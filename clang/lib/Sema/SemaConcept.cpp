@@ -585,7 +585,7 @@ static bool CheckConstraintSatisfaction(
 
   ArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
-          ? TemplateArgsLists.getOutermost()
+          ? TemplateArgsLists.getInnermost()
           : ArrayRef<TemplateArgument> {};
   Sema::InstantiatingTemplate Inst(S, TemplateIDRange.getBegin(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1063,16 +1063,20 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
 bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
   assert(FD->getFriendObjectKind() && "Must be a friend!");
 
+  FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate();
   // The logic for non-templates is handled in ASTContext::isSameEntity, so we
   // don't have to bother checking 'DependsOnEnclosingTemplate' for a
   // non-function-template.
-  assert(FD->getDescribedFunctionTemplate() &&
-         "Non-function templates don't need to be checked");
+  assert(FTD && "Non-function templates don't need to be checked");
 
   SmallVector<const Expr *, 3> ACs;
-  FD->getDescribedFunctionTemplate()->getAssociatedConstraints(ACs);
+  FTD->getAssociatedConstraints(ACs);
 
+  #if 0
   unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
+  #else
+  unsigned OldTemplateDepth = FTD->getTemplateParameters()->getDepth();
+  #endif
   for (const Expr *Constraint : ACs)
     if (ConstraintExpressionDependsOnEnclosingTemplate(FD, OldTemplateDepth,
                                                        Constraint))

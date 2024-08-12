@@ -705,7 +705,7 @@ struct TemplateInstantiationArgumentCollecter
     }
 
     if (const MemberSpecializationInfo *MSI = RD->getMemberSpecializationInfo();
-        MSI &&MSI->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+        MSI && MSI->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
       return Done();
 
     bool IsFriend = RD->getFriendObjectKind() ||
@@ -912,6 +912,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   if (!CurDecl)
     CurDecl = Decl::castFromDeclContext(DC);
 
+  #if 1
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
                                      Final);
@@ -927,6 +928,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       HandleDefaultTempArgIntoTempTempParam(TTP, Result);
     CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
   }
+  #endif
 
   TemplateInstantiationArgumentCollecter Collecter(
       *this, Result, RelativeToPrimary,
@@ -935,6 +937,11 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
   } while (CurDecl);
+
+  #if 0
+  if (Innermost)
+    Result.replaceInnermostTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost);
+  #endif
   return Result;
 
   #if 0
