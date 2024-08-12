@@ -657,14 +657,14 @@ define void @foo(<2 x i8> %vec, i32 %idx) {
 
   auto *NewI1 =
       cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
-          ArgVec, ArgIdx, Ret, Ctx, "NewInsBeforeRet"));
+          ArgVec, ArgIdx, Ret, Ctx, "NewExtrBeforeRet"));
   EXPECT_EQ(NewI1->getOperand(0), ArgVec);
   EXPECT_EQ(NewI1->getOperand(1), ArgIdx);
   EXPECT_EQ(NewI1->getNextNode(), Ret);
 
   auto *NewI2 =
       cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
-          ArgVec, ArgIdx, BB, Ctx, "NewInsAtEndOfBB"));
+          ArgVec, ArgIdx, BB, Ctx, "NewExtrAtEndOfBB"));
   EXPECT_EQ(NewI2->getPrevNode(), Ret);
 
   auto *LLVMArgVec = LLVMF.getArg(0);
