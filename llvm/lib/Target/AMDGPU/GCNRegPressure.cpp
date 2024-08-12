@@ -408,10 +408,9 @@ void GCNRPTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
 
 LaneBitmask GCNRPTracker::getLastUsedLanes(Register RegUnit,
                                            SlotIndex Pos) const {
-  assert(RequireIntervals);
   return getLanesWithProperty(
-      *LIS, *MRI, TrackLaneMasks, RegUnit, Pos.getBaseIndex(),
-      LaneBitmask::getNone(), [](const LiveRange &LR, SlotIndex Pos) {
+      LIS, *MRI, true, RegUnit, Pos.getBaseIndex(), LaneBitmask::getNone(),
+      [](const LiveRange &LR, SlotIndex Pos) {
         const LiveRange::Segment *S = LR.getSegmentContaining(Pos);
         return S != nullptr && S->end == Pos.getRegSlot();
       });
