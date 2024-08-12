@@ -175,6 +175,9 @@ private:
   bool selectFmix(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
 
+  bool selectLength(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
+
   bool selectFrac(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
 
@@ -1372,6 +1375,23 @@ bool SPIRVInstructionSelector::selectFmix(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectLength(Register ResVReg,
+                                            const SPIRVType *ResType,
+                                            MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Length)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
                                            const SPIRVType *ResType,
                                            MachineInstr &I) const {
@@ -2118,6 +2138,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAny(ResVReg, ResType, I);
   case Intrinsic::spv_lerp:
     return selectFmix(ResVReg, ResType, I);
+  case Intrinsic::spv_length:
+    return selectLength(ResVReg, ResType, I);
   case Intrinsic::spv_frac:
     return selectFrac(ResVReg, ResType, I);
   case Intrinsic::spv_rsqrt:

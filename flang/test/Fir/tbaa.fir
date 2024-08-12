@@ -166,7 +166,9 @@ module {
 // CHECK:           %[[VAL_37:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_38:.*]] = llvm.trunc %[[VAL_37]] : i32 to i8
 // CHECK:           %[[VAL_39:.*]] = llvm.insertvalue %[[VAL_38]], %[[VAL_36]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %{{.*}}, %[[VAL_39]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
+// CHECK:           %[[VAL_40:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_41:.*]] = llvm.trunc %[[VAL_40]] : i32 to i8
+// CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_41]], %[[VAL_39]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_44B:.*]] = llvm.insertvalue %[[VAL_27]], %[[VAL_42]][8] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_44:.*]] = llvm.insertvalue %{{.*}}, %[[VAL_44B]][9, 0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_45:.*]] = llvm.getelementptr %[[VAL_3]][0, 7, 0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
