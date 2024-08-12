@@ -18214,9 +18214,10 @@ private:
                 createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
             VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy, FMF,
                                                           CostKind);
-            VectorCost += TTI->getVectorInstrCost(
-                Instruction::InsertElement, VecTy, TTI::TCK_RecipThroughput, I);
           }
+          VectorCost += TTI->getScalarizationOverhead(
+              VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
+              /*Extract*/ false, TTI::TCK_RecipThroughput);
         } else {
           VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy, FMF,
                                                        CostKind);
