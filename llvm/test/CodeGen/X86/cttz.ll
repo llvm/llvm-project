@@ -317,13 +317,11 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 ;
 ; X64-LABEL: cttz_i32_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB6_1
-; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB6_1:
-; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
+; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i32_zero_test:
