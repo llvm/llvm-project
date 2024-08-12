@@ -300,6 +300,8 @@ public:
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
                const LiveRegSet *LiveRegsCopy = nullptr);
+
+  void bumpDownwardPressure(const MachineInstr *MI);
 };
 
 LaneBitmask getLiveLaneMask(unsigned Reg,

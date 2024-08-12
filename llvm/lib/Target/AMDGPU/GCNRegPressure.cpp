@@ -706,6 +706,54 @@ Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
   });
 }
 
+void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI) {
+  assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
+
+  SlotIndex SlotIdx;
+  if (RequireIntervals)
+    SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+
+  // Account for register pressure similar to RegPressureTracker::recede().
+  RegisterOperands RegOpers;
+  RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/false);
+  if (TrackLaneMasks)
+    RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
+
+  if (RequireIntervals) {
+    for (const RegisterMaskPair &Use : RegOpers.Uses) {
+      Register Reg = Use.RegUnit;
+      LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
+      if (LastUseMask.none())
+        continue;
+      // The LastUseMask is queried from the liveness information of instruction
+      // which may be further down the schedule. Some lanes may actually not be
+      // last uses for the current position.
+      // FIXME: allow the caller to pass in the list of vreg uses that remain
+      // to be bottom-scheduled to avoid searching uses at each query.
+      SlotIndex CurrIdx = getCurrSlot();
+      LastUseMask =
+          findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, LIS);
+      if (LastUseMask.none())
+        continue;
+
+      LaneBitmask LiveMask = LiveRegs.contains(Reg);
+      LaneBitmask NewMask = LiveMask & ~LastUseMask;
+      decreaseRegPressure(Reg, LiveMask, NewMask);
+    }
+  }
+
+  // Generate liveness for defs.
+  for (const RegisterMaskPair &Def : RegOpers.Defs) {
+    Register Reg = Def.RegUnit;
+    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+    LaneBitmask NewMask = LiveMask | Def.LaneMask;
+    increaseRegPressure(Reg, LiveMask, NewMask);
+  }
+
+  // Boost pressure for all dead defs together.
+  bumpDeadDefs(RegOpers.DeadDefs);
+}
+
 bool GCNUpwardRPTracker::isValid() const {
   const auto &SI = LIS.getInstructionIndex(*LastTrackedMI).getBaseIndex();
   const auto LISLR = llvm::getLiveRegs(SI, LIS, *MRI);
