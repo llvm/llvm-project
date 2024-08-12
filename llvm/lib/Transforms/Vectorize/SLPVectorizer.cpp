@@ -323,7 +323,7 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
           return true;
         }))
       return 0;
-    if (!std::is_sorted(ExtractionIndex.begin(), ExtractionIndex.end()))
+    if (!is_sorted(ExtractionIndex))
       return 0;
     ++NumGroup;
   }
