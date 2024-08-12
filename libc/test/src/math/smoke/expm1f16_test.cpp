@@ -42,12 +42,27 @@ TEST_F(LlvmLibcExpm1f16Test, Overflow) {
   LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::expm1f16(max_normal),
-                              FE_OVERFLOW);
+                              FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::expm1f16(static_cast<float16>(12.0)), FE_OVERFLOW);
+  // round(16 * log(2), HP, RN);
+  float16 x = static_cast<float16>(0x1.63p+3);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(inf, LIBC_NAMESPACE::expm1f16(x),
+                                               FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(inf, LIBC_NAMESPACE::expm1f16(x),
+                                              FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
+      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
 }
 
 TEST_F(LlvmLibcExpm1f16Test, ResultNearNegOne) {
@@ -60,37 +75,34 @@ TEST_F(LlvmLibcExpm1f16Test, ResultNearNegOne) {
   // round(-11 * log(2), HP, RN);
   float16 x = static_cast<float16>(-0x1.e8p+2);
 
-  EXPECT_FP_EQ_ROUNDING_NEAREST(static_cast<float16>(-0x1.ffcp-1),
-                                LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::expm1f16(x),
+      FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
-                               LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
+                                              LIBC_NAMESPACE::expm1f16(x),
+                                              FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_DOWNWARD(static_cast<float16>(-1.0),
-                                 LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
+      static_cast<float16>(-1.0), LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(static_cast<float16>(-0x1.ffcp-1),
-                                    LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::expm1f16(x),
+      FE_INEXACT);
 
   x = static_cast<float16>(-0x1.0a4p+3);
 
-  EXPECT_FP_EQ_ROUNDING_NEAREST(static_cast<float16>(-1.0),
-                                LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      static_cast<float16>(-1.0), LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
-                               LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
+                                              LIBC_NAMESPACE::expm1f16(x),
+                                              FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_DOWNWARD(static_cast<float16>(-1.0),
-                                 LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
+      static_cast<float16>(-1.0), LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
 
-  EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(static_cast<float16>(-0x1.ffcp-1),
-                                    LIBC_NAMESPACE::expm1f16(x));
-  EXPECT_FP_EXCEPTION(FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::expm1f16(x),
+      FE_INEXACT);
 }

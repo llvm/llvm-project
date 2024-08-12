@@ -70,8 +70,8 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
     if (x_abs == 0)
       return x;
 
-    // When x >= 12.
-    if (x_bits.is_pos() && x_abs >= 0x4a00U) {
+    // When x >= 16 * log(2).
+    if (x_bits.is_pos() && x_abs >= 0x498cU) {
       // expm1(+inf) = +inf
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
@@ -80,7 +80,7 @@ LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) {
       case FE_TONEAREST:
       case FE_UPWARD:
         fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW);
+        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return FPBits::inf().get_val();
       default:
         return FPBits::max_normal().get_val();
