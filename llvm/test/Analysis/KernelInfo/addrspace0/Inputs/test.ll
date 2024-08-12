@@ -1,6 +1,6 @@
 define void @f() !dbg !3 {
 entry:
-  ; load
+  ; load: check remarks for both unnamed and named values.
   ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction accesses memory in addrspace(0)
   %0 = load i32, ptr null, align 4, !dbg !6
   ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction ('%load') accesses memory in addrspace(0)
