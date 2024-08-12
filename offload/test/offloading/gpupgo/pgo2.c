@@ -49,7 +49,7 @@ int main() {
 // LLVM-DEVICE-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // LLVM-DEVICE: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-DEVICE: Counters: 3
-// LLVM-DEVICE: Block counts: [10, 1, 1]
+// LLVM-DEVICE: Block counts: [10, 2, 1]
 
 // CLANG-HOST-LABEL: main:
 // CLANG-HOST: Hash: {{0[xX][0-9a-fA-F]+}}

@@ -194,7 +194,7 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
 
     // Check if given current global is a profiling global based
     // on name
-    if (NameOrErr->equals(getInstrProfNamesVarName())) {
+    if (*NameOrErr == getInstrProfNamesVarName()) {
       // Read in profiled function names
       DeviceProfileData.NamesData = SmallVector<uint8_t>(Sym.getSize(), 0);
       GlobalTy NamesGlobal(NameOrErr->str(), Sym.getSize(),
