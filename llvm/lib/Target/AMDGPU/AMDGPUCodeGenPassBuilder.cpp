@@ -16,7 +16,7 @@
 using namespace llvm;
 
 AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
-    AMDGPUTargetMachine &TM, const CGPassBuilderOption &Opts,
+    GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
     PassInstrumentationCallbacks *PIC)
     : CodeGenPassBuilder(TM, Opts, PIC) {
   Opt.RequiresCodeGenSCCOrder = true;
