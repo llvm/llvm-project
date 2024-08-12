@@ -1,4 +1,4 @@
-# Check cat command with single file.
+## Test cat command with a single file.
 #
 # RUN: rm -rf %T/testCat
 # RUN: mkdir -p %T/testCat
@@ -10,7 +10,7 @@
 # FILE-EXISTS: True
 # CAT-OUTPUT: abcdefgh
 #
-# Check cat command with multiple files.
+## Test cat command with multiple files.
 #
 # RUN: rm -rf %T/testCat
 # RUN: mkdir -p %T/testCat
@@ -26,7 +26,7 @@
 # MULTI-CAT-OUTPUT-NEXT: efghijkl
 # MULTI-CAT-OUTPUT-NEXT: mnopqrst
 #
-# Check cat command with multiple files and piped output to FileCheck.
+## Test cat command with multiple files and piped output to FileCheck.
 #
 # RUN: rm -rf %T/testCat
 # RUN: mkdir -p %T/testCat
@@ -36,7 +36,7 @@
 # PIPED-CAT-OUTPUT: abcdefgh
 # PIPED-CAT-OUTPUT-NEXT: efghijkl
 #
-# Check cat command with multiple files and glob expressions.
+## Test cat command with multiple files and glob expressions.
 #
 # RUN: rm -rf %T/testCat
 # RUN: mkdir -p %T/testCat
@@ -46,7 +46,7 @@
 # GLOB-CAT-OUTPUT: cvbnm
 # GLOB-CAT-OUTPUT-NEXT: qwerty
 #
-# Check cat command with -v option
+## Test cat command with -v option
 #
 # RUN: cat -v %S/cat_nonprinting.bin | FileCheck --check-prefix=NP-CAT-OUTPUT %s
 # NP-CAT-OUTPUT: ^@^A^B^C^D^E^F^G	^H
@@ -64,7 +64,7 @@
 # NP-CAT-OUTPUT-NEXT: M-\M-]M-^M-_M-`M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-o
 # NP-CAT-OUTPUT-NEXT: M-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-zM-{M-|M-}M-~M-^?
 #
-# Check cat command with -show-nonprinting option
+## Test cat command with -show-nonprinting option
 #
 # RUN: cat --show-nonprinting %S/cat_nonprinting.bin | FileCheck --check-prefix=NPLONG-CAT-OUTPUT %s
 # NPLONG-CAT-OUTPUT: ^@^A^B^C^D^E^F^G	^H

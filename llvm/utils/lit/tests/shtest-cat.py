@@ -8,13 +8,13 @@
 # CHECK: FAIL: shtest-cat :: cat-error-0.txt ({{[^)]*}})
 # CHECK: cat -b temp1.txt
 # CHECK: # .---command stderr{{-*}}
-# CHECK: # | Unsupported: 'cat':  option -b not recognized
+# CHECK-NEXT: # | Unsupported: 'cat':  option -b not recognized
 # CHECK: # error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-cat :: cat-error-1.txt ({{[^)]*}})
 # CHECK: cat temp1.txt
 # CHECK: # .---command stderr{{-*}}
-# CHECK: # | [Errno 2] No such file or directory: 'temp1.txt'
+# CHECK-NEXT: # | [Errno 2] No such file or directory: 'temp1.txt'
 # CHECK: # error: command failed with exit status: 1
 
 # CHECK: PASS: shtest-cat :: cat.txt ({{[^)]*}})
