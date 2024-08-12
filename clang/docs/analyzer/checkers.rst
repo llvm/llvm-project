@@ -2501,7 +2501,11 @@ alpha.core.PointerSub (C)
 Check for pointer subtractions on two pointers pointing to different memory
 chunks. According to the C standard §6.5.6 only subtraction of pointers that
 point into (or one past the end) the same array object is valid (for this
-purpose non-array variables are like arrays of size 1).
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
 
 .. code-block:: c
 
@@ -2511,11 +2515,6 @@ purpose non-array variables are like arrays of size 1).
    x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
    x = (&a + 1) - &a;
    x = &b - &a; // warn: 'a' and 'b' are different variables
-   x = (&a + 2) - &a; // warn: for a variable it is only valid to have a pointer
-                      // to one past the address of it
-   x = &c[10] - &c[0];
-   x = &c[11] - &c[0]; // warn: index larger than one past the end
-   x = &c[-1] - &c[0]; // warn: negative index
  }
 
  struct S {
@@ -2537,9 +2536,6 @@ There may be existing applications that use code like above for calculating
 offsets of members in a structure, using pointer subtractions. This is still
 undefined behavior according to the standard and code like this can be replaced
 with the `offsetof` macro.
-
-The checker only reports cases where stack-allocated objects are involved (no
-warnings on pointers to memory allocated by `malloc`).
 
 .. _alpha-core-StackAddressAsyncEscape:
 

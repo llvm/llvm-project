@@ -299,9 +299,10 @@ static void createStoreInstBefore(llvm::Value *value, Address addr,
   store->setAlignment(addr.getAlignment().getAsAlign());
 }
 
-static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
-                                            llvm::BasicBlock::iterator beforeInst,
-                                            CodeGenFunction &CGF) {
+static llvm::LoadInst *
+createLoadInstBefore(Address addr, const Twine &name,
+                     llvm::BasicBlock::iterator beforeInst,
+                     CodeGenFunction &CGF) {
   return new llvm::LoadInst(addr.getElementType(), addr.emitRawPointer(CGF),
                             name, false, addr.getAlignment().getAsAlign(),
                             beforeInst);

@@ -32,6 +32,7 @@
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -1083,6 +1084,11 @@ Expected<bool> parseDependenceAnalysisPrinterOptions(StringRef Params) {
 Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "lower-gep",
                                             "SeparateConstOffsetFromGEP");
+}
+
+Expected<bool> parseStructurizeCFGPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "skip-uniform-regions",
+                                            "StructurizeCFG");
 }
 
 Expected<OptimizationLevel>
