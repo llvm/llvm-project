@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/KernelInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -139,8 +140,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       }
       remarkAlloca(ORE, F, *Alloca, StaticSize);
     } else if (const CallBase *Call = dyn_cast<CallBase>(&I)) {
-      std::string CallKind;
-      std::string RemarkKind;
+      SmallString<40> CallKind;
+      SmallString<40> RemarkKind;
       if (Call->isIndirectCall()) {
         IndirectCalls += Direction;
         CallKind += "indirect";
