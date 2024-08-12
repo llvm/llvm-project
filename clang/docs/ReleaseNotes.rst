@@ -217,6 +217,8 @@ Bug Fixes to C++ Support
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
   (#GH99877).
 - Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
+- Fix mismatch of noexecpt in friend function declaration by copying template instantiated parameters to
+  current local scope.(#GH101330).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
