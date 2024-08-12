@@ -7,6 +7,15 @@ module attributes {
   cir.triple = "spirv64-unknown-unknown",
   llvm.data_layout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 } {
+  cir.global external addrspace(offload_global) @addrspace1 = #cir.int<1> : !s32i
+  // LLVM: @addrspace1 = addrspace(1) global i32
+
+  cir.global "private" internal addrspace(offload_local) @addrspace2 : !s32i
+  // LLVM: @addrspace2 = internal addrspace(3) global i32 undef
+
+  cir.global external addrspace(target<7>) @addrspace3 = #cir.int<3> : !s32i
+  // LLVM: @addrspace3 = addrspace(7) global i32
+
   // LLVM: define void @foo(ptr %0)
   cir.func @foo(%arg0: !cir.ptr<!s32i>) {
     // LLVM-NEXT: alloca ptr,
