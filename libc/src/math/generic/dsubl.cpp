@@ -10,16 +10,11 @@
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, dsubl, (long double x, long double y)) {
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
-  return static_cast<double>(x) - static_cast<double>(y);
-#else
-  return fputil::generic::add<double>(x, y);
-#endif
+  return fputil::generic::sub<double>(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
