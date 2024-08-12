@@ -9,10 +9,10 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
-#include <map>
 
 namespace llvm {
 
@@ -20,12 +20,27 @@ class CtxProfAnalysis;
 
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
+  friend class CtxProfAnalysis;
+  friend class CtxProfAnalysisPrinterPass;
+  struct FunctionInfo {
+    uint32_t NextCounterIndex = 0;
+    uint32_t NextCallsiteIndex = 0;
+    const std::string Name;
+
+    FunctionInfo(StringRef Name) : Name(Name) {}
+  };
   std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
+  // For the GUIDs in this module, associate metadata about each function which
+  // we'll need when we maintain the profiles during IPO transformations.
+  DenseMap<GlobalValue::GUID, FunctionInfo> FuncInfo;
+
+  GlobalValue::GUID getKnownGUID(const Function &F) const;
+
+  // This is meant to be constructed from CtxProfAnalysis, which will also set
+  // its state piecemeal.
+  PGOContextualProfile() = default;
 
 public:
-  explicit PGOContextualProfile(PGOCtxProfContext::CallTargetMapTy &&Profiles)
-      : Profiles(std::move(Profiles)) {}
-  PGOContextualProfile() = default;
   PGOContextualProfile(const PGOContextualProfile &) = delete;
   PGOContextualProfile(PGOContextualProfile &&) = default;
 
@@ -33,6 +48,18 @@ public:
 
   const PGOCtxProfContext::CallTargetMapTy &profiles() const {
     return *Profiles;
+  }
+
+  bool isFunctionKnown(const Function &F) const { return getKnownGUID(F) != 0; }
+
+  uint32_t allocateNextCounterIndex(const Function &F) {
+    assert(isFunctionKnown(F));
+    return FuncInfo.find(getKnownGUID(F))->second.NextCounterIndex++;
+  }
+
+  uint32_t allocateNextCallsiteIndex(const Function &F) {
+    assert(isFunctionKnown(F));
+    return FuncInfo.find(getKnownGUID(F))->second.NextCallsiteIndex++;
   }
 
   bool invalidate(Module &, const PreservedAnalyses &PA,

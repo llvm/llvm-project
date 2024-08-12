@@ -16,6 +16,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
 
@@ -223,8 +224,8 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-      // FIXME(mtrofin): use InstrProfSymtab::getCanonicalName
-      Guid = Builder.getInt64(F.getGUID());
+
+      Guid = Builder.getInt64(AssignUniqueIDPass::getGUID(F));
       // The type of the context of this function is now knowable since we have
       // NrCallsites and NrCounters. We delcare it here because it's more
       // convenient - we have the Builder.
@@ -348,4 +349,35 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         "instructions above which to release the context: " +
         F.getName());
   return true;
+}
+
+const char *AssignUniqueIDPass::GUIDMetadataName = "unique_id";
+
+PreservedAnalyses AssignUniqueIDPass::run(Module &M,
+                                          ModuleAnalysisManager &MAM) {
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+    const GlobalValue::GUID GUID = F.getGUID();
+    assert(!F.getMetadata(GUIDMetadataName) ||
+           GUID == AssignUniqueIDPass::getGUID(F));
+    F.setMetadata(GUIDMetadataName,
+                  MDNode::get(M.getContext(),
+                              {ConstantAsMetadata::get(ConstantInt::get(
+                                  Type::getInt64Ty(M.getContext()), GUID))}));
+  }
+  return PreservedAnalyses::none();
+}
+
+GlobalValue::GUID AssignUniqueIDPass::getGUID(const Function &F) {
+  if (F.isDeclaration()) {
+    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
+    return GlobalValue::getGUID(F.getGlobalIdentifier());
+  }
+  auto *MD = F.getMetadata(GUIDMetadataName);
+  assert(MD);
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
 }
