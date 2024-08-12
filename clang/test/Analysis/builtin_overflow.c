@@ -145,17 +145,13 @@ void test_uadd_overflow_contraints(unsigned a, unsigned b)
 {
    unsigned res;
 
-   if (a > 10)
+   if (a > 5)
      return;
-   if (b > 10)
+   if (b != 10)
      return;
-
-   /* clang_analyzer_eval(a + b < 30); <--- Prints 1 and 0, but why ??? */
 
    if (__builtin_uadd_overflow(a, b, &res)) {
-     /* clang_analyzer_warnIfReached(); */
+     clang_analyzer_warnIfReached();
      return;
    }
 }
-
-// TODO: more tests after figuring out what's going on.

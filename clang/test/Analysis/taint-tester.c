@@ -196,3 +196,19 @@ void noCrashTest(void) {
     __builtin___memcpy_chk(pointer2, pointer1, 0, 0); // no-crash
   }
 }
+
+void builtin_overflow_test(void) {
+  int input, input2, res;
+
+  scanf("%d", &input);
+  scanf("%d", &input2);
+
+  if (__builtin_add_overflow(input, 10, &res)) // expected-warning + {{tainted}}
+    return;
+
+  if (__builtin_add_overflow(10, input, &res)) // expected-warning + {{tainted}}
+    return;
+
+  if (__builtin_add_overflow(input2, input, &res)) // expected-warning + {{tainted}}
+    return;
+}

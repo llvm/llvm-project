@@ -16,6 +16,7 @@
 
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -27,11 +28,14 @@
 
 using namespace clang;
 using namespace ento;
+using namespace taint;
 
 namespace {
 
 QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
+  // Calling a builtin with a non-integer type result produces compiler error.
   assert(T->isIntegerType());
+
   ASTContext &ACtx = C.getASTContext();
 
   unsigned BitWidth = ACtx.getIntWidth(T);
@@ -39,6 +43,7 @@ QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
 }
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
+  // Calling a builtin with an incorrect argument count produces compiler error.
   assert(Call.getNumArgs() == 3);
 
   return Call.getArgExpr(2)->getType()->getPointeeType();
@@ -46,6 +51,7 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call) {
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
                                       unsigned BI) {
+  // Calling a builtin with an incorrect argument count produces compiler error.
   assert(Call.getNumArgs() == 3);
 
   ASTContext &ACtx = C.getASTContext();
@@ -119,6 +125,7 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   SValBuilder &SVB = C.getSValBuilder();
   ASTContext &ACtx = C.getASTContext();
 
+  // Calling a builtin with a non-integer type result produces compiler error.
   assert(Res->isIntegerType());
 
   unsigned BitWidth = ACtx.getIntWidth(Res);
@@ -144,7 +151,7 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
                                                    CheckerContext &C,
                                                    BinaryOperator::Opcode Op,
                                                    QualType ResultType) const {
-  // All __builtin_*_overflow functions take 3 argumets.
+  // Calling a builtin with an incorrect argument count produces compiler error.
   assert(Call.getNumArgs() == 3);
 
   ProgramStateRef State = C.getState();
@@ -160,13 +167,19 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
   if (NotOverflow) {
-    ProgramStateRef StateSuccess =
+    ProgramStateRef StateNoOverflow =
         State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false));
 
-    if (auto L = Call.getArgSVal(2).getAs<Loc>())
-      StateSuccess = StateSuccess->bindLoc(*L, RetVal, C.getLocationContext());
+    if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
+      StateNoOverflow =
+          StateNoOverflow->bindLoc(*L, RetVal, C.getLocationContext());
 
-    C.addTransition(StateSuccess);
+      // Propagate taint if any of the argumets were tainted
+      if (isTainted(State, Arg1) || isTainted(State, Arg2))
+        StateNoOverflow = addTaint(StateNoOverflow, *L);
+    }
+
+    C.addTransition(StateNoOverflow);
   }
 
   if (Overflow)
