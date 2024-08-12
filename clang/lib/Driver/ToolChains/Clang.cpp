@@ -7270,6 +7270,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdelayed-template-parsing");
   }
 
+  if (Args.hasFlag(options::OPT_fcomplete_member_pointers,
+                   options::OPT_fno_complete_member_pointers, false)) {
+    CmdArgs.push_back("-fcomplete-member-pointers");
+    CmdArgs.push_back("-Werror=microsoft-incomplete-member-pointer");
+  }
+
   if (Args.hasFlag(options::OPT_fpch_validate_input_files_content,
                    options::OPT_fno_pch_validate_input_files_content, false))
     CmdArgs.push_back("-fvalidate-ast-input-files-content");
@@ -7926,8 +7932,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_static_consts);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_persistent_storage_variables,
                     options::OPT_fno_keep_persistent_storage_variables);
-  Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
-                    options::OPT_fno_complete_member_pointers);
   Args.addOptOutFlag(CmdArgs, options::OPT_fcxx_static_destructors,
                      options::OPT_fno_cxx_static_destructors);
 

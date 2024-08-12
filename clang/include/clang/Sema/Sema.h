@@ -14961,6 +14961,23 @@ public:
     return RequireCompleteType(Loc, T, Diagnoser);
   }
 
+private:
+  void AssignInheritanceModelToBase(SourceLocation Loc,
+                                    const MemberPointerType *T);
+
+public:
+  /// Called when the Microsoft ABI would require the base type of a member
+  /// pointer to have its inheritance model calculated.
+  void microsoftCompleteMemberPointer(SourceLocation Loc,
+                                      const MemberPointerType *T) {
+    if (getLangOpts().CompleteMemberPointers)
+      AssignInheritanceModelToBase(Loc, T);
+  }
+  void microsoftCompleteMemberPointer(SourceLocation Loc, QualType T) {
+    if (getLangOpts().CompleteMemberPointers)
+      AssignInheritanceModelToBase(Loc, T->getAs<MemberPointerType>());
+  }
+
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
     return D->isUnconditionallyVisible() ||

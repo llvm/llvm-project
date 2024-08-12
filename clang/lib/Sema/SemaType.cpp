@@ -2064,10 +2064,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
 
     // Mentioning a member pointer type for an array type causes us to lock in
     // an inheritance model, even if it's inside an unused typedef.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft())
-      if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
-        if (!MPTy->getClass()->isDependentType())
-          (void)isCompleteType(Loc, T);
+    // FIXME: Verify this, it doesn't appear to always be true
+    microsoftCompleteMemberPointer(Loc, T);
 
   } else {
     // C99 6.7.5.2p1: If the element type is an incomplete or function type,
@@ -9047,35 +9045,61 @@ bool Sema::hasReachableDefinition(NamedDecl *D, NamedDecl **Suggested,
                                  OnlyNeedComplete);
 }
 
-/// Locks in the inheritance model for the given class and all of its bases.
-static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
-  RD = RD->getMostRecentNonInjectedDecl();
-  if (!RD->hasAttr<MSInheritanceAttr>()) {
-    MSInheritanceModel IM;
-    bool BestCase = false;
-    switch (S.MSPointerToMemberRepresentationMethod) {
-    case LangOptions::PPTMK_BestCase:
-      BestCase = true;
-      IM = RD->calculateInheritanceModel();
-      break;
-    case LangOptions::PPTMK_FullGeneralitySingleInheritance:
-      IM = MSInheritanceModel::Single;
-      break;
-    case LangOptions::PPTMK_FullGeneralityMultipleInheritance:
-      IM = MSInheritanceModel::Multiple;
-      break;
-    case LangOptions::PPTMK_FullGeneralityVirtualInheritance:
-      IM = MSInheritanceModel::Unspecified;
-      break;
-    }
+void Sema::AssignInheritanceModelToBase(SourceLocation Loc,
+                                        const MemberPointerType *T) {
+  if (!T || T->getClass()->isDependentType())
+    return;
 
-    SourceRange Loc = S.ImplicitMSInheritanceAttrLoc.isValid()
-                          ? S.ImplicitMSInheritanceAttrLoc
-                          : RD->getSourceRange();
-    RD->addAttr(MSInheritanceAttr::CreateImplicit(
-        S.getASTContext(), BestCase, Loc, MSInheritanceAttr::Spelling(IM)));
-    S.Consumer.AssignInheritanceModel(RD);
+  assert(getLangOpts().CompleteMemberPointers &&
+         "Should not need assign the inheritance model in this case");
+
+  QualType Base = QualType(T->getClass(), 0);
+  (void)isCompleteType(Loc, Base);
+  CXXRecordDecl *RD =
+      T->getClass()->getAsCXXRecordDecl()->getMostRecentNonInjectedDecl();
+  if (RD->hasAttr<MSInheritanceAttr>())
+    return;
+
+  MSInheritanceModel IM;
+  bool BestCase = false;
+  switch (MSPointerToMemberRepresentationMethod) {
+  case LangOptions::PPTMK_BestCase:
+    BestCase = true;
+    IM = RD->calculateInheritanceModel();
+    break;
+  case LangOptions::PPTMK_FullGeneralitySingleInheritance:
+    IM = MSInheritanceModel::Single;
+    break;
+  case LangOptions::PPTMK_FullGeneralityMultipleInheritance:
+    IM = MSInheritanceModel::Multiple;
+    break;
+  case LangOptions::PPTMK_FullGeneralityVirtualInheritance:
+    IM = MSInheritanceModel::Unspecified;
+    break;
   }
+
+  SourceRange AttrLoc = ImplicitMSInheritanceAttrLoc.isValid()
+                            ? ImplicitMSInheritanceAttrLoc
+                            : RD->getSourceRange();
+  RD->addAttr(MSInheritanceAttr::CreateImplicit(
+      Context, BestCase, AttrLoc, MSInheritanceAttr::Spelling(IM)));
+  Consumer.AssignInheritanceModel(RD);
+
+  // Don't warn if the inheritance model is explicitly unspecified because of a
+  // pragma
+  if (IM != MSInheritanceModel::Unspecified || !BestCase)
+    return;
+
+  Diag(Loc, diag::warn_memptr_incomplete_ms) << Base;
+  if (!RD->hasDefinition())
+    Diag(RD->getLocation(), diag::note_forward_declaration) << Base;
+  else if (RD->isParsingBaseSpecifiers())
+    Diag(RD->getDefinition()->getLocation(),
+         diag::note_memptr_incomplete_until_bases);
+  Diag(RD->getLocation(), diag::note_memptr_incomplete_specify_inheritance)
+      << FixItHint::CreateInsertion(RD->getLocation(),
+                                    "__single_inheritance|__multiple_"
+                                    "inheritance|__virtual_inheritance");
 }
 
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
@@ -9090,19 +9114,15 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
-    if (!MPTy->getClass()->isDependentType()) {
-      if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getClass()->getAsCXXRecordDecl()->isBeingDefined() &&
-          RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
-                              diag::err_memptr_incomplete))
-        return true;
+    const Type *Class = MPTy->getClass();
+    if (!Class->isDependentType()) {
+      // Warn if base type of member pointer is incomplete.
+      // Do this before microsoftCompleteMemberPointer can complete it.
+      const CXXRecordDecl *RD = Class->getAsCXXRecordDecl();
+      if (!RD->hasDefinition())
+        Diag(Loc, diag::warn_memptr_incomplete) << QualType(Class, 0);
 
-      // We lock in the inheritance model once somebody has asked us to ensure
-      // that a pointer-to-member type is complete.
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-        (void)isCompleteType(Loc, QualType(MPTy->getClass(), 0));
-        assignInheritanceModel(*this, MPTy->getMostRecentCXXRecordDecl());
-      }
+      microsoftCompleteMemberPointer(Loc, MPTy);
     }
   }
 

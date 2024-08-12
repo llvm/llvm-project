@@ -2414,7 +2414,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     const CXXRecordDecl *RD = ClassTy->getAsCXXRecordDecl();
     ASTContext &Context = RD->getASTContext();
     // Member pointers not in the MS ABI don't get special treatment.
-    if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
+    if (!Context.getLangOpts().CompleteMemberPointers)
       return false;
     // The inheritance attribute might only be present on the most recent
     // CXXRecordDecl, use that one.

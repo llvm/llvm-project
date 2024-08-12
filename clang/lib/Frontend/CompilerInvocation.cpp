@@ -4363,9 +4363,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       auto Kind = TargetCXXABI::getKind(CXXABI);
       if (!TargetCXXABI::isSupportedCXXABI(T, Kind))
         Diags.Report(diag::err_unsupported_cxx_abi) << CXXABI << T.str();
-      else
+      else {
         Opts.CXXABI = Kind;
+        if (Kind == TargetCXXABI::Microsoft)
+          Opts.CompleteMemberPointers = true;
+      }
     }
+  } else {
+    // The default C++ ABI for this platform is going to be used
+    if (TargetCXXABI::defaultABIIsMicrosoft(T))
+      Opts.CompleteMemberPointers = true;
   }
 
   Opts.RelativeCXXABIVTables =
