@@ -1689,7 +1689,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
           }
         });
 
-    if(llvm::any_of(distTypes, [](Type type){return !type;}))
+    if (llvm::any_of(distTypes, [](Type type) { return !type; }))
       return failure();
 
     SmallVector<size_t> newRetIndices;
