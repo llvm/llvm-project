@@ -1756,9 +1756,10 @@ LogicalResult WsloopOp::verify() {
 
   auto wrapper =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
-  bool isCompositeWrapper = wrapper && wrapper.isWrapper() &&
-                            (!llvm::isa<ParallelOp>(wrapper) ||
-                             llvm::isa<DistributeOp>(wrapper->getParentOp()));
+  bool isCompositeChildLeaf =
+      wrapper && wrapper.isWrapper() &&
+      (!llvm::isa<ParallelOp>(wrapper) ||
+       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -1769,10 +1770,10 @@ LogicalResult WsloopOp::verify() {
     if (!isa<SimdOp>(nested))
       return emitError() << "only supported nested wrapper is 'omp.simd'";
 
-  } else if (isComposite() && !isCompositeWrapper) {
+  } else if (isComposite() && !isCompositeChildLeaf) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
-  } else if (!isComposite() && isCompositeWrapper) {
+  } else if (!isComposite() && isCompositeChildLeaf) {
     return emitError()
            << "'omp.composite' attribute missing from composite wrapper";
   }
@@ -1820,15 +1821,16 @@ LogicalResult SimdOp::verify() {
 
   auto wrapper =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
-  bool isCompositeWrapper = wrapper && wrapper.isWrapper() &&
-                            (!llvm::isa<ParallelOp>(wrapper) ||
-                             llvm::isa<DistributeOp>(wrapper->getParentOp()));
+  bool isCompositeChildLeaf =
+      wrapper && wrapper.isWrapper() &&
+      (!llvm::isa<ParallelOp>(wrapper) ||
+       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
 
-  if (!isComposite() && isCompositeWrapper)
+  if (!isComposite() && isCompositeChildLeaf)
     return emitError()
            << "'omp.composite' attribute missing from composite wrapper";
 
-  if (isComposite() && !isCompositeWrapper)
+  if (isComposite() && !isCompositeChildLeaf)
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
 
