@@ -371,7 +371,6 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
         !ProcessEntry(entry, callback))
       return;
   }
-  m_fallback.GetFullyQualifiedType(context, callback);
 }
 
 bool DebugNamesDWARFIndex::SameParentChain(
