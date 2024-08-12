@@ -170,7 +170,7 @@ public:
   /// both cases correctly and avoids crashes.
   DWARFCompileUnit *GetSkeletonUnit();
 
-  void SetSkeletonUnit(DWARFUnit *skeleton_unit);
+  bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
 
   bool Supports_DW_AT_APPLE_objc_complete_type();
 
