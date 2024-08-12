@@ -150,7 +150,7 @@ void test_uadd_overflow_contraints(unsigned a, unsigned b)
    if (b > 10)
      return;
 
-   // clang_analyzer_eval(a + b < 30); <--- Prints 1 and 0, but why ???
+   /* clang_analyzer_eval(a + b < 30); <--- Prints 1 and 0, but why ??? */
 
    if (__builtin_uadd_overflow(a, b, &res)) {
      /* clang_analyzer_warnIfReached(); */
