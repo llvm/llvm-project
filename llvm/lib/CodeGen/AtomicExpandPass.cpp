@@ -211,6 +211,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   auto *RMWI = dyn_cast<AtomicRMWInst>(I);
   auto *CASI = dyn_cast<AtomicCmpXchgInst>(I);
 
+  bool MadeChange = false;
+
   // If the Size/Alignment is not supported, replace with a libcall.
   if (LI) {
     if (!LI->isAtomic())
@@ -220,6 +222,12 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       expandAtomicLoadToLibcall(LI);
       return true;
     }
+
+    if (TLI->shouldCastAtomicLoadInIR(LI) ==
+        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+      I = LI = convertAtomicLoadToIntegerType(LI);
+      MadeChange = true;
+    }
   } else if (SI) {
     if (!SI->isAtomic())
       return false;
@@ -228,35 +236,29 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       expandAtomicStoreToLibcall(SI);
       return true;
     }
+
+    if (TLI->shouldCastAtomicStoreInIR(SI) ==
+        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+      I = SI = convertAtomicStoreToIntegerType(SI);
+      MadeChange = true;
+    }
   } else if (RMWI) {
     if (!atomicSizeSupported(TLI, RMWI)) {
       expandAtomicRMWToLibcall(RMWI);
       return true;
+    }
+
+    if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
+        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+      I = RMWI = convertAtomicXchgToIntegerType(RMWI);
+      MadeChange = true;
     }
   } else if (CASI) {
     if (!atomicSizeSupported(TLI, CASI)) {
       expandAtomicCASToLibcall(CASI);
       return true;
     }
-  } else
-    return false;
 
-  bool MadeChange = false;
-
-  if (LI && TLI->shouldCastAtomicLoadInIR(LI) ==
-                TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-    I = LI = convertAtomicLoadToIntegerType(LI);
-    MadeChange = true;
-  } else if (SI && TLI->shouldCastAtomicStoreInIR(SI) ==
-                       TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-    I = SI = convertAtomicStoreToIntegerType(SI);
-    MadeChange = true;
-  } else if (RMWI &&
-             TLI->shouldCastAtomicRMWIInIR(RMWI) ==
-                 TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-    I = RMWI = convertAtomicXchgToIntegerType(RMWI);
-    MadeChange = true;
-  } else if (CASI) {
     // TODO: when we're ready to make the change at the IR level, we can
     // extend convertCmpXchgToInteger for floating point too.
     if (CASI->getCompareOperand()->getType()->isPointerTy()) {
@@ -265,7 +267,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       I = CASI = convertCmpXchgToIntegerType(CASI);
       MadeChange = true;
     }
-  }
+  } else
+    return false;
 
   if (TLI->shouldInsertFencesForAtomic(I)) {
     auto FenceOrdering = AtomicOrdering::Monotonic;
