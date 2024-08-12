@@ -2,7 +2,7 @@
 # RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
 
 # CHECK:      DW_TAG_variable
-# CHECK-NEXT:   DW_AT_location (DW_OP_implicit_pointer 0x2a +0)
+# CHECK-NEXT:   DW_AT_location (DW_OP_implicit_pointer 0x2a +4)
 
 --- !ELF
 FileHeader:
@@ -74,12 +74,12 @@ DWARF:
           Values:
             - Value:           0x0000000000000006
               BlockData:
-                - 0xa0
-                - 0x2a
+                - 0xa0 # DW_OP_implicit_pointer
+                - 0x2a # Section offset of parameter in the previous entry
                 - 0x00
                 - 0x00
                 - 0x00
-                - 0x00
+                - 0x04 # Pointer references location 4 bytes into value of previous entry
         - AbbrCode:        0x00000000
           Values:
         - AbbrCode:        0x00000000
