@@ -3863,72 +3863,28 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
+
   // [DR2369]
   // FIXME: We have to partially instantiate lambda's captures for constraint
   // evaluation.
-  if (!isLambdaCallOperator(FD) && !isLambdaConversionOperator(FD) &&
-      (!PartialOverloading ||
-       (CanonicalBuilder.size() ==
-        FunctionTemplate->getTemplateParameters()->size()))) {
-    FunctionTemplateDecl *Template = FunctionTemplate->getCanonicalDecl();
-    FunctionDecl *FD = Template->getTemplatedDecl();
-    SmallVector<const Expr *, 3> TemplateAC;
-    Template->getAssociatedConstraints(TemplateAC);
-    if (!TemplateAC.empty()) {
-
-      // Enter the scope of this instantiation. We don't use
-      // PushDeclContext because we don't have a scope.
-      LocalInstantiationScope Scope(*this);
-
-      // Collect the list of template arguments relative to the 'primary'
-      // template. We need the entire list, since the constraint is completely
-      // uninstantiated at this point.
-
-      MultiLevelTemplateArgumentList MLTAL(FD, SugaredBuilder, /*Final=*/false);
-      getTemplateInstantiationArgs(nullptr, FD->getLexicalDeclContext(),
-                                   /*Final=*/false,
-                                   /*Innermost=*/std::nullopt,
-                                   /*RelativeToPrimary=*/true,
-                                   /*Pattern=*/nullptr,
-                                   /*ForConstraintInstantiation=*/true,
-                                   /*SkipForSpecialization=*/false,
-                                   /*Merged=*/&MLTAL);
-
-      MultiLevelTemplateArgumentList JustTemplArgs(
-          Template, CanonicalDeducedArgumentList->asArray(),
-          /*Final=*/false);
-      if (addInstantiatedParametersToScope(nullptr, FD, Scope, JustTemplArgs))
-        return TemplateDeductionResult::MiscellaneousDeductionFailure;
-
-      if (FunctionTemplateDecl *FromMemTempl =
-              Template->getInstantiatedFromMemberTemplate()) {
-        while (FromMemTempl->getInstantiatedFromMemberTemplate())
-          FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
-        if (addInstantiatedParametersToScope(
-                nullptr, FromMemTempl->getTemplatedDecl(), Scope, MLTAL))
-          return TemplateDeductionResult::MiscellaneousDeductionFailure;
-      }
-
-      Qualifiers ThisQuals;
-      CXXRecordDecl *Record = nullptr;
-      if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
-        ThisQuals = Method->getMethodQualifiers();
-        Record = Method->getParent();
-      }
-      CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-      llvm::SmallVector<Expr *, 1> Converted;
-      if (CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
-                                      Info.getLocation(),
-                                      Info.AssociatedConstraintsSatisfaction))
-        return TemplateDeductionResult::MiscellaneousDeductionFailure;
-      if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-        Info.reset(TemplateArgumentList::CreateCopy(Context, SugaredBuilder),
-                   Info.takeCanonical());
-        return TemplateDeductionResult::ConstraintsNotSatisfied;
-      }
+  bool NeedConstraintChecking =
+      !PartialOverloading ||
+      CanonicalBuilder.size() ==
+          FunctionTemplate->getTemplateParameters()->size();
+  bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
+#if 1
+  if (!IsLambda && NeedConstraintChecking) {
+    if (CheckFunctionConstraintsWithoutInstantiation(
+            Info.getLocation(), FunctionTemplate->getCanonicalDecl(),
+            CanonicalBuilder, Info.AssociatedConstraintsSatisfaction))
+      return TemplateDeductionResult::MiscellaneousDeductionFailure;
+    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+      Info.reset(Info.takeSugared(),
+                 TemplateArgumentList::CreateCopy(Context, CanonicalBuilder));
+      return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
-
+#endif
   // C++ [temp.deduct.call]p10: [DR1391]
   //   If deduction succeeds for all parameters that contain
   //   template-parameters that participate in template argument deduction,
@@ -3975,9 +3931,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.decl]), those constraints are checked for satisfaction
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
-  if (!PartialOverloading ||
-      (CanonicalBuilder.size() ==
-       FunctionTemplate->getTemplateParameters()->size())) {
+  if (IsLambda && NeedConstraintChecking) {
     if (CheckInstantiatedFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CanonicalBuilder,
             Info.AssociatedConstraintsSatisfaction))

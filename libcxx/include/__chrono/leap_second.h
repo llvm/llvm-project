@@ -105,7 +105,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const sys_time<_Duration>& __x, 
   return !(__x < __y);
 }
 
-#    ifndef _LIBCPP_COMPILER_GCC
+#    if 0
 // This requirement cause a compilation loop in GCC-13 and running out of memory.
 // TODO TZDB Test whether GCC-14 fixes this.
 template <class _Duration>

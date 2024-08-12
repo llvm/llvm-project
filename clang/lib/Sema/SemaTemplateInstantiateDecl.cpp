@@ -34,6 +34,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -2136,7 +2137,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
-  if (TemplateParams && TemplateParams->size()) {
+  if (false && TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
     if (LastParam && LastParam->isImplicit() &&
@@ -2548,7 +2549,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
-  if (TemplateParams && TemplateParams->size()) {
+  if (false && TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
     if (LastParam && LastParam->isImplicit() &&
@@ -4577,17 +4578,17 @@ void Sema::addInstantiatedLocalVarsToScope(FunctionDecl *Function,
   }
 }
 
-static bool addInstantiatedParametersToScope(
-    Sema &SemaRef, MutableArrayRef<ParmVarDecl *> InstantiatedParamDecls,
-    const FunctionDecl *PatternDecl, LocalInstantiationScope &Scope,
+bool Sema::addInstantiatedParametersToScope(
+    FunctionDecl *Function, const FunctionDecl *PatternDecl,
+    LocalInstantiationScope &Scope,
     const MultiLevelTemplateArgumentList &TemplateArgs) {
   unsigned FParamIdx = 0;
   for (unsigned I = 0, N = PatternDecl->getNumParams(); I != N; ++I) {
     const ParmVarDecl *PatternParam = PatternDecl->getParamDecl(I);
     if (!PatternParam->isParameterPack()) {
       // Simple case: not a parameter pack.
-      assert(FParamIdx < InstantiatedParamDecls.size());
-      ParmVarDecl *FunctionParam = InstantiatedParamDecls[FParamIdx];
+      assert(FParamIdx < Function->getNumParams());
+      ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
       FunctionParam->setDeclName(PatternParam->getDeclName());
       // If the parameter's type is not dependent, update it to match the type
       // in the pattern. They can differ in top-level cv-qualifiers, and we want
@@ -4596,9 +4597,9 @@ static bool addInstantiatedParametersToScope(
       // it's instantiation-dependent.
       // FIXME: Updating the type to work around this is at best fragile.
       if (!PatternDecl->getType()->isDependentType()) {
-        QualType T = SemaRef.SubstType(PatternParam->getType(), TemplateArgs,
-                                       FunctionParam->getLocation(),
-                                       FunctionParam->getDeclName());
+        QualType T = SubstType(PatternParam->getType(), TemplateArgs,
+                               FunctionParam->getLocation(),
+                               FunctionParam->getDeclName());
         if (T.isNull())
           return true;
         FunctionParam->setType(T);
@@ -4612,19 +4613,18 @@ static bool addInstantiatedParametersToScope(
     // Expand the parameter pack.
     Scope.MakeInstantiatedLocalArgPack(PatternParam);
     std::optional<unsigned> NumArgumentsInExpansion =
-        SemaRef.getNumArgumentsInExpansion(PatternParam->getType(),
-                                           TemplateArgs);
+        getNumArgumentsInExpansion(PatternParam->getType(), TemplateArgs);
     if (NumArgumentsInExpansion) {
       QualType PatternType =
           PatternParam->getType()->castAs<PackExpansionType>()->getPattern();
       for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
-        ParmVarDecl *FunctionParam = InstantiatedParamDecls[FParamIdx];
+        ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
         FunctionParam->setDeclName(PatternParam->getDeclName());
         if (!PatternDecl->getType()->isDependentType()) {
-          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, Arg);
-          QualType T = SemaRef.SubstType(PatternType, TemplateArgs,
-                                         FunctionParam->getLocation(),
-                                         FunctionParam->getDeclName());
+          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this, Arg);
+          QualType T =
+              SubstType(PatternType, TemplateArgs, FunctionParam->getLocation(),
+                        FunctionParam->getDeclName());
           if (T.isNull())
             return true;
           FunctionParam->setType(T);
@@ -4637,25 +4637,6 @@ static bool addInstantiatedParametersToScope(
   }
 
   return false;
-}
-
-bool Sema::addInstantiatedParametersToScope(
-    FunctionDecl *Function, const FunctionDecl *PatternDecl,
-    LocalInstantiationScope &Scope,
-    const MultiLevelTemplateArgumentList &TemplateArgs) {
-  if (Function)
-    return ::addInstantiatedParametersToScope(*this, Function->parameters(),
-                                              PatternDecl, Scope, TemplateArgs);
-  FunctionTypeLoc TypeLoc = PatternDecl->getFunctionTypeLoc();
-  assert(!TypeLoc.isNull() && "Invalid function TypeLoc?");
-  SmallVector<QualType> ParamTypes;
-  SmallVector<ParmVarDecl *> OutParams;
-  Sema::ExtParameterInfoBuilder ExtParamInfos;
-  if (SubstParmTypes(PatternDecl->getLocation(), TypeLoc.getParams(), nullptr,
-                     TemplateArgs, ParamTypes, &OutParams, ExtParamInfos))
-    return true;
-  return ::addInstantiatedParametersToScope(*this, OutParams, PatternDecl,
-                                            Scope, TemplateArgs);
 }
 
 bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,

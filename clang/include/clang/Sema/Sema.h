@@ -14450,6 +14450,11 @@ public:
       ArrayRef<TemplateArgument> TemplateArgs,
       ConstraintSatisfaction &Satisfaction);
 
+  bool CheckFunctionConstraintsWithoutInstantiation(
+      SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
+      ArrayRef<TemplateArgument> TemplateArgs,
+      ConstraintSatisfaction &Satisfaction);
+
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.
   /// \param First whether this is the first time an unsatisfied constraint is

@@ -461,13 +461,17 @@ static ExprResult calculateConstraintSatisfaction(
           return ExprError();
 
         llvm::FoldingSetNodeID ID;
+        // llvm::errs() << "Preparing for checking " << Template << "\n";
         if (Template &&
             DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, MLTAL)) {
+          // Template->dump();
           Satisfaction.IsSatisfied = false;
           Satisfaction.ContainsErrors = true;
+          // __builtin_trap();
           return ExprEmpty();
         }
 
+        // llvm::errs() << "Pushing " << Template << "\n";
         SatisfactionStackRAII StackRAII(S, Template, ID);
 
         // We do not want error diagnostics escaping here.
@@ -1119,6 +1123,139 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,
+                                     PointOfInstantiation, Satisfaction);
+}
+
+namespace {
+
+// We employ a TreeTransform because RAV couldn't recurse into a bunch of
+// Exprs e.g. SizeOfPackExpr, CXXFoldExpr, etc.
+// FIXME: Could we do the Decl instantiation as we substitute into
+// the constraint expressions?
+class InstantiateReferencedParameter
+    : public TreeTransform<InstantiateReferencedParameter> {
+  const MultiLevelTemplateArgumentList &TemplateArgs;
+
+  DeclContext *FunctionDC;
+
+  using inherited = TreeTransform<InstantiateReferencedParameter>;
+
+  bool instantiateParameterToScope(ParmVarDecl *OldParm,
+                                   LocalInstantiationScope &Scope) {
+    // Current context might have been changed by lambda expressions. So resume
+    // it before we substitute parameters.
+    Sema::ContextRAII Context(SemaRef, FunctionDC);
+    std::optional<unsigned> NumExpansions;
+    ParmVarDecl *NewParm = nullptr;
+    unsigned IndexAdjustment = 0;
+    if (OldParm->isParameterPack()) {
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      TypeLoc TL = OldParm->getTypeSourceInfo()->getTypeLoc();
+      PackExpansionTypeLoc ExpansionTL = TL.castAs<PackExpansionTypeLoc>();
+      TypeLoc Pattern = ExpansionTL.getPatternLoc();
+      SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+
+      assert(!Unexpanded.empty() &&
+             "A pack Decl doesn't contain anything unexpanded?");
+
+      bool ShouldExpand = false;
+      bool RetainExpansion = false;
+      std::optional<unsigned> OrigNumExpansions =
+          ExpansionTL.getTypePtr()->getNumExpansions();
+      NumExpansions = OrigNumExpansions;
+      if (SemaRef.CheckParameterPacksForExpansion(
+              ExpansionTL.getEllipsisLoc(), Pattern.getSourceRange(),
+              Unexpanded, TemplateArgs, ShouldExpand, RetainExpansion,
+              NumExpansions))
+        return true;
+
+      assert(ShouldExpand && !RetainExpansion &&
+             "Shouldn't retain an expansion here!");
+      Scope.MakeInstantiatedLocalArgPack(OldParm);
+
+      for (unsigned I = 0; I != *NumExpansions; ++I) {
+        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+        ParmVarDecl *NewParm = SemaRef.SubstParmVarDecl(
+            OldParm, TemplateArgs, /*indexAdjustment=*/IndexAdjustment++,
+            NumExpansions, /*ExpectParameterPack=*/false,
+            /*EvaluateConstraints=*/false);
+        if (!NewParm)
+          return true;
+      }
+
+      return false;
+    }
+    NewParm = SemaRef.SubstParmVarDecl(OldParm, TemplateArgs,
+                                       /*indexAdjustment=*/IndexAdjustment,
+                                       std::nullopt,
+                                       /*ExpectParameterPack=*/false);
+    if (!NewParm)
+      return true;
+    Scope.InstantiatedLocal(OldParm, NewParm);
+    return false;
+  }
+
+public:
+  InstantiateReferencedParameter(
+      Sema &SemaRef, const MultiLevelTemplateArgumentList &TemplateArgs,
+      DeclContext *FunctionDC)
+      : inherited(SemaRef), TemplateArgs(TemplateArgs), FunctionDC(FunctionDC) {
+  }
+
+  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
+    if (auto *PVD = dyn_cast<ParmVarDecl>(D))
+      instantiateParameterToScope(PVD, *SemaRef.CurrentInstantiationScope);
+    return D;
+  }
+
+  void TraverseConstraintExprs(ArrayRef<const Expr *> Exprs) {
+    for (auto *E : Exprs)
+      TransformExpr(const_cast<Expr *>(E));
+  }
+};
+
+} // namespace
+
+bool Sema::CheckFunctionConstraintsWithoutInstantiation(
+    SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
+    ArrayRef<TemplateArgument> TemplateArgs,
+    ConstraintSatisfaction &Satisfaction) {
+  FunctionDecl *FD = Template->getTemplatedDecl();
+  SmallVector<const Expr *, 3> TemplateAC;
+  Template->getAssociatedConstraints(TemplateAC);
+  if (TemplateAC.empty()) {
+    Satisfaction.IsSatisfied = true;
+    return false;
+  }
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  LocalInstantiationScope Scope(*this);
+
+  // Collect the list of template arguments relative to the 'primary'
+  // template. We need the entire list, since the constraint is completely
+  // uninstantiated at this point.
+  DeclContext *NextDC = FD->getFriendObjectKind() ? FD->getLexicalDeclContext()
+                                                  : FD->getDeclContext();
+  MultiLevelTemplateArgumentList MLTAL =
+      getTemplateInstantiationArgs(FD, NextDC,
+                                   /*Final=*/false,
+                                   /*Innermost=*/TemplateArgs,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true);
+
+  InstantiateReferencedParameter(*this, MLTAL, FD)
+      .TraverseConstraintExprs(TemplateAC);
+
+  Qualifiers ThisQuals;
+  CXXRecordDecl *Record = nullptr;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
+    ThisQuals = Method->getMethodQualifiers();
+    Record = Method->getParent();
+  }
+  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+  return CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
                                      PointOfInstantiation, Satisfaction);
 }
 
