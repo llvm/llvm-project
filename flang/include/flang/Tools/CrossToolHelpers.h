@@ -131,7 +131,9 @@ struct OffloadModuleOpts {
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
       bool OpenMPIsGPU, bool OpenMPForceUSM, uint32_t OpenMPVersion,
-      std::string OMPHostIRFile = {}, bool NoGPULib = false)
+      std::string OMPHostIRFile = {},
+      const std::vector<llvm::Triple> &OMPTargetTriples = {},
+      bool NoGPULib = false)
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
@@ -139,7 +141,9 @@ struct OffloadModuleOpts {
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
         OpenMPForceUSM(OpenMPForceUSM), OpenMPVersion(OpenMPVersion),
-        OMPHostIRFile(OMPHostIRFile), NoGPULib(NoGPULib) {}
+        OMPHostIRFile(OMPHostIRFile),
+        OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
+        NoGPULib(NoGPULib) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
@@ -150,7 +154,7 @@ struct OffloadModuleOpts {
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
         OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPForceUSM(Opts.OpenMPForceUSM),
         OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile),
-        NoGPULib(Opts.NoGPULib) {}
+        OMPTargetTriples(Opts.OMPTargetTriples), NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -162,6 +166,7 @@ struct OffloadModuleOpts {
   bool OpenMPForceUSM = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
+  std::vector<llvm::Triple> OMPTargetTriples = {};
   bool NoGPULib = false;
 };
 
@@ -185,6 +190,9 @@ struct OffloadModuleOpts {
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
     }
+    auto strTriples = llvm::to_vector(llvm::map_range(Opts.OMPTargetTriples,
+        [](llvm::Triple triple) { return triple.normalize(); }));
+    offloadMod.setTargetTriples(strTriples);
   }
 }
 

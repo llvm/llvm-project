@@ -1313,8 +1313,8 @@ public:
                                      CodeGenFunction &CGF) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store =
-        new llvm::StoreInst(value, addr.emitRawPointer(CGF), &block->back());
+    auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
+                                     block->back().getIterator());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
@@ -3310,9 +3310,9 @@ public:
   const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const FieldDecl *FAMDecl,
-                                      const FieldDecl *CountDecl);
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -3904,6 +3904,7 @@ public:
   void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
   void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
+  void EmitOMPAssumeDirective(const OMPAssumeDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -4850,9 +4851,10 @@ public:
   void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
                             ExprValueKind SrcKind);
 
-  /// Build all the stores needed to initialize an aggregate at Dest with the
-  /// value Val.
-  void EmitAggregateStore(llvm::Value *Val, Address Dest, bool DestIsVolatile);
+  /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
+  /// to at most \arg DstSize bytes.
+  void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
+                          bool DstIsVolatile);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
@@ -5308,7 +5310,7 @@ public:
       llvm::SmallVector<StringRef, 8> Features;
 
       Conds(StringRef Arch, ArrayRef<StringRef> Feats)
-          : Architecture(Arch), Features(Feats.begin(), Feats.end()) {}
+          : Architecture(Arch), Features(Feats) {}
     } Conditions;
 
     MultiVersionResolverOption(llvm::Function *F, StringRef Arch,

@@ -509,8 +509,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   return true;
 }
 
-bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
-                                        uint32_t &ProbeCount,
+template <bool IsTopLevelFunc>
+bool MCPseudoProbeDecoder::countRecords(bool &Discard, uint32_t &ProbeCount,
                                         uint32_t &InlinedCount,
                                         const Uint64Set &GuidFilter) {
   if (!IsTopLevelFunc)
@@ -583,7 +583,7 @@ bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
   }
 
   for (uint32_t I = 0; I < ChildrenToProcess; I++)
-    if (!countRecords(false, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<false>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
   return true;
 }
@@ -600,7 +600,7 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   End = Data + Size;
   bool Discard = false;
   while (Data < End) {
-    if (!countRecords(true, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<true>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
     TopLevelFuncs += !Discard;
   }

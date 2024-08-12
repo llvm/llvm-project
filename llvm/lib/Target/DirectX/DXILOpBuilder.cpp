@@ -208,8 +208,8 @@ static StructType *getHandleType(LLVMContext &Ctx) {
                                Ctx);
 }
 
-static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
-  auto &Ctx = OverloadTy->getContext();
+static Type *getTypeFromParameterKind(ParameterKind Kind, LLVMContext &Ctx,
+                                      Type *OverloadTy) {
   switch (Kind) {
   case ParameterKind::Void:
     return Type::getVoidTy(Ctx);
@@ -285,28 +285,26 @@ static ShaderKind getShaderKindEnum(Triple::EnvironmentType EnvType) {
 /// the following prototype
 ///     OverloadType dx.op.<opclass>.<return-type>(int opcode, <param types>)
 /// <param-types> are constructed from types in Prop.
-/// \param Prop  Structure containing DXIL Operation properties based on
-///               its specification in DXIL.td.
-/// \param OverloadTy Return type to be used to construct DXIL function type.
 static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
-                                           Type *ReturnTy, Type *OverloadTy) {
+                                           LLVMContext &Context,
+                                           Type *OverloadTy) {
   SmallVector<Type *> ArgTys;
 
   const ParameterKind *ParamKinds = getOpCodeParameterKind(*Prop);
 
-  // Add ReturnTy as return type of the function
-  ArgTys.emplace_back(ReturnTy);
+  assert(Prop->NumOfParameters && "No return type?");
+  // Add return type of the function
+  Type *ReturnTy = getTypeFromParameterKind(ParamKinds[0], Context, OverloadTy);
 
   // Add DXIL Opcode value type viz., Int32 as first argument
-  ArgTys.emplace_back(Type::getInt32Ty(OverloadTy->getContext()));
+  ArgTys.emplace_back(Type::getInt32Ty(Context));
 
   // Add DXIL Operation parameter types as specified in DXIL properties
-  for (unsigned I = 0; I < Prop->NumOfParameters; ++I) {
+  for (unsigned I = 1; I < Prop->NumOfParameters; ++I) {
     ParameterKind Kind = ParamKinds[I];
-    ArgTys.emplace_back(getTypeFromParameterKind(Kind, OverloadTy));
+    ArgTys.emplace_back(getTypeFromParameterKind(Kind, Context, OverloadTy));
   }
-  return FunctionType::get(
-      ArgTys[0], ArrayRef<Type *>(&ArgTys[1], ArgTys.size() - 1), false);
+  return FunctionType::get(ReturnTy, ArgTys, /*isVarArg=*/false);
 }
 
 /// Get index of the property from PropList valid for the most recent
@@ -347,107 +345,91 @@ DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {
   }
 }
 
-CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
-                                          Type *OverloadTy,
-                                          SmallVector<Value *> Args) {
+static Error makeOpError(dxil::OpCode OpCode, Twine Msg) {
+  return make_error<StringError>(
+      Twine("Cannot create ") + getOpCodeName(OpCode) + " operation: " + Msg,
+      inconvertibleErrorCode());
+}
 
+Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
+                                                ArrayRef<Value *> Args,
+                                                Type *RetTy) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
+
+  Type *OverloadTy = nullptr;
+  if (Prop->OverloadParamIndex == 0) {
+    if (!RetTy)
+      return makeOpError(OpCode, "Op overloaded on unknown return type");
+    OverloadTy = RetTy;
+  } else if (Prop->OverloadParamIndex > 0) {
+    // The index counts including the return type
+    unsigned ArgIndex = Prop->OverloadParamIndex - 1;
+    if (static_cast<unsigned>(ArgIndex) >= Args.size())
+      return makeOpError(OpCode, "Wrong number of arguments");
+    OverloadTy = Args[ArgIndex]->getType();
+  }
+  FunctionType *DXILOpFT =
+      getDXILOpFunctionType(Prop, M.getContext(), OverloadTy);
+
   std::optional<size_t> OlIndexOrErr =
       getPropIndex(ArrayRef(Prop->Overloads), DXILVersion);
-  if (!OlIndexOrErr.has_value()) {
-    report_fatal_error(Twine(getOpCodeName(OpCode)) +
-                           ": No valid overloads found for DXIL Version - " +
-                           DXILVersion.getAsString(),
-                       /*gen_crash_diag*/ false);
-  }
+  if (!OlIndexOrErr.has_value())
+    return makeOpError(OpCode, Twine("No valid overloads for DXIL version ") +
+                                   DXILVersion.getAsString());
+
   uint16_t ValidTyMask = Prop->Overloads[*OlIndexOrErr].ValidTys;
 
-  OverloadKind Kind = getOverloadKind(OverloadTy);
+  // If we don't have an overload type, use the function's return type. This is
+  // a bit of a hack, but it's necessary to get the type suffix on unoverloaded
+  // DXIL ops correct, like `dx.op.threadId.i32`.
+  OverloadKind Kind =
+      getOverloadKind(OverloadTy ? OverloadTy : DXILOpFT->getReturnType());
 
   // Check if the operation supports overload types and OverloadTy is valid
   // per the specified types for the operation
   if ((ValidTyMask != OverloadKind::UNDEFINED) &&
-      (ValidTyMask & (uint16_t)Kind) == 0) {
-    report_fatal_error(Twine("Invalid Overload Type for DXIL operation - ") +
-                           getOpCodeName(OpCode),
-                       /* gen_crash_diag=*/false);
-  }
+      (ValidTyMask & (uint16_t)Kind) == 0)
+    return makeOpError(OpCode, "Invalid overload type");
 
   // Perform necessary checks to ensure Opcode is valid in the targeted shader
   // kind
   std::optional<size_t> StIndexOrErr =
       getPropIndex(ArrayRef(Prop->Stages), DXILVersion);
-  if (!StIndexOrErr.has_value()) {
-    report_fatal_error(Twine(getOpCodeName(OpCode)) +
-                           ": No valid stages found for DXIL Version - " +
-                           DXILVersion.getAsString(),
-                       /*gen_crash_diag*/ false);
-  }
+  if (!StIndexOrErr.has_value())
+    return makeOpError(OpCode, Twine("No valid stage for DXIL version ") +
+                                   DXILVersion.getAsString());
+
   uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
 
   // Ensure valid shader stage properties are specified
-  if (ValidShaderKindMask == ShaderKind::removed) {
-    report_fatal_error(
-        Twine(DXILVersion.getAsString()) +
-            ": Unsupported Target Shader Stage for DXIL operation - " +
-            getOpCodeName(OpCode),
-        /*gen_crash_diag*/ false);
-  }
+  if (ValidShaderKindMask == ShaderKind::removed)
+    return makeOpError(OpCode, "Operation has been removed");
 
   // Shader stage need not be validated since getShaderKindEnum() fails
   // for unknown shader stage.
 
   // Verify the target shader stage is valid for the DXIL operation
   ShaderKind ModuleStagekind = getShaderKindEnum(ShaderStage);
-  if (!(ValidShaderKindMask & ModuleStagekind)) {
-    auto ShaderEnvStr = Triple::getEnvironmentTypeName(ShaderStage);
-    report_fatal_error(Twine(ShaderEnvStr) +
-                           " : Invalid Shader Stage for DXIL operation - " +
-                           getOpCodeName(OpCode) + " for DXIL Version " +
-                           DXILVersion.getAsString(),
-                       /*gen_crash_diag*/ false);
-  }
+  if (!(ValidShaderKindMask & ModuleStagekind))
+    return makeOpError(OpCode, "Invalid stage");
 
   std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);
-  FunctionCallee DXILFn;
-  // Get the function with name DXILFnName, if one exists
-  if (auto *Func = M.getFunction(DXILFnName)) {
-    DXILFn = FunctionCallee(Func);
-  } else {
-    // Construct and add a function with name DXILFnName
-    FunctionType *DXILOpFT = getDXILOpFunctionType(Prop, ReturnTy, OverloadTy);
-    DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
-  }
+  FunctionCallee DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
 
-  return B.CreateCall(DXILFn, Args);
+  // We need to inject the opcode as the first argument.
+  SmallVector<Value *> OpArgs;
+  OpArgs.push_back(B.getInt32(llvm::to_underlying(OpCode)));
+  OpArgs.append(Args.begin(), Args.end());
+
+  return B.CreateCall(DXILFn, OpArgs);
 }
 
-Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
-
-  const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
-  // If DXIL Op has no overload parameter, just return the
-  // precise return type specified.
-  if (Prop->OverloadParamIndex < 0) {
-    return FT->getReturnType();
-  }
-
-  // Consider FT->getReturnType() as default overload type, unless
-  // Prop->OverloadParamIndex != 0.
-  Type *OverloadType = FT->getReturnType();
-  if (Prop->OverloadParamIndex != 0) {
-    // Skip Return Type.
-    OverloadType = FT->getParamType(Prop->OverloadParamIndex - 1);
-  }
-
-  const ParameterKind *ParamKinds = getOpCodeParameterKind(*Prop);
-  auto Kind = ParamKinds[Prop->OverloadParamIndex];
-  // For ResRet and CBufferRet, OverloadTy is in field of StructType.
-  if (Kind == ParameterKind::CBufferRet ||
-      Kind == ParameterKind::ResourceRet) {
-    auto *ST = cast<StructType>(OverloadType);
-    OverloadType = ST->getElementType(0);
-  }
-  return OverloadType;
+CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> &Args,
+                                  Type *RetTy) {
+  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, RetTy);
+  if (Error E = Result.takeError())
+    llvm_unreachable("Invalid arguments for operation");
+  return *Result;
 }
 
 const char *DXILOpBuilder::getOpCodeName(dxil::OpCode DXILOp) {

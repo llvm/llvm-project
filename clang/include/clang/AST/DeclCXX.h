@@ -1206,6 +1206,13 @@ public:
     return D.HasPublicFields || D.HasProtectedFields || D.HasPrivateFields;
   }
 
+  /// If this is a standard-layout class or union, any and all data members will
+  /// be declared in the same type.
+  ///
+  /// This retrieves the type where any fields are declared,
+  /// or the current class if there is no class with fields.
+  const CXXRecordDecl *getStandardLayoutBaseWithFields() const;
+
   /// Whether this class is polymorphic (C++ [class.virtual]),
   /// which means that the class contains or inherits a virtual function.
   bool isPolymorphic() const { return data().Polymorphic; }

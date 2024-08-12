@@ -16,6 +16,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -74,16 +75,13 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
 
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
-  DXILOpBuilder DXILB(M, B);
-  Type *OverloadTy = DXILB.getOverloadTy(DXILOp, F.getFunctionType());
+  DXILOpBuilder OpBuilder(M, B);
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
 
     SmallVector<Value *> Args;
-    Value *DXILOpArg = B.getInt32(static_cast<unsigned>(DXILOp));
-    Args.emplace_back(DXILOpArg);
     B.SetInsertPoint(CI);
     if (isVectorArgExpansion(F)) {
       SmallVector<Value *> NewArgs = argVectorFlatten(CI, B);
@@ -91,10 +89,18 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     } else
       Args.append(CI->arg_begin(), CI->arg_end());
 
-    CallInst *DXILCI =
-        DXILB.createDXILOpCall(DXILOp, F.getReturnType(), OverloadTy, Args);
+    Expected<CallInst *> OpCallOrErr = OpBuilder.tryCreateOp(DXILOp, Args,
+                                                             F.getReturnType());
+    if (Error E = OpCallOrErr.takeError()) {
+      std::string Message(toString(std::move(E)));
+      DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
+                                     CI->getDebugLoc());
+      M.getContext().diagnose(Diag);
+      continue;
+    }
+    CallInst *OpCall = *OpCallOrErr;
 
-    CI->replaceAllUsesWith(DXILCI);
+    CI->replaceAllUsesWith(OpCall);
     CI->eraseFromParent();
   }
   if (F.user_empty())

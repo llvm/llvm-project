@@ -226,6 +226,8 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " primitive-array";
   else if (isCompositeArray())
     OS << " composite-array";
+  else if (isUnion())
+    OS << " union";
   else if (isRecord())
     OS << " record";
   else if (isPrimitive())
@@ -250,6 +252,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "IsInitialized: " << IsInitialized << "\n";
   OS << "IsBase: " << IsBase << "\n";
   OS << "IsActive: " << IsActive << "\n";
+  OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "Desc: ";
   if (Desc)

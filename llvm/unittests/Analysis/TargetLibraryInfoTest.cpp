@@ -472,6 +472,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, %struct*)\n"
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, "
       "%struct*, i8)\n"
+      "declare %struct @__size_returning_new(i64)\n"
+      "declare %struct @__size_returning_new_hot_cold(i64, i8)\n"
+      "declare %struct @__size_returning_new_aligned(i64, i64)\n"
+      "declare %struct @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n"
 
       "declare void @\"??3@YAXPEAX@Z\"(i8*)\n"
       "declare void @\"??3@YAXPEAXAEBUnothrow_t@std@@@Z\"(i8*, %struct*)\n"

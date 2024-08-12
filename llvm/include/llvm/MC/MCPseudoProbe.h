@@ -372,8 +372,9 @@ public:
 
   // Decode pseudo_probe section to count the number of probes and inlined
   // function records for each function record.
-  bool countRecords(bool IsTopLevelFunc, bool &Discard, uint32_t &ProbeCount,
-                    uint32_t &InlinedCount, const Uint64Set &GuidFilter);
+  template <bool IsTopLevelFunc>
+  bool countRecords(bool &Discard, uint32_t &ProbeCount, uint32_t &InlinedCount,
+                    const Uint64Set &GuidFilter);
 
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.

@@ -804,7 +804,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -887,7 +887,7 @@ void CudaToolChain::addClangTargetOptions(
     }
 
     // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingLTO(/* IsOffload */ true))
+    if (getDriver().isUsingOffloadLTO())
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
