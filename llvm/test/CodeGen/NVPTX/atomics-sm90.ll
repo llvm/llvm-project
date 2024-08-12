@@ -63,7 +63,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ; CHECKPTX71-NEXT:    not.b32 %r3, %r27;
 ; CHECKPTX71-NEXT:    ld.u32 %r54, [%r1];
 ; CHECKPTX71-NEXT:    cvt.f32.bf16 %f2, %rs1;
-; CHECKPTX71-NEXT:  $L__BB0_1: // %atomicrmw.start
+; CHECKPTX71-NEXT:  $L__BB0_1: // %atomicrmw.start45
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKPTX71-NEXT:    shr.u32 %r28, %r54, %r2;
 ; CHECKPTX71-NEXT:    cvt.u16.u32 %rs2, %r28;
@@ -78,9 +78,9 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ; CHECKPTX71-NEXT:    setp.ne.s32 %p1, %r6, %r54;
 ; CHECKPTX71-NEXT:    mov.u32 %r54, %r6;
 ; CHECKPTX71-NEXT:    @%p1 bra $L__BB0_1;
-; CHECKPTX71-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECKPTX71-NEXT:  // %bb.2: // %atomicrmw.end44
 ; CHECKPTX71-NEXT:    ld.u32 %r55, [%r1];
-; CHECKPTX71-NEXT:  $L__BB0_3: // %atomicrmw.start9
+; CHECKPTX71-NEXT:  $L__BB0_3: // %atomicrmw.start27
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKPTX71-NEXT:    shr.u32 %r33, %r55, %r2;
 ; CHECKPTX71-NEXT:    cvt.u16.u32 %rs6, %r33;
@@ -95,14 +95,14 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ; CHECKPTX71-NEXT:    setp.ne.s32 %p2, %r9, %r55;
 ; CHECKPTX71-NEXT:    mov.u32 %r55, %r9;
 ; CHECKPTX71-NEXT:    @%p2 bra $L__BB0_3;
-; CHECKPTX71-NEXT:  // %bb.4: // %atomicrmw.end8
+; CHECKPTX71-NEXT:  // %bb.4: // %atomicrmw.end26
 ; CHECKPTX71-NEXT:    and.b32 %r10, %r22, -4;
 ; CHECKPTX71-NEXT:    shl.b32 %r38, %r22, 3;
 ; CHECKPTX71-NEXT:    and.b32 %r11, %r38, 24;
 ; CHECKPTX71-NEXT:    shl.b32 %r40, %r26, %r11;
 ; CHECKPTX71-NEXT:    not.b32 %r12, %r40;
 ; CHECKPTX71-NEXT:    ld.global.u32 %r56, [%r10];
-; CHECKPTX71-NEXT:  $L__BB0_5: // %atomicrmw.start27
+; CHECKPTX71-NEXT:  $L__BB0_5: // %atomicrmw.start9
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKPTX71-NEXT:    shr.u32 %r41, %r56, %r11;
 ; CHECKPTX71-NEXT:    cvt.u16.u32 %rs10, %r41;
@@ -117,14 +117,14 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ; CHECKPTX71-NEXT:    setp.ne.s32 %p3, %r15, %r56;
 ; CHECKPTX71-NEXT:    mov.u32 %r56, %r15;
 ; CHECKPTX71-NEXT:    @%p3 bra $L__BB0_5;
-; CHECKPTX71-NEXT:  // %bb.6: // %atomicrmw.end26
+; CHECKPTX71-NEXT:  // %bb.6: // %atomicrmw.end8
 ; CHECKPTX71-NEXT:    and.b32 %r16, %r23, -4;
 ; CHECKPTX71-NEXT:    shl.b32 %r46, %r23, 3;
 ; CHECKPTX71-NEXT:    and.b32 %r17, %r46, 24;
 ; CHECKPTX71-NEXT:    shl.b32 %r48, %r26, %r17;
 ; CHECKPTX71-NEXT:    not.b32 %r18, %r48;
 ; CHECKPTX71-NEXT:    ld.shared.u32 %r57, [%r16];
-; CHECKPTX71-NEXT:  $L__BB0_7: // %atomicrmw.start45
+; CHECKPTX71-NEXT:  $L__BB0_7: // %atomicrmw.start
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECKPTX71-NEXT:    shr.u32 %r49, %r57, %r17;
 ; CHECKPTX71-NEXT:    cvt.u16.u32 %rs14, %r49;
@@ -139,7 +139,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ; CHECKPTX71-NEXT:    setp.ne.s32 %p4, %r21, %r57;
 ; CHECKPTX71-NEXT:    mov.u32 %r57, %r21;
 ; CHECKPTX71-NEXT:    @%p4 bra $L__BB0_7;
-; CHECKPTX71-NEXT:  // %bb.8: // %atomicrmw.end44
+; CHECKPTX71-NEXT:  // %bb.8: // %atomicrmw.end
 ; CHECKPTX71-NEXT:    ret;
   %r1 = atomicrmw fadd ptr %dp0, bfloat %val seq_cst
   %r2 = atomicrmw fadd ptr %dp0, bfloat 1.0 seq_cst
