@@ -1,3 +1,18 @@
+// Test that PIE is the default for main components
+
+// RUN: %clang --target=x86_64-scei-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-PIE %s
+
+// CHECK-PIE: {{ld(\.exe)?}}"
+// CHECK-PIE-SAME: "-pie"
+
+// RUN: %clang --target=x86_64-scei-ps5 -no-pie %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-PIE %s
+// RUN: %clang --target=x86_64-scei-ps5 -r %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-PIE %s
+// RUN: %clang --target=x86_64-scei-ps5 -shared %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-PIE %s
+// RUN: %clang --target=x86_64-scei-ps5 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-PIE %s
+
+// CHECK-NO-PIE: {{ld(\.exe)?}}"
+// CHECK-NO-PIE-NOT: "-pie"
+
 // Test that -static is forwarded to the linker
 
 // RUN: %clang --target=x86_64-scei-ps5 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC %s
