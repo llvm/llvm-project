@@ -5233,8 +5233,7 @@ define <4 x i32> @fptoui_4f16_to_4i32(<4 x half> %a) nounwind {
 ; AVX512-FASTLANE-LABEL: fptoui_4f16_to_4i32:
 ; AVX512-FASTLANE:       # %bb.0:
 ; AVX512-FASTLANE-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX512-FASTLANE-NEXT:    vcvttps2udq %ymm0, %ymm0
-; AVX512-FASTLANE-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-FASTLANE-NEXT:    vcvttps2udq %xmm0, %xmm0
 ; AVX512-FASTLANE-NEXT:    vzeroupper
 ; AVX512-FASTLANE-NEXT:    retq
   %cvt = fptoui <4 x half> %a to <4 x i32>
