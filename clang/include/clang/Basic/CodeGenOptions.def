@@ -40,8 +40,6 @@ CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
 CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(SSE2AVX          , 1, 0)   ///< -msse2avx
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
-CODEGENOPT(HeterogeneousDwarf, 1, 0) ///< Enable DWARF extensions for
-                                     ///< heterogeneous debugging.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
 CODEGENOPT(AssumeUniqueVTables , 1, 1) ///< Assume a class has only one vtable.

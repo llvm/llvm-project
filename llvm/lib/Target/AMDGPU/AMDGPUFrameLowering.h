@@ -37,6 +37,10 @@ public:
                                               DIExprBuilder &Builder,
                                               DIExprBuilder::Iterator BI,
                                               Type *ResultType) const override;
+
+  DIExpression *lowerFIArgToFPArg(const MachineFunction &MF,
+                                  const DIExpression *Expr, uint64_t ArgIndex,
+                                  StackOffset Offset) const override;
 };
 
 } // end namespace llvm

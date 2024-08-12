@@ -920,7 +920,9 @@ specifies implicit location storage ``ILS`` and offset 0. ``ILS`` has value
 
 ``L'`` comprises one implicit location description ``IL``. ``IL`` specifies
 implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``V`` and size
-``bitsizeof(T')``.
+``bitsizeof(T')``. If ``bitsizeof(T')`` is greater than ``bitsizeof(T)`` and
+``T'`` and ``T`` are both integral types, then the expression is not
+well-formed.
 
 ``V`` is the value ``read(L, T)`` converted to type ``T'``.
 
@@ -928,6 +930,41 @@ implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``V`` and size
 debug format. For example, when the target debug format is DWARF, the
 conversions used should be limited to those supported by the* ``DW_OP_convert``
 *operation.]*
+
+*[Note: The restriction on extending integral types can be resolved by using
+either ``DIOpSExt(T')`` or ``DIOpZExt(T')``.]*
+
+``DIOpZExt``
+^^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpZExt(T':type)
+   { (L:T) -> (L':T') }
+
+``L'`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``V`` and size
+``bitsizeof(T')``. If ``T`` and ``T'`` are not integral types, or if
+``bitsizeof(T')`` is less than or equal to ``bitsizeof(T)`` then the expression
+is not well-formed.
+
+``V`` is the value ``read(L, T)`` zero-extended to type ``T'``.
+
+``DIOpSExt``
+^^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpSExt(T':type)
+   { (L:T) -> (L':T') }
+
+``L'`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``V`` and size
+``bitsizeof(T')``. If ``T`` and ``T'`` are not integral types, or if
+``bitsizeof(T')`` is less than or equal to ``bitsizeof(T)`` then the expression
+is not well-formed.
+
+``V`` is the value ``read(L, T)`` sign-extended to type ``T'``.
 
 ``DIOpReinterpret``
 ^^^^^^^^^^^^^^^^^^^
@@ -1136,19 +1173,33 @@ implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
 implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
 / read(V1, T)`` and size ``bitsizeof(T)``.
 
-``DIOpShr``
-^^^^^^^^^^^
+``DIOpLShr``
+^^^^^^^^^^^^
 
 .. code:: llvm
 
-   DIOpShr()
+   DIOpLShr()
    { (L1:T) (L2:T) -> (L:T) }
 
 ``L`` comprises one implicit location description ``IL``. ``IL`` specifies
 implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
->> read(V1, t)`` and size ``bitsizeof(T)``. If ``T`` is an unsigned integral
-type, then the result is filled with 0 bits. If ``T`` is a signed integral type,
-then the result is filled with the sign bit of ``V1``.
+>> read(V1, T)`` and size ``bitsizeof(T)``. The higher order bits are filled
+with zeros.
+
+If ``T`` is not an integral type, then the expression is not well-formed.
+
+``DIOpAShr``
+^^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpAShr()
+   { (L1:T) (L2:T) -> (L:T) }
+
+``L`` comprises one implicit location description ``IL``. ``IL`` specifies
+implicit location storage ``ILS`` and offset 0. ``ILS`` has value ``read(V2, T)
+>> read(V1, T)`` and size ``bitsizeof(T)``. The higher order bits are filled
+with the value of the sign bit.
 
 If ``T`` is not an integral type, then the expression is not well-formed.
 
@@ -1182,6 +1233,18 @@ model.
 
 If ``T`` is not an integral type or the source language is not implemented using
 a SIMD or SIMT execution model, then the expression is not well-formed.
+
+``DIOpFragment``
+^^^^^^^^^^^^^^^^
+
+.. code:: llvm
+
+   DIOpFragment(O:unsigned, S:unsigned)
+   { -> }
+
+An operation with no effect, used only as a means to encode the "fragment"
+position of the debug intrinsic or metadata which refers to the expression in
+terms of an bit offset ``O`` and bit size ``S``.
 
 Intrinsics
 ----------

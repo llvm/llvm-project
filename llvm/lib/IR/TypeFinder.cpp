@@ -173,27 +173,42 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
   if (!VisitedMetadata.insert(V).second)
     return;
 
+  auto incorporateDIOp = [this](DIOp::Variant Op) {
+    std::visit(
+        makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+            [&](DIOp::Referrer R) { incorporateType(R.getResultType()); },
+            [&](DIOp::Arg A) { incorporateType(A.getResultType()); },
+            [&](DIOp::TypeObject T) { incorporateType(T.getResultType()); },
+            [&](DIOp::Constant C) { incorporateValue(C.getLiteralValue()); },
+            [&](DIOp::Convert C) { incorporateType(C.getResultType()); },
+            [&](DIOp::ZExt C) { incorporateType(C.getResultType()); },
+            [&](DIOp::SExt C) { incorporateType(C.getResultType()); },
+            [&](DIOp::Reinterpret R) { incorporateType(R.getResultType()); },
+            [&](DIOp::BitOffset B) { incorporateType(B.getResultType()); },
+            [&](DIOp::ByteOffset B) { incorporateType(B.getResultType()); },
+            [&](DIOp::Composite C) { incorporateType(C.getResultType()); },
+            [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
+            [&](DIOp::Deref D) { incorporateType(D.getResultType()); },
+            [&](DIOp::PushLane P) { incorporateType(P.getResultType()); },
+            [&](DIOp::Fragment F) {}),
+        Op);
+  };
+
   // The operations in a DIExpr are not exposed as operands, so handle such
   // nodes specifically here.
   if (const auto *E = dyn_cast<DIExpr>(V)) {
-    for (auto &&Op : E->builder())
-      std::visit(
-          makeVisitor(
-#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
-#include "llvm/IR/DIExprOps.def"
-              [&](DIOp::Referrer R) { incorporateType(R.getResultType()); },
-              [&](DIOp::Arg A) { incorporateType(A.getResultType()); },
-              [&](DIOp::TypeObject T) { incorporateType(T.getResultType()); },
-              [&](DIOp::Constant C) { incorporateValue(C.getLiteralValue()); },
-              [&](DIOp::Convert C) { incorporateType(C.getResultType()); },
-              [&](DIOp::Reinterpret R) { incorporateType(R.getResultType()); },
-              [&](DIOp::BitOffset B) { incorporateType(B.getResultType()); },
-              [&](DIOp::ByteOffset B) { incorporateType(B.getResultType()); },
-              [&](DIOp::Composite C) { incorporateType(C.getResultType()); },
-              [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
-              [&](DIOp::Deref D) { incorporateType(D.getResultType()); },
-              [&](DIOp::PushLane P) { incorporateType(P.getResultType()); }),
-          Op);
+    for (const auto &Op : E->builder())
+      incorporateDIOp(Op);
+    return;
+  }
+
+  if (const auto *E = dyn_cast<DIExpression>(V)) {
+    if (auto Elems = E->getNewElementsRef()) {
+      for (const auto &Op : *Elems)
+        incorporateDIOp(Op);
+    }
     return;
   }
 

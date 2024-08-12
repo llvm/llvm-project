@@ -737,24 +737,40 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
     return nullptr;
   }
 
-  if (auto *E = dyn_cast<DIExpr>(MD))
-    for (auto &&Op : E->builder())
-      std::visit(makeVisitor(
+  auto enumerateDIOp = [this](DIOp::Variant Op) {
+    std::visit(
+        makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"
-                [&](DIOp::Referrer R) { EnumerateType(R.getResultType()); },
-                [&](DIOp::Arg A) { EnumerateType(A.getResultType()); },
-                [&](DIOp::TypeObject T) { EnumerateType(T.getResultType()); },
-                [&](DIOp::Constant C) { EnumerateValue(C.getLiteralValue()); },
-                [&](DIOp::Convert C) { EnumerateType(C.getResultType()); },
-                [&](DIOp::Reinterpret R) { EnumerateType(R.getResultType()); },
-                [&](DIOp::BitOffset B) { EnumerateType(B.getResultType()); },
-                [&](DIOp::ByteOffset B) { EnumerateType(B.getResultType()); },
-                [&](DIOp::Composite C) { EnumerateType(C.getResultType()); },
-                [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
-                [&](DIOp::Deref D) { EnumerateType(D.getResultType()); },
-                [&](DIOp::PushLane P) { EnumerateType(P.getResultType()); }),
-            Op);
+            [&](DIOp::Referrer R) { EnumerateType(R.getResultType()); },
+            [&](DIOp::Arg A) { EnumerateType(A.getResultType()); },
+            [&](DIOp::TypeObject T) { EnumerateType(T.getResultType()); },
+            [&](DIOp::Constant C) { EnumerateValue(C.getLiteralValue()); },
+            [&](DIOp::Convert C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::ZExt C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::SExt C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::Reinterpret R) { EnumerateType(R.getResultType()); },
+            [&](DIOp::BitOffset B) { EnumerateType(B.getResultType()); },
+            [&](DIOp::ByteOffset B) { EnumerateType(B.getResultType()); },
+            [&](DIOp::Composite C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
+            [&](DIOp::Deref D) { EnumerateType(D.getResultType()); },
+            [&](DIOp::PushLane P) { EnumerateType(P.getResultType()); },
+            [&](DIOp::Fragment) {}),
+        Op);
+  };
+
+  if (auto *E = dyn_cast<DIExpr>(MD)) {
+    for (const auto &Op : E->builder())
+      enumerateDIOp(Op);
+  }
+
+  if (auto *E = dyn_cast<DIExpression>(MD)) {
+    if (auto Elems = E->getNewElementsRef()) {
+      for (const auto &Op : *Elems)
+        enumerateDIOp(Op);
+    }
+  }
 
   // Don't assign IDs to metadata nodes.
   if (auto *N = dyn_cast<MDNode>(MD))

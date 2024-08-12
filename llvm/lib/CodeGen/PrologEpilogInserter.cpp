@@ -1432,6 +1432,24 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
     return true;
   }
 
+  if (MI.isDebugValue() && MI.getDebugExpression()->holdsNewElements()) {
+    MachineOperand &Op = MI.getOperand(OpIdx);
+    Register Reg;
+    unsigned FrameIdx = Op.getIndex();
+    StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+
+    if (Reg) {
+      Op.ChangeToRegister(Reg, false /*isDef*/);
+      Op.setIsDebug();
+    } else {
+      Op.ChangeToImmediate(0);
+    }
+
+    MI.getDebugExpressionOp().setMetadata(TFI->lowerFIArgToFPArg(
+        MF, MI.getDebugExpression(), MI.getDebugOperandIndex(&Op), Offset));
+    return true;
+  }
+
   if (MI.isDebugValue()) {
 
     MachineOperand &Op = MI.getOperand(OpIdx);

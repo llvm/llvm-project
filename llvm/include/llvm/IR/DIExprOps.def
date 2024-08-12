@@ -86,6 +86,10 @@ HANDLE_OP1(Constant, ConstantData *, LiteralValue)
 SEPARATOR
 HANDLE_OP1(Convert, Type *, ResultType)
 SEPARATOR
+HANDLE_OP1(ZExt, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(SExt, Type *, ResultType)
+SEPARATOR
 HANDLE_OP1(Reinterpret, Type *, ResultType)
 SEPARATOR
 HANDLE_OP1(BitOffset, Type *, ResultType)
@@ -112,11 +116,15 @@ HANDLE_OP0(Mul)
 SEPARATOR
 HANDLE_OP0(Div)
 SEPARATOR
-HANDLE_OP0(Shr)
+HANDLE_OP0(LShr)
+SEPARATOR
+HANDLE_OP0(AShr)
 SEPARATOR
 HANDLE_OP0(Shl)
 SEPARATOR
 HANDLE_OP1(PushLane, Type *, ResultType)
+SEPARATOR
+HANDLE_OP2(Fragment, uint32_t, BitOffset, uint32_t, BitSize)
 
 #undef SEPARATOR
 #undef HANDLE_OP2

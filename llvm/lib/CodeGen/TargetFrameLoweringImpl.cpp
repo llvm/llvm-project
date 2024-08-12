@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
@@ -86,6 +87,31 @@ TargetFrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   // local area from MFI's ObjectOffset.
   return StackOffset::getFixed(MF.getFrameInfo().getObjectOffset(FI) -
                                getOffsetOfLocalArea());
+}
+
+DIExpression *TargetFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
+                                                     const DIExpression *Expr,
+                                                     uint64_t ArgIndex,
+                                                     StackOffset Offset) const {
+  const DataLayout &DL = MF.getDataLayout();
+  LLVMContext &Context = MF.getFunction().getParent()->getContext();
+  DIExprBuilder Builder(*Expr);
+  for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
+    if (auto *Arg = std::get_if<DIOp::Arg>(&*I)) {
+      if (Arg->getIndex() != ArgIndex)
+        continue;
+      Type *ResultType = Arg->getResultType();
+      unsigned PointerSizeInBits =
+          DL.getPointerSizeInBits(ResultType->getPointerAddressSpace());
+      auto *IntTy = IntegerType::get(Context, PointerSizeInBits);
+      ConstantData *C = ConstantInt::get(IntTy, Offset.getFixed(), true);
+      std::initializer_list<DIOp::Variant> IL = {DIOp::Reinterpret(IntTy),
+                                                 DIOp::Constant(C), DIOp::Add(),
+                                                 DIOp::Reinterpret(ResultType)};
+      I = Builder.insert(++I, IL);
+    }
+  }
+  return Builder.intoExpression();
 }
 
 bool TargetFrameLowering::needsFrameIndexResolution(

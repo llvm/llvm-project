@@ -47,7 +47,7 @@ static cl::opt<bool, true> DisableDwarfLocationsOpt(
 
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
                                        DwarfCompileUnit &CU, DIELoc &DIE)
-    : DwarfExpression(AP.getDwarfVersion(), CU), AP(AP), OutDIE(DIE) {}
+    : DwarfExpression(AP, CU), OutDIE(DIE) {}
 
 void DIEDwarfExpression::emitOp(uint8_t Op, const char* Comment) {
   CU.addUInt(getActiveDIE(), dwarf::DW_FORM_data1, Op);
@@ -67,6 +67,10 @@ void DIEDwarfExpression::emitData1(uint8_t Value) {
 
 void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   CU.addBaseTypeRef(getActiveDIE(), Idx);
+}
+
+void DIEDwarfExpression::emitOpAddress(const GlobalVariable *GV) {
+  CU.addOpAddress(getActiveDIE(), AP.getSymbol(GV));
 }
 
 void DIEDwarfExpression::enableTemporaryBuffer() {

@@ -347,6 +347,14 @@ void DwarfCompileUnit::addLocationAttribute(
         }
       }
       DwarfExpr->addFragmentOffset(Expr);
+
+      if (auto NewElementsRef = Expr->getNewElementsRef()) {
+        SmallVector<DbgValueLocEntry> ArgLocEntries;
+        if (Global)
+          ArgLocEntries.emplace_back(Global);
+        DwarfExpr->addExpression(*NewElementsRef, ArgLocEntries);
+        continue;
+      }
     }
 
     // FIXME: This is a workaround to avoid generating symbols for non-global
@@ -905,6 +913,8 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
+  const DIExpression *Expr = Single.getExpr();
+
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
@@ -944,13 +954,22 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
         return Entry.isLocation() && !Entry.getLoc().getReg();
       }))
     return;
-  const DIExpression *Expr = Single.getExpr();
   assert(Expr && "Variadic Debug Value must have an Expression.");
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   DwarfExpr.addFragmentOffset(Expr);
-  DIExpressionCursor Cursor(Expr);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+
+  if (Expr) {
+    if (auto NewElementsRef = Expr->getNewElementsRef()) {
+      DwarfExpr.addExpression(*NewElementsRef, DVal->getLocEntries(), &TRI);
+      addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+      return;
+    }
+  }
+
+  DIExpressionCursor Cursor(Expr);
 
   auto AddEntry = [&](const DbgValueLocEntry &Entry,
                       DIExpressionCursor &Cursor) {
@@ -1017,6 +1036,15 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
   std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+  auto PoisonedExpr =
+      find_if(MMI.getFrameIndexExprs(), [](const auto &Fragment) {
+        return Fragment.Expr->holdsOldElements() && Fragment.Expr->isPoisoned();
+      });
+  if (PoisonedExpr != MMI.getFrameIndexExprs().end()) {
+    DwarfExpr.addExpression(PoisonedExpr->Expr);
+    addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+    return;
+  }
   for (const auto &Fragment : MMI.getFrameIndexExprs()) {
     Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;
@@ -1026,6 +1054,22 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     DwarfExpr.addFragmentOffset(Expr);
 
     auto *TRI = Asm->MF->getSubtarget().getRegisterInfo();
+
+    if (Expr->holdsNewElements()) {
+      // TODO: support frame symbol
+      assert(!Asm->getFunctionFrameSymbol());
+      SmallVector<DbgValueLocEntry> ArgLocEntries;
+      if (FrameReg)
+        ArgLocEntries.push_back({MachineLocation{FrameReg}});
+      else
+        ArgLocEntries.push_back({int64_t{0}});
+      DIExpression *UpdatedExpr =
+          TFI->lowerFIArgToFPArg(*Asm->MF, Expr, /*ArgIndex=*/0u, Offset);
+      DwarfExpr.addExpression(*UpdatedExpr->getNewElementsRef(), ArgLocEntries,
+                              TRI);
+      continue;
+    }
+
     SmallVector<uint64_t, 8> Ops;
     TRI->getOffsetOpcodes(Offset, Ops);
 

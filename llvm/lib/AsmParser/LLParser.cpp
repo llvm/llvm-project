@@ -5894,11 +5894,156 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+// Common parser for both DIExpr and DIOp-based ("NewElements") DIExpression.
+// Begins parsing assuming the name and open parenthesis has been parsed
+// already, and populates Result with the appropriate metadata based on
+// IsDIExpr.
+//
+// An empty DIExpr is permitted (although currently has no use), but an empty
+// DIOp-based DIExpression is not as at least one DIOp token is required to
+// disambiguate with an empty "OldElements" DIExpression.
+bool LLParser::parseDIOpExpression(MDNode *&Result, bool IsDIExpr) {
+  DIExprBuilder Builder(Context);
+  if (!IsDIExpr || Lex.getKind() != lltok::rparen)
+    do {
+      if (Lex.getKind() != lltok::DIOp)
+        return tokError("expected DIOp");
+      std::string Name = Lex.getStrVal();
+      Lex.Lex();
+      if (parseToken(lltok::lparen, "expected '(' here"))
+        return true;
+      if (Name == DIOp::Referrer::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Referrer>(Ty);
+      } else if (Name == DIOp::Arg::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Arg>(I, Ty);
+      } else if (Name == DIOp::TypeObject::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::TypeObject>(Ty);
+      } else if (Name == DIOp::Constant::getAsmName()) {
+        Type *Ty = nullptr;
+        Constant *C = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        LocTy ValLoc = Lex.getLoc();
+        if (parseConstantValue(Ty, C))
+          return true;
+        if (!isa<ConstantData>(C))
+          return error(ValLoc, "expected constant data");
+        Builder.append<DIOp::Constant>(cast<ConstantData>(C));
+      } else if (Name == DIOp::Convert::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Convert>(Ty);
+      } else if (Name == DIOp::ZExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ZExt>(Ty);
+      } else if (Name == DIOp::SExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::SExt>(Ty);
+      } else if (Name == DIOp::Reinterpret::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Reinterpret>(Ty);
+      } else if (Name == DIOp::BitOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::BitOffset>(Ty);
+      } else if (Name == DIOp::ByteOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ByteOffset>(Ty);
+      } else if (Name == DIOp::Composite::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Composite>(I, Ty);
+      } else if (Name == DIOp::Extend::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::Extend>(I);
+      } else if (Name == DIOp::AddrOf::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::AddrOf>(I);
+      } else if (Name == DIOp::Deref::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Deref>(Ty);
+      } else if (Name == DIOp::PushLane::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::PushLane>(Ty);
+      } else if (Name == DIOp::Fragment::getAsmName()) {
+        uint32_t BitOffset, BitSize;
+        if (parseUInt32(BitOffset))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseUInt32(BitSize))
+          return true;
+        Builder.append<DIOp::Fragment>(BitOffset, BitSize);
+      }
+#define HANDLE_OP0(NAME)                                                       \
+  else if (Name == DIOp::NAME::getAsmName()) {                                 \
+    Builder.append<DIOp::NAME>();                                              \
+  }
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+      else {
+        llvm_unreachable("unhandled DIOp");
+      }
+      if (parseToken(lltok::rparen, "expected ')' here"))
+        return true;
+    } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  if (IsDIExpr)
+    Result = Builder.intoExpr();
+  else
+    Result = Builder.intoExpression();
+  return false;
+}
+
 /// parseDIExpressionBody:
 ///   ::= (0, 7, -1)
 bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
+
+  if (Lex.getKind() == lltok::DIOp)
+    return parseDIOpExpression(Result, /*IsDIExpr=*/false);
 
   SmallVector<uint64_t, 8> Elements;
   if (Lex.getKind() != lltok::rparen)
@@ -5985,115 +6130,7 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
-  DIExprBuilder Builder(Context);
-  if (Lex.getKind() != lltok::rparen)
-    do {
-      if (Lex.getKind() != lltok::DIOp)
-        return tokError("expected DIOp");
-      std::string Name = Lex.getStrVal();
-      Lex.Lex();
-      if (parseToken(lltok::lparen, "expected '(' here"))
-        return true;
-      if (Name == DIOp::Referrer::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Referrer>(Ty);
-      } else if (Name == DIOp::Arg::getAsmName()) {
-        uint32_t I;
-        Type *Ty = nullptr;
-        if (parseUInt32(I))
-          return true;
-        if (parseToken(lltok::comma, "expected ',' here"))
-          return true;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Arg>(I, Ty);
-      } else if (Name == DIOp::TypeObject::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::TypeObject>(Ty);
-      } else if (Name == DIOp::Constant::getAsmName()) {
-        Type *Ty = nullptr;
-        Constant *C = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        LocTy ValLoc = Lex.getLoc();
-        if (parseConstantValue(Ty, C))
-          return true;
-        if (!isa<ConstantData>(C))
-          return error(ValLoc, "expected constant data");
-        Builder.append<DIOp::Constant>(cast<ConstantData>(C));
-      } else if (Name == DIOp::Convert::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Convert>(Ty);
-      } else if (Name == DIOp::Reinterpret::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Reinterpret>(Ty);
-      } else if (Name == DIOp::BitOffset::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::BitOffset>(Ty);
-      } else if (Name == DIOp::ByteOffset::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::ByteOffset>(Ty);
-      } else if (Name == DIOp::Composite::getAsmName()) {
-        uint32_t I;
-        Type *Ty = nullptr;
-        if (parseUInt32(I))
-          return true;
-        if (parseToken(lltok::comma, "expected ',' here"))
-          return true;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Composite>(I, Ty);
-      } else if (Name == DIOp::Extend::getAsmName()) {
-        uint32_t I;
-        if (parseUInt32(I))
-          return true;
-        Builder.append<DIOp::Extend>(I);
-      } else if (Name == DIOp::AddrOf::getAsmName()) {
-        uint32_t I;
-        if (parseUInt32(I))
-          return true;
-        Builder.append<DIOp::AddrOf>(I);
-      } else if (Name == DIOp::Deref::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::Deref>(Ty);
-      } else if (Name == DIOp::PushLane::getAsmName()) {
-        Type *Ty = nullptr;
-        if (parseFirstClassType(Ty))
-          return true;
-        Builder.append<DIOp::PushLane>(Ty);
-      }
-#define HANDLE_OP0(NAME)                                                       \
-  else if (Name == DIOp::NAME::getAsmName()) {                                 \
-    Builder.append<DIOp::NAME>();                                              \
-  }
-#include "llvm/IR/DIExprOps.def"
-#undef HANDLE_OP0
-      else {
-        llvm_unreachable("unhandled DIOp");
-      }
-      if (parseToken(lltok::rparen, "expected ')' here"))
-        return true;
-    } while (EatIfPresent(lltok::comma));
-
-  if (parseToken(lltok::rparen, "expected ')' here"))
-    return true;
-
-  Result = Builder.intoExpr();
-  return false;
+  return parseDIOpExpression(Result, /*IsDIExpr=*/true);
 }
 
 bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {

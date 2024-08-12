@@ -809,7 +809,20 @@ private:
   /// anonymous decl and create static variables for them. The first
   /// time this is called it needs to be on a union and then from
   /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariable *CollectAnonRecordDeclsForHeterogeneousDwarf(
+  llvm::DIGlobalVariable *CollectAnonRecordDeclsForHeterogeneousDwarfDIExpr(
+      const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
+      StringRef LinkageName, llvm::dwarf::MemorySpace MS,
+      llvm::GlobalVariable *Var, llvm::DIScope *DContext);
+
+  /// Return a global variable that represents one of the collection of global
+  /// variables created for an anonmyous union (-gheterogeneous-dwarf).
+  ///
+  /// Recursively collect all of the member fields of a global
+  /// anonymous decl and create static variables for them. The first
+  /// time this is called it needs to be on a union and then from
+  /// there we can have additional unnamed fields.
+  llvm::DIGlobalVariableExpression *
+  CollectAnonRecordDeclsForHeterogeneousDwarfDIExpression(
       const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
       StringRef LinkageName, llvm::dwarf::MemorySpace MS,
       llvm::GlobalVariable *Var, llvm::DIScope *DContext);

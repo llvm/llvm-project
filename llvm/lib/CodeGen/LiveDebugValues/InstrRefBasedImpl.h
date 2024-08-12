@@ -318,7 +318,8 @@ public:
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
     assert(MI.isDebugValue());
-    assert(MI.getDebugExpression()->getNumLocationOperands() == 0 ||
+    assert(MI.getDebugExpression()->isPoisoned() ||
+           MI.getDebugExpression()->getNumLocationOperands() == 0 ||
            MI.isDebugValueList() || MI.isUndefDebugValue());
     IsVariadic = MI.isDebugValueList();
     DIExpr = MI.getDebugExpression();

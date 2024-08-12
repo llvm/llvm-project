@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG='&g' -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=INT-ADDROF-VAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG='&g' -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=INT-ADDROF-NOVAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG=0 -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=INT-NOADDROF-VAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG=0 -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=INT-NOADDROF-NOVAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG='&g' -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=INT-ADDROF-VAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG='&g' -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=INT-ADDROF-NOVAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG=0 -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=INT-NOADDROF-VAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=int -D PTR_ARG=0 -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=INT-NOADDROF-NOVAL %s
 //
-// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG='&g' -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-ADDROF-VAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG='&g' -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-ADDROF-NOVAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-VAL %s
-// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-NOVAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG='&g' -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=FLOAT-ADDROF-VAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG='&g' -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=FLOAT-ADDROF-NOVAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-VAL %s
+// RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf=diexpr %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-NOVAL %s
 
 // INT-ADDROF-VAL: @g = internal constant i32 1, align 4{{$}}
 // INT-ADDROF-VAL-DAG: !llvm.dbg.retainedNodes = !{![[#LIFETIME:]]}

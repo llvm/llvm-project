@@ -55,6 +55,10 @@ cl::opt<Level> DebugifyLevel(
                           "Locations and Variables")),
     cl::init(Level::LocationsAndVariables));
 
+cl::opt<bool> DebugifyDIOpDIExprs(
+    "debugify-diop-diexprs",
+    cl::desc("Generate DIOp-based DIExpressions in debugify"), cl::init(false));
+
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
@@ -137,6 +141,24 @@ bool llvm::applyDebugifyMetadata(
       auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
+      if (DebugifyDIOpDIExprs) {
+        DIExprBuilder ExprBuilder(Ctx);
+        ExprBuilder.append<DIOp::Arg>(0, V->getType());
+        std::optional<uint64_t> IRSize;
+        if (TypeSize IRTypeSize =
+                M.getDataLayout().getTypeSizeInBits(V->getType()))
+          if (!IRTypeSize.isScalable())
+            IRSize = IRTypeSize.getFixedValue();
+        std::optional<uint64_t> DISize = LocalVar->getSizeInBits();
+        if (IRSize && DISize) {
+          assert(DISize >= IRSize);
+          if (DISize > IRSize)
+            ExprBuilder.append<DIOp::ZExt>(IntegerType::get(Ctx, *DISize));
+        }
+        DIB.insertDbgValueIntrinsic(V, LocalVar, ExprBuilder.intoExpression(),
+                                    Loc, InsertBefore);
+        return;
+      }
       DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
                                   InsertBefore);
     };

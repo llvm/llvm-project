@@ -195,6 +195,10 @@ void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   getActiveStreamer().emitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
+void DebugLocDwarfExpression::emitOpAddress(const GlobalVariable *GV) {
+  llvm_unreachable("cannot have loc_list for global");
+}
+
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                               llvm::Register MachineReg) {
   // This information is not available while emitting .debug_loc entries.
@@ -282,7 +286,7 @@ bool llvm::operator<(const EntryValueInfo &LHS, const EntryValueInfo &RHS) {
 Loc::Single::Single(DbgValueLoc ValueLoc)
     : ValueLoc(std::make_unique<DbgValueLoc>(ValueLoc)),
       Expr(ValueLoc.getExpression()) {
-  if (!Expr->getNumElements())
+  if (Expr->holdsOldElements() && !Expr->getNumElements())
     Expr = nullptr;
 }
 
@@ -298,7 +302,8 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
   assert((FrameIndexExprs.size() == 1 ||
           llvm::all_of(FrameIndexExprs,
                        [](const FrameIndexExpr &FIE) {
-                         return FIE.Expr && FIE.Expr->isFragment();
+                         return FIE.Expr && (FIE.Expr->isFragment() ||
+                                             FIE.Expr->isPoisoned());
                        })) &&
          "conflicting locations for variable");
 }
@@ -2787,8 +2792,17 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    const DbgValueLoc &Value,
                                    DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
-  DIExpressionCursor ExprCursor(DIExpr);
   DwarfExpr.addFragmentOffset(DIExpr);
+
+  if (DIExpr) {
+    if (auto NewElementsRef = DIExpr->getNewElementsRef()) {
+      DwarfExpr.addExpression(*NewElementsRef, Value.getLocEntries(),
+                              AP.MF->getSubtarget().getRegisterInfo());
+      return;
+    }
+  }
+
+  DIExpressionCursor ExprCursor(DIExpr);
 
   // If the DIExpr is an Entry Value, we want to follow the same code path
   // regardless of whether the DBG_VALUE is variadic or not.
@@ -2887,7 +2901,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   assert(Begin != End && "unexpected location list entry with empty range");
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
-  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer, TheCU);
+  DebugLocDwarfExpression DwarfExpr(AP, Streamer, TheCU);
   const DbgValueLoc &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.

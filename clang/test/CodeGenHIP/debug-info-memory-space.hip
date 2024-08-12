@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -o - %s | FileCheck %s
 // CHECK-DAG: !DIGlobalVariable(name: "GlobalShared", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
 // CHECK-DAG: !DIGlobalVariable(name: "GlobalDevice", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 // CHECK-DAG: !DIGlobalVariable(name: "GlobalConstant", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)

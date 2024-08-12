@@ -3982,6 +3982,80 @@ TEST_F(DIExpressionTest, extractLeadingOffset) {
 #undef OPS
 }
 
+TEST_F(DIExpressionTest, createNewFragmentExpression) {
+#define EXPECT_VALID_FRAGMENT(Offset, Size, ...)                               \
+  do {                                                                         \
+    DIOp::Variant Elements[] = {__VA_ARGS__};                                  \
+    DIExpression *Expression = DIExpression::get(Context, bool(), Elements);   \
+    EXPECT_TRUE(                                                               \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
+  } while (false)
+#define EXPECT_INVALID_FRAGMENT(Offset, Size, ...)                             \
+  do {                                                                         \
+    DIOp::Variant Elements[] = {__VA_ARGS__};                                  \
+    DIExpression *Expression = DIExpression::get(Context, bool(), Elements);   \
+    EXPECT_FALSE(                                                              \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
+  } while (false)
+
+  IntegerType *IntTy = Type::getInt32Ty(Context);
+  Type *PtrTy = PointerType::get(Context, 5);
+  ConstantInt *ConstInt = ConstantInt::get(IntTy, 42);
+
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Arg(0, IntTy));
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Constant(ConstInt));
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Arg(0, PtrTy), DIOp::Deref(IntTy),
+                        DIOp::Constant(ConstInt), DIOp::BitOffset(IntTy));
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Arg(0, PtrTy), DIOp::Deref(IntTy),
+                        DIOp::Constant(ConstInt), DIOp::ByteOffset(IntTy));
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Arg(0, IntTy), DIOp::Fragment(0, 32));
+  EXPECT_VALID_FRAGMENT(0, 16, DIOp::Arg(0, IntTy), DIOp::AddrOf(0),
+                        DIOp::Deref(IntTy));
+
+  EXPECT_VALID_FRAGMENT(8, 16, DIOp::Arg(0, IntTy), DIOp::Deref(IntTy));
+
+  using VarTy = DIOp::Variant;
+  for (auto Op : {VarTy(DIOp::Add()), VarTy(DIOp::Sub()), VarTy(DIOp::Mul()),
+                  VarTy(DIOp::Div()), VarTy(DIOp::Shl()), VarTy(DIOp::LShr()),
+                  VarTy(DIOp::AShr())}) {
+    EXPECT_INVALID_FRAGMENT(0, 16, DIOp::Arg(0, IntTy),
+                            DIOp::Constant(ConstInt), Op);
+  }
+
+  EXPECT_INVALID_FRAGMENT(0, 16, DIOp::Arg(0, PtrTy), DIOp::Deref(IntTy),
+                          DIOp::Constant(ConstInt), DIOp::Add(),
+                          DIOp::Constant(ConstInt), DIOp::ByteOffset(IntTy));
+
+  // The same as above, just with a more complicated expression to skip over.
+  EXPECT_INVALID_FRAGMENT(
+      0, 16, DIOp::Arg(0, PtrTy), DIOp::Deref(IntTy), DIOp::Constant(ConstInt),
+      DIOp::Add(), DIOp::Constant(ConstInt), DIOp::Constant(ConstInt),
+      DIOp::Sub(), DIOp::Reinterpret(IntTy), DIOp::ByteOffset(IntTy));
+
+#undef EXPECT_INVALID_FRAGMENT
+#undef EXPECT_VALID_FRAGMENT
+
+  // Verify that fragmenting a fragment work as expected.
+  DIOp::Variant Ops[] = {DIOp::Arg(0, PtrTy), DIOp::Deref(IntTy),
+                         DIOp::Fragment(8, 16)};
+  DIExpression *ArgDerefMid16Expr = DIExpression::get(Context, bool(), Ops);
+
+  DIExpression *Low7Frag =
+      *DIExpression::createFragmentExpression(ArgDerefMid16Expr, 0, 7);
+  DIExpression *High9Frag =
+      *DIExpression::createFragmentExpression(ArgDerefMid16Expr, 7, 9);
+
+  auto Low7FragInfo = *Low7Frag->getFragmentInfo();
+  auto High9FragInfo = *High9Frag->getFragmentInfo();
+
+  EXPECT_EQ(Low7FragInfo.SizeInBits, 7u);
+  EXPECT_EQ(High9FragInfo.SizeInBits, 9u);
+  EXPECT_EQ(Low7FragInfo.OffsetInBits, 8u);
+  EXPECT_EQ(High9FragInfo.OffsetInBits, 15u);
+}
+
 TEST_F(DIExpressionTest, convertToUndefExpression) {
 #define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
   do {                                                                         \

@@ -2790,6 +2790,401 @@ public:
   }
 };
 
+namespace DIOp {
+
+// These are the concrete alternatives that a DIOp::Variant encapsulates.
+#define HANDLE_OP0(NAME)                                                       \
+  class NAME {                                                                 \
+  public:                                                                      \
+    explicit constexpr NAME() {}                                               \
+    bool operator==(const NAME &O) const { return true; }                      \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+  };
+#define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
+  class NAME {                                                                 \
+    TYPE1 NAME1;                                                               \
+                                                                               \
+  public:                                                                      \
+    explicit constexpr NAME(TYPE1 NAME1) : NAME1(NAME1) {}                     \
+    bool operator==(const NAME &O) const { return NAME1 == O.NAME1; }          \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+    TYPE1 get##NAME1() const { return NAME1; }                                 \
+    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
+  };
+#define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
+  class NAME {                                                                 \
+    TYPE1 NAME1;                                                               \
+    TYPE2 NAME2;                                                               \
+                                                                               \
+  public:                                                                      \
+    explicit constexpr NAME(TYPE1 NAME1, TYPE2 NAME2)                          \
+        : NAME1(NAME1), NAME2(NAME2) {}                                        \
+    bool operator==(const NAME &O) const {                                     \
+      return NAME1 == O.NAME1 && NAME2 == O.NAME2;                             \
+    }                                                                          \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+    TYPE1 get##NAME1() const { return NAME1; }                                 \
+    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
+    TYPE2 get##NAME2() const { return NAME2; }                                 \
+    void set##NAME2(TYPE2 NAME2) { this->NAME2 = NAME2; }                      \
+  };
+LLVM_PACKED_START
+#include "llvm/IR/DIExprOps.def"
+LLVM_PACKED_END
+
+/// Container for a runtime-variant DIOp
+using Variant = std::variant<
+#define HANDLE_OP_NAME(NAME) NAME
+#define SEPARATOR ,
+#include "llvm/IR/DIExprOps.def"
+    >;
+
+#define HANDLE_OP_NAME(NAME)                                                   \
+  constexpr StringRef DIOp::NAME::getAsmName() { return "DIOp" #NAME; }
+#include "llvm/IR/DIExprOps.def"
+
+StringRef getAsmName(const Variant &V);
+
+#define DEFINE_BC_ID(NAME, ID)                                                 \
+  constexpr unsigned DIOp::NAME::getBitcodeID() { return ID; }
+DEFINE_BC_ID(Referrer, 1u)
+DEFINE_BC_ID(Arg, 2u)
+DEFINE_BC_ID(TypeObject, 3u)
+DEFINE_BC_ID(Constant, 4u)
+DEFINE_BC_ID(Convert, 5u)
+DEFINE_BC_ID(Reinterpret, 6u)
+DEFINE_BC_ID(BitOffset, 7u)
+DEFINE_BC_ID(ByteOffset, 8u)
+DEFINE_BC_ID(Composite, 9u)
+DEFINE_BC_ID(Extend, 10u)
+DEFINE_BC_ID(Select, 11u)
+DEFINE_BC_ID(AddrOf, 12u)
+DEFINE_BC_ID(Deref, 13u)
+DEFINE_BC_ID(Read, 14u)
+DEFINE_BC_ID(Add, 15u)
+DEFINE_BC_ID(Sub, 16u)
+DEFINE_BC_ID(Mul, 17u)
+DEFINE_BC_ID(Div, 18u)
+DEFINE_BC_ID(LShr, 19u)
+DEFINE_BC_ID(Shl, 20u)
+DEFINE_BC_ID(PushLane, 21u)
+DEFINE_BC_ID(Fragment, 22u)
+DEFINE_BC_ID(ZExt, 23u)
+DEFINE_BC_ID(SExt, 24u)
+DEFINE_BC_ID(AShr, 25u)
+#undef DEFINE_BC_ID
+
+unsigned getBitcodeID(const Variant &V);
+
+/// Get the number of stack elements this operation consumes.
+unsigned getNumInputs(Variant V);
+
+// The sizeof of `Op` is the size of the largest union variant, which
+// should essentially be defined as a packed struct equivalent to:
+//
+//    uint8_t Index; // Internal to std::variant, but we expect this to be
+//                   // the smallest available integral type which
+//                   // can represent our set of alternatives.
+//    uint32_t I;
+//    void* P;
+//
+// Note that there is no public interface which lets a pointer to the members
+// of the alternative types escape, and so we can safely pack them. This
+// means huge performance benefits (smaller memory footprint and more
+// cache-friendly traversal).
+//
+// This static_assert tries to catch issues where the struct is not packed into
+// at most two 64-bit words, as we would expect it to be.
+//
+// FIXME: If we can constrain `I` further to <= 16 bits we should also
+// fit in two 32-bit words on 32-bit targets.
+static_assert(sizeof(DIOp::Variant) <= 16);
+
+} // namespace DIOp
+
+/// Context in which a DIExpression is to be evaluated, used to permit more
+/// complete validation.
+struct DIExpressionEnv {
+  /// The source variable whose location is being described by the expression.
+  DIVariable *Variable;
+  /// Argument(s) to the debug intrinsic or DIGlobalVariableExpression node
+  /// referencing the expression.
+  ArrayRef<const Value *> Arguments;
+  /// DataLayout of the Target associated with the expression.
+  const DataLayout &DL;
+};
+
+/// CRTP visitor class for visiting DIExpr operations in order.
+///
+/// The derived class must provide an overload set for the method
+/// `bool visit(OpT Op, Type *ResultType, ArrayRef<StackEntry> Inputs)` handling
+/// every "DIOp*" `OpT` (i.e. for every alternative type of `DIOp::Variant`).
+/// The `ResultType` is the type of the entry the operation pushes onto the
+/// stack (or `nullptr` if the operation pushes nothing). The `Inputs` are the
+/// stack entries the operation consumes, where the highest index is the top of
+/// the stack (i.e. the most recently pushed entry). The return value is
+/// `true` when the visit succeeds, and `false` when it fails; a returned
+/// `false` will short-circuit to the caller, so the rest of the expression will
+/// not be visited.
+///
+/// For convenience a no-op overload set is defined in this class, where each
+/// method simply returns `true`. If the derived class does not intend to
+/// exhaustively cover every "DIOp*" operation it can declare `using
+/// DIExprConstVisitor<Derived>::visit;` to bring the no-op overload set into
+/// the derived class, and then it can selectively shadow the overloads it is
+/// interested in. This scheme is employed to avoid the need for dynamic virtual
+/// function dispatch.
+///
+/// This class validates that the expression yields one stack entry. To visit
+/// that final `StackEntry` the derived class can implement `bool
+/// visitResult(StackEntry Result)`.
+///
+/// To handle error messages generated by this class, the derived class can
+/// define a method `bool error(const Twine &)` which will be called with
+/// any error messages before `false` is returned.
+///
+/// This class implements type propagation, and maintains a stack so operation
+/// visitor functions can inspect their input stack entries. It validates
+/// properties of the expression which can be checked purely by looking at the
+/// expression itself, including:
+///
+/// * Input and result type equality (e.g. for arithmetic operations)
+/// * Type category requirements (e.g. for shift operations requiring integer
+/// types)
+/// * Input counts, including the dynamic input requirement of DIOpComposite
+///
+/// Anything further, including debug intrinsic argument type compatibility
+/// with DIOpArg uses, must be handled by the derived class if required.
+template <class Derived> class DIExprConstVisitor {
+protected:
+  LLVMContext &Context;
+  ArrayRef<DIOp::Variant> Expr;
+
+  /// Represents the result of evaluating an operation.
+  /// ResultType cannot be null.
+  struct StackEntry {
+    DIOp::Variant Operation;
+    Type *ResultType;
+
+    StackEntry(DIOp::Variant Operation, Type *ResultType)
+        : Operation(Operation), ResultType(ResultType) {
+      assert(ResultType &&
+             "null ResultType indicates no StackEntry should be created");
+    }
+  };
+
+  SmallVector<StackEntry, 8> Stack;
+
+  bool error(const Twine &) { return false; }
+
+  Derived &getDerived() { return static_cast<Derived &>(*this); }
+
+  std::optional<Type *> getTypeError(const Twine &Msg) {
+    getDerived().error(Msg);
+    return std::nullopt;
+  }
+
+  // The getType overloads return:
+  //
+  // * std::nullopt when an error has occured.
+  // * nullptr when the operation does not push anything.
+  // * the type of the pushed entry, otherwise.
+  //
+  // Note: This assumes operations push either 0 or 1 entries, which is
+  // currently true.
+
+  std::optional<Type *> getType(DIOp::Referrer Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Arg Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::TypeObject Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Constant Op, ArrayRef<StackEntry>) {
+    return Op.getLiteralValue()->getType();
+  }
+
+  std::optional<Type *> getType(DIOp::Convert Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::ZExt Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError("DIOpZExt requires integer typed input");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::SExt Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError("DIOpSExt requires integer typed input");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Reinterpret Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::BitOffset Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpBitOffset requires first input be integer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::ByteOffset Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpByteOffset requires first input be integer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Composite Op, ArrayRef<StackEntry> Ins) {
+    assert(Op.getCount() == Ins.size() &&
+           "DIOpComposite has wrong number of inputs");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Extend Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isPointerTy() &&
+        !Ins[0].ResultType->isFloatingPointTy() &&
+        !Ins[0].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpExtend child must have integer, floating point, or ptr type");
+    return VectorType::get(Ins[0].ResultType,
+                           ElementCount::getFixed(Op.getCount()));
+  }
+
+  std::optional<Type *> getType(DIOp::Select Op, ArrayRef<StackEntry> Ins) {
+    if (Ins[0].ResultType != Ins[1].ResultType)
+      return getTypeError(
+          "DIOpSelect requires first two inputs have same type");
+    if (!Ins[0].ResultType->isVectorTy())
+      return getTypeError(
+          "DIOpSelect requires first two inputs to be vector typed");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::AddrOf Op, ArrayRef<StackEntry>) {
+    // FIXME: Track this to ensure invariants on uses
+    return PointerType::get(Context, Op.getAddressSpace());
+  }
+
+  std::optional<Type *> getType(DIOp::Deref Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isPointerTy())
+      return getTypeError("DIOpDeref requires input to be pointer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Read Op, ArrayRef<StackEntry> Ins) {
+    return Ins[0].ResultType;
+  }
+
+  template <typename OpT>
+  std::optional<Type *> getTypeBinOp(OpT Op, ArrayRef<StackEntry> Ins) {
+    if (Ins[0].ResultType != Ins[1].ResultType)
+      return getTypeError(Twine(Op.getAsmName()) +
+                          " requires identical type inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Add Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Sub Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Mul Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Div Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::LShr, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpLShr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::AShr, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpAShr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Shl, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpShl requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::PushLane Op, ArrayRef<StackEntry>) {
+    if (!Op.getResultType()->isIntegerTy())
+      return getTypeError("DIOpPushLane requires integer result type");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Fragment, ArrayRef<StackEntry>) {
+    return nullptr;
+  }
+
+  template <typename OpT> bool visitOperator(OpT Op) {
+    if (Stack.size() < getNumInputs(Op))
+      return getDerived().error(Op.getAsmName() + " requires more inputs");
+    auto InBegin = Stack.end() - getNumInputs(Op);
+    std::optional<Type *> Ty = getType(Op, ArrayRef(InBegin, Stack.end()));
+    if (!Ty)
+      return false;
+    if (!getDerived().visit(Op, *Ty, ArrayRef(InBegin, Stack.end())))
+      return false;
+    Stack.erase(InBegin, Stack.end());
+    if (*Ty)
+      Stack.emplace_back(Op, *Ty);
+    return true;
+  }
+
+#define HANDLE_OP_NAME(NAME)                                                   \
+  bool visit(DIOp::NAME Op, Type *ResultType, ArrayRef<StackEntry> Inputs) {   \
+    return true;                                                               \
+  }
+#include "DIExprOps.def"
+
+  bool visitResult(StackEntry Result) { return true; }
+
+public:
+  DIExprConstVisitor(LLVMContext &Context, ArrayRef<DIOp::Variant> Expr)
+      : Context(Context), Expr(Expr) {}
+
+  bool visitInOrder() {
+    for (const auto &Op : Expr) {
+      if (!std::visit([this](auto Op) { return this->visitOperator(Op); }, Op))
+        return false;
+    }
+    if (Stack.size() != 1) {
+      getDerived().error(
+          "DIOp expression requires one element on stack after evaluating");
+      return false;
+    }
+    if (!getDerived().visitResult(Stack.back()))
+      return false;
+    return true;
+  }
+};
+
 /// DWARF expression.
 ///
 /// This is (almost) a DWARF expression that modifies the location of a
@@ -2803,15 +3198,56 @@ class DIExpression : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  std::vector<uint64_t> Elements;
+public:
+  using OldElements = std::vector<uint64_t>;
+  using NewElements = SmallVector<DIOp::Variant, 0>;
+  using OldElementsRef = ArrayRef<uint64_t>;
+  using NewElementsRef = ArrayRef<DIOp::Variant>;
+  using ElementsRef = std::variant<OldElementsRef, NewElementsRef>;
+
+private:
+  std::variant<OldElements, NewElements> Elements;
+
+  // When existing code operates on a DIOp-based (i.e. "NewElements")
+  // DIExpression they will transparently see this expression in place of
+  // the actual expression. So long as they unconditionally replace the
+  // expression with a new "OldElements" version derived from this poison we
+  // will see this DW_OP_LLVM_poisoned operation during DWARF generation and can
+  // e.g. lower it to an undefined location to reflect the fact that the
+  // expression was not understood by some pass.
+  //
+  // There is some risk that a particular set of circumstances in code from
+  // upstream could align to foil this scheme, e.g. if a pass were to
+  // inspect an expression to see if it contains some particular pattern
+  // and decides only to update the expression in the absense of that pattern
+  // then the poisoned expression would lead to it not making the change. In
+  // practice no such call-site could be identified in the codebase, and in
+  // general the decision to modify the expression is made irrespective of
+  // the expression contents (although the contents in many cases then
+  // influences exactly *how* the expression is modified).
+  static constexpr std::array<uint64_t, 1> PoisonedExpr = {
+      dwarf::DW_OP_LLVM_poisoned};
 
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
       : MDNode(C, DIExpressionKind, Storage, std::nullopt),
-        Elements(Elements.begin(), Elements.end()) {}
+        Elements(std::in_place_type<OldElements>, Elements.begin(),
+                 Elements.end()) {}
+  DIExpression(LLVMContext &C, StorageType Storage,
+               ArrayRef<DIOp::Variant> Elements)
+      : MDNode(C, DIExpressionKind, Storage, std::nullopt),
+        Elements(std::in_place_type<NewElements>, Elements.begin(),
+                 Elements.end()) {}
   ~DIExpression() = default;
 
-  static DIExpression *getImpl(LLVMContext &Context,
-                               ArrayRef<uint64_t> Elements, StorageType Storage,
+  // FIXME: workaround to avoid updating callsites for now
+  static DIExpression *getImpl(LLVMContext &Context, std::nullopt_t Elements,
+                               StorageType Storage, bool ShouldCreate = true);
+
+  static DIExpression *getImpl(LLVMContext &Context, OldElementsRef Elements,
+                               StorageType Storage, bool ShouldCreate = true);
+
+  static DIExpression *getImpl(LLVMContext &Context, bool /*ignored*/,
+                               NewElementsRef Elements, StorageType Storage,
                                bool ShouldCreate = true);
 
   TempDIExpression cloneImpl() const {
@@ -2819,18 +3255,56 @@ class DIExpression : public MDNode {
   }
 
 public:
+  DEFINE_MDNODE_GET(DIExpression, (std::nullopt_t Elements), (Elements))
   DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
+  // The bool parameter is ignored, and only present to disambiguate the
+  // overload for the new elements from the old for the empty initializer list
+  // case (i.e. DIExpression::new({}))
+  DEFINE_MDNODE_GET(DIExpression,
+                    (bool /*ignored*/, ArrayRef<DIOp::Variant> Elements),
+                    (false, Elements))
+
+  static DIExpression *getPoisoned(LLVMContext &Ctx) {
+    return get(Ctx, PoisonedExpr);
+  }
+  DIExpression *getPoisoned() const { return getPoisoned(getContext()); }
 
   TempDIExpression clone() const { return cloneImpl(); }
 
-  ArrayRef<uint64_t> getElements() const { return Elements; }
+  OldElementsRef getElements() const {
+    if (auto *E = std::get_if<OldElements>(&Elements))
+      return *E;
+    return PoisonedExpr;
+  }
 
-  unsigned getNumElements() const { return Elements.size(); }
+  unsigned getNumElements() const { return getElements().size(); }
 
   uint64_t getElement(unsigned I) const {
-    assert(I < Elements.size() && "Index out of range");
-    return Elements[I];
+    assert(I < getNumElements() && "Index out of range");
+    return getElements()[I];
   }
+
+  ElementsRef getElementsRef() const {
+    return std::visit([](auto &&V) -> ElementsRef { return {V}; }, Elements);
+  }
+  std::optional<OldElementsRef> getOldElementsRef() const {
+    if (auto *E = std::get_if<OldElements>(&Elements))
+      return *E;
+    return std::nullopt;
+  }
+  std::optional<NewElementsRef> getNewElementsRef() const {
+    if (auto *E = std::get_if<NewElements>(&Elements))
+      return *E;
+    return std::nullopt;
+  }
+
+  template <typename T> bool holds() const {
+    return std::holds_alternative<T>(Elements);
+  }
+  bool holdsOldElements() const { return holds<OldElements>(); }
+  bool holdsNewElements() const { return holds<NewElements>(); }
+
+  bool isPoisoned() const;
 
   enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
   /// Determine whether this represents a constant value, if so
@@ -2846,6 +3320,10 @@ public:
   /// This function would return 2, as there are two unique location operands
   /// (0 and 1).
   uint64_t getNumLocationOperands() const;
+
+  /// Return the number of unique location operands referred to (via DIOpArg) in
+  /// this expression. Like getNumLocationOperands, but for DIOp-DIExpressions.
+  uint64_t getNewNumLocationOperands() const;
 
   using element_iterator = ArrayRef<uint64_t>::iterator;
 
@@ -2951,7 +3429,9 @@ public:
   }
   /// @}
 
-  bool isValid() const;
+  bool isValid(std::optional<DIExpressionEnv> Env = std::nullopt,
+               std::optional<std::reference_wrapper<llvm::raw_ostream>> ErrS =
+                   std::nullopt) const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIExpressionKind;
@@ -2975,8 +3455,12 @@ public:
   static std::optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
                                                      expr_op_iterator End);
 
+  static std::optional<FragmentInfo> getFragmentInfo(NewElementsRef E);
+
   /// Retrieve the details of this fragment expression.
   std::optional<FragmentInfo> getFragmentInfo() const {
+    if (auto NewElements = getNewElementsRef())
+      return getFragmentInfo(*NewElements);
     return getFragmentInfo(expr_op_begin(), expr_op_end());
   }
 
@@ -3119,6 +3603,15 @@ public:
   static DIExpression *appendOpsToArg(const DIExpression *Expr,
                                       ArrayRef<uint64_t> Ops, unsigned ArgNo,
                                       bool StackValue = false);
+
+  /// Create a copy of \p Expr by appending the given list of \p Ops to each
+  /// instance of the operand `DIOpArg(ArgNo, OldArgType)`, updating OldArgType
+  /// to \p NewArgType if non-null. This is used to modify a specific location
+  /// used by \p Expr, such as when salvaging that location.
+  static DIExpression *appendNewOpsToArg(const DIExpression *Expr,
+                                         ArrayRef<DIOp::Variant> Ops,
+                                         unsigned ArgNo,
+                                         Type *NewArgType = nullptr);
 
   /// Create a copy of \p Expr with each instance of
   /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
@@ -3270,135 +3763,27 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
 };
 
-namespace DIOp {
-
-// These are the concrete alternatives that a DIOp::Variant encapsulates.
-#define HANDLE_OP0(NAME)                                                       \
-  class NAME {                                                                 \
-  public:                                                                      \
-    explicit constexpr NAME() {}                                               \
-    bool operator==(const NAME &O) const { return true; }                      \
-    friend hash_code hash_value(const NAME &O);                                \
-    static constexpr StringRef getAsmName();                                   \
-    static constexpr unsigned getBitcodeID();                                  \
-  };
-#define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
-  class NAME {                                                                 \
-    TYPE1 NAME1;                                                               \
-                                                                               \
-  public:                                                                      \
-    explicit constexpr NAME(TYPE1 NAME1) : NAME1(NAME1) {}                     \
-    bool operator==(const NAME &O) const { return NAME1 == O.NAME1; }          \
-    friend hash_code hash_value(const NAME &O);                                \
-    static constexpr StringRef getAsmName();                                   \
-    static constexpr unsigned getBitcodeID();                                  \
-    TYPE1 get##NAME1() const { return NAME1; }                                 \
-    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
-  };
-#define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
-  class NAME {                                                                 \
-    TYPE1 NAME1;                                                               \
-    TYPE2 NAME2;                                                               \
-                                                                               \
-  public:                                                                      \
-    explicit constexpr NAME(TYPE1 NAME1, TYPE2 NAME2)                          \
-        : NAME1(NAME1), NAME2(NAME2) {}                                        \
-    bool operator==(const NAME &O) const {                                     \
-      return NAME1 == O.NAME1 && NAME2 == O.NAME2;                             \
-    }                                                                          \
-    friend hash_code hash_value(const NAME &O);                                \
-    static constexpr StringRef getAsmName();                                   \
-    static constexpr unsigned getBitcodeID();                                  \
-    TYPE1 get##NAME1() const { return NAME1; }                                 \
-    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
-    TYPE2 get##NAME2() const { return NAME2; }                                 \
-    void set##NAME2(TYPE2 NAME2) { this->NAME2 = NAME2; }                      \
-  };
-LLVM_PACKED_START
-#include "llvm/IR/DIExprOps.def"
-LLVM_PACKED_END
-
-/// Container for a runtime-variant DIOp
-using Variant = std::variant<
-#define HANDLE_OP_NAME(NAME) NAME
-#define SEPARATOR ,
-#include "llvm/IR/DIExprOps.def"
-    >;
-
-#define HANDLE_OP_NAME(NAME)                                                   \
-  constexpr StringRef DIOp::NAME::getAsmName() { return "DIOp" #NAME; }
-#include "llvm/IR/DIExprOps.def"
-
-StringRef getAsmName(const Variant &V);
-
-#define DEFINE_BC_ID(NAME, ID)                                                 \
-  constexpr unsigned DIOp::NAME::getBitcodeID() { return ID; }
-DEFINE_BC_ID(Referrer, 1u)
-DEFINE_BC_ID(Arg, 2u)
-DEFINE_BC_ID(TypeObject, 3u)
-DEFINE_BC_ID(Constant, 4u)
-DEFINE_BC_ID(Convert, 5u)
-DEFINE_BC_ID(Reinterpret, 6u)
-DEFINE_BC_ID(BitOffset, 7u)
-DEFINE_BC_ID(ByteOffset, 8u)
-DEFINE_BC_ID(Composite, 9u)
-DEFINE_BC_ID(Extend, 10u)
-DEFINE_BC_ID(Select, 11u)
-DEFINE_BC_ID(AddrOf, 12u)
-DEFINE_BC_ID(Deref, 13u)
-DEFINE_BC_ID(Read, 14u)
-DEFINE_BC_ID(Add, 15u)
-DEFINE_BC_ID(Sub, 16u)
-DEFINE_BC_ID(Mul, 17u)
-DEFINE_BC_ID(Div, 18u)
-DEFINE_BC_ID(Shr, 19u)
-DEFINE_BC_ID(Shl, 20u)
-DEFINE_BC_ID(PushLane, 21u)
-#undef DEFINE_BC_ID
-
-unsigned getBitcodeID(const Variant &V);
-
-// The sizeof of `Op` is the size of the largest union variant, which
-// should essentially be defined as a packed struct equivalent to:
-//
-//    uint8_t Index; // Internal to std::variant, but we expect this to be
-//                   // the smallest available integral type which
-//                   // can represent our set of alternatives.
-//    uint32_t I;
-//    void* P;
-//
-// Note that there is no public interface which lets a pointer to the members
-// of the alternative types escape, and so we can safely pack them. This
-// means huge performance benefits (smaller memory footprint and more
-// cache-friendly traversal).
-//
-// This static_assert tries to catch issues where the struct is not packed into
-// at most two 64-bit words, as we would expect it to be.
-//
-// FIXME: If we can constrain `I` further to <= 16 bits we should also
-// fit in two 32-bit words on 32-bit targets.
-static_assert(sizeof(DIOp::Variant) <= 16);
-
-} // namespace DIOp
-
 template <class NodeTy> struct MDNodeKeyImpl;
 
-  /// Mutable buffer to manipulate debug info expressions.
-  ///
-  /// Example of creating a new expression from scratch:
-  ///
-  /// LLVMContext Ctx;
-  ///
-  /// DIExpr::Builder Builder(Ctx);
-  /// Builder.append(DIOp::InPlaceAdd).intoExpr();
-  ///
-  /// Example of creating a new expression:
-  ///
-  /// DIExpr *Expr = ...;
-  /// ...
-  /// DIExpr *NewExpr = Expr.builder()
-  ///     .append(DIOp::InPlaceDeref)
-  ///     .intoExpr();
+/// Mutable buffer to manipulate debug info expressions.
+///
+/// Example of creating a new expression from scratch:
+///
+/// LLVMContext Ctx;
+///
+/// DIExprBuilder Builder(Ctx);
+/// Builder.append<DIOp::Add>().intoExpr();
+///
+/// Example of modifying an expression:
+///
+/// DIExpr *Expr = ...;
+/// ...
+/// DIExpr *NewExpr = Expr.builder()
+///     .append(DIOp::InPlaceDeref)
+///     .intoExpr();
+///
+/// Despite the name, it supports creating both DIExpr and DIOp-based
+/// ("NewElements") DIExpression nodes.
 class DIExprBuilder {
   LLVMContext &C;
   SmallVector<DIOp::Variant> Elements;
@@ -3411,8 +3796,12 @@ public:
   /// Create a builder for a new expression for the sequence of ops in \p IL.
   explicit DIExprBuilder(LLVMContext &C,
                          std::initializer_list<DIOp::Variant> IL);
+  /// Create a builder for a new expression for the sequence of ops in \p V.
+  explicit DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V);
   /// Create a builder for a new expression, initially a copy of \p E.
   explicit DIExprBuilder(const DIExpr &E);
+  /// Create a builder for a new expression, initially a copy of \p E.
+  explicit DIExprBuilder(const DIExpression &E);
 
   class Iterator
       : public iterator_facade_base<Iterator, std::random_access_iterator_tag,
@@ -3505,6 +3894,13 @@ public:
   /// This leaves the Builder in a valid but unspecified state, as if it were
   /// moved from.
   DIExpr *intoExpr();
+
+  /// Get the uniqued, immutable expression metadata from the current state
+  /// of the builder.
+  ///
+  /// This leaves the Builder in a valid but unspecified state, as if it were
+  /// moved from.
+  DIExpression *intoExpression();
 };
 
 /// Immutable debug info expression.

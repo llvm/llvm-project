@@ -4462,12 +4462,23 @@ def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
 def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
-def gheterogeneous_dwarf : Flag<["-"], "gheterogeneous-dwarf">,
+
+def gheterogeneous_dwarf_EQ : Joined<["-"], "gheterogeneous-dwarf=">,
   Group<g_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable DWARF extensions for heterogeneous debugging">,
-  MarshallingInfoFlag<CodeGenOpts<"HeterogeneousDwarf">>;
+  HelpText<"Control DWARF extensions for heterogeneous debugging">,
+  Values<"disabled,diexpr,diexpression">,
+  NormalizedValuesScope<"CodeGenOptions::HeterogeneousDwarfOpts">,
+  NormalizedValues<["Disabled","DIExpr","DIExpression"]>,
+  MarshallingInfoEnum<CodeGenOpts<"HeterogeneousDwarfMode">, "Disabled">;
+def gheterogeneous_dwarf : Flag<["-"], "gheterogeneous-dwarf">, Group<g_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable DIExpression-based DWARF extensions for heterogeneous debugging">,
+  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["diexpression"]>;
 def gno_heterogeneous_dwarf : Flag<["-"], "gno-heterogeneous-dwarf">,
-  Group<g_Group>, HelpText<"Disable DWARF extensions for heterogeneous debugging">;
+  Visibility<[ClangOption, CC1Option]>,
+  Group<g_Group>,
+  HelpText<"Disable DWARF extensions for heterogeneous debugging">,
+  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["disabled"]>;
 
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,

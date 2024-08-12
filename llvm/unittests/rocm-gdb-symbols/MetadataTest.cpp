@@ -243,6 +243,241 @@ TEST_F(DIExprBuilderTest, Visitor) {
   visit(makeVisitor([](DIOp::Referrer) {}, [](auto) { FAIL(); }), Op);
 }
 
+typedef MetadataTest DIExprBuilderDIExpressionTest;
+
+TEST_F(DIExprBuilderDIExpressionTest, EmptyBuilderGet) {
+  DIExprBuilder BuilderA(Context);
+  DIExpression *ExprA = BuilderA.intoExpression();
+  EXPECT_NE(ExprA, nullptr);
+  DIExprBuilder BuilderB(Context);
+  EXPECT_EQ(ExprA, BuilderB.intoExpression());
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, NonUnique) {
+  DIExprBuilder BuilderA(Context);
+  BuilderA.append<DIOp::Referrer>(Int32Ty);
+  DIExprBuilder BuilderB(Context);
+  BuilderB.append<DIOp::Referrer>(Int32Ty);
+  EXPECT_EQ(BuilderA.intoExpression(), BuilderB.intoExpression());
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, Unique) {
+  DIExprBuilder BuilderA(Context);
+  BuilderA.append<DIOp::Referrer>(Int32Ty);
+  DIExprBuilder BuilderB(Context);
+  BuilderB.append<DIOp::Referrer>(Int64Ty);
+  EXPECT_NE(BuilderA.intoExpression(), BuilderB.intoExpression());
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, EquivalentAppends) {
+  DIExprBuilder BuilderA(Context);
+  BuilderA.append<DIOp::Referrer>(Int64Ty);
+  DIExprBuilder BuilderB(Context);
+  BuilderB.append(DIOp::Referrer(Int64Ty));
+  DIExprBuilder BuilderC(Context);
+  BuilderC.append(DIOp::Variant(DIOp::Referrer(Int64Ty)));
+  DIExpression *ExprA = BuilderA.intoExpression();
+  DIExpression *ExprB = BuilderB.intoExpression();
+  DIExpression *ExprC = BuilderC.intoExpression();
+  EXPECT_EQ(ExprA, ExprB);
+  EXPECT_EQ(ExprB, ExprC);
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, Iterator) {
+  DIExprBuilder Builder(Context);
+  DIOp::Variant Op(std::in_place_type<DIOp::Referrer>, Int32Ty);
+  DIExpression *Expr = Builder.append(Op).intoExpression();
+  DIExprBuilder ViewBuilder{*Expr};
+  DIExprBuilder::Iterator I = ViewBuilder.begin();
+  DIExprBuilder::Iterator E = ViewBuilder.end();
+  EXPECT_EQ(*I, Op);
+  ++I;
+  EXPECT_EQ(I, E);
+  --I;
+  EXPECT_EQ(*I, Op);
+  I++;
+  EXPECT_EQ(I, E);
+  I--;
+  EXPECT_EQ(*I, Op);
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, IteratorRange) {
+  SmallVector<DIOp::Variant> Ops{
+      DIOp::Variant{std::in_place_type<DIOp::Arg>, 0, Int64Ty},
+      DIOp::Variant{std::in_place_type<DIOp::Arg>, 1, Int64Ty},
+      DIOp::Variant{std::in_place_type<DIOp::Add>}};
+  DIExprBuilder Builder(Context);
+  for (auto &Op : Ops)
+    Builder.append(Op);
+  DIExpression *Expr = Builder.intoExpression();
+  SmallVector<DIOp::Variant> Ops2;
+  ASSERT_TRUE(Expr->holdsNewElements());
+  auto NewElements = Expr->getNewElementsRef();
+  ASSERT_TRUE(NewElements);
+  for (auto &Op : *NewElements)
+    Ops2.push_back(Op);
+  EXPECT_EQ(Ops, Ops2);
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, InitializerList) {
+  std::initializer_list<DIOp::Variant> IL{
+      DIOp::Variant{std::in_place_type<DIOp::Arg>, 0, Int64Ty},
+      DIOp::Variant{std::in_place_type<DIOp::Arg>, 1, Int64Ty},
+      DIOp::Variant{std::in_place_type<DIOp::Add>}};
+  DIExprBuilder BuilderA(Context, IL);
+
+  DIExprBuilder BuilderB(Context);
+  BuilderB.insert(BuilderB.begin(), IL);
+
+  DIExprBuilder BuilderC(Context);
+  for (auto &Op : IL)
+    BuilderC.append(Op);
+
+  DIExpression *ExprA = BuilderA.intoExpression();
+  DIExpression *ExprB = BuilderB.intoExpression();
+  DIExpression *ExprC = BuilderC.intoExpression();
+
+  EXPECT_EQ(ExprA, ExprB);
+  EXPECT_EQ(ExprB, ExprC);
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, InsertByValue) {
+  DIOp::Variant V(std::in_place_type<DIOp::Sub>);
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), V);
+    DIExprBuilder ExpectedA(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Sub>}});
+    EXPECT_EQ(BuilderA.intoExpression(), ExpectedA.intoExpression());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context,
+                           {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                            DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, V);
+    DIExprBuilder ExpectedB(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                             DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpression(), ExpectedB.intoExpression());
+  }
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, InsertEmplace) {
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert<DIOp::Sub>(BuilderA.begin());
+    DIExprBuilder ExpectedA(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Sub>}});
+    EXPECT_EQ(BuilderA.intoExpression(), ExpectedA.intoExpression());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context,
+                           {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                            DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    BuilderB.insert<DIOp::Sub>(BuilderB.begin() + 1);
+    DIExprBuilder ExpectedB(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                             DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpression(), ExpectedB.intoExpression());
+  }
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, InsertRange) {
+  SmallVector<DIOp::Variant> Vs{DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                                DIOp::Variant{std::in_place_type<DIOp::Add>}};
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), Vs);
+    DIExprBuilder ExpectedA(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Add>}});
+    EXPECT_EQ(BuilderA.intoExpression(), ExpectedA.intoExpression());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context,
+                           {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                            DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, Vs);
+    DIExprBuilder ExpectedB(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                             DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Add>},
+                             DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpression(), ExpectedB.intoExpression());
+  }
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, InsertFromTo) {
+  SmallVector<DIOp::Variant> Vs{DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                                DIOp::Variant{std::in_place_type<DIOp::Add>}};
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), Vs.begin(), Vs.end());
+    DIExprBuilder ExpectedA(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Add>}});
+    EXPECT_EQ(BuilderA.intoExpression(), ExpectedA.intoExpression());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context,
+                           {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                            DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, Vs.begin(), Vs.end());
+    DIExprBuilder ExpectedB(Context,
+                            {DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                             DIOp::Variant{std::in_place_type<DIOp::Sub>},
+                             DIOp::Variant{std::in_place_type<DIOp::Add>},
+                             DIOp::Variant{std::in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpression(), ExpectedB.intoExpression());
+  }
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, Erase) {
+  DIExprBuilder BuilderA(
+      Context, {DIOp::Variant{std::in_place_type<DIOp::Referrer>, Int64Ty},
+                DIOp::Variant{std::in_place_type<DIOp::Arg>, 0, Int64Ty},
+                DIOp::Variant{std::in_place_type<DIOp::Add>},
+                DIOp::Variant{std::in_place_type<DIOp::Mul>}});
+  ASSERT_TRUE(
+      std::holds_alternative<DIOp::Add>(*BuilderA.erase(++BuilderA.begin())));
+  ASSERT_TRUE(
+      std::holds_alternative<DIOp::Add>(*BuilderA.erase(BuilderA.begin())));
+  auto I = BuilderA.erase(--BuilderA.end());
+  ASSERT_EQ(I, BuilderA.end());
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, Contains) {
+  DIExprBuilder ExprBuilder0(Context);
+  EXPECT_EQ(ExprBuilder0.contains<DIOp::Add>(), false);
+
+  DIExprBuilder ExprBuilder1(Context,
+                             {DIOp::Variant{std::in_place_type<DIOp::Add>}});
+  EXPECT_EQ(ExprBuilder1.contains<DIOp::Add>(), true);
+  EXPECT_EQ(ExprBuilder1.contains<DIOp::Mul>(), false);
+
+  DIExprBuilder ExprBuilder2(Context,
+                             {DIOp::Variant{std::in_place_type<DIOp::Add>},
+                              DIOp::Variant{std::in_place_type<DIOp::Mul>},
+                              DIOp::Variant{std::in_place_type<DIOp::Add>}});
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Add>(), true);
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Mul>(), true);
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Select>(), false);
+}
+
+TEST_F(DIExprBuilderDIExpressionTest, Visitor) {
+  DIOp::Variant Op(std::in_place_type<DIOp::Referrer>, Int32Ty);
+  visit(makeVisitor([](DIOp::Referrer) {}, [](auto) { FAIL(); }), Op);
+}
+
 typedef MetadataTest DIExprOpsTest;
 
 TEST_F(DIExprOpsTest, Referrer) {
@@ -276,6 +511,18 @@ TEST_F(DIExprOpsTest, Convert) {
   DIOp::Variant V{std::in_place_type<DIOp::Convert>, Int64Ty};
   ASSERT_TRUE(std::holds_alternative<DIOp::Convert>(V));
   ASSERT_EQ(std::get<DIOp::Convert>(V).getResultType(), Int64Ty);
+}
+
+TEST_F(DIExprOpsTest, ZExt) {
+  DIOp::Variant V{std::in_place_type<DIOp::ZExt>, Int64Ty};
+  ASSERT_TRUE(std::holds_alternative<DIOp::ZExt>(V));
+  ASSERT_EQ(std::get<DIOp::ZExt>(V).getResultType(), Int64Ty);
+}
+
+TEST_F(DIExprOpsTest, SExt) {
+  DIOp::Variant V{std::in_place_type<DIOp::SExt>, Int64Ty};
+  ASSERT_TRUE(std::holds_alternative<DIOp::SExt>(V));
+  ASSERT_EQ(std::get<DIOp::SExt>(V).getResultType(), Int64Ty);
 }
 
 TEST_F(DIExprOpsTest, Reinterpret) {
@@ -351,9 +598,14 @@ TEST_F(DIExprOpsTest, Div) {
   ASSERT_TRUE(std::holds_alternative<DIOp::Div>(V));
 }
 
-TEST_F(DIExprOpsTest, Shr) {
-  DIOp::Variant V{std::in_place_type<DIOp::Shr>};
-  ASSERT_TRUE(std::holds_alternative<DIOp::Shr>(V));
+TEST_F(DIExprOpsTest, LShr) {
+  DIOp::Variant V{std::in_place_type<DIOp::LShr>};
+  ASSERT_TRUE(std::holds_alternative<DIOp::LShr>(V));
+}
+
+TEST_F(DIExprOpsTest, AShr) {
+  DIOp::Variant V{std::in_place_type<DIOp::AShr>};
+  ASSERT_TRUE(std::holds_alternative<DIOp::AShr>(V));
 }
 
 TEST_F(DIExprOpsTest, Shl) {

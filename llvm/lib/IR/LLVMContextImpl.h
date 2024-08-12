@@ -1193,18 +1193,17 @@ template <> struct MDNodeKeyImpl<DILabel> {
 };
 
 template <> struct MDNodeKeyImpl<DIExpression> {
-  ArrayRef<uint64_t> Elements;
+  DIExpression::ElementsRef Elements;
 
+  MDNodeKeyImpl(DIExpression::NewElementsRef Elements) : Elements(Elements) {}
   MDNodeKeyImpl(ArrayRef<uint64_t> Elements) : Elements(Elements) {}
-  MDNodeKeyImpl(const DIExpression *N) : Elements(N->getElements()) {}
+  MDNodeKeyImpl(const DIExpression *N) : Elements(N->getElementsRef()) {}
 
   bool isKeyOf(const DIExpression *RHS) const {
-    return Elements == RHS->getElements();
+    return Elements == RHS->getElementsRef();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Elements.begin(), Elements.end());
-  }
+  unsigned getHashValue() const { return hash_value(Elements); }
 };
 
 template <> struct MDNodeKeyImpl<DIExpr> {

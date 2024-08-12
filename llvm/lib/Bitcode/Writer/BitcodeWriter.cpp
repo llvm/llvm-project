@@ -370,6 +370,11 @@ private:
                        unsigned Abbrev);
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+
+  void writeOneDIOpToRecord(SmallVectorImpl<uint64_t> &Record,
+                            DIOp::Variant Op);
+  void writeNewDIExpression(const DIExpression *N,
+                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpr(const DIExpr *N, SmallVectorImpl<uint64_t> &Record,
@@ -2253,9 +2258,90 @@ void ModuleBitcodeWriter::writeDILabel(
   Record.clear();
 }
 
+void ModuleBitcodeWriter::writeOneDIOpToRecord(
+    SmallVectorImpl<uint64_t> &Record, DIOp::Variant Op) {
+  Record.push_back(DIOp::getBitcodeID(Op));
+  std::visit(
+      makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+          [&](DIOp::Referrer Referrer) {
+            Record.push_back(VE.getTypeID(Referrer.getResultType()));
+          },
+          [&](DIOp::Arg Arg) {
+            Record.push_back(VE.getTypeID(Arg.getResultType()));
+            Record.push_back(Arg.getIndex());
+          },
+          [&](DIOp::TypeObject TypeObject) {
+            Record.push_back(VE.getTypeID(TypeObject.getResultType()));
+          },
+          [&](DIOp::Constant Constant) {
+            Record.push_back(
+                VE.getTypeID(Constant.getLiteralValue()->getType()));
+            Record.push_back(VE.getValueID(Constant.getLiteralValue()));
+          },
+          [&](DIOp::Convert Convert) {
+            Record.push_back(VE.getTypeID(Convert.getResultType()));
+          },
+          [&](DIOp::ZExt ZExt) {
+            Record.push_back(VE.getTypeID(ZExt.getResultType()));
+          },
+          [&](DIOp::SExt SExt) {
+            Record.push_back(VE.getTypeID(SExt.getResultType()));
+          },
+          [&](DIOp::Reinterpret Reinterpret) {
+            Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
+          },
+          [&](DIOp::BitOffset BitOffset) {
+            Record.push_back(VE.getTypeID(BitOffset.getResultType()));
+          },
+          [&](DIOp::ByteOffset ByteOffset) {
+            Record.push_back(VE.getTypeID(ByteOffset.getResultType()));
+          },
+          [&](DIOp::Composite Composite) {
+            Record.push_back(VE.getTypeID(Composite.getResultType()));
+            Record.push_back(Composite.getCount());
+          },
+          [&](DIOp::Extend Extend) { Record.push_back(Extend.getCount()); },
+          [&](DIOp::AddrOf AddrOf) {
+            Record.push_back(AddrOf.getAddressSpace());
+          },
+          [&](DIOp::Deref Deref) {
+            Record.push_back(VE.getTypeID(Deref.getResultType()));
+          },
+          [&](DIOp::PushLane PushLane) {
+            Record.push_back(VE.getTypeID(PushLane.getResultType()));
+          },
+          [&](DIOp::Fragment Fragment) {
+            Record.push_back(Fragment.getBitOffset());
+            Record.push_back(Fragment.getBitSize());
+          }),
+      Op);
+}
+
+void ModuleBitcodeWriter::writeNewDIExpression(
+    const DIExpression *N, SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+  assert(N->holdsNewElements());
+
+  // Use version 16 for DIOp DIExpressions. This is just an arbitrary large
+  // number to avoid any merge issues if the upstream version increases from 3.
+  const uint64_t Version = 16 << 1;
+  Record.push_back((uint64_t)N->isDistinct() | Version);
+  auto Elements = N->getNewElementsRef();
+  for (auto &Elem : *Elements)
+    writeOneDIOpToRecord(Record, Elem);
+
+  Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
+  Record.clear();
+}
+
 void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
+  if (N->holdsNewElements())
+    return writeNewDIExpression(N, Record, Abbrev);
+
   Record.reserve(N->getElements().size() + 1);
   const uint64_t Version = 3 << 1;
   Record.push_back((uint64_t)N->isDistinct() | Version);
@@ -2271,55 +2357,8 @@ void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
   assert(!N->isDistinct() && "Expected non-distinct expr");
   const unsigned Version = 0;
   Record.push_back(Version);
-  for (auto &Op : N->builder()) {
-    Record.push_back(DIOp::getBitcodeID(Op));
-    std::visit(makeVisitor(
-#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
-#include "llvm/IR/DIExprOps.def"
-#undef HANDLE_OP0
-              [&](DIOp::Referrer Referrer) {
-                Record.push_back(VE.getTypeID(Referrer.getResultType()));
-              },
-              [&](DIOp::Arg Arg) {
-                Record.push_back(VE.getTypeID(Arg.getResultType()));
-                Record.push_back(Arg.getIndex());
-              },
-              [&](DIOp::TypeObject TypeObject) {
-                Record.push_back(VE.getTypeID(TypeObject.getResultType()));
-              },
-              [&](DIOp::Constant Constant) {
-                Record.push_back(
-                    VE.getTypeID(Constant.getLiteralValue()->getType()));
-                Record.push_back(VE.getValueID(Constant.getLiteralValue()));
-              },
-              [&](DIOp::Convert Convert) {
-                Record.push_back(VE.getTypeID(Convert.getResultType()));
-              },
-              [&](DIOp::Reinterpret Reinterpret) {
-                Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
-              },
-              [&](DIOp::BitOffset BitOffset) {
-                Record.push_back(VE.getTypeID(BitOffset.getResultType()));
-              },
-              [&](DIOp::ByteOffset ByteOffset) {
-                Record.push_back(VE.getTypeID(ByteOffset.getResultType()));
-              },
-              [&](DIOp::Composite Composite) {
-                Record.push_back(VE.getTypeID(Composite.getResultType()));
-                Record.push_back(Composite.getCount());
-              },
-              [&](DIOp::Extend Extend) { Record.push_back(Extend.getCount()); },
-              [&](DIOp::AddrOf AddrOf) {
-                Record.push_back(AddrOf.getAddressSpace());
-              },
-              [&](DIOp::Deref Deref) {
-                Record.push_back(VE.getTypeID(Deref.getResultType()));
-              },
-              [&](DIOp::PushLane PushLane) {
-                Record.push_back(VE.getTypeID(PushLane.getResultType()));
-              }),
-          Op);
-  }
+  for (auto &Op : N->builder())
+    writeOneDIOpToRecord(Record, Op);
   Stream.EmitRecord(bitc::METADATA_EXPR, Record, Abbrev);
   Record.clear();
 }
