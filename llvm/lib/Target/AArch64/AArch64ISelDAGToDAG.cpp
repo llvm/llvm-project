@@ -1873,8 +1873,7 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
   unsigned FirstVecIdx = HasPred ? 2 : 1;
 
   auto GetMultiVecOperand = [=](unsigned StartIdx) {
-    SmallVector<SDValue, 4> Regs(N->op_begin() + StartIdx,
-                                 N->op_begin() + StartIdx + NumVecs);
+    SmallVector<SDValue, 4> Regs(N->ops().slice(StartIdx, NumVecs));
     return createZMulTuple(Regs);
   };
 
@@ -2135,8 +2134,7 @@ void AArch64DAGToDAGISel::SelectUnaryMultiIntrinsic(SDNode *N,
   if (IsTupleInput) {
     assert((NumInVecs == 2 || NumInVecs == 4) &&
            "Don't know how to handle multi-register input!");
-    SmallVector<SDValue, 4> Regs(N->op_begin() + 1,
-                                 N->op_begin() + 1 + NumInVecs);
+    SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumInVecs));
     Ops.push_back(createZMulTuple(Regs));
   } else {
     // All intrinsic nodes have the ID as the first operand, hence the "1 + I".
@@ -2160,7 +2158,7 @@ void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
 
   // Form a REG_SEQUENCE to force register allocation.
   bool Is128Bit = VT.getSizeInBits() == 128;
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(2, NumVecs));
   SDValue RegSeq = Is128Bit ? createQTuple(Regs) : createDTuple(Regs);
 
   SDValue Ops[] = {RegSeq, N->getOperand(NumVecs + 2), N->getOperand(0)};
@@ -2398,7 +2396,7 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
   bool Narrow = VT.getSizeInBits() == 64;
 
   // Form a REG_SEQUENCE to force register allocation.
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumVecs));
 
   if (Narrow)
     transform(Regs, Regs.begin(),

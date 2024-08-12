@@ -1559,6 +1559,9 @@ private:
   std::pair<ModuleFile *, unsigned>
   translateTypeIDToIndex(serialization::TypeID ID) const;
 
+  /// Get a predefined Decl from ASTContext.
+  Decl *getPredefinedDecl(PredefinedDeclIDs ID);
+
 public:
   /// Load the AST file and validate its contents against the given
   /// Preprocessor.

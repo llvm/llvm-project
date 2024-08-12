@@ -838,8 +838,7 @@ struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
   static bool isEmptyMemRef(BaseMemRefType type) {
-    return type.hasRank() &&
-           llvm::any_of(type.getShape(), [](int64_t x) { return x == 0; });
+    return type.hasRank() && llvm::is_contained(type.getShape(), 0);
   }
 
   LogicalResult matchAndRewrite(CopyOp copyOp,

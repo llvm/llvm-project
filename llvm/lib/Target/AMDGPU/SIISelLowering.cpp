@@ -11555,7 +11555,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
                                           N->getMemoryVT(), DCI);
     if (NewPtr) {
-      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 8> NewOps(N->ops());
 
       NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -15275,7 +15275,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    SmallVector<SDValue, 9> Ops(Node->ops());
     Ops[1] = Src0;
     Ops[3] = Src1;
     Ops[5] = Src2;
@@ -16882,12 +16882,13 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3, "loaded.phi");
+  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
   Loaded->addIncoming(LoadedShared, SharedBB);
   Loaded->addIncoming(LoadedPrivate, PrivateBB);
   Loaded->addIncoming(LoadedGlobal, GlobalBB);
   Builder.CreateBr(ExitBB);
 
+  Loaded->takeName(AI);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
