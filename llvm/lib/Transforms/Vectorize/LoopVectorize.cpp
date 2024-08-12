@@ -8532,18 +8532,20 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
 }
 
 // Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
-// original exit block.
+// original exit block fed by a reduction or VPValue that's not a
+// VPWidenIntOrFpInductionRecipe or VPFirstOrderRecurrencePHIRecipe.
 static void addUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
-  BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
-  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
-  // Only handle single-exit loops with unique exit blocks for now.
-  if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
-    return;
-
   auto MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+
+  // No edge from the middle block to the unique exit block has been inserted
+  // and there is nothing to fix from vector loop; phis should have incoming
+  // from scalar loop only.
+  if (MiddleVPBB->getNumSuccessors() != 2)
+    return;
+  // TODO: set B to MiddleVPBB->getFirstNonPhi(), taking care of affected tests.
   VPBuilder B(MiddleVPBB);
   if (auto *Terminator = MiddleVPBB->getTerminator()) {
     auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
@@ -8553,12 +8555,17 @@ static void addUsersInExitBlock(
   }
 
   // Introduce VPUsers modeling the exit values.
+  BasicBlock *ExitBB =
+      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
+  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
     VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
     // Exit values for inductions are computed and updated outside of VPlan and
     // independent of induction recipes.
+    // Exit values for first-order recurrences are added separately in
+    // addLiveOutsForFirstOrderRecurrences.
     // TODO: Compute induction exit values in VPlan, use VPLiveOuts to update
     // live-outs.
     if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
@@ -8580,12 +8587,15 @@ static void addUsersInExitBlock(
   }
 }
 
-/// Feed a resume value for every FOR from the vector loop to the scalar loop,
-/// if middle block branches to scalar preheader, by introducing ExtractFromEnd
-/// and ResumePhi recipes in each, respectively, and a VPLiveOut which uses the
-/// latter and corresponds to the scalar header.
-static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, Loop *OrigLoop,
-                                                bool RequiresScalarEpilogue) {
+/// Handle live-outs for first order reductions, both in the scalar preheader
+/// and the original exit block:
+/// 1. Feed a resume value for every FOR from the vector loop to the scalar
+///    loop, if middle block branches to scalar preheader, by introducing
+///    ExtractFromEnd and ResumePhi recipes in each, respectively, and a
+///    VPLiveOut which uses the latter and corresponds to the scalar header.
+/// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
+///     the original exit block using a VPLiveOut.
+static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
   // Start by finding out if middle block branches to scalar preheader, which is
@@ -8712,21 +8722,14 @@ static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, Loop *OrigLoop,
     // No edge from the middle block to the unique exit block has been inserted
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
-    if (RequiresScalarEpilogue)
+    if (MiddleVPBB->getNumSuccessors() != 2)
       continue;
-    BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
-    BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
-    // Only handle single-exit loops with unique exit blocks for now.
-    if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
-      continue;
-
+    BasicBlock *ExitBB =
+        cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
     for (User *U : FORPhi->users()) {
       auto *UI = cast<Instruction>(U);
-      if (UI->getParent() != ExitBB) {
-        assert(OrigLoop->contains(UI->getParent()) &&
-               "FOR used outside loop and exit block");
+      if (UI->getParent() != ExitBB)
         continue;
-      }
       VPValue *Ext = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
           "vector.recur.extract.for.phi");
@@ -8892,16 +8895,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  bool RequiresScalarEpilogue = CM.requiresScalarEpilogue(Range);
-  addLiveOutsForFirstOrderRecurrences(*Plan, OrigLoop, RequiresScalarEpilogue);
-
-  if (RequiresScalarEpilogue) {
-    // No edge from the middle block to the unique exit block has been inserted
-    // and there is nothing to fix from vector loop; phis should have incoming
-    // from scalar loop only.
-  } else
-    addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
-                        Legal->getInductionVars());
+  addLiveOutsForFirstOrderRecurrences(*Plan);
+  addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
+                      Legal->getInductionVars());
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
