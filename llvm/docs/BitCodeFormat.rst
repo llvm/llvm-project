@@ -477,7 +477,7 @@ that has gone through a pre-link LTO pipeline).  The ``.llvmbc`` section
 predates FatLTO support in LLVM, and may not always contain bitcode that is
 suitable for LTO (i.e. from ``-fembed-bitcode``).  The wrapper format is useful
 for accommodating LTO in compilation pipelines where intermediate objects must
-be native object files which contain metadata in other sections. 
+be native object files which contain metadata in other sections.
 
 Not all tools support this format.  For example, lld and the gold plugin will
 ignore the ``.llvmbc`` section when linking object files, but can use
@@ -1006,8 +1006,8 @@ number of values representing the bytes of a null-terminated string. For
 attributes with a string argument (code 4), the *value* value is similarly a
 variable number of values representing the bytes of a null-terminated string.
 
-The integer codes are mapped to well-known attributes as described in the
-enumeration in the file `LLVMBitCodes.h
+The integer codes are mapped to attributes as described in the
+``AttributeKindCodes`` enumeration in the file `LLVMBitCodes.h
 <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Bitcode/LLVMBitCodes.h>`_.
 
 For example:
