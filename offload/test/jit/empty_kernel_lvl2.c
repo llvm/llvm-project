@@ -21,7 +21,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefix=FIRST
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
 // RUN:     -DTGT1_DIRECTIVE="target"                          \
@@ -30,7 +29,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefixes=FIRST,SECOND
 //
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
@@ -39,7 +37,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefix=FIRST
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
 // RUN:     -DTGT1_DIRECTIVE="target teams"                    \
@@ -48,7 +45,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefixes=FIRST,SECOND
 //
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
@@ -57,7 +53,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefix=FIRST
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
 // RUN:     -DTGT1_DIRECTIVE="target teams"                    \
@@ -66,7 +61,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefixes=FIRST,SECOND
 //
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
@@ -75,7 +69,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefix=FIRST
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
 // RUN:     -DTGT1_DIRECTIVE="target teams"                    \
@@ -84,7 +77,6 @@
 // RUN: env LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=%t.pre.ll     \
 // RUN:     LIBOMPTARGET_JIT_SKIP_OPT=true                   \
 // RUN:     %libomptarget-run-generic
-// TODO:
 // RUN: not %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefixes=FIRST,SECOND
 // clang-format on
 
