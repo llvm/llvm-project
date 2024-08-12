@@ -239,6 +239,8 @@ RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
 
 void RecordInfo::merge(RecordInfo &&Other) {
   assert(mergeable(Other));
+  if (FullName.empty())
+    FullName = std::move(Other.FullName);
   if (!llvm::to_underlying(TagType))
     TagType = Other.TagType;
   IsTypeDef = IsTypeDef || Other.IsTypeDef;
