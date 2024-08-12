@@ -351,9 +351,14 @@ public:
     for (MemMapT &EvictMemMap : EvictionMemMaps)
       unmapCallBack(EvictMemMap);
 
-    if (Interval >= 0) {
+    // If a thread already holds the mutex, the current thread will
+    // skip the release logic to reduce thread contention and leave
+    // the responsibility of releases to the next uncontended
+    // thread
+    if (Interval >= 0 && Mutex.tryLock()) {
       // TODO: Add ReleaseToOS logic to LRU algorithm
       releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+      Mutex.unlock();
     }
   }
 
@@ -455,7 +460,10 @@ public:
     return true;
   }
 
-  void releaseToOS() { releaseOlderThan(UINT64_MAX); }
+  void releaseToOS() {
+    ScopedLock L(Mutex);
+    releaseOlderThan(UINT64_MAX);
+  }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
@@ -597,8 +605,7 @@ private:
     Entry.Time = 0;
   }
 
-  void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
+  void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
     if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
