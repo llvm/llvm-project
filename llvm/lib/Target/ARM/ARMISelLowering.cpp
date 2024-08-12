@@ -20186,9 +20186,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // CSINV: KnownOp0 or ~KnownOp1
     // CSNEG: KnownOp0 or KnownOp1 * -1
     if (Op.getOpcode() == ARMISD::CSINC)
-      KnownOp1 = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KnownOp1,
-          KnownBits::makeConstant(APInt(32, 1)));
+      KnownOp1 =
+          KnownBits::add(KnownOp1, KnownBits::makeConstant(APInt(32, 1)));
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)
