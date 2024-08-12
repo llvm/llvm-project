@@ -2634,8 +2634,9 @@ static int __kmp_topology_type_2_intel_type(kmp_hw_t type) {
     return INTEL_LEVEL_TYPE_MODULE;
   case KMP_HW_DIE:
     return INTEL_LEVEL_TYPE_DIE;
+  default:
+    return INTEL_LEVEL_TYPE_INVALID;
   }
-  return INTEL_LEVEL_TYPE_INVALID;
 }
 
 struct cpuid_level_info_t {
