@@ -102,7 +102,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
+            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
             MRI.setType(ResVReg,
                         LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
             GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
@@ -124,7 +124,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResVType)
             continue;
           // Set type & class
-          MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
+          MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
           MRI.setType(ResVReg,
                       LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
           GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
@@ -139,7 +139,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           // Restore usual instructions pattern for the newly inserted
           // instruction
           MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                       ? &SPIRV::IDRegClass
+                                       ? &SPIRV::iIDRegClass
                                        : &SPIRV::ANYIDRegClass);
           MRI.setType(ResVReg, LLT::scalar(32));
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
