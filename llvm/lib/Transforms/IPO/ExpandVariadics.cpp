@@ -238,7 +238,7 @@ public:
 
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
     // The type of "FTy" with the ... removed and a va_list appended
-    SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+    SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
@@ -456,8 +456,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   // Replace known calls to the variadic with calls to the va_list equivalent
   for (User *U : make_early_inc_range(VariadicWrapper->users())) {
     if (CallBase *CB = dyn_cast<CallBase>(U)) {
-      Value *calledOperand = CB->getCalledOperand();
-      if (VariadicWrapper == calledOperand)
+      Value *CalledOperand = CB->getCalledOperand();
+      if (VariadicWrapper == CalledOperand)
         Changed |=
             expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
                        FixedArityReplacement);
@@ -538,7 +538,7 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   const bool FunctionIsDefinition = !F.isDeclaration();
 
   FunctionType *FTy = F.getFunctionType();
-  SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+  SmallVector<Type *> ArgTypes(FTy->params());
   ArgTypes.push_back(ABI->vaListParameterType(M));
 
   FunctionType *NFTy = inlinableVariadicFunctionType(M, FTy);
@@ -809,7 +809,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     Value *Dst = NF ? NF : CI->getCalledOperand();
     FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
 
-    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI);
+    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     assert(TCK != CallInst::TCK_MustTail);
@@ -938,6 +938,33 @@ struct Amdgpu final : public VariadicABIInfo {
   }
 };
 
+struct NVPTX final : public VariadicABIInfo {
+
+  bool enableForTarget() override { return true; }
+
+  bool vaListPassedInSSARegister() override { return true; }
+
+  Type *vaListType(LLVMContext &Ctx) override {
+    return PointerType::getUnqual(Ctx);
+  }
+
+  Type *vaListParameterType(Module &M) override {
+    return PointerType::getUnqual(M.getContext());
+  }
+
+  Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
+                          AllocaInst *, Value *Buffer) override {
+    return Builder.CreateAddrSpaceCast(Buffer, vaListParameterType(M));
+  }
+
+  VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) override {
+    // NVPTX expects natural alignment in all cases. The variadic call ABI will
+    // handle promoting types to their appropriate size and alignment.
+    Align A = DL.getABITypeAlign(Parameter);
+    return {A, false};
+  }
+};
+
 struct Wasm final : public VariadicABIInfo {
 
   bool enableForTarget() override {
@@ -967,8 +994,8 @@ struct Wasm final : public VariadicABIInfo {
     if (A < MinAlign)
       A = Align(MinAlign);
 
-    if (auto s = dyn_cast<StructType>(Parameter)) {
-      if (s->getNumElements() > 1) {
+    if (auto *S = dyn_cast<StructType>(Parameter)) {
+      if (S->getNumElements() > 1) {
         return {DL.getABITypeAlign(PointerType::getUnqual(Ctx)), true};
       }
     }
@@ -986,6 +1013,11 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
 
   case Triple::wasm32: {
     return std::make_unique<Wasm>();
+  }
+
+  case Triple::nvptx:
+  case Triple::nvptx64: {
+    return std::make_unique<NVPTX>();
   }
 
   default:

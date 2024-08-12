@@ -11,13 +11,14 @@
 
 #include "linux_extension_errors.h"
 #include "posix_errors.h"
+#include "src/__support/macros/config.h"
 #include "stdc_errors.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_ERRORS =
     STDC_ERRORS + POSIX_ERRORS + LINUX_ERRORS;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_PLATFORM_ERRORS_H

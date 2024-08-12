@@ -21,7 +21,6 @@
 
 namespace mlir {
 class Location;
-struct LogicalResult;
 class Operation;
 class OpPrintingFlags;
 class Pass;

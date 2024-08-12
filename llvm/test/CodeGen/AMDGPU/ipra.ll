@@ -59,10 +59,10 @@ define void @func_regular_call() #1 {
 
 ; GCN-LABEL: {{^}}func_tail_call:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_getpc_b64 s[4:5]
-; GCN-NEXT: s_add_u32 s4,
-; GCN-NEXT: s_addc_u32 s5,
-; GCN-NEXT: s_setpc_b64 s[4:5]
+; GCN-NEXT: s_getpc_b64 s[16:17]
+; GCN-NEXT: s_add_u32 s16,
+; GCN-NEXT: s_addc_u32 s17,
+; GCN-NEXT: s_setpc_b64 s[16:17]
 
 ; GCN: ; NumSgprs: 32
 ; GCN: ; NumVgprs: 8

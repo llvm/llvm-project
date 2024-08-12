@@ -182,6 +182,7 @@ class RegisterTypeBuilder;
 class RegisterValue;
 class RegularExpression;
 class RichManglingContext;
+class SaveCoreOptions;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
@@ -189,6 +190,7 @@ class ScriptedMetadata;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
+class ScriptedThreadPlanInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -406,6 +408,8 @@ typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
+    ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;

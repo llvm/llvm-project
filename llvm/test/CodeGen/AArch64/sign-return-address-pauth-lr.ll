@@ -15,17 +15,15 @@
 ; sign-return-address.ll tests combinations of -mbranch-protection=none/pac-ret
 ; and whether +pauth-lr is present or not.
 
-; sign-return-address-pauth-lr.ll is identical, with the addition of this module
+; sign-return-address-pauth-lr.ll is identical, with the addition of the function
 ; attribute, which enables -mbranch-protection=pac-ret+pc, and therefore tests
 ; the remaining parameter combinations in the table:
-!llvm.module.flags = !{!1}
-!1 = !{i32 1, !"branch-protection-pauth-lr", i32 1}
 
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=PAUTHLR %s
 
-define i32 @leaf(i32 %x) {
+define i32 @leaf(i32 %x) "branch-protection-pauth-lr" {
 ; CHECK-LABEL: leaf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
@@ -36,7 +34,7 @@ define i32 @leaf(i32 %x) {
   ret i32 %x
 }
 
-define i32 @leaf_sign_none(i32 %x) "sign-return-address"="none"  {
+define i32 @leaf_sign_none(i32 %x) "branch-protection-pauth-lr"   {
 ; CHECK-LABEL: leaf_sign_none:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
@@ -47,7 +45,7 @@ define i32 @leaf_sign_none(i32 %x) "sign-return-address"="none"  {
   ret i32 %x
 }
 
-define i32 @leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
+define i32 @leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="non-leaf"  {
 ; CHECK-LABEL: leaf_sign_non_leaf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
@@ -58,7 +56,7 @@ define i32 @leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
   ret i32 %x
 }
 
-define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
+define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" {
 ; COMPAT-LABEL: leaf_sign_all:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
@@ -89,14 +87,14 @@ define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
   ret i32 %x
 }
 
-define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
+define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-address"="non-leaf"  {
 ; COMPAT-LABEL: leaf_clobbers_lr:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp1:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -113,8 +111,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp1:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP
@@ -129,8 +127,8 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp1:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    //APP
@@ -144,14 +142,14 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 
 declare i32 @foo(i32)
 
-define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
+define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" {
 ; COMPAT-LABEL: non_leaf_sign_all:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp2:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -166,8 +164,8 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp2:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -180,8 +178,8 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp2:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -191,14 +189,14 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
   ret i32 %call
 }
 
-define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
+define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="non-leaf"  {
 ; COMPAT-LABEL: non_leaf_sign_non_leaf:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp3:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    bl foo
@@ -213,8 +211,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp3:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl foo
@@ -227,8 +225,8 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp3:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -239,7 +237,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 }
 
 ; Should not use the RETAA instruction.
-define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstack "target-features"="+v8.3a,+reserve-x18"  {
+define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="non-leaf" shadowcallstack "target-features"="+v8.3a,+reserve-x18"  {
 ; CHECK-LABEL: non_leaf_scs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [x18], #8
@@ -247,8 +245,8 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; CHECK-NEXT:    hint #39
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    paciasp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl foo
@@ -265,8 +263,8 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    bl foo
@@ -278,7 +276,7 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
   ret i32 %call
 }
 
-define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" {
+define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "target-features"="+v8.3a" {
 ; CHECK-LABEL: leaf_sign_all_v83:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    hint #39
@@ -300,14 +298,14 @@ define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-featur
 
 declare fastcc i64 @bar(i64)
 
-define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
+define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" "sign-return-address"="all" {
 ; COMPAT-LABEL: spill_lr_and_tail_call:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:  .Ltmp6:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
 ; COMPAT-NEXT:    //APP
@@ -324,8 +322,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:  .Ltmp6:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    //APP
@@ -341,8 +339,8 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:  .Ltmp6:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; PAUTHLR-NEXT:    .cfi_negate_ra_state
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
 ; PAUTHLR-NEXT:    //APP
@@ -356,7 +354,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
   ret void
 }
 
-define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" {
+define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="a_key" {
 ; COMPAT-LABEL: leaf_sign_all_a_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
@@ -387,7 +385,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
   ret i32 %x
 }
 
-define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" {
+define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; COMPAT-LABEL: leaf_sign_all_b_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    .cfi_b_key_frame
@@ -421,7 +419,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
   ret i32 %x
 }
 
-define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" {
+define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL: leaf_sign_all_v83_b_key:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    .cfi_b_key_frame
@@ -444,7 +442,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-
 }
 
 ; Note that BTI instruction is not needed before PACIASP.
-define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" "branch-target-enforcement"="true"{
+define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="a_key" "branch-target-enforcement" {
 ; COMPAT-LABEL: leaf_sign_all_a_key_bti:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #34
@@ -479,7 +477,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 }
 
 ; Note that BTI instruction is not needed before PACIBSP.
-define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement"="true"{
+define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; COMPAT-LABEL: leaf_sign_all_b_key_bti:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #34
@@ -517,7 +515,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 }
 
 ; Note that BTI instruction is not needed before PACIBSP.
-define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement"="true" {
+define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    hint #34

@@ -1,13 +1,41 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
 
-namespace cwg2621 { // cwg2621: 16
+namespace std {
+#if __cplusplus >= 202002L
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less{-1},
+      strong_ordering::equal{0}, strong_ordering::greater{1};
+#endif
+
+  typedef short int16_t;
+  typedef unsigned short uint16_t;
+  typedef int int32_t;
+  typedef unsigned uint32_t;
+  typedef long long int64_t;
+  // cxx98-error@-1 {{'long long' is a C++11 extension}}
+  typedef unsigned long long uint64_t;
+  // cxx98-error@-1 {{'long long' is a C++11 extension}}
+  static_assert(sizeof(int16_t) == 2 && sizeof(int32_t) == 4 && sizeof(int64_t) == 8, "Some tests rely on these sizes");
+
+  template<typename T> T declval();
+}
+
+namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
 enum class E { a };
 namespace One {
@@ -17,12 +45,92 @@ auto v = a;
 }
 namespace Two {
 using cwg2621::E;
-int E; // we see this
+int E; // ignored by type-only lookup
 using enum E;
-// since-cxx20-error@-1 {{unknown type name E}}
 }
 #endif
 }
+
+namespace cwg2627 { // cwg2627: 20
+#if __cplusplus >= 202002L
+struct C {
+  long long i : 8;
+  friend auto operator<=>(C, C) = default;
+};
+
+void f() {
+  C x{1}, y{2};
+  static_cast<void>(x <=> y);
+  static_cast<void>(x.i <=> y.i);
+}
+
+template<typename T>
+struct CDependent {
+  T i : 8;
+  friend auto operator<=>(CDependent, CDependent) = default;
+};
+
+template<typename T>
+concept three_way_comparable = requires(T t) { { t <=> t }; };
+template<typename T>
+concept bf_three_way_comparable = requires(T t) { { t.i <=> t.i }; };
+static_assert(three_way_comparable<CDependent<long long>>);
+static_assert(bf_three_way_comparable<CDependent<long long>>);
+#endif
+
+#if __cplusplus >= 201103L
+template<typename T, int N>
+struct D {
+  T i : N;
+};
+
+template<typename T, int N>
+D<T, N> d();
+
+std::int32_t d1{ d<std::int64_t, 31>().i };
+std::int32_t d2{ d<std::int64_t, 32>().i };
+std::int32_t d3{ d<std::int64_t, 33>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'long long' to 'std::int32_t' (aka 'int') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+
+std::int16_t d6{ d<int, 16>().i };
+std::int16_t d7{ d<unsigned, 15>().i };
+std::int16_t d8{ d<unsigned, 16>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'std::int16_t' (aka 'short') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+std::uint16_t d9{ d<unsigned, 16>().i };
+std::uint16_t da{ d<int, 1>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'std::uint16_t' (aka 'unsigned short') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+
+bool db{ d<unsigned, 1>().i };
+bool dc{ d<int, 1>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'bool' in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+
+template<typename Target, typename Source>
+constexpr decltype(Target{ std::declval<Source>().i }, false) is_narrowing(int) { return false; }
+template<typename Target, typename Source>
+constexpr bool is_narrowing(long) { return true; }
+
+static_assert(!is_narrowing<std::int16_t, D<int, 16>>(0), "");
+static_assert(!is_narrowing<std::int16_t, D<unsigned, 15>>(0), "");
+static_assert(is_narrowing<std::int16_t, D<unsigned, 16>>(0), "");
+static_assert(!is_narrowing<std::uint16_t, D<unsigned, 16>>(0), "");
+static_assert(is_narrowing<std::uint16_t, D<int, 1>>(0), "");
+static_assert(!is_narrowing<bool, D<unsigned, 1>>(0), "");
+static_assert(is_narrowing<bool, D<int, 1>>(0), "");
+
+template<int N>
+struct E {
+  signed int x : N;
+  decltype(std::int16_t{ x }) dependent_narrowing;
+  decltype(unsigned{ x }) always_narrowing;
+  // since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'unsigned int' in initializer list}}
+  //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+};
+#endif
+} // namespace cwg2627
 
 namespace cwg2628 { // cwg2628: no
                    // this was reverted for the 16.x release
@@ -194,8 +302,11 @@ static_assert(__is_same(decltype(i), I<char, 4>));
 J j = { "ghi" };
 // since-cxx20-error@-1 {{no viable constructor or deduction guide}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'J<N>' against 'const char *'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(J<N>) -> J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(const unsigned char (&)[N]) -> J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> J<N>'}}
 #endif
 }
 

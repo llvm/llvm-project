@@ -154,7 +154,7 @@ def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
   let extraClassDeclaration = [{
-    ::mlir::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
+    ::llvm::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
                                 ::mlir::Location loc) const;
 
   private:
@@ -390,6 +390,12 @@ def TestRecursiveAlias
 
     void setBody(Type type);
   }];
+}
+
+def TestTypeVerification : Test_Type<"TestTypeVerification"> {
+  let parameters = (ins AnyTypeOf<[I16, I32]>:$param);
+  let mnemonic = "type_verification";
+  let assemblyFormat = "`<` $param `>`";
 }
 
 #endif // TEST_TYPEDEFS

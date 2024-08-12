@@ -237,3 +237,45 @@ concept D = []<C T = int>() { return true; }();
 D auto x = 0;
 
 } // namespace GH93821
+
+namespace dependent_param_concept {
+template <typename... Ts> void sink(Ts...) {}
+void dependent_param() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y) {
+      return [](int z)
+        requires requires { sink(y..., z); }
+      {};
+    };
+  };
+  L(0, 1)(1, 2)(1);
+}
+} // namespace dependent_param_concept
+
+namespace init_captures {
+template <int N> struct V {};
+
+void sink(V<0>, V<1>, V<2>, V<3>, V<4>) {}
+
+void init_capture_pack() {
+  auto L = [](auto... z) {
+    return [=](auto... y) {
+      return [... w = z, y...](auto)
+        requires requires { sink(w..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+
+void dependent_capture_packs() {
+  auto L = [](auto... z) {
+    return [... w = z](auto... y) {
+      return [... c = w](auto)
+        requires requires { sink(c..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+} // namespace init_captures

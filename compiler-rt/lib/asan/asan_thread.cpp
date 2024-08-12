@@ -67,10 +67,10 @@ static void InitThreads() {
   // thread before all TSD destructors will be called for it.
 
   // MIPS requires aligned address
-  static ALIGNED(alignof(
-      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
-  static ALIGNED(alignof(
-      ThreadArgRetval)) char thread_data_placeholder[sizeof(ThreadArgRetval)];
+  alignas(alignof(ThreadRegistry)) static char
+      thread_registry_placeholder[sizeof(ThreadRegistry)];
+  alignas(alignof(ThreadArgRetval)) static char
+      thread_data_placeholder[sizeof(ThreadArgRetval)];
 
   asan_thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);

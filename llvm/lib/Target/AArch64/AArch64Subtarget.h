@@ -185,6 +185,12 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
+  /// Returns true if the target has access to either the full range of SVE instructions,
+  /// or the streaming-compatible subset of SVE instructions.
+  bool isSVEorStreamingSVEAvailable() const {
+    return hasSVE() || (hasSME() && isStreaming());
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -203,6 +209,7 @@ public:
     AllReservedX |= ReserveXRegisterForRA;
     return AllReservedX.count();
   }
+  bool isLRReservedForRA() const { return ReserveLRForRA; }
   bool isXRegCustomCalleeSaved(size_t i) const {
     return CustomCallSavedXRegs[i];
   }
@@ -315,13 +322,15 @@ public:
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
-  bool isCallingConvWin64(CallingConv::ID CC) const {
+  bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {
     switch (CC) {
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
       return isTargetWindows();
+    case CallingConv::PreserveNone:
+      return IsVarArg && isTargetWindows();
     case CallingConv::Win64:
       return true;
     default:
@@ -355,30 +364,27 @@ public:
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
-  bool hasSVEorSME() const { return hasSVE() || hasSME(); }
-  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
-
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const {
-    assert(hasSVEorSME() &&
+    assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
     return MaxSVEVectorSizeInBits;
   }
 
   unsigned getMinSVEVectorSizeInBits() const {
-    assert(hasSVEorSME() &&
+    assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
     return MinSVEVectorSizeInBits;
   }
 
   bool useSVEForFixedLengthVectors() const {
-    if (!isNeonAvailable())
-      return hasSVEorSME();
+    if (!isSVEorStreamingSVEAvailable())
+      return false;
 
     // Prefer NEON unless larger SVE registers are available.
-    return hasSVEorSME() && getMinSVEVectorSizeInBits() >= 256;
+    return !isNeonAvailable() || getMinSVEVectorSizeInBits() >= 256;
   }
 
   bool useSVEForFixedLengthVectors(EVT VT) const {
@@ -407,7 +413,18 @@ public:
   }
 
   /// Choose a method of checking LR before performing a tail call.
-  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+  AArch64PAuth::AuthCheckMethod
+  getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;
+
+  /// Compute the integer discriminator for a given BlockAddress constant, if
+  /// blockaddress signing is enabled, or std::nullopt otherwise.
+  /// Blockaddress signing is controlled by the function attribute
+  /// "ptrauth-indirect-gotos" on the parent function.
+  /// Note that this assumes the discriminator is independent of the indirect
+  /// goto branch site itself, i.e., it's the same for all BlockAddresses in
+  /// a function.
+  std::optional<uint16_t>
+  getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
 
   const PseudoSourceValue *getAddressCheckPSV() const {
     return AddressCheckPSV.get();

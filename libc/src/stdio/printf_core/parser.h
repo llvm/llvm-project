@@ -11,8 +11,10 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/algorithm.h" // max
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -23,7 +25,7 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <typename T> struct int_type_of {
@@ -128,7 +130,8 @@ public:
         cur_pos = cur_pos + result.parsed_len;
       }
       if (section.min_width < 0) {
-        section.min_width = -section.min_width;
+        section.min_width =
+            (section.min_width == INT_MIN) ? INT_MAX : -section.min_width;
         section.flags = static_cast<FormatFlags>(section.flags |
                                                  FormatFlags::LEFT_JUSTIFIED);
       }
@@ -208,11 +211,11 @@ public:
         case (LengthModifier::wf):
           if (bw == 0) {
             section.has_conv = false;
-          } else if (bw <= INT_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned int>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
-          } else if (bw <= LONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
-          } else if (bw <= LLONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
           } else {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
@@ -594,11 +597,11 @@ private:
             break;
           case (LengthModifier::w):
           case (LengthModifier::wf):
-            if (bw <= INT_WIDTH) {
+            if (bw <= cpp::numeric_limits<unsigned int>::digits) {
               conv_size = type_desc_from_type<int>();
-            } else if (bw <= LONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
               conv_size = type_desc_from_type<long>();
-            } else if (bw <= LLONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
               conv_size = type_desc_from_type<long long>();
             } else {
               conv_size = type_desc_from_type<intmax_t>();
@@ -668,6 +671,6 @@ private:
 };
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H

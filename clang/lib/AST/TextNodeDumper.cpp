@@ -1859,6 +1859,9 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
     OS << " fixed-length rvv data vector";
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     OS << " fixed-length rvv mask vector";
     break;
   }
@@ -2386,8 +2389,8 @@ void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
     OS << " inline";
   if (D->isNested())
     OS << " nested";
-  if (!D->isOriginalNamespace())
-    dumpDeclRef(D->getOriginalNamespace(), "original");
+  if (!D->isFirstDecl())
+    dumpDeclRef(D->getFirstDecl(), "original");
 }
 
 void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -2883,4 +2886,9 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
     OS << " <orphan>";
   else
     OS << " parent: " << S->getParentComputeConstruct();
+}
+
+void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
+  AddChild("begin", [=] { OS << S->getStartingElementPos(); });
+  AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
 }

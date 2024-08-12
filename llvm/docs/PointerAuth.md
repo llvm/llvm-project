@@ -18,6 +18,9 @@ At the IR level, it is represented using:
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
 * a [signed pointer constant](#constant) (to sign globals)
 * a [call operand bundle](#operand-bundle) (to authenticate called pointers)
+* a [set of function attributes](#function-attributes) (to describe what
+  pointers are signed and how, to control implicit codegen in the backend, as
+  well as preserve invariants in the mid-level optimizer)
 
 The current implementation leverages the
 [Armv8.3-A PAuth/Pointer Authentication Code](#armv8-3-a-pauth-pointer-authentication-code)
@@ -285,6 +288,27 @@ define void @f(void ()* %fp) {
 
 but with the added guarantee that `%fp_i`, `%fp_auth`, and `%fp_auth_p`
 are not stored to (and reloaded from) memory.
+
+
+### Function Attributes
+
+Some function attributes are used to describe other pointer authentication
+operations that are not otherwise explicitly expressed in IR.
+
+#### ``ptrauth-indirect-gotos``
+
+``ptrauth-indirect-gotos`` specifies that indirect gotos in this function
+should authenticate their target.  At the IR level, no other change is needed.
+When lowering [``blockaddress`` constants](https://llvm.org/docs/LangRef.html#blockaddress),
+and [``indirectbr`` instructions](https://llvm.org/docs/LangRef.html#i-indirectbr),
+this tells the backend to respectively sign and authenticate the pointers.
+
+The specific scheme isn't ABI-visible.  Currently, the AArch64 backend
+signs blockaddresses using the `ASIA` key, with an integer discriminator
+derived from the parent function's name, using the SipHash stable discriminator:
+```
+  ptrauth_string_discriminator("<function_name> blockaddress")
+```
 
 
 ## AArch64 Support

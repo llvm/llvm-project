@@ -27,7 +27,7 @@ namespace characteristics = Fortran::evaluate::characteristics;
 namespace Fortran::semantics {
 
 static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
-    parser::ContextualMessages &messages, evaluate::FoldingContext &context) {
+    parser::ContextualMessages &messages, SemanticsContext &context) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -67,11 +67,9 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         messages.Say(
             "Coarray argument requires an explicit interface"_err_en_US);
       }
-      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-        if (details->IsAssumedRank()) {
-          messages.Say(
-              "Assumed rank argument requires an explicit interface"_err_en_US);
-        }
+      if (evaluate::IsAssumedRank(symbol)) {
+        messages.Say(
+            "Assumed rank argument requires an explicit interface"_err_en_US);
       }
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
         messages.Say(
@@ -81,8 +79,12 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
       }
+      if (const Symbol & base{named->GetFirstSymbol()};
+          IsFunctionResult(base)) {
+        context.NoteDefinedSymbol(base);
+      }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
-                   "actual argument", *expr, context,
+                   "actual argument", *expr, context.foldingContext(),
                    /*forImplicitInterface=*/true)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
@@ -143,8 +145,8 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
         bool canAssociate{CanAssociateWithStorageSequence(dummy)};
         if (dummy.type.Rank() > 0 && canAssociate) {
           // Character storage sequence association (F'2023 15.5.2.12p4)
-          if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-                  evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+          if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
+                  foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
             if (actualType.Rank() == 0) {
               evaluate::DesignatorFolder folder{
@@ -183,8 +185,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
               }
             } else { // actual.type.Rank() > 0
               if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
-                      foldingContext,
-                      evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+                      foldingContext, evaluate::GetSize(actualType.shape())))};
                   actualSize &&
                   *actualSize * *actualLength < *dummySize * *dummyLength &&
                   (extentErrors ||
@@ -251,7 +252,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
   if (dummyType.type().category() == TypeCategory::Integer &&
       actualType.type().category() == TypeCategory::Integer &&
       dummyType.type().kind() != actualType.type().kind() &&
-      GetRank(dummyType.shape()) == 0 && GetRank(actualType.shape()) == 0 &&
+      dummyType.Rank() == 0 && actualType.Rank() == 0 &&
       !evaluate::IsVariable(actual)) {
     auto converted{
         evaluate::ConvertToType(dummyType.type(), std::move(actual))};
@@ -387,10 +388,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // if the actual argument is an array or array element designator,
       // and the dummy is an array, but not assumed-shape or an INTENT(IN)
       // pointer that's standing in for an assumed-shape dummy.
-    } else {
+    } else if (dummy.type.shape() && actualType.shape()) {
       // Let CheckConformance accept actual scalars; storage association
       // cases are checked here below.
-      CheckConformance(messages, dummy.type.shape(), actualType.shape(),
+      CheckConformance(messages, *dummy.type.shape(), *actualType.shape(),
           dummyIsAllocatableOrPointer
               ? evaluate::CheckConformanceFlags::None
               : evaluate::CheckConformanceFlags::RightScalarExpandable,
@@ -579,8 +580,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         CanAssociateWithStorageSequence(dummy) &&
         !dummy.attrs.test(
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
-      if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-              evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+      if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
+              foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
         if (actualRank == 0 && !actualIsAssumedRank) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
@@ -622,8 +623,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             }
           }
         } else { // actualRank > 0 || actualIsAssumedRank
-          if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-                  evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+          if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
+                  foldingContext, evaluate::GetSize(actualType.shape())))};
               actualSize && *actualSize < *dummySize &&
               (extentErrors ||
                   context.ShouldWarn(common::UsageWarning::ShortArrayActual))) {
@@ -650,8 +651,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualLastSymbol->name(), dummyName);
   }
 
-  // Definability
-  bool actualIsVariable{evaluate::IsVariable(actual)};
+  // Definability checking
+  // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
     std::optional<parser::MessageFixedText> undefinableMessage;
     if (dummy.intent == common::Intent::Out) {
@@ -673,7 +674,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (undefinableMessage) {
-      // Problems with polymorphism are caught in the callee's definition.
       DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
@@ -682,9 +682,22 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         flags.set(DefinabilityFlag::PointerDefinition);
       }
       if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-        if (auto *msg{
-                messages.Say(std::move(*undefinableMessage), dummyName)}) {
-          msg->Attach(std::move(*whyNot));
+        if (whyNot->IsFatal()) {
+          if (auto *msg{
+                  messages.Say(std::move(*undefinableMessage), dummyName)}) {
+            msg->Attach(
+                std::move(whyNot->set_severity(parser::Severity::Because)));
+          }
+        } else {
+          messages.Say(std::move(*whyNot));
+        }
+      }
+    } else if (dummy.intent != common::Intent::In ||
+        (dummyIsPointer && !actualIsPointer)) {
+      if (auto named{evaluate::ExtractNamedEntity(actual)}) {
+        if (const Symbol & base{named->GetFirstSymbol()};
+            IsFunctionResult(base)) {
+          context.NoteDefinedSymbol(base);
         }
       }
     }
@@ -891,6 +904,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // argument
   if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target) &&
       context.ShouldWarn(common::UsageWarning::NonTargetPassedToTarget)) {
+    bool actualIsVariable{evaluate::IsVariable(actual)};
     bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
         evaluate::ExtractCoarrayRef(actual)};
     if (actualIsTemp) {
@@ -1414,11 +1428,17 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             if (auto whyNot{WhyNotDefinable(
                     pointerArg->sourceLocation().value_or(messages.at()),
                     *scope,
-                    DefinabilityFlags{DefinabilityFlag::PointerDefinition},
+                    DefinabilityFlags{DefinabilityFlag::PointerDefinition,
+                        DefinabilityFlag::DoNotNoteDefinition},
                     *pointerExpr)}) {
-              if (auto *msg{messages.Say(pointerArg->sourceLocation(),
-                      "POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
-                msg->Attach(std::move(*whyNot));
+              if (whyNot->IsFatal()) {
+                if (auto *msg{messages.Say(pointerArg->sourceLocation(),
+                        "POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
+                  msg->Attach(std::move(
+                      whyNot->set_severity(parser::Severity::Because)));
+                }
+              } else {
+                messages.Say(std::move(*whyNot));
               }
             }
           }
@@ -2014,7 +2034,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
       auto restorer{messages.SetMessages(buffer)};
       for (auto &actual : actuals) {
         if (actual) {
-          CheckImplicitInterfaceArg(*actual, messages, foldingContext);
+          CheckImplicitInterfaceArg(*actual, messages, context);
         }
       }
     }

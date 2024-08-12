@@ -154,7 +154,7 @@ static void constifyIndexValues(
 /// expected for `getAttributes` in `constifyIndexValues`.
 static SmallVector<int64_t> getConstantSizes(MemRefType memRefTy) {
   ArrayRef<int64_t> sizes = memRefTy.getShape();
-  return SmallVector<int64_t>(sizes.begin(), sizes.end());
+  return SmallVector<int64_t>(sizes);
 }
 
 /// Wrapper around `getStridesAndOffset` that returns only the offset and
@@ -838,8 +838,7 @@ struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
   static bool isEmptyMemRef(BaseMemRefType type) {
-    return type.hasRank() &&
-           llvm::any_of(type.getShape(), [](int64_t x) { return x == 0; });
+    return type.hasRank() && llvm::is_contained(type.getShape(), 0);
   }
 
   LogicalResult matchAndRewrite(CopyOp copyOp,
@@ -2691,10 +2690,10 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   //   `sourceOffset + sum_i(staticOffset_i * sourceStrides_i)`.
   int64_t targetOffset = sourceOffset;
   for (auto it : llvm::zip(staticOffsets, sourceStrides)) {
-    auto staticOffset = std::get<0>(it), targetStride = std::get<1>(it);
+    auto staticOffset = std::get<0>(it), sourceStride = std::get<1>(it);
     targetOffset = (SaturatedInteger::wrap(targetOffset) +
                     SaturatedInteger::wrap(staticOffset) *
-                        SaturatedInteger::wrap(targetStride))
+                        SaturatedInteger::wrap(sourceStride))
                        .asInteger();
   }
 

@@ -160,7 +160,7 @@ If a conversion specification is provided an invalid type modifier, that type
 modifier will be ignored, and the default type for that conversion will be used.
 In the case of the length modifier "L" and integer conversions, it will be
 treated as if it was "ll" (lowercase LL). For this purpose the list of integer
-conversions is d, i, u, o, x, X, n.
+conversions is d, i, u, o, x, X, b, B, n.
 
 If a conversion specification ending in % has any options that consume arguments
 (e.g. "%*.*%") those arguments will be consumed as normal, but their values will
@@ -169,9 +169,13 @@ be ignored.
 If a conversion specification ends in a null byte ('\0') then it shall be
 treated as an invalid conversion followed by a null byte.
 
-If a number passed as a min width or precision value is out of range for an int,
-then it will be treated as the largest or smallest value in the int range
-(e.g. "%-999999999999.999999999999s" is the same as "%-2147483648.2147483647s").
+If a number passed as a field width or precision value is out of range for an
+int, then it will be treated as the largest value in the int range
+(e.g. "%-999999999999.999999999999s" is the same as "%-2147483647.2147483647s").
+
+If the field width is set to INT_MIN by using the '*' form, 
+e.g. printf("%*d", INT_MIN, 1), it will be treated as INT_MAX, since -INT_MIN is
+not representable as an int.
 
 If a number passed as a bit width is less than or equal to zero, the conversion
 is considered invalid. If the provided bit width is larger than the width of

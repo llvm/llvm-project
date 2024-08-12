@@ -47,7 +47,7 @@ entry:
   ret i8 %y
 }
 !5 = !{i32 0, i8 0}
-; CHECK: Range types must match instruction type!
+; CHECK: Range pair types must match!
 ; CHECK:  %y = load
 
 define i8 @f7(ptr %x) {
@@ -56,7 +56,7 @@ entry:
   ret i8 %y
 }
 !6 = !{i8 0, i32 0}
-; CHECK: Range types must match instruction type!
+; CHECK: Range pair types must match!
 ; CHECK:  %y = load
 
 define i8 @f8(ptr %x) {

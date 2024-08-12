@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/PGOCtxProfReader.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -32,18 +33,18 @@ using namespace llvm;
   if (auto Err = (EXPR))                                                       \
     return Err;
 
-Expected<PGOContextualProfile &>
-PGOContextualProfile::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
-                                   SmallVectorImpl<uint64_t> &&Counters) {
-  auto [Iter, Inserted] = Callsites[Index].insert(
-      {G, PGOContextualProfile(G, std::move(Counters))});
+Expected<PGOCtxProfContext &>
+PGOCtxProfContext::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
+                                SmallVectorImpl<uint64_t> &&Counters) {
+  auto [Iter, Inserted] =
+      Callsites[Index].insert({G, PGOCtxProfContext(G, std::move(Counters))});
   if (!Inserted)
     return make_error<InstrProfError>(instrprof_error::invalid_prof,
                                       "Duplicate GUID for same callsite.");
   return Iter->second;
 }
 
-void PGOContextualProfile::getContainedGuids(
+void PGOCtxProfContext::getContainedGuids(
     DenseSet<GlobalValue::GUID> &Guids) const {
   Guids.insert(GUID);
   for (const auto &[_, Callsite] : Callsites)
@@ -73,7 +74,7 @@ bool PGOCtxProfileReader::canReadContext() {
          Blk->ID == PGOCtxProfileBlockIDs::ContextNodeBlockID;
 }
 
-Expected<std::pair<std::optional<uint32_t>, PGOContextualProfile>>
+Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
 PGOCtxProfileReader::readContext(bool ExpectIndex) {
   RET_ON_ERR(Cursor.EnterSubBlock(PGOCtxProfileBlockIDs::ContextNodeBlockID));
 
@@ -124,7 +125,7 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
     }
   }
 
-  PGOContextualProfile Ret(*Guid, std::move(*Counters));
+  PGOCtxProfContext Ret(*Guid, std::move(*Counters));
 
   while (canReadContext()) {
     EXPECT_OR_RET(SC, readContext(true));
@@ -139,6 +140,20 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
 }
 
 Error PGOCtxProfileReader::readMetadata() {
+  if (Magic.size() < PGOCtxProfileWriter::ContainerMagic.size() ||
+      Magic != PGOCtxProfileWriter::ContainerMagic)
+    return make_error<InstrProfError>(instrprof_error::invalid_prof,
+                                      "Invalid magic");
+
+  BitstreamEntry Entry;
+  RET_ON_ERR(Cursor.advance().moveInto(Entry));
+  if (Entry.Kind != BitstreamEntry::SubBlock ||
+      Entry.ID != bitc::BLOCKINFO_BLOCK_ID)
+    return unsupported("Expected Block ID");
+  // We don't need the blockinfo to read the rest, it's metadata usable for e.g.
+  // llvm-bcanalyzer.
+  RET_ON_ERR(Cursor.SkipBlock());
+
   EXPECT_OR_RET(Blk, advance());
   if (Blk->Kind != BitstreamEntry::SubBlock)
     return unsupported("Expected Version record");
@@ -159,9 +174,9 @@ Error PGOCtxProfileReader::readMetadata() {
   return Error::success();
 }
 
-Expected<std::map<GlobalValue::GUID, PGOContextualProfile>>
+Expected<std::map<GlobalValue::GUID, PGOCtxProfContext>>
 PGOCtxProfileReader::loadContexts() {
-  std::map<GlobalValue::GUID, PGOContextualProfile> Ret;
+  std::map<GlobalValue::GUID, PGOCtxProfContext> Ret;
   RET_ON_ERR(readMetadata());
   while (canReadContext()) {
     EXPECT_OR_RET(E, readContext(false));

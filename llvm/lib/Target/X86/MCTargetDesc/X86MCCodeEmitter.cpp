@@ -111,9 +111,9 @@ class X86OpcodePrefixHelper {
   //  0b11: F2
 
   // EVEX (4 bytes)
-  // +-----+ +---------------+ +--------------------+ +------------------------+
-  // | 62h | | RXBR' | B'mmm | | W | vvvv | X' | pp | | z | L'L | b | v' | aaa |
-  // +-----+ +---------------+ +--------------------+ +------------------------+
+  // +-----+ +---------------+ +-------------------+ +------------------------+
+  // | 62h | | RXBR' | B'mmm | | W | vvvv | U | pp | | z | L'L | b | v' | aaa |
+  // +-----+ +---------------+ +-------------------+ +------------------------+
 
   // EVEX_L2/VEX_L (Vector Length):
   // L2 L
@@ -131,7 +131,7 @@ class X86OpcodePrefixHelper {
   // | RM (VR)  | EVEX_X  | EVEX_B | modrm.r/m | VR      | Dest or Src  |
   // | RM (GPR) | EVEX_B' | EVEX_B | modrm.r/m | GPR     | Dest or Src  |
   // | BASE     | EVEX_B' | EVEX_B | modrm.r/m | GPR     | MA           |
-  // | INDEX    | EVEX_X' | EVEX_X | sib.index | GPR     | MA           |
+  // | INDEX    | EVEX_U  | EVEX_X | sib.index | GPR     | MA           |
   // | VIDX     | EVEX_v' | EVEX_X | sib.index | VR      | VSIB MA      |
   // +----------+---------+--------+-----------+---------+--------------+
   //
@@ -238,6 +238,7 @@ public:
   void setZ(bool V) { EVEX_z = V; }
   void setL2(bool V) { EVEX_L2 = V; }
   void setEVEX_b(bool V) { EVEX_b = V; }
+  void setEVEX_U(bool V) { X2 = V; }
   void setV2(const MCInst &MI, unsigned OpNum, bool HasVEX_4V) {
     // Only needed with VSIB which don't use VVVV.
     if (HasVEX_4V)
@@ -344,7 +345,7 @@ public:
   ~X86MCCodeEmitter() override = default;
 
   void emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
-                  const MCSubtargetInfo &STI) const override;
+                  const MCSubtargetInfo &STI) const;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -691,9 +692,12 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   unsigned BaseRegNo = BaseReg ? getX86RegNum(Base) : -1U;
 
+  bool IsAdSize16 = STI.hasFeature(X86::Is32Bit) &&
+                    (TSFlags & X86II::AdSizeMask) == X86II::AdSize16;
+
   // 16-bit addressing forms of the ModR/M byte have a different encoding for
   // the R/M field and are far more limited in which registers can be used.
-  if (X86_MC::is16BitMemOperand(MI, Op, STI)) {
+  if (IsAdSize16 || X86_MC::is16BitMemOperand(MI, Op, STI)) {
     if (BaseReg) {
       // For 32-bit addressing, the row and column values in Table 2-2 are
       // basically the same. It's AX/CX/DX/BX/SP/BP/SI/DI in that order, with
@@ -1049,6 +1053,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setZ(HasEVEX_K && (TSFlags & X86II::EVEX_Z));
   Prefix.setEVEX_b(TSFlags & X86II::EVEX_B);
+  Prefix.setEVEX_U(TSFlags & X86II::EVEX_U);
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
@@ -1529,6 +1534,11 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
   unsigned CurOp = X86II::getOperandBias(Desc);
 
   emitPrefixImpl(CurOp, MI, STI, CB);
+}
+
+void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
+                        SmallVectorImpl<char> &CB, const MCSubtargetInfo &STI) {
+  static_cast<X86MCCodeEmitter &>(MCE).emitPrefix(MI, CB, STI);
 }
 
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
