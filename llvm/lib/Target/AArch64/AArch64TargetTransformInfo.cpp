@@ -3418,7 +3418,9 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode, const AArch64Subtar
           "Should be called on only load or stores.");
   switch(Opcode) {
     case Instruction::Load:
-      return SVEGatherOverhead;
+      if (SVEGatherOverhead.getNumOccurrences() > 0)
+        return SVEGatherOverhead;
+      return ST->getGatherOverhead();
       break;
     case Instruction::Store:
       if (SVEScatterOverhead.getNumOccurrences() > 0)
