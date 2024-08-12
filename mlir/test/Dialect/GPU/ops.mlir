@@ -441,3 +441,17 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
 
 gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }
+
+// Check kernel memref args are valid even if the address space differs
+module attributes {gpu.container_module} {
+  func.func @foo(%mem : memref<5xf32>) {
+    %c0 = arith.constant 0 : i32
+    gpu.launch_func @gpu_kernels::@kernel blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%mem : memref<5xf32>)
+    return
+  }
+  gpu.module @gpu_kernels {
+    gpu.func @kernel(%arg0 : memref<5xf32, #gpu.address_space<global>>) kernel {
+      gpu.return
+    }
+  }
+}

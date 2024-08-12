@@ -401,8 +401,29 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
              << expectedNumArguments;
 
     auto functionType = kernelGPUFunction.getFunctionType();
+    auto typesMatch = [&](Type launchOpArgType, Type gpuFuncArgType) {
+      auto launchOpMemref = dyn_cast<MemRefType>(launchOpArgType);
+      auto kernelMemref = dyn_cast<MemRefType>(gpuFuncArgType);
+      // Allow address space incompatibility for OpenCL kernels: `gpu.launch`'s
+      // argument memref without address space attribute will match a kernel
+      // function's memref argument with address space `Global`.
+      if (launchOpMemref && kernelMemref) {
+        auto launchAS = llvm::dyn_cast_or_null<gpu::AddressSpaceAttr>(
+            launchOpMemref.getMemorySpace());
+        auto kernelAS = llvm::dyn_cast_or_null<gpu::AddressSpaceAttr>(
+            kernelMemref.getMemorySpace());
+        if (!launchAS && kernelAS &&
+            kernelAS.getValue() == gpu::AddressSpace::Global)
+          return launchOpMemref.getShape() == kernelMemref.getShape() &&
+                 launchOpMemref.getLayout() == kernelMemref.getLayout() &&
+                 launchOpMemref.getElementType() ==
+                     kernelMemref.getElementType();
+      }
+      return launchOpArgType == gpuFuncArgType;
+    };
     for (unsigned i = 0; i < expectedNumArguments; ++i) {
-      if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
+      if (!typesMatch(launchOp.getKernelOperand(i).getType(),
+                      functionType.getInput(i))) {
         return launchOp.emitOpError("type of function argument ")
                << i << " does not match";
       }
