@@ -179,6 +179,12 @@ static cl::opt<unsigned> PragmaUnrollFullMaxIterations(
     "pragma-unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
     cl::desc("Maximum allowed iterations to unroll under pragma unroll full."));
 
+static cl::opt<bool>
+    UseBranchWeights("loop-unroll-use-branch-weights", cl::init(true),
+                     cl::Hidden,
+                     cl::desc("Estimate loop trip counts with branch weight "
+                              "metadata to help determine the peel count"));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -1012,7 +1018,8 @@ bool llvm::computeUnrollCount(
   }
 
   // 5th priority is loop peeling.
-  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, AC, UP.Threshold);
+  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, UseBranchWeights, AC,
+                   UP.Threshold);
   if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
@@ -1081,7 +1088,7 @@ bool llvm::computeUnrollCount(
   }
 
   // Check if the runtime trip count is too small when profile is available.
-  if (L->getHeader()->getParent()->hasProfileData()) {
+  if (UseBranchWeights && L->getHeader()->getParent()->hasProfileData()) {
     if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
       if (*ProfileTripCount < FlatLoopTripCountThreshold)
         return false;

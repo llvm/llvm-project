@@ -538,8 +538,8 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
                             unsigned TripCount, DominatorTree &DT,
-                            ScalarEvolution &SE, AssumptionCache *AC,
-                            unsigned Threshold) {
+                            ScalarEvolution &SE, bool UseBranchWeights,
+                            AssumptionCache *AC, unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -632,7 +632,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // hit the peeled section.
   // We only do this in the presence of profile information, since otherwise
   // our estimates of the trip count are not reliable enough.
-  if (L->getHeader()->getParent()->hasProfileData()) {
+  if (UseBranchWeights && L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
     std::optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
