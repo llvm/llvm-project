@@ -219,6 +219,10 @@ static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
              "block placement."),
     cl::init(UINT_MAX), cl::Hidden);
 
+static cl::opt<bool>
+    UseProfileData("block-placement-use-profile", cl::init(true), cl::Hidden,
+                   cl::desc("Use profile data to do precise benefit analysis"));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -1220,7 +1224,7 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
 
   // If profile information is available, findDuplicateCandidates can do more
   // precise benefit analysis.
-  if (F->getFunction().hasProfileData())
+  if (UseProfileData && F->getFunction().hasProfileData())
     return true;
 
   // This is mainly for function exit BB.
@@ -1388,7 +1392,7 @@ void MachineBlockPlacement::precomputeTriangleChains() {
 // When profile is available, we need to handle the triangle-shape CFG.
 static BranchProbability getLayoutSuccessorProbThreshold(
       const MachineBasicBlock *BB) {
-  if (!BB->getParent()->getFunction().hasProfileData())
+  if (!UseProfileData || !BB->getParent()->getFunction().hasProfileData())
     return BranchProbability(StaticLikelyProb, 100);
   if (BB->succ_size() == 2) {
     const MachineBasicBlock *Succ1 = *BB->succ_begin();
@@ -2621,7 +2625,8 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // will be merged into the first outer loop chain for which this block is not
   // cold anymore. This needs precise profile data and we only do this when
   // profile data is available.
-  if (F->getFunction().hasProfileData() || ForceLoopColdBlock) {
+  if ((UseProfileData && F->getFunction().hasProfileData()) ||
+      ForceLoopColdBlock) {
     BlockFrequency LoopFreq(0);
     for (auto *LoopPred : L.getHeader()->predecessors())
       if (!L.contains(LoopPred))
@@ -2670,8 +2675,8 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // this loop by modeling costs more precisely which requires the profile data
   // for better layout.
   bool RotateLoopWithProfile =
-      ForcePreciseRotationCost ||
-      (PreciseRotationCost && F->getFunction().hasProfileData());
+      ForcePreciseRotationCost || (PreciseRotationCost && UseProfileData &&
+                                   F->getFunction().hasProfileData());
 
   // First check to see if there is an obviously preferable top block for the
   // loop. This will default to the header, but may end up as one of the
@@ -3208,7 +3213,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
   bool IsSimple = TailDup.isSimpleBB(BB);
   SmallVector<MachineBasicBlock *, 8> CandidatePreds;
   SmallVectorImpl<MachineBasicBlock *> *CandidatePtr = nullptr;
-  if (F->getFunction().hasProfileData()) {
+  if (UseProfileData && F->getFunction().hasProfileData()) {
     // We can do partial duplication with precise profile information.
     findDuplicateCandidates(CandidatePreds, BB, BlockFilter);
     if (CandidatePreds.size() == 0)
@@ -3409,7 +3414,7 @@ void MachineBlockPlacement::findDuplicateCandidates(
 
 void MachineBlockPlacement::initDupThreshold() {
   DupThreshold = BlockFrequency(0);
-  if (!F->getFunction().hasProfileData())
+  if (!UseProfileData || !F->getFunction().hasProfileData())
     return;
 
   // We prefer to use prifile count.
@@ -3529,7 +3534,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   // Apply a post-processing optimizing block placement.
   if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
+      (ApplyExtTspWithoutProfile ||
+       (UseProfileData && MF.getFunction().hasProfileData())) &&
       MF.size() <= ExtTspBlockPlacementMaxBlocks) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
