@@ -126,7 +126,7 @@ bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(
   if (!TargetNameOrErr)
     return false;
 
-  return TargetNameOrErr->startswith(getImportSymbolPrefix());
+  return TargetNameOrErr->starts_with(getImportSymbolPrefix());
 }
 
 } // namespace llvm
