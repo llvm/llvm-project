@@ -45,6 +45,18 @@ namespace {
 /// Attribute name used for labeling transfer ops during progressive lowering.
 static const char kPassLabel[] = "__vector_to_scf_lowering__";
 
+/// Return true if this transfer op operates on a source tensor.
+static bool isTensorOp(VectorTransferOpInterface xferOp) {
+  if (isa<RankedTensorType>(xferOp.getShapedType())) {
+    if (isa<vector::TransferWriteOp>(xferOp)) {
+      // TransferWriteOps on tensors have a result.
+      assert(xferOp->getNumResults() > 0);
+    }
+    return true;
+  }
+  return false;
+}
+
 /// Patterns that inherit from this struct have access to
 /// VectorTransferToSCFOptions.
 template <typename OpTy>
@@ -52,6 +64,15 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
   explicit VectorToSCFPattern(MLIRContext *context,
                               VectorTransferToSCFOptions opt)
       : OpRewritePattern<OpTy>(context), options(opt) {}
+
+  LogicalResult checkLowerTensors(VectorTransferOpInterface xferOp,
+                                  PatternRewriter &rewriter) const {
+    if (isTensorOp(xferOp) && !options.lowerTensors) {
+      return rewriter.notifyMatchFailure(
+          xferOp, "lowering tensor transfers is disabled");
+    }
+    return success();
+  }
 
   VectorTransferToSCFOptions options;
 };
@@ -256,19 +277,6 @@ static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
                                 unsigned targetRank) {
   if (newXferOp.getVectorType().getRank() > targetRank)
     newXferOp->setAttr(kPassLabel, b.getUnitAttr());
-}
-
-/// Return true if this transfer op operates on a source tensor.
-template <typename OpTy>
-static bool isTensorOp(OpTy xferOp) {
-  if (isa<RankedTensorType>(xferOp.getShapedType())) {
-    if (xferOp.getOperationName() == TransferWriteOp::getOperationName()) {
-      // TransferWriteOps on tensors have a result.
-      assert(xferOp->getNumResults() > 0);
-    }
-    return true;
-  }
-  return false;
 }
 
 namespace lowering_n_d {
@@ -1058,10 +1066,8 @@ struct ScalableTransposeTransferWriteConversion
 
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
-    if (isTensorOp(writeOp) && !options.lowerTensors) {
-      return rewriter.notifyMatchFailure(
-          writeOp, "lowering tensor transfers is disabled");
-    }
+    if (failed(checkLowerTensors(writeOp, rewriter)))
+      return failure();
 
     VectorType vectorType = writeOp.getVectorType();
 
@@ -1286,9 +1292,8 @@ struct UnrollTransferReadConversion
     if (xferOp.getVectorType().getRank() <= options.targetRank)
       return rewriter.notifyMatchFailure(
           xferOp, "vector rank is less or equal to target rank");
-    if (isTensorOp(xferOp) && !options.lowerTensors)
-      return rewriter.notifyMatchFailure(
-          xferOp, "transfers operating on tensors are excluded");
+    if (failed(checkLowerTensors(xferOp, rewriter)))
+      return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
@@ -1424,7 +1429,7 @@ struct UnrollTransferWriteConversion
     if (inputVectorTy.getRank() <= options.targetRank)
       return failure();
 
-    if (isTensorOp(xferOp) && !options.lowerTensors)
+    if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (inputVectorTy.getElementType() !=
