@@ -16,7 +16,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%12>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
@@ -77,8 +77,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): default.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_CMP:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_CMP]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
