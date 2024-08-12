@@ -1233,11 +1233,12 @@ improved compile time performance.
 Reachability of internal partition units
 ----------------------------------------
 
-The internal partition units are called as implementation partition unit somewhere else.
-But the name may be confusing since implementation partition units are not implementation
+The internal partition units are sometimes called implementation partition units in other documentation.
+However, the name may be confusing since implementation partition units are not implementation
 units.
 
-According to [module.reach]p1,2:
+According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_:
 
   A translation unit U is necessarily reachable from a point P if U is a module
   interface unit on which the translation unit containing P has an interface
@@ -1272,14 +1273,14 @@ For example,
   module B:C;
   template<typename> inline void f() noexcept {}
 
-The internal partition units ``c.cppm`` is not necessarily reachable to
-``a.cpp`` since ``c.cppm`` is not a module interface unit and ``a.cpp``
-doesn't import ``c.cppm``. Then it is up to the compiler to decide if
-``c.cppm`` is reachable to ``a.cpp`` or not. Clang's decision is the
-non-directly imported internal partition units are not reachable.
+The internal partition unit ``c.cppm`` is not necessarily reachable by
+``a.cpp`` because ``c.cppm`` is not a module interface unit and ``a.cpp``
+doesn't import ``c.cppm``. This leaves it up to the compiler to decide if
+``c.cppm`` is reachable by ``a.cpp`` or not. Clang's behavior is that
+indirectly imported internal partition units are not reachable.
 
-The suggestion to use internal partition units is, only import them in
-the implementation units unless we understand the codebases very well.
+The suggested approach for using an internal partition unit in Clang is
+to only import them in the implementation unit.
 
 Known Issues
 ------------
