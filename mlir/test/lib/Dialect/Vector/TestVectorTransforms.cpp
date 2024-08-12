@@ -374,12 +374,13 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 };
 
-struct TestSinkVectorBroadcast
-    : public PassWrapper<TestSinkVectorBroadcast, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSinkVectorBroadcast)
+struct TestVectorReorderPatterns
+    : public PassWrapper<TestVectorReorderPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorReorderPatterns)
 
-  TestSinkVectorBroadcast() = default;
-  TestSinkVectorBroadcast(const TestSinkVectorBroadcast &pass) = default;
+  TestVectorReorderPatterns() = default;
+  TestVectorReorderPatterns(const TestVectorReorderPatterns &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, affine::AffineDialect>();
@@ -920,7 +921,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
-  PassRegistration<TestSinkVectorBroadcast>();
+  PassRegistration<TestVectorReorderPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
