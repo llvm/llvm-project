@@ -198,6 +198,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -706,6 +707,9 @@ MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
                                            ModuleAnalysisManager &AM) {
+  // Return early if nosanitize_memory module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
+    return PreservedAnalyses::all();
   bool Modified = false;
   if (!Options.Kernel) {
     insertModuleCtor(M);
@@ -3873,38 +3877,49 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Handle Arm NEON vector store intrinsics (vst{2,3,4} and vst1x_{2,3,4}).
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
+  /// and vst{2,3,4}lane).
   ///
   /// Arm NEON vector store intrinsics have the output address (pointer) as the
-  /// last argument, with the initial arguments being the inputs. They return
-  /// void.
+  /// last argument, with the initial arguments being the inputs (and lane
+  /// number for vst{2,3,4}lane). They return void.
   ///
   /// - st4 interleaves the output e.g., st4 (inA, inB, inC, inD, outP) writes
   ///   abcdabcdabcdabcd... into *outP
   /// - st1_x4 is non-interleaved e.g., st1_x4 (inA, inB, inC, inD, outP)
   ///   writes aaaa...bbbb...cccc...dddd... into *outP
+  /// - st4lane has arguments of (inA, inB, inC, inD, lane, outP)
   /// These instructions can all be instrumented with essentially the same
   /// MSan logic, simply by applying the corresponding intrinsic to the shadow.
-  void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
+  void handleNEONVectorStoreIntrinsic(IntrinsicInst &I, bool useLane) {
     IRBuilder<> IRB(&I);
 
     // Don't use getNumOperands() because it includes the callee
     int numArgOperands = I.arg_size();
-    assert(numArgOperands >= 1);
 
-    // The last arg operand is the output
+    // The last arg operand is the output (pointer)
+    assert(numArgOperands >= 1);
     Value *Addr = I.getArgOperand(numArgOperands - 1);
     assert(Addr->getType()->isPointerTy());
+    int skipTrailingOperands = 1;
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
-    SmallVector<Value *, 8> Shadows;
-    // Every arg operand, other than the last one, is an input vector
-    for (int i = 0; i < numArgOperands - 1; i++) {
+    // Second-last operand is the lane number (for vst{2,3,4}lane)
+    if (useLane) {
+      skipTrailingOperands++;
+      assert(numArgOperands >= static_cast<int>(skipTrailingOperands));
+      assert(isa<IntegerType>(
+          I.getArgOperand(numArgOperands - skipTrailingOperands)->getType()));
+    }
+
+    SmallVector<Value *, 8> ShadowArgs;
+    // All the initial operands are the inputs
+    for (int i = 0; i < numArgOperands - skipTrailingOperands; i++) {
       assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
       Value *Shadow = getShadow(&I, i);
-      Shadows.append(1, Shadow);
+      ShadowArgs.append(1, Shadow);
     }
 
     // MSan's GetShadowTy assumes the LHS is the type we want the shadow for
@@ -3921,20 +3936,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     FixedVectorType *OutputVectorTy = FixedVectorType::get(
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getElementType(),
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements() *
-            (numArgOperands - 1));
+            (numArgOperands - skipTrailingOperands));
     Type *OutputShadowTy = getShadowTy(OutputVectorTy);
+
+    if (useLane)
+      ShadowArgs.append(1,
+                        I.getArgOperand(numArgOperands - skipTrailingOperands));
 
     Value *OutputShadowPtr, *OutputOriginPtr;
     // AArch64 NEON does not need alignment (unless OS requires it)
     std::tie(OutputShadowPtr, OutputOriginPtr) = getShadowOriginPtr(
         Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
-    Shadows.append(1, OutputShadowPtr);
+    ShadowArgs.append(1, OutputShadowPtr);
 
-    // CreateIntrinsic will select the correct (integer) type for the
-    // intrinsic; the original instruction I may have either integer- or
-    // float-type inputs.
     CallInst *CI =
-        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), Shadows);
+        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (MS.TrackOrigins) {
@@ -3942,8 +3958,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // more accurately track the origins (e.g., if both inputs are
       // uninitialized for vst2, we currently blame the second input, even
       // though part of the output depends only on the first input).
+      //
+      // This is particularly imprecise for vst{2,3,4}lane, since only one
+      // lane of each input is actually copied to the output.
       OriginCombiner OC(this, IRB);
-      for (int i = 0; i < numArgOperands - 1; i++)
+      for (int i = 0; i < numArgOperands - skipTrailingOperands; i++)
         OC.Add(I.getArgOperand(i));
 
       const DataLayout &DL = F.getDataLayout();
@@ -4116,6 +4135,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_mmx_psrli_q:
     case Intrinsic::x86_mmx_psrai_w:
     case Intrinsic::x86_mmx_psrai_d:
+    case Intrinsic::aarch64_neon_rshrn:
+    case Intrinsic::aarch64_neon_sqrshl:
+    case Intrinsic::aarch64_neon_sqrshrn:
+    case Intrinsic::aarch64_neon_sqrshrun:
+    case Intrinsic::aarch64_neon_sqshl:
+    case Intrinsic::aarch64_neon_sqshlu:
+    case Intrinsic::aarch64_neon_sqshrn:
+    case Intrinsic::aarch64_neon_sqshrun:
+    case Intrinsic::aarch64_neon_srshl:
+    case Intrinsic::aarch64_neon_sshl:
+    case Intrinsic::aarch64_neon_uqrshl:
+    case Intrinsic::aarch64_neon_uqrshrn:
+    case Intrinsic::aarch64_neon_uqshl:
+    case Intrinsic::aarch64_neon_uqshrn:
+    case Intrinsic::aarch64_neon_urshl:
+    case Intrinsic::aarch64_neon_ushl:
+      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
       handleVectorShiftIntrinsic(I, /* Variable */ false);
       break;
     case Intrinsic::x86_avx2_psllv_d:
@@ -4299,7 +4335,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_st2:
     case Intrinsic::aarch64_neon_st3:
     case Intrinsic::aarch64_neon_st4: {
-      handleNEONVectorStoreIntrinsic(I);
+      handleNEONVectorStoreIntrinsic(I, false);
+      break;
+    }
+
+    case Intrinsic::aarch64_neon_st2lane:
+    case Intrinsic::aarch64_neon_st3lane:
+    case Intrinsic::aarch64_neon_st4lane: {
+      handleNEONVectorStoreIntrinsic(I, true);
       break;
     }
 

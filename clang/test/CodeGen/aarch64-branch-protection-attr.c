@@ -1,6 +1,18 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mbranch-target-enforce %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mguarded-control-stack %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -msign-return-address=non-leaf -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -msign-return-address=all -msign-return-address-key=b_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mbranch-protection-pauth-lr -msign-return-address=all -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mguarded-control-stack -mbranch-target-enforce -mbranch-protection-pauth-lr -msign-return-address=all -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
 
 __attribute__ ((target("branch-protection=none")))
 void none() {}
@@ -82,7 +94,6 @@ void gcs() {}
 // CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "sign-return-address"="all" "sign-return-address-key"="b_key"
 
 // CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}} "branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
-
 
 // CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}} "branch-protection-pauth-lr" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 

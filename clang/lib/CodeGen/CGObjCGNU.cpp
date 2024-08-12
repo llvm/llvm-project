@@ -2092,10 +2092,15 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         auto *classStart =
             llvm::StructType::get(PtrTy, PtrTy, PtrTy, LongTy, LongTy);
         auto &astContext = CGM.getContext();
-        auto flags = Builder.CreateLoad(
-            Address{Builder.CreateStructGEP(classStart, selfValue, 4), LongTy,
-                    CharUnits::fromQuantity(
-                        astContext.getTypeAlign(astContext.UnsignedLongTy))});
+        // FIXME: The following few lines up to and including the call to
+        // `CreateLoad` were known to miscompile when MSVC 19.40.33813 is used
+        // to build Clang. When the bug is fixed in future MSVC releases, we
+        // should revert these lines to their previous state. See discussion in
+        // https://github.com/llvm/llvm-project/pull/102681
+        llvm::Value *Val = Builder.CreateStructGEP(classStart, selfValue, 4);
+        auto Align = CharUnits::fromQuantity(
+            astContext.getTypeAlign(astContext.UnsignedLongTy));
+        auto flags = Builder.CreateLoad(Address{Val, LongTy, Align});
         auto isInitialized =
             Builder.CreateAnd(flags, ClassFlags::ClassFlagInitialized);
         llvm::BasicBlock *notInitializedBlock =

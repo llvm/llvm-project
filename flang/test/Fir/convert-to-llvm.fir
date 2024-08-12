@@ -1050,8 +1050,9 @@ func.func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
 // CHECK-LABEL: llvm.func @extract_elesize(
 // CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr) -> i32
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
-// CHECK:         llvm.return %[[ELE_SIZE]] : i32
+// CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i64
+// CHECK:         %[[ELE_SIZE_CONV:.*]] = llvm.trunc %[[ELE_SIZE]] : i64 to i32
+// CHECK:         llvm.return %[[ELE_SIZE_CONV]] : i32
 
 // -----
 
@@ -1085,9 +1086,10 @@ func.func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-LABEL: llvm.func @box_isalloc(
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
+// CHECK:         %[[ATTR_CONV:.*]] = llvm.sext %[[ATTR]] : i8 to i32
 // CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(2 : i32) : i32
-// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR_CONV]], %[[ATTR_ISALLOC]]  : i32
 // CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
 // CHECK:         llvm.return %[[IS_ALLOC]] : i1
@@ -1106,9 +1108,10 @@ func.func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-LABEL: llvm.func @box_isptr(
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
-// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i32
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
+// CHECK:         %[[ATTR_CONV:.*]] = llvm.sext %[[ATTR]] : i8 to i32
 // CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR_CONV]], %[[ATTR_ISALLOC]]  : i32
 // CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
 // CHECK:         llvm.return %[[IS_ALLOC]] : i1

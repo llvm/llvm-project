@@ -5,7 +5,7 @@
 // CHECK-EMPTY:
 // CHECK-NEXT:     Name                Architecture Feature(s)                                Description
 // CHECK-NEXT:     aes                 FEAT_AES, FEAT_PMULL                                   Enable AES support
-// CHECK-NEXT:     b16b16              FEAT_SVE_B16B16                                        Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions
+// CHECK-NEXT:     b16b16              FEAT_B16B16                                            Enable SME2.1 ZA-targeting non-widening BFloat16 to BFloat16 instructions
 // CHECK-NEXT:     bf16                FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
@@ -71,6 +71,7 @@
 // CHECK-NEXT:     ssve-fp8dot4        FEAT_SSVE_FP8DOT4                                      Enable SVE2 FP8 4-way dot product instructions
 // CHECK-NEXT:     ssve-fp8fma         FEAT_SSVE_FP8FMA                                       Enable SVE2 FP8 multiply-add instructions
 // CHECK-NEXT:     sve                 FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
+// CHECK-NEXT:     sve-b16b16          FEAT_SVE_B16B16                                        Enable SVE2.1 non-widening and SME2.1 Z-targeting non-widening BFloat16 to BFloat16 instructions
 // CHECK-NEXT:     sve2                FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     sve2-aes            FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable AES SVE2 instructions
 // CHECK-NEXT:     sve2-bitperm        FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
