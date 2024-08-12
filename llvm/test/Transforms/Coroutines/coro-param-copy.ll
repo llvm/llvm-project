@@ -69,7 +69,7 @@ suspend:
 ; The next instruction is to recreate %y.cast in the original IR.
 ; CHECK-NEXT:  %y.addr.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 4
 ; CHECK-NEXT:  call void @llvm.memset.p0.i32(ptr %y.addr.reload.addr, i8 1, i32 4, i1 false)
-; CHECK-NEXT:  %index.addr1 = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 6
+; CHECK-NEXT:  %index.addr1 = getelementptr inbounds nuw %f.Frame, ptr %hdl, i32 0, i32 6
 ; CHECK-NEXT:  store i1 false, ptr %index.addr1, align 1
 ; CHECK-NEXT:  ret ptr %hdl
 

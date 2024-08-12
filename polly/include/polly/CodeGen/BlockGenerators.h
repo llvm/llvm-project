@@ -162,9 +162,14 @@ protected:
   /// The dominator tree of this function.
   DominatorTree &DT;
 
-  /// The entry block of the current function.
-  BasicBlock *EntryBB;
+  /// Relates to the region where the code is emitted into.
+  /// @{
+  DominatorTree *GenDT;
+  LoopInfo *GenLI;
+  ScalarEvolution *GenSE;
+  /// @}
 
+public:
   /// Map to resolve scalar dependences for PHI operands and scalars.
   ///
   /// When translating code that contains scalar dependences as they result from
@@ -297,6 +302,10 @@ protected:
 
   /// Split @p BB to create a new one we can use to clone @p BB in.
   BasicBlock *splitBB(BasicBlock *BB);
+
+  /// Change the function that code is emitted into.
+  void switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
+                           LoopInfo *GenLI, ScalarEvolution *GenSE);
 
   /// Copy the given basic block.
   ///

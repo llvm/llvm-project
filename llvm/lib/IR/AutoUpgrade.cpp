@@ -4886,7 +4886,25 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
-  unsigned Version = getDebugMetadataVersionFromModule(M);
+  // We need to get metadata before the module is verified (i.e., getModuleFlag
+  // makes assumptions that we haven't verified yet). Carefully extract the flag
+  // from the metadata.
+  unsigned Version = 0;
+  if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
+      if (Flag->getNumOperands() < 3)
+        return false;
+      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
+        return K->getString() == "Debug Info Version";
+      return false;
+    });
+    if (OpIt != ModFlags->op_end()) {
+      const MDOperand &ValOp = (*OpIt)->getOperand(2);
+      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
+        Version = CI->getZExtValue();
+    }
+  }
+
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))
@@ -5254,6 +5272,22 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
     Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
+
+/// Replace "amdgpu-unsafe-fp-atomics" metadata with atomicrmw metadata
+struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
+    : public InstVisitor<AMDGPUUnsafeFPAtomicsUpgradeVisitor> {
+  AMDGPUUnsafeFPAtomicsUpgradeVisitor() = default;
+
+  void visitAtomicRMWInst(AtomicRMWInst &RMW) {
+    if (!RMW.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(RMW.getContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
+};
 } // namespace
 
 void llvm::UpgradeFunctionAttributes(Function &F) {
@@ -5275,6 +5309,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
     F.removeFnAttr("implicit-section-name");
+  }
+
+  if (!F.empty()) {
+    // For some reason this is called twice, and the first time is before any
+    // instructions are loaded into the body.
+
+    if (Attribute A = F.getFnAttribute("amdgpu-unsafe-fp-atomics");
+        A.isValid()) {
+
+      if (A.getValueAsBool()) {
+        AMDGPUUnsafeFPAtomicsUpgradeVisitor Visitor;
+        Visitor.visit(F);
+      }
+
+      // We will leave behind dead attribute uses on external declarations, but
+      // clang never added these to declarations anyway.
+      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+    }
   }
 }
 

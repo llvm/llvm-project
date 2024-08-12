@@ -34,7 +34,7 @@ int main(void) {
 #pragma omp taskwait
 }
 
-// TRACE: Kernel {{.*}}'__omp_offloading_{{.*}}_main_
+// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l30)
 // TRACE:     launchKernel
 //
-// CHECK-DAG: Kernel {{[0-9]}}: '__omp_offloading_{{.*}}_main_l30'
+// CHECK: Kernel {{[0-9]}}: {{.*}} (__omp_offloading_{{.*}}_main_l30)

@@ -1819,7 +1819,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
-  Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
+  bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
   Features["egpr"] = HasAPXF;
   Features["push2pop2"] = HasAPXF;
@@ -1849,8 +1849,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
-  Features["avx10.1-512"] =
-      Features["avx10.1-256"] && HasLeaf24 && ((EBX >> 18) & 1);
+
+  int AVX10Ver = HasLeaf24 && (EBX & 0xff);
+  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
+  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
+  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
+  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
 
   return Features;
 }

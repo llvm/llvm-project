@@ -2131,26 +2131,14 @@ define void @test_store_fpimm(ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) {
 ; GFX10-NEXT:    global_store_short v[2:3], v5, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_store_fpimm:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x3f80
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0x4228
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.l, v4.h
-; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v5, off
-; GFX11TRUE16-NEXT:    global_store_b16 v[2:3], v4, off
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: test_store_fpimm:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    v_mov_b32_e32 v4, 0x3f80
-; GFX11FAKE16-NEXT:    v_mov_b32_e32 v5, 0x4228
-; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v4, off
-; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v5, off
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_store_fpimm:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0x3f80
+; GFX11-NEXT:    v_mov_b32_e32 v5, 0x4228
+; GFX11-NEXT:    global_store_b16 v[0:1], v4, off
+; GFX11-NEXT:    global_store_b16 v[2:3], v5, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store bfloat 1.0, ptr addrspace(1) %ptr0
   store bfloat 42.0, ptr addrspace(1) %ptr1
   ret void

@@ -2453,8 +2453,8 @@ bool AsmPrinter::doFinalization(Module &M) {
       auto SymbolName = "swift_async_extendedFramePointerFlags";
       auto Global = M.getGlobalVariable(SymbolName);
       if (!Global) {
-        auto Int8PtrTy = PointerType::getUnqual(M.getContext());
-        Global = new GlobalVariable(M, Int8PtrTy, false,
+        auto PtrTy = PointerType::getUnqual(M.getContext());
+        Global = new GlobalVariable(M, PtrTy, false,
                                     GlobalValue::ExternalWeakLinkage, nullptr,
                                     SymbolName);
         OutStreamer->emitSymbolAttribute(getSymbol(Global), MCSA_WeakReference);

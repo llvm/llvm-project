@@ -1418,6 +1418,20 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
 
+// Proxy fence (uni-directional)
+foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+
+  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope:
+        Intrinsic<[], [], [IntrNoCallback],
+        "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
+
+  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope:
+        Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+
+}
+
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive :
     ClangBuiltin<"__nvvm_cp_async_mbarrier_arrive">,

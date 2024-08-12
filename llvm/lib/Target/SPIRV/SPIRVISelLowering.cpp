@@ -96,10 +96,10 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                         : &SPIRV::fIDRegClass);
   else if (VT.isInteger())
     RC = VT.isVector() ? &SPIRV::vIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::ID64RegClass
-                                                        : &SPIRV::IDRegClass);
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::iID64RegClass
+                                                        : &SPIRV::iIDRegClass);
   else
-    RC = &SPIRV::IDRegClass;
+    RC = &SPIRV::iIDRegClass;
 
   return std::make_pair(0u, RC);
 }
@@ -125,7 +125,7 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                                    *STI.getRegBankInfo());
   if (!Res)
     report_fatal_error("insert validation bitcast: cannot constrain all uses");
-  MRI->setRegClass(NewReg, &SPIRV::IDRegClass);
+  MRI->setRegClass(NewReg, &SPIRV::iIDRegClass);
   GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
   I.getOperand(OpIdx).setReg(NewReg);
 }
@@ -201,6 +201,30 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
       createNewPtrType(GR, I, OpType, false, true, nullptr,
                        TargetExtType::get(Context, "spirv.Event"));
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
+}
+
+static void validateLifetimeStart(const SPIRVSubtarget &STI,
+                                  MachineRegisterInfo *MRI,
+                                  SPIRVGlobalRegistry &GR, MachineInstr &I) {
+  Register PtrReg = I.getOperand(0).getReg();
+  MachineFunction *MF = I.getParent()->getParent();
+  Register PtrTypeReg = getTypeReg(MRI, PtrReg);
+  SPIRVType *PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
+  SPIRVType *PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
+  if (!PonteeElemType || PonteeElemType->getOpcode() == SPIRV::OpTypeVoid ||
+      (PonteeElemType->getOpcode() == SPIRV::OpTypeInt &&
+       PonteeElemType->getOperand(1).getImm() == 8))
+    return;
+  // To keep the code valid a bitcast must be inserted
+  SPIRV::StorageClass::StorageClass SC =
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          PtrType->getOperand(1).getImm());
+  MachineIRBuilder MIB(I);
+  LLVMContext &Context = MF->getFunction().getContext();
+  SPIRVType *ElemType =
+      GR.getOrCreateSPIRVType(IntegerType::getInt8Ty(Context), MIB);
+  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ElemType, MIB, SC);
+  doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
 }
 
 static void validateGroupAsyncCopyPtr(const SPIRVSubtarget &STI,
@@ -412,6 +436,11 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
+      case SPIRV::OpLifetimeStart:
+      case SPIRV::OpLifetimeStop:
+        if (MI.getOperand(1).getImm() > 0)
+          validateLifetimeStart(STI, MRI, GR, MI);
         break;
       case SPIRV::OpGroupAsyncCopy:
         validateGroupAsyncCopyPtr(STI, MRI, GR, MI, 3);

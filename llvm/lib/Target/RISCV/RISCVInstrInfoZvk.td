@@ -140,6 +140,8 @@ let Predicates = [HasStdExtZvkb] in {
   defm VROR_V   : VROR_IV_V_X_I<"vror", 0b010100>;
 } // Predicates = [HasStdExtZvkb]
 
+let ActiveElementsAffectResult = 1 in {
+
 let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
   def VGHSH_VV : PALUVVNoVmTernary<0b101100, OPMVV, "vghsh.vv">,
                  SchedTernaryMC<"WriteVGHSHV", "ReadVGHSHV", "ReadVGHSHV",
@@ -187,6 +189,8 @@ let Predicates = [HasStdExtZvksh], RVVConstraint = VS2Constraint in {
   def VSM3ME_VV : PALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">,
                   SchedUnaryMC<"WriteVSM3MEV", "ReadVSM3MEV">;
 } // Predicates = [HasStdExtZvksh]
+
+} // ActiveElementsAffectResult = 1
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions

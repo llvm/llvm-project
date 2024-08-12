@@ -27,8 +27,6 @@
 #include <vector>
 
 using namespace clang;
-
-using namespace clang;
 using namespace clang::interp;
 
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
@@ -127,21 +125,40 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isActive())
     return true;
 
-  // Get the inactive field descriptor.
-  const FieldDecl *InactiveField = Ptr.getField();
+  assert(Ptr.inUnion());
 
-  // Walk up the pointer chain to find the union which is not active.
   Pointer U = Ptr.getBase();
-  while (!U.isActive()) {
+  Pointer C = Ptr;
+  while (!U.isRoot() && U.inUnion() && !U.isActive()) {
+    C = U;
     U = U.getBase();
   }
+  // Get the inactive field descriptor.
+  const FieldDecl *InactiveField = C.getField();
+  assert(InactiveField);
+
+  // Consider:
+  // union U {
+  //   struct {
+  //     int x;
+  //     int y;
+  //   } a;
+  // }
+  //
+  // When activating x, we will also activate a. If we now try to read
+  // from y, we will get to CheckActive, because y is not active. In that
+  // case, our U will be a (not a union). We return here and let later code
+  // handle this.
+  if (!U.getFieldDesc()->isUnion())
+    return true;
 
   // Find the active field of the union.
   const Record *R = U.getRecord();
   assert(R && R->isUnion() && "Not a union");
+
   const FieldDecl *ActiveField = nullptr;
-  for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {
-    const Pointer &Field = U.atField(R->getField(I)->Offset);
+  for (const Record::Field &F : R->fields()) {
+    const Pointer &Field = U.atField(F.Offset);
     if (Field.isActive()) {
       ActiveField = Field.getField();
       break;
@@ -303,10 +320,11 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
-    if (VD->isConstexpr())
+    QualType T = VD->getType();
+
+    if (T.isConstant(S.getCtx()))
       return true;
 
-    QualType T = VD->getType();
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
       return (T->isSignedIntegerOrEnumerationType() ||
               T->isUnsignedIntegerOrEnumerationType()) &&
@@ -327,7 +345,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (const auto *D = Desc->asVarDecl();
       D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
-    return S.inConstantContext();
+    return false;
   }
 
   return true;
@@ -630,7 +648,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
       S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+
+      if (DiagDecl->getDefinition())
+        S.Note(DiagDecl->getDefinition()->getLocation(),
+               diag::note_declared_at);
+      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
   } else {
     S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
@@ -837,6 +860,12 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   assert(Desc->isRecord());
   const Record *R = Desc->ElemRecord;
   assert(R);
+
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_destroy);
+    return false;
+  }
 
   // Fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {

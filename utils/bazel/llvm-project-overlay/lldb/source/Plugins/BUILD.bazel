@@ -178,6 +178,7 @@ cc_library(
         ":PluginCPlusPlusLanguageHeaders",
         ":PluginExpressionParserClangHeaders",
         ":PluginObjCRuntime",
+        ":PluginPlatformMacOSX",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
         "//clang:ast",

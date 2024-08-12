@@ -985,11 +985,14 @@ def err_main_arg_wrong : Error<"%select{first|second|third|fourth}0 "
 def warn_main_returns_bool_literal : Warning<"bool literal returned from "
     "'main'">, InGroup<Main>;
 def err_main_global_variable :
-    Error<"main cannot be declared as global variable">;
+    Error<"main cannot be declared as a variable %select{in the global scope|with C language linkage}0">;
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<
+  "'main' should not be "
+  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -11639,6 +11642,8 @@ def warn_omp_unterminated_declare_target : Warning<
   InGroup<SourceUsesOpenMP>;
 def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
+def err_omp_multi_expr_not_allowed: Error<"only one expression allowed in '%0' clause">;
+def err_ompx_more_than_three_expr_not_allowed: Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -11688,6 +11693,8 @@ def err_module_not_defined : Error<
 def err_module_redeclaration : Error<
   "translation unit contains multiple module declarations">;
 def note_prev_module_declaration : Note<"previous module declaration is here">;
+def err_module_declaration_missing : Error<
+  "missing 'export module' declaration in module interface unit">;
 def err_module_declaration_missing_after_global_module_introducer : Error<
   "missing 'module' declaration at end of global module fragment "
   "introduced here">;

@@ -220,6 +220,45 @@ void DataLayout::reset(StringRef Desc) {
     return report_fatal_error(std::move(Err));
 }
 
+DataLayout &DataLayout::operator=(const DataLayout &Other) {
+  clear();
+  StringRepresentation = Other.StringRepresentation;
+  BigEndian = Other.BigEndian;
+  AllocaAddrSpace = Other.AllocaAddrSpace;
+  ProgramAddrSpace = Other.ProgramAddrSpace;
+  DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
+  StackNaturalAlign = Other.StackNaturalAlign;
+  FunctionPtrAlign = Other.FunctionPtrAlign;
+  TheFunctionPtrAlignType = Other.TheFunctionPtrAlignType;
+  ManglingMode = Other.ManglingMode;
+  LegalIntWidths = Other.LegalIntWidths;
+  IntAlignments = Other.IntAlignments;
+  FloatAlignments = Other.FloatAlignments;
+  VectorAlignments = Other.VectorAlignments;
+  StructAlignment = Other.StructAlignment;
+  Pointers = Other.Pointers;
+  NonIntegralAddressSpaces = Other.NonIntegralAddressSpaces;
+  return *this;
+}
+
+bool DataLayout::operator==(const DataLayout &Other) const {
+  // NOTE: StringRepresentation might differ, it is not canonicalized.
+  // FIXME: NonIntegralAddressSpaces isn't compared.
+  return BigEndian == Other.BigEndian &&
+         AllocaAddrSpace == Other.AllocaAddrSpace &&
+         ProgramAddrSpace == Other.ProgramAddrSpace &&
+         DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
+         StackNaturalAlign == Other.StackNaturalAlign &&
+         FunctionPtrAlign == Other.FunctionPtrAlign &&
+         TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
+         ManglingMode == Other.ManglingMode &&
+         LegalIntWidths == Other.LegalIntWidths &&
+         IntAlignments == Other.IntAlignments &&
+         FloatAlignments == Other.FloatAlignments &&
+         VectorAlignments == Other.VectorAlignments &&
+         StructAlignment == Other.StructAlignment && Pointers == Other.Pointers;
+}
+
 Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
   DataLayout Layout("");
   if (Error Err = Layout.parseSpecifier(LayoutDescription))
@@ -556,25 +595,6 @@ DataLayout::DataLayout(const Module *M) {
 
 void DataLayout::init(const Module *M) { *this = M->getDataLayout(); }
 
-bool DataLayout::operator==(const DataLayout &Other) const {
-  bool Ret = BigEndian == Other.BigEndian &&
-             AllocaAddrSpace == Other.AllocaAddrSpace &&
-             StackNaturalAlign == Other.StackNaturalAlign &&
-             ProgramAddrSpace == Other.ProgramAddrSpace &&
-             DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
-             FunctionPtrAlign == Other.FunctionPtrAlign &&
-             TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
-             ManglingMode == Other.ManglingMode &&
-             LegalIntWidths == Other.LegalIntWidths &&
-             IntAlignments == Other.IntAlignments &&
-             FloatAlignments == Other.FloatAlignments &&
-             VectorAlignments == Other.VectorAlignments &&
-             StructAlignment == Other.StructAlignment &&
-             Pointers == Other.Pointers;
-  // Note: getStringRepresentation() might differs, it is not canonicalized
-  return Ret;
-}
-
 static SmallVectorImpl<LayoutAlignElem>::const_iterator
 findAlignmentLowerBound(const SmallVectorImpl<LayoutAlignElem> &Alignments,
                         uint32_t BitWidth) {
@@ -863,11 +883,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
-}
-
-/// TODO: Remove this function once the transition to Align is over.
-uint64_t DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getPrefTypeAlign(Ty).value();
 }
 
 Align DataLayout::getPrefTypeAlign(Type *Ty) const {

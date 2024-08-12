@@ -509,8 +509,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   return true;
 }
 
-bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
-                                        uint32_t &ProbeCount,
+template <bool IsTopLevelFunc>
+bool MCPseudoProbeDecoder::countRecords(bool &Discard, uint32_t &ProbeCount,
                                         uint32_t &InlinedCount,
                                         const Uint64Set &GuidFilter) {
   if (!IsTopLevelFunc)
@@ -583,7 +583,7 @@ bool MCPseudoProbeDecoder::countRecords(bool IsTopLevelFunc, bool &Discard,
   }
 
   for (uint32_t I = 0; I < ChildrenToProcess; I++)
-    if (!countRecords(false, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<false>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
   return true;
 }
@@ -600,7 +600,7 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   End = Data + Size;
   bool Discard = false;
   while (Data < End) {
-    if (!countRecords(true, Discard, ProbeCount, InlinedCount, GuidFilter))
+    if (!countRecords<true>(Discard, ProbeCount, InlinedCount, GuidFilter))
       return false;
     TopLevelFuncs += !Discard;
   }
@@ -630,7 +630,7 @@ void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
                                                 uint64_t Address) {
   auto It = Address2ProbesMap.find(Address);
   if (It != Address2ProbesMap.end()) {
-    for (auto &Probe : It->second) {
+    for (const MCDecodedPseudoProbe &Probe : It->second) {
       OS << " [Probe]:\t";
       Probe.print(OS, GUID2FuncDescMap, true);
     }
@@ -657,7 +657,7 @@ MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   const auto &Probes = It->second;
 
   const MCDecodedPseudoProbe *CallProbe = nullptr;
-  for (const auto &Probe : Probes) {
+  for (const MCDecodedPseudoProbe &Probe : Probes) {
     if (Probe.isCall()) {
       // Disabling the assert and returning first call probe seen so far.
       // Subsequent call probes, if any, are ignored. Due to the the way
