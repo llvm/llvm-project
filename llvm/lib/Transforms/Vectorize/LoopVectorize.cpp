@@ -7080,7 +7080,16 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    SmallVector<Instruction *> IVInsts = {IV, IVInc};
+    SmallVector<Instruction *> IVInsts = {IVInc};
+    for (unsigned I = 0; I != IVInsts.size(); I++) {
+      for (Value *Op : IVInsts[I]->operands()) {
+        auto *OpI = dyn_cast<Instruction>(Op);
+        if (Op == IV || !OpI || !OrigLoop->contains(OpI) || !Op->hasOneUse())
+          continue;
+        IVInsts.push_back(OpI);
+      }
+    }
+    IVInsts.push_back(IV);
     for (User *U : IV->users()) {
       auto *CI = cast<Instruction>(U);
       if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
@@ -8539,12 +8548,12 @@ static void addUsersInExitBlock(
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
   auto MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-
   // No edge from the middle block to the unique exit block has been inserted
   // and there is nothing to fix from vector loop; phis should have incoming
   // from scalar loop only.
   if (MiddleVPBB->getNumSuccessors() != 2)
     return;
+
   // TODO: set B to MiddleVPBB->getFirstNonPhi(), taking care of affected tests.
   VPBuilder B(MiddleVPBB);
   if (auto *Terminator = MiddleVPBB->getTerminator()) {
