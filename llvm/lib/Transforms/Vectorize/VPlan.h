@@ -1682,8 +1682,7 @@ public:
   bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    assert(getNumOperands() == 1 && "must have a single operand");
-    return true;
+    return Op == getOperand(0);
   }
 
   VPVectorPointerRecipe *clone() override {

@@ -692,6 +692,7 @@ unsigned VPInstruction::getInterleaveCount() const {
              ? 1
              : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
                    ->getZExtValue();
+}
 
 #if !defined(NDEBUG)
 bool VPInstruction::isFPMathOp() const {
@@ -2531,42 +2532,59 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
+  unsigned CurrentPart = 0;
+  if (getNumOperands() == 5)
+    CurrentPart =
+        cast<ConstantInt>(getOperand(4)->getLiveInIRValue())->getZExtValue();
   Type *PhiType = IndDesc.getStep()->getType();
 
   // Build a pointer phi
   Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
   Type *ScStValueType = ScalarStartValue->getType();
-  PHINode *NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                           CanonicalIV->getIterator());
+  PHINode *NewPointerPhi = nullptr;
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+  if (getNumOperands() == 5) {
+    auto *GEP = cast<GetElementPtrInst>(State.get(getOperand(3), 0));
+    NewPointerPhi = cast<PHINode>(GEP->getPointerOperand());
+  } else {
+    NewPointerPhi =
+        PHINode::Create(ScStValueType, 2, "pointer.phi", CanonicalIV);
+    NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+  }
 
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
+  unsigned UF = getNumOperands() == 2
+                    ? 1
+                    : cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
+                          ->getZExtValue();
 
   Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   Value *NumUnrolledElems =
-      State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
-  Value *InductionGEP = GetElementPtrInst::Create(
-      State.Builder.getInt8Ty(), NewPointerPhi,
-      State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-      InductionLoc);
+      State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, UF));
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
   // block cannot be used, as it does not exist yet.
   // TODO: Model increment value in VPlan, by turning the recipe into a
   // multi-def and a subclass of VPHeaderPHIRecipe.
-  NewPointerPhi->addIncoming(InductionGEP, VectorPH);
+  if (getNumOperands() != 5) {
+    Value *InductionGEP = GetElementPtrInst::Create(
+        State.Builder.getInt8Ty(), NewPointerPhi,
+        State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
+        InductionLoc);
+
+    NewPointerPhi->addIncoming(InductionGEP, VectorPH);
+  }
 
   // Create UF many actual address geps that use the pointer
   // phi as base and a vectorized version of the step value
   // (<step*0, ..., step*N>) as offset.
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Type *VecPhiType = VectorType::get(PhiType, State.VF);
-    Value *StartOffsetScalar =
-        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, Part));
+    Value *StartOffsetScalar = State.Builder.CreateMul(
+        RuntimeVF, ConstantInt::get(PhiType, CurrentPart));
     Value *StartOffset =
         State.Builder.CreateVectorSplat(State.VF, StartOffsetScalar);
     // Create a vector of consecutive numbers from zero to VF.
