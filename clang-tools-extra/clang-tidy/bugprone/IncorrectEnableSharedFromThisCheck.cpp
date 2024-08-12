@@ -1,5 +1,4 @@
-//===--- IncorrectEnableSharedFromThisCheck.cpp - clang-tidy
-//-------------------------===//
+//===--- IncorrectEnableSharedFromThisCheck.cpp - clang-tidy --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,10 +44,10 @@ void IncorrectEnableSharedFromThisCheck::check(
       const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
       if (BaseType && BaseType->getQualifiedNameAsString() ==
                           "std::enable_shared_from_this") {
-        SourceRange ReplacementRange = Base.getSourceRange();
-        std::string ReplacementString =
+        const SourceRange ReplacementRange = Base.getSourceRange();
+        const std::string ReplacementString =
             "public " + Base.getType().getAsString();
-        FixItHint Hint =
+        const FixItHint Hint =
             FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
         diag(
             StdEnableSharedClassDecl->getLocation(),
@@ -66,19 +65,19 @@ void IncorrectEnableSharedFromThisCheck::check(
       const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
       if (BaseType &&
           BaseType->getQualifiedNameAsString() == "enable_shared_from_this") {
-        clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
+        const clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
         if (AccessSpec == clang::AS_public) {
-          SourceLocation InsertLocation = Base.getBaseTypeLoc();
-          FixItHint Hint = FixItHint::CreateInsertion(InsertLocation, "std::");
+          const SourceLocation InsertLocation = Base.getBaseTypeLoc();
+          const FixItHint Hint = FixItHint::CreateInsertion(InsertLocation, "std::");
           diag(MissingStdSharedClassDecl->getLocation(),
                "Should be std::enable_shared_from_this", DiagnosticIDs::Warning)
               << Hint;
           break;
         } else {
-          SourceRange ReplacementRange = Base.getSourceRange();
-          std::string ReplacementString =
+          const SourceRange ReplacementRange = Base.getSourceRange();
+          const std::string ReplacementString =
               "public std::" + Base.getType().getAsString();
-          FixItHint Hint =
+          const FixItHint Hint =
               FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
           diag(MissingStdSharedClassDecl->getLocation(),
                "Should be std::enable_shared_from_this and "
@@ -93,4 +92,5 @@ void IncorrectEnableSharedFromThisCheck::check(
     }
   }
 }
+
 } // namespace clang::tidy::bugprone

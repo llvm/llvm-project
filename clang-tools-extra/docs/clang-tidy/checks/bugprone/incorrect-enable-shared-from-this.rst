@@ -3,9 +3,9 @@
 bugprone-incorrect-enable-shared-from-this
 =======================================
 
-Check if class/struct publicly derives from ``std::enable_shared_from_this``,
+Checks if class/struct publicly derives from ``std::enable_shared_from_this``,
 because otherwise when ``shared_from_this`` is called it will throw 
-``std::bad_weak_ptr``. Issues a ``FixItHint`` that can be applied.
+``std::bad_weak_ptr``.
 
 Consider the following code:
 

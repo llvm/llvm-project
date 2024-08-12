@@ -54,4 +54,3 @@ class BadMixedProblemExample : enable_shared_from_this<BadMixedProblemExample> {
 //FIXME: can't do anything about this, clang-check -ast-dump doesn't show A's internals in class B's AST
 class A : public std::enable_shared_from_this<A> {};
 class B : private A{};
-
