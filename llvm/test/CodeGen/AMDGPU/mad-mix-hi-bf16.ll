@@ -6,7 +6,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo(bfloat %src0,
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -24,7 +23,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_constlo(bfloat %src0,
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v3, 0x3f80
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_fma_mixhi_bf16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
@@ -45,7 +43,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_reglo(bfloat %src0, b
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixhi_bf16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, v3
@@ -66,7 +63,6 @@ define i32 @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_intpack(bfloat %src0, bfloat %
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -88,7 +84,6 @@ define i32 @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_intpack_sext(bfloat %src0, bfl
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -110,7 +105,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_precvt(
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
@@ -133,7 +127,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -153,7 +146,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_fma_mixlo_bf16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1210-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX1210-NEXT:    s_wait_storecnt 0x0
