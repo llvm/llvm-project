@@ -234,7 +234,7 @@ const std::vector<std::string> uniqued_flags = {
 TEST_F(ClangArgs, UniquingCollisionWithExistingFlags) {
   const std::vector<std::string> source = duplicated_flags;
   std::vector<std::string> dest = uniqued_flags;
-  SwiftASTContext::AddExtraClangArgs(source, dest);
+  SwiftASTContext::AddExtraClangArgs(source, dest, false);
 
   EXPECT_EQ(dest, uniqued_flags);
 }
@@ -242,7 +242,7 @@ TEST_F(ClangArgs, UniquingCollisionWithExistingFlags) {
 TEST_F(ClangArgs, UniquingCollisionWithAddedFlags) {
   const std::vector<std::string> source = duplicated_flags;
   std::vector<std::string> dest;
-  SwiftASTContext::AddExtraClangArgs(source, dest);
+  SwiftASTContext::AddExtraClangArgs(source, dest, false);
 
   EXPECT_EQ(dest, uniqued_flags);
 }
@@ -251,7 +251,7 @@ TEST_F(ClangArgs, DoubleDash) {
   // -v with all currently ignored arguments following.
   const std::vector<std::string> source{"-v", "--", "-Werror", ""};
   std::vector<std::string> dest;
-  SwiftASTContext::AddExtraClangArgs(source, dest);
+  SwiftASTContext::AddExtraClangArgs(source, dest, false);
 
   // Check that all ignored arguments got removed.
   EXPECT_EQ(dest, std::vector<std::string>({"-v"}));

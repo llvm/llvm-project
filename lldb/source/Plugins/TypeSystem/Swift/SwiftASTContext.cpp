@@ -1573,7 +1573,21 @@ bool ShouldUnique(StringRef arg) {
 
 // static
 void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
-                                        std::vector<std::string> &dest) {
+                                        std::vector<std::string> &dest,
+                                        bool cc1) {
+  // FIXME: Support for cc1 flags isn't complete.  The uniquing
+  // algortihm below does not work for cc1 flags. Since cc1 flags are
+  // not stable it's not feasible to keep a list of all multi-arg
+  // flags, for example. It also makes it difficult to correctly
+  // identify where workng directories and path remappings should
+  // applied. For all these reasons, using cc1 flags for anything but
+  // a local build with explicit modules and precise compiler
+  // invocations isn't supported yet.
+  if (cc1) {
+    dest.insert(dest.end(), source.begin(), source.end());
+    return;
+  }
+
   llvm::StringSet<> unique_flags;
   for (auto &arg : dest)
     unique_flags.insert(arg);
@@ -1751,11 +1765,27 @@ static void applyOverrideOptions(std::vector<std::string> &args,
 void SwiftASTContext::AddExtraClangArgs(
     const std::vector<std::string> &ExtraArgs, StringRef overrideOpts) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-  AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
+
+  // Detect cc1 flags.  When DirectClangCC1ModuleBuild is on then the
+  // clang arguments in the serialized invocation are clang cc1 flags,
+  // which are very specific to one compiler version and cannot
+  // be merged with driver options.
+  bool fresh_invocation = importer_options.ExtraArgs.empty();
+  if (fresh_invocation && !ExtraArgs.empty() && ExtraArgs.front() == "-cc1")
+    importer_options.DirectClangCC1ModuleBuild = true;
+  if (!importer_options.DirectClangCC1ModuleBuild && !ExtraArgs.empty() &&
+      ExtraArgs.front() == "-cc1")
+    AddDiagnostic(
+        eSeverityWarning,
+        "Mixing and matching of driver and cc1 Clang options detected");
+
+  AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs,
+                    importer_options.DirectClangCC1ModuleBuild);
   applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
 
+  // Detect explicitly-built modules.
   m_has_explicit_modules =
       llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
         return StringRef(arg).starts_with("-fmodule-file=");
@@ -1864,6 +1894,11 @@ void SwiftASTContext::FilterClangImporterOptions(
         arg_sr == "-fno-implicit-module-maps")
       continue;
 
+    // This is not a cc1 option.
+    if (arg_sr.starts_with("--target=") && ctx &&
+        ctx->GetClangImporterOptions().DirectClangCC1ModuleBuild)
+      continue;
+
     // The VFS options turn into fatal errors when the referenced file
     // is not found. Since the Xcode build system tends to create a
     // lot of VFS overlays by default, stat them and emit a warning if
@@ -1889,6 +1924,7 @@ void SwiftASTContext::FilterClangImporterOptions(
       // Keep it.
       extra_args.push_back(ivfs_arg);
     }
+
     extra_args.push_back(std::move(arg));
   }
 }
