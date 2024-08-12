@@ -1427,7 +1427,8 @@ void VPlanTransforms::addActiveLaneMask(
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
+bool VPlanTransforms::tryAddExplicitVectorLength(
+    VPlan &Plan, const std::optional<unsigned> &MaxEVLSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
@@ -1452,8 +1453,12 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
-                                  {EVLPhi, Plan.getTripCount()});
+  SmallVector<VPValue *, 3> Operands = {EVLPhi, Plan.getTripCount()};
+  if (MaxEVLSafeElements)
+    Operands.push_back(Plan.getOrAddLiveIn(ConstantInt::get(
+        CanonicalIVPHI->getScalarType(), *MaxEVLSafeElements)));
+  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength, Operands,
+                                  DebugLoc());
   VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
 
   auto *CanonicalIVIncrement =

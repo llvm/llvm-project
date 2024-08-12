@@ -1239,6 +1239,13 @@ public:
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
+    /// Creates special scalar explicit-vector-length instruction, which
+    /// calculates the vectorization factor (number of iterations, that can be
+    /// executed simultaneously) at runtime.
+    /// Has two mandatory parameters - EVL (effective vector length) on the
+    /// previous iteration and original trip count.
+    /// Also, has one optional parameter - max safe distance, allowed for the
+    /// loop.
     ExplicitVectorLength,
     /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
     /// The first operand is the incoming value from the predecessor in VPlan,
