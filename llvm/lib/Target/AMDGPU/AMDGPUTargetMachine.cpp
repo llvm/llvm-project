@@ -430,7 +430,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
-  initializeAMDGPULateCodeGenPreparePass(*PR);
+  initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
@@ -656,14 +656,6 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   if (Result)
     return *Result;
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
-}
-
-Error AMDGPUTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
 Expected<AMDGPUAttributorOptions>
@@ -920,6 +912,14 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
+}
+
+Error GCNTargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1229,7 +1229,7 @@ bool GCNPassConfig::addPreISel() {
     addPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createAMDGPULateCodeGenPrepareLegacyPass());
 
   addPass(createAMDGPUConditionalDiscardPass());
 

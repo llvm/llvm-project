@@ -7080,7 +7080,16 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    SmallVector<Instruction *> IVInsts = {IV, IVInc};
+    SmallVector<Instruction *> IVInsts = {IVInc};
+    for (unsigned I = 0; I != IVInsts.size(); I++) {
+      for (Value *Op : IVInsts[I]->operands()) {
+        auto *OpI = dyn_cast<Instruction>(Op);
+        if (Op == IV || !OpI || !OrigLoop->contains(OpI) || !Op->hasOneUse())
+          continue;
+        IVInsts.push_back(OpI);
+      }
+    }
+    IVInsts.push_back(IV);
     for (User *U : IV->users()) {
       auto *CI = cast<Instruction>(U);
       if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
@@ -8008,8 +8017,9 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB) {
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
-  // This is the block mask. We OR all incoming edges.
-  for (auto *Predecessor : predecessors(BB)) {
+  // This is the block mask. We OR all unique incoming edges.
+  for (auto *Predecessor :
+       SetVector<BasicBlock *>(pred_begin(BB), pred_end(BB))) {
     VPValue *EdgeMask = createEdgeMask(Predecessor, BB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is too.
       BlockMaskCache[BB] = EdgeMask;
