@@ -1128,6 +1128,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
+  setTargetDAGCombine(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM);
+
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -25434,6 +25436,41 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
+static SDValue performHistogramCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       SelectionDAG &DAG) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
+  SDLoc DL(HG);
+  SDValue Chain = HG->getChain();
+  SDValue Inc = HG->getInc();
+  SDValue Mask = HG->getMask();
+  SDValue Ptr = HG->getBasePtr();
+  SDValue Index = HG->getIndex();
+  SDValue Scale = HG->getScale();
+  SDValue IntID = HG->getIntID();
+  EVT MemVT = HG->getMemoryVT();
+  EVT IndexVT = Index.getValueType();
+  MachineMemOperand *MMO = HG->getMemOperand();
+  ISD::MemIndexType IndexType = HG->getIndexType();
+
+  if (IndexVT == MVT::nxv4i32 || IndexVT == MVT::nxv2i64)
+    return SDValue();
+
+  // Split vectors which are too wide
+  SDValue IndexLo, IndexHi, MaskLo, MaskHi;
+  std::tie(IndexLo, IndexHi) = DAG.SplitVector(Index, DL);
+  std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  SDValue HistogramOpsLo[] = {Chain, Inc, MaskLo, Ptr, IndexLo, Scale, IntID};
+  SDValue HChain = DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL,
+                                          HistogramOpsLo, MMO, IndexType);
+  SDValue HistogramOpsHi[] = {HChain, Inc, MaskHi, Ptr, IndexHi, Scale, IntID};
+  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL,
+                                HistogramOpsHi, MMO, IndexType);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -25778,6 +25815,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTLZCombine(N, DAG, Subtarget);
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    return performHistogramCombine(N, DCI, DAG);
   }
   return SDValue();
 }
