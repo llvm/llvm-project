@@ -75,6 +75,8 @@ bool getEnableHonorSignDependentRoundingFPMath();
 
 llvm::FloatABI::ABIType getFloatABIForCalls();
 
+llvm::DecimalFloatABI getDecimalFloatABIForCalls();
+
 llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
 
 SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();

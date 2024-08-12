@@ -21,12 +21,28 @@ namespace driver {
 namespace tools {
 namespace x86 {
 
+enum class DecimalFloatABI {
+  Default,    // Target-specific default.
+  None,       // No decimal floating-point support.
+  Libgcc_BID, // libgcc with BID encoding.
+  Libgcc_DPD, // libgcc with DPD encoding.
+  Hard,       // Target-specific hard ABI.
+  Invalid
+};
+
 std::string getX86TargetCPU(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple);
 
 void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                           const llvm::opt::ArgList &Args,
                           std::vector<llvm::StringRef> &Features);
+
+DecimalFloatABI getX86DecimalFloatABI(const Driver &D,
+                                      const llvm::Triple &Triple,
+                                      const llvm::opt::ArgList &Args);
+
+DecimalFloatABI getDefaultX86DecimalFloatABI(const llvm::Triple &Triple,
+                                             const llvm::opt::ArgList &Args);
 
 } // end namespace x86
 } // end namespace target

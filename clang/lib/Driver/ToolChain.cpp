@@ -9,6 +9,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/X86.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"

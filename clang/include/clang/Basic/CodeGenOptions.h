@@ -217,6 +217,9 @@ public:
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 
+  /// The encoding used for decimal floating point arguments.
+  std::string DecimalFloatABI;
+
   /// The file to use for dumping bug report by `Debugify` for original
   /// debug info.
   std::string DIBugsReportFilePath;

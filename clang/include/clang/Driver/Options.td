@@ -4284,6 +4284,11 @@ def malign_double : Flag<["-"], "malign-double">, Group<m_Group>,
   MarshallingInfoFlag<LangOpts<"AlignDouble">>;
 let Flags = [TargetSpecific] in {
 def mfloat_abi_EQ : Joined<["-"], "mfloat-abi=">, Group<m_Group>, Values<"soft,softfp,hard">;
+def mdecimal_float_abi_EQ : Joined<["-"], "mdecimal-float-abi=">, Group<m_Group>,
+Visibility<[ClangOption, CC1Option]>,
+  Values<"libgcc:bid,libgcc:dpd,hard">,
+  HelpText<"The decimal float encoding to use">,
+  MarshallingInfoString<CodeGenOpts<"DecimalFloatABI">>;
 def mfpmath_EQ : Joined<["-"], "mfpmath=">, Group<m_Group>;
 def mfpu_EQ : Joined<["-"], "mfpu=">, Group<m_Group>;
 def mhwdiv_EQ : Joined<["-"], "mhwdiv=">, Group<m_Group>;

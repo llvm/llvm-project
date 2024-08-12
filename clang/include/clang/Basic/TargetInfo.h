@@ -114,6 +114,8 @@ struct TransferrableTargetInfo {
   unsigned char DecimalFloat64Width, DecimalFloat64Align;
   unsigned char DecimalFloat128Width, DecimalFloat128Align;
 
+  enum DecimalFloat { Libgcc_BID, Libgcc_DPD, Hard } DecimalFloatABI;
+
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
   unsigned char AccumWidth, AccumAlign;

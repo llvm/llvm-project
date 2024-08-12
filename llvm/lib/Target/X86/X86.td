@@ -66,6 +66,9 @@ def FeatureXSAVES  : SubtargetFeature<"xsaves", "HasXSAVES", "true",
                                        "Support xsaves instructions",
                                        [FeatureXSAVE]>;
 
+def FeatureBIDENCODING : SubtargetFeature<"bid-encoding", "HasBIDENCODING", "true",
+                                          "Support BID encoding for decimal floatin-points">;
+
 def FeatureSSE1    : SubtargetFeature<"sse", "X86SSELevel", "SSE1",
                                       "Enable SSE instructions">;
 def FeatureSSE2    : SubtargetFeature<"sse2", "X86SSELevel", "SSE2",

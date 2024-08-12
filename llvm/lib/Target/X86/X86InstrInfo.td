@@ -929,6 +929,7 @@ def HasAVXVNNIINT16 : Predicate<"Subtarget->hasAVXVNNIINT16()">;
 def HasAVXVNNIINT8 : Predicate<"Subtarget->hasAVXVNNIINT8()">;
 def HasAVXVNNI : Predicate <"Subtarget->hasAVXVNNI()">;
 def NoVLX_Or_NoVNNI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVNNI()">;
+def HasBIDENCODING : Predicate<"Subtarget->hasBIDENCODING()">;
 
 def HasBITALG    : Predicate<"Subtarget->hasBITALG()">;
 def HasPOPCNT    : Predicate<"Subtarget->hasPOPCNT()">;

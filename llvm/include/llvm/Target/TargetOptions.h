@@ -32,6 +32,14 @@ namespace llvm {
     };
   }
 
+   enum class DecimalFloatABI {
+    Default,    // Target-specific.
+    None,       // No decimal floating-point support.
+    Libgcc_BID, // libgcc with BID encoding.
+    Libgcc_DPD, // libgcc with DPD encoding.
+    Hard        // Hardware with target-specific encoding.
+  };
+
   namespace FPOpFusion {
     enum FPOpFusionMode {
       Fast,     // Enable fusion of FP ops wherever it's profitable.
@@ -375,6 +383,8 @@ namespace llvm {
     /// be used. Such a combination is unfortunately popular (e.g.
     /// arm-apple-darwin). Hard presumes that the normal FP ABI is used.
     FloatABI::ABIType FloatABIType = FloatABI::Default;
+
+    DecimalFloatABI DecimalFloatABIType = DecimalFloatABI::Default;
 
     /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
     /// This controls the creation of fused FP ops that store intermediate

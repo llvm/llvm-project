@@ -62,6 +62,8 @@ def err_drv_no_cuda_libdevice : Error<
   "cannot find libdevice for %0; provide path to different CUDA installation "
   "via '--cuda-path', or pass '-nocudalib' to build without linking with "
   "libdevice">;
+def err_drv_unsupported_decimal_fp_encoding_for_target : Error<
+  "unsupported decimal floating-point encoding '%0' for target '%1'">;
 
 def err_drv_no_rocm_device_lib : Error<
   "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
@@ -242,6 +244,8 @@ def err_drv_cannot_read_config_file : Error<
   "cannot read configuration file '%0': %1">;
 def err_drv_arg_requires_bitcode_input: Error<
   "option '%0' requires input to be LLVM bitcode">;
+def err_drv_invalid_mdecimal_float_abi_EQ: Error<
+  "invalid argument '%0' to -mdecimal-float-abi=; each element must be one of: %1">;
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;

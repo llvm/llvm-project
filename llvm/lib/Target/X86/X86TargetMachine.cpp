@@ -238,6 +238,15 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
   }
 
+  // Default to triple-appropriate decimal float ABI.
+  if (Options.DecimalFloatABIType == DecimalFloatABI::None) {
+    this->Options.DecimalFloatABIType = DecimalFloatABI::None;
+  } else {
+    if (Options.DecimalFloatABIType == DecimalFloatABI::Default) {
+      this->Options.DecimalFloatABIType = DecimalFloatABI::Libgcc_BID;
+    }
+  }
+
   setMachineOutliner(true);
 
   // x86 supports the debug entry values.

@@ -353,6 +353,12 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
           .Case("softfp", llvm::FloatABI::Soft)
           .Case("hard", llvm::FloatABI::Hard)
           .Default(llvm::FloatABI::Default);
+  Options.DecimalFloatABIType =
+      llvm::StringSwitch<llvm::DecimalFloatABI>(CodeGenOpts.DecimalFloatABI)
+          .Case("libgcc:bid", llvm::DecimalFloatABI::Libgcc_BID)
+          .Case("libgcc:dpd", llvm::DecimalFloatABI::Libgcc_DPD)
+          .Case("hard", llvm::DecimalFloatABI::Hard)
+          .Default(llvm::DecimalFloatABI::Default);
 
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {

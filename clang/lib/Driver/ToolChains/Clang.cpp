@@ -2818,6 +2818,16 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     switch (optID) {
     default:
       break;
+    case options::OPT_mdecimal_float_abi_EQ: {
+      StringRef Val = A->getValue();
+      if (Val == "libgcc:bid" || Val == "libgcc:dpd" || Val == "hard") {
+        CmdArgs.push_back(Args.MakeArgString("-mdecimal-float-abi=" + Val));
+      } else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+      }
+      break;
+    }
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
       HonorINFs = true;
