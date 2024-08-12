@@ -481,11 +481,6 @@ Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
     // the usage in the CallInst, which is what we check here.
     if (User == Call)
       continue;
-    if (auto *Bitcast = dyn_cast<BitCastInst>(User)) {
-      if (!Bitcast->hasOneUse() || *Bitcast->user_begin() != Call)
-        return nullptr;
-      continue;
-    }
 
     if (auto *Store = dyn_cast<StoreInst>(User)) {
       // This is a duplicate store, bail out.
