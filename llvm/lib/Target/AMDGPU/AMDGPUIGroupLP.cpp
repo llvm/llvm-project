@@ -1430,14 +1430,14 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (!(TempExp && TempMFMA))
     return false;
 
-  HasChainBetweenCvt = llvm::none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
+  HasChainBetweenCvt = none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
     return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
   });
 
   // Count the number of MFMAs that are reached by an EXP
   for (auto &SuccSU : MFMAPipeCands) {
     if (MFMAPipeSUs.size() &&
-        llvm::any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
+        any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
           return PotentialMatch->NodeNum == SuccSU->NodeNum;
         }))
       continue;
