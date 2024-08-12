@@ -17,27 +17,6 @@
 
 #include "kmp_config.h"
 
-#if KMP_OS_LINUX
-// BTI and PAC gnu property note
-#define NT_GNU_PROPERTY_TYPE_0 5
-#define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
-#define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
-#define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
-
-# define GNU_PROPERTY(type, value)                                             \
-  .pushsection .note.gnu.property, "a";                                        \
-  .p2align 3;                                                                  \
-  .word 4;                                                                     \
-  .word 16;                                                                    \
-  .word NT_GNU_PROPERTY_TYPE_0;                                                \
-  .asciz "GNU";                                                                \
-  .word type;                                                                  \
-  .word 4;                                                                     \
-  .word value;                                                                 \
-  .word 0;                                                                     \
-  .popsection
-#endif
-
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
 # if KMP_MIC
@@ -196,6 +175,27 @@ KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
 .endm
 # endif // KMP_OS_DARWIN
+
+# if KMP_OS_LINUX
+// BTI and PAC gnu property note
+#  define NT_GNU_PROPERTY_TYPE_0 5
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+
+#  define GNU_PROPERTY(type, value)                                            \
+  .pushsection .note.gnu.property, "a";                                        \
+  .p2align 3;                                                                  \
+  .word 4;                                                                     \
+  .word 16;                                                                    \
+  .word NT_GNU_PROPERTY_TYPE_0;                                                \
+  .asciz "GNU";                                                                \
+  .word type;                                                                  \
+  .word 4;                                                                     \
+  .word value;                                                                 \
+  .word 0;                                                                     \
+  .popsection
+# endif
 
 # if defined(__ARM_FEATURE_BTI_DEFAULT)
 #  define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
