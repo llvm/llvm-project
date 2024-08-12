@@ -517,10 +517,12 @@ BreakableBlockComment::BreakableBlockComment(
   }
 
   Decoration = "* ";
-  if (Lines.size() == 1 && !FirstInLine) {
+  if ((Style.DecorateReflowedComments == FormatStyle::DRC_Never) ||
+      (!FirstInLine &&
+       (Style.DecorateReflowedComments == FormatStyle::DRC_FirstInLineOnly))) {
     // Comments for which FirstInLine is false can start on arbitrary column,
     // and available horizontal space can be too small to align consecutive
-    // lines with the first one.
+    // lines with the first one. Also if decoration is explicitly turned off.
     // FIXME: We could, probably, align them to current indentation level, but
     // now we just wrap them without stars.
     Decoration = "";

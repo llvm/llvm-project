@@ -47,8 +47,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "["
-       << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -346,6 +345,35 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
          (Previous->IsMultiline || Previous->NewlinesBefore > 0);
 }
 
+void UnwrappedLineParser::parseStmt(bool keepIndentation) {
+  bool levelsAreAdded = (Line->Level == DeclarationScopeStack.size());
+  // move till the end of the statement
+  while (!FormatTok->is(tok::semi))
+    nextToken();
+  nextToken();
+  if (keepIndentation) {
+    // if levels are already added, just emit with existing indentation
+    // otherwise, emit with scoped indentation
+    if (levelsAreAdded) {
+      addUnwrappedLine(LineLevel::Keep);
+    } else {
+      Line->Level += (DeclarationScopeStack.size() - 1);
+      addUnwrappedLine(LineLevel::Keep);
+      Line->Level -= (DeclarationScopeStack.size() - 1);
+    }
+  } else {
+    // if levels are already added, remove the levels and emit
+    // otherwise, just emit
+    if (levelsAreAdded) {
+      Line->Level -= (DeclarationScopeStack.size() - 1);
+      addUnwrappedLine(LineLevel::Remove);
+      Line->Level += (DeclarationScopeStack.size() - 1);
+    } else {
+      addUnwrappedLine(LineLevel::Remove);
+    }
+  }
+}
+
 /// \brief Parses a level, that is ???.
 /// \param OpeningBrace Opening brace (\p nullptr if absent) of that level.
 /// \param IfKind The \p if statement kind in the level.
@@ -464,6 +492,9 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       }
       SwitchLabelEncountered = true;
       parseStructuralElement();
+      break;
+    case tok::kw_using:
+      parseStmt(Style.IndentUsingDeclarations);
       break;
     case tok::l_square:
       if (Style.isCSharp()) {
@@ -3117,6 +3148,8 @@ void UnwrappedLineParser::parseNamespace() {
 
     if (ManageWhitesmithsBraces)
       --Line->Level;
+  } else if (FormatTok->is(tok::equal)) {
+    parseStmt(Style.IndentNamespaceAliases);
   }
   // FIXME: Add error handling.
 }

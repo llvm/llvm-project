@@ -449,6 +449,16 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::DecorateReflowedCommentsStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::DecorateReflowedCommentsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::DRC_Never);
+    IO.enumCase(Value, "Always", FormatStyle::DRC_Always);
+    IO.enumCase(Value, "FirstInLineOnly", FormatStyle::DRC_FirstInLineOnly);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::OperandAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::OperandAlignmentStyle &Value) {
     IO.enumCase(Value, "DontAlign", FormatStyle::OAS_DontAlign);
@@ -1014,6 +1024,9 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
+    IO.mapOptional("IndentNamespaceAliases", Style.IndentNamespaceAliases);
+    IO.mapOptional("IndentUsingDeclarations", Style.IndentUsingDeclarations);
+    IO.mapOptional("DecorateReflowedComments", Style.DecorateReflowedComments);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
     IO.mapOptional("IndentRequiresClause", Style.IndentRequiresClause);
@@ -1524,6 +1537,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
+  LLVMStyle.IndentNamespaceAliases = false;
+  LLVMStyle.IndentUsingDeclarations = false;
+  LLVMStyle.DecorateReflowedComments = FormatStyle::DRC_FirstInLineOnly;
   LLVMStyle.IndentGotoLabels = true;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;

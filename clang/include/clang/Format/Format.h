@@ -2822,6 +2822,46 @@ struct FormatStyle {
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
 
+  /// IndentNamespaceAliases is the type of indenting of namespace aliases
+  /// irrespective of NamespaceIndentation.
+  bool IndentNamespaceAliases;
+
+  /// IndentUsingDeclarations is the type of indenting of using declarations
+  /// irrespective of NamespaceIndentation.
+  bool IndentUsingDeclarations;
+
+  enum DecorateReflowedCommentsStyle : int8_t {
+    /// Never:
+    /// don't use any decorator
+    /// \code
+    /// /* blah blah blah blah blah blah blah blah blah blah blah blah blah
+    ///    blah blah blah blah blah blah blah blah */
+    /// \endcode
+    DRC_Never,
+    /// Always:
+    /// Always decorate with the decorator
+    /// \code
+    /// /* blah blah blah blah blah blah blah blah blah blah blah blah blah
+    ///  * blah blah blah blah blah blah blah blah */
+    /// \endcode
+    DRC_Always,
+    /// FirstInLine:
+    /// Use decoration only for First in line block comments
+    /// \code
+    /// using namespace std; /* blah blah blah blah blah blah blah blah blah
+    ///                         blah blah blah */
+    ///
+    /// /* blah blah blah blah blah blah blah blah blah blah blah blah blah
+    ///  * blah blah blah blah blah blah blah blah */
+    /// using namespace std;
+    /// \endcode
+    DRC_FirstInLineOnly
+  };
+
+  /// reflowed block comments decoration style
+  /// \version 17
+  DecorateReflowedCommentsStyle DecorateReflowedComments;
+
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {
     /// Does not indent any directives.
@@ -5104,6 +5144,9 @@ struct FormatStyle {
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentExternBlock == R.IndentExternBlock &&
+           IndentNamespaceAliases == R.IndentNamespaceAliases &&
+           IndentUsingDeclarations == R.IndentUsingDeclarations &&
+           DecorateReflowedComments == R.DecorateReflowedComments &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentRequiresClause == R.IndentRequiresClause &&

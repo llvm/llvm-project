@@ -120,6 +120,7 @@ private:
   void reset();
   void parseFile();
   bool precededByCommentOrPPDirective() const;
+  void parseStmt(bool keepIndentation);
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
                   IfStmtKind *IfKind = nullptr,
                   FormatToken **IfLeftBrace = nullptr);
