@@ -34,7 +34,8 @@ class PGOContextualProfile {
   // we'll need when we maintain the profiles during IPO transformations.
   DenseMap<GlobalValue::GUID, FunctionInfo> FuncInfo;
 
-  GlobalValue::GUID getKnownGUID(const Function &F) const;
+  /// Get the GUID of this Function if it's defined in this module.
+  GlobalValue::GUID getDefinedFunctionGUID(const Function &F) const;
 
   // This is meant to be constructed from CtxProfAnalysis, which will also set
   // its state piecemeal.
@@ -50,16 +51,18 @@ public:
     return *Profiles;
   }
 
-  bool isFunctionKnown(const Function &F) const { return getKnownGUID(F) != 0; }
+  bool isFunctionKnown(const Function &F) const {
+    return getDefinedFunctionGUID(F) != 0;
+  }
 
   uint32_t allocateNextCounterIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getKnownGUID(F))->second.NextCounterIndex++;
+    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCounterIndex++;
   }
 
   uint32_t allocateNextCallsiteIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getKnownGUID(F))->second.NextCallsiteIndex++;
+    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
   }
 
   bool invalidate(Module &, const PreservedAnalyses &PA,

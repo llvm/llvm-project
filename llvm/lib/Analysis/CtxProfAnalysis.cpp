@@ -90,7 +90,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     if (F.isDeclaration())
       continue;
     auto GUID = AssignUniqueIDPass::getGUID(F);
-    assert(GUID);
+    assert(GUID && "guid not found for defined function");
     const auto &Entry = F.begin();
     uint32_t MaxCounters = 0; // we expect at least a counter.
     for (const auto &I : *Entry)
@@ -127,7 +127,8 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   return Result;
 }
 
-GlobalValue::GUID PGOContextualProfile::getKnownGUID(const Function &F) const {
+GlobalValue::GUID
+PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
   if (auto It = FuncInfo.find(AssignUniqueIDPass::getGUID(F));
       It != FuncInfo.end())
     return It->first;

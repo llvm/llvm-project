@@ -375,7 +375,7 @@ GlobalValue::GUID AssignUniqueIDPass::getGUID(const Function &F) {
     return GlobalValue::getGUID(F.getGlobalIdentifier());
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD);
+  assert(MD && "unique_id not found for defined function");
   return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
                                ->getValue()
                                ->stripPointerCasts())

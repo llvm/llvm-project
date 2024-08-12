@@ -28,9 +28,7 @@ public:
 /// Assign a GUID to functions as metadata. GUID calculation takes linkage into
 /// account, which may change especially through and after thinlto. By
 /// pre-computing and assigning as metadata, this mechanism is resilient to such
-/// changes (as well as name changes e.g. suffix ".llvm." additions). It's
-/// arguably a much simpler mechanism than PGO's current GV-based one, and can
-/// be made available more broadly.
+/// changes (as well as name changes e.g. suffix ".llvm." additions).
 
 // FIXME(mtrofin): we can generalize this mechanism to calculate a GUID early in
 // the pass pipeline, associate it with any Global Value, and then use it for
