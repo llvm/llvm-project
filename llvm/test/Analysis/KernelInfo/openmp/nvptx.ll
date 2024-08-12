@@ -1,16 +1,12 @@
 ; See ./README.md for how to maintain the LLVM IR in this test.
 
+; REQUIRES: nvptx-registered-target
+
 ; RUN: opt -pass-remarks=kernel-info -passes=kernel-info \
 ; RUN:     -disable-output %s 2>&1 | \
 ; RUN:   FileCheck -match-full-lines %s
 
-; For some builds, we see a warning like:
-;
-;   opt: WARNING: failed to create target machine for 'nvptx64-nvidia-cuda': unable to get target for 'nvptx64-nvidia-cuda', see --version and --triple.
-;
-; But there should be no other remarks here.
-; CHECK-NOT: remark:
-
+;  CHECK-NOT: remark:
 ;      CHECK: remark: test.c:0:0: in artificial function '[[OFF_FUNC:__omp_offloading_[a-f0-9_]*_h_l12]]_debug__', artificial alloca 'dyn_ptr' with static size of 8 bytes
 ; CHECK-NEXT: remark: test.c:14:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:15:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'a' with static size of 8 bytes

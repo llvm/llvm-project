@@ -122,7 +122,8 @@ static void remarkAddrspaceZeroAccess(OptimizationRemarkEmitter &ORE,
 }
 
 void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
-                             OptimizationRemarkEmitter &ORE) {
+                             OptimizationRemarkEmitter &ORE,
+                             const TargetTransformInfo &TTI) {
   assert(Direction == 1 || Direction == -1);
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
@@ -170,34 +171,34 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       }
       remarkCall(ORE, F, *Call, CallKind, RemarkKind);
       if (const AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Call)) {
-        if (MI->getDestAddressSpace() == 0) {
+        if (MI->getDestAddressSpace() == TTI.getFlatAddressSpace()) {
           AddrspaceZeroAccesses += Direction;
           remarkAddrspaceZeroAccess(ORE, F, I);
         } else if (const AnyMemTransferInst *MT =
                        dyn_cast<AnyMemTransferInst>(MI)) {
-          if (MT->getSourceAddressSpace() == 0) {
+          if (MT->getSourceAddressSpace() == TTI.getFlatAddressSpace()) {
             AddrspaceZeroAccesses += Direction;
             remarkAddrspaceZeroAccess(ORE, F, I);
           }
         }
       }
     } else if (const LoadInst *Load = dyn_cast<LoadInst>(&I)) {
-      if (Load->getPointerAddressSpace() == 0) {
+      if (Load->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
         AddrspaceZeroAccesses += Direction;
         remarkAddrspaceZeroAccess(ORE, F, I);
       }
     } else if (const StoreInst *Store = dyn_cast<StoreInst>(&I)) {
-      if (Store->getPointerAddressSpace() == 0) {
+      if (Store->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
         AddrspaceZeroAccesses += Direction;
         remarkAddrspaceZeroAccess(ORE, F, I);
       }
     } else if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
-      if (At->getPointerAddressSpace() == 0) {
+      if (At->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
         AddrspaceZeroAccesses += Direction;
         remarkAddrspaceZeroAccess(ORE, F, I);
       }
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
-      if (At->getPointerAddressSpace() == 0) {
+      if (At->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
         AddrspaceZeroAccesses += Direction;
         remarkAddrspaceZeroAccess(ORE, F, I);
       }
@@ -286,6 +287,7 @@ static std::optional<int64_t> parseNVPTXMDNodeAsInteger(Function &F,
 
 KernelInfo KernelInfo::getKernelInfo(Function &F,
                                      FunctionAnalysisManager &FAM) {
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   KernelInfo KI;
   // Only analyze modules for GPUs.
   // TODO: This would be more maintainable if there were an isGPU.
@@ -319,7 +321,7 @@ KernelInfo KernelInfo::getKernelInfo(Function &F,
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   for (const auto &BB : F)
     if (DT.isReachableFromEntry(&BB))
-      KI.updateForBB(BB, +1, ORE);
+      KI.updateForBB(BB, +1, ORE, TTI);
 
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)

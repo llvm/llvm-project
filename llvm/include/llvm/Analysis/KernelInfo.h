@@ -16,6 +16,7 @@
 #define LLVM_ANALYSIS_KERNELINFO_H
 
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
 class DominatorTree;
@@ -24,7 +25,8 @@ class Function;
 /// Data structure holding function info for kernels.
 class KernelInfo {
   void updateForBB(const BasicBlock &BB, int64_t Direction,
-                   OptimizationRemarkEmitter &ORE);
+                   OptimizationRemarkEmitter &ORE,
+                   const TargetTransformInfo &TTI);
 
 public:
   static KernelInfo getKernelInfo(Function &F, FunctionAnalysisManager &FAM);

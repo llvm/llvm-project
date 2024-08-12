@@ -1,12 +1,3 @@
-; Check info on addrspace(0) memory accesses.
-
-; RUN: opt -pass-remarks=kernel-info -passes=kernel-info \
-; RUN:     -disable-output %s 2>&1 | \
-; RUN:   FileCheck -match-full-lines --implicit-check-not='addrspace(0)' %s
-
-target datalayout = "e-i65:64-i128:128-v16:16-v32:32-n16:32:64"
-target triple = "nvptx64-nvidia-cuda"
-
 define void @f() !dbg !3 {
 entry:
   ; load
