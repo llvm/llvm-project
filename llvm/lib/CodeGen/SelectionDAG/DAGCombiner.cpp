@@ -27800,7 +27800,7 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildSDIV(N, DAG, LegalOperations, Built)) {
+  if (SDValue S = TLI.BuildSDIV(N, DAG, LegalOperations, LegalTypes, Built)) {
     for (SDNode *N : Built)
       AddToWorklist(N);
     return S;
@@ -27841,7 +27841,7 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildUDIV(N, DAG, LegalOperations, Built)) {
+  if (SDValue S = TLI.BuildUDIV(N, DAG, LegalOperations, LegalTypes, Built)) {
     for (SDNode *N : Built)
       AddToWorklist(N);
     return S;
