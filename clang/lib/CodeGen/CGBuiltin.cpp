@@ -18590,22 +18590,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "normalize operand must have a float representation");
 
-    // scalar inputs should expect a scalar return type
-    if (!E->getArg(0)->getType()->isVectorType())
-      return Builder.CreateIntrinsic(
-          /*ReturnType=*/X->getType()->getScalarType(),
-          CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
-          nullptr, "hlsl.normalize");
-
-    // construct a vector return type for vector inputs
-    auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
-    llvm::Type *retType = X->getType()->getScalarType();
-    retType = llvm::VectorType::get(
-        retType, ElementCount::getFixed(XVecTy->getNumElements()));
-
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/retType, CGM.getHLSLRuntime().getNormalizeIntrinsic(),
-        ArrayRef<Value *>{X}, nullptr, "hlsl.normalize");
+        /*ReturnType=*/X->getType(),
+        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.normalize");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
