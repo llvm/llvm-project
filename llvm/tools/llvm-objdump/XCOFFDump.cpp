@@ -63,8 +63,8 @@ void XCOFFDumper::printNumber(StringRef Name, uint64_t Value) {
 }
 
 void XCOFFDumper::printStrHex(StringRef Name, StringRef Str, uint64_t Value) {
-  outs() << formatName(Name) << Str << " (" << format_decimal(Value, 0) << ")"
-         << "\n";
+  outs() << formatName(Name) << Str << " (" << format_decimal(Value, 0)
+         << ")\n";
 }
 
 void XCOFFDumper::printFileHeader() {
@@ -73,30 +73,30 @@ void XCOFFDumper::printFileHeader() {
   printHex("Magic:", Obj.getMagic());
   printNumber("NumberOfSections:", Obj.getNumberOfSections());
 
-  int32_t TimeStamp = Obj.getTimeStamp();
+  int32_t Timestamp = Obj.getTimeStamp();
   if (TimeStamp > 0) {
-    // This handling of the time stamp assumes that the host  system's time_t is
-    // compatible with AIX time_t. If a platform is not  compatible, the lit
+    // This handling of the timestamp assumes that the host system's time_t is
+    // compatible with AIX time_t. If a platform is not compatible, the lit
     // tests will let us know.
     time_t TimeDate = TimeStamp;
 
     char FormattedTime[80] = {};
 
-    size_t BytesFormatted = strftime(FormattedTime, sizeof(FormattedTime),
-                                     "%F %T", gmtime(&TimeDate));
+    size_t BytesFormatted = std::strftime(FormattedTime, sizeof(FormattedTime),
+                                          "%F %T", gmtime(&TimeDate));
     if (BytesFormatted)
-      printStrHex("TimeStamp:", FormattedTime, TimeStamp);
+      printStrHex("Timestamp:", FormattedTime, TimeStamp);
     else
       printHex("Timestamp:", TimeStamp);
   } else {
     // Negative timestamp values are reserved for future use.
-    printStrHex("TimeStamp:", TimeStamp == 0 ? "None" : "Reserved Value",
+    printStrHex("Timestamp:", TimeStamp == 0 ? "None" : "Reserved Value",
                 TimeStamp);
   }
 
-  // The number of symbol table entries is an unsigned value in
-  // 64-bit objects and a signed value (with negative values
-  // being 'reserved') in 32-bit objects.
+  // The number of symbol table entries is an unsigned value in 64-bit objects
+  // and a signed value (with negative values being 'reserved') in 32-bit
+  // objects.
   if (Obj.is64Bit()) {
     printHex("SymbolTableOffset:", Obj.getSymbolTableOffset64());
     printNumber("SymbolTableEntries:", Obj.getNumberOfSymbolTableEntries64());
