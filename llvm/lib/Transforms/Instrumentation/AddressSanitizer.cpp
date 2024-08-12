@@ -1616,12 +1616,6 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
   Instruction *InsertPoint = InsertBefore;
-  if (CLAsanDormant) {
-    InstrumentationIRBuilder IRB(InsertPoint);
-    InsertPoint = SplitBlockAndInsertIfThen(
-        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
-        InsertBefore, false);
-  }
 
   if (!TypeStoreSize.isScalable()) {
     const auto FixedSize = TypeStoreSize.getFixedValue();
@@ -1654,14 +1648,6 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
 
   IRBuilder IB(I);
   Instruction *LoopInsertBefore = I;
-
-  if (CLAsanDormant) {
-    LoopInsertBefore = SplitBlockAndInsertIfThen(
-        IB.CreateNot(IB.CreateLoad(IB.getInt1Ty(), DormantAsanFlag)),
-        LoopInsertBefore, false);
-    IB.SetInsertPoint(LoopInsertBefore);
-  }
-
   if (EVL) {
     // The end argument of SplitBlockAndInsertForLane is assumed bigger
     // than zero, so we should check whether EVL is zero here.
@@ -1759,15 +1745,23 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     NumInstrumentedWrites++;
   else
     NumInstrumentedReads++;
+  
+  Instruction* InsertPoint = O.getInsn();
+  if(CLAsanDormant){
+    InstrumentationIRBuilder IRB(InsertPoint);
+    InsertPoint = SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+        InsertPoint, false);
+  }
 
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
-                                O.MaybeStride, O.getInsn(), Addr, O.Alignment,
+                                O.MaybeStride, InsertPoint, Addr, O.Alignment,
                                 Granularity, O.OpType, O.IsWrite, nullptr,
                                 UseCalls, Exp, RTCI);
   } else {
-    doInstrumentAddress(this, O.getInsn(), O.getInsn(), Addr, O.Alignment,
+    doInstrumentAddress(this, InsertPoint, InsertPoint, Addr, O.Alignment,
                         Granularity, O.TypeStoreSize, O.IsWrite, nullptr,
                         UseCalls, Exp, RTCI, DormantAsanFlag);
   }
@@ -1963,11 +1957,6 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
     TypeSize TypeStoreSize, bool IsWrite, Value *SizeArgument, bool UseCalls,
     uint32_t Exp, RuntimeCallInserter &RTCI) {
   InstrumentationIRBuilder IRB(InsertBefore);
-  if (CLAsanDormant)
-    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
-        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
-        InsertBefore, false));
-
   Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
 
