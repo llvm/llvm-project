@@ -2560,7 +2560,6 @@ void MicrosoftCXXNameMangler::mangleAutoReturnType(QualType T,
 
 void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
                                          QualifierMangleMode QMM) {
-
   // Don't use the canonical types.  MSVC includes things like 'const' on
   // pointer arguments to function pointers that canonicalization strips away.
   T = T.getDesugaredType(getASTContext());
