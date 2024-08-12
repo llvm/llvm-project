@@ -413,3 +413,38 @@ func.func @test_tile_invalid_multiples() {
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @test_invalid_constant_permutation
+func.func @test_invalid_constant_permutation() {
+  // expected-error@+3 {{permutation must be within input bounds}}
+  %0 = tensor.empty() : tensor<3x4x5xi32>
+  %1 = arith.constant dense<[3, 0, 1]> : tensor<3xi32>
+  %2 = tosa.transpose %0, %1 : (tensor<3x4x5xi32>, tensor<3xi32>) -> tensor<3x4x5xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_rank_size_constant_permutation
+func.func @test_rank_size_constant_permutation() {
+  // expected-error@+4 {{permutation must be within input bounds}}
+  %0 = arith.constant 6 : index
+  %1 = arith.constant dense<[0, 2]> : tensor<2xi32>
+  %2 = tensor.empty(%0) : tensor<?x27xi64>
+  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_large_constant_permutation
+func.func @test_large_constant_permutation() {
+  // expected-error@+4 {{permutation must be within input bounds}}
+  %0 = arith.constant 6 : index
+  %1 = arith.constant dense<[1185677355, 332462212]> : tensor<2xi32>
+  %2 = tensor.empty(%0) : tensor<?x27xi64>
+  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  return
+}
