@@ -281,7 +281,7 @@ public:
   void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs,
                          llvm::StringRef overrideOpts = "");
   static void AddExtraClangArgs(const std::vector<std::string>& source,
-                                std::vector<std::string>& dest);
+                                std::vector<std::string>& dest, bool cc1);
   static std::string GetPluginServer(llvm::StringRef plugin_library_path);
   /// Removes nonexisting VFS overlay options.
   static void FilterClangImporterOptions(std::vector<std::string> &extra_args,
