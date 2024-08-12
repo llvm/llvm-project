@@ -39,8 +39,8 @@ let Namespace = "SPIRV" in {
   def vpID320 : Register<"vpID320">;
   def vpID640 : Register<"vpID640">;
 
-  def ID : RegisterClass<"SPIRV", [i32], 32, (add ID0)>;
-  def ID64 : RegisterClass<"SPIRV", [i64], 32, (add ID640)>;
+  def iID : RegisterClass<"SPIRV", [i32], 32, (add ID0)>;
+  def iID64 : RegisterClass<"SPIRV", [i64], 32, (add ID640)>;
   def fID : RegisterClass<"SPIRV", [f32], 32, (add fID0)>;
   def fID64 : RegisterClass<"SPIRV", [f64], 32, (add fID640)>;
   def pID32 : RegisterClass<"SPIRV", [p32], 32, (add pID320)>;
@@ -49,6 +49,12 @@ let Namespace = "SPIRV" in {
   def vfID : RegisterClass<"SPIRV", [v2f32], 32, (add vfID0)>;
   def vpID32 : RegisterClass<"SPIRV", [v2p32], 32, (add vpID320)>;
   def vpID64 : RegisterClass<"SPIRV", [v2p64], 32, (add vpID640)>;
+
+  def ID : RegisterClass<
+      "SPIRV",
+      [i32, i64, f32, f64, p32, p64, v2i32, v2f32, v2p32, v2p64],
+      32,
+      (add iID, iID64, fID, fID64, pID32, pID64, vID, vfID, vpID32, vpID64)>;
 
   def ANYID : RegisterClass<
       "SPIRV",
