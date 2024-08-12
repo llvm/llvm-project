@@ -82,8 +82,6 @@ struct Response {
     return R;
   }
 };
-
-namespace TemplateInstArgsHelpers {
 // Retrieve the primary template for a lambda call operator. It's
 // unfortunate that we only have the mappings of call operators rather
 // than lambda classes.
@@ -171,6 +169,23 @@ bool isLambdaEnclosedByTypeAliasDecl(
               .TraverseType(Underlying);
 }
 
+namespace TemplateInstArgsHelpers {
+
+// If we have a template template parameter with translation unit context,
+// then we're performing substitution into a default template argument of
+// this template template parameter before we've constructed the template
+// that will own this template template parameter. In this case, we
+// use empty template parameter lists for all of the outer templates
+// to avoid performing any substitutions.
+Response
+HandleDefaultTempArgIntoTempTempParam(const TemplateTemplateParmDecl *TTP,
+                                      MultiLevelTemplateArgumentList &Result) {
+  for (unsigned I = 0, N = TTP->getDepth() + 1; I != N; ++I)
+    Result.addOuterTemplateArguments(std::nullopt);
+  return Response::Done();
+}
+
+#if 0
 // Add template arguments from a variable template instantiation.
 Response
 HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
@@ -209,20 +224,6 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
       return Response::Done();
   }
   return Response::DontClearRelativeToPrimaryNextDecl(VarTemplSpec);
-}
-
-// If we have a template template parameter with translation unit context,
-// then we're performing substitution into a default template argument of
-// this template template parameter before we've constructed the template
-// that will own this template template parameter. In this case, we
-// use empty template parameter lists for all of the outer templates
-// to avoid performing any substitutions.
-Response
-HandleDefaultTempArgIntoTempTempParam(const TemplateTemplateParmDecl *TTP,
-                                      MultiLevelTemplateArgumentList &Result) {
-  for (unsigned I = 0, N = TTP->getDepth() + 1; I != N; ++I)
-    Result.addOuterTemplateArguments(std::nullopt);
-  return Response::Done();
 }
 
 Response HandlePartialClassTemplateSpec(
@@ -500,36 +501,310 @@ Response HandleImplicitConceptSpecializationDecl(
 Response HandleGenericDeclContext(const Decl *CurDecl) {
   return Response::UseNextDecl(CurDecl);
 }
+#endif
 } // namespace TemplateInstArgsHelpers
 
 
 struct TemplateInstantiationArgumentCollecter
     : DeclVisitor<TemplateInstantiationArgumentCollecter, Decl*> {
+  Sema &S;
   MultiLevelTemplateArgumentList &Result;
   bool RelativeToPrimary;
   bool ForConstraintInstantiation;
   bool SkipForSpecialization;
 
   TemplateInstantiationArgumentCollecter(
+      Sema &S,
       MultiLevelTemplateArgumentList &Result,
       bool RelativeToPrimary,
       bool ForConstraintInstantiation,
       bool SkipForSpecialization) :
-          Result(Result), RelativeToPrimary(RelativeToPrimary),
+          S(S), Result(Result), RelativeToPrimary(RelativeToPrimary),
           ForConstraintInstantiation(ForConstraintInstantiation),
           SkipForSpecialization(SkipForSpecialization) { }
-  //using inherited = DeclVisitor<TemplateInstantiationArgumentCollecter>;
 
+  Decl *Done() {
+    return nullptr;
+  }
 
+  Decl *ChangeDecl(const Decl *D) {
+    RelativeToPrimary = false;
+    return const_cast<Decl *>(D);
+  }
+
+  Decl *ChangeDecl(const DeclContext *DC) {
+    return ChangeDecl(Decl::castFromDeclContext(DC));
+  }
+
+  Decl *UseNextDecl(const Decl *D) {
+    return ChangeDecl(D->getDeclContext());
+  }
+
+  Decl *DontClearRelativeToPrimaryNextDecl(const Decl* D) {
+    return const_cast<Decl *>(
+        Decl::castFromDeclContext(D->getDeclContext()));
+  }
+
+  Decl *VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTPD) {
+    for (unsigned I = 0, N = TTPD->getDepth() + 1; I != N; ++I)
+      Result.addOuterTemplateArguments(std::nullopt);
+    return Done();
+  }
+
+  Decl *VisitFunctionTemplateDecl(FunctionTemplateDecl *FTD) {
+    if (ForConstraintInstantiation)
+      Result.addOuterTemplateArguments(
+          FTD, FTD->getInjectedTemplateArgs(), /*Final=*/false);
+
+    if (FTD->isMemberSpecialization())
+      return Done();
+
+    if (FTD->getFriendObjectKind())
+      return ChangeDecl(FTD->getLexicalDeclContext());
+    return UseNextDecl(FTD);
+  }
+
+  Decl *VisitVarTemplateDecl(VarTemplateDecl *VTD) {
+    if (!SkipForSpecialization && ForConstraintInstantiation)
+      Result.addOuterTemplateArguments(
+          VTD, VTD->getInjectedTemplateArgs(), /*Final=*/false);
+
+    if (VTD->isMemberSpecialization())
+      return Done();
+
+    return UseNextDecl(VTD);
+  }
+
+  Decl *VisitClassTemplateDecl(ClassTemplateDecl *CTD) {
+    if (!SkipForSpecialization && ForConstraintInstantiation)
+      Result.addOuterTemplateArguments(
+          CTD, CTD->getInjectedTemplateArgs(), /*Final=*/false);
+
+    if (CTD->isMemberSpecialization())
+      return Done();
+
+    if (CTD->getFriendObjectKind())
+      return ChangeDecl(CTD->getLexicalDeclContext());
+    return UseNextDecl(CTD);
+  }
+
+  Decl *VisitClassTemplatePartialSpecializationDecl(ClassTemplatePartialSpecializationDecl *CTPSD) {
+    if (!SkipForSpecialization)
+        Result.addOuterRetainedLevels(CTPSD->getTemplateDepth());
+    return Done();
+  }
+
+  Decl *VisitFunctionDecl(FunctionDecl *FD) {
+    // Add template arguments from a function template specialization.
+    if (!RelativeToPrimary &&
+        FD->getTemplateSpecializationKindForInstantiation() ==
+            TSK_ExplicitSpecialization)
+      return Done();
+
+    if (!RelativeToPrimary &&
+        FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
+      // This is an implicit instantiation of an explicit specialization. We
+      // don't get any template arguments from this function but might get
+      // some from an enclosing template.
+      return UseNextDecl(FD);
+    } else if (const TemplateArgumentList *TemplateArgs =
+                   FD->getTemplateSpecializationArgs()) {
+      // Add the template arguments for this specialization.
+      Result.addOuterTemplateArguments(
+          FD, TemplateArgs->asArray(), /*Final=*/false);
+
+      if (RelativeToPrimary &&
+          (FD->getTemplateSpecializationKind() ==
+               TSK_ExplicitSpecialization ||
+           (FD->getFriendObjectKind() &&
+            !FD->getPrimaryTemplate()->getFriendObjectKind())))
+        return UseNextDecl(FD);
+
+      // If this function was instantiated from a specialized member that is
+      // a function template, we're done.
+      assert(FD->getPrimaryTemplate() && "No function template?");
+      if (FD->getPrimaryTemplate()->isMemberSpecialization())
+        return Done();
+
+      // If this function is a generic lambda specialization, we are done.
+      if (!ForConstraintInstantiation &&
+          isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD)) {
+        // TypeAliasTemplateDecls should be taken into account, e.g.
+        // when we're deducing the return type of a lambda.
+        //
+        // template <class> int Value = 0;
+        // template <class T>
+        // using T = decltype([]<int U = 0>() { return Value<T>; }());
+        //
+        if (auto TypeAlias = getEnclosingTypeAliasTemplateDecl(S)) {
+          if (isLambdaEnclosedByTypeAliasDecl(
+                  /*PrimaryLambdaCallOperator=*/getPrimaryTemplateOfGenericLambda(FD),
+                  /*PrimaryTypeAliasDecl=*/TypeAlias.PrimaryTypeAliasDecl))
+            return UseNextDecl(FD);
+        }
+        return Done();
+      }
+
+    } else if (FD->getDescribedFunctionTemplate()) {
+      assert(
+          (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+          "Outer template not instantiated?");
+    }
+    // If this is a friend or local declaration and it declares an entity at
+    // namespace scope, take arguments from its lexical parent
+    // instead of its semantic parent, unless of course the pattern we're
+    // instantiating actually comes from the file's context!
+    if ((FD->getFriendObjectKind() || FD->isLocalExternDecl()) &&
+        FD->getNonTransparentDeclContext()->isFileContext()) {
+      return ChangeDecl(FD->getLexicalDeclContext());
+    }
+
+    if (ForConstraintInstantiation && FD->getFriendObjectKind())
+      return ChangeDecl(FD->getLexicalDeclContext());
+    return UseNextDecl(FD);
+  }
+
+  Decl *VisitCXXRecordDecl(CXXRecordDecl *RD) {
+    if (ClassTemplateDecl *ClassTemplate = RD->getDescribedClassTemplate()) {
+      assert(
+          (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+          "Outer template not instantiated?");
+      if (ClassTemplate->isMemberSpecialization())
+        return Done();
+      if (ForConstraintInstantiation)
+        Result.addOuterTemplateArguments(
+            RD, ClassTemplate->getInjectedTemplateArgs(), /*Final=*/false);
+    }
+
+    if (const MemberSpecializationInfo *MSInfo =
+            RD->getMemberSpecializationInfo())
+      if (MSInfo->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+        return Done();
+
+    bool IsFriend = RD->getFriendObjectKind() ||
+                    (RD->getDescribedClassTemplate() &&
+                     RD->getDescribedClassTemplate()->getFriendObjectKind());
+    if (ForConstraintInstantiation && IsFriend &&
+        RD->getNonTransparentDeclContext()->isFileContext()) {
+      return ChangeDecl(RD->getLexicalDeclContext());
+    }
+
+    // This is to make sure we pick up the VarTemplateSpecializationDecl or the
+    // TypeAliasTemplateDecl that this lambda is defined inside of.
+    if (RD->isLambda()) {
+      if (Decl *LCD = RD->getLambdaContextDecl())
+        return ChangeDecl(LCD);
+      // Retrieve the template arguments for a using alias declaration.
+      // This is necessary for constraint checking, since we always keep
+      // constraints relative to the primary template.
+      if (auto TypeAlias = getEnclosingTypeAliasTemplateDecl(S)) {
+        const FunctionDecl *PrimaryLambdaCallOperator =
+            getPrimaryTemplateOfGenericLambda(RD->getLambdaCallOperator());
+        if (isLambdaEnclosedByTypeAliasDecl(PrimaryLambdaCallOperator,
+                                            TypeAlias.PrimaryTypeAliasDecl)) {
+          Result.addOuterTemplateArguments(TypeAlias.Template,
+                                           TypeAlias.AssociatedTemplateArguments,
+                                           /*Final=*/false);
+          // Visit the parent of the current type alias declaration rather than
+          // the lambda thereof.
+          // E.g., in the following example:
+          // struct S {
+          //  template <class> using T = decltype([]<Concept> {} ());
+          // };
+          // void foo() {
+          //   S::T var;
+          // }
+          // The instantiated lambda expression (which we're visiting at 'var')
+          // has a function DeclContext 'foo' rather than the Record DeclContext
+          // S. This seems to be an oversight to me that we may want to set a
+          // Sema Context from the CXXScopeSpec before substituting into T.
+          return ChangeDecl(TypeAlias.Template->getDeclContext());
+        }
+      }
+    }
+
+    return UseNextDecl(RD);
+  }
+
+  Decl *VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
+    if (!CTSD->isClassScopeExplicitSpecialization()) {
+      // We're done when we hit an explicit specialization.
+      if (CTSD->getSpecializationKind() == TSK_ExplicitSpecialization &&
+          !isa<ClassTemplatePartialSpecializationDecl>(CTSD))
+        return Done();
+
+      if (!SkipForSpecialization)
+        Result.addOuterTemplateArguments(
+            CTSD, CTSD->getTemplateInstantiationArgs().asArray(), /*Final=*/false);
+
+      // If this class template specialization was instantiated from a
+      // specialized member that is a class template, we're done.
+      assert(CTSD->getSpecializedTemplate() && "No class template?");
+      if (CTSD->getSpecializedTemplate()->isMemberSpecialization())
+        return Done();
+
+      // If this was instantiated from a partial template specialization, we need
+      // to get the next level of declaration context from the partial
+      // specialization, as the ClassTemplateSpecializationDecl's
+      // DeclContext/LexicalDeclContext will be for the primary template.
+      if (auto *CTPSD = CTSD->getSpecializedTemplateOrPartial()
+                        .dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+        return ChangeDecl(CTPSD->getLexicalDeclContext());
+    }
+    return UseNextDecl(CTSD);
+  }
+
+  Decl *VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
+      // For a class-scope explicit specialization, there are no template arguments
+    // at this level, but there may be enclosing template arguments.
+    if (VTSD->isClassScopeExplicitSpecialization())
+      return DontClearRelativeToPrimaryNextDecl(VTSD);
+
+    // We're done when we hit an explicit specialization.
+    if (VTSD->getSpecializationKind() == TSK_ExplicitSpecialization &&
+        !isa<VarTemplatePartialSpecializationDecl>(VTSD))
+      return Done();
+
+    // If this variable template specialization was instantiated from a
+    // specialized member that is a variable template, we're done.
+    assert(VTSD->getSpecializedTemplate() && "No variable template?");
+    llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
+        Specialized = VTSD->getSpecializedTemplateOrPartial();
+    if (VarTemplatePartialSpecializationDecl *VTPSD =
+            Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+      if (!SkipForSpecialization)
+        Result.addOuterTemplateArguments(
+            VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
+            /*Final=*/false);
+      if (VTPSD->isMemberSpecialization())
+        return Done();
+    } else {
+      VarTemplateDecl *VTD = Specialized.get<VarTemplateDecl *>();
+      if (!SkipForSpecialization)
+        Result.addOuterTemplateArguments(
+            VTD, VTSD->getTemplateInstantiationArgs().asArray(),
+            /*Final=*/false);
+      if (VTD->isMemberSpecialization())
+        return Done();
+    }
+    return DontClearRelativeToPrimaryNextDecl(VTSD);
+  }
+
+  Decl *VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl *ICSD) {
+    Result.addOuterTemplateArguments(
+        ICSD, ICSD->getTemplateArguments(),
+        /*Final=*/false);
+    return UseNextDecl(ICSD);
+  }
 
   Decl *VisitDecl(Decl *D) {
     if (D->isFileContextDecl())
-      return nullptr;
+      return Done();
 
     if (isa<DeclContext>(D))
       RelativeToPrimary = false;
 
-    return Decl::castFromDeclContext(D->getDeclContext());
+    return UseNextDecl(D);
   }
 };
 
@@ -567,13 +842,15 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   }
 
   TemplateInstantiationArgumentCollecter Collecter(
-      Result, RelativeToPrimary,
+      *this, Result, RelativeToPrimary,
       ForConstraintInstantiation,
       SkipForSpecialization);
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
   } while (CurDecl);
+  return Result;
 
+  #if 0
   while (!CurDecl->isFileContextDecl()) {
     Response R;
     if (const auto *VarTemplSpec =
@@ -619,6 +896,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   }
 
   return Result;
+  #endif
 }
 
 bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
