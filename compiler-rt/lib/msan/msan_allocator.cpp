@@ -24,8 +24,9 @@
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_errno.h"
 
-namespace __msan {
+using namespace __msan;
 
+namespace {
 struct Metadata {
   uptr requested_size;
 };
@@ -47,7 +48,9 @@ struct MsanMapUnmapCallback {
     }
   }
 };
+}  // namespace
 
+namespace __msan {
 // Note: to ensure that the allocator is compatible with the application memory
 // layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
 // duplicated as MappingDesc::ALLOCATOR in msan.h.
@@ -145,6 +148,7 @@ typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #endif
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
 typedef Allocator::AllocatorCache AllocatorCache;
+}  // namespace __msan
 
 static Allocator allocator;
 static AllocatorCache fallback_allocator_cache;
@@ -152,7 +156,7 @@ static StaticSpinMutex fallback_mutex;
 
 static uptr max_malloc_size;
 
-void MsanAllocatorInit() {
+void __msan::MsanAllocatorInit() {
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
   if (common_flags()->max_allocation_size_mb)
@@ -162,9 +166,9 @@ void MsanAllocatorInit() {
     max_malloc_size = kMaxAllowedMallocSize;
 }
 
-void LockAllocator() { allocator.ForceLock(); }
+void __msan::LockAllocator() { allocator.ForceLock(); }
 
-void UnlockAllocator() { allocator.ForceUnlock(); }
+void __msan::UnlockAllocator() { allocator.ForceUnlock(); }
 
 AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
   CHECK(ms);
@@ -235,7 +239,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   return allocated;
 }
 
-void MsanDeallocate(BufferedStackTrace *stack, void *p) {
+void __msan::MsanDeallocate(BufferedStackTrace *stack, void *p) {
   CHECK(p);
   UnpoisonParam(1);
   RunFreeHooks(p);
@@ -327,15 +331,15 @@ static uptr AllocationSizeFast(const void *p) {
   return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
-void *msan_malloc(uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_malloc(uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), false));
 }
 
-void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanCalloc(stack, nmemb, size));
 }
 
-void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack) {
   if (!ptr)
     return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), false));
   if (size == 0) {
@@ -345,8 +349,8 @@ void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanReallocate(stack, ptr, size, sizeof(u64)));
 }
 
-void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
-                        BufferedStackTrace *stack) {
+void *__msan::msan_reallocarray(void *ptr, uptr nmemb, uptr size,
+                                BufferedStackTrace *stack) {
   if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
     errno = errno_ENOMEM;
     if (AllocatorMayReturnNull())
@@ -357,11 +361,11 @@ void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
   return msan_realloc(ptr, nmemb * size, stack);
 }
 
-void *msan_valloc(uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_valloc(uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, GetPageSizeCached(), false));
 }
 
-void *msan_pvalloc(uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_pvalloc(uptr size, BufferedStackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
     errno = errno_ENOMEM;
@@ -375,7 +379,8 @@ void *msan_pvalloc(uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, PageSize, false));
 }
 
-void *msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_aligned_alloc(uptr alignment, uptr size,
+                                 BufferedStackTrace *stack) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
     errno = errno_EINVAL;
     if (AllocatorMayReturnNull())
@@ -386,7 +391,8 @@ void *msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, alignment, false));
 }
 
-void *msan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack) {
+void *__msan::msan_memalign(uptr alignment, uptr size,
+                            BufferedStackTrace *stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
     if (AllocatorMayReturnNull())
@@ -397,8 +403,8 @@ void *msan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, alignment, false));
 }
 
-int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
-                        BufferedStackTrace *stack) {
+int __msan::msan_posix_memalign(void **memptr, uptr alignment, uptr size,
+                                BufferedStackTrace *stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
     if (AllocatorMayReturnNull())
       return errno_EINVAL;
@@ -414,10 +420,7 @@ int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
-} // namespace __msan
-
-using namespace __msan;
-
+extern "C" {
 uptr __sanitizer_get_current_allocated_bytes() {
   uptr stats[AllocatorStatCount];
   allocator.GetStats(stats);
@@ -452,3 +455,4 @@ uptr __sanitizer_get_allocated_size_fast(const void *p) {
 }
 
 void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }
+}

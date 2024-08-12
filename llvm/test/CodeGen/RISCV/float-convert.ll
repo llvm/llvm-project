@@ -1247,11 +1247,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ;
 ; RV64IZFINX-LABEL: fcvt_s_w_demanded_bits:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    addiw a2, a0, 1
-; RV64IZFINX-NEXT:    addi a0, a0, 1
-; RV64IZFINX-NEXT:    fcvt.s.w a0, a0
-; RV64IZFINX-NEXT:    sw a0, 0(a1)
-; RV64IZFINX-NEXT:    mv a0, a2
+; RV64IZFINX-NEXT:    addiw a0, a0, 1
+; RV64IZFINX-NEXT:    fcvt.s.w a2, a0
+; RV64IZFINX-NEXT:    sw a2, 0(a1)
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:

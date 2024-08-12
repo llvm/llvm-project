@@ -4146,9 +4146,7 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
 
   // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
   // it will also make S poison by being part of PC2.MaybePoison.
-  return all_of(PC1.MaybePoison, [&](const SCEVUnknown *S) {
-    return PC2.MaybePoison.contains(S);
-  });
+  return llvm::set_is_subset(PC1.MaybePoison, PC2.MaybePoison);
 }
 
 void ScalarEvolution::getPoisonGeneratingValues(
@@ -14914,8 +14912,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   if (Preds->implies(&Pred))
     return;
 
-  auto &OldPreds = Preds->getPredicates();
-  SmallVector<const SCEVPredicate*, 4> NewPreds(OldPreds.begin(), OldPreds.end());
+  SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
   NewPreds.push_back(&Pred);
   Preds = std::make_unique<SCEVUnionPredicate>(NewPreds);
   updateGeneration();

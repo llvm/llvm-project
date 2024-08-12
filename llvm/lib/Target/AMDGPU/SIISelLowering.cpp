@@ -11864,7 +11864,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
                                           N->getMemoryVT(), DCI);
     if (NewPtr) {
-      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 8> NewOps(N->ops());
 
       NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -15596,7 +15596,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    SmallVector<SDValue, 9> Ops(Node->ops());
     Ops[1] = Src0;
     Ops[3] = Src1;
     Ops[5] = Src2;
@@ -17126,9 +17126,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   //
   // With this expansion we produce the following code:
   //   [...]
-  //   br label %atomicrmw.check.shared
-  //
-  // atomicrmw.check.shared:
   //   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %addr)
   //   br i1 %is.shared, label %atomicrmw.shared, label %atomicrmw.check.private
   //
@@ -17171,8 +17168,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
       BB->splitBasicBlock(Builder.GetInsertPoint(), "atomicrmw.end");
-  BasicBlock *CheckSharedBB =
-      BasicBlock::Create(Ctx, "atomicrmw.check.shared", F, ExitBB);
   BasicBlock *SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
   BasicBlock *CheckPrivateBB =
       BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
@@ -17199,9 +17194,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
-  Builder.CreateBr(CheckSharedBB);
-
-  Builder.SetInsertPoint(CheckSharedBB);
   CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
                                                {Addr}, nullptr, "is.shared");
   Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
@@ -17235,12 +17227,13 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3, "loaded.phi");
+  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
   Loaded->addIncoming(LoadedShared, SharedBB);
   Loaded->addIncoming(LoadedPrivate, PrivateBB);
   Loaded->addIncoming(LoadedGlobal, GlobalBB);
   Builder.CreateBr(ExitBB);
 
+  Loaded->takeName(AI);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
