@@ -74,7 +74,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
-    const MachineModuleInfo &MMI = MF.getMMI();
+    const MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
     const Module *M = MMI.getModule();
     Context = &M->getContext();
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
