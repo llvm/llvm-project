@@ -1045,15 +1045,15 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_nearbyint : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_udot : Intrinsic<[LLVMVectorElementType<0>],
-                           [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-                           [IntrNoMem, IntrWillReturn, Commutative] >;
-  def int_sdot : Intrinsic<[LLVMVectorElementType<0>],
-                           [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-                           [IntrNoMem, IntrWillReturn, Commutative] >;
-  def int_fdot : Intrinsic<[LLVMVectorElementType<0>],
-                           [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-                           [IntrNoMem, IntrWillReturn, Commutative] >;
+  def int_udot : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                       [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+				       [IntrNoMem, Commutative] >;
+  def int_sdot : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                       [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+                                       [IntrNoMem, Commutative] >;
+  def int_fdot : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                       [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
+                                       [IntrNoMem, Commutative] >;
 
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],

@@ -18524,10 +18524,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // If the arguments are scalars, just emit a multiply
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
       if (T0->isFloatingPointTy())
-        return Builder.CreateFMul(Op0, Op1, "dot");
+        return Builder.CreateFMul(Op0, Op1, "hlsl.dot");
 
       if (T0->isIntegerTy())
-        return Builder.CreateMul(Op0, Op1, "dot");
+        return Builder.CreateMul(Op0, Op1, "hlsl.dot");
 
       llvm_unreachable(
           "Scalar dot product is only supported on ints and floats.");
@@ -18551,7 +18551,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
         getDotProductIntrinsic(VecTy0->getElementType()),
-        ArrayRef<Value *>{Op0, Op1}, nullptr, "dot");
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));

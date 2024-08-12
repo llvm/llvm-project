@@ -633,6 +633,14 @@ G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
 
 These correspond to the standard C trigonometry functions of the same name.
 
+
+G_FDOTPROD, G_SDOTPROD, G_UDOTPROD
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These represent the floating point, signed integer, and unsigned integer dot products respectively.
+A dot product takes two equal-sized vectors and multiplies each element by the element in the corresponding
+location of the other vector and then sums all the products, returning a scalar value.
+
 G_INTRINSIC_TRUNC
 ^^^^^^^^^^^^^^^^^
 

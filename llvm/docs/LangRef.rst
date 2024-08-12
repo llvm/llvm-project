@@ -15674,6 +15674,138 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.fdot.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fdot`` on a 2-4 element 
+vector of 16-bit or 32-bit floating-point types. Not all targets support
+all types however.
+
+::
+
+      declare half     @llvm.fdot.v2f16(<2 x half> %Vec0, <2 x half> %Vec1)
+      declare half     @llvm.fdot.v3f16(<3 x half> %Vec0, <3 x half> %Vec1)
+      declare half     @llvm.fdot.v4f16(<4 x half> %Vec0, <4 x half> %Vec1)
+      declare float     @llvm.fdot.v2f32(<2 x float> %Vec0, <2 x float> %Vec1)
+      declare float     @llvm.fdot.v3f32(<3 x float> %Vec0, <3 x float> %Vec1)
+      declare float     @llvm.fdot.v4f32(<4 x float> %Vec0, <4 x float> %Vec1)
+
+Overview:
+"""""""""
+
+The '``llvm.fdot.*``' intrinsics return the dot product of the two vector operands.
+A dot product takes two equal-sized vectors and multiplies each element by the element in the corresponding
+location of the other vector and then sums all the products, returning a scalar value.
+
+
+Arguments:
+""""""""""
+
+The arguments are vectors to be elementwise multiplied and then summed.
+The vectors may be of 2-4 elements and contain 16-bit or 32-bit float elements.
+The arguments must be vectors of the same size and scalar element type.
+The return type must match the scalar type of the elements.
+
+Semantics:
+""""""""""
+
+Return the summation of the products of the elements of the first and second arguments using
+floating point arithmetic operations.
+
+
+'``llvm.sdot.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sdot`` on a 2-4 element 
+vector of 16-bit to 64-bit signed integer types. Not all targets support
+all types however.
+
+::
+
+      declare i16     @llvm.sdot.v2i16(<2 x i16> %Vec0, <2 x i16> %Vec1)
+      declare i16     @llvm.sdot.v3i16(<3 x i16> %Vec0, <3 x i16> %Vec1)
+      declare i16     @llvm.sdot.v4i16(<4 x i16> %Vec0, <4 x i16> %Vec1)
+      declare i32     @llvm.sdot.v2i32(<2 x i32> %Vec0, <2 x i32> %Vec1)
+      declare i32     @llvm.sdot.v3i32(<3 x i32> %Vec0, <3 x i32> %Vec1)
+      declare i32     @llvm.sdot.v4i32(<4 x i32> %Vec0, <4 x i32> %Vec1)
+      declare i64     @llvm.sdot.v2i64(<2 x i64> %Vec0, <2 x i64> %Vec1)
+      declare i64     @llvm.sdot.v3i64(<3 x i64> %Vec0, <3 x i64> %Vec1)
+      declare i64     @llvm.sdot.v4i64(<4 x i64> %Vec0, <4 x i64> %Vec1)
+
+Overview:
+"""""""""
+
+The '``llvm.sdot.*``' intrinsics return the dot product of the two vector operands.
+A dot product takes two equal-sized vectors and multiplies each element by the element in the corresponding
+location of the other vector and then sums all the products, returning a scalar value.
+
+
+Arguments:
+""""""""""
+
+The arguments are vectors to be elementwise multiplied and then summed.
+The vectors may be of 2-4 elements and contain 16-bit to 64-bit signed integer elements.
+The arguments must be vectors of the same size and scalar element type.
+The return type must match the scalar type of the elements.
+
+Semantics:
+""""""""""
+
+Return the summation of the products of the elements of the first and second arguments using
+signed integer arithmetic operations.
+
+
+'``llvm.udot.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.udot`` on a 2-4 element 
+vector of 16-bit to 64-bit unsigned integer types. Not all targets support
+all types however.
+
+::
+
+      declare i16     @llvm.udot.v2i16(<2 x i16> %Vec0, <2 x i16> %Vec1)
+      declare i16     @llvm.udot.v3i16(<3 x i16> %Vec0, <3 x i16> %Vec1)
+      declare i16     @llvm.udot.v4i16(<4 x i16> %Vec0, <4 x i16> %Vec1)
+      declare i32     @llvm.udot.v2i32(<2 x i32> %Vec0, <2 x i32> %Vec1)
+      declare i32     @llvm.udot.v3i32(<3 x i32> %Vec0, <3 x i32> %Vec1)
+      declare i32     @llvm.udot.v4i32(<4 x i32> %Vec0, <4 x i32> %Vec1)
+      declare i64     @llvm.udot.v2i64(<2 x i64> %Vec0, <2 x i64> %Vec1)
+      declare i64     @llvm.udot.v3i64(<3 x i64> %Vec0, <3 x i64> %Vec1)
+      declare i64     @llvm.udot.v4i64(<4 x i64> %Vec0, <4 x i64> %Vec1)
+
+Overview:
+"""""""""
+
+The '``llvm.udot.*``' intrinsics return the dot product of the two vector operands.
+A dot product takes two equal-sized vectors and multiplies each element by the element in the corresponding
+location of the other vector and then sums all the products, returning a scalar value.
+
+
+Arguments:
+""""""""""
+
+The arguments are vectors to be elementwise multiplied and then summed.
+The vectors may be of 2-4 elements and contain 16-bit to 64-bit unsigned integer elements.
+The arguments must be vectors of the same size and scalar element type.
+The return type must match the scalar type of the elements.
+
+Semantics:
+""""""""""
+
+Return the summation of the products of the elements of the first and second arguments using
+unsigned integer arithmetic operations.
+
+
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

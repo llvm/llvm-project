@@ -71,58 +71,73 @@ static bool expandAbs(CallInst *Orig) {
   return true;
 }
 
-static bool expandDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
-  assert(DotIntrinsic == Intrinsic::sdot || DotIntrinsic == Intrinsic::udot ||
-         DotIntrinsic == Intrinsic::fdot);
+// Create DXIL dot intrinsics for floating point dot operations
+static bool expandFloatDotIntrinsic(CallInst *Orig) {
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
 
-  [[maybe_unused]] Type *ATy = A->getType();
+  Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
 
   IRBuilder<> Builder(Orig);
 
-  auto *AVec = dyn_cast<FixedVectorType>(A->getType());
+  auto *AVec = dyn_cast<FixedVectorType>(ATy);
 
-  Type *EltTy = ATy->getScalarType();
-  Value *Result;
-  if (EltTy->isIntegerTy()) {
-    // Expand integer dot product to multiply and add ops
-    Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::sdot
-                                     ? Intrinsic::dx_imad
-                                     : Intrinsic::dx_umad;
-    Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
-    Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
-    Result = Builder.CreateMul(Elt0, Elt1);
-    for (unsigned I = 1; I < AVec->getNumElements(); I++) {
-      Elt0 = Builder.CreateExtractElement(A, I);
-      Elt1 = Builder.CreateExtractElement(B, I);
-      Result = Builder.CreateIntrinsic(Result->getType(), MadIntrinsic,
-                                       ArrayRef<Value *>{Elt0, Elt1, Result},
-                                       nullptr, "dx.mad");
-    }
-  } else {
-    // Use dx intrinsics for float vectors
-    assert(EltTy->isFloatingPointTy());
+  assert(ATy->getScalarType()->isFloatingPointTy());
 
-    Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
-    switch (AVec->getNumElements()) {
-    case 2:
-      DotIntrinsic = Intrinsic::dx_dot2;
-      break;
-    case 3:
-      DotIntrinsic = Intrinsic::dx_dot3;
-      break;
-    case 4:
-      DotIntrinsic = Intrinsic::dx_dot4;
-      break;
-    default:
-      llvm_unreachable("dot product with vector outside 2-4 range");
-    }
-    Result = Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
-                                     ArrayRef<Value *>{A, B}, nullptr, "dot");
+  Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
+  switch (AVec->getNumElements()) {
+  case 2:
+    DotIntrinsic = Intrinsic::dx_dot2;
+    break;
+  case 3:
+    DotIntrinsic = Intrinsic::dx_dot3;
+    break;
+  case 4:
+    DotIntrinsic = Intrinsic::dx_dot4;
+    break;
+  default:
+    llvm_unreachable("dot product with vector outside 2-4 range");
   }
+  Value *Result = Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
+				   ArrayRef<Value *>{A, B}, nullptr, "dot");
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+
+// Expand integer dot product to multiply and add ops
+static bool expandIntegerDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
+  assert(DotIntrinsic == Intrinsic::sdot || DotIntrinsic == Intrinsic::udot);
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+
+  Type *ATy = A->getType();
+  [[maybe_unused]] Type *BTy = B->getType();
+  assert(ATy->isVectorTy() && BTy->isVectorTy());
+
+  IRBuilder<> Builder(Orig);
+
+  auto *AVec = dyn_cast<FixedVectorType>(ATy);
+
+  assert(ATy->getScalarType()->isIntegerTy());
+
+  Value *Result;
+  Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::sdot
+    ? Intrinsic::dx_imad
+    : Intrinsic::dx_umad;
+  Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
+  Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
+  Result = Builder.CreateMul(Elt0, Elt1);
+  for (unsigned i = 1; i < AVec->getNumElements(); i++) {
+    Elt0 = Builder.CreateExtractElement(A, i);
+    Elt1 = Builder.CreateExtractElement(B, i);
+    Result = Builder.CreateIntrinsic(Result->getType(), MadIntrinsic,
+				     ArrayRef<Value *>{Elt0, Elt1, Result},
+				     nullptr, "dx.mad");
+  }
+
   Orig->replaceAllUsesWith(Result);
   Orig->eraseFromParent();
   return true;
@@ -342,9 +357,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_length:
     return expandLengthIntrinsic(Orig);
   case Intrinsic::fdot:
+    return expandFloatDotIntrinsic(Orig);
   case Intrinsic::sdot:
   case Intrinsic::udot:
-    return expandDotIntrinsic(Orig, F.getIntrinsicID());
+    return expandIntegerDotIntrinsic(Orig, F.getIntrinsicID());
   }
   return false;
 }
