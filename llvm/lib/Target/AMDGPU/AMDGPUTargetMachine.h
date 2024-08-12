@@ -16,11 +16,52 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <utility>
 
 namespace llvm {
+
+enum class ScanOptions;
+
+namespace AMDGPU {
+
+extern cl::opt<bool> EnableEarlyIfConversion;
+extern cl::opt<bool> OptExecMaskPreRA;
+extern cl::opt<bool> LowerCtorDtor;
+extern cl::opt<bool> EnableLoadStoreVectorizer;
+extern cl::opt<bool> ScalarizeGlobal;
+extern cl::opt<bool> InternalizeSymbols;
+extern cl::opt<bool> EarlyInlineAll;
+extern cl::opt<bool> RemoveIncompatibleFunctions;
+extern cl::opt<bool> EnableSDWAPeephole;
+extern cl::opt<bool> EnableDPPCombine;
+extern cl::opt<bool> EnableAMDGPUAliasAnalysis;
+extern cl::opt<bool, true> LateCFGStructurize;
+extern cl::opt<bool, true> DisableStructurizer;
+extern cl::opt<bool> EnableLibCallSimplify;
+extern cl::opt<bool> EnableLowerKernelArguments;
+extern cl::opt<bool> EnableRegReassign;
+extern cl::opt<bool> OptVGPRLiveRange;
+extern cl::opt<ScanOptions> AMDGPUAtomicOptimizerStrategy;
+extern cl::opt<bool> EnableSIModeRegisterPass;
+extern cl::opt<bool> EnableInsertSingleUseVDST;
+extern cl::opt<bool> EnableInsertDelayAlu;
+extern cl::opt<bool> EnableVOPD;
+extern cl::opt<bool> EnableDCEInRA;
+extern cl::opt<bool> EnableSetWavePriority;
+extern cl::opt<bool> EnableScalarIRPasses;
+extern cl::opt<bool, true> EnableStructurizerWorkarounds;
+extern cl::opt<bool, true> EnableLowerModuleLDS;
+extern cl::opt<bool> EnablePreRAOptimizations;
+extern cl::opt<bool> EnablePromoteKernelArguments;
+extern cl::opt<bool> EnableImageIntrinsicOptimizer;
+extern cl::opt<bool> EnableLoopPrefetch;
+extern cl::opt<bool> EnableMaxIlpSchedStrategy;
+extern cl::opt<bool> EnableRewritePartialRegUses;
+extern cl::opt<bool> EnableHipStdPar;
+} // namespace AMDGPU
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Target Machine (R600+)
