@@ -8,13 +8,20 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
 
 define i8 @ctlo_i8(i8 %x) {
-; CHECK-LABEL: ctlo_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255 // =0xff
-; CHECK-NEXT:    bic w8, w8, w0
-; CHECK-NEXT:    clz w8, w8
-; CHECK-NEXT:    sub w0, w8, #24
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ctlo_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-SD-NEXT:    eor w8, w8, w0, lsl #24
+; CHECK-SD-NEXT:    clz w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ctlo_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #255 // =0xff
+; CHECK-GI-NEXT:    bic w8, w8, w0
+; CHECK-GI-NEXT:    clz w8, w8
+; CHECK-GI-NEXT:    sub w0, w8, #24
+; CHECK-GI-NEXT:    ret
   %tmp1 = xor i8 %x, -1
   %tmp2 = call i8 @llvm.ctlz.i8( i8 %tmp1, i1 false )
   ret i8 %tmp2
@@ -41,13 +48,20 @@ define i8 @ctlo_i8_undef(i8 %x) {
 }
 
 define i16 @ctlo_i16(i16 %x) {
-; CHECK-LABEL: ctlo_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-NEXT:    bic w8, w8, w0
-; CHECK-NEXT:    clz w8, w8
-; CHECK-NEXT:    sub w0, w8, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ctlo_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-SD-NEXT:    eor w8, w8, w0, lsl #16
+; CHECK-SD-NEXT:    clz w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ctlo_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-GI-NEXT:    bic w8, w8, w0
+; CHECK-GI-NEXT:    clz w8, w8
+; CHECK-GI-NEXT:    sub w0, w8, #16
+; CHECK-GI-NEXT:    ret
   %tmp1 = xor i16 %x, -1
   %tmp2 = call i16 @llvm.ctlz.i16( i16 %tmp1, i1 false )
   ret i16 %tmp2
