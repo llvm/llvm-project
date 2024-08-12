@@ -54,6 +54,8 @@ config.mlir_run_cuda_sm80_lt_tests = @MLIR_RUN_CUDA_SM80_LT_TESTS@
 config.mlir_run_cuda_sm90_tests = @MLIR_RUN_CUDA_SM90_TESTS@
 config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
 config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
+if config.arm_emulator_executable:
+    config.available_features.add("mlir_arm_emulator")
 config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
 config.arm_emulator_mlir_cpu_runner_executable = "@ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE@"
 config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"

@@ -29,11 +29,10 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
-// XFAIL: {{.*}}
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 // Current fails for SVE, see https://github.com/llvm/llvm-project/issues/60626
-// UNSUPPORTED: target=aarch64{{.*}}
+// UNSUPPORTED: mlir_arm_emulator
 
 #SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
