@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRLowerContext_H
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRLowerContext_H
 
+#include "CIRRecordLayout.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -42,7 +43,7 @@ private:
 
   /// The language options used to create the AST associated with
   /// this ASTContext object.
-  clang::LangOptions &LangOpts;
+  clang::LangOptions LangOpts;
 
   //===--------------------------------------------------------------------===//
   //                         Built-in Types
@@ -51,7 +52,7 @@ private:
   Type CharTy;
 
 public:
-  CIRLowerContext(ModuleOp module, clang::LangOptions &LOpts);
+  CIRLowerContext(ModuleOp module, clang::LangOptions LOpts);
   CIRLowerContext(const CIRLowerContext &) = delete;
   CIRLowerContext &operator=(const CIRLowerContext &) = delete;
   ~CIRLowerContext();
@@ -69,6 +70,10 @@ private:
   Type initBuiltinType(clang::BuiltinType::Kind K);
 
 public:
+  const clang::TargetInfo &getTargetInfo() const { return *Target; }
+
+  const clang::LangOptions &getLangOpts() const { return LangOpts; }
+
   MLIRContext *getMLIRContext() const { return MLIRCtx; }
 
   //===--------------------------------------------------------------------===//
@@ -89,6 +94,9 @@ public:
   /// Convert a size in bits to a size in characters.
   clang::CharUnits toCharUnitsFromBits(int64_t BitSize) const;
 
+  /// Convert a size in characters to a size in bits.
+  int64_t toBits(clang::CharUnits CharSize) const;
+
   clang::CharUnits getTypeSizeInChars(Type T) const {
     // FIXME(cir): We should query MLIR's Datalayout here instead.
     return getTypeInfoInChars(T).Width;
@@ -102,6 +110,11 @@ public:
 
   /// More type predicates useful for type checking/promotion
   bool isPromotableIntegerType(Type T) const; // C99 6.3.1.1p2
+
+  /// Get or compute information about the layout of the specified
+  /// record (struct/union/class) \p D, which indicates its size and field
+  /// position information.
+  const CIRRecordLayout &getCIRRecordLayout(const Type D) const;
 };
 
 } // namespace cir

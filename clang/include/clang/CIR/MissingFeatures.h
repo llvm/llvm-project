@@ -70,6 +70,7 @@ struct MissingFeatures {
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
   static bool objCLifetime() { return false; }
+  static bool objCIvarDecls() { return false; }
 
   // Debug info
   static bool generateDebugInfo() { return false; }
@@ -205,16 +206,41 @@ struct MissingFeatures {
 
   //-- Missing AST queries
 
-  static bool recordDeclCanPassInRegisters() { return false; }
+  static bool CXXRecordDeclIsEmptyCXX11() { return false; }
+  static bool CXXRecordDeclIsPOD() { return false; }
+  static bool CXXRecordIsDynamicClass() { return false; }
+  static bool astContextGetExternalSource() { return false; }
+  static bool declGetMaxAlignment() { return false; }
+  static bool declHasAlignMac68kAttr() { return false; }
+  static bool declHasAlignNaturalAttr() { return false; }
+  static bool declHasMaxFieldAlignmentAttr() { return false; }
+  static bool fieldDeclIsBitfield() { return false; }
+  static bool fieldDeclIsPotentiallyOverlapping() { return false; }
+  static bool fieldDeclGetMaxFieldAlignment() { return false; }
+  static bool fieldDeclisUnnamedBitField() { return false; }
   static bool funcDeclIsCXXConstructorDecl() { return false; }
   static bool funcDeclIsCXXDestructorDecl() { return false; }
   static bool funcDeclIsCXXMethodDecl() { return false; }
   static bool funcDeclIsInlineBuiltinDeclaration() { return false; }
   static bool funcDeclIsReplaceableGlobalAllocationFunction() { return false; }
+  static bool isCXXRecordDecl() { return false; }
   static bool qualTypeIsReferenceType() { return false; }
-  static bool typeGetAsEnumType() { return false; }
+  static bool recordDeclCanPassInRegisters() { return false; }
+  static bool recordDeclHasAlignmentAttr() { return false; }
+  static bool recordDeclHasFlexibleArrayMember() { return false; }
+  static bool recordDeclIsCXXDecl() { return false; }
+  static bool recordDeclIsMSStruct() { return false; }
+  static bool recordDeclIsPacked() { return false; }
+  static bool recordDeclMayInsertExtraPadding() { return false; }
   static bool typeGetAsBuiltinType() { return false; }
+  static bool typeGetAsEnumType() { return false; }
+  static bool typeIsCXXRecordDecl() { return false; }
+  static bool typeIsScalableType() { return false; }
+  static bool typeIsSized() { return false; }
   static bool varDeclIsKNRPromoted() { return false; }
+
+  // We need to track parent (base) classes to determine the layout of a class.
+  static bool getCXXRecordBases() { return false; }
 
   //-- Missing types
 
@@ -231,6 +257,18 @@ struct MissingFeatures {
   static bool noFPClass() { return false; }
 
   //-- Other missing features
+
+  // We need to track the parent record types that represent a field
+  // declaration. This is necessary to determine the layout of a class.
+  static bool fieldDeclAbstraction() { return false; }
+
+  // There are some padding diagnostic features for Itanium ABI that we might
+  // wanna add later.
+  static bool bitFieldPaddingDiagnostics() { return false; }
+
+  // Clang considers both enums and records as tag types. We don't have a way to
+  // transparently handle both these types yet. Might need an interface here.
+  static bool tagTypeClassAbstraction() { return false; }
 
   // Empty values might be passed as arguments to serve as padding, ensuring
   // alignment and compliance (e.g. MIPS). We do not yet support this.
@@ -268,7 +306,7 @@ struct MissingFeatures {
   // evaluating ABI-specific lowering.
   static bool qualifiedTypes() { return false; }
 
-  // We're ignoring several details regarding ABI-halding for Swift.
+  // We're ignoring several details regarding ABI-handling for Swift.
   static bool swift() { return false; }
 
   // The AppleARM64 is using ItaniumCXXABI, which is not quite right.
@@ -281,6 +319,7 @@ struct MissingFeatures {
   // If a store op is guaranteed to execute before the retun value load op, we
   // can optimize away the store and load ops. Seems like an early optimization.
   static bool returnValueDominatingStoreOptmiization() { return false; }
+
   // Globals (vars and functions) may have attributes that are target depedent.
   static bool setTargetAttributes() { return false; }
 

@@ -458,6 +458,10 @@ LogicalResult CastOp::verify() {
     return success();
   }
   case cir::CastKind::bitcast: {
+    // Allow bitcast of structs for calling conventions.
+    if (isa<StructType>(srcType) || isa<StructType>(resType))
+      return success();
+
     // This is the only cast kind where we don't want vector types to decay
     // into the element type.
     if ((!mlir::isa<mlir::cir::PointerType>(getSrc().getType()) ||

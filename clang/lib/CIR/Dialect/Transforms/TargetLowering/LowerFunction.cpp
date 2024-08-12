@@ -32,6 +32,210 @@ using ABIArgInfo = ::cir::ABIArgInfo;
 namespace mlir {
 namespace cir {
 
+namespace {
+
+Value buildAddressAtOffset(LowerFunction &LF, Value addr,
+                           const ABIArgInfo &info) {
+  if (unsigned offset = info.getDirectOffset()) {
+    llvm_unreachable("NYI");
+  }
+  return addr;
+}
+
+/// Given a struct pointer that we are accessing some number of bytes out of it,
+/// try to gep into the struct to get at its inner goodness.  Dive as deep as
+/// possible without entering an element with an in-memory size smaller than
+/// DstSize.
+Value enterStructPointerForCoercedAccess(Value SrcPtr, StructType SrcSTy,
+                                         uint64_t DstSize, LowerFunction &CGF) {
+  // We can't dive into a zero-element struct.
+  if (SrcSTy.getNumElements() == 0)
+    llvm_unreachable("NYI");
+
+  Type FirstElt = SrcSTy.getMembers()[0];
+
+  // If the first elt is at least as large as what we're looking for, or if the
+  // first element is the same size as the whole struct, we can enter it. The
+  // comparison must be made on the store size and not the alloca size. Using
+  // the alloca size may overstate the size of the load.
+  uint64_t FirstEltSize = CGF.LM.getDataLayout().getTypeStoreSize(FirstElt);
+  if (FirstEltSize < DstSize &&
+      FirstEltSize < CGF.LM.getDataLayout().getTypeStoreSize(SrcSTy))
+    return SrcPtr;
+
+  llvm_unreachable("NYI");
+}
+
+/// Create a store to \param Dst from \param Src where the source and
+/// destination may have different types.
+///
+/// This safely handles the case when the src type is larger than the
+/// destination type; the upper bits of the src will be lost.
+void createCoercedStore(Value Src, Value Dst, bool DstIsVolatile,
+                        LowerFunction &CGF) {
+  Type SrcTy = Src.getType();
+  Type DstTy = Dst.getType();
+  if (SrcTy == DstTy) {
+    llvm_unreachable("NYI");
+  }
+
+  // FIXME(cir): We need a better way to handle datalayout queries.
+  assert(isa<IntType>(SrcTy));
+  llvm::TypeSize SrcSize = CGF.LM.getDataLayout().getTypeAllocSize(SrcTy);
+
+  if (StructType DstSTy = dyn_cast<StructType>(DstTy)) {
+    Dst = enterStructPointerForCoercedAccess(Dst, DstSTy,
+                                             SrcSize.getFixedValue(), CGF);
+    assert(isa<PointerType>(Dst.getType()));
+    DstTy = cast<PointerType>(Dst.getType()).getPointee();
+  }
+
+  PointerType SrcPtrTy = dyn_cast<PointerType>(SrcTy);
+  PointerType DstPtrTy = dyn_cast<PointerType>(DstTy);
+  // TODO(cir): Implement address space.
+  if (SrcPtrTy && DstPtrTy && !::cir::MissingFeatures::addressSpace()) {
+    llvm_unreachable("NYI");
+  }
+
+  // If the source and destination are integer or pointer types, just do an
+  // extension or truncation to the desired type.
+  if ((isa<IntegerType>(SrcTy) || isa<PointerType>(SrcTy)) &&
+      (isa<IntegerType>(DstTy) || isa<PointerType>(DstTy))) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm::TypeSize DstSize = CGF.LM.getDataLayout().getTypeAllocSize(DstTy);
+
+  // If store is legal, just bitcast the src pointer.
+  assert(!::cir::MissingFeatures::vectorType());
+  if (SrcSize.getFixedValue() <= DstSize.getFixedValue()) {
+    // Dst = Dst.withElementType(SrcTy);
+    CGF.buildAggregateStore(Src, Dst, DstIsVolatile);
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
+// FIXME(cir): Create a custom rewriter class to abstract this away.
+Value createBitcast(Value Src, Type Ty, LowerFunction &LF) {
+  return LF.getRewriter().create<CastOp>(Src.getLoc(), Ty, CastKind::bitcast,
+                                         Src);
+}
+
+/// Coerces a \param Src value to a value of type \param Ty.
+///
+/// This safely handles the case when the src type is smaller than the
+/// destination type; in this situation the values of bits which not present in
+/// the src are undefined.
+///
+/// NOTE(cir): This method has partial parity with CGCall's CreateCoercedLoad.
+/// Unlike the original codegen, this function does not emit a coerced load
+/// since CIR's type checker wouldn't allow it. Instead, it casts the existing
+/// ABI-agnostic value to it's ABI-aware counterpart. Nevertheless, we should
+/// try to follow the same logic as the original codegen for correctness.
+Value createCoercedValue(Value Src, Type Ty, LowerFunction &CGF) {
+  Type SrcTy = Src.getType();
+
+  // If SrcTy and Ty are the same, just reuse the exising load.
+  if (SrcTy == Ty)
+    return Src;
+
+  // If it is the special boolean case, simply bitcast it.
+  if ((isa<BoolType>(SrcTy) && isa<IntType>(Ty)) ||
+      (isa<IntType>(SrcTy) && isa<BoolType>(Ty)))
+    return createBitcast(Src, Ty, CGF);
+
+  llvm::TypeSize DstSize = CGF.LM.getDataLayout().getTypeAllocSize(Ty);
+
+  if (auto SrcSTy = dyn_cast<StructType>(SrcTy)) {
+    Src = enterStructPointerForCoercedAccess(Src, SrcSTy,
+                                             DstSize.getFixedValue(), CGF);
+    SrcTy = Src.getType();
+  }
+
+  llvm::TypeSize SrcSize = CGF.LM.getDataLayout().getTypeAllocSize(SrcTy);
+
+  // If the source and destination are integer or pointer types, just do an
+  // extension or truncation to the desired type.
+  if ((isa<IntType>(Ty) || isa<PointerType>(Ty)) &&
+      (isa<IntType>(SrcTy) || isa<PointerType>(SrcTy))) {
+    llvm_unreachable("NYI");
+  }
+
+  // If load is legal, just bitcast the src pointer.
+  if (!SrcSize.isScalable() && !DstSize.isScalable() &&
+      SrcSize.getFixedValue() >= DstSize.getFixedValue()) {
+    // Generally SrcSize is never greater than DstSize, since this means we are
+    // losing bits. However, this can happen in cases where the structure has
+    // additional padding, for example due to a user specified alignment.
+    //
+    // FIXME: Assert that we aren't truncating non-padding bits when have access
+    // to that information.
+    // Src = Src.withElementType();
+    return CGF.buildAggregateBitcast(Src, Ty);
+  }
+
+  llvm_unreachable("NYI");
+}
+
+Value emitAddressAtOffset(LowerFunction &LF, Value addr,
+                          const ABIArgInfo &info) {
+  if (unsigned offset = info.getDirectOffset()) {
+    llvm_unreachable("NYI");
+  }
+  return addr;
+}
+
+/// After the calling convention is lowered, an ABI-agnostic type might have to
+/// be loaded back to its ABI-aware couterpart so it may be returned. If they
+/// differ, we have to do a coerced load. A coerced load, which means to load a
+/// type to another despite that they represent the same value. The simplest
+/// cases can be solved with a mere bitcast.
+///
+/// This partially replaces CreateCoercedLoad from the original codegen.
+/// However, instead of emitting the load, it emits a cast.
+///
+/// FIXME(cir): Improve parity with the original codegen.
+Value castReturnValue(Value Src, Type Ty, LowerFunction &LF) {
+  Type SrcTy = Src.getType();
+
+  // If SrcTy and Ty are the same, nothing to do.
+  if (SrcTy == Ty)
+    return Src;
+
+  // If is the special boolean case, simply bitcast it.
+  if (isa<BoolType>(SrcTy) && isa<IntType>(Ty))
+    return createBitcast(Src, Ty, LF);
+
+  llvm::TypeSize DstSize = LF.LM.getDataLayout().getTypeAllocSize(Ty);
+
+  // FIXME(cir): Do we need the EnterStructPointerForCoercedAccess routine here?
+
+  llvm::TypeSize SrcSize = LF.LM.getDataLayout().getTypeAllocSize(SrcTy);
+
+  if ((isa<IntType>(Ty) || isa<PointerType>(Ty)) &&
+      (isa<IntType>(SrcTy) || isa<PointerType>(SrcTy))) {
+    llvm_unreachable("NYI");
+  }
+
+  // If load is legal, just bitcast the src pointer.
+  if (!SrcSize.isScalable() && !DstSize.isScalable() &&
+      SrcSize.getFixedValue() >= DstSize.getFixedValue()) {
+    // Generally SrcSize is never greater than DstSize, since this means we are
+    // losing bits. However, this can happen in cases where the structure has
+    // additional padding, for example due to a user specified alignment.
+    //
+    // FIXME: Assert that we aren't truncating non-padding bits when have access
+    // to that information.
+    return LF.getRewriter().create<CastOp>(Src.getLoc(), Ty, CastKind::bitcast,
+                                           Src);
+  }
+
+  llvm_unreachable("NYI");
+}
+
+} // namespace
+
 // FIXME(cir): Pass SrcFn and NewFn around instead of having then as attributes.
 LowerFunction::LowerFunction(LowerModule &LM, PatternRewriter &rewriter,
                              FuncOp srcFn, FuncOp newFn)
@@ -140,7 +344,57 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
         break;
       }
 
-      llvm_unreachable("NYI");
+      assert(!::cir::MissingFeatures::vectorType());
+
+      // Allocate original argument to be "uncoerced".
+      // FIXME(cir): We should have a alloca op builder that does not required
+      // the pointer type to be explicitly passed.
+      // FIXME(cir): Get the original name of the argument, as well as the
+      // proper alignment for the given type being allocated.
+      auto Alloca = rewriter.create<AllocaOp>(
+          Fn.getLoc(), rewriter.getType<PointerType>(Ty), Ty,
+          /*name=*/StringRef(""),
+          /*alignment=*/rewriter.getI64IntegerAttr(4));
+
+      Value Ptr = buildAddressAtOffset(*this, Alloca.getResult(), ArgI);
+
+      // Fast-isel and the optimizer generally like scalar values better than
+      // FCAs, so we flatten them if this is safe to do for this argument.
+      StructType STy = dyn_cast<StructType>(ArgI.getCoerceToType());
+      if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
+          STy.getNumElements() > 1) {
+        llvm_unreachable("NYI");
+      } else {
+        // Simple case, just do a coerced store of the argument into the alloca.
+        assert(NumIRArgs == 1);
+        Value AI = Fn.getArgument(FirstIRArg);
+        // TODO(cir): Set argument name in the new function.
+        createCoercedStore(AI, Ptr, /*DstIsVolatile=*/false, *this);
+      }
+
+      // Match to what EmitParamDecl is expecting for this type.
+      if (::cir::MissingFeatures::evaluationKind()) {
+        llvm_unreachable("NYI");
+      } else {
+        // FIXME(cir): Should we have an ParamValue abstraction like in the
+        // original codegen?
+        ArgVals.push_back(Alloca);
+      }
+
+      // NOTE(cir): Once we have uncoerced the argument, we should be able to
+      // RAUW the original argument alloca with the new one. This assumes that
+      // the argument is used only to be stored in a alloca.
+      Value arg = SrcFn.getArgument(ArgNo);
+      assert(arg.hasOneUse());
+      for (auto *firstStore : arg.getUsers()) {
+        assert(isa<StoreOp>(firstStore));
+        auto argAlloca = cast<StoreOp>(firstStore).getAddr();
+        rewriter.replaceAllUsesWith(argAlloca, Alloca);
+        rewriter.eraseOp(firstStore);
+        rewriter.eraseOp(argAlloca.getDefiningOp());
+      }
+
+      break;
     }
     default:
       llvm_unreachable("Unhandled ABIArgInfo::Kind");
@@ -162,6 +416,7 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
   // NOTE(cir): no-return, naked, and no result functions should be handled in
   // CIRGen.
 
+  Value RV = {};
   Type RetTy = FI.getReturnType();
   const ABIArgInfo &RetAI = FI.getReturnInfo();
 
@@ -193,7 +448,21 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
         return success();
       }
     } else {
-      llvm_unreachable("NYI");
+      // NOTE(cir): Unlike the original codegen, CIR may have multiple return
+      // statements in the function body. We have to handle this here.
+      mlir::PatternRewriter::InsertionGuard guard(rewriter);
+      NewFn->walk([&](ReturnOp returnOp) {
+        rewriter.setInsertionPoint(returnOp);
+
+        // TODO(cir): I'm not sure if we need this offset here or in CIRGen.
+        // Perhaps both? For now I'm just ignoring it.
+        // Value V = emitAddressAtOffset(*this, getResultAlloca(returnOp),
+        // RetAI);
+
+        RV = castReturnValue(returnOp->getOperand(0), RetAI.getCoerceToType(),
+                             *this);
+        rewriter.replaceOpWithNewOp<ReturnOp>(returnOp, RV);
+      });
     }
 
     // TODO(cir): Should AutoreleaseResult be handled here?
@@ -244,6 +513,33 @@ LogicalResult LowerFunction::generateCode(FuncOp oldFn, FuncOp newFn,
     return failure();
 
   return success();
+}
+
+void LowerFunction::buildAggregateStore(Value Val, Value Dest,
+                                        bool DestIsVolatile) {
+  // In LLVM codegen:
+  // Function to store a first-class aggregate into memory. We prefer to
+  // store the elements rather than the aggregate to be more friendly to
+  // fast-isel.
+  assert(mlir::isa<PointerType>(Dest.getType()) && "Storing in a non-pointer!");
+  (void)DestIsVolatile;
+
+  // Circumvent CIR's type checking.
+  Type pointeeTy = mlir::cast<PointerType>(Dest.getType()).getPointee();
+  if (Val.getType() != pointeeTy) {
+    // NOTE(cir):  We only bitcast and store if the types have the same size.
+    assert((LM.getDataLayout().getTypeSizeInBits(Val.getType()) ==
+            LM.getDataLayout().getTypeSizeInBits(pointeeTy)) &&
+           "Incompatible types");
+    auto loc = Val.getLoc();
+    Val = rewriter.create<CastOp>(loc, pointeeTy, CastKind::bitcast, Val);
+  }
+
+  rewriter.create<StoreOp>(Val.getLoc(), Val, Dest);
+}
+
+Value LowerFunction::buildAggregateBitcast(Value Val, Type DestTy) {
+  return rewriter.create<CastOp>(Val.getLoc(), DestTy, CastKind::bitcast, Val);
 }
 
 /// Rewrite a call operation to abide to the ABI calling convention.
@@ -436,7 +732,38 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
         break;
       }
 
-      llvm_unreachable("NYI");
+      // FIXME: Avoid the conversion through memory if possible.
+      Value Src = {};
+      if (!isa<StructType>(I->getType())) {
+        llvm_unreachable("NYI");
+      } else {
+        // NOTE(cir): I'm leaving L/RValue stuff for CIRGen to handle.
+        Src = *I;
+      }
+
+      // If the value is offst in memory, apply the offset now.
+      // FIXME(cir): Is this offset already handled in CIRGen?
+      Src = emitAddressAtOffset(*this, Src, ArgInfo);
+
+      // Fast-isel and the optimizer generally like scalar values better than
+      // FCAs, so we flatten them if this is safe to do for this argument.
+      StructType STy = dyn_cast<StructType>(ArgInfo.getCoerceToType());
+      if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
+        llvm_unreachable("NYI");
+      } else {
+        // In the simple case, just pass the coerced loaded value.
+        assert(NumIRArgs == 1);
+        Value Load = createCoercedValue(Src, ArgInfo.getCoerceToType(), *this);
+
+        // FIXME(cir): We should probably handle CMSE non-secure calls here
+
+        // since they are a ARM-specific feature.
+        if (::cir::MissingFeatures::undef())
+          llvm_unreachable("NYI");
+        IRCallArgs[FirstIRArg] = Load;
+      }
+
+      break;
     }
     default:
       llvm::outs() << "Missing ABIArgInfo::Kind: " << ArgInfo.getKind() << "\n";
@@ -519,7 +846,39 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
         }
       }
 
-      llvm_unreachable("NYI");
+      // If coercing a fixed vector from a scalable vector for ABI
+      // compatibility, and the types match, use the llvm.vector.extract
+      // intrinsic to perform the conversion.
+      if (::cir::MissingFeatures::vectorType()) {
+        llvm_unreachable("NYI");
+      }
+
+      // FIXME(cir): Use return value slot here.
+      Value RetVal = callOp.getResult();
+      // TODO(cir): Check for volatile return values.
+
+      // NOTE(cir): If the function returns, there should always be a valid
+      // return value present. Instead of setting the return value here, we
+      // should have the ReturnValueSlot object set it beforehand.
+      if (!RetVal) {
+        RetVal = callOp.getResult();
+        // TODO(cir): Check for volatile return values.
+      }
+
+      // An empty record can overlap other data (if declared with
+      // no_unique_address); omit the store for such types - as there is no
+      // actual data to store.
+      if (dyn_cast<StructType>(RetTy) &&
+          cast<StructType>(RetTy).getNumElements() != 0) {
+        // NOTE(cir): I'm assuming we don't need to change any offsets here.
+        // Value StorePtr = emitAddressAtOffset(*this, RetVal, RetAI);
+        RetVal =
+            createCoercedValue(newCallOp.getResult(), RetVal.getType(), *this);
+      }
+
+      // NOTE(cir): No need to convert from a temp to an RValue. This is
+      // done in CIRGen
+      return RetVal;
     }
     default:
       llvm::errs() << "Unhandled ABIArgInfo kind: " << RetAI.getKind() << "\n";

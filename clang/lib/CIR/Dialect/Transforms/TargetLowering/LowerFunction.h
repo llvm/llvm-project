@@ -71,6 +71,15 @@ public:
   LogicalResult generateCode(FuncOp oldFn, FuncOp newFn,
                              const LowerFunctionInfo &FnInfo);
 
+  // Emit the most simple cir.store possible (e.g. a store for a whole
+  // struct), which can later be broken down in other CIR levels (or prior
+  // to dialect codegen).
+  void buildAggregateStore(Value Val, Value Dest, bool DestIsVolatile);
+
+  // Emit a simple bitcast for a coerced aggregate type to convert it from an
+  // ABI-agnostic to an ABI-aware type.
+  Value buildAggregateBitcast(Value Val, Type DestTy);
+
   /// Rewrite a call operation to abide to the ABI calling convention.
   LogicalResult rewriteCallOp(CallOp op,
                               ReturnValueSlot retValSlot = ReturnValueSlot());

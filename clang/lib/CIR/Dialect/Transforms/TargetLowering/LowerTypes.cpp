@@ -37,7 +37,7 @@ LowerTypes::LowerTypes(LowerModule &LM, StringRef DLString)
     : LM(LM), context(LM.getContext()), Target(LM.getTarget()),
       CXXABI(LM.getCXXABI()),
       TheABIInfo(LM.getTargetLoweringInfo().getABIInfo()),
-      mlirContext(LM.getMLIRContext()), DL(DLString, LM.getModule()) {}
+      mlirContext(LM.getMLIRContext()), DL(LM.getModule()) {}
 
 /// Return the ABI-specific function type for a CIR function type.
 FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {

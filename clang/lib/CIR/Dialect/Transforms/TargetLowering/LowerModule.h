@@ -23,6 +23,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <memory>
@@ -54,6 +55,10 @@ public:
   const clang::TargetInfo &getTarget() const { return *Target; }
   MLIRContext *getMLIRContext() { return module.getContext(); }
   ModuleOp &getModule() { return module; }
+
+  const ::cir::CIRDataLayout &getDataLayout() const {
+    return types.getDataLayout();
+  }
 
   const TargetLoweringInfo &getTargetLoweringInfo();
 

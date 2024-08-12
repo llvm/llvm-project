@@ -5,7 +5,8 @@
 
 module attributes {
   cir.triple = "spirv64-unknown-unknown",
-  llvm.data_layout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
+  llvm.data_layout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1",
+  dlti.dl_spec = #dlti.dl_spec<> // Avoid assert errors.
 } {
   cir.global external addrspace(offload_global) @addrspace1 = #cir.int<1> : !s32i
   // LLVM: @addrspace1 = addrspace(1) global i32

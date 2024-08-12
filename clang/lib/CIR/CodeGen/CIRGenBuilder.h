@@ -878,7 +878,7 @@ public:
       unsigned Pos = 0;
       for (size_t I = 0; I < Elts.size(); ++I) {
         auto EltSize = Layout.getTypeAllocSize(Elts[I]);
-        unsigned AlignMask = Layout.getABITypeAlign(Elts[I]) - 1;
+        unsigned AlignMask = Layout.getABITypeAlign(Elts[I]).value() - 1;
         Pos = (Pos + AlignMask) & ~AlignMask;
         if (Offset < Pos + EltSize) {
           Indices.push_back(I);
