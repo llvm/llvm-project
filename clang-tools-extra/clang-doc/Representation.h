@@ -48,7 +48,7 @@ enum class InfoType {
 // A representation of a parsed comment.
 struct CommentInfo {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &Other) = delete;
+  CommentInfo(CommentInfo &Other) = default;
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
 
@@ -432,7 +432,7 @@ struct EnumValueInfo {
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
 
-  std::vector<CommentInfo> Description; // Comment description of this field.
+  std::vector<CommentInfo> Description; /// Comment description of this field.
 };
 
 // TODO: Expand to allow for documenting templating.

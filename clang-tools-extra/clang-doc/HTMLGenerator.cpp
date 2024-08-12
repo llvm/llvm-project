@@ -397,8 +397,7 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums,
 }
 
 static std::unique_ptr<TagNode>
-genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members,
-                    bool HasComments) {
+genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members) {
   if (Members.empty())
     return nullptr;
 
@@ -416,8 +415,7 @@ genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members,
       TRNode->Children.emplace_back(
           std::make_unique<TagNode>(HTMLTag::TAG_TD, M.Value));
     }
-
-    if (HasComments) {
+    if (M.Description.empty()) {
       auto TD = std::make_unique<TagNode>(HTMLTag::TAG_TD);
       TD->Children.emplace_back(genHTML(M.Description));
       TRNode->Children.emplace_back(std::move(TD));
@@ -663,7 +661,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     }
     return std::move(FullComment);
   }
- 
+
   if (I.Kind == "ParagraphComment") {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
@@ -698,16 +696,12 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
   // Determine if enum members have comments attached
-  bool HasComments = false;
-  for (const auto &M : I.Members) {
-    if (!M.Description.empty()) {
-      HasComments = true;
-      break;
-    }
-  }
+  bool HasComments =
+      std::any_of(I.Members.begin(), I.Members.end(),
+                  [](const EnumValueInfo &M) { return M.Description.empty(); });
   std::unique_ptr<TagNode> Table =
       std::make_unique<TagNode>(HTMLTag::TAG_TABLE);
-  std::unique_ptr<TagNode> Thead =
+  std::unique_ptr<TagNode> THead =
       std::make_unique<TagNode>(HTMLTag::TAG_THEAD);
   std::unique_ptr<TagNode> TRow = std::make_unique<TagNode>(HTMLTag::TAG_TR);
   std::unique_ptr<TagNode> TD =
@@ -717,10 +711,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   Table->Attributes.emplace_back("id", llvm::toHex(llvm::toStringRef(I.USR)));
   TRow->Children.emplace_back(std::move(TD));
-  Thead->Children.emplace_back(std::move(TRow));
-  Table->Children.emplace_back(std::move(Thead));
+  THead->Children.emplace_back(std::move(TRow));
+  Table->Children.emplace_back(std::move(THead));
 
-  std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members, HasComments);
+  std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members);
 
   if (Node)
     Table->Children.emplace_back(std::move(Node));
@@ -731,8 +725,8 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -780,8 +774,8 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -847,8 +841,8 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
