@@ -169,7 +169,7 @@ public:
     }
 
     Error inc() {
-      if (Storage.size() == 0 || Descriptors.size() == 0) {
+      if (Descriptors.empty()) {
         IsEnd = true;
         return Error::success();
       }
@@ -197,7 +197,7 @@ public:
     Memory64Iterator(ArrayRef<uint8_t> Storage,
                      ArrayRef<minidump::MemoryDescriptor_64> Descriptors)
         : Storage(Storage), Descriptors(Descriptors), IsEnd(false) {
-      assert(Descriptors.size() > 0 &&
+      assert(!Descriptors.empty() &&
              Storage.size() >= Descriptors.front().DataSize);
       minidump::MemoryDescriptor_64 Descriptor = Descriptors.front();
       ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
