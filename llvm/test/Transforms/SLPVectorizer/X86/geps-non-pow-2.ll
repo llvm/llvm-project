@@ -14,6 +14,7 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    [[A_020:%.*]] = phi ptr [ [[A_020_BE:%.*]], [[WHILE_BODY_BACKEDGE:%.*]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x ptr> [ [[TMP14:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 1
@@ -32,7 +33,6 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       sw.bb6:
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[INCDEC_PTR]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 2, i64 2>

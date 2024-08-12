@@ -1116,6 +1116,12 @@ LogicalResult tosa::TransposeOp::verify() {
            "Unexpectedly found permutation tensor without rank");
     if (!isPermutationVector(constantPerms))
       return emitOpError() << "expected valid permutation tensor";
+
+    if (inputType.hasRank() && !llvm::all_of(constantPerms, [&](int64_t s) {
+          return s < inputType.getRank();
+        })) {
+      return emitOpError() << "permutation must be within input bounds";
+    }
   }
   return success();
 }
