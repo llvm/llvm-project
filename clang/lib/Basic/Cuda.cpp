@@ -15,10 +15,8 @@ struct CudaVersionMapEntry {
   PTXVersion PTX;
 };
 #define CUDA_ENTRY(major, minor, ptx)                                          \
-  {                                                                            \
-    #major "." #minor, CudaVersion::CUDA_##major##minor,                       \
-        llvm::VersionTuple(major, minor), PTXVersion::ptx                      \
-  }
+  {#major "." #minor, CudaVersion::CUDA_##major##minor,                        \
+   llvm::VersionTuple(major, minor), PTXVersion::ptx}
 
 static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(7, 0, PTX_42),
@@ -48,8 +46,7 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max()),
      PTXVersion::PTX_LAST},
     // End of list tombstone
-    {"unknown", CudaVersion::UNKNOWN, {}, PTXVersion::PTX_42}
-};
+    {"unknown", CudaVersion::UNKNOWN, {}, PTXVersion::PTX_42}};
 #undef CUDA_ENTRY
 
 const char *CudaVersionToString(CudaVersion V) {
@@ -97,11 +94,9 @@ struct OffloadArchToStringMap {
 };
 } // namespace
 
-#define SM2(sm, ca)                                                            \
-  { OffloadArch::SM_##sm, "sm_" #sm, ca }
+#define SM2(sm, ca) {OffloadArch::SM_##sm, "sm_" #sm, ca}
 #define SM(sm) SM2(sm, "compute_" #sm)
-#define GFX(gpu)                                                               \
-  { OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn" }
+#define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
 static const OffloadArchToStringMap arch_names[] = {
     // clang-format off
     {OffloadArch::UNUSED, "", ""},
