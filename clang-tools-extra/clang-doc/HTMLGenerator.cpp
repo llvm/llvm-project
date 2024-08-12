@@ -713,7 +713,7 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   TRow->Children.emplace_back(std::move(TD));
   THead->Children.emplace_back(std::move(TRow));
   Table->Children.emplace_back(std::move(THead));
-  
+
   if (std::unique_ptr<TagNode> Node = genEnumMembersBlock(I.Members))
     Table->Children.emplace_back(std::move(Node));
 
