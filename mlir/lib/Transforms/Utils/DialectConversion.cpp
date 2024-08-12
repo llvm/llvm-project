@@ -2471,7 +2471,7 @@ OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
 static Operation *findLiveUserOfReplaced(
     Value initialValue, ConversionPatternRewriterImpl &rewriterImpl,
     const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  SmallVector<Value> worklist(1, initialValue);
+  SmallVector<Value> worklist = {initialValue};
   while (!worklist.empty()) {
     Value value = worklist.pop_back_val();
 
