@@ -94,6 +94,19 @@ static void lowerYield(SmallVector<Value> &resultVariables,
   rewriter.eraseOp(yield);
 }
 
+// Lower the contents of an scf::if/scf::index_switch regions to an
+// emitc::if/emitc::switch regions. The contents of the lowering region is
+// moved into the respective lowered region, but the scf::yield is replaced not
+// only with an emitc::yield, but also with a sequence of emitc::assign ops that
+// set the yielded values into the result variables.
+static void lowerRegion(SmallVector<Value> &resultVariables,
+                        PatternRewriter &rewriter, Region &region,
+                        Region &loweredRegion) {
+  rewriter.inlineRegionBefore(region, loweredRegion, loweredRegion.end());
+  Operation *terminator = loweredRegion.back().getTerminator();
+  lowerYield(resultVariables, rewriter, cast<scf::YieldOp>(terminator));
+}
+
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
                                            PatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
@@ -145,18 +158,6 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   SmallVector<Value> resultVariables =
       createVariablesForResults(ifOp, rewriter);
 
-  // Utility function to lower the contents of an scf::if region to an emitc::if
-  // region. The contents of the scf::if regions is moved into the respective
-  // emitc::if regions, but the scf::yield is replaced not only with an
-  // emitc::yield, but also with a sequence of emitc::assign ops that set the
-  // yielded values into the result variables.
-  auto lowerRegion = [&resultVariables, &rewriter](Region &region,
-                                                   Region &loweredRegion) {
-    rewriter.inlineRegionBefore(region, loweredRegion, loweredRegion.end());
-    Operation *terminator = loweredRegion.back().getTerminator();
-    lowerYield(resultVariables, rewriter, cast<scf::YieldOp>(terminator));
-  };
-
   Region &thenRegion = ifOp.getThenRegion();
   Region &elseRegion = ifOp.getElseRegion();
 
@@ -195,18 +196,6 @@ IndexSwitchOpLowering::matchAndRewrite(IndexSwitchOp indexSwitchOp,
   // assigned to by emitc::assign ops within the case and default regions.
   SmallVector<Value> resultVariables =
       createVariablesForResults(indexSwitchOp, rewriter);
-
-  // Utility function to lower the contents of an scf::index_switch regions to
-  // an emitc::switch regions. The contents of the scf::index_switch regions is
-  // moved into the respective emitc::switch regions, but the scf::yield is
-  // replaced not only with an emitc::yield, but also with a sequence of
-  // emitc::assign ops that set the yielded values into the result variables.
-  auto lowerRegion = [&resultVariables, &rewriter](Region &region,
-                                                   Region &loweredRegion) {
-    rewriter.inlineRegionBefore(region, loweredRegion, loweredRegion.end());
-    Operation *terminator = loweredRegion.back().getTerminator();
-    lowerYield(resultVariables, rewriter, cast<scf::YieldOp>(terminator));
-  };
 
   auto loweredSwitch = rewriter.create<emitc::SwitchOp>(
       loc, indexSwitchOp.getArg(), indexSwitchOp.getCases(),
