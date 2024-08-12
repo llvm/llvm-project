@@ -451,9 +451,7 @@ define i16 @sdiv16_constant_lhs(i16 %a) nounwind {
 define i32 @sdiv_pow2(i32 %a) nounwind {
 ; XTENSA-LABEL: sdiv_pow2:
 ; XTENSA:         srai a8, a2, 31
-; XTENSA-NEXT:    movi a9, 29
-; XTENSA-NEXT:    ssr a9
-; XTENSA-NEXT:    srl a8, a8
+; XTENSA-NEXT:    extui a8, a8, 29, 3
 ; XTENSA-NEXT:    add a8, a2, a8
 ; XTENSA-NEXT:    srai a2, a8, 3
 ; XTENSA-NEXT:    ret
@@ -464,9 +462,7 @@ define i32 @sdiv_pow2(i32 %a) nounwind {
 define i32 @sdiv_pow2_2(i32 %a) nounwind {
 ; XTENSA-LABEL: sdiv_pow2_2:
 ; XTENSA:         srai a8, a2, 31
-; XTENSA-NEXT:    movi a9, 16
-; XTENSA-NEXT:    ssr a9
-; XTENSA-NEXT:    srl a8, a8
+; XTENSA-NEXT:    extui a8, a8, 16, 16
 ; XTENSA-NEXT:    add a8, a2, a8
 ; XTENSA-NEXT:    srai a2, a8, 16
 ; XTENSA-NEXT:    ret
@@ -478,9 +474,7 @@ define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; XTENSA-LABEL: sdiv16_pow2:
 ; XTENSA:         slli a8, a2, 16
 ; XTENSA-NEXT:    srai a8, a8, 16
-; XTENSA-NEXT:    movi a9, 28
-; XTENSA-NEXT:    ssr a9
-; XTENSA-NEXT:    srl a8, a8
+; XTENSA-NEXT:    extui a8, a8, 28, 4
 ; XTENSA-NEXT:    movi a9, 7
 ; XTENSA-NEXT:    and a8, a8, a9
 ; XTENSA-NEXT:    add a8, a2, a8

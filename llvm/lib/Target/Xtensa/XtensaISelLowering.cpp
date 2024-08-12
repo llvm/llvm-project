@@ -827,47 +827,8 @@ SDValue XtensaTargetLowering::LowerShiftRightParts(SDValue Op,
 }
 
 SDValue XtensaTargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op->getValueType(0);
-  SDValue Val = Op.getOperand(0);
-  SDLoc DL(Op);
-
-  if (VT != MVT::i32)
-    return SDValue();
-
-  // CTPOP expansion:
-  // Val = (Val - (Val >> 1)) & 0x55555555
-  // Val = ((Val >> 2) & 0x33333333) + (Val & 0x33333333)
-  // Val = ((Val >> 4) + Val) & 0x0f0f0f0f
-  // Val = (Val >> 8) + Val
-  // Val = (extract bits [16, 20] from Val) + Val
-  // Val = extract bits [0, 5] from Val
-
-  SDValue Mask = DAG.getConstant(0x55555555, DL, VT);
-  SDValue Shift =
-      DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(1, DL, VT));
-  SDValue ShiftAndMask = DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
-  Val = DAG.getNode(ISD::SUB, DL, VT, Val, ShiftAndMask);
-
-  Mask = DAG.getConstant(0x33333333, DL, VT);
-  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(2, DL, VT));
-  SDValue ValAndMask = DAG.getNode(ISD::AND, DL, VT, Val, Mask);
-  ShiftAndMask = DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
-  Val = DAG.getNode(ISD::ADD, DL, VT, ValAndMask, ShiftAndMask);
-
-  Mask = DAG.getConstant(0x0f0f0f0f, DL, VT);
-  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(4, DL, VT));
-  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
-  Val = DAG.getNode(ISD::AND, DL, VT, Val, Mask);
-
-  Shift = DAG.getNode(ISD::SRL, DL, VT, Val, DAG.getConstant(8, DL, VT));
-  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
-
-  Shift = DAG.getNode(XtensaISD::EXTUI, DL, VT, Val,
-                      DAG.getConstant(16, DL, VT), DAG.getConstant(5, DL, VT));
-  Val = DAG.getNode(ISD::ADD, DL, VT, Val, Shift);
-
-  return DAG.getNode(XtensaISD::EXTUI, DL, VT, Val, DAG.getConstant(0, DL, VT),
-                     DAG.getConstant(6, DL, VT));
+  auto &TLI = DAG.getTargetLoweringInfo();
+  return TLI.expandCTPOP(Op.getNode(), DAG);
 }
 
 bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,

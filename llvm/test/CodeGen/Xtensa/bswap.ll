@@ -24,14 +24,12 @@ define i16 @test_bswap_i16(i16 %a) nounwind {
 
 define i32 @test_bswap_i32(i32 %a) nounwind {
 ; XTENSA-LABEL: test_bswap_i32:
-; XTENSA:         movi a8, 24
-; XTENSA-NEXT:    ssr a8
-; XTENSA-NEXT:    srl a8, a2
-; XTENSA-NEXT:    srli a9, a2, 8
-; XTENSA-NEXT:    l32r a10, .LCPI1_0
-; XTENSA-NEXT:    and a9, a9, a10
-; XTENSA-NEXT:    or a8, a9, a8
-; XTENSA-NEXT:    and a9, a2, a10
+; XTENSA:         srli a8, a2, 8
+; XTENSA-NEXT:    l32r a9, .LCPI1_0
+; XTENSA-NEXT:    and a8, a8, a9
+; XTENSA-NEXT:    extui a10, a2, 24, 8
+; XTENSA-NEXT:    or a8, a8, a10
+; XTENSA-NEXT:    and a9, a2, a9
 ; XTENSA-NEXT:    slli a9, a9, 8
 ; XTENSA-NEXT:    slli a10, a2, 24
 ; XTENSA-NEXT:    or a9, a10, a9
@@ -43,28 +41,25 @@ define i32 @test_bswap_i32(i32 %a) nounwind {
 
 define i64 @test_bswap_i64(i64 %a) nounwind {
 ; XTENSA-LABEL: test_bswap_i64:
-; XTENSA:         movi a9, 24
-; XTENSA-NEXT:    ssr a9
-; XTENSA-NEXT:    srl a8, a3
-; XTENSA-NEXT:    srli a10, a3, 8
-; XTENSA-NEXT:    l32r a11, .LCPI2_0
-; XTENSA-NEXT:    and a10, a10, a11
-; XTENSA-NEXT:    or a8, a10, a8
-; XTENSA-NEXT:    and a10, a3, a11
+; XTENSA:         srli a8, a3, 8
+; XTENSA-NEXT:    l32r a9, .LCPI2_0
+; XTENSA-NEXT:    and a8, a8, a9
+; XTENSA-NEXT:    extui a10, a3, 24, 8
+; XTENSA-NEXT:    or a8, a8, a10
+; XTENSA-NEXT:    and a10, a3, a9
 ; XTENSA-NEXT:    slli a10, a10, 8
-; XTENSA-NEXT:    slli a7, a3, 24
-; XTENSA-NEXT:    or a10, a7, a10
-; XTENSA-NEXT:    or a8, a10, a8
-; XTENSA-NEXT:    ssr a9
-; XTENSA-NEXT:    srl a9, a2
-; XTENSA-NEXT:    srli a10, a2, 8
-; XTENSA-NEXT:    and a10, a10, a11
-; XTENSA-NEXT:    or a9, a10, a9
-; XTENSA-NEXT:    and a10, a2, a11
-; XTENSA-NEXT:    slli a10, a10, 8
-; XTENSA-NEXT:    slli a11, a2, 24
+; XTENSA-NEXT:    slli a11, a3, 24
 ; XTENSA-NEXT:    or a10, a11, a10
-; XTENSA-NEXT:    or a3, a10, a9
+; XTENSA-NEXT:    or a8, a10, a8
+; XTENSA-NEXT:    srli a10, a2, 8
+; XTENSA-NEXT:    and a10, a10, a9
+; XTENSA-NEXT:    extui a11, a2, 24, 8
+; XTENSA-NEXT:    or a10, a10, a11
+; XTENSA-NEXT:    and a9, a2, a9
+; XTENSA-NEXT:    slli a9, a9, 8
+; XTENSA-NEXT:    slli a11, a2, 24
+; XTENSA-NEXT:    or a9, a11, a9
+; XTENSA-NEXT:    or a3, a9, a10
 ; XTENSA-NEXT:    or a2, a8, a8
 ; XTENSA-NEXT:    ret
   %tmp = call i64 @llvm.bswap.i64(i64 %a)
@@ -129,14 +124,12 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 
 define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; XTENSA-LABEL: test_bitreverse_i32:
-; XTENSA:         movi a8, 24
-; XTENSA-NEXT:    ssr a8
-; XTENSA-NEXT:    srl a8, a2
-; XTENSA-NEXT:    srli a9, a2, 8
-; XTENSA-NEXT:    l32r a10, .LCPI5_0
-; XTENSA-NEXT:    and a9, a9, a10
-; XTENSA-NEXT:    or a8, a9, a8
-; XTENSA-NEXT:    and a9, a2, a10
+; XTENSA:         srli a8, a2, 8
+; XTENSA-NEXT:    l32r a9, .LCPI5_0
+; XTENSA-NEXT:    and a8, a8, a9
+; XTENSA-NEXT:    extui a10, a2, 24, 8
+; XTENSA-NEXT:    or a8, a8, a10
+; XTENSA-NEXT:    and a9, a2, a9
 ; XTENSA-NEXT:    slli a9, a9, 8
 ; XTENSA-NEXT:    slli a10, a2, 24
 ; XTENSA-NEXT:    or a9, a10, a9
@@ -166,45 +159,42 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 
 define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; XTENSA-LABEL: test_bitreverse_i64:
-; XTENSA:         movi a10, 24
-; XTENSA-NEXT:    ssr a10
-; XTENSA-NEXT:    srl a8, a3
-; XTENSA-NEXT:    srli a11, a3, 8
+; XTENSA:         srli a8, a3, 8
 ; XTENSA-NEXT:    l32r a9, .LCPI6_0
-; XTENSA-NEXT:    and a11, a11, a9
-; XTENSA-NEXT:    or a8, a11, a8
-; XTENSA-NEXT:    and a11, a3, a9
-; XTENSA-NEXT:    slli a11, a11, 8
-; XTENSA-NEXT:    slli a7, a3, 24
-; XTENSA-NEXT:    or a11, a7, a11
-; XTENSA-NEXT:    or a8, a11, a8
-; XTENSA-NEXT:    srli a7, a8, 4
+; XTENSA-NEXT:    and a8, a8, a9
+; XTENSA-NEXT:    extui a10, a3, 24, 8
+; XTENSA-NEXT:    or a8, a8, a10
+; XTENSA-NEXT:    and a10, a3, a9
+; XTENSA-NEXT:    slli a10, a10, 8
+; XTENSA-NEXT:    slli a11, a3, 24
+; XTENSA-NEXT:    or a10, a11, a10
+; XTENSA-NEXT:    or a8, a10, a8
+; XTENSA-NEXT:    srli a10, a8, 4
 ; XTENSA-NEXT:    l32r a11, .LCPI6_1
-; XTENSA-NEXT:    and a7, a7, a11
+; XTENSA-NEXT:    and a10, a10, a11
 ; XTENSA-NEXT:    and a8, a8, a11
 ; XTENSA-NEXT:    slli a8, a8, 4
-; XTENSA-NEXT:    or a8, a7, a8
-; XTENSA-NEXT:    srli a7, a8, 2
-; XTENSA-NEXT:    l32r a6, .LCPI6_2
-; XTENSA-NEXT:    and a7, a7, a6
-; XTENSA-NEXT:    and a8, a8, a6
+; XTENSA-NEXT:    or a8, a10, a8
+; XTENSA-NEXT:    srli a10, a8, 2
+; XTENSA-NEXT:    l32r a7, .LCPI6_2
+; XTENSA-NEXT:    and a10, a10, a7
+; XTENSA-NEXT:    and a8, a8, a7
 ; XTENSA-NEXT:    slli a8, a8, 2
-; XTENSA-NEXT:    or a8, a7, a8
-; XTENSA-NEXT:    srli a7, a8, 1
-; XTENSA-NEXT:    l32r a5, .LCPI6_3
-; XTENSA-NEXT:    and a7, a7, a5
-; XTENSA-NEXT:    and a8, a8, a5
+; XTENSA-NEXT:    or a8, a10, a8
+; XTENSA-NEXT:    srli a10, a8, 1
+; XTENSA-NEXT:    l32r a6, .LCPI6_3
+; XTENSA-NEXT:    and a10, a10, a6
+; XTENSA-NEXT:    and a8, a8, a6
 ; XTENSA-NEXT:    slli a8, a8, 1
-; XTENSA-NEXT:    or a8, a7, a8
-; XTENSA-NEXT:    ssr a10
-; XTENSA-NEXT:    srl a10, a2
-; XTENSA-NEXT:    srli a7, a2, 8
-; XTENSA-NEXT:    and a7, a7, a9
-; XTENSA-NEXT:    or a10, a7, a10
+; XTENSA-NEXT:    or a8, a10, a8
+; XTENSA-NEXT:    srli a10, a2, 8
+; XTENSA-NEXT:    and a10, a10, a9
+; XTENSA-NEXT:    extui a5, a2, 24, 8
+; XTENSA-NEXT:    or a10, a10, a5
 ; XTENSA-NEXT:    and a9, a2, a9
 ; XTENSA-NEXT:    slli a9, a9, 8
-; XTENSA-NEXT:    slli a7, a2, 24
-; XTENSA-NEXT:    or a9, a7, a9
+; XTENSA-NEXT:    slli a5, a2, 24
+; XTENSA-NEXT:    or a9, a5, a9
 ; XTENSA-NEXT:    or a9, a9, a10
 ; XTENSA-NEXT:    srli a10, a9, 4
 ; XTENSA-NEXT:    and a10, a10, a11
@@ -212,13 +202,13 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; XTENSA-NEXT:    slli a9, a9, 4
 ; XTENSA-NEXT:    or a9, a10, a9
 ; XTENSA-NEXT:    srli a10, a9, 2
-; XTENSA-NEXT:    and a10, a10, a6
-; XTENSA-NEXT:    and a9, a9, a6
+; XTENSA-NEXT:    and a10, a10, a7
+; XTENSA-NEXT:    and a9, a9, a7
 ; XTENSA-NEXT:    slli a9, a9, 2
 ; XTENSA-NEXT:    or a9, a10, a9
 ; XTENSA-NEXT:    srli a10, a9, 1
-; XTENSA-NEXT:    and a10, a10, a5
-; XTENSA-NEXT:    and a9, a9, a5
+; XTENSA-NEXT:    and a10, a10, a6
+; XTENSA-NEXT:    and a9, a9, a6
 ; XTENSA-NEXT:    slli a9, a9, 1
 ; XTENSA-NEXT:    or a3, a10, a9
 ; XTENSA-NEXT:    or a2, a8, a8
