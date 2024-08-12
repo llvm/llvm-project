@@ -4146,9 +4146,7 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
 
   // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
   // it will also make S poison by being part of PC2.MaybePoison.
-  return all_of(PC1.MaybePoison, [&](const SCEVUnknown *S) {
-    return PC2.MaybePoison.contains(S);
-  });
+  return llvm::set_is_subset(PC1.MaybePoison, PC2.MaybePoison);
 }
 
 void ScalarEvolution::getPoisonGeneratingValues(
@@ -11963,9 +11961,14 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   SmallDenseMap<const SCEV *, int, 8> Multiplicity;
   APInt Diff(BW, 0);
   auto Add = [&](const SCEV *S, int Mul) {
-    if (auto *C = dyn_cast<SCEVConstant>(S))
-      Diff += C->getAPInt() * Mul;
-    else
+    if (auto *C = dyn_cast<SCEVConstant>(S)) {
+      if (Mul == 1) {
+        Diff += C->getAPInt();
+      } else {
+        assert(Mul == -1);
+        Diff -= C->getAPInt();
+      }
+    } else
       Multiplicity[S] += Mul;
   };
   auto Decompose = [&](const SCEV *S, int Mul) {
@@ -14914,8 +14917,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   if (Preds->implies(&Pred))
     return;
 
-  auto &OldPreds = Preds->getPredicates();
-  SmallVector<const SCEVPredicate*, 4> NewPreds(OldPreds.begin(), OldPreds.end());
+  SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
   NewPreds.push_back(&Pred);
   Preds = std::make_unique<SCEVUnionPredicate>(NewPreds);
   updateGeneration();

@@ -345,7 +345,7 @@ def testVectorType():
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
+            # CHECK: error: unknown: failed to verify 'elementType': integer or index or floating-point
             print(e)
         else:
             print("Exception not produced")

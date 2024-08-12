@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPU.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIFixSGPRCopies.h"
@@ -15,7 +16,7 @@
 using namespace llvm;
 
 AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
-    AMDGPUTargetMachine &TM, const CGPassBuilderOption &Opts,
+    GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
     PassInstrumentationCallbacks *PIC)
     : CodeGenPassBuilder(TM, Opts, PIC) {
   Opt.RequiresCodeGenSCCOrder = true;
@@ -40,5 +41,6 @@ void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
 Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(AMDGPUISelDAGToDAGPass(TM));
   addPass(SIFixSGPRCopiesPass());
+  addPass(SILowerI1CopiesPass());
   return Error::success();
 }

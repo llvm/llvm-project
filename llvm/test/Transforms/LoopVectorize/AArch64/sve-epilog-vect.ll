@@ -384,7 +384,6 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP14]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP17]], 16
@@ -466,7 +465,6 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 1
 ; CHECK-VF8-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP10]]
 ; CHECK-VF8-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP6]]
-; CHECK-VF8-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP11]]
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP12]], i32 0
 ; CHECK-VF8-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 16

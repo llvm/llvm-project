@@ -173,11 +173,12 @@ def main():
   # those files.
   cd_to_toplevel()
   filter_symlinks(changed_lines)
+  filter_ignored_files(changed_lines, binary=opts.binary)
   if opts.verbose >= 1:
     ignored_files.difference_update(changed_lines)
     if ignored_files:
-      print(
-        'Ignoring changes in the following files (wrong extension or symlink):')
+      print('Ignoring the following files (wrong extension, symlink, or '
+            'ignored by clang-format):')
       for filename in ignored_files:
         print('    %s' % filename)
     if changed_lines:
@@ -397,6 +398,16 @@ def filter_symlinks(dictionary):
   for filename in list(dictionary.keys()):
     if os.path.islink(filename):
       del dictionary[filename]
+
+
+def filter_ignored_files(dictionary, binary):
+  """Delete every key in `dictionary` that is ignored by clang-format."""
+  ignored_files = run(binary, '-list-ignored', *dictionary.keys())
+  if not ignored_files:
+    return
+  ignored_files = ignored_files.split('\n')
+  for filename in ignored_files:
+    del dictionary[filename]
 
 
 def cd_to_toplevel():

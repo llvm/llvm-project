@@ -388,12 +388,37 @@ void Pointer::initialize() const {
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
-         "Only composite fields can be initialised");
+         "Only composite fields can be activated");
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
     return;
+  if (!getInlineDesc()->InUnion)
+    return;
 
   getInlineDesc()->IsActive = true;
+
+  // Get the union, iterate over its fields and DEactivate all others.
+  Pointer UnionPtr = getBase();
+  while (!UnionPtr.getFieldDesc()->isUnion())
+    UnionPtr = UnionPtr.getBase();
+
+  const Record *UnionRecord = UnionPtr.getRecord();
+  for (const Record::Field &F : UnionRecord->fields()) {
+    Pointer FieldPtr = UnionPtr.atField(F.Offset);
+    if (FieldPtr == *this) {
+    } else {
+      FieldPtr.getInlineDesc()->IsActive = false;
+      // FIXME: Recurse.
+    }
+  }
+
+  Pointer B = getBase();
+  while (!B.isRoot() && B.inUnion()) {
+    // FIXME: Need to de-activate other fields of parent records.
+    B.getInlineDesc()->IsActive = true;
+    assert(B.isActive());
+    B = B.getBase();
+  }
 }
 
 void Pointer::deactivate() const {

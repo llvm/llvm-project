@@ -16,14 +16,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
-#include "nsan/nsan.h"
+#include "nsan.h"
+#include "nsan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_linux.h"
 
 #include <wchar.h>
 
+using namespace __nsan;
 using namespace __sanitizer;
-using __nsan::nsan_init_is_running;
-using __nsan::nsan_initialized;
 
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 
@@ -201,6 +202,36 @@ INTERCEPTOR(uptr, strxfrm, char *dst, const char *src, uptr size) {
   return res;
 }
 
+extern "C" int pthread_attr_init(void *attr);
+extern "C" int pthread_attr_destroy(void *attr);
+
+static void *NsanThreadStartFunc(void *arg) {
+  auto *t = reinterpret_cast<NsanThread *>(arg);
+  SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
+  return t->ThreadStart();
+}
+
+INTERCEPTOR(int, pthread_create, void *th, void *attr,
+            void *(*callback)(void *), void *param) {
+  __sanitizer_pthread_attr_t myattr;
+  if (!attr) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+
+  AdjustStackSize(attr);
+
+  NsanThread *t = NsanThread::Create(callback, param);
+  ScopedBlockSignals block(&t->starting_sigset_);
+  int res = REAL(pthread_create)(th, attr, NsanThreadStartFunc, t);
+
+  if (attr == &myattr)
+    pthread_attr_destroy(&myattr);
+  return res;
+}
+
 void __nsan::InitializeInterceptors() {
   static bool initialized = false;
   CHECK(!initialized);
@@ -230,6 +261,8 @@ void __nsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(strfry);
   INTERCEPT_FUNCTION(strsep);
   INTERCEPT_FUNCTION(strtok);
+
+  INTERCEPT_FUNCTION(pthread_create);
 
   initialized = 1;
 }
