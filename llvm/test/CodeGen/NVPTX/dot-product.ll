@@ -4,7 +4,10 @@
 
 target triple = "nvptx-nvidia-cuda"
 
-declare i32 @llvm.nvvm.idp4a(i32, i1 immarg, i32, i1 immarg, i32)
+declare i32 @llvm.nvvm.idp4a.s.s(i32, i32, i32)
+declare i32 @llvm.nvvm.idp4a.s.u(i32, i32, i32)
+declare i32 @llvm.nvvm.idp4a.u.s(i32, i32, i32)
+declare i32 @llvm.nvvm.idp4a.u.u(i32, i32, i32)
 
 define i32 @test_dp4a_u32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test_dp4a_u32_u32(
@@ -18,7 +21,7 @@ define i32 @test_dp4a_u32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp4a.u32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp4a(i32 %a, i1 1, i32 %b, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp4a.u.u(i32 %a, i32 %b, i32 %c)
   ret i32 %call
 }
 
@@ -33,7 +36,7 @@ define i32 @test_dp4a_u32imm_u32imm(i32 %c) {
 ; CHECK-NEXT:    dp4a.u32.u32 %r3, %r2, %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp4a(i32 0, i1 1, i32 0, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp4a.u.u(i32 0, i32 0, i32 %c)
   ret i32 %call
 }
 
@@ -49,7 +52,7 @@ define i32 @test_dp4a_u32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp4a.u32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp4a(i32 %a, i1 1, i32 %b, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp4a.u.s(i32 %a, i32 %b, i32 %c)
   ret i32 %call
 }
 
@@ -65,7 +68,7 @@ define i32 @test_dp4a_s32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp4a.s32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp4a(i32 %a, i1 0, i32 %b, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp4a.s.u(i32 %a, i32 %b, i32 %c)
   ret i32 %call
 }
 
@@ -81,11 +84,14 @@ define i32 @test_dp4a_s32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp4a.s32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp4a(i32 %a, i1 0, i32 %b, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp4a.s.s(i32 %a, i32 %b, i32 %c)
   ret i32 %call
 }
 
-declare i32 @llvm.nvvm.idp2a(i32, i1 immarg, i32, i1 immarg, i1 immarg, i32)
+declare i32 @llvm.nvvm.idp2a.s.s(i32, i32, i1 immarg, i32)
+declare i32 @llvm.nvvm.idp2a.s.u(i32, i32, i1 immarg, i32)
+declare i32 @llvm.nvvm.idp2a.u.s(i32, i32, i1 immarg, i32)
+declare i32 @llvm.nvvm.idp2a.u.u(i32, i32, i1 immarg, i32)
 
 define i32 @test_dp2a_lo_u32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test_dp2a_lo_u32_u32(
@@ -99,7 +105,7 @@ define i32 @test_dp2a_lo_u32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.lo.u32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 1, i32 %b, i1 1, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.u.u(i32 %a, i32 %b, i1 0, i32 %c)
   ret i32 %call
 }
 
@@ -115,7 +121,7 @@ define i32 @test_dp2a_lo_u32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.lo.u32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 1, i32 %b, i1 0, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.u.s(i32 %a, i32 %b, i1 0, i32 %c)
   ret i32 %call
 }
 
@@ -131,7 +137,7 @@ define i32 @test_dp2a_lo_s32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.lo.s32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 0, i32 %b, i1 1, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.s.u(i32 %a, i32 %b, i1 0, i32 %c)
   ret i32 %call
 }
 
@@ -147,7 +153,7 @@ define i32 @test_dp2a_lo_s32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.lo.s32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 0, i32 %b, i1 0, i1 0, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.s.s(i32 %a, i32 %b, i1 0, i32 %c)
   ret i32 %call
 }
 
@@ -163,7 +169,7 @@ define i32 @test_dp2a_hi_u32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.hi.u32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 1, i32 %b, i1 1, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.u.u(i32 %a, i32 %b, i1 1, i32 %c)
   ret i32 %call
 }
 
@@ -179,7 +185,7 @@ define i32 @test_dp2a_hi_u32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.hi.u32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 1, i32 %b, i1 0, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.u.s(i32 %a, i32 %b, i1 1, i32 %c)
   ret i32 %call
 }
 
@@ -195,7 +201,7 @@ define i32 @test_dp2a_hi_s32_u32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.hi.s32.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 0, i32 %b, i1 1, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.s.u(i32 %a, i32 %b, i1 1, i32 %c)
   ret i32 %call
 }
 
@@ -211,6 +217,6 @@ define i32 @test_dp2a_hi_s32_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    dp2a.hi.s32.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
-  %call = call i32 @llvm.nvvm.idp2a(i32 %a, i1 0, i32 %b, i1 0, i1 1, i32 %c)
+  %call = call i32 @llvm.nvvm.idp2a.s.s(i32 %a, i32 %b, i1 1, i32 %c)
   ret i32 %call
 }

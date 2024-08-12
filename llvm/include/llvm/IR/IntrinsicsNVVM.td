@@ -1055,14 +1055,18 @@ let TargetPrefix = "nvvm" in {
 //
 // Dot Product
 //
-  def int_nvvm_idp4a :
-      DefaultAttrsIntrinsic<[llvm_i32_ty],
-          [llvm_i32_ty, llvm_i1_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
-          [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
-  def int_nvvm_idp2a :
-      DefaultAttrsIntrinsic<[llvm_i32_ty],
-        [llvm_i32_ty, llvm_i1_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty, llvm_i32_ty],
-        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+  foreach a_type = ["s", "u"] in {
+    foreach b_type = ["s", "u"] in {
+      def int_nvvm_idp4a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable]>;
+      def int_nvvm_idp2a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+    }
+  }
 
 //
 // Convert
