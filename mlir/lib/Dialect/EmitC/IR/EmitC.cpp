@@ -1179,16 +1179,14 @@ ParseResult SwitchOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void SwitchOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  p << getArg();
+  p << ' ' << getArg();
   SmallVector<StringRef, 2> elidedAttrs;
   elidedAttrs.push_back("cases");
   p.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
   p << ' ';
   printSwitchCases(p, *this, getCasesAttr(), getCaseRegions());
   p.printNewline();
-  p << "default";
-  p << ' ';
+  p << "default ";
   p.printRegion(getDefaultRegion(), /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
 }
@@ -1207,6 +1205,7 @@ static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
                .attachNote(yield.getLoc())
            << "see yield operation here";
   }
+
   return success();
 }
 

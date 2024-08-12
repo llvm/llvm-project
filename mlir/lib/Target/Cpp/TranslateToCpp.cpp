@@ -467,9 +467,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   os << "\nswitch (" << emitter.getOrCreateName(switchOp.getArg()) << ") {";
 
   for (auto pair : llvm::zip(switchOp.getCases(), switchOp.getCaseRegions())) {
-    os << "\ncase "
-       << "(" << std::get<0>(pair) << ")"
-       << ": {\n";
+    os << "\ncase (" << std::get<0>(pair) << "): {\n";
     os.indent();
 
     if (failed(emitSwitchCase(emitter, os, std::get<1>(pair))))
