@@ -5,7 +5,7 @@
 // to LLVM-IR from MLIR when a fortran common block is lowered alongside
 // the omp.map.info.
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @omp_map_common_block_using_common_block_members() {
     %0 = llvm.mlir.constant(4 : index) : i64
     %1 = llvm.mlir.constant(0 : index) : i64

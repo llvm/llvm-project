@@ -67,12 +67,14 @@ public:
                          out.min_normal));
 
     if constexpr (sizeof(OutType) < sizeof(InType)) {
+      InFPBits tmp = InFPBits::one();
+      tmp.set_biased_exponent(InFPBits::EXP_BIAS - InFPBits::FRACTION_LEN - 1);
+      InType reciprocal_value = tmp.get_val();
+
       InType v = InFPBits(static_cast<InStorageType>(IN_MIN_NORMAL_U +
                                                      InStorageType(1)))
                      .get_val();
-      EXPECT_FP_EQ(
-          out.min_normal,
-          func(InType(1) / InType(IN_MIN_NORMAL_U << 1), v, out.min_normal));
+      EXPECT_FP_EQ(out.min_normal, func(reciprocal_value, v, out.min_normal));
     }
 
     // Test overflow.

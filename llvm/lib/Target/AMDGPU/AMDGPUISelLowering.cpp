@@ -444,19 +444,15 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
                      Custom);
 
-  // FIXME: Why is v8f16/v8bf16 missing?
   setOperationAction(
       ISD::EXTRACT_SUBVECTOR,
-      {MVT::v2f16,  MVT::v2bf16, MVT::v2i16,  MVT::v4f16,  MVT::v4bf16,
-       MVT::v4i16,  MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,
-       MVT::v4f32,  MVT::v4i32,  MVT::v5f32,  MVT::v5i32,  MVT::v6f32,
-       MVT::v6i32,  MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,
-       MVT::v9f32,  MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32,
-       MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16bf16,
-       MVT::v16i16, MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
+      {MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,  MVT::v4f32,
+       MVT::v4i32,  MVT::v5f32,  MVT::v5i32,  MVT::v6f32,  MVT::v6i32,
+       MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,  MVT::v9f32,
+       MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32, MVT::v11f32,
+       MVT::v12i32, MVT::v12f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
        MVT::v2f64,  MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,
-       MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64,
-       MVT::v32i16, MVT::v32f16, MVT::v32bf16},
+       MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -4961,7 +4957,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       SDValue CastBack =
           DAG.getNode(ISD::BITCAST, SL, HighBits.getValueType(), NegHi);
 
-      SmallVector<SDValue, 8> Ops(BCSrc->op_begin(), BCSrc->op_end());
+      SmallVector<SDValue, 8> Ops(BCSrc->ops());
       Ops.back() = CastBack;
       DCI.AddToWorklist(NegHi.getNode());
       SDValue Build =
@@ -6001,34 +5997,6 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
-}
-
-TargetLowering::AtomicExpansionKind
-AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
-  switch (RMW->getOperation()) {
-  case AtomicRMWInst::Nand:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::FMax:
-  case AtomicRMWInst::FMin:
-    return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getDataLayout();
-    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
-    if (ValSize == 32 || ValSize == 64)
-      return AtomicExpansionKind::None;
-    return AtomicExpansionKind::CmpXChg;
-  }
-  default: {
-    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
-      unsigned Size = IntTy->getBitWidth();
-      if (Size == 32 || Size == 64)
-        return AtomicExpansionKind::None;
-    }
-
-    return AtomicExpansionKind::CmpXChg;
-  }
-  }
 }
 
 /// Whether it is profitable to sink the operands of an

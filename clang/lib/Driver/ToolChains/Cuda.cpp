@@ -596,14 +596,16 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  if (GPUArch.empty()) {
+  if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
     return;
   }
 
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  if (!GPUArch.empty()) {
+    CmdArgs.push_back("-arch");
+    CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  }
 
   if (Args.hasArg(options::OPT_ptxas_path_EQ))
     CmdArgs.push_back(Args.MakeArgString(
@@ -802,7 +804,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -885,7 +887,7 @@ void CudaToolChain::addClangTargetOptions(
     }
 
     // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingLTO(/* IsOffload */ true))
+    if (getDriver().isUsingOffloadLTO())
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),

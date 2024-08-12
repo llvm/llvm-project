@@ -79,7 +79,7 @@ static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
 
-  std::vector<const Record *> VTsByNumber{16384};
+  std::vector<const Record *> VTsByNumber{512};
   auto ValueTypes = Records.getAllDerivedDefinitions("ValueType");
   for (auto *VT : ValueTypes) {
     auto Number = VT->getValueAsInt("Value");

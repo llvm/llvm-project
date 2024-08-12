@@ -18,6 +18,7 @@
 #include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -37,9 +38,9 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
   Locals = std::make_unique<char[]>(FrameSize);
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      Block *B =
-          new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
-      B->invokeCtor();
+      new (localBlock(Local.Offset)) Block(S.Ctx.getEvalID(), Local.Desc);
+      // Note that we are NOT calling invokeCtor() here, since that is done
+      // via the InitScope op.
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
     }
   }
@@ -75,11 +76,17 @@ InterpFrame::~InterpFrame() {
   if (Func) {
     for (auto &Scope : Func->scopes()) {
       for (auto &Local : Scope.locals()) {
-        Block *B = localBlock(Local.Offset);
-        if (B->isInitialized())
-          B->invokeDtor();
+        S.deallocate(localBlock(Local.Offset));
       }
     }
+  }
+}
+
+void InterpFrame::initScope(unsigned Idx) {
+  if (!Func)
+    return;
+  for (auto &Local : Func->getScope(Idx).locals()) {
+    localBlock(Local.Offset)->invokeCtor();
   }
 }
 
@@ -163,11 +170,32 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
       F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
     return;
 
+  const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
-  if (const auto *M = dyn_cast<CXXMethodDecl>(F);
-      M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
-    print(OS, This, S.getCtx(), S.getCtx().getRecordType(M->getParent()));
-    OS << "->";
+  bool IsMemberCall = isa<CXXMethodDecl>(F) && !isa<CXXConstructorDecl>(F) &&
+                      cast<CXXMethodDecl>(F)->isImplicitObjectMemberFunction();
+  if (Func->hasThisPointer() && IsMemberCall) {
+    if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
+      const Expr *Object = MCE->getImplicitObjectArgument();
+      Object->printPretty(OS, /*Helper=*/nullptr,
+                          S.getCtx().getPrintingPolicy(),
+                          /*Indentation=*/0);
+      if (Object->getType()->isPointerType())
+        OS << "->";
+      else
+        OS << ".";
+    } else if (const auto *OCE =
+                   dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
+      OCE->getArg(0)->printPretty(OS, /*Helper=*/nullptr,
+                                  S.getCtx().getPrintingPolicy(),
+                                  /*Indentation=*/0);
+      OS << ".";
+    } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
+      print(OS, This, S.getCtx(),
+            S.getCtx().getLValueReferenceType(
+                S.getCtx().getRecordType(M->getParent())));
+      OS << ".";
+    }
   }
 
   F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
