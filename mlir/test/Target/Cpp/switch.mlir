@@ -1,22 +1,203 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
-// CPP-DEFAULT-LABEL: void emitc_switch_index() {
-// CPP-DEFAULT:         size_t v1 = 1;
+// CPP-DEFAULT-LABEL: void emitc_switch_ptrdiff_t() {
+// CPP-DEFAULT:         ptrdiff_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         return;
+// CPP-DEFAULT:       }
+
+// CPP-DECLTOP-LABEL: void emitc_switch_ptrdiff_t() {
+// CPP-DECLTOP:         ptrdiff_t v1;
+// CPP-DECLTOP:         float v2;
+// CPP-DECLTOP:         int32_t v3;
+// CPP-DECLTOP:         int32_t v4;
+// CPP-DECLTOP:         v1 = 1;
+// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         default: {
+// CPP-DECLTOP:           v2 = 4.200000000e+01f;
+// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         return;
+// CPP-DECLTOP:       }
+func.func @emitc_switch_ptrdiff_t() {
+  %0 = "emitc.variable"(){value = 1 : index} : () -> !emitc.ptrdiff_t
+
+  emitc.switch %0 : !emitc.ptrdiff_t
+  case 2: {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 5: {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default: {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// CPP-DEFAULT-LABEL: void emitc_switch_ssize_t() {
+// CPP-DEFAULT:         ssize_t v1 = 1;
+// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         case 2: {
+// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         case 5: {
+// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         default: {
+// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
+// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         return;
+// CPP-DEFAULT:       }
+
+// CPP-DECLTOP-LABEL: void emitc_switch_ssize_t() {
+// CPP-DECLTOP:         ssize_t v1;
+// CPP-DECLTOP:         float v2;
+// CPP-DECLTOP:         int32_t v3;
+// CPP-DECLTOP:         int32_t v4;
+// CPP-DECLTOP:         v1 = 1;
+// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         default: {
+// CPP-DECLTOP:           v2 = 4.200000000e+01f;
+// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         return;
+// CPP-DECLTOP:       }
+func.func @emitc_switch_ssize_t() {
+  %0 = "emitc.variable"(){value = 1 : index} : () -> !emitc.ssize_t
+
+  emitc.switch %0 : !emitc.ssize_t
+  case 2: {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 5: {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default: {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// CPP-DEFAULT-LABEL: void emitc_switch_size_t() {
+// CPP-DEFAULT:         size_t v1 = 1;
+// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         case 2: {
+// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         case 5: {
+// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         default: {
+// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
+// CPP-DEFAULT:           func2(v4);
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         return;
+// CPP-DEFAULT:       }
+
+// CPP-DECLTOP-LABEL: void emitc_switch_size_t() {
+// CPP-DECLTOP:         size_t v1;
+// CPP-DECLTOP:         float v2;
+// CPP-DECLTOP:         int32_t v3;
+// CPP-DECLTOP:         int32_t v4;
+// CPP-DECLTOP:         v1 = 1;
+// CPP-DECLTOP:         switch (v1) {
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         default: {
+// CPP-DECLTOP:           v2 = 4.200000000e+01f;
+// CPP-DECLTOP:           func2(v2);
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         return;
+// CPP-DECLTOP:       }
+func.func @emitc_switch_size_t() {
+  %0 = "emitc.variable"(){value = 1 : index} : () -> !emitc.size_t
+
+  emitc.switch %0 : !emitc.size_t
+  case 2: {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 5: {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default: {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// CPP-DEFAULT-LABEL: void emitc_switch_index() {
+// CPP-DEFAULT:         size_t v1 = 1;
+// CPP-DEFAULT:         switch (v1) {
+// CPP-DEFAULT:         case 2: {
+// CPP-DEFAULT:           int32_t v2 = func_b();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         case 5: {
+// CPP-DEFAULT:           int32_t v3 = func_a();
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         default: {
+// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
+// CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -25,31 +206,28 @@
 // CPP-DECLTOP-LABEL: void emitc_switch_index() {
 // CPP-DECLTOP:         size_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
 func.func @emitc_switch_index() {
   %0 = "emitc.variable"(){value = 1 : index} : () -> index
-  
+
   emitc.switch %0 : index
   case 2: {
     %1 = emitc.call_opaque "func_b" () : () -> i32
@@ -61,10 +239,7 @@ func.func @emitc_switch_index() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -73,19 +248,17 @@ func.func @emitc_switch_index() {
 // CPP-DEFAULT-LABEL: void emitc_switch_opaque() {
 // CPP-DEFAULT:         size_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -94,24 +267,21 @@ func.func @emitc_switch_index() {
 // CPP-DECLTOP-LABEL: void emitc_switch_opaque() {
 // CPP-DECLTOP:         size_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -131,10 +301,7 @@ func.func @emitc_switch_opaque() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -143,19 +310,17 @@ func.func @emitc_switch_opaque() {
 // CPP-DEFAULT-LABEL: void emitc_switch_i1() {
 // CPP-DEFAULT:         bool v1 = true;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -164,24 +329,21 @@ func.func @emitc_switch_opaque() {
 // CPP-DECLTOP-LABEL: void emitc_switch_i1() {
 // CPP-DECLTOP:         bool v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = true;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -200,10 +362,7 @@ func.func @emitc_switch_i1() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -212,19 +371,17 @@ func.func @emitc_switch_i1() {
 // CPP-DEFAULT-LABEL: void emitc_switch_i8() {
 // CPP-DEFAULT:         int8_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -233,24 +390,21 @@ func.func @emitc_switch_i1() {
 // CPP-DECLTOP-LABEL: void emitc_switch_i8() {
 // CPP-DECLTOP:         int8_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -269,10 +423,7 @@ func.func @emitc_switch_i8() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -281,19 +432,17 @@ func.func @emitc_switch_i8() {
 // CPP-DEFAULT-LABEL: void emitc_switch_ui8() {
 // CPP-DEFAULT:         uint8_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -302,24 +451,21 @@ func.func @emitc_switch_i8() {
 // CPP-DECLTOP-LABEL: void emitc_switch_ui8() {
 // CPP-DECLTOP:         uint8_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -338,10 +484,7 @@ func.func @emitc_switch_ui8() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -350,19 +493,17 @@ func.func @emitc_switch_ui8() {
 // CPP-DEFAULT-LABEL: void emitc_switch_i16() {
 // CPP-DEFAULT:         int16_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -371,24 +512,21 @@ func.func @emitc_switch_ui8() {
 // CPP-DECLTOP-LABEL: void emitc_switch_i16() {
 // CPP-DECLTOP:         int16_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -407,10 +545,7 @@ func.func @emitc_switch_i16() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -419,19 +554,17 @@ func.func @emitc_switch_i16() {
 // CPP-DEFAULT-LABEL: void emitc_switch_ui16() {
 // CPP-DEFAULT:         uint16_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -440,24 +573,21 @@ func.func @emitc_switch_i16() {
 // CPP-DECLTOP-LABEL: void emitc_switch_ui16() {
 // CPP-DECLTOP:         uint16_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -476,10 +606,7 @@ func.func @emitc_switch_ui16() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -488,19 +615,17 @@ func.func @emitc_switch_ui16() {
 // CPP-DEFAULT-LABEL: void emitc_switch_i32() {
 // CPP-DEFAULT:         int32_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -509,24 +634,21 @@ func.func @emitc_switch_ui16() {
 // CPP-DECLTOP-LABEL: void emitc_switch_i32() {
 // CPP-DECLTOP:         int32_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -545,10 +667,7 @@ func.func @emitc_switch_i32() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -557,19 +676,17 @@ func.func @emitc_switch_i32() {
 // CPP-DEFAULT-LABEL: void emitc_switch_ui32() {
 // CPP-DEFAULT:         uint32_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -578,24 +695,21 @@ func.func @emitc_switch_i32() {
 // CPP-DECLTOP-LABEL: void emitc_switch_ui32() {
 // CPP-DECLTOP:         uint32_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -614,10 +728,7 @@ func.func @emitc_switch_ui32() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -626,19 +737,17 @@ func.func @emitc_switch_ui32() {
 // CPP-DEFAULT-LABEL: void emitc_switch_i64() {
 // CPP-DEFAULT:         int64_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -647,24 +756,21 @@ func.func @emitc_switch_ui32() {
 // CPP-DECLTOP-LABEL: void emitc_switch_i64() {
 // CPP-DECLTOP:         int64_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -683,10 +789,7 @@ func.func @emitc_switch_i64() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
@@ -695,19 +798,17 @@ func.func @emitc_switch_i64() {
 // CPP-DEFAULT-LABEL: void emitc_switch_ui64() {
 // CPP-DEFAULT:         uint64_t v1 = 1;
 // CPP-DEFAULT:         switch (v1) {
-// CPP-DEFAULT:         case (2): {
+// CPP-DEFAULT:         case 2: {
 // CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
-// CPP-DEFAULT:         case (5): {
+// CPP-DEFAULT:         case 5: {
 // CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
 // CPP-DEFAULT:           float v4 = 4.200000000e+01f;
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
 // CPP-DEFAULT:           func2(v4);
-// CPP-DEFAULT:           func3(v5, v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
@@ -716,24 +817,21 @@ func.func @emitc_switch_i64() {
 // CPP-DECLTOP-LABEL: void emitc_switch_ui64() {
 // CPP-DECLTOP:         uint64_t v1;
 // CPP-DECLTOP:         float v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 1;
 // CPP-DECLTOP:         switch (v1) {
-// CPP-DECLTOP:         case (2): {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:         case 2: {
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
-// CPP-DECLTOP:         case (5): {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:         case 5: {
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
-// CPP-DECLTOP:           func3(v3, v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
@@ -752,11 +850,9 @@ func.func @emitc_switch_ui64() {
   }
   default: {
     %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-    %4 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
-
     emitc.call_opaque "func2" (%3) : (f32) -> ()
-    emitc.call_opaque "func3" (%3, %4) { args = [1 : index, 0 : index] } : (f32, f32) -> ()
     emitc.yield
   }
   return
 }
+
