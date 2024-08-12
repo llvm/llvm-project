@@ -1482,7 +1482,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
 static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                                         const ConceptSpecializationExpr *CSE) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
+      CSE->getNamedConcept(), CSE->getNamedConcept()->getDeclContext(),
       /*Final=*/true, CSE->getTemplateArguments(),
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,

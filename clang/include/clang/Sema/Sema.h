@@ -13033,11 +13033,14 @@ public:
   /// instantiation arguments.
   ///
   /// \param DC In the event we don't HAVE a declaration yet, we instead provide
-  ///  the decl context where it will be created.  In this case, the `Innermost`
-  ///  should likely be provided.  If ND is non-null, this is ignored.
+  ///  the decl context where it will be created.  In this case, the \p
+  ///  Innermost should likely be provided.  If \p ND is non-null and \p
+  ///  Innermost is NULL, this is ignored.
   ///
   /// \param Innermost if non-NULL, specifies a template argument list for the
-  /// template declaration passed as ND.
+  /// template declaration passed as \p ND. The next declaration context would
+  /// be switched to \p DC if present; otherwise, it would be the semantic
+  /// declaration context of \p ND.
   ///
   /// \param RelativeToPrimary true if we should get the template
   /// arguments relative to the primary template, even when we're
@@ -13053,6 +13056,9 @@ public:
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
+  ///
+  /// \param SkipForSpecialization when specified, any template specializations
+  /// in a traversal would be ignored.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,

@@ -5582,7 +5582,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, NewContext, /*Final=*/true, SugaredConverted,
+        Template, Template->getDeclContext(), /*Final=*/true, SugaredConverted,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
