@@ -631,6 +631,50 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   }
 }
 
+TEST_F(SandboxIRTest, ExtractElementInst) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %vec, i32 %idx) {
+  %ins0 = extractelement <2 x i8> %vec, i32 %idx
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgVec = F.getArg(0);
+  auto *ArgIdx = F.getArg(1);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *EI = cast<sandboxir::ExtractElementInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(EI->getOpcode(), sandboxir::Instruction::Opcode::ExtractElement);
+  EXPECT_EQ(EI->getOperand(0), ArgVec);
+  EXPECT_EQ(EI->getOperand(1), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperand(), ArgVec);
+  EXPECT_EQ(EI->getIndexOperand(), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperandType(), ArgVec->getType());
+
+  auto *NewI1 =
+      cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
+          ArgVec, ArgIdx, Ret, Ctx, "NewExtrBeforeRet"));
+  EXPECT_EQ(NewI1->getOperand(0), ArgVec);
+  EXPECT_EQ(NewI1->getOperand(1), ArgIdx);
+  EXPECT_EQ(NewI1->getNextNode(), Ret);
+
+  auto *NewI2 =
+      cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
+          ArgVec, ArgIdx, BB, Ctx, "NewExtrAtEndOfBB"));
+  EXPECT_EQ(NewI2->getPrevNode(), Ret);
+
+  auto *LLVMArgVec = LLVMF.getArg(0);
+  auto *LLVMArgIdx = LLVMF.getArg(1);
+  EXPECT_EQ(sandboxir::ExtractElementInst::isValidOperands(ArgVec, ArgIdx),
+            llvm::ExtractElementInst::isValidOperands(LLVMArgVec, LLVMArgIdx));
+  EXPECT_EQ(sandboxir::ExtractElementInst::isValidOperands(ArgIdx, ArgVec),
+            llvm::ExtractElementInst::isValidOperands(LLVMArgIdx, LLVMArgVec));
+}
+
 TEST_F(SandboxIRTest, InsertElementInst) {
   parseIR(C, R"IR(
 define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
