@@ -44,7 +44,7 @@ define i32 @lshr(i32 %x, i32 %y) nounwind {
   ret i32 %c
 }
 
-define i32 @lshr_imm_1(i32 %x, i32 %y) nounwind {
+define i32 @lshr_imm_1(i32 %x) nounwind {
 ; CHECK-LABEL: lshr_imm_1:
 ; CHECK:         srli a2, a2, 1
 ; CHECK-NEXT:    ret
@@ -52,7 +52,7 @@ define i32 @lshr_imm_1(i32 %x, i32 %y) nounwind {
   ret i32 %c
 }
 
-define i32 @lshr_imm_15(i32 %x, i32 %y) nounwind {
+define i32 @lshr_imm_15(i32 %x) nounwind {
 ; CHECK-LABEL: lshr_imm_15:
 ; CHECK:         srli a2, a2, 15
 ; CHECK-NEXT:    ret
@@ -69,7 +69,7 @@ define i32 @ashr(i32 %x, i32 %y) nounwind {
   ret i32 %c
 }
 
-define i32 @ashr_imm_1(i32 %x, i32 %y) nounwind {
+define i32 @ashr_imm_1(i32 %x) nounwind {
 ; CHECK-LABEL: ashr_imm_1:
 ; CHECK:         srai a2, a2, 1
 ; CHECK-NEXT:    ret
@@ -77,7 +77,7 @@ define i32 @ashr_imm_1(i32 %x, i32 %y) nounwind {
   ret i32 %c
 }
 
-define i32 @ashr_imm_10(i32 %x, i32 %y) nounwind {
+define i32 @ashr_imm_10(i32 %x) nounwind {
 ; CHECK-LABEL: ashr_imm_10:
 ; CHECK:         srai a2, a2, 10
 ; CHECK-NEXT:    ret
@@ -85,7 +85,7 @@ define i32 @ashr_imm_10(i32 %x, i32 %y) nounwind {
   ret i32 %c
 }
 
-define i32 @ashr_imm_31(i32 %x, i32 %y) nounwind {
+define i32 @ashr_imm_31(i32 %x) nounwind {
 ; CHECK-LABEL: ashr_imm_31:
 ; CHECK:         srai a2, a2, 31
 ; CHECK-NEXT:    ret
