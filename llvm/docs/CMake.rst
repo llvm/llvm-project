@@ -556,8 +556,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 .. _llvm_enable_pdb:
 
 **LLVM_ENABLE_PDB**:BOOL
-  For Windows builds using MSVC or clang-cl, generate PDB files regardless of
-  CMAKE_BUILD_TYPE.
+  For Windows builds using MSVC or clang-cl, generate PDB files when
+  :ref:`CMAKE_BUILD_TYPE <cmake_build_type>` is set to Release.
 
 **LLVM_ENABLE_PEDANTIC**:BOOL
   Enable pedantic mode. This disables compiler-specific extensions, if
