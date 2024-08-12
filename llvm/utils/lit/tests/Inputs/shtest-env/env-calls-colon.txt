@@ -1,1 +1,0 @@
-# RUN: env -u FOO BAR=3 :
