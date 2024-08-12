@@ -114,6 +114,7 @@ class Instruction;
 class SelectInst;
 class ExtractElementInst;
 class InsertElementInst;
+class ShuffleVectorInst;
 class BranchInst;
 class UnaryInstruction;
 class LoadInst;
@@ -246,6 +247,7 @@ protected:
   friend class SelectInst;         // For getting `Val`.
   friend class ExtractElementInst; // For getting `Val`.
   friend class InsertElementInst;  // For getting `Val`.
+  friend class ShuffleVectorInst;  // For getting `Val`.
   friend class BranchInst;         // For getting `Val`.
   friend class LoadInst;           // For getting `Val`.
   friend class StoreInst;          // For getting `Val`.
@@ -669,6 +671,7 @@ protected:
   friend class SelectInst;         // For getTopmostLLVMInstruction().
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
   friend class InsertElementInst;  // For getTopmostLLVMInstruction().
+  friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
   friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
   friend class StoreInst;          // For getTopmostLLVMInstruction().
@@ -946,6 +949,285 @@ public:
 
   VectorType *getVectorOperandType() const {
     return cast<VectorType>(getVectorOperand()->getType());
+  }
+};
+
+class ShuffleVectorInst final
+  : public SingleLLVMInstructionImpl<llvm::ShuffleVectorInst> {
+  /// Use Context::createShuffleVectorInst() instead.
+  ShuffleVectorInst(llvm::Instruction *I, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::ShuffleVector, Opcode::ShuffleVector,
+                                  I, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
+
+public:
+  static Value *create(Value *V1, Value *V2, Value *Mask,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, Value *Mask,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ShuffleVector;
+  }
+
+  static bool isValidOperands(const Value *V1, const Value *V2,
+                              const Value *Mask) {
+    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val,
+                                                    Mask->Val);
+  }
+
+  static bool isValidOperands(const Value *V1, const Value *V2,
+                              ArrayRef<int> Mask) {
+    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val,
+                                                    Mask);
+  }
+
+  void commute() {
+    cast<llvm::ShuffleVectorInst>(Val)->commute();
+  }
+
+  VectorType *getType() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getType();
+  }
+
+  int getMaskValue(unsigned Elt) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getMaskValue(Elt);
+  }
+
+  static void getShuffleMask(const Constant *Mask,
+                             SmallVectorImpl<int> &Result) {
+    llvm::ShuffleVectorInst::getShuffleMask(cast<llvm::Constant>(Mask->Val),
+                                            Result);
+  }
+
+  void getShuffleMask(SmallVectorImpl<int> &Result) const {
+    cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask(Result);
+  }
+
+  Constant *getShuffleMaskForBitcode() const;
+
+  static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
+                                                Type *ResultTy, Context &Ctx);
+
+  void setShuffleMask(ArrayRef<int> Mask) {
+    cast<llvm::ShuffleVectorInst>(Val)->setShuffleMask(Mask);
+  }
+
+  ArrayRef<int> getShuffleMask() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask();
+  }
+
+  bool changesLength() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->changesLength();
+  }
+
+  bool increasesLength() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->increasesLength();
+  }
+
+  static bool isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSingleSourceMask(Mask, NumSrcElts);
+  }
+
+  static bool isSingleSourceMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSingleSourceMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isSingleSource() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSingleSource();
+  }
+
+  static bool isIdentityMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isIdentityMask(Mask, NumSrcElts);
+  }
+
+  static bool isIdentityMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isIdentityMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isIdentity() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentity();
+  }
+
+  bool isIdentityWithPadding() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentityWithPadding();
+  }
+
+  bool isIdentityWithExtract() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isIdentityWithExtract();
+  }
+
+  bool isConcat() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isConcat();
+  }
+
+  static bool isSelectMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSelectMask(Mask, NumSrcElts);
+  }
+
+  static bool isSelectMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isSelectMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isSelect() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSelect();
+  }
+
+  static bool isReverseMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isReverseMask(Mask, NumSrcElts);
+  }
+
+  static bool isReverseMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isReverseMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isReverse() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isReverse();
+  }
+
+  static bool isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts);
+  }
+
+  static bool isZeroEltSplatMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isZeroEltSplatMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isZeroEltSplat() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isZeroEltSplat();
+  }
+
+  static bool isTransposeMask(ArrayRef<int> Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts);
+  }
+
+  static bool isTransposeMask(const Constant *Mask, int NumSrcElts) {
+    return llvm::ShuffleVectorInst::isTransposeMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts);
+  }
+
+  bool isTranspose() const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isTranspose();
+  }
+
+  static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index) {
+    return llvm::ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index);
+  }
+
+  static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
+    return llvm::ShuffleVectorInst::isSpliceMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, Index);
+  }
+
+  bool isSplice(int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isSplice(Index);
+  }
+
+  static bool isExtractSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
+                                     int &Index) {
+    return llvm::ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts,
+                                                           Index);
+  }
+
+  static bool isExtractSubvectorMask(const Constant *Mask, int NumSrcElts,
+                                     int &Index) {
+    return llvm::ShuffleVectorInst::isExtractSubvectorMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, Index);
+  }
+
+  bool isExtractSubvectorMask(int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isExtractSubvectorMask(Index);
+  }
+
+  static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index) {
+    return llvm::ShuffleVectorInst::isInsertSubvectorMask(Mask, NumSrcElts,
+                                                          NumSubElts, Index);
+  }
+
+  static bool isInsertSubvectorMask(const Constant *Mask, int NumSrcElts,
+                                    int &NumSubElts, int &Index) {
+    return llvm::ShuffleVectorInst::isInsertSubvectorMask(
+        cast<llvm::Constant>(Mask->Val), NumSrcElts, NumSubElts, Index);
+  }
+
+  bool isInsertSubvectorMask(int &NumSubElts, int &Index) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isInsertSubvectorMask(NumSubElts,
+                                                                     Index);
+  }
+
+  static bool isReplicationMask(ArrayRef<int> Mask, int &ReplicationFactor,
+                                int &VF) {
+    return llvm::ShuffleVectorInst::isReplicationMask(Mask, ReplicationFactor,
+                                                      VF);
+  }
+  static bool isReplicationMask(const Constant *Mask, int &ReplicationFactor,
+                                int &VF) {
+    return llvm::ShuffleVectorInst::isReplicationMask(cast<llvm::Constant>(Mask->Val), ReplicationFactor, VF);
+  }
+
+  /// Return true if this shuffle mask is a replication mask.
+  bool isReplicationMask(int &ReplicationFactor, int &VF) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isReplicationMask(
+        ReplicationFactor, VF);
+  }
+
+  static bool isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
+    return llvm::ShuffleVectorInst::isOneUseSingleSourceMask(Mask, VF);
+  }
+
+  bool isOneUseSingleSourceMask(int VF) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isOneUseSingleSourceMask(VF);
+  }
+
+  static void commuteShuffleMask(MutableArrayRef<int> Mask,
+                                 unsigned InVecNumElts) {
+    llvm::ShuffleVectorInst::commuteShuffleMask(Mask, InVecNumElts);
+  }
+
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts,
+                               SmallVectorImpl<unsigned> &StartIndexes) {
+    return llvm::ShuffleVectorInst::isInterleaveMask(Mask, Factor, NumInputElts,
+                                                     StartIndexes);
+  }
+
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts) {
+    return llvm::ShuffleVectorInst::isInterleaveMask(Mask, Factor,
+                                                     NumInputElts);
+  }
+
+  bool isInterleave(unsigned Factor) const {
+    return cast<llvm::ShuffleVectorInst>(Val)->isInterleave(Factor);
+  }
+
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
+                                         unsigned &Index) {
+    return llvm::ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor,
+                                                               Index);
+  }
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
+    return llvm::ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor);
+  }
+
+  static bool isBitRotateMask(ArrayRef<int> Mask, unsigned EltSizeInBits,
+                              unsigned MinSubElts, unsigned MaxSubElts,
+                              unsigned &NumSubElts, unsigned &RotateAmt) {
+    return llvm::ShuffleVectorInst::isBitRotateMask(
+        Mask, EltSizeInBits, MinSubElts, MaxSubElts, NumSubElts, RotateAmt);
   }
 };
 
@@ -2280,6 +2562,8 @@ protected:
   friend InsertElementInst; // For createInsertElementInst()
   ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
   friend ExtractElementInst; // For createExtractElementInst()
+  ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
+  friend ShuffleVectorInst; // For createShuffleVectorInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
