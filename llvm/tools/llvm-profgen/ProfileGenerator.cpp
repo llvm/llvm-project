@@ -1183,11 +1183,9 @@ void ProfileGeneratorBase::extractProbesFromRange(
     do {
       const AddressProbesMap &Address2ProbesMap =
           Binary->getAddress2ProbesMap();
-      auto It = Address2ProbesMap.find(IP.Address);
-      if (It != Address2ProbesMap.end()) {
-        for (const MCDecodedPseudoProbe &Probe : It->second) {
-          ProbeCounter[&Probe] += Count;
-        }
+      for (const MCDecodedPseudoProbe &Probe :
+           Address2ProbesMap.find(IP.Address)) {
+        ProbeCounter[&Probe] += Count;
       }
     } while (IP.advance() && IP.Address <= RangeEnd);
   }

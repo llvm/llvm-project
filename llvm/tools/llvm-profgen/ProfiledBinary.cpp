@@ -132,7 +132,7 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder) {
   ProbeFrameStack ProbeContext;
   for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
-    trackInlineesOptimizedAway(ProbeDecoder, *Child.second, ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, Child, ProbeContext);
 }
 
 void BinarySizeContextTracker::trackInlineesOptimizedAway(
@@ -160,9 +160,9 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 
   // DFS down the probe inline tree
   for (const auto &ChildNode : ProbeNode.getChildren()) {
-    InlineSite Location = ChildNode.first;
+    InlineSite Location = ChildNode.getInlineSite();
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second, ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, ChildNode, ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -454,8 +454,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
   // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
   // is available
   if (TrackFuncContextSize) {
-    for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
-      auto *Frame = Child.second.get();
+    for (auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
+      auto *Frame = &Child;
       StringRef FuncName =
           ProbeDecoder.getFuncDescForGUID(Frame->Guid)->FuncName;
       TopLevelProbeFrameMap[FuncName] = Frame;
