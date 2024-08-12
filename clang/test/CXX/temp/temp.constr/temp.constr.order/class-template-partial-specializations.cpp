@@ -33,11 +33,12 @@ class D{}; // expected-note{{previous definition is here}}
 template<typename T>
 class D<T>{}; // expected-error{{class template partial specialization does not specialize any template argument; to define the primary template, remove the template argument list}} expected-error{{redefinition of 'D'}}
 
-template<typename T> requires C1<T> // expected-note{{previous template declaration is here}}
-class E{};
+template<typename T> requires C1<T>
+class E{}; // expected-note{{previous definition is here}}
 
-template<typename T> // expected-error{{requires clause differs in template redeclaration}}
+template<typename T>
 class E<T>{}; // expected-error{{class template partial specialization does not specialize any template argument; to define the primary template, remove the template argument list}}
+              // expected-error@-1{{redefinition of 'E'}}
 
 template<typename T>
 struct F{ enum{ value = 1 }; };
