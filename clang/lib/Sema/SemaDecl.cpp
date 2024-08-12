@@ -4506,8 +4506,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   // Ensure the template parameters are compatible.
   if (NewTemplate &&
-      !TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
-                                      OldTemplate->getTemplateParameters(),
+      !TemplateParameterListsAreEqual(NewTemplate, NewTemplate->getTemplateParameters(),
+                                      OldTemplate, OldTemplate->getTemplateParameters(),
                                       /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
