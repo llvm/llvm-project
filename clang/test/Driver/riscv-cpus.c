@@ -1,5 +1,23 @@
 // Check target CPUs are correctly passed.
 
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=nutshell-rv32 | FileCheck -check-prefix=MCPU-NUTSHELL32 %s
+// MCPU-NUTSHELL32: "-nostdsysteminc" "-target-cpu" "nutshell-rv32"
+// MCPU-NUTSHELL32-SAME: "-target-feature" "+m"
+// MCPU-NUTSHELL32-SAME: "-target-feature" "+a"
+// MCPU-NUTSHELL32-SAME: "-target-feature" "+c"
+// MCPU-NUTSHELL32-SAME: "-target-feature" "+zicsr"
+// MCPU-NUTSHELL32-SAME: "-target-feature" "+zifencei"
+// MCPU-NUTSHELL32-SMAE: "-target-abi" "ilp32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=nutshell-rv64 | FileCheck -check-prefix=MCPU-NUTSHELL64 %s
+// MCPU-NUTSHELL64: "-nostdsysteminc" "-target-cpu" "nutshell-rv64"
+// MCPU-NUTSHELL64-SAME: "-target-feature" "+m"
+// MCPU-NUTSHELL64-SAME: "-target-feature" "+a"
+// MCPU-NUTSHELL64-SAME: "-target-feature" "+c"
+// MCPU-NUTSHELL64-SAME: "-target-feature" "+zicsr"
+// MCPU-NUTSHELL64-SAME: "-target-feature" "+zifencei"
+// MCPU-NUTSHELL64-SMAE: "-target-abi" "lp64"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=rocket-rv32 | FileCheck -check-prefix=MCPU-ROCKET32 %s
 // MCPU-ROCKET32: "-nostdsysteminc" "-target-cpu" "rocket-rv32"
 // MCPU-ROCKET32: "-target-feature" "+zicsr" "-target-feature" "+zifencei"

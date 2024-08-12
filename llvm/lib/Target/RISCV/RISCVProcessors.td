@@ -71,6 +71,28 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
+def NUTSHELL_RV32 : RISCVProcessorModel<"nutshell-rv32",
+                                        NoSchedModel,
+                                        [Feature32Bit,
+                                         FeatureStdExtI,
+                                         FeatureStdExtM,
+                                         FeatureStdExtA,
+                                         FeatureStdExtC,
+                                         FeatureStdExtZicsr,
+                                         FeatureStdExtZifencei
+                                        ]>;
+
+def NUTSHELL_RV64 : RISCVProcessorModel<"nutshell-rv64",
+                                        NoSchedModel,
+                                        [Feature64Bit,
+                                         FeatureStdExtI,
+                                         FeatureStdExtM,
+                                         FeatureStdExtA,
+                                         FeatureStdExtC,
+                                         FeatureStdExtZicsr,
+                                         FeatureStdExtZifencei
+                                        ]>;
+
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
                                       [Feature32Bit,
