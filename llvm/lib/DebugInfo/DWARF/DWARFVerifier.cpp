@@ -1646,6 +1646,13 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
     // unable to load the .dwo file from the .dwo or .dwp, it will return the
     // unit DIE of the DWARFUnit in "DU". So we need to check if the DWARFUnit
     // has a .dwo file, but we couldn't load it.
+
+    // FIXME: Need a follow up patch to fix usage of
+    // DWARFUnit::getNonSkeletonUnitDIE() so that it returns an empty DWARFDie
+    // if the .dwo file isn't available and clean up other uses of this function
+    // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
+    // will return the unit DIE of DU if we aren't able to get the .dwo file,
+    // but that is what the function currently does.
     DWARFDie NonSkeletonUnitDie = DU->getNonSkeletonUnitDIE();
     if (DU->getDWOId() && DU->getUnitDIE() == NonSkeletonUnitDie) {
       ErrorCategory.Report("Unable to get load .dwo file", [&]() {
