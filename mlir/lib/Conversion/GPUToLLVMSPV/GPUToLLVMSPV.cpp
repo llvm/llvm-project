@@ -346,9 +346,10 @@ struct GPUToLLVMSPVConversionPass final
 namespace mlir {
 namespace {
 static unsigned
-storageClassToOCLAddressSpace(spirv::StorageClass storageClass) {
+gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
   constexpr spirv::ClientAPI clientAPI = spirv::ClientAPI::OpenCL;
-  return storageClassToAddressSpace(clientAPI, storageClass);
+  return storageClassToAddressSpace(clientAPI,
+                                    addressSpaceToStorageClass(addressSpace));
 }
 } // namespace
 
@@ -362,9 +363,9 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                LaunchConfigOpConversion<gpu::GlobalIdOp>>(typeConverter);
   MLIRContext *context = &typeConverter.getContext();
   unsigned privateAddressSpace =
-      storageClassToOCLAddressSpace(spirv::StorageClass::Function);
+      gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Private);
   unsigned localAddressSpace =
-      storageClassToOCLAddressSpace(spirv::StorageClass::Workgroup);
+      gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Workgroup);
   OperationName llvmFuncOpName(LLVM::LLVMFuncOp::getOperationName(), context);
   StringAttr kernelBlockSizeAttributeName =
       LLVM::LLVMFuncOp::getReqdWorkGroupSizeAttrName(llvmFuncOpName);
@@ -378,9 +379,7 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
 }
 
 void populateGpuMemorySpaceAttributeConversions(TypeConverter &typeConverter) {
-  populateGpuMemorySpaceAttributeConversions(
-      typeConverter, [](gpu::AddressSpace space) -> unsigned {
-        return storageClassToOCLAddressSpace(addressSpaceToStorageClass(space));
-      });
+  populateGpuMemorySpaceAttributeConversions(typeConverter,
+                                             gpuAddressSpaceToOCLAddressSpace);
 }
 } // namespace mlir
