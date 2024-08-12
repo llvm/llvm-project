@@ -8962,17 +8962,6 @@ void ASTReader::ReadLateParsedTemplates(
   LateParsedTemplates.clear();
 }
 
-void ASTReader::AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {
-  if (Lambda->getLambdaContextDecl()) {
-    // Keep track of this lambda so it can be merged with another lambda that
-    // is loaded later.
-    LambdaDeclarationsForMerging.insert(
-        {{Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-          Lambda->getLambdaIndexInContext()},
-         const_cast<CXXRecordDecl *>(Lambda)});
-  }
-}
-
 void ASTReader::LoadSelector(Selector Sel) {
   // It would be complicated to avoid reading the methods anyway. So don't.
   ReadMethodPool(Sel);

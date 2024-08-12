@@ -4506,6 +4506,34 @@ void ASTReader::loadObjCCategories(GlobalDeclID ID, ObjCInterfaceDecl *D,
   ModuleMgr.visit(Visitor);
 }
 
+void ASTReader::AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {
+  if (Lambda->getLambdaContextDecl()) {
+    auto ContextAndIndexPair = std::make_pair<const Decl *, unsigned>(
+        Lambda->getLambdaContextDecl()->getCanonicalDecl(),
+        Lambda->getLambdaIndexInContext());
+
+    auto Iter = LambdaDeclarationsForMerging.find(ContextAndIndexPair);
+    // If we import first and then include second, try to merge the second
+    // one with the first one.
+    if (Iter != LambdaDeclarationsForMerging.end() &&
+        Iter->second->isFromASTFile()) {
+      NamedDecl *Slot = Iter->second;
+      ASTDeclMerger Merger(*this);
+      // The lambda shouldn't be a key declaration as the lambda wouldn't
+      // be a canonical decl for its owning module.
+      Merger.mergeRedeclarableImpl(const_cast<CXXRecordDecl *>(Lambda),
+                                   cast<TagDecl>(Slot),
+                                   /*KeyDeclID*/ GlobalDeclID());
+      return;
+    }
+
+    // Keep track of this lambda so it can be merged with another lambda that
+    // is loaded later.
+    LambdaDeclarationsForMerging.insert(
+        {ContextAndIndexPair, const_cast<CXXRecordDecl *>(Lambda)});
+  }
+}
+
 template<typename DeclT, typename Fn>
 static void forAllLaterRedecls(DeclT *D, Fn F) {
   F(D);
