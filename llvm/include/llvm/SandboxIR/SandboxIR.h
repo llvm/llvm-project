@@ -111,6 +111,7 @@ class Context;
 class Function;
 class Instruction;
 class SelectInst;
+class ExtractElementInst;
 class InsertElementInst;
 class BranchInst;
 class UnaryInstruction;
@@ -232,24 +233,25 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;           // For getting `Val`.
-  friend class User;              // For getting `Val`.
-  friend class Use;               // For getting `Val`.
-  friend class SelectInst;        // For getting `Val`.
-  friend class InsertElementInst; // For getting `Val`.
-  friend class BranchInst;        // For getting `Val`.
-  friend class LoadInst;          // For getting `Val`.
-  friend class StoreInst;         // For getting `Val`.
-  friend class ReturnInst;        // For getting `Val`.
-  friend class CallBase;          // For getting `Val`.
-  friend class CallInst;          // For getting `Val`.
-  friend class InvokeInst;        // For getting `Val`.
-  friend class CallBrInst;        // For getting `Val`.
-  friend class GetElementPtrInst; // For getting `Val`.
-  friend class AllocaInst;        // For getting `Val`.
-  friend class CastInst;          // For getting `Val`.
-  friend class PHINode;           // For getting `Val`.
-  friend class UnreachableInst;   // For getting `Val`.
+  friend class Context;            // For getting `Val`.
+  friend class User;               // For getting `Val`.
+  friend class Use;                // For getting `Val`.
+  friend class SelectInst;         // For getting `Val`.
+  friend class ExtractElementInst; // For getting `Val`.
+  friend class InsertElementInst;  // For getting `Val`.
+  friend class BranchInst;         // For getting `Val`.
+  friend class LoadInst;           // For getting `Val`.
+  friend class StoreInst;          // For getting `Val`.
+  friend class ReturnInst;         // For getting `Val`.
+  friend class CallBase;           // For getting `Val`.
+  friend class CallInst;           // For getting `Val`.
+  friend class InvokeInst;         // For getting `Val`.
+  friend class CallBrInst;         // For getting `Val`.
+  friend class GetElementPtrInst;  // For getting `Val`.
+  friend class AllocaInst;         // For getting `Val`.
+  friend class CastInst;           // For getting `Val`.
+  friend class PHINode;            // For getting `Val`.
+  friend class UnreachableInst;    // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -615,20 +617,21 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
-  friend class SelectInst;        // For getTopmostLLVMInstruction().
-  friend class InsertElementInst; // For getTopmostLLVMInstruction().
-  friend class BranchInst;        // For getTopmostLLVMInstruction().
-  friend class LoadInst;          // For getTopmostLLVMInstruction().
-  friend class StoreInst;         // For getTopmostLLVMInstruction().
-  friend class ReturnInst;        // For getTopmostLLVMInstruction().
-  friend class CallInst;          // For getTopmostLLVMInstruction().
-  friend class InvokeInst;        // For getTopmostLLVMInstruction().
-  friend class CallBrInst;        // For getTopmostLLVMInstruction().
-  friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
-  friend class AllocaInst;        // For getTopmostLLVMInstruction().
-  friend class CastInst;          // For getTopmostLLVMInstruction().
-  friend class PHINode;           // For getTopmostLLVMInstruction().
-  friend class UnreachableInst;   // For getTopmostLLVMInstruction().
+  friend class SelectInst;         // For getTopmostLLVMInstruction().
+  friend class ExtractElementInst; // For getTopmostLLVMInstruction().
+  friend class InsertElementInst;  // For getTopmostLLVMInstruction().
+  friend class BranchInst;         // For getTopmostLLVMInstruction().
+  friend class LoadInst;           // For getTopmostLLVMInstruction().
+  friend class StoreInst;          // For getTopmostLLVMInstruction().
+  friend class ReturnInst;         // For getTopmostLLVMInstruction().
+  friend class CallInst;           // For getTopmostLLVMInstruction().
+  friend class InvokeInst;         // For getTopmostLLVMInstruction().
+  friend class CallBrInst;         // For getTopmostLLVMInstruction().
+  friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class AllocaInst;         // For getTopmostLLVMInstruction().
+  friend class CastInst;           // For getTopmostLLVMInstruction().
+  friend class PHINode;            // For getTopmostLLVMInstruction().
+  friend class UnreachableInst;    // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -765,6 +768,37 @@ public:
                               const Value *Idx) {
     return llvm::InsertElementInst::isValidOperands(Vec->Val, NewElt->Val,
                                                     Idx->Val);
+  }
+};
+
+class ExtractElementInst final
+    : public SingleLLVMInstructionImpl<llvm::ExtractElementInst> {
+  /// Use Context::createExtractElementInst() instead.
+  ExtractElementInst(llvm::Instruction *I, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::ExtractElement,
+                                  Opcode::ExtractElement, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+
+public:
+  static Value *create(Value *Vec, Value *Idx, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Vec, Value *Idx, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ExtractElement;
+  }
+
+  static bool isValidOperands(const Value *Vec, const Value *Idx) {
+    return llvm::ExtractElementInst::isValidOperands(Vec->Val, Idx->Val);
+  }
+  Value *getVectorOperand() { return getOperand(0); }
+  Value *getIndexOperand() { return getOperand(1); }
+  const Value *getVectorOperand() const { return getOperand(0); }
+  const Value *getIndexOperand() const { return getOperand(1); }
+
+  VectorType *getVectorOperandType() const {
+    return cast<VectorType>(getVectorOperand()->getType());
   }
 };
 
@@ -1644,6 +1678,8 @@ protected:
   friend SelectInst; // For createSelectInst()
   InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
   friend InsertElementInst; // For createInsertElementInst()
+  ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
+  friend ExtractElementInst; // For createExtractElementInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
