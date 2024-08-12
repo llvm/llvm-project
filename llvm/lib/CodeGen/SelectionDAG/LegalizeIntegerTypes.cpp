@@ -1045,9 +1045,17 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   SDValue Op1 = N->getOperand(0);
   SDValue Op2 = N->getOperand(1);
   MatchContextClass matcher(DAG, TLI, N);
-  unsigned OldBits = Op1.getScalarValueSizeInBits();
 
   unsigned Opcode = matcher.getRootBaseOpcode();
+  unsigned OldBits = Op1.getScalarValueSizeInBits();
+
+  // USUBSAT can always be promoted as long as we have zero/sign-extended the
+  // args.
+  if (Opcode == ISD::USUBSAT) {
+    SExtOrZExtPromotedOperands(Op1, Op2);
+    return matcher.getNode(ISD::USUBSAT, dl, Op1.getValueType(), Op1, Op2);
+  }
+
   bool IsShift = Opcode == ISD::USHLSAT || Opcode == ISD::SSHLSAT;
 
   // FIXME: We need vp-aware PromotedInteger functions.
@@ -1055,7 +1063,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   if (IsShift) {
     Op1Promoted = GetPromotedInteger(Op1);
     Op2Promoted = ZExtPromotedInteger(Op2);
-  } else if (Opcode == ISD::UADDSAT || Opcode == ISD::USUBSAT) {
+  } else if (Opcode == ISD::UADDSAT) {
     Op1Promoted = ZExtPromotedInteger(Op1);
     Op2Promoted = ZExtPromotedInteger(Op2);
   } else {
@@ -1072,11 +1080,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
         matcher.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
     return matcher.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
   }
-
-  // USUBSAT can always be promoted as long as we have zero-extended the args.
-  if (Opcode == ISD::USUBSAT)
-    return matcher.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
-                           Op2Promoted);
 
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
