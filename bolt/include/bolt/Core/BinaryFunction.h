@@ -388,7 +388,7 @@ private:
   uint64_t RawBranchCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
-  uint64_t ExecutedBytes{0};
+  uint64_t SampleCountInBytes{0};
 
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
@@ -1847,7 +1847,7 @@ public:
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
-  uint64_t getExecutedBytes() const { return ExecutedBytes; }
+  uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
 
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.

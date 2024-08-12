@@ -1467,10 +1467,10 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       if (IsHotParentOfBOLTSplitFunction)
         for (const BinaryFunction *Fragment : Function.getFragments())
           Size += Fragment->getSize();
-      double Density = (double)1.0 * Function.getExecutedBytes() / Size;
+      double Density = (double)1.0 * Function.getSampleCountInBytes() / Size;
       FuncDensityList.emplace_back(Density, SampleCount);
       LLVM_DEBUG(BC.outs() << Function << ": executed bytes "
-                           << Function.getExecutedBytes() << ", size (b) "
+                           << Function.getSampleCountInBytes() << ", size (b) "
                            << Size << ", density " << Density
                            << ", sample count " << SampleCount << '\n');
     }
