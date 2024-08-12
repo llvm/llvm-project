@@ -3,9 +3,6 @@
 ## split unit from the DWP file. This can sometimes happen when the compile unit
 ## is nearly empty (e.g. because LTO has optimized all of it away).
 
-# Is flaky on Windows on Arm.
-# UNSUPPORTED: system-windows
-
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s --defsym MAIN=0 > %t
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t.dwp
 # RUN: %lldb %t -o "image lookup -t my_enum_type" \
