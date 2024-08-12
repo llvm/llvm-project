@@ -2386,7 +2386,7 @@ static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
   } else {
     return nullptr;
   }
-  return CastInst::CreateBitOrPointerCast(NewSel, Sel.getType());
+  return new BitCastInst(NewSel, Sel.getType());
 }
 
 /// Try to eliminate select instructions that test the returned flag of cmpxchg

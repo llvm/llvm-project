@@ -6754,6 +6754,12 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
     StoredIdx = Idx;
 }
 
+void ASTWriter::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  assert(D->isCanonicalDecl() && "predefined decl is not canonical");
+  DeclIDs[D] = LocalDeclID(ID);
+  PredefinedDecls.insert(D);
+}
+
 void ASTWriter::SelectorRead(SelectorID ID, Selector S) {
   // Always keep the highest ID. See \p TypeRead() for more information.
   SelectorID &StoredID = SelectorIDs[S];
