@@ -209,8 +209,15 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
+static cl::opt<bool> SPVEnableNonSemanticDI(
+    "spv-emit-nonsemantic-debug-info",
+    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::Optional, cl::init(false));
+
 void SPIRVPassConfig::addPreEmitPass() {
-  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  if (SPVEnableNonSemanticDI) {
+    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  }
 }
 
 namespace {
