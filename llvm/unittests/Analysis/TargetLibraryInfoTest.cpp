@@ -255,6 +255,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @modf(double, double*)\n"
       "declare float @modff(float, float*)\n"
       "declare x86_fp80 @modfl(x86_fp80, x86_fp80*)\n"
+      "declare double @nan(ptr)\n"
+      "declare float @nanf(ptr)\n"
+      "declare x86_fp80 @nanl(ptr)\n"
       "declare double @nearbyint(double)\n"
       "declare float @nearbyintf(float)\n"
       "declare x86_fp80 @nearbyintl(x86_fp80)\n"
@@ -469,6 +472,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, %struct*)\n"
       "declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, "
       "%struct*, i8)\n"
+      "declare %struct @__size_returning_new(i64)\n"
+      "declare %struct @__size_returning_new_hot_cold(i64, i8)\n"
+      "declare %struct @__size_returning_new_aligned(i64, i64)\n"
+      "declare %struct @__size_returning_new_aligned_hot_cold(i64, i64, i8)\n"
 
       "declare void @\"??3@YAXPEAX@Z\"(i8*)\n"
       "declare void @\"??3@YAXPEAXAEBUnothrow_t@std@@@Z\"(i8*, %struct*)\n"
@@ -499,6 +506,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_release(%struct*)\n"
 
       "declare i32 @atexit(void ()*)\n"
+
+      "declare void @abort()\n"
+      "declare void @exit(i32)\n"
+      "declare void @_Exit(i32)\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 

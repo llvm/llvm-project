@@ -133,7 +133,7 @@ subroutine sub4()
   integer, parameter :: n = 10
   real, device :: adev(n)
   real :: ahost(n)
-  real :: b
+  real, managed :: b
   integer :: i
 
   adev = ahost

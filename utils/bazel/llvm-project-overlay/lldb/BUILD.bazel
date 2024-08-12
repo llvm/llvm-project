@@ -432,6 +432,7 @@ cc_library(
         ":Version",
         "//clang:codegen",
         "//clang:frontend",
+        "//clang:serialization",
         "//llvm:Support",
     ],
 )

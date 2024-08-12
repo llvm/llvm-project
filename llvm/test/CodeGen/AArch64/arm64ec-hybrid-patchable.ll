@@ -238,7 +238,7 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .symidx exp
 ; CHECK-NEXT:      .word   0
 ; CHECK-NEXT:      .section        .drectve,"yni"
-; CHECK-NEXT:      .ascii  " /EXPORT:\"#exp$hp_target,EXPORTAS,exp$hp_target\""
+; CHECK-NEXT:      .ascii  " /EXPORT:exp"
 
 ; CHECK-NEXT:      .def    func;
 ; CHECK-NEXT:      .scl    2;

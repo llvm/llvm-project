@@ -7,8 +7,8 @@ template <typename T> class vector {
 public:
   using iterator = T *;
   using const_iterator = const T *;
-  using reverse_iterator = T*;
-  using reverse_const_iterator = const T*;
+  using reverse_iterator = T *;
+  using reverse_const_iterator = const T *;
 
   constexpr const_iterator begin() const;
   constexpr const_iterator end() const;
@@ -72,8 +72,8 @@ template <typename Container> constexpr auto crend(const Container &Cont) {
   return Cont.crend();
 }
 // Find
-template< class InputIt, class T >
-InputIt find( InputIt first, InputIt last, const T& value );
+template <class InputIt, class T>
+InputIt find(InputIt first, InputIt last, const T &value);
 
 // Reverse
 template <typename Iter> void reverse(Iter begin, Iter end);
@@ -82,6 +82,7 @@ template <typename Iter> void reverse(Iter begin, Iter end);
 template <class InputIt1, class InputIt2>
 bool includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
 
+inline namespace _V1 {
 // IsPermutation
 template <class ForwardIt1, class ForwardIt2>
 bool is_permutation(ForwardIt1 first1, ForwardIt1 last1, ForwardIt2 first2);
@@ -97,9 +98,10 @@ template <class InputIt1, class InputIt2>
 bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
 
 template <class InputIt1, class InputIt2, class BinaryPred>
-bool equal(InputIt1 first1, InputIt1 last1,
-           InputIt2 first2, InputIt2 last2, BinaryPred p) {
-  // Need a definition to suppress undefined_internal_type when invoked with lambda
+bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2,
+           BinaryPred p) {
+  // Need a definition to suppress undefined_internal_type when invoked with
+  // lambda
   return true;
 }
 
@@ -108,6 +110,7 @@ void iota(ForwardIt first, ForwardIt last, T value);
 
 template <class ForwardIt>
 ForwardIt rotate(ForwardIt first, ForwardIt middle, ForwardIt last);
+} // namespace _V1
 
 } // namespace std
 

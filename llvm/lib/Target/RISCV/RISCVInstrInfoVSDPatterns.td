@@ -41,24 +41,6 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 
-multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
-                                        int log2sew,
-                                        LMULInfo vlmul,
-                                        VReg reg_class,
-                                        int sew = !shl(1, log2sew)> {
-  defvar load_instr =
-    !cast<Instruction>("VL"#!substr(vlmul.MX, 1)#"RE"#sew#"_V");
-  defvar store_instr =
-    !cast<Instruction>("VS"#!substr(vlmul.MX, 1)#"R_V");
-
-  // Load
-  def : Pat<(type (load GPR:$rs1)),
-            (load_instr GPR:$rs1)>;
-  // Store
-  def : Pat<(store type:$rs2, GPR:$rs1),
-            (store_instr reg_class:$rs2, GPR:$rs1)>;
-}
-
 multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
   defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
@@ -895,23 +877,11 @@ multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 //===----------------------------------------------------------------------===//
 
 // 7.4. Vector Unit-Stride Instructions
-foreach vti = !listconcat(FractionalGroupIntegerVectors,
-                          FractionalGroupFloatVectors,
-                          FractionalGroupBFloatVectors) in
+foreach vti = AllVectors in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
                        GetVTypePredicates<vti>.Predicates) in 
   defm : VPatUSLoadStoreSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
-foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VBF16M1, VF16M1, VF32M1, VF64M1] in
-  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
-  defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
-                                      vti.RegClass>;
-foreach vti = !listconcat(GroupIntegerVectors, GroupFloatVectors, GroupBFloatVectors) in
-  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       GetVTypePredicates<vti>.Predicates) in 
-  defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
-                                      vti.RegClass>;
 foreach mti = AllMasks in
   let Predicates = [HasVInstructions] in
   defm : VPatUSLoadStoreMaskSDNode<mti>;
@@ -1460,7 +1430,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16] in
+  let Predicates = [HasVInstructionsBF16Minimal] in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),
@@ -1474,14 +1444,14 @@ foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
 //===----------------------------------------------------------------------===//
 // Vector Element Extracts
 //===----------------------------------------------------------------------===//
-foreach vti = AllFloatVectors in {
-  defvar vmv_f_s_inst = !cast<Instruction>(!strconcat("PseudoVFMV_",
+foreach vti = NoGroupFloatVectors in {
+  defvar vfmv_f_s_inst = !cast<Instruction>(!strconcat("PseudoVFMV_",
                                                        vti.ScalarSuffix,
-                                                       "_S_", vti.LMul.MX));
+                                                       "_S"));
   // Only pattern-match extract-element operations where the index is 0. Any
   // other index will have been custom-lowered to slide the vector correctly
   // into place.
   let Predicates = GetVTypePredicates<vti>.Predicates in
   def : Pat<(vti.Scalar (extractelt (vti.Vector vti.RegClass:$rs2), 0)),
-            (vmv_f_s_inst vti.RegClass:$rs2, vti.Log2SEW)>;
+            (vfmv_f_s_inst vti.RegClass:$rs2, vti.Log2SEW)>;
 }

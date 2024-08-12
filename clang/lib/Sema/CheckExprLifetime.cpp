@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CheckExprLifetime.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
@@ -548,6 +549,14 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                        EnableLifetimeWarnings);
   }
 
+  if (auto *M = dyn_cast<MemberExpr>(Init)) {
+    // Lifetime of a non-reference type field is same as base object.
+    if (auto *F = dyn_cast<FieldDecl>(M->getMemberDecl());
+        F && !F->getType()->isReferenceType())
+      visitLocalsRetainedByInitializer(Path, M->getBase(), Visit, true,
+                                       EnableLifetimeWarnings);
+  }
+
   if (isa<CallExpr>(Init)) {
     if (EnableLifetimeWarnings)
       handleGslAnnotatedTypes(Path, Init, Visit);
@@ -816,7 +825,6 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (auto *CCE = dyn_cast<CXXConstructExpr>(Init)) {
     if (CCE->getConstructor()->isCopyOrMoveConstructor()) {
       if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(CCE->getArg(0))) {
-        // assert(false && "hit temporary copy path");
         Expr *Arg = MTE->getSubExpr();
         Path.push_back({IndirectLocalPathEntry::TemporaryCopy, Arg,
                         CCE->getConstructor()});

@@ -839,7 +839,7 @@ public:
   Type *
   getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
                             unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                            unsigned SrcAlign, unsigned DestAlign,
+                            Align SrcAlign, Align DestAlign,
                             std::optional<uint32_t> AtomicElementSize) const {
     return AtomicElementSize ? Type::getIntNTy(Context, *AtomicElementSize * 8)
                              : Type::getInt8Ty(Context);
@@ -848,7 +848,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const {
     unsigned OpSizeInBytes = AtomicCpySize ? *AtomicCpySize : 1;
     Type *OpType = Type::getIntNTy(Context, OpSizeInBytes * 8);
@@ -1389,7 +1389,7 @@ public:
 
         bool IsUnary = isa<UndefValue>(Operands[1]);
         NumSubElts = VecSrcTy->getElementCount().getKnownMinValue();
-        SmallVector<int, 16> AdjustMask(Mask.begin(), Mask.end());
+        SmallVector<int, 16> AdjustMask(Mask);
 
         // Widening shuffle - widening the source(s) to the new length
         // (treated as free - see above), and then perform the adjusted

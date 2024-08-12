@@ -455,9 +455,9 @@ An example build would look like:
 
   $ ninja -C build cxx-benchmarks
 
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
+This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
+``build/libcxx/test/benchmarks``.
 
 Also See:
 
@@ -474,9 +474,9 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.bench.out # Runs all the benchmarks
-  $ ./algorithms.bench.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ cd build/libcxx/test/benchmarks
+  $ ./find.bench.out # Runs all the benchmarks
+  $ ./find.bench.out --benchmark_filter="bm_ranges_find<std::vector<char>>" # Only runs that specific benchmark
 
 For more information about running benchmarks see `Google Benchmark`_.
 

@@ -17,6 +17,7 @@
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)
 #endif
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
+MODULE_ANALYSIS("machine-module-info", MachineModuleAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #undef MODULE_ANALYSIS
 
@@ -52,7 +53,6 @@ FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
-FUNCTION_PASS("expandvp", ExpandVectorPredicationPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass(TM))
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass(TM))

@@ -781,7 +781,7 @@ define void @string_type(ptr %arg1) {
 !6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
 !7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
-!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6);
+!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6, flags: 64);
 !10 = !DILocation(line: 1, column: 2, scope: !5)
 
 ; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
@@ -791,3 +791,4 @@ define void @string_type(ptr %arg1) {
 ; CHECK-SAME: stringLength = #[[VAR]]
 ; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
 ; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "str", file = #di_file, type = #di_string_type, flags = Artificial>

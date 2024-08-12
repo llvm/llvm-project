@@ -44,6 +44,7 @@ public:
 
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
+  void initScope(unsigned Idx);
 
   /// Pops the arguments off the stack.
   void popArgs();

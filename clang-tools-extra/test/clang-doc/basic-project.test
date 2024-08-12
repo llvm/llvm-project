@@ -58,13 +58,13 @@
 // HTML-SHAPE: <p>Defined at line 8 of file {{.*}}Shape.h</p>
 // HTML-SHAPE: <p> Provides a common interface for different types of shapes.</p>
 // HTML-SHAPE: <h2 id="Functions">Functions</h2>
-// HTML-SHAPE: <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
-// HTML-SHAPE: <p>public void ~Shape()</p>
-// HTML-SHAPE: <p>Defined at line 13 of file {{.*}}Shape.h</p>
 // HTML-SHAPE: <h3 id="{{([0-9A-F]{40})}}">area</h3>
 // HTML-SHAPE: <p>public double area()</p>
 // HTML-SHAPE: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
 // HTML-SHAPE: <p>public double perimeter()</p>
+// HTML-SHAPE: <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
+// HTML-SHAPE: <p>public void ~Shape()</p>
+// HTML-SHAPE: <p>Defined at line 13 of file {{.*}}Shape.h</p>
 
 // HTML-CALC:  <h1>class Calculator</h1>
 // HTML-CALC:  <p>Defined at line 8 of file {{.*}}Calculator.h</p>

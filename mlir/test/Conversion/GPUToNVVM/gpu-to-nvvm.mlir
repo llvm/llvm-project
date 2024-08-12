@@ -254,13 +254,16 @@ gpu.module @test_module_9 {
 gpu.module @test_module_10 {
   // CHECK: llvm.func @__nv_cosf(f32) -> f32
   // CHECK: llvm.func @__nv_cos(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_cosf(f32) -> f32
   // CHECK-LABEL: func @gpu_cos
-  func.func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.cos %arg_f32 : f32
     // CHECK: llvm.call @__nv_cosf(%{{.*}}) : (f32) -> f32
     %result64 = math.cos %arg_f64 : f64
     // CHECK: llvm.call @__nv_cos(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.cos %arg_f32 fastmath<afn> : f32
+    // CHECK: llvm.call @__nv_fast_cosf(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -268,13 +271,16 @@ gpu.module @test_module_10 {
 gpu.module @test_module_11 {
   // CHECK: llvm.func @__nv_expf(f32) -> f32
   // CHECK: llvm.func @__nv_exp(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_expf(f32) -> f32
   // CHECK-LABEL: func @gpu_exp
-  func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.exp %arg_f32 : f32
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     %result64 = math.exp %arg_f64 : f64
     // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.exp %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_fast_expf(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -297,13 +303,16 @@ gpu.module @test_module_12 {
 gpu.module @test_module_13 {
   // CHECK: llvm.func @__nv_logf(f32) -> f32
   // CHECK: llvm.func @__nv_log(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_logf(f32) -> f32
   // CHECK-LABEL: func @gpu_log
-  func.func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.log %arg_f32 : f32
     // CHECK: llvm.call @__nv_logf(%{{.*}}) : (f32) -> f32
     %result64 = math.log %arg_f64 : f64
     // CHECK: llvm.call @__nv_log(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.log %arg_f32 fastmath<afn> : f32
+    // CHECK: llvm.call @__nv_fast_logf(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -312,13 +321,16 @@ gpu.module @test_module_13 {
 gpu.module @test_module_14 {
   // CHECK: llvm.func @__nv_log10f(f32) -> f32
   // CHECK: llvm.func @__nv_log10(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_log10f(f32) -> f32
   // CHECK-LABEL: func @gpu_log10
-  func.func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.log10 %arg_f32 : f32
     // CHECK: llvm.call @__nv_log10f(%{{.*}}) : (f32) -> f32
     %result64 = math.log10 %arg_f64 : f64
     // CHECK: llvm.call @__nv_log10(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.log10 %arg_f32 fastmath<afn> : f32
+    // CHECK: llvm.call @__nv_fast_log10f(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -342,13 +354,16 @@ gpu.module @test_module_15 {
 gpu.module @test_module_16 {
   // CHECK: llvm.func @__nv_log2f(f32) -> f32
   // CHECK: llvm.func @__nv_log2(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_log2f(f32) -> f32
   // CHECK-LABEL: func @gpu_log2
-  func.func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.log2 %arg_f32 : f32
     // CHECK: llvm.call @__nv_log2f(%{{.*}}) : (f32) -> f32
     %result64 = math.log2 %arg_f64 : f64
     // CHECK: llvm.call @__nv_log2(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.log2 %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_fast_log2f(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -357,13 +372,16 @@ gpu.module @test_module_16 {
 gpu.module @test_module_17 {
   // CHECK: llvm.func @__nv_sinf(f32) -> f32
   // CHECK: llvm.func @__nv_sin(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_sinf(f32) -> f32
   // CHECK-LABEL: func @gpu_sin
-  func.func @gpu_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.sin %arg_f32 : f32
     // CHECK: llvm.call @__nv_sinf(%{{.*}}) : (f32) -> f32
     %result64 = math.sin %arg_f64 : f64
     // CHECK: llvm.call @__nv_sin(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.sin %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_fast_sinf(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -372,8 +390,9 @@ gpu.module @test_module_17 {
 gpu.module @test_module_18 {
   // CHECK: llvm.func @__nv_tanf(f32) -> f32
   // CHECK: llvm.func @__nv_tan(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_tanf(f32) -> f32
   // CHECK-LABEL: func @gpu_tan
-  func.func @gpu_tan(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+  func.func @gpu_tan(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64, f32) {
     %result16 = math.tan %arg_f16 : f16
     // CHECK: llvm.fpext %{{.*}} : f16 to f32
     // CHECK-NEXT: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
@@ -382,7 +401,9 @@ gpu.module @test_module_18 {
     // CHECK: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
     %result64 = math.tan %arg_f64 : f64
     // CHECK: llvm.call @__nv_tan(%{{.*}}) : (f64) -> f64
-    func.return %result16, %result32, %result64 : f16, f32, f64
+    %result32Fast = math.tan %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_fast_tanf(%{{.*}}) : (f32) -> f32
+    func.return %result16, %result32, %result64, %result32Fast : f16, f32, f64, f32
   }
 }
 
@@ -494,13 +515,16 @@ gpu.module @test_module_24 {
   // CHECK: test.symbol_scope
   // CHECK: llvm.func @__nv_expf(f32) -> f32
   // CHECK: llvm.func @__nv_exp(f64) -> f64
+  // CHECK: llvm.func @__nv_fast_expf(f32) -> f32
   // CHECK-LABEL: func @gpu_exp
-    func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
       %result32 = math.exp %arg_f32 : f32
       // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
       %result64 = math.exp %arg_f64 : f64
       // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
-      func.return %result32, %result64 : f32, f64
+      %result32Fast = math.exp %arg_f32 fastmath<afn> : f32
+      // CHECK: llvm.call @__nv_fast_expf(%{{.*}}) : (f32) -> f32
+      func.return %result32, %result64, %result32Fast : f32, f64, f32
     }
     "test.finish" () : () -> ()
   }) : () -> ()
@@ -526,13 +550,16 @@ gpu.module @test_module_25 {
 gpu.module @test_module_26 {
   // CHECK: llvm.func @__nv_powf(f32, f32) -> f32
   // CHECK: llvm.func @__nv_pow(f64, f64) -> f64
+  // CHECK: llvm.func @__nv_fast_powf(f32, f32) -> f32
   // CHECK-LABEL: func @gpu_pow
-  func.func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
     %result32 = math.powf %arg_f32, %arg_f32 : f32
     // CHECK: llvm.call @__nv_powf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
     %result64 = math.powf %arg_f64, %arg_f64 : f64
     // CHECK: llvm.call @__nv_pow(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    %result32Fast = math.powf %arg_f32, %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_fast_powf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
   }
 }
 
@@ -701,6 +728,194 @@ gpu.module @test_module_34 {
   }
 }
 
+gpu.module @test_module_35 {
+  // CHECK: llvm.func @__nv_acosf(f32) -> f32
+  // CHECK: llvm.func @__nv_acos(f64) -> f64
+  // CHECK-LABEL: func @gpu_acos
+  func.func @gpu_acos(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.acos %arg_f32 : f32
+    // CHECK: llvm.call @__nv_acosf(%{{.*}}) : (f32) -> f32
+    %result64 = math.acos %arg_f64 : f64
+    // CHECK: llvm.call @__nv_acos(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_36 {
+  // CHECK: llvm.func @__nv_acoshf(f32) -> f32
+  // CHECK: llvm.func @__nv_acosh(f64) -> f64
+  // CHECK-LABEL: func @gpu_acosh
+  func.func @gpu_acosh(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.acosh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_acoshf(%{{.*}}) : (f32) -> f32
+    %result64 = math.acosh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_acosh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_37 {
+  // CHECK: llvm.func @__nv_asinf(f32) -> f32
+  // CHECK: llvm.func @__nv_asin(f64) -> f64
+  // CHECK-LABEL: func @gpu_asin
+  func.func @gpu_asin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.asin %arg_f32 : f32
+    // CHECK: llvm.call @__nv_asinf(%{{.*}}) : (f32) -> f32
+    %result64 = math.asin %arg_f64 : f64
+    // CHECK: llvm.call @__nv_asin(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_38 {
+  // CHECK: llvm.func @__nv_asinhf(f32) -> f32
+  // CHECK: llvm.func @__nv_asinh(f64) -> f64
+  // CHECK-LABEL: func @gpu_asinh
+  func.func @gpu_asinh(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.asinh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_asinhf(%{{.*}}) : (f32) -> f32
+    %result64 = math.asinh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_asinh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_39 {
+  // CHECK: llvm.func @__nv_atanhf(f32) -> f32
+  // CHECK: llvm.func @__nv_atanh(f64) -> f64
+  // CHECK-LABEL: func @gpu_atanh
+  func.func @gpu_atanh(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
+      -> (f16, f32, f64) {
+    %result16 = math.atanh %arg_f16 : f16
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_atanhf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
+    %result32 = math.atanh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_atanhf(%{{.*}}) : (f32) -> f32
+    %result64 = math.atanh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_atanh(%{{.*}}) : (f64) -> f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+gpu.module @test_module_40 {
+  // CHECK: llvm.func @__nv_copysignf(f32, f32) -> f32
+  // CHECK: llvm.func @__nv_copysign(f64, f64) -> f64
+  // CHECK-LABEL: func @gpu_copysign
+  func.func @gpu_copysign(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.copysign %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__nv_copysignf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+    %result64 = math.copysign %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__nv_copysign(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_41 {
+  // CHECK: llvm.func @__nv_coshf(f32) -> f32
+  // CHECK: llvm.func @__nv_cosh(f64) -> f64
+  // CHECK-LABEL: func @gpu_cosh
+  func.func @gpu_cosh(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.cosh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_coshf(%{{.*}}) : (f32) -> f32
+    %result64 = math.cosh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_cosh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_42 {
+  // CHECK: llvm.func @__nv_fmaf(f32, f32, f32) -> f32
+  // CHECK: llvm.func @__nv_fma(f64, f64, f64) -> f64
+  // CHECK-LABEL: func @gpu_fma
+  func.func @gpu_fma(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.fma %arg_f32, %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__nv_fmaf(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
+    %result64 = math.fma %arg_f64, %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__nv_fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_43 {
+  // CHECK: llvm.func @__nv_roundf(f32) -> f32
+  // CHECK: llvm.func @__nv_round(f64) -> f64
+  // CHECK-LABEL: func @gpu_round
+  func.func @gpu_round(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.round %arg_f32 : f32
+    // CHECK: llvm.call @__nv_roundf(%{{.*}}) : (f32) -> f32
+    %result64 = math.round %arg_f64 : f64
+    // CHECK: llvm.call @__nv_round(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_44 {
+  // CHECK: llvm.func @__nv_rintf(f32) -> f32
+  // CHECK: llvm.func @__nv_rint(f64) -> f64
+  // CHECK-LABEL: func @gpu_roundeven
+  func.func @gpu_roundeven(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.roundeven %arg_f32 : f32
+    // CHECK: llvm.call @__nv_rintf(%{{.*}}) : (f32) -> f32
+    %result64 = math.roundeven %arg_f64 : f64
+    // CHECK: llvm.call @__nv_rint(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_45 {
+  // CHECK: llvm.func @__nv_sinhf(f32) -> f32
+  // CHECK: llvm.func @__nv_sinh(f64) -> f64
+  // CHECK-LABEL: func @gpu_sinh
+  func.func @gpu_sinh(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.sinh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_sinhf(%{{.*}}) : (f32) -> f32
+    %result64 = math.sinh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_sinh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_46 {
+  // CHECK: llvm.func @__nv_coshf(f32) -> f32
+  // CHECK: llvm.func @__nv_cosh(f64) -> f64
+  // CHECK-LABEL: func @gpu_cosh_with_fastmath
+  func.func @gpu_cosh_with_fastmath(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.cosh %arg_f32 fastmath<fast> : f32
+    // CHECK: llvm.call @__nv_coshf(%{{.*}}) : (f32) -> f32
+    %result64 = math.cosh %arg_f64 fastmath<afn> : f64
+    // CHECK: llvm.call @__nv_cosh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_47 {
+  // CHECK: llvm.func @__nv_sinhf(f32) -> f32
+  // CHECK: llvm.func @__nv_sinh(f64) -> f64
+  // CHECK-LABEL: func @gpu_sinh_with_fastmath
+  func.func @gpu_sinh_with_fastmath(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.sinh %arg_f32 fastmath<contract> : f32
+    // CHECK: llvm.call @__nv_sinhf(%{{.*}}) : (f32) -> f32
+    %result64 = math.sinh %arg_f64 fastmath<none> : f64
+    // CHECK: llvm.call @__nv_sinh(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_48 {
+  // CHECK: llvm.func @__nv_expf(f32) -> f32
+  // CHECK: llvm.func @__nv_exp(f64) -> f64
+  // CHECK-LABEL: func @gpu_exp_with_fastmath
+  func.func @gpu_exp_with_fastmath(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64, f32) {
+    %result32 = math.exp %arg_f32 fastmath<reassoc>: f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    %result64 = math.exp %arg_f64 fastmath<contract>: f64
+    // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
+    %result32Fast = math.exp %arg_f32 fastmath<ninf> : f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    func.return %result32, %result64, %result32Fast : f32, f64, f32
+  }
+}
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
@@ -729,9 +944,9 @@ module attributes {transform.with_named_sequence} {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
       legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
       illegal_dialects = ["gpu"],
-      illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
-                    "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2","llvm.pow",
-                    "llvm.sin", "llvm.sqrt"],
+      illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
+                    "llvm.ffloor", "llvm.fma", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
+                    "llvm.roundeven", "llvm.round", "llvm.sin", "llvm.sqrt"],
       partial_conversion
     } : !transform.any_op
     transform.yield

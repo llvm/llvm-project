@@ -213,6 +213,12 @@ static cl::opt<bool> RenumberBlocksBeforeView(
         "into a dot graph. Only used when a function is being printed."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
+    "ext-tsp-block-placement-max-blocks",
+    cl::desc("Maximum number of basic blocks in a function to run ext-TSP "
+             "block placement."),
+    cl::init(UINT_MAX), cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -2596,7 +2602,15 @@ void MachineBlockPlacement::rotateLoopWithProfile(
 /// otherwise, collect all blocks in the loop.
 MachineBlockPlacement::BlockFilterSet
 MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
-  BlockFilterSet LoopBlockSet;
+  // Collect the blocks in a set ordered by block number, as this gives the same
+  // order as they appear in the function.
+  struct MBBCompare {
+    bool operator()(const MachineBasicBlock *X,
+                    const MachineBasicBlock *Y) const {
+      return X->getNumber() < Y->getNumber();
+    }
+  };
+  std::set<const MachineBasicBlock *, MBBCompare> LoopBlockSet;
 
   // Filter cold blocks off from LoopBlockSet when profile data is available.
   // Collect the sum of frequencies of incoming edges to the loop header from
@@ -2627,7 +2641,11 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   } else
     LoopBlockSet.insert(L.block_begin(), L.block_end());
 
-  return LoopBlockSet;
+  // Copy the blocks into a BlockFilterSet, as iterating it is faster than
+  // std::set. We will only remove blocks and never insert them, which will
+  // preserve the ordering.
+  BlockFilterSet Ret(LoopBlockSet.begin(), LoopBlockSet.end());
+  return Ret;
 }
 
 /// Forms basic block chains from the natural loop structures.
@@ -3511,7 +3529,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   // Apply a post-processing optimizing block placement.
   if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData())) {
+      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
+      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
 
@@ -3630,6 +3649,11 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
+  // At this point, we possibly removed blocks from the function, so we can't
+  // renumber the domtree. At this point, we don't need it anymore, though.
+  // TODO: move this to the point where the dominator tree is actually
+  // invalidated (i.e., where blocks are removed without updating the domtree).
+  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

@@ -23,11 +23,10 @@ private:
   bool Valid;
 
 public:
-  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {
-    assert(Func);
-  }
+  FunctionPointer() = default;
+  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {}
 
-  FunctionPointer(uintptr_t IntVal = 0, const Descriptor *Desc = nullptr)
+  FunctionPointer(uintptr_t IntVal, const Descriptor *Desc = nullptr)
       : Func(reinterpret_cast<const Function *>(IntVal)), Valid(false) {}
 
   const Function *getFunction() const { return Func; }

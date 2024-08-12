@@ -226,6 +226,8 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " primitive-array";
   else if (isCompositeArray())
     OS << " composite-array";
+  else if (isUnion())
+    OS << " union";
   else if (isRecord())
     OS << " record";
   else if (isPrimitive())
@@ -250,6 +252,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "IsInitialized: " << IsInitialized << "\n";
   OS << "IsBase: " << IsBase << "\n";
   OS << "IsActive: " << IsActive << "\n";
+  OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "Desc: ";
   if (Desc)
@@ -278,10 +281,15 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS << "\n";
   OS.indent(Spaces) << "This: " << getThis() << "\n";
   OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  OS.indent(Spaces) << "Depth: " << Depth << "\n";
+  OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
+  OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+  OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+  OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
+                    << "\n";
 
-  while (const InterpFrame *F = this->Caller) {
+  for (const InterpFrame *F = this->Caller; F; F = F->Caller) {
     F->dump(OS, Indent + 1);
-    F = F->Caller;
   }
 }
 

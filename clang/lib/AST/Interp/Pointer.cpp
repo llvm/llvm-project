@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 
 using namespace clang;
@@ -55,11 +56,12 @@ Pointer::Pointer(Pointer &&P)
 }
 
 Pointer::~Pointer() {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return;
 
   if (Block *Pointee = PointeeStorage.BS.Pointee) {
     Pointee->removePointer(this);
+    PointeeStorage.BS.Pointee = nullptr;
     Pointee->cleanup();
   }
 }
@@ -67,12 +69,17 @@ Pointer::~Pointer() {
 void Pointer::operator=(const Pointer &P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
-  bool WasBlockPointer = isBlockPointer();
-  if (StorageKind == Storage::Block) {
-    Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && Old) {
-      PointeeStorage.BS.Pointee->removePointer(this);
-      Old->cleanup();
+  if (isBlockPointer()) {
+    if (P.isBlockPointer() && this->block() == P.block()) {
+      Offset = P.Offset;
+      PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
+      return;
+    }
+
+    if (Block *Pointee = PointeeStorage.BS.Pointee) {
+      Pointee->removePointer(this);
+      PointeeStorage.BS.Pointee = nullptr;
+      Pointee->cleanup();
     }
   }
 
@@ -87,6 +94,8 @@ void Pointer::operator=(const Pointer &P) {
       PointeeStorage.BS.Pointee->addPointer(this);
   } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
+  } else if (P.isFunctionPointer()) {
+    PointeeStorage.Fn = P.PointeeStorage.Fn;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -95,12 +104,18 @@ void Pointer::operator=(const Pointer &P) {
 void Pointer::operator=(Pointer &&P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
-  bool WasBlockPointer = isBlockPointer();
-  if (StorageKind == Storage::Block) {
-    Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && Old) {
-      PointeeStorage.BS.Pointee->removePointer(this);
-      Old->cleanup();
+  if (isBlockPointer()) {
+    if (P.isBlockPointer() && this->block() == P.block()) {
+      Offset = P.Offset;
+      PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
+      return;
+    }
+
+    if (Block *Pointee = PointeeStorage.BS.Pointee) {
+      assert(P.block() != this->block());
+      Pointee->removePointer(this);
+      PointeeStorage.BS.Pointee = nullptr;
+      Pointee->cleanup();
     }
   }
 
@@ -115,6 +130,8 @@ void Pointer::operator=(Pointer &&P) {
       PointeeStorage.BS.Pointee->addPointer(this);
   } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
+  } else if (P.isFunctionPointer()) {
+    PointeeStorage.Fn = P.PointeeStorage.Fn;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -131,18 +148,40 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+  if (isFunctionPointer())
+    return asFunctionPointer().toAPValue(ASTCtx);
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
   APValue::LValueBase Base;
   if (const auto *VD = Desc->asValueDecl())
     Base = VD;
-  else if (const auto *E = Desc->asExpr())
-    Base = E;
-  else
+  else if (const auto *E = Desc->asExpr()) {
+    // Create a DynamicAlloc base of the right type.
+    if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
+      QualType AllocatedType;
+      if (NewExpr->isArray()) {
+        assert(Desc->isArray());
+        APInt ArraySize(64, static_cast<uint64_t>(Desc->getNumElems()),
+                        /*IsSigned=*/false);
+        AllocatedType =
+            ASTCtx.getConstantArrayType(NewExpr->getAllocatedType(), ArraySize,
+                                        nullptr, ArraySizeModifier::Normal, 0);
+      } else {
+        AllocatedType = NewExpr->getAllocatedType();
+      }
+      // FIXME: Suboptimal counting of dynamic allocations. Move this to Context
+      // or InterpState?
+      static int ReportedDynamicAllocs = 0;
+      DynamicAllocLValue DA(ReportedDynamicAllocs++);
+      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+    } else {
+      Base = E;
+    }
+  } else
     llvm_unreachable("Invalid allocation type");
 
-  if (isUnknownSizeArray() || Desc->asExpr())
+  if (isUnknownSizeArray())
     return APValue(Base, CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
@@ -263,7 +302,7 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
 }
 
 bool Pointer::isInitialized() const {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return true;
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
@@ -299,7 +338,7 @@ bool Pointer::isInitialized() const {
 }
 
 void Pointer::initialize() const {
-  if (isIntegralPointer())
+  if (!isBlockPointer())
     return;
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
@@ -349,12 +388,37 @@ void Pointer::initialize() const {
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
-         "Only composite fields can be initialised");
+         "Only composite fields can be activated");
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
     return;
+  if (!getInlineDesc()->InUnion)
+    return;
 
   getInlineDesc()->IsActive = true;
+
+  // Get the union, iterate over its fields and DEactivate all others.
+  Pointer UnionPtr = getBase();
+  while (!UnionPtr.getFieldDesc()->isUnion())
+    UnionPtr = UnionPtr.getBase();
+
+  const Record *UnionRecord = UnionPtr.getRecord();
+  for (const Record::Field &F : UnionRecord->fields()) {
+    Pointer FieldPtr = UnionPtr.atField(F.Offset);
+    if (FieldPtr == *this) {
+    } else {
+      FieldPtr.getInlineDesc()->IsActive = false;
+      // FIXME: Recurse.
+    }
+  }
+
+  Pointer B = getBase();
+  while (!B.isRoot() && B.inUnion()) {
+    // FIXME: Need to de-activate other fields of parent records.
+    B.getInlineDesc()->IsActive = true;
+    assert(B.isActive());
+    B = B.getBase();
+  }
 }
 
 void Pointer::deactivate() const {
@@ -368,11 +432,22 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 
   if (A.isIntegralPointer() && B.isIntegralPointer())
     return true;
+  if (A.isFunctionPointer() && B.isFunctionPointer())
+    return true;
 
   if (A.isIntegralPointer() || B.isIntegralPointer())
     return A.getSource() == B.getSource();
 
+  if (A.StorageKind != B.StorageKind)
+    return false;
+
   return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
+}
+
+bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
+  return A.block() == B.block();
 }
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
@@ -546,4 +621,31 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   if (!Composite(getType(), *this, Result))
     return std::nullopt;
   return Result;
+}
+
+IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
+                                unsigned Offset) const {
+  if (!this->Desc)
+    return *this;
+  const Record *R = this->Desc->ElemRecord;
+  if (!R)
+    return *this;
+
+  const Record::Field *F = nullptr;
+  for (auto &It : R->fields()) {
+    if (It.Offset == Offset) {
+      F = &It;
+      break;
+    }
+  }
+  if (!F)
+    return *this;
+
+  const FieldDecl *FD = F->Decl;
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+  unsigned FieldIndex = FD->getFieldIndex();
+  uint64_t FieldOffset =
+      ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+          .getQuantity();
+  return IntPointer{this->Desc, FieldOffset};
 }

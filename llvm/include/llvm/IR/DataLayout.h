@@ -120,10 +120,10 @@ private:
   bool BigEndian;
 
   unsigned AllocaAddrSpace;
-  MaybeAlign StackNaturalAlign;
   unsigned ProgramAddrSpace;
   unsigned DefaultGlobalsAddrSpace;
 
+  MaybeAlign StackNaturalAlign;
   MaybeAlign FunctionPtrAlign;
   FunctionPtrAlignType TheFunctionPtrAlignType;
 
@@ -139,6 +139,7 @@ private:
   };
   ManglingModeT ManglingMode;
 
+  // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
   /// Primitive type alignment data. This is sorted by type and bit
@@ -201,26 +202,7 @@ public:
 
   ~DataLayout(); // Not virtual, do not subclass this class
 
-  DataLayout &operator=(const DataLayout &DL) {
-    clear();
-    StringRepresentation = DL.StringRepresentation;
-    BigEndian = DL.isBigEndian();
-    AllocaAddrSpace = DL.AllocaAddrSpace;
-    StackNaturalAlign = DL.StackNaturalAlign;
-    FunctionPtrAlign = DL.FunctionPtrAlign;
-    TheFunctionPtrAlignType = DL.TheFunctionPtrAlignType;
-    ProgramAddrSpace = DL.ProgramAddrSpace;
-    DefaultGlobalsAddrSpace = DL.DefaultGlobalsAddrSpace;
-    ManglingMode = DL.ManglingMode;
-    LegalIntWidths = DL.LegalIntWidths;
-    IntAlignments = DL.IntAlignments;
-    FloatAlignments = DL.FloatAlignments;
-    VectorAlignments = DL.VectorAlignments;
-    StructAlignment = DL.StructAlignment;
-    Pointers = DL.Pointers;
-    NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
-    return *this;
-  }
+  DataLayout &operator=(const DataLayout &Other);
 
   bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
@@ -538,14 +520,6 @@ public:
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
-  /// FIXME: Deprecate this function once migration to Align is over.
-  LLVM_DEPRECATED("use getPrefTypeAlign instead", "getPrefTypeAlign")
-  uint64_t getPrefTypeAlignment(Type *Ty) const;
-
-  /// Returns the preferred stack/global alignment for the specified
-  /// type.
-  ///
-  /// This is always at least as good as the ABI alignment.
   Align getPrefTypeAlign(Type *Ty) const;
 
   /// Returns an integer type with size at least as big as that of a
@@ -693,7 +667,6 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::FloatTyID:
     return TypeSize::getFixed(32);
   case Type::DoubleTyID:
-  case Type::X86_MMXTyID:
     return TypeSize::getFixed(64);
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:

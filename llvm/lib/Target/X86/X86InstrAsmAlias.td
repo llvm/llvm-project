@@ -157,6 +157,14 @@ def : InstAlias<"ctest"#Cond#"{l} $dcf\t{$src2, $src1|$src1, $src2}",
                 (CTEST32mr i32mem:$src1, GR32:$src2, cflags:$dcf, CC), 0>;
 def : InstAlias<"ctest"#Cond#"{q} $dcf\t{$src2, $src1|$src1, $src2}",
                 (CTEST64mr i64mem:$src1, GR64:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{b} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST8mr  i8mem:$src1,  GR8:$src2,  cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{w} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST16mr i16mem:$src1, GR16:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{l} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST32mr i32mem:$src1, GR32:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{q} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST64mr i64mem:$src1, GR64:$src2, cflags:$dcf, CC), 0>;
 def : InstAlias<"ctest"#Cond#"{b} $dcf\t{$src2, $src1|$src1, $src2}",
                 (CTEST8ri  GR8:$src1,  i8imm:$src2,  cflags:$dcf, CC), 0>;
 def : InstAlias<"ctest"#Cond#"{w} $dcf\t{$src2, $src1|$src1, $src2}",

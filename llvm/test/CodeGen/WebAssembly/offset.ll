@@ -40,6 +40,26 @@ define i32 @load_i32_with_folded_gep_offset(ptr %p) {
   ret i32 %t
 }
 
+; Same for nusw.
+
+; CHECK-LABEL: load_i32_with_folded_gep_offset_nusw:
+; CHECK: i32.load  $push0=, 24($0){{$}}
+define i32 @load_i32_with_folded_gep_offset_nusw(ptr %p) {
+  %s = getelementptr nusw i32, ptr %p, i32 6
+  %t = load i32, ptr %s
+  ret i32 %t
+}
+
+; For nuw we don't need the offset to be positive.
+
+; CHECK-LABEL: load_i32_with_folded_gep_offset_nuw:
+; CHECK: i32.load  $push0=, -24($0){{$}}
+define i32 @load_i32_with_folded_gep_offset_nuw(ptr %p) {
+  %s = getelementptr nuw i32, ptr %p, i32 -6
+  %t = load i32, ptr %s
+  ret i32 %t
+}
+
 ; We can't fold a negative offset though, even with an inbounds gep.
 
 ; CHECK-LABEL: load_i32_with_unfolded_gep_negative_offset:

@@ -47,7 +47,7 @@ ConstructQueue buildConstructQueue(mlir::ModuleOp modOp,
                                    llvm::omp::Directive compound,
                                    const List<Clause> &clauses);
 
-bool isLastItemInQueue(ConstructQueue::iterator item,
+bool isLastItemInQueue(ConstructQueue::const_iterator item,
                        const ConstructQueue &queue);
 } // namespace Fortran::lower::omp
 

@@ -59,21 +59,8 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
-  dag iofArg = (ins EnumProperty<"IntegerOverflowFlags">:$overflowFlags);
+  dag iofArg = (ins EnumProperty<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
-
-  let builders = [
-    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
-                   "IntegerOverflowFlags":$overflowFlags), [{
-      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
-      build($_builder, $_state, type, lhs, rhs);
-    }]>,
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
-                   "IntegerOverflowFlags":$overflowFlags), [{
-      $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
-      build($_builder, $_state, lhs, rhs);
-    }]>
-  ];
 
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
@@ -1469,7 +1456,11 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$no_unwind,
     OptionalAttr<UnitAttr>:$will_return,
-    OptionalAttr<UnitAttr>:$optimize_none
+    OptionalAttr<UnitAttr>:$optimize_none,
+    OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
+    OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
+    OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
+    OptionalAttr<I32Attr>:$intel_reqd_sub_group_size
   );
 
   let regions = (region AnyRegion:$body);
