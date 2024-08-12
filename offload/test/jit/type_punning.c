@@ -13,8 +13,8 @@
 // Ensure that there is only the kernel function left, not any outlined
 // parallel regions.
 //
-// CHECK: define
-// CHECK-NOT: define
+// CHECK:     define {{.*}}__omp_offloading_
+// CHECK-NOT: call {{.*}}@__
 
 #include <omp.h>
 #include <stdio.h>

@@ -722,18 +722,17 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error synchronize(__tgt_async_info *AsyncInfo);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
 
-  /// Invokes any global constructors on the device if present and is required
-  /// by the target.
-  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
-                                       DeviceImageTy &Image) {
-    return Error::success();
+  /// Call the ctor/dtor of image \p Image, if available.
+  Error callGlobalCtorDtor(DeviceImageTy &Image, bool IsCtor);
+
+  /// Return the name of the global constructors on the device.
+  virtual Expected<StringRef> getGlobalConstructorName(DeviceImageTy &Image) {
+    return "";
   }
 
-  /// Invokes any global destructors on the device if present and is required
-  /// by the target.
-  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
-                                      DeviceImageTy &Image) {
-    return Error::success();
+  /// Return the name of the global destructors on the device.
+  virtual Expected<StringRef> getGlobalDestructorName(DeviceImageTy &Image) {
+    return "";
   }
 
   /// Query for the completion of the pending operations on the __tgt_async_info
@@ -928,8 +927,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
-  /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+  /// Retrieve the kernel with name \p Name from image \p Image (or any image if
+  /// \p Image is null) and return it. If \p Optional is true, the function
+  /// returns success if there is no kernel with the given name.
+  Expected<GenericKernelTy *> getKernel(llvm::StringRef Name,
+                                        DeviceImageTy *Image = nullptr,
+                                        bool Optional = false);
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
@@ -947,6 +950,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
       UInt32Envar("OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES", 0);
 
 private:
+  /// Allocate and construct a kernel object (users should use getKernel).
+  virtual Expected<GenericKernelTy &>
+  constructKernelImpl(llvm::StringRef Name) = 0;
+
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
@@ -1046,6 +1053,8 @@ protected:
 private:
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
+
+  DenseMap<StringRef, GenericKernelTy *> KernelMap;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

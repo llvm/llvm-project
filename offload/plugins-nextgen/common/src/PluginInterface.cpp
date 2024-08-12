@@ -36,6 +36,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string>
 
 using namespace llvm;
 using namespace omp;
@@ -809,7 +810,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   for (DeviceImageTy *Image : LoadedImages)
-    if (auto Err = callGlobalDestructors(Plugin, *Image))
+    if (auto Err = callGlobalCtorDtor(*Image, /*Ctor*/ false))
       return Err;
 
   if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
@@ -866,6 +867,37 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
+
+Error GenericDeviceTy::callGlobalCtorDtor(DeviceImageTy &Image, bool IsCtor) {
+  auto NameOrErr =
+      IsCtor ? getGlobalConstructorName(Image) : getGlobalDestructorName(Image);
+  if (auto Err = NameOrErr.takeError())
+    return Err;
+  // No error but no name, that means there is no ctor/dtor.
+  if (NameOrErr->empty())
+    return Plugin::success();
+
+  auto KernelOrErr = getKernel(*NameOrErr, &Image, /*Optional=*/true);
+  if (auto Err = KernelOrErr.takeError())
+    return Err;
+
+  if (GenericKernelTy *Kernel = *KernelOrErr) {
+    KernelArgsTy KernelArgs;
+    KernelArgs.NumTeams[0] = KernelArgs.ThreadLimit[0] = 1;
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
+    if (auto Err = Kernel->launch(*this, /*ArgPtrs=*/nullptr,
+                                  /*ArgOffsets=*/nullptr, KernelArgs,
+                                  AsyncInfoWrapper))
+      return Err;
+
+    Error Err = Plugin::success();
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  return Plugin::success();
+}
+
 Expected<DeviceImageTy *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                             const __tgt_device_image *InputTgtImage) {
@@ -927,8 +959,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 #endif
 
   // Call any global constructors present on the device.
-  if (auto Err = callGlobalConstructors(Plugin, *Image))
-    return std::move(Err);
+  if (auto Err = callGlobalCtorDtor(*Image, /*Ctor*/ true))
+    return Err;
 
   // Return the pointer to the table of entries.
   return Image;
@@ -1531,6 +1563,67 @@ Error GenericDeviceTy::printInfo() {
   InfoQueue.print();
 
   return Plugin::success();
+}
+
+Expected<GenericKernelTy *> GenericDeviceTy::getKernel(llvm::StringRef Name,
+                                                       DeviceImageTy *ImagePtr,
+                                                       bool Optional) {
+  bool KernelFound = false;
+  GenericKernelTy *&KernelPtr = KernelMap[Name];
+  if (!KernelPtr) {
+    GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+
+    auto CheckImage = [&](DeviceImageTy &Image) -> GenericKernelTy * {
+      if (!GHandler.isSymbolInImage(*this, Image, Name))
+        return nullptr;
+      KernelFound = true;
+
+      auto KernelOrErr = constructKernelImpl(Name);
+      if (Error Err = KernelOrErr.takeError()) {
+        [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+        DP("Failed to construct kernel ('%s'): %s", Name.data(),
+           ErrStr.c_str());
+        return nullptr;
+      }
+
+      GenericKernelTy &Kernel = *KernelOrErr;
+      if (auto Err = Kernel.init(*this, Image)) {
+        [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+        DP("Failed to initialize kernel ('%s'): %s", Name.data(),
+           ErrStr.c_str());
+        return nullptr;
+      }
+
+      return &Kernel;
+    };
+
+    if (ImagePtr) {
+      KernelPtr = CheckImage(*ImagePtr);
+    } else {
+      for (DeviceImageTy *Image : LoadedImages) {
+        KernelPtr = CheckImage(*Image);
+        if (KernelPtr)
+          break;
+      }
+    }
+  }
+
+  // If we didn't find the kernel and it was optional, we do not emit an error.
+  if (!KernelPtr && !KernelFound && Optional)
+    return nullptr;
+  // If we didn't find the kernel and it was not optional, we will emit an
+  // error.
+  if (!KernelPtr && !KernelFound)
+    return Plugin::error(
+        "Kernel '%s' not found%s", Name.data(),
+        ImagePtr
+            ? ""
+            : ", searched " + std::to_string(LoadedImages.size()) + " images");
+  // If we found the kernel but couldn't initialize it, we will emit an error.
+  if (!KernelPtr)
+    return Plugin::error("Kernel '%s' failed to initialize");
+  // Found the kernel and initialized it.
+  return KernelPtr;
 }
 
 Error GenericDeviceTy::createEvent(void **EventPtrStorage) {
@@ -2147,20 +2240,14 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
 
   GenericDeviceTy &Device = Image.getDevice();
 
-  auto KernelOrErr = Device.constructKernel(Name);
+  auto KernelOrErr = Device.getKernel(Name, &Image);
   if (Error Err = KernelOrErr.takeError()) {
     REPORT("Failure to look up kernel: %s\n", toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
 
-  GenericKernelTy &Kernel = *KernelOrErr;
-  if (auto Err = Kernel.init(Device, Image)) {
-    REPORT("Failure to init kernel: %s\n", toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
   // Note that this is not the kernel's device address.
-  *KernelPtr = &Kernel;
+  *KernelPtr = *KernelOrErr;
   return OFFLOAD_SUCCESS;
 }
 

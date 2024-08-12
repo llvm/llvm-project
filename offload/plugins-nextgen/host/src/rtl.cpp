@@ -151,13 +151,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &>
+  constructKernelImpl(llvm::StringRef Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel = Plugin.allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(Name);
+    new (GenELF64Kernel) GenELF64KernelTy(Name.data());
 
     return *GenELF64Kernel;
   }

@@ -124,6 +124,9 @@ struct DeviceTy {
   /// Calls the corresponding print device info function in the plugin.
   bool printDeviceInfo();
 
+  /// Return the handle to the kernel with name \p Name in \p HandlePtr.
+  int32_t getKernelHandle(llvm::StringRef Name, void **HandlePtr);
+
   /// Event related interfaces.
   /// {
   /// Create an event.

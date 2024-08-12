@@ -2016,20 +2016,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
-                                       DeviceImageTy &Image) override {
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (Handler.isSymbolInImage(*this, Image, "amdgcn.device.fini"))
-      Image.setPendingGlobalDtors();
-
-    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
+  virtual Expected<StringRef>
+  getGlobalConstructorName(DeviceImageTy &Image) override {
+    return "amdgcn.device.init";
   }
-
-  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
-                                      DeviceImageTy &Image) override {
-    if (Image.hasPendingGlobalDtors())
-      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
-    return Plugin::success();
+  virtual Expected<StringRef>
+  getGlobalDestructorName(DeviceImageTy &Image) override {
+    return "amdgcn.device.fini";
   }
 
   uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
@@ -2107,13 +2100,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &>
+  constructKernelImpl(llvm::StringRef Name) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin.allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(Name);
+    new (AMDGPUKernel) AMDGPUKernelTy(Name.data());
 
     return *AMDGPUKernel;
   }
@@ -2790,38 +2784,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
-
-  /// Common method to invoke a single threaded constructor or destructor
-  /// kernel by name.
-  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                                 bool IsCtor) {
-    const char *KernelName =
-        IsCtor ? "amdgcn.device.init" : "amdgcn.device.fini";
-    // Perform a quick check for the named kernel in the image. The kernel
-    // should be created by the 'amdgpu-lower-ctor-dtor' pass.
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
-      return Plugin::success();
-
-    // Allocate and construct the AMDGPU kernel.
-    AMDGPUKernelTy AMDGPUKernel(KernelName);
-    if (auto Err = AMDGPUKernel.init(*this, Image))
-      return Err;
-
-    AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
-
-    KernelArgsTy KernelArgs = {};
-    if (auto Err =
-            AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
-                                    /*NumBlocks=*/1ul, KernelArgs,
-                                    KernelLaunchParamsTy{}, AsyncInfoWrapper))
-      return Err;
-
-    Error Err = Plugin::success();
-    AsyncInfoWrapper.finalize(Err);
-
-    return Err;
-  }
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {

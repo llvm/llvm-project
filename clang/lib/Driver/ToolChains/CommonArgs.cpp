@@ -1202,8 +1202,11 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                     options::OPT_fno_openmp, false)) {
     // We need libomptarget (liboffload) if it's the choosen offloading runtime.
     if (Args.hasFlag(options::OPT_foffload_via_llvm,
-                     options::OPT_fno_offload_via_llvm, false))
+                     options::OPT_fno_offload_via_llvm, false)) {
       CmdArgs.push_back("-lomptarget");
+      if (!Args.hasArg(options::OPT_nogpulib))
+        CmdArgs.append({"-lomptarget.devicertl", "-loffload.kernels"});
+    }
     return false;
   }
 
@@ -1240,7 +1243,7 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
     CmdArgs.push_back("-lomptarget");
 
   if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
-    CmdArgs.push_back("-lomptarget.devicertl");
+    CmdArgs.append({"-lomptarget.devicertl", "-loffload.kernels"});
 
   addArchSpecificRPath(TC, Args, CmdArgs);
 
