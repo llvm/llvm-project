@@ -5217,9 +5217,8 @@ define <4 x i32> @fptoui_4f16_to_4i32(<4 x half> %a) nounwind {
 ; F16C-NEXT:    vcvttps2dq %ymm0, %ymm1
 ; F16C-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; F16C-NEXT:    vcvttps2dq %ymm0, %ymm0
-; F16C-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; F16C-NEXT:    vblendvps %ymm1, %ymm0, %ymm1, %ymm0
-; F16C-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; F16C-NEXT:    vorps %xmm0, %xmm1, %xmm0
+; F16C-NEXT:    vblendvps %xmm1, %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    retq
 ;
