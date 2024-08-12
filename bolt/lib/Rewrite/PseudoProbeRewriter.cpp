@@ -143,7 +143,6 @@ void PseudoProbeRewriter::parsePseudoProbe() {
   if (!ProbeDecoder.buildAddress2ProbeMap(
           reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
           GuidFilter, FuncStartAddrs)) {
-    ProbeDecoder.getAddress2ProbesMap().clear();
     errs() << "BOLT-WARNING: fail in building Address2ProbeMap\n";
     return;
   }
@@ -201,7 +200,9 @@ void PseudoProbeRewriter::updatePseudoProbes() {
     }
 
     unsigned ProbeTrack = AP.second.size();
-    std::list<MCDecodedPseudoProbe>::iterator Probe = AP.second.begin();
+    auto Probe = llvm::map_iterator(
+        AP.second.begin(),
+        [](auto RW) -> MCDecodedPseudoProbe & { return RW.get(); });
     while (ProbeTrack != 0) {
       if (Probe->isBlock()) {
         Probe->setAddress(BlkOutputAddress);
@@ -219,9 +220,7 @@ void PseudoProbeRewriter::updatePseudoProbes() {
         }
 
         while (CallOutputAddress != CallOutputAddresses.second) {
-          AP.second.push_back(*Probe);
-          AP.second.back().setAddress(CallOutputAddress->second);
-          Probe->getInlineTreeNode()->addProbes(&(AP.second.back()));
+          ProbeDecoder.addInjectedProbe(*Probe, CallOutputAddress->second);
           CallOutputAddress = std::next(CallOutputAddress);
         }
       }
@@ -333,7 +332,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
       ProbeDecoder.getDummyInlineRoot();
   for (auto Child = Root.getChildren().begin();
        Child != Root.getChildren().end(); ++Child)
-    Inlinees[Child->first] = Child->second.get();
+    Inlinees[Child->getInlineSite()] = &*Child;
 
   for (auto Inlinee : Inlinees)
     // INT64_MAX is "placeholder" of unused callsite index field in the pair
@@ -363,7 +362,8 @@ void PseudoProbeRewriter::encodePseudoProbes() {
       if (Probe->getAddress() == INT64_MAX)
         Deleted++;
     LLVM_DEBUG(dbgs() << "Deleted Probes:" << Deleted << "\n");
-    uint64_t ProbesSize = Cur->getProbes().size() - Deleted;
+    size_t InjectedProbes = ProbeDecoder.getNumInjectedProbes(Cur);
+    uint64_t ProbesSize = Cur->NumProbes + InjectedProbes - Deleted;
     EmitULEB128IntValue(ProbesSize);
     // Emit number of direct inlinees
     EmitULEB128IntValue(Cur->getChildren().size());
@@ -374,10 +374,18 @@ void PseudoProbeRewriter::encodePseudoProbes() {
       EmitDecodedPseudoProbe(Probe);
       LastProbe = Probe;
     }
+    if (InjectedProbes) {
+      for (MCDecodedPseudoProbe *&Probe : ProbeDecoder.getInjectedProbes(Cur)) {
+        if (Probe->getAddress() == INT64_MAX)
+          continue;
+        EmitDecodedPseudoProbe(Probe);
+        LastProbe = Probe;
+      }
+    }
 
     for (auto Child = Cur->getChildren().begin();
          Child != Cur->getChildren().end(); ++Child)
-      Inlinees[Child->first] = Child->second.get();
+      Inlinees[Child->getInlineSite()] = &*Child;
     for (const auto &Inlinee : Inlinees) {
       assert(Cur->Guid != 0 && "non root tree node must have nonzero Guid");
       NextNodes.push_back({std::get<1>(Inlinee.first), Inlinee.second});
