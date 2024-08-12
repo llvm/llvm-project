@@ -4466,9 +4466,8 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // from the two low order bits (i.e. from bit 1 into bit 2) when adding
   // voffset to (soffset + inst_offset).
   auto VKnown = KB->getKnownBits(VAddr);
-  auto SKnown = KnownBits::computeForAddSub(
-      /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KB->getKnownBits(SAddr),
-      KnownBits::makeConstant(APInt(32, ImmOffset)));
+  auto SKnown = KnownBits::add(KB->getKnownBits(SAddr),
+                               KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
   return (VMax & 3) + (SMax & 3) >= 4;

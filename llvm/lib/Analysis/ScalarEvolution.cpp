@@ -11961,9 +11961,14 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   SmallDenseMap<const SCEV *, int, 8> Multiplicity;
   APInt Diff(BW, 0);
   auto Add = [&](const SCEV *S, int Mul) {
-    if (auto *C = dyn_cast<SCEVConstant>(S))
-      Diff += C->getAPInt() * Mul;
-    else
+    if (auto *C = dyn_cast<SCEVConstant>(S)) {
+      if (Mul == 1) {
+        Diff += C->getAPInt();
+      } else {
+        assert(Mul == -1);
+        Diff -= C->getAPInt();
+      }
+    } else
       Multiplicity[S] += Mul;
   };
   auto Decompose = [&](const SCEV *S, int Mul) {

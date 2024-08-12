@@ -80,7 +80,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       middle.block:
 ; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[BB12_PREHEADER11]]
-; AVX2:       bb12.preheader11:
+; AVX2:       bb12.preheader8:
 ; AVX2-NEXT:    [[PTR2_PH:%.*]] = phi ptr [ [[START]], [[BB12_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; AVX2-NEXT:    br label [[BB12:%.*]]
 ; AVX2:       bb12:
