@@ -14,6 +14,7 @@
 #define LLVM_RUNTIME_DYLD_COFF_H
 
 #include "RuntimeDyldImpl.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "dyld"
 
@@ -48,6 +49,12 @@ protected:
                               StringRef Name, bool SetSectionIDMinus1 = false);
 
   static constexpr StringRef getImportSymbolPrefix() { return "__imp_"; }
+
+  bool relocationNeedsDLLImportStub(const RelocationRef &R) const;
+
+  unsigned sizeAfterAddingDLLImportStub(unsigned Size) const {
+    return alignTo(Size, PointerSize) + PointerSize;
+  }
 
 private:
   unsigned PointerSize;
