@@ -415,7 +415,7 @@ genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members) {
       TRNode->Children.emplace_back(
           std::make_unique<TagNode>(HTMLTag::TAG_TD, M.Value));
     }
-    if (M.Description.empty()) {
+    if (!M.Description.empty()) {
       auto TD = std::make_unique<TagNode>(HTMLTag::TAG_TD);
       TD->Children.emplace_back(genHTML(M.Description));
       TRNode->Children.emplace_back(std::move(TD));
