@@ -98,7 +98,7 @@ void implicitConversionFromBoolLiterals() {
 
   functionTaking<unsigned long>(false);
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: implicit conversion 'bool' -> 'unsigned long'
-  // CHECK-FIXES: functionTaking<unsigned long>(0u);
+  // CHECK-FIXES: functionTaking<unsigned long>(0U);
 
   functionTaking<signed char>(true);
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: implicit conversion 'bool' -> 'signed char'
@@ -106,7 +106,7 @@ void implicitConversionFromBoolLiterals() {
 
   functionTaking<float>(false);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: implicit conversion 'bool' -> 'float'
-  // CHECK-FIXES: functionTaking<float>(0.0f);
+  // CHECK-FIXES: functionTaking<float>(0.0F);
 
   functionTaking<double>(true);
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: implicit conversion 'bool' -> 'double'
@@ -177,14 +177,14 @@ void implicitConversionToBoolSimpleCases() {
   unsigned long unsignedLong = 10;
   functionTaking<bool>(unsignedLong);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'unsigned long' -> 'bool'
-  // CHECK-FIXES: functionTaking<bool>(unsignedLong != 0u);
+  // CHECK-FIXES: functionTaking<bool>(unsignedLong != 0U);
 
-  float floating = 0.0f;
+  float floating = 0.0F;
   functionTaking<bool>(floating);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: functionTaking<bool>(floating != 0.0f);
+  // CHECK-FIXES: functionTaking<bool>(floating != 0.0F);
 
-  double doubleFloating = 1.0f;
+  double doubleFloating = 1.0F;
   functionTaking<bool>(doubleFloating);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'double' -> 'bool'
   // CHECK-FIXES: functionTaking<bool>(doubleFloating != 0.0);
@@ -211,10 +211,10 @@ void implicitConversionToBoolInSingleExpressions() {
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: implicit conversion 'int' -> 'bool'
   // CHECK-FIXES: bool boolComingFromInt = integer != 0;
 
-  float floating = 10.0f;
+  float floating = 10.0F;
   bool boolComingFromFloat = floating;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: bool boolComingFromFloat = floating != 0.0f;
+  // CHECK-FIXES: bool boolComingFromFloat = floating != 0.0F;
 
   signed char character = 'a';
   bool boolComingFromChar = character;
@@ -239,7 +239,7 @@ void implicitConversionToBoolInComplexExpressions() {
   float floating = 0.2f;
   bool boolComingFromFloating = floating - 0.3f || boolean;
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: bool boolComingFromFloating = ((floating - 0.3f) != 0.0f) || boolean;
+  // CHECK-FIXES: bool boolComingFromFloating = ((floating - 0.3f) != 0.0F) || boolean;
 
   double doubleFloating = 0.3;
   bool boolComingFromDoubleFloating = (doubleFloating - 0.4) && boolean;
@@ -253,10 +253,10 @@ void implicitConversionInNegationExpressions() {
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: implicit conversion 'int' -> 'bool'
   // CHECK-FIXES: bool boolComingFromNegatedInt = integer == 0;
 
-  float floating = 10.0f;
+  float floating = 10.0F;
   bool boolComingFromNegatedFloat = ! floating;
   // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: bool boolComingFromNegatedFloat = floating == 0.0f;
+  // CHECK-FIXES: bool boolComingFromNegatedFloat = floating == 0.0F;
 
   signed char character = 'a';
   bool boolComingFromNegatedChar = (! character);
@@ -283,7 +283,7 @@ void implicitConversionToBoolInControlStatements() {
   float floating = 0.3f;
   while (floating) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: while (floating != 0.0f) {}
+  // CHECK-FIXES: while (floating != 0.0F) {}
 
   double doubleFloating = 0.4;
   do {} while (doubleFloating);
@@ -295,7 +295,7 @@ bool implicitConversionToBoolInReturnValue() {
   float floating = 1.0f;
   return floating;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: return floating != 0.0f;
+  // CHECK-FIXES: return floating != 0.0F;
 }
 
 void implicitConversionToBoolFromLiterals() {
@@ -354,7 +354,7 @@ void implicitConversionToBoolFromUnaryMinusAndZeroLiterals() {
 
   functionTaking<bool>(-0.0f);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'float' -> 'bool'
-  // CHECK-FIXES: functionTaking<bool>((-0.0f) != 0.0f);
+  // CHECK-FIXES: functionTaking<bool>((-0.0f) != 0.0F);
 
   functionTaking<bool>(-0.0);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'double' -> 'bool'
