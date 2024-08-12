@@ -327,6 +327,30 @@ getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
   }
 }
 
+/// Helper to find a vreg use between two indices [PriorUseIdx, NextUseIdx).
+/// The query starts with a lane bitmask which gets lanes/bits removed for every
+/// use we find.
+static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
+                                  SlotIndex PriorUseIdx, SlotIndex NextUseIdx,
+                                  const MachineRegisterInfo &MRI,
+                                  const LiveIntervals *LIS) {
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+    if (MO.isUndef())
+      continue;
+    const MachineInstr *MI = MO.getParent();
+    SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
+    if (InstSlot >= PriorUseIdx && InstSlot < NextUseIdx) {
+      unsigned SubRegIdx = MO.getSubReg();
+      LaneBitmask UseMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
+      LastUseMask &= ~UseMask;
+      if (LastUseMask.none())
+        return LaneBitmask::getNone();
+    }
+  }
+  return LastUseMask;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRPTracker
 
