@@ -114,18 +114,18 @@ mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
   return {};
 }
 
-static constexpr const char *identName = "llvm.ident";
-
 void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
   if (ident.empty())
     return;
 
   auto *ctx = mod.getContext();
-  mod->setAttr(identName, mlir::StringAttr::get(ctx, ident));
+  mod->setAttr(mlir::LLVM::LLVMDialect::getIdentAttrName(),
+               mlir::StringAttr::get(ctx, ident));
 }
 
 llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(identName))
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getIdentAttrName()))
     return attr;
   return {};
 }

@@ -1815,11 +1815,12 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
 }
 
 LogicalResult ModuleTranslation::createIdentMetadata() {
-  if (auto attr = mlirModule->getAttrOfType<mlir::StringAttr>("llvm.ident")) {
-    llvm::StringRef ident = attr;
+  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+          LLVMDialect::getIdentAttrName())) {
+    StringRef ident = attr;
     llvm::LLVMContext &ctx = llvmModule->getContext();
     llvm::NamedMDNode *namedMd =
-        llvmModule->getOrInsertNamedMetadata("llvm.ident");
+        llvmModule->getOrInsertNamedMetadata(LLVMDialect::getIdentAttrName());
     llvm::MDNode *md = llvm::MDNode::get(ctx, llvm::MDString::get(ctx, ident));
     namedMd->addOperand(md);
   }

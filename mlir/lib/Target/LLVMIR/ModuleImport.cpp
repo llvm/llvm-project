@@ -522,11 +522,14 @@ LogicalResult ModuleImport::convertIdentMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     // llvm.ident should have a single operand. That operand is itself an
     // MDNode with a single string operand.
-    if (named.getName() == "llvm.ident")
-      if (named.getNumOperands() == 1)
-        if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+    if (named.getName() != LLVMDialect::getIdentAttrName())
+      continue;
+
+    if (named.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+        if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr("llvm.ident",
+            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
                                 builder.getStringAttr(mdStr->getString()));
   }
   return success();
