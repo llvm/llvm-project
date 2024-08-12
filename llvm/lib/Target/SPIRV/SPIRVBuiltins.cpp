@@ -1091,16 +1091,30 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 
   Register Arg0;
   if (GroupBuiltin->HasBoolArg) {
-    Register ConstRegister = Call->Arguments[0];
-    auto ArgInstruction = getDefInstrMaybeConstant(ConstRegister, MRI);
-    (void)ArgInstruction;
-    // TODO: support non-constant bool values.
-    assert(ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT &&
-           "Only constant bool value args are supported");
-    if (GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() !=
-        SPIRV::OpTypeBool)
-      Arg0 = GR->buildConstantInt(getIConstVal(ConstRegister, MRI), MIRBuilder,
-                                  GR->getOrCreateSPIRVBoolType(MIRBuilder));
+    SPIRVType *BoolType = GR->getOrCreateSPIRVBoolType(MIRBuilder);
+    Register BoolReg = Call->Arguments[0];
+    SPIRVType *BoolRegType = GR->getSPIRVTypeForVReg(BoolReg);
+    if (!BoolRegType)
+      report_fatal_error("Can't find a register's type definition");
+    MachineInstr *ArgInstruction = getDefInstrMaybeConstant(BoolReg, MRI);
+    if (ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT) {
+      if (BoolRegType->getOpcode() != SPIRV::OpTypeBool)
+        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI), MIRBuilder,
+                                    BoolType);
+    } else {
+      if (BoolRegType->getOpcode() == SPIRV::OpTypeInt) {
+        Arg0 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+        MRI->setRegClass(Arg0, &SPIRV::IDRegClass);
+        GR->assignSPIRVTypeToVReg(BoolType, Arg0, MIRBuilder.getMF());
+        MIRBuilder.buildICmp(CmpInst::ICMP_NE, Arg0, BoolReg,
+                             GR->buildConstantInt(0, MIRBuilder, BoolRegType));
+        insertAssignInstr(Arg0, nullptr, BoolType, GR, MIRBuilder,
+                          MIRBuilder.getMF().getRegInfo());
+      } else if (BoolRegType->getOpcode() != SPIRV::OpTypeBool) {
+        report_fatal_error("Expect a boolean argument");
+      }
+      // if BoolReg is a boolean register, we don't need to do anything
+    }
   }
 
   Register GroupResultRegister = Call->ReturnRegister;
