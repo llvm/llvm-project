@@ -335,7 +335,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
                       LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
-  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
 template <typename OpTy>

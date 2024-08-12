@@ -21,6 +21,7 @@ include "mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
@@ -1347,10 +1348,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
-      SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins SymbolNameAttr:$sym_name,
-          OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
-          OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
+      NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1379,7 +1377,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     gpu.module @symbol_name {
       gpu.func {}
         ...
-      gpu.module_end
     }
     // Module with offloading handler and target attributes.
     gpu.module @symbol_name2 <#gpu.select_object<1>> [
@@ -1387,7 +1384,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
         #rocdl.target<chip = "gfx90a">] {
       gpu.func {}
         ...
-      gpu.module_end
     }
     ```
   }];
@@ -1399,8 +1395,18 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
                    "ArrayRef<Attribute>":$targets,
                    CArg<"Attribute", "{}">:$handler)>
   ];
+
+  let arguments = (ins
+      SymbolNameAttr:$sym_name,
+      OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
+      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler);
   let regions = (region SizedRegion<1>:$bodyRegion);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $sym_name
+    (`<` $offloadingHandler^ `>`)?
+    ($targets^)?
+    attr-dict-with-keyword $bodyRegion
+  }];
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.
@@ -1413,17 +1419,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-}
-
-def GPU_ModuleEndOp : GPU_Op<"module_end", [
-  Terminator, HasParent<"GPUModuleOp">
-]> {
-  let summary = "A pseudo op that marks the end of a gpu.module.";
-  let description = [{
-    This op terminates the only block inside the only region of a `gpu.module`.
-  }];
-
-  let assemblyFormat = "attr-dict";
 }
 
 def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
