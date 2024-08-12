@@ -1908,6 +1908,10 @@ void TransposeOp::getEffects(
 
 LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
                                 SmallVectorImpl<OpFoldResult> &result) {
+  // Only the tensor type is supported.
+  if (!isa<TensorType>(getInput().getType()))
+    return failure();
+
   // Single dimension transpose.
   if (getPermutation().size() == 0) {
     result.push_back(getInput());
