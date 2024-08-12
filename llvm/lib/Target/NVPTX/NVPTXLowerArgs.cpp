@@ -328,7 +328,7 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
                                     const NVPTXTargetLowering *TLI) {
   Function *Func = Arg->getParent();
   Type *StructType = Arg->getParamByValType();
-  const DataLayout DL(Func->getParent());
+  const DataLayout &DL = Func->getDataLayout();
 
   uint64_t NewArgAlign =
       TLI->getFunctionParamOptimizedAlign(Func, StructType, DL).value();

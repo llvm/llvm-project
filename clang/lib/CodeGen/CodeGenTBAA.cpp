@@ -318,7 +318,7 @@ TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
 }
 
 TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
-  llvm::DataLayout DL(&Module);
+  const llvm::DataLayout &DL = Module.getDataLayout();
   unsigned Size = DL.getPointerTypeSize(VTablePtrType);
   return TBAAAccessInfo(createScalarTypeNode("vtable pointer", getRoot(), Size),
                         Size);

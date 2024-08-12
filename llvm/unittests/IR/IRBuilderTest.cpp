@@ -521,11 +521,10 @@ TEST_F(IRBuilderTest, GetIntTy) {
   IntegerType *Ty1 = Builder.getInt1Ty();
   EXPECT_EQ(Ty1, IntegerType::get(Ctx, 1));
 
-  DataLayout* DL = new DataLayout(M.get());
-  IntegerType *IntPtrTy = Builder.getIntPtrTy(*DL);
-  unsigned IntPtrBitSize =  DL->getPointerSizeInBits(0);
+  const DataLayout &DL = M->getDataLayout();
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  unsigned IntPtrBitSize = DL.getPointerSizeInBits(0);
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
-  delete DL;
 }
 
 TEST_F(IRBuilderTest, UnaryOperators) {
