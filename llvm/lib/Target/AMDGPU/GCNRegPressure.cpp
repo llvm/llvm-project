@@ -479,6 +479,53 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
 
+void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI) {
+  assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
+
+  SlotIndex SlotIdx;
+  if (RequireIntervals)
+    SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+
+  // Account for register pressure similar to RegPressureTracker::recede().
+  RegisterOperands RegOpers;
+  RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/true);
+  assert(RegOpers.DeadDefs.empty());
+  if (TrackLaneMasks)
+    RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
+  else if (RequireIntervals)
+    RegOpers.detectDeadDefs(*MI, *LIS);
+
+  // Boost max pressure for all dead defs together.
+  // Since CurrSetPressure and MaxSetPressure
+  bumpDeadDefs(RegOpers.DeadDefs);
+
+  // Kill liveness at live defs.
+  for (const RegisterMaskPair &P : RegOpers.Defs) {
+    Register Reg = P.RegUnit;
+    LaneBitmask LiveAfter = LiveRegs.contains(Reg);
+    LaneBitmask UseLanes = getRegLanes(RegOpers.Uses, Reg);
+    LaneBitmask DefLanes = P.LaneMask;
+    LaneBitmask LiveBefore = (LiveAfter & ~DefLanes) | UseLanes;
+
+    // There may be parts of the register that were dead before the
+    // instruction, but became live afterwards. Similarly, some parts
+    // may have been killed in this instruction.
+    decreaseRegPressure(Reg, LiveAfter, LiveAfter & LiveBefore);
+    increaseRegPressure(Reg, LiveAfter, ~LiveAfter & LiveBefore);
+  }
+  // Generate liveness for uses.
+  for (const RegisterMaskPair &P : RegOpers.Uses) {
+    Register Reg = P.RegUnit;
+    // If this register was also in a def operand, we've handled it
+    // with defs.
+    if (getRegLanes(RegOpers.Defs, Reg).any())
+      continue;
+    LaneBitmask LiveAfter = LiveRegs.contains(Reg);
+    LaneBitmask LiveBefore = LiveAfter | P.LaneMask;
+    increaseRegPressure(Reg, LiveAfter, LiveBefore);
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // GCNDownwardRPTracker
 
