@@ -699,11 +699,22 @@ enum {
 
 // SPARC Specific e_flags
 enum : unsigned {
+  // ELF extension mask.
+  // All values are available for 32 and 64-bit objects,
+  // except EF_SPARC_32PLUS which is a 32-bit only flag.
+  //
+  // Note that those features are not mutually exclusive (i.e
+  // one can set more than one flag in this group), so
+  // do not use the mask in LLVM's BCaseMask, printFlags,
+  // etc. as they assume that everything covered under one
+  // mask needs to be a mutually exclusive choice.
   EF_SPARC_EXT_MASK = 0xffff00,
   EF_SPARC_32PLUS = 0x000100,
   EF_SPARC_SUN_US1 = 0x000200,
   EF_SPARC_HAL_R1 = 0x000400,
   EF_SPARC_SUN_US3 = 0x000800,
+
+  // Memory model selection mask for 64-bit SPARC objects.
   EF_SPARCV9_MM = 0x3,
   EF_SPARCV9_TSO = 0x0,
   EF_SPARCV9_PSO = 0x1,

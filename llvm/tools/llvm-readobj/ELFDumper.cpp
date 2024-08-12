@@ -3638,7 +3638,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   else if (e.e_machine == EM_SPARC || e.e_machine == EM_SPARC32PLUS ||
            e.e_machine == EM_SPARCV9)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderSPARCFlags),
-                          unsigned(ELF::EF_SPARC_EXT_MASK),
                           unsigned(ELF::EF_SPARCV9_MM));
   else if (e.e_machine == EM_AVR)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderAVRFlags),
@@ -7135,7 +7134,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_SPARC || E.e_machine == EM_SPARC32PLUS ||
              E.e_machine == EM_SPARCV9)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderSPARCFlags),
-                   unsigned(ELF::EF_SPARC_EXT_MASK),
                    unsigned(ELF::EF_SPARCV9_MM));
     else if (E.e_machine == EM_AVR)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderAVRFlags),

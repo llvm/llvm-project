@@ -1,0 +1,29 @@
+# RUN: yaml2obj %s -o %t -DFLAG_NAME=""
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=PLAIN -DFLAG_VALUE=0x0
+
+# RUN: yaml2obj %s -o %t -DFLAG_NAME="EF_SPARC_SUN_US1"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=US1 -DFLAG_NAME=EF_SPARC_SUN_US1 -DFLAG_VALUE=0x200
+
+# RUN: yaml2obj %s -o %t -DFLAG_NAME="EF_SPARC_SUN_US1, EF_SPARCV9_RMO"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=US1-RMO -DFLAG0_NAME=EF_SPARCV9_RMO -DFLAG1_NAME=EF_SPARC_SUN_US1 -DFLAG_VALUE=0x202
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  Type:            ET_REL
+  Machine:         EM_SPARCV9
+  Flags:           [ [[FLAG_NAME]] ]
+
+# PLAIN:          Flags [ ([[FLAG_VALUE]])
+# PLAIN-NEXT:     ]
+
+# US1:          Flags [ ([[FLAG_VALUE]])
+# US1-NEXT:       [[FLAG_NAME]]
+# US1-NEXT:     ]
+
+# US1-RMO:          Flags [ ([[FLAG_VALUE]])
+# US1-RMO-NEXT:       [[FLAG0_NAME]]
+# US1-RMO-NEXT:       [[FLAG1_NAME]]
+# US1-RMO-NEXT:     ]
+
