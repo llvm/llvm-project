@@ -21810,19 +21810,19 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::experimental_vector_partial_reduce_add: {
     SDLoc DL(N);
 
-    bool IsValidDotProduct = false;
+    bool IsValidDotProduct = true;
 
     auto NarrowOp = N->getOperand(1);
     auto MulOp = N->getOperand(2);
-    if (MulOp->getOpcode() == ISD::MUL)
-      IsValidDotProduct = true;
+    if (MulOp->getOpcode() != ISD::MUL)
+      IsValidDotProduct = false;
 
     auto ExtA = MulOp->getOperand(0);
     auto ExtB = MulOp->getOperand(1);
     bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
     bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-    if (ExtA->getOpcode() == ExtB->getOpcode() && (IsSExt || IsZExt))
-      IsValidDotProduct = true;
+    if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
+      IsValidDotProduct = false;
 
     unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
 
@@ -21844,8 +21844,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     } else {
       // If the node doesn't match a dot product, lower to a series of ADDs
       // instead.
-      SDValue Op0 = N->getOperand(0);
-      SDValue Op1 = N->getOperand(1);
+      SDValue Op0 = N->getOperand(1);
+      SDValue Op1 = N->getOperand(2);
       EVT Type0 = Op0->getValueType(0);
       EVT Type1 = Op1->getValueType(0);
 
