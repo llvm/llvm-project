@@ -48,7 +48,7 @@ enum class InfoType {
 // A representation of a parsed comment.
 struct CommentInfo {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &Other) = default;
+  CommentInfo(CommentInfo &Other) = delete;
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
 
