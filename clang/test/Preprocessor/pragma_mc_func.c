@@ -5,19 +5,19 @@
 // CHECK:  error: #pragma mc_func is not supported
 
 // Cases where no errors occur.
-// RUN: %clang --target=powerpc64-ibm-aix -fno-err-pragma-mc-func-aix -fsyntax-only %s
-// RUN: %clang --target=powerpc64-ibm-aix -ferr-pragma-mc-func-aix -fsyntax-only \
+// RUN: %clang --target=powerpc64-ibm-aix -fno-err-pragma-mc-func-aix -c -S %s
+// RUN: %clang --target=powerpc64-ibm-aix -ferr-pragma-mc-func-aix -c -S \
 // RUN:    -fno-err-pragma-mc-func-aix %s
-// RUN: %clang --target=powerpc64-ibm-aix -fsyntax-only %s
+// RUN: %clang --target=powerpc64-ibm-aix -c -S %s
 // RUN: %clang --target=powerpc64-ibm-aix -Werror=unknown-pragmas \
-// RUN:   -fno-err-pragma-mc-func-aix -fsyntax-only %s
+// RUN:   -fno-err-pragma-mc-func-aix -c -S %s
 
 // Cases where we have errors or warnings.
 // RUN: not %clang --target=powerpc64le-unknown-linux-gnu \
-// RUN:   -Werror=unknown-pragmas -fno-err-pragma-mc-func-aix -fsyntax-only %s 2>&1 | \
+// RUN:   -Werror=unknown-pragmas -fno-err-pragma-mc-func-aix -c -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=UNUSED %s
 // RUN: %clang --target=powerpc64le-unknown-linux-gnu \
-// RUN:   -fno-err-pragma-mc-func-aix -fsyntax-only %s 2>&1 | \
+// RUN:   -fno-err-pragma-mc-func-aix -c -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=UNUSED %s
 
 // UNUSED: clang: warning: argument unused during compilation: '-fno-err-pragma-mc-func-aix' [-Wunused-command-line-argument]
