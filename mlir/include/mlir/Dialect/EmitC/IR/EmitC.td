@@ -1311,7 +1311,8 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let description = [{
     The `emitc.switch` is a control-flow operation that branches to one of
     the given regions based on the values of the argument and the cases.
-    The operand to a switch operation is a opaque or integral value.
+    The operand to a switch operation is a opaque, integral or pointer
+    wide types.
 
     The operation always has a "default" region and any number of case regions
     denoted by integer constants. Control-flow transfers to the case region
