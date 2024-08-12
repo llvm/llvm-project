@@ -837,13 +837,6 @@ def : MipsPat<(MipsExt (i32 (trunc GPR64:$src)), immZExt5:$pos, immZExt5:$size),
               (EXTRACT_SUBREG (DEXT GPR64:$src, immZExt5:$pos, immZExt5:$size), sub_32)>,
               ISA_MIPS3, GPR_64;
 
-def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
-  return N->getFlags().hasNonNeg();
-}]>;
-def sext_like : PatFrags<(ops node:$src),
-                         [(zext_nneg node:$src),
-                          (sext node:$src)]>;
-
 // 32-to-64-bit extension
 def : MipsPat<(i64 (anyext GPR32:$src)),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>,
