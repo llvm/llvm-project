@@ -3138,6 +3138,8 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+
+#if 0
 template <typename TemplateDeclT>
 static bool DeducedArgsNeedReplacement(TemplateDeclT *Template) {
   return false;
@@ -3152,6 +3154,7 @@ bool DeducedArgsNeedReplacement<ClassTemplatePartialSpecializationDecl>(
     ClassTemplatePartialSpecializationDecl *Spec) {
   return !Spec->isClassScopeExplicitSpecialization();
 }
+#endif
 
 template <typename TemplateDeclT>
 static TemplateDeductionResult
@@ -3162,6 +3165,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
+  #if 0
   std::optional<ArrayRef<TemplateArgument>> Innermost;
   // If we don't need to replace the deduced template arguments,
   // we can add them immediately as the inner-most argument list.
@@ -3179,6 +3183,32 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   // instead of adding to inner-most.
   if (!Innermost)
     MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
+  #endif
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Template, Template->getDeclContext(), /*Final=*/false,
+      /*Innermost=*/CanonicalDeducedArgs, /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+
+  #if 0
+  if (DeducedArgsNeedReplacement(Template)) {
+    MultiLevelTemplateArgumentList WithReplacement = S.getTemplateInstantiationArgs(
+      Template, Template->getDeclContext(), /*Final=*/false, /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
+
+    WithReplacement.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
+
+    assert(MLTAL.getNumLevels() == WithReplacement.getNumLevels());
+    assert(MLTAL.getNumSubstitutedLevels() == WithReplacement.getNumSubstitutedLevels());
+    auto First0 = MLTAL.begin(), Last0 = MLTAL.end();
+    auto First1 = WithReplacement.begin(), Last1 = WithReplacement.end();
+
+    while (First0 != Last0) {
+      assert(First0->Args.data() == First1->Args.data());
+      ++First0, ++First1;
+    }
+  }
+  #endif
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
