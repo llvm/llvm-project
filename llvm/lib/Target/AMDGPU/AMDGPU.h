@@ -56,7 +56,7 @@ FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
-FunctionPass *createAMDGPULateCodeGenPreparePass();
+FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
@@ -282,6 +282,16 @@ public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
+class AMDGPULateCodeGenPreparePass
+    : public PassInfoMixin<AMDGPULateCodeGenPreparePass> {
+private:
+  const GCNTargetMachine &TM;
+
+public:
+  AMDGPULateCodeGenPreparePass(const GCNTargetMachine &TM) : TM(TM) {};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
 class AMDGPULowerKernelArgumentsPass
     : public PassInfoMixin<AMDGPULowerKernelArgumentsPass> {
 private:
@@ -352,8 +362,8 @@ extern char &AMDGPUCodeGenPrepareID;
 void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
-void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
-extern char &AMDGPULateCodeGenPrepareID;
+void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
+extern char &AMDGPULateCodeGenPrepareLegacyID;
 
 FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
 void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
