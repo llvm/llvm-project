@@ -592,6 +592,10 @@ FUNCTION_PASS_WITH_PARAMS(
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "rtsan", "RealtimeSanitizerPass",
+    [](RealtimeSanitizerOptions Opts) { return RealtimeSanitizerPass(Opts); },
+    parseRtSanPassOptions, "")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

@@ -50,7 +50,7 @@ class VNBRe_no_write<bits<4> op> : VNBRe_Base<op> {
 //===----------------------------------------------------------------------===//
 
 class SemaOperand<string prefix, bit alwaysPrint = 0>
-    : NamedIntOperand<i32, prefix> {
+    : NamedIntOperand<prefix> {
   let Validator = "[](int64_t V) { return -4 <= V && V <= 7; }";
   let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
     "const MCSubtargetInfo &STI, raw_ostream &O) { "#

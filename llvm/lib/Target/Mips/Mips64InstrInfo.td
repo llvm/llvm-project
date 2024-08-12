@@ -830,6 +830,12 @@ def : MipsPat<(sra GPR64:$rt, (i32 (trunc GPR64:$rs))),
 def : MipsPat<(rotr GPR64:$rt, (i32 (trunc GPR64:$rs))),
               (DROTRV GPR64:$rt, (EXTRACT_SUBREG GPR64:$rs, sub_32))>,
               ISA_MIPS3, GPR_64;
+def : MipsPat<(and (srl (i32 (trunc GPR64:$src)), immZExt5:$imm5), immZExt16:$value),
+              (ANDi (EXTRACT_SUBREG (DSRL GPR64:$src, immZExt5:$imm5), sub_32), immZExt16:$value)>,
+              ISA_MIPS3, GPR_64;
+def : MipsPat<(MipsExt (i32 (trunc GPR64:$src)), immZExt5:$pos, immZExt5:$size),
+              (EXTRACT_SUBREG (DEXT GPR64:$src, immZExt5:$pos, immZExt5:$size), sub_32)>,
+              ISA_MIPS3, GPR_64;
 
 // 32-to-64-bit extension
 def : MipsPat<(i64 (anyext GPR32:$src)),

@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -62,10 +63,23 @@
 
 using namespace llvm;
 
-#undef  DEBUG_TYPE
-#define DEBUG_TYPE "reloc-info"
+#define DEBUG_TYPE "elf-object-writer"
 
 namespace {
+namespace stats {
+
+STATISTIC(AllocTextBytes, "Total size of SHF_ALLOC text sections");
+STATISTIC(AllocROBytes, "Total size of SHF_ALLOC readonly sections");
+STATISTIC(AllocRWBytes, "Total size of SHF_ALLOC read-write sections");
+STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
+STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
+STATISTIC(RelocationBytes, "Total size of relocation sections");
+STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
+STATISTIC(DebugBytes, "Total size of debug info sections");
+STATISTIC(UnwindBytes, "Total size of unwind sections");
+STATISTIC(OtherBytes, "Total size of uncategorized sections");
+
+} // namespace stats
 
 struct ELFWriter;
 
@@ -950,6 +964,44 @@ void ELFWriter::writeSectionHeader(const MCAssembler &Asm) {
       Size = Asm.getSectionAddressSize(*Section);
     else
       Size = Offsets.second - Offsets.first;
+
+    auto SectionHasFlag = [&](uint64_t Flag) -> bool {
+      return Section->getFlags() & Flag;
+    };
+
+    if (Section->getName().starts_with(".debug")) {
+      stats::DebugBytes += Size;
+    } else if (Section->getName().starts_with(".eh_frame")) {
+      stats::UnwindBytes += Size;
+    } else if (SectionHasFlag(ELF::SHF_ALLOC)) {
+      if (SectionHasFlag(ELF::SHF_EXECINSTR)) {
+        stats::AllocTextBytes += Size;
+      } else if (SectionHasFlag(ELF::SHF_WRITE)) {
+        stats::AllocRWBytes += Size;
+      } else {
+        stats::AllocROBytes += Size;
+      }
+    } else {
+      switch (Section->getType()) {
+      case ELF::SHT_STRTAB:
+        stats::StrtabBytes += Size;
+        break;
+      case ELF::SHT_SYMTAB:
+        stats::SymtabBytes += Size;
+        break;
+      case ELF::SHT_DYNSYM:
+        stats::DynsymBytes += Size;
+        break;
+      case ELF::SHT_REL:
+      case ELF::SHT_RELA:
+      case ELF::SHT_CREL:
+        stats::RelocationBytes += Size;
+        break;
+      default:
+        stats::OtherBytes += Size;
+        break;
+      }
+    }
 
     writeSection(GroupSymbolIndex, Offsets.first, Size, *Section);
   }

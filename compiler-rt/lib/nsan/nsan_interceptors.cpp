@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
-#include "nsan/nsan.h"
+#include "nsan.h"
 #include "sanitizer_common/sanitizer_common.h"
 
 #include <wchar.h>

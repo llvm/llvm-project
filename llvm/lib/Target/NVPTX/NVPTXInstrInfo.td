@@ -3899,7 +3899,7 @@ def brx_end :
   SDNode<"NVPTXISD::BrxEnd", SDTBrxEndProfile,
          [SDNPHasChain, SDNPInGlue, SDNPSideEffect]>;
 
-let isTerminator = 1, isBranch = 1, isIndirectBranch = 1 in {
+let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
 
   def BRX_START :
     NVPTXInst<(outs), (ins i32imm:$id),
@@ -3914,7 +3914,9 @@ let isTerminator = 1, isBranch = 1, isIndirectBranch = 1 in {
   def BRX_END :
     NVPTXInst<(outs), (ins brtarget:$target, Int32Regs:$val, i32imm:$id),
               "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
-              [(brx_end bb:$target, (i32 Int32Regs:$val), (i32 imm:$id))]>;
+              [(brx_end bb:$target, (i32 Int32Regs:$val), (i32 imm:$id))]> {
+      let isBarrier = 1;
+    }
 }
 
 

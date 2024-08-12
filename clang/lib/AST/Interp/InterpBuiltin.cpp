@@ -1658,18 +1658,34 @@ bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
   }
 
   if (DestDesc->isRecord()) {
-    assert(SrcDesc->isRecord());
-    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
-    const Record *R = DestDesc->ElemRecord;
-    for (const Record::Field &F : R->fields()) {
+    auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
       Pointer DestField = Dest.atField(F.Offset);
       if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
         TYPE_SWITCH(*FT, {
           DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
           DestField.initialize();
+          if (Activate)
+            DestField.activate();
         });
+        return true;
+      }
+      return Invalid(S, OpPC);
+    };
+
+    assert(SrcDesc->isRecord());
+    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
+    const Record *R = DestDesc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      if (R->isUnion()) {
+        // For unions, only copy the active field.
+        const Pointer &SrcField = Src.atField(F.Offset);
+        if (SrcField.isActive()) {
+          if (!copyField(F, /*Activate=*/true))
+            return false;
+        }
       } else {
-        return Invalid(S, OpPC);
+        if (!copyField(F, /*Activate=*/false))
+          return false;
       }
     }
     return true;
