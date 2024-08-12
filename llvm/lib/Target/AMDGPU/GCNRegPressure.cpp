@@ -298,6 +298,35 @@ static LaneBitmask getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
   return I->LaneMask;
 }
 
+static LaneBitmask
+getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+                     bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
+                     LaneBitmask SafeDefault,
+                     bool (*Property)(const LiveRange &LR, SlotIndex Pos)) {
+  if (RegUnit.isVirtual()) {
+    const LiveInterval &LI = LIS.getInterval(RegUnit);
+    LaneBitmask Result;
+    if (TrackLaneMasks && LI.hasSubRanges()) {
+      for (const LiveInterval::SubRange &SR : LI.subranges()) {
+        if (Property(SR, Pos))
+          Result |= SR.LaneMask;
+      }
+    } else if (Property(LI, Pos)) {
+      Result = TrackLaneMasks ? MRI.getMaxLaneMaskForVReg(RegUnit)
+                              : LaneBitmask::getAll();
+    }
+
+    return Result;
+  } else {
+    const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
+    // Be prepared for missing liveranges: We usually do not compute liveranges
+    // for physical registers on targets with many registers (GPUs).
+    if (LR == nullptr)
+      return SafeDefault;
+    return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRPTracker
 
