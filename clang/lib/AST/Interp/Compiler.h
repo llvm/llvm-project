@@ -357,6 +357,7 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool compileConstructor(const CXXConstructorDecl *Ctor);
 
   bool checkLiteralType(const Expr *E);
 
@@ -388,9 +389,6 @@ protected:
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;
-
-  /// Flag indicating if we're initializing a global variable.
-  bool GlobalDecl = false;
 
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;

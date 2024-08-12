@@ -78,6 +78,8 @@ jobs:
     name: Build Release Binaries
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     needs:
       - validate-tag
       - release-create
@@ -99,6 +101,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     permissions:
+      contents: read
       id-token: write
       attestations: write
     needs:

@@ -5022,6 +5022,7 @@ cc_library(
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -5785,10 +5786,12 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
+        ":SPIRVCommonAttrToLLVMConversion",
         ":SPIRVDialect",
         ":Support",
         ":TransformUtils",
@@ -5984,7 +5987,10 @@ cc_library(
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
     ],
-    hdrs = ["include/mlir/Conversion/GPUCommon/GPUCommonPass.h"],
+    hdrs = [
+        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
+        "lib/Conversion/GPUCommon/GPUOpsLowering.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithToLLVM",
@@ -6082,6 +6088,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefToLLVM",
         ":Pass",
+        ":SPIRVCommonAttrToLLVMConversion",
         ":SPIRVDialect",
         ":SPIRVUtils",
         ":Support",
@@ -7213,6 +7220,16 @@ cc_library(
 )
 
 cc_library(
+    name = "SPIRVCommonAttrToLLVMConversion",
+    srcs = ["lib/Conversion/SPIRVCommon/AttrToLLVMConverter.cpp"],
+    hdrs = ["include/mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"],
+    includes = ["include"],
+    deps = [
+        ":SPIRVDialect",
+    ],
+)
+
+cc_library(
     name = "MathToSPIRV",
     srcs = glob([
         "lib/Conversion/MathToSPIRV/*.cpp",
@@ -8316,6 +8333,7 @@ cc_library(
         ":FuncToSPIRV",
         ":IR",
         ":IndexToSPIRV",
+        ":MemRefToSPIRV",
         ":Pass",
         ":Rewrite",
         ":SCFToSPIRV",

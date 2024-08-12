@@ -33,8 +33,6 @@
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
-using namespace llvm::PatternMatch;
-
 // As a default, let's assume that we want to be aggressive,
 // and attempt to traverse with no limits in attempt to sink negation.
 static constexpr unsigned NegatorDefaultMaxDepth = ~0U;

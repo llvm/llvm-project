@@ -738,14 +738,8 @@ public:
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
   /// consistent memory ranges given a \a core_style.
-  Status CalculateCoreFileSaveRanges(const SaveCoreOptions &core_options,
+  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
                                      CoreFileMemoryRanges &ranges);
-
-  /// Helper function for Process::SaveCore(...) that calculates the thread list
-  /// based upon options set within a given \a core_options object.
-  /// \note If there is no thread list defined, all threads will be saved.
-  std::vector<lldb::ThreadSP>
-  CalculateCoreFileThreadList(const SaveCoreOptions &core_options);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
@@ -1320,10 +1314,16 @@ public:
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,
-                         uint32_t num_frames_with_source,
-                         bool stop_format);
+                         uint32_t num_frames_with_source, bool stop_format);
 
-  void SendAsyncInterrupt();
+  /// Send an async interrupt request.
+  ///
+  /// If \a thread is specified the async interrupt stop will be attributed to
+  /// the specified thread.
+  ///
+  /// \param[in] thread
+  ///     The thread the async interrupt will be attributed to.
+  void SendAsyncInterrupt(Thread *thread = nullptr);
 
   // Notify this process class that modules got loaded.
   //
@@ -2873,6 +2873,17 @@ protected:
     return std::nullopt;
   }
 
+  /// Handle thread specific async interrupt and return the original thread
+  /// that requested the async interrupt. It can be null if original thread
+  /// has exited.
+  ///
+  /// \param[in] description
+  ///     Returns the stop reason description of the async interrupt.
+  virtual lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo, const std::string &description) {
+    return lldb::ThreadSP();
+  }
+
   lldb::StateType GetPrivateState();
 
   /// The "private" side of resuming a process.  This doesn't alter the state
@@ -3158,6 +3169,11 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
+
+  lldb::tid_t m_interrupt_tid; /// The tid of the thread that issued the async
+                               /// interrupt, used by thread plan timeout. It
+                               /// can be LLDB_INVALID_THREAD_ID to indicate
+                               /// user level async interrupt.
 
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.

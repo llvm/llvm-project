@@ -86,7 +86,7 @@ int internal_pthread_join(void *th, void **ret);
       return REAL(pthread_create)(th, attr, callback, param);             \
     }                                                                     \
     int internal_pthread_join(void *th, void **ret) {                     \
-      return REAL(pthread_join(th, ret));                                 \
+      return REAL(pthread_join)(th, ret);                                 \
     }                                                                     \
     }  // namespace __sanitizer
 
