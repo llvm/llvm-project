@@ -4759,7 +4759,6 @@ ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
-namespace {
 /// Certain overflow-dependent code patterns can have their integer overflow
 /// sanitization disabled. Check for the common pattern `if (a + b < a)` and
 /// return the resulting BinaryOperator responsible for the addition so we can
@@ -4806,7 +4805,6 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
     return BO;
   return {};
 }
-} // namespace
 
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
