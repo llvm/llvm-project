@@ -107,9 +107,16 @@ static void *NsanAllocate(uptr size, uptr alignment, bool zero) {
     GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);
     ReportRssLimitExceeded(&stack);
   }
-  NsanThread *t = GetCurrentThread();
-  void *allocated = allocator.Allocate(GetAllocatorCache(&t->malloc_storage()),
-                                       size, alignment);
+
+  void *allocated;
+  if (NsanThread *t = GetCurrentThread()) {
+    AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
+    allocated = allocator.Allocate(cache, size, alignment);
+  } else {
+    SpinMutexLock l(&fallback_mutex);
+    AllocatorCache *cache = &fallback_allocator_cache;
+    allocated = allocator.Allocate(cache, size, alignment);
+  }
   if (UNLIKELY(!allocated)) {
     SetAllocatorOutOfMemory();
     if (AllocatorMayReturnNull())

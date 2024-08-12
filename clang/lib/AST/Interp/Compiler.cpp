@@ -4733,9 +4733,8 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
-  // Classify the return type.
-  ReturnType = this->classify(F->getReturnType());
+bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
+  assert(!ReturnType);
 
   auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
                                   const Expr *InitExpr) -> bool {
@@ -4763,102 +4762,114 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     return this->emitFinishInitPop(InitExpr);
   };
 
+  const RecordDecl *RD = Ctor->getParent();
+  const Record *R = this->getRecord(RD);
+  if (!R)
+    return false;
+
+  if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
+    // union copy and move ctors are special.
+    assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
+    if (!this->emitThis(Ctor))
+      return false;
+
+    auto PVD = Ctor->getParamDecl(0);
+    ParamOffset PO = this->Params[PVD]; // Must exist.
+
+    if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
+      return false;
+
+    return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
+           this->emitRetVoid(Ctor);
+  }
+
+  InitLinkScope<Emitter> InitScope(this, InitLink::This());
+  for (const auto *Init : Ctor->inits()) {
+    // Scope needed for the initializers.
+    BlockScope<Emitter> Scope(this);
+
+    const Expr *InitExpr = Init->getInit();
+    if (const FieldDecl *Member = Init->getMember()) {
+      const Record::Field *F = R->getField(Member);
+
+      if (!emitFieldInitializer(F, F->Offset, InitExpr))
+        return false;
+    } else if (const Type *Base = Init->getBaseClass()) {
+      const auto *BaseDecl = Base->getAsCXXRecordDecl();
+      assert(BaseDecl);
+
+      if (Init->isBaseVirtual()) {
+        assert(R->getVirtualBase(BaseDecl));
+        if (!this->emitGetPtrThisVirtBase(BaseDecl, InitExpr))
+          return false;
+
+      } else {
+        // Base class initializer.
+        // Get This Base and call initializer on it.
+        const Record::Base *B = R->getBase(BaseDecl);
+        assert(B);
+        if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
+          return false;
+      }
+
+      if (!this->visitInitializer(InitExpr))
+        return false;
+      if (!this->emitFinishInitPop(InitExpr))
+        return false;
+    } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
+      assert(IFD->getChainingSize() >= 2);
+
+      unsigned NestedFieldOffset = 0;
+      const Record::Field *NestedField = nullptr;
+      for (const NamedDecl *ND : IFD->chain()) {
+        const auto *FD = cast<FieldDecl>(ND);
+        const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
+        assert(FieldRecord);
+
+        NestedField = FieldRecord->getField(FD);
+        assert(NestedField);
+
+        NestedFieldOffset += NestedField->Offset;
+      }
+      assert(NestedField);
+
+      if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
+        return false;
+    } else {
+      assert(Init->isDelegatingInitializer());
+      if (!this->emitThis(InitExpr))
+        return false;
+      if (!this->visitInitializer(Init->getInit()))
+        return false;
+      if (!this->emitPopPtr(InitExpr))
+        return false;
+    }
+
+    if (!Scope.destroyLocals())
+      return false;
+  }
+
+  if (const auto *Body = Ctor->getBody())
+    if (!visitStmt(Body))
+      return false;
+
+  return this->emitRetVoid(SourceInfo{});
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
+  // Classify the return type.
+  ReturnType = this->classify(F->getReturnType());
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F))
+    return this->compileConstructor(Ctor);
+
   // Emit custom code if this is a lambda static invoker.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
       MD && MD->isLambdaStaticInvoker())
     return this->emitLambdaStaticInvokerBody(MD);
 
-  // Constructor. Set up field initializers.
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F)) {
-    const RecordDecl *RD = Ctor->getParent();
-    const Record *R = this->getRecord(RD);
-    if (!R)
-      return false;
-
-    if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
-      // union copy and move ctors are special.
-      assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
-      if (!this->emitThis(Ctor))
-        return false;
-
-      auto PVD = Ctor->getParamDecl(0);
-      ParamOffset PO = this->Params[PVD]; // Must exist.
-
-      if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
-        return false;
-
-      return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
-             this->emitRetVoid(Ctor);
-    }
-
-    InitLinkScope<Emitter> InitScope(this, InitLink::This());
-    for (const auto *Init : Ctor->inits()) {
-      // Scope needed for the initializers.
-      BlockScope<Emitter> Scope(this);
-
-      const Expr *InitExpr = Init->getInit();
-      if (const FieldDecl *Member = Init->getMember()) {
-        const Record::Field *F = R->getField(Member);
-
-        if (!emitFieldInitializer(F, F->Offset, InitExpr))
-          return false;
-      } else if (const Type *Base = Init->getBaseClass()) {
-        const auto *BaseDecl = Base->getAsCXXRecordDecl();
-        assert(BaseDecl);
-
-        if (Init->isBaseVirtual()) {
-          assert(R->getVirtualBase(BaseDecl));
-          if (!this->emitGetPtrThisVirtBase(BaseDecl, InitExpr))
-            return false;
-
-        } else {
-          // Base class initializer.
-          // Get This Base and call initializer on it.
-          const Record::Base *B = R->getBase(BaseDecl);
-          assert(B);
-          if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
-            return false;
-        }
-
-        if (!this->visitInitializer(InitExpr))
-          return false;
-        if (!this->emitFinishInitPop(InitExpr))
-          return false;
-      } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
-        assert(IFD->getChainingSize() >= 2);
-
-        unsigned NestedFieldOffset = 0;
-        const Record::Field *NestedField = nullptr;
-        for (const NamedDecl *ND : IFD->chain()) {
-          const auto *FD = cast<FieldDecl>(ND);
-          const Record *FieldRecord =
-              this->P.getOrCreateRecord(FD->getParent());
-          assert(FieldRecord);
-
-          NestedField = FieldRecord->getField(FD);
-          assert(NestedField);
-
-          NestedFieldOffset += NestedField->Offset;
-        }
-        assert(NestedField);
-
-        if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
-          return false;
-      } else {
-        assert(Init->isDelegatingInitializer());
-        if (!this->emitThis(InitExpr))
-          return false;
-        if (!this->visitInitializer(Init->getInit()))
-          return false;
-        if (!this->emitPopPtr(InitExpr))
-          return false;
-      }
-
-      if (!Scope.destroyLocals())
-        return false;
-    }
-  }
-
+  // Regular functions.
   if (const auto *Body = F->getBody())
     if (!visitStmt(Body))
       return false;
