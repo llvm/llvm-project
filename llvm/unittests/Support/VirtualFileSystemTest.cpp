@@ -3629,3 +3629,53 @@ TEST(TracingFileSystemTest, TracingWorks) {
   EXPECT_EQ(TracingFS->NumExistsCalls, 1u);
   EXPECT_EQ(TracingFS->NumIsLocalCalls, 1u);
 }
+
+TEST(TracingFileSystemTest, PrintOutput) {
+  auto InMemoryFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  auto TracingFS =
+      makeIntrusiveRefCnt<vfs::TracingFileSystem>(std::move(InMemoryFS));
+
+  (void)TracingFS->status("/foo");
+
+  (void)TracingFS->openFileForRead("/foo");
+  (void)TracingFS->openFileForRead("/foo");
+
+  std::error_code EC;
+  (void)TracingFS->dir_begin("/foo", EC);
+  (void)TracingFS->dir_begin("/foo", EC);
+  (void)TracingFS->dir_begin("/foo", EC);
+
+  llvm::SmallString<128> RealPath;
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+
+  bool IsLocal;
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  TracingFS->print(OS);
+
+  ASSERT_EQ("TracingFileSystem\n"
+            "NumStatusCalls=1\n"
+            "NumOpenFileForReadCalls=2\n"
+            "NumDirBeginCalls=3\n"
+            "NumGetRealPathCalls=4\n"
+            "NumExistsCalls=5\n"
+            "NumIsLocalCalls=6\n"
+            "  InMemoryFileSystem\n",
+            Output);
+}

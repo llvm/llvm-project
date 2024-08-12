@@ -2952,6 +2952,19 @@ void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
   if (Type == PrintType::Summary)
     return;
 
+  printIndent(OS, IndentLevel);
+  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
+
   if (Type == PrintType::Contents)
     Type = PrintType::Summary;
   getUnderlyingFS().print(OS, Type, IndentLevel + 1);
