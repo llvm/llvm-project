@@ -22,6 +22,7 @@
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -237,6 +238,15 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // point, if issues crop up, consider disabling.
         FPM.addPass(NVVMIntrRangePass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  PB.registerFullLinkTimeOptimizationLastEPCallback(
+      [](ModulePassManager &PM, OptimizationLevel Level) {
+        if (KernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter());
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        }
       });
 }
 

@@ -40,6 +40,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -771,6 +772,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (FilterName == "vgpr")
           return onlyAllocateVGPRs;
         return nullptr;
+      });
+
+  PB.registerFullLinkTimeOptimizationLastEPCallback(
+      [](ModulePassManager &PM, OptimizationLevel Level) {
+        if (KernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter());
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        }
       });
 }
 
