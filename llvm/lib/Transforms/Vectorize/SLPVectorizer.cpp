@@ -10135,13 +10135,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
-          [E](Instruction *I) {
+          [&](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-            return I->getOpcode() == E->getAltOpcode();
+            return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
+                                          *TLI);
           },
           Mask);
       VecCost += ::getShuffleCost(TTIRef, TargetTransformInfo::SK_PermuteTwoSrc,
-                                  FinalVecTy, Mask);
+                                  FinalVecTy, Mask, CostKind);
       // Patterns like [fadd,fsub] can be combined into a single instruction
       // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
       // need to take into account their order when looking for the most used
