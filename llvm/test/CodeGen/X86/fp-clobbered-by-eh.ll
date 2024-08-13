@@ -12,7 +12,7 @@ define internal i64 @catchall_filt() {
 ; message.
 
 ; CHECK: <unknown>:0: error: Frame pointer clobbered by function invoke is not supported
-; CHECK: <unknown>:0: error: Stack realignment in presence of dynamic allocas is not supported withthis calling convention
+; CHECK: <unknown>:0: error: Stack realignment in presence of dynamic allocas is not supported with this calling convention
 define void @use_except_handler3() personality ptr @_except_handler3 {
 entry:
   invoke ghccc void @may_throw_or_crash()

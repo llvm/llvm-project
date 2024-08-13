@@ -568,8 +568,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasFP(MF)) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
-        SMLoc(),
-        "Frame pointer clobbered by function invoke is not supported.");
+          SMLoc(),
+          "Frame pointer clobbered by function invoke is not supported.");
 
     for (const MCPhysReg &SubReg : subregs_inclusive(X86::RBP))
       Reserved.set(SubReg);
@@ -578,10 +578,10 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Set the base-pointer register and its aliases as reserved if needed.
   if (hasBasePointer(MF)) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getBPClobberedByInvoke())
-      MF.getContext().reportError(
-        SMLoc(),
-        "Stack realignment in presence of dynamic allocas is not supported with"
-        "this calling convention.");
+      MF.getContext().reportError(SMLoc(),
+                                  "Stack realignment in presence of dynamic "
+                                  "allocas is not supported with "
+                                  "this calling convention.");
 
     Register BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
     for (const MCPhysReg &SubReg : subregs_inclusive(BasePtr))
