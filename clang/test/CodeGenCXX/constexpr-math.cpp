@@ -99,9 +99,8 @@ int func()
   constexpr float frexp5 = __builtin_frexpf(-NAN, (int [1]){});
   constexpr float frexp6 = __builtin_frexpf(+INFINITY, (int [1]){});
   constexpr float frexp7 = __builtin_frexpf(-INFINITY, (int [1]){});
-  constexpr __fp16 frexp9 = __builtin_frexpf16(3.5, (int [1]){});
   constexpr long double frexp8 = __builtin_frexpl(259.328L, (int [1]){});
-
+  constexpr __fp16 frexp9 = __builtin_frexpf16(3.5, (int [1]){});
   return 0;
 }
 #elif FLOAT128
