@@ -9437,6 +9437,13 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
     // ---------- Step 4 opt  -----------
     ArgStringList OptArgs;
+
+    // Forward -Xopaque-offload-opt arguments to the 'opt' job.
+    for (Arg *A : Args.filtered(options::OPT_Xopaque_offload_opt)) {
+      OptArgs.push_back(A->getValue());
+      A->claim();
+    }
+
     auto OptOutputFileName = amdgpu::dlr::getOptCommandArgs(
         C, Args, OptArgs, TheTriple, TargetID, OutputFilePrefix,
         LinkOutputFileName);
