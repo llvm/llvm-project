@@ -17946,8 +17946,37 @@ public:
                                          SameValuesCounter, TrackedToOrig);
         }
 
-        Value *ReducedSubTree =
-            emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
+        Value *ReducedSubTree;
+        Type *ScalarTy = VL.front()->getType();
+        if (isa<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+          ReducedSubTree = PoisonValue::get(FixedVectorType::get(
+              VectorizedRoot->getType()->getScalarType(), ScalarTyNumElements));
+          for (unsigned I : seq<unsigned>(ScalarTyNumElements)) {
+            // Do reduction for each lane.
+            // e.g., do reduce add for
+            // VL[0] = <4 x Ty> <a, b, c, d>
+            // VL[1] = <4 x Ty> <e, f, g, h>
+            // Lane[0] = <2 x Ty> <a, e>
+            // Lane[1] = <2 x Ty> <b, f>
+            // Lane[2] = <2 x Ty> <c, g>
+            // Lane[3] = <2 x Ty> <d, h>
+            // result[0] = reduce add Lane[0]
+            // result[1] = reduce add Lane[1]
+            // result[2] = reduce add Lane[2]
+            // result[3] = reduce add Lane[3]
+            SmallVector<int, 16> Mask =
+                createStrideMask(I, ScalarTyNumElements, VL.size());
+            Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
+            ReducedSubTree = Builder.CreateInsertElement(
+                ReducedSubTree, emitReduction(Lane, Builder, ReduxWidth, TTI),
+                I);
+          }
+        } else {
+          ReducedSubTree =
+              emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
+        }
         if (ReducedSubTree->getType() != VL.front()->getType()) {
           assert(ReducedSubTree->getType() != VL.front()->getType() &&
                  "Expected different reduction type.");
@@ -18175,9 +18204,25 @@ private:
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
-      if (!AllConsts)
-        VectorCost =
-            TTI->getArithmeticReductionCost(RdxOpcode, VectorTy, FMF, CostKind);
+      if (!AllConsts) {
+        if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          unsigned ScalarTyNumElements = VecTy->getNumElements();
+          for (unsigned I : seq<unsigned>(ReducedVals.size())) {
+            VectorCost += TTI->getShuffleCost(
+                TTI::SK_PermuteSingleSrc, VectorTy,
+                createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
+            VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy, FMF,
+                                                          CostKind);
+          }
+          VectorCost += TTI->getScalarizationOverhead(
+              VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
+              /*Extract*/ false, TTI::TCK_RecipThroughput);
+        } else {
+          VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy, FMF,
+                                                       CostKind);
+        }
+      }
       ScalarCost = EvaluateScalarCost([&]() {
         return TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy, CostKind);
       });
