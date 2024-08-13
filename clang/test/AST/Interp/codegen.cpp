@@ -32,6 +32,16 @@ namespace BaseClassOffsets {
   B* b = &c;
 }
 
+namespace ExprBase {
+  struct A { int n; };
+  struct B { int n; };
+  struct C : A, B {};
+
+  extern const int &&t = ((B&&)C{}).n;
+  // CHECK: @_ZGRN8ExprBase1tE_ = internal global {{.*}} zeroinitializer,
+  // CHECK: @_ZN8ExprBase1tE = constant ptr {{.*}} @_ZGRN8ExprBase1tE_, {{.*}} 8
+}
+
 namespace reinterpretcast {
   const unsigned int n = 1234;
   extern const int &s = reinterpret_cast<const int&>(n);
@@ -43,4 +53,14 @@ namespace reinterpretcast {
   }
   // CHECK: define {{.*}} ptr @_ZN15reinterpretcast2f1Em
   // CHECK: inttoptr
+}
+
+namespace Bitfield {
+  struct S { int a : 5; ~S(); };
+  // CHECK: alloca
+  // CHECK: call {{.*}}memset
+  // CHECK: store i32 {{.*}}, ptr @_ZGRN8Bitfield1rE_
+  // CHECK: call void @_ZN8Bitfield1SD1
+  // CHECK: store ptr @_ZGRN8Bitfield1rE_, ptr @_ZN8Bitfield1rE, align 8
+  int &&r = S().a;
 }

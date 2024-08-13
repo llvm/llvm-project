@@ -6,16 +6,16 @@
 // CHECK:  store ptr addrspace(1) %p1, ptr [[p1addr]]
 // CHECK:  store ptr addrspace(2) %p2, ptr [[p2addr]]
 // CHECK:  [[t0:%.*]] = load ptr addrspace(2), ptr [[p2addr]], align 8 
-// CHECK:  [[t1:%.*]] = getelementptr inbounds %struct.S, ptr addrspace(2) [[t0]], i32 0, i32 1
+// CHECK:  [[t1:%.*]] = getelementptr inbounds nuw %struct.S, ptr addrspace(2) [[t0]], i32 0, i32 1
 // CHECK:  [[t2:%.*]] = load i32, ptr addrspace(2) [[t1]], align 4
 // CHECK:  [[t3:%.*]] = load ptr addrspace(1), ptr [[p1addr]], align 8  
-// CHECK:  [[t4:%.*]] = getelementptr inbounds %struct.S, ptr addrspace(1) [[t3]], i32 0, i32 0 
+// CHECK:  [[t4:%.*]] = getelementptr inbounds nuw %struct.S, ptr addrspace(1) [[t3]], i32 0, i32 0 
 // CHECK:  store i32 [[t2]], ptr addrspace(1) [[t4]], align 4
 // CHECK:  [[t5:%.*]] = load ptr addrspace(2), ptr [[p2addr]], align 8  
-// CHECK:  [[t6:%.*]] = getelementptr inbounds %struct.S, ptr addrspace(2) [[t5]], i32 0, i32 0 
+// CHECK:  [[t6:%.*]] = getelementptr inbounds nuw %struct.S, ptr addrspace(2) [[t5]], i32 0, i32 0 
 // CHECK:  [[t7:%.*]] = load i32, ptr addrspace(2) [[t6]], align 4            
 // CHECK:  [[t8:%.*]] = load ptr addrspace(1), ptr [[p1addr]], align 8  
-// CHECK:  [[t9:%.*]] = getelementptr inbounds %struct.S, ptr addrspace(1) [[t8]], i32 0, i32 1 
+// CHECK:  [[t9:%.*]] = getelementptr inbounds nuw %struct.S, ptr addrspace(1) [[t8]], i32 0, i32 1 
 // CHECK:  store i32 [[t7]], ptr addrspace(1) [[t9]], align 4
 // CHECK:  ret void
 // CHECK:}

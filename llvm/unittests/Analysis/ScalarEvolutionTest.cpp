@@ -137,7 +137,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
-  auto *PN = PHINode::Create(Ty, 2, "", &*LoopBB->begin());
+  auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
   PN->addIncoming(UndefValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
@@ -930,10 +930,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Type::getInt64Ty(Context), 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br);
+  auto *Phi =
+      PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br->getIterator());
   Phi->addIncoming(MinInt64, EntryBB);
   Phi->addIncoming(Add, LoopBB);
   // exit:
@@ -986,10 +988,11 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br);
+  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br->getIterator());
   auto *Arg = &*(F->arg_begin());
   Phi->addIncoming(Arg, EntryBB);
   Phi->addIncoming(Add, LoopBB);
@@ -1117,28 +1120,40 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 %sz, i32 %pp, i32 %x) { "
-      "entry: "
-      "  %v0 = add i32 %pp, 0 "
-      "  %v3 = add i32 %pp, 3 "
-      "  %vx = add i32 %pp, %x "
-      "  %vx3 = add i32 %vx, 3 "
-      "  br label %loop.body "
-      "loop.body: "
-      "  %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ] "
-      "  %xa = add nsw i32 %iv, %v0 "
-      "  %yy = add nsw i32 %iv, %v3 "
-      "  %xb = sub nsw i32 %yy, 3 "
-      "  %iv.next = add nsw i32 %iv, 1 "
-      "  %cmp = icmp sle i32 %iv.next, %sz "
-      "  br i1 %cmp, label %loop.body, label %exit "
-      "exit: "
-      "  ret void "
-      "} ",
+      R"(define void @foo(ptr %ptr, i32 %sz, i32 %pp, i32 %x) {
+      entry:
+        %v0 = add i32 %pp, 0
+        %v3 = add i32 %pp, 3
+        %vx = add i32 %pp, %x
+        %vx3 = add i32 %vx, 3
+        br label %loop.body
+      loop.body:
+        %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ]
+        %xa = add nsw i32 %iv, %v0
+        %yy = add nsw i32 %iv, %v3
+        %xb = sub nsw i32 %yy, 3
+        %iv.next = add nsw i32 %iv, 1
+        %cmp = icmp sle i32 %iv.next, %sz
+        br i1 %cmp, label %loop.body, label %loop2.body
+      loop2.body:
+        %iv2 = phi i32 [ %iv2.next, %loop2.body ], [ %iv, %loop.body ]
+        %iv2.next = add nsw i32 %iv2, 1
+        %iv2p3 = add i32 %iv2, 3
+        %var = load i32, ptr %ptr
+        %iv2pvar = add i32 %iv2, %var
+        %iv2pvarp3 = add i32 %iv2pvar, 3
+        %cmp2 = icmp sle i32 %iv2.next, %sz
+        br i1 %cmp2, label %loop2.body, label %exit
+      exit:
+        ret void
+      })",
       Err, C);
 
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     const SCEV *ScevV0 = SE.getSCEV(getInstructionByName(F, "v0")); // %pp
@@ -1154,6 +1169,15 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     const SCEV *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
     const SCEV *ScevIVNext =
         SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
+    // {{0,+,1},+,1}
+    const SCEV *ScevIV2 = SE.getSCEV(getInstructionByName(F, "iv2"));
+    // {{3,+,1},+,1}
+    const SCEV *ScevIV2P3 = SE.getSCEV(getInstructionByName(F, "iv2p3"));
+    // %var + {{0,+,1},+,1}
+    const SCEV *ScevIV2PVar = SE.getSCEV(getInstructionByName(F, "iv2pvar"));
+    // %var + {{3,+,1},+,1}
+    const SCEV *ScevIV2PVarP3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarp3"));
 
     auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
@@ -1178,6 +1202,8 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
+    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), std::nullopt); // TODO
+    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), std::nullopt); // TODO
     EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
     EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);

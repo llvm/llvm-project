@@ -2391,7 +2391,7 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   VisitDecl(D);
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
+    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/true));
   D->setTemplateArguments(Args);
 }
 
@@ -3684,6 +3684,54 @@ static void inheritDefaultTemplateArguments(ASTContext &Context,
   }
 }
 
+// [basic.link]/p10:
+//    If two declarations of an entity are attached to different modules,
+//    the program is ill-formed;
+static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
+                                                  Decl *Previous) {
+  Module *M = Previous->getOwningModule();
+
+  // We only care about the case in named modules.
+  if (!M || !M->isNamedModule())
+    return;
+
+  // If it is previous implcitly introduced, it is not meaningful to
+  // diagnose it.
+  if (Previous->isImplicit())
+    return;
+
+  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
+  // abstract for decls of an entity. e.g., the namespace decl and using decl
+  // doesn't introduce an entity.
+  if (!isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous))
+    return;
+
+  // Skip implicit instantiations since it may give false positive diagnostic
+  // messages.
+  // FIXME: Maybe this shows the implicit instantiations may have incorrect
+  // module owner ships. But given we've finished the compilation of a module,
+  // how can we add new entities to that module?
+  if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Previous);
+      VTSD && !VTSD->isExplicitSpecialization())
+    return;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Previous);
+      CTSD && !CTSD->isExplicitSpecialization())
+    return;
+  if (auto *Func = dyn_cast<FunctionDecl>(Previous))
+    if (auto *FTSI = Func->getTemplateSpecializationInfo();
+        FTSI && !FTSI->isExplicitSpecialization())
+      return;
+
+  // It is fine if they are in the same module.
+  if (Reader.getContext().isInSameModule(M, D->getOwningModule()))
+    return;
+
+  Reader.Diag(Previous->getLocation(),
+              diag::err_multiple_decl_in_different_modules)
+      << cast<NamedDecl>(Previous) << M->Name;
+  Reader.Diag(D->getLocation(), diag::note_also_found);
+}
+
 void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
                                        Decl *Previous, Decl *Canon) {
   assert(D && Previous);
@@ -3697,22 +3745,7 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
 #include "clang/AST/DeclNodes.inc"
   }
 
-  // [basic.link]/p10:
-  //    If two declarations of an entity are attached to different modules,
-  //    the program is ill-formed;
-  //
-  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
-  // abstract for decls of an entity. e.g., the namespace decl and using decl
-  // doesn't introduce an entity.
-  if (Module *M = Previous->getOwningModule();
-      M && M->isNamedModule() &&
-      isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous) &&
-      !Reader.getContext().isInSameModule(M, D->getOwningModule())) {
-    Reader.Diag(Previous->getLocation(),
-                diag::err_multiple_decl_in_different_modules)
-        << cast<NamedDecl>(Previous) << M->Name;
-    Reader.Diag(D->getLocation(), diag::note_also_found);
-  }
+  checkMultipleDefinitionInNamedModules(Reader, D, Previous);
 
   // If the declaration was visible in one module, a redeclaration of it in
   // another module remains visible even if it wouldn't be visible by itself.
@@ -4209,6 +4242,13 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
+
+  for (GlobalDeclID ID : VTablesToEmit) {
+    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
+    assert(!RD->shouldEmitInExternalSource());
+    PassVTableToConsumer(RD);
+  }
+  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

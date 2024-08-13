@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 
 using namespace clang;
@@ -155,12 +156,32 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   APValue::LValueBase Base;
   if (const auto *VD = Desc->asValueDecl())
     Base = VD;
-  else if (const auto *E = Desc->asExpr())
-    Base = E;
-  else
+  else if (const auto *E = Desc->asExpr()) {
+    // Create a DynamicAlloc base of the right type.
+    if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
+      QualType AllocatedType;
+      if (NewExpr->isArray()) {
+        assert(Desc->isArray());
+        APInt ArraySize(64, static_cast<uint64_t>(Desc->getNumElems()),
+                        /*IsSigned=*/false);
+        AllocatedType =
+            ASTCtx.getConstantArrayType(NewExpr->getAllocatedType(), ArraySize,
+                                        nullptr, ArraySizeModifier::Normal, 0);
+      } else {
+        AllocatedType = NewExpr->getAllocatedType();
+      }
+      // FIXME: Suboptimal counting of dynamic allocations. Move this to Context
+      // or InterpState?
+      static int ReportedDynamicAllocs = 0;
+      DynamicAllocLValue DA(ReportedDynamicAllocs++);
+      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+    } else {
+      Base = E;
+    }
+  } else
     llvm_unreachable("Invalid allocation type");
 
-  if (isUnknownSizeArray() || Desc->asExpr())
+  if (isUnknownSizeArray())
     return APValue(Base, CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
@@ -367,12 +388,37 @@ void Pointer::initialize() const {
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
-         "Only composite fields can be initialised");
+         "Only composite fields can be activated");
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
     return;
+  if (!getInlineDesc()->InUnion)
+    return;
 
   getInlineDesc()->IsActive = true;
+
+  // Get the union, iterate over its fields and DEactivate all others.
+  Pointer UnionPtr = getBase();
+  while (!UnionPtr.getFieldDesc()->isUnion())
+    UnionPtr = UnionPtr.getBase();
+
+  const Record *UnionRecord = UnionPtr.getRecord();
+  for (const Record::Field &F : UnionRecord->fields()) {
+    Pointer FieldPtr = UnionPtr.atField(F.Offset);
+    if (FieldPtr == *this) {
+    } else {
+      FieldPtr.getInlineDesc()->IsActive = false;
+      // FIXME: Recurse.
+    }
+  }
+
+  Pointer B = getBase();
+  while (!B.isRoot() && B.inUnion()) {
+    // FIXME: Need to de-activate other fields of parent records.
+    B.getInlineDesc()->IsActive = true;
+    assert(B.isActive());
+    B = B.getBase();
+  }
 }
 
 void Pointer::deactivate() const {
@@ -575,4 +621,31 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   if (!Composite(getType(), *this, Result))
     return std::nullopt;
   return Result;
+}
+
+IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
+                                unsigned Offset) const {
+  if (!this->Desc)
+    return *this;
+  const Record *R = this->Desc->ElemRecord;
+  if (!R)
+    return *this;
+
+  const Record::Field *F = nullptr;
+  for (auto &It : R->fields()) {
+    if (It.Offset == Offset) {
+      F = &It;
+      break;
+    }
+  }
+  if (!F)
+    return *this;
+
+  const FieldDecl *FD = F->Decl;
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+  unsigned FieldIndex = FD->getFieldIndex();
+  uint64_t FieldOffset =
+      ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+          .getQuantity();
+  return IntPointer{this->Desc, FieldOffset};
 }

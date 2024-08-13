@@ -7,17 +7,17 @@ define void @test(ptr %ptr, ptr noalias %s)  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[BAIL_OUT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[S:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[S]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[S]], align 4
 ; CHECK-NEXT:    br i1 true, label [[LOOP1]], label [[CONT:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[BAIL_OUT]]
 ; CHECK:       bail_out:
-; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP3]], [[CONT]] ]
+; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP1]], [[CONT]] ]
 ; CHECK-NEXT:    store i32 [[DUMMY_PHI]], ptr [[S]], align 4
 ; CHECK-NEXT:    ret void
 ;

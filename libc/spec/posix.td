@@ -132,6 +132,9 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadRWLockTPtr = PtrType<PThreadRWLockTType>;
   RestrictedPtrType RestrictedPThreadRWLockTPtr = RestrictedPtrType<PThreadRWLockTType>;
 
+  NamedType PThreadSpinLockTType = NamedType<"pthread_spinlock_t">;
+  PtrType PThreadSpinLockTPtr = PtrType<PThreadSpinLockTType>;
+
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
@@ -1049,6 +1052,7 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadOnceT,
         PThreadRWLockAttrTType,
         PThreadRWLockTType,
+        PThreadSpinLockTType,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -1360,6 +1364,31 @@ def POSIX : StandardSpec<"POSIX"> {
         RetValSpec<IntType>,
         [ArgSpec<PThreadRWLockTPtr>]
       >,
+      FunctionSpec<
+        "pthread_spin_init",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "pthread_spin_destroy",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_lock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_trylock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_spin_unlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadSpinLockTPtr>]
+      >
     ]
   >;
 
