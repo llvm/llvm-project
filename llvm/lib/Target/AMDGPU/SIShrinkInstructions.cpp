@@ -152,6 +152,10 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
       if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
           !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
         return false;
+
+      if (AMDGPU::VGPR_16RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_16_Lo128RegClass.contains(Reg))
+        return false;
     }
   }
   return true;
