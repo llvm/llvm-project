@@ -133,3 +133,18 @@ Options
 
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
+
+.. option::  UseUpperCaseSuffix
+
+   When `true`, the check will allow new explicit conversion use an uppercase
+   suffix when it applies.
+
+Example
+^^^^^^^
+
+.. code-block:: c++
+
+  uint32_t foo;
+  if (foo) {}
+  // ^ propose replacement default: if (foo != 0u) {}
+  // ^ propose replacement with option `UseUpperCaseSuffix`: if (foo != 0U) {}
