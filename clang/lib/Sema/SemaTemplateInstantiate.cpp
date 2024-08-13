@@ -511,17 +511,15 @@ struct TemplateInstantiationArgumentCollecter
   MultiLevelTemplateArgumentList &Result;
   bool RelativeToPrimary;
   bool ForConstraintInstantiation;
-  bool SkipForSpecialization;
 
   TemplateInstantiationArgumentCollecter(
       Sema &S,
       MultiLevelTemplateArgumentList &Result,
       bool RelativeToPrimary,
-      bool ForConstraintInstantiation,
-      bool SkipForSpecialization) :
+      bool ForConstraintInstantiation) :
           S(S), Result(Result), RelativeToPrimary(RelativeToPrimary),
-          ForConstraintInstantiation(ForConstraintInstantiation),
-          SkipForSpecialization(SkipForSpecialization) { }
+          ForConstraintInstantiation(ForConstraintInstantiation) {
+  }
 
   Decl *Done() {
     return nullptr;
@@ -577,7 +575,7 @@ struct TemplateInstantiationArgumentCollecter
     assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
           "outer template not instantiated?");
 
-    if (!SkipForSpecialization && ForConstraintInstantiation)
+    if (ForConstraintInstantiation)
       Result.addOuterTemplateArguments(
           VTD, VTD->getInjectedTemplateArgs(), /*Final=*/false);
 
@@ -591,7 +589,7 @@ struct TemplateInstantiationArgumentCollecter
     assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
           "outer template not instantiated?");
 
-    if (!SkipForSpecialization && ForConstraintInstantiation)
+    if (ForConstraintInstantiation)
       Result.addOuterTemplateArguments(
           CTD, CTD->getInjectedTemplateArgs(), /*Final=*/false);
 
@@ -798,26 +796,23 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = CTSD->getSpecializedTemplateOrPartial();
     #if 0
     if (auto *CTPSD = Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (!SkipForSpecialization)
-        Result.addOuterTemplateArguments(
-            CTPSD, CTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
+      Result.addOuterTemplateArguments(
+          CTPSD, CTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
       if (CTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *CTD = Specialized.get<ClassTemplateDecl *>();
-      if (!SkipForSpecialization)
-        Result.addOuterTemplateArguments(
-            CTD, CTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
+      Result.addOuterTemplateArguments(
+          CTD, CTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
       if (CTD->isMemberSpecialization())
         return Done();
     }
     #else
-    if (!SkipForSpecialization)
-      Result.addOuterTemplateArguments(
-          CTSD, CTSD->getTemplateInstantiationArgs().asArray(),
-          /*Final=*/false);
+    Result.addOuterTemplateArguments(
+        CTSD, CTSD->getTemplateInstantiationArgs().asArray(),
+        /*Final=*/false);
     if (auto *CTPSD = Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
       if (CTPSD->isMemberSpecialization())
         return Done();
@@ -849,18 +844,16 @@ struct TemplateInstantiationArgumentCollecter
     llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD = Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (!SkipForSpecialization)
-        Result.addOuterTemplateArguments(
-            VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
+      Result.addOuterTemplateArguments(
+          VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
       if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (!SkipForSpecialization)
-        Result.addOuterTemplateArguments(
-            VTD, VTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
+      Result.addOuterTemplateArguments(
+          VTD, VTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
       if (VTD->isMemberSpecialization())
         return Done();
     }
@@ -897,14 +890,11 @@ struct TemplateInstantiationArgumentCollecter
 
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     const NamedDecl *ND, const DeclContext *DC, bool Final,
-    std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
-    const FunctionDecl *Pattern, bool ForConstraintInstantiation,
-    bool SkipForSpecialization, bool ForDefaultArgumentSubstitution) {
+    std::optional<ArrayRef<TemplateArgument>> Innermost,
+    bool RelativeToPrimary, bool ForConstraintInstantiation) {
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
-
-  SkipForSpecialization = false;
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
@@ -932,8 +922,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
 
   TemplateInstantiationArgumentCollecter Collecter(
       *this, Result, RelativeToPrimary,
-      ForConstraintInstantiation,
-      SkipForSpecialization);
+      ForConstraintInstantiation);
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
   } while (CurDecl);

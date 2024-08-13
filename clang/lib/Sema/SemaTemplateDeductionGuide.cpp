@@ -807,7 +807,6 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
         F, F->getLexicalDeclContext(),
         /*Final=*/false, /*Innermost=*/TemplateArgsForBuildingRC,
         /*RelativeToPrimary=*/true,
-        /*Pattern=*/nullptr,
         /*ForConstraintInstantiation=*/true);;
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
   #if 0
