@@ -351,13 +351,17 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
 
   bool MadeChange = false;
 
-  for (BasicBlock &BB : make_early_inc_range(F)) {
-    for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      // We do this iteration backwards because the control flow introducing
-      // transforms split the block at the end.
-      if (processAtomicInstr(&I))
-        MadeChange = true;
-    }
+  SmallVector<Instruction *, 1> AtomicInsts;
+
+  // Changing control-flow while iterating through it is a bad idea, so gather a
+  // list of all atomic instructions before we start.
+  for (Instruction &I : instructions(F))
+    if (I.isAtomic() && !isa<FenceInst>(&I))
+      AtomicInsts.push_back(&I);
+
+  for (auto *I : AtomicInsts) {
+    if (processAtomicInstr(I))
+      MadeChange = true;
   }
 
   return MadeChange;
