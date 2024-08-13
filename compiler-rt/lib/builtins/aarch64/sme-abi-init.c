@@ -20,7 +20,7 @@ _Bool __aarch64_has_sme_and_tpidr2_el0;
 #else
 #define getauxval(x) 0
 #endif
-#include "cpumodel/aarch64/hwcap.inc"
+#include "../cpu_model/aarch64/hwcap.inc"
 
 static _Bool has_sme(void) { return getauxval(AT_HWCAP2) & HWCAP2_SME; }
 
