@@ -147,7 +147,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
