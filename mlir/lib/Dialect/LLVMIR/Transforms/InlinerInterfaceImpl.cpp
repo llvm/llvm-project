@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/SliceSupport.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -221,86 +222,28 @@ static ArrayAttr concatArrayAttr(ArrayAttr lhs, ArrayAttr rhs) {
   return ArrayAttr::get(lhs.getContext(), result);
 }
 
-/// Attempts to return the underlying pointer value that `pointerValue` is based
-/// on. This traverses down the chain of operations to the last operation
-/// producing the base pointer and returns it. If it encounters an operation it
-/// cannot further traverse through, returns the operation's result.
-static Value getUnderlyingObject(Value pointerValue) {
-  while (true) {
-    if (auto gepOp = pointerValue.getDefiningOp<LLVM::GEPOp>()) {
-      pointerValue = gepOp.getBase();
-      continue;
-    }
-
-    if (auto addrCast = pointerValue.getDefiningOp<LLVM::AddrSpaceCastOp>()) {
-      pointerValue = addrCast.getOperand();
-      continue;
-    }
-
-    break;
-  }
-
-  return pointerValue;
-}
-
 /// Attempts to return the set of all underlying pointer values that
 /// `pointerValue` is based on. This function traverses through select
 /// operations and block arguments unlike getUnderlyingObject.
 static SmallVector<Value> getUnderlyingObjectSet(Value pointerValue) {
   SmallVector<Value> result;
+  walkBackwardSlice(pointerValue, [&](Value val) {
+    if (auto gepOp = val.getDefiningOp<LLVM::GEPOp>())
+      return WalkContinuation::advanceTo(gepOp.getBase());
 
-  SmallVector<Value> workList{pointerValue};
-  // Avoid dataflow loops.
-  SmallPtrSet<Value, 4> seen;
-  do {
-    Value current = workList.pop_back_val();
-    current = getUnderlyingObject(current);
+    if (auto addrCast = val.getDefiningOp<LLVM::AddrSpaceCastOp>())
+      return WalkContinuation::advanceTo(addrCast.getOperand());
 
-    if (!seen.insert(current).second)
-      continue;
+    // TODO: Add a SelectLikeOpInterface and use it in the slicing utility.
+    if (auto selectOp = val.getDefiningOp<LLVM::SelectOp>())
+      return WalkContinuation::advanceTo(
+          {selectOp.getTrueValue(), selectOp.getFalseValue()});
 
-    if (auto selectOp = current.getDefiningOp<LLVM::SelectOp>()) {
-      workList.push_back(selectOp.getTrueValue());
-      workList.push_back(selectOp.getFalseValue());
-      continue;
-    }
+    if (isa<OpResult>(val))
+      result.push_back(val);
 
-    if (auto blockArg = dyn_cast<BlockArgument>(current)) {
-      Block *parentBlock = blockArg.getParentBlock();
-
-      // Attempt to find all block argument operands for every predecessor.
-      // If any operand to the block argument wasn't found in a predecessor,
-      // conservatively add the block argument to the result set.
-      SmallVector<Value> operands;
-      bool anyUnknown = false;
-      for (auto iter = parentBlock->pred_begin();
-           iter != parentBlock->pred_end(); iter++) {
-        auto branch = dyn_cast<BranchOpInterface>((*iter)->getTerminator());
-        if (!branch) {
-          result.push_back(blockArg);
-          anyUnknown = true;
-          break;
-        }
-
-        Value operand = branch.getSuccessorOperands(
-            iter.getSuccessorIndex())[blockArg.getArgNumber()];
-        if (!operand) {
-          result.push_back(blockArg);
-          anyUnknown = true;
-          break;
-        }
-
-        operands.push_back(operand);
-      }
-
-      if (!anyUnknown)
-        llvm::append_range(workList, operands);
-
-      continue;
-    }
-
-    result.push_back(current);
-  } while (!workList.empty());
+    return WalkContinuation::advance();
+  });
 
   return result;
 }
