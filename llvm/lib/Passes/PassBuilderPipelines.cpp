@@ -1196,6 +1196,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
+    // FIXME(mtrofin): move AssignUniqueID if there is agreement to use this
+    // mechanism for GUIDs.
     MPM.addPass(AssignUniqueIDPass());
     if (IsCtxProfUse)
       return MPM;

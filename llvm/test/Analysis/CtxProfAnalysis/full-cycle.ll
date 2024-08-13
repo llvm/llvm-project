@@ -6,14 +6,15 @@
 ;
 ; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
 ;
-; Disable pre-inline to avoid losing the trivial functions to the preinliner.
-;
-; RUN: opt -module-summary -disable-preinline -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m1.bc %t/m1.ll
-; RUN: opt -module-summary -disable-preinline -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m2.bc %t/m2.ll
+; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m1.bc %t/m1.ll
+; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m2.bc %t/m2.ll
 ;
 ; RUN: rm -rf %t/postlink
 ; RUN: mkdir %t/postlink
+;
+;
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc -o %t/ -thinlto-distributed-indexes \
+; RUN:  -use-ctx-profile=%t/profile.ctxprofdata \
 ; RUN:  -r %t/m1.bc,f1,plx \
 ; RUN:  -r %t/m2.bc,f1 \
 ; RUN:  -r %t/m2.bc,entrypoint,plx
@@ -25,14 +26,16 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define private void @f2() {
+define private void @f2() #0 {
   ret void
 }
 
-define void @f1() {
+define void @f1() #0 {
   call void @f2()
   ret void
 }
+
+attributes #0 = { noinline }
 
 ;--- m2.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

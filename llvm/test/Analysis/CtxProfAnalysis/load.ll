@@ -11,9 +11,8 @@
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' \
 ; RUN:   -use-ctx-profile=%t/profile.ctxprofdata %t/example.ll -S -o %t/prelink.ll
 
-; disable preinline to get the same functions we started with.
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
-; RUN:  -disable-preinline %t/example.ll -S -o %t/prelink.ll
+; RUN:  %t/example.ll -S -o %t/prelink.ll
 ; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
 ; RUN:   -use-ctx-profile=%t/profile.ctxprofdata %t/prelink.ll -S 2> %t/output.txt
 ; RUN: diff %t/expected-profile-output.txt %t/output.txt
@@ -89,7 +88,7 @@ Current Profile:
 ;--- example.ll
 declare void @bar()
 
-define private void @foo(i32 %a, ptr %fct) {
+define private void @foo(i32 %a, ptr %fct) #0 {
   %t = icmp eq i32 %a, 0
   br i1 %t, label %yes, label %no
 yes:
@@ -122,3 +121,5 @@ yes:
 no:
   ret void
 }
+
+attributes #0 = { noinline }

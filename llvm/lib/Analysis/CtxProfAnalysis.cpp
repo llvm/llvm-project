@@ -120,7 +120,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   // .Profiles.
   // Trim first the roots that aren't in this module.
   DenseSet<GlobalValue::GUID> ProfiledGUIDs;
-  for (auto &[RootGuid, Tree] : llvm::make_early_inc_range(*MaybeCtx))
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
     if (!Result.FuncInfo.contains(RootGuid))
       MaybeCtx->erase(RootGuid);
   Result.Profiles = std::move(*MaybeCtx);
