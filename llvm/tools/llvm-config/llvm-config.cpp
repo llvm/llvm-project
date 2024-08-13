@@ -507,13 +507,9 @@ int main(int argc, char **argv) {
   raw_ostream &OS = outs();
 
   // Check if we want quoting and escaping.
-  bool QuotePaths = false;
-  for (int i = 1; i != argc; ++i) {
-    if (StringRef(argv[i]) == "--quote-paths") {
-      QuotePaths = true;
-      break;
-    }
-  }
+  bool QuotePaths = std::any_of(&argv[0], &argv[argc], [](const char *Arg) {
+    return StringRef(Arg) == "--quote-paths";
+  });
 
   auto MaybePrintQuoted = [&](StringRef Str) {
     if (QuotePaths)
