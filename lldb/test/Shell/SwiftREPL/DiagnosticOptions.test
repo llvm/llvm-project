@@ -10,8 +10,8 @@
 
 
 _ = "An unterminated string
-// DIAGNOSTIC: error: unterminated string literal [lex_unterminated_string]{{$}}
-// LOCALIZED: error: chaîne non terminée littérale{{$}}
+// DIAGNOSTIC: unterminated string literal [lex_unterminated_string]{{$}}
+// LOCALIZED: chaîne non terminée littérale{{$}}
 :quit
 
 
