@@ -10152,12 +10152,10 @@ let Predicates = [HasFP8] in {
   defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
 } // End let Predicates = [HasFP8]
 
-let Predicates = [HasFAMINMAX] in {
+let Predicates = [HasNEON, HasFAMINMAX] in {
  defm FAMAX : SIMDThreeSameVectorFP<0b0, 0b1, 0b011, "famax", null_frag>;
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
-} // End let Predicates = [HasFAMINMAX]
 
-let Predicates = [HasNEON, HasFAMINMAX] in {
  foreach Ty = [v4f16, v8f16, v2f32, v4f32, v2f64] in {
   // Replace min(abs(a), abs(b)) with famin(a, b)
   def : Pat<(Ty (fminimum (fabs Ty:$Rn), (fabs Ty:$Rm))),
