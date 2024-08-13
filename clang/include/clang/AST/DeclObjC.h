@@ -1758,6 +1758,7 @@ private:
   static bool isKnownExtension(ObjCCategoryDecl *Cat);
 
 public:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
@@ -2146,6 +2147,7 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
   void setHasODRHash(bool HasHash);
 
 public:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
