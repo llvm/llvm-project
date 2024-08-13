@@ -465,6 +465,16 @@ public:
   /// True if fast-isel is used.
   bool useFastISel() const;
 
+  /// True if ARMISD::MEMCPY should not be created/expanded specially (e.g.
+  /// as LDM/STM pairs).
+  bool wantsMEMCPYAsLdSt() const { return HasV7Ops && ARMProcClass == MClass; }
+
+  /// True if volatile ARMISD::MEMCPY should not be created/expanded specially
+  /// (e.g. as LDM/STM pairs).
+  bool wantsVolatileMEMCPYAsLdSt() const {
+    return ARMProcClass == MClass && HasV6Ops && !HasV7Ops;
+  }
+
   /// Returns the correct return opcode for the current feature set.
   /// Use BX if available to allow mixing thumb/arm code, but fall back
   /// to plain mov pc,lr on ARMv4.
