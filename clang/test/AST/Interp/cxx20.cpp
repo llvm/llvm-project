@@ -859,7 +859,6 @@ namespace DefinitionLoc {
                                           // both-note {{non-constexpr constructor}}
 }
 
-/// FIXME: Call base dtors when explicitly calling dtor.
 namespace VirtDtor {
   class B {
   public:
@@ -900,5 +899,5 @@ namespace VirtDtor {
     return buff[0] == a && buff[1] == b;
   }
 
-  static_assert(test('C', 'B')); // expected-error {{failed}}
+  static_assert(test('C', 'B'));
 }
