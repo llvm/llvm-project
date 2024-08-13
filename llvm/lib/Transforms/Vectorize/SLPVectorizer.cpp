@@ -15564,7 +15564,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (all_of(E.Scalars, IsaPred<Constant>))
     return true;
 
-  unsigned OrigBitWidth = DL->getTypeSizeInBits(E.Scalars.front()->getType());
+  unsigned OrigBitWidth =
+      DL->getTypeSizeInBits(E.Scalars.front()->getType()->getScalarType());
   if (OrigBitWidth == BitWidth) {
     MaxDepthLevel = 1;
     return true;
@@ -15995,7 +15996,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     }
 
     unsigned VF = E.getVectorFactor();
-    auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
+    auto *TreeRootIT =
+        dyn_cast<IntegerType>(E.Scalars.front()->getType()->getScalarType());
     if (!TreeRootIT || !Opcode)
       return 0u;
 
@@ -16145,7 +16147,8 @@ void BoUpSLP::computeMinimumValueSizes() {
 
     for (unsigned Idx : RootDemotes) {
       if (all_of(VectorizableTree[Idx]->Scalars, [&](Value *V) {
-            uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+            uint32_t OrigBitWidth =
+                DL->getTypeSizeInBits(V->getType()->getScalarType());
             if (OrigBitWidth > MaxBitWidth) {
               APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
               return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
