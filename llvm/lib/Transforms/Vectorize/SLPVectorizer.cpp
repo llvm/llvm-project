@@ -6108,6 +6108,9 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
   DenseMap<Value *, SmallVector<StoreInst *>> PtrToStoresMap;
   for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size())) {
     Value *V = TE->Scalars[Lane];
+    // Don't iterate over the users of constant data.
+    if (isa<ConstantData>(V))
+      continue;
     // To save compilation time we don't visit if we have too many users.
     if (V->hasNUsesOrMore(UsesLimit))
       break;
@@ -6115,7 +6118,9 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
     // Collect stores per pointer object.
     for (User *U : V->users()) {
       auto *SI = dyn_cast<StoreInst>(U);
-      if (SI == nullptr || !SI->isSimple() ||
+      // Test whether we can handle the store. V might be a global, which could
+      // be used in a different function.
+      if (SI == nullptr || !SI->isSimple() || SI->getFunction() != F ||
           !isValidElementType(SI->getValueOperand()->getType()))
         continue;
       // Skip entry if already
@@ -9522,8 +9527,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   // that the costs will be accurate.
   auto It = MinBWs.find(E);
   Type *OrigScalarTy = ScalarTy;
-  if (It != MinBWs.end())
+  if (It != MinBWs.end()) {
+    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
+    if (VecTy)
+      ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
+  }
   auto *VecTy = getWidenedType(ScalarTy, VL.size());
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
@@ -12581,8 +12590,15 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
     }
     if (IsSameVE) {
       auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
+        // V may be affected by MinBWs.
+        // We want ShuffleInstructionBuilder to correctly support REVEC. The key
+        // factor is the number of elements, not their type.
+        Type *ScalarTy = cast<VectorType>(V->getType())->getElementType();
+        unsigned NumElements = getNumElements(VL.front()->getType());
         ShuffleInstructionBuilder ShuffleBuilder(
-            cast<VectorType>(V->getType())->getElementType(), Builder, *this);
+            NumElements != 1 ? FixedVectorType::get(ScalarTy, NumElements)
+                             : ScalarTy,
+            Builder, *this);
         ShuffleBuilder.add(V, Mask);
         return ShuffleBuilder.finalize(std::nullopt);
       };
@@ -13115,8 +13131,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   else if (auto *IE = dyn_cast<InsertElementInst>(V))
     ScalarTy = IE->getOperand(1)->getType();
   auto It = MinBWs.find(E);
-  if (It != MinBWs.end())
+  if (It != MinBWs.end()) {
+    auto VecTy = dyn_cast<FixedVectorType>(ScalarTy);
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
+    if (VecTy)
+      ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
+  }
   auto *VecTy = getWidenedType(ScalarTy, E->Scalars.size());
   if (E->isGather()) {
     // Set insert point for non-reduction initial nodes.
@@ -15559,7 +15579,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (all_of(E.Scalars, IsaPred<Constant>))
     return true;
 
-  unsigned OrigBitWidth = DL->getTypeSizeInBits(E.Scalars.front()->getType());
+  unsigned OrigBitWidth =
+      DL->getTypeSizeInBits(E.Scalars.front()->getType()->getScalarType());
   if (OrigBitWidth == BitWidth) {
     MaxDepthLevel = 1;
     return true;
@@ -15990,7 +16011,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     }
 
     unsigned VF = E.getVectorFactor();
-    auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
+    Type *ScalarTy = E.Scalars.front()->getType();
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+    auto *TreeRootIT = dyn_cast<IntegerType>(ScalarTy->getScalarType());
     if (!TreeRootIT || !Opcode)
       return 0u;
 
@@ -15998,7 +16021,8 @@ void BoUpSLP::computeMinimumValueSizes() {
                [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
       return 0u;
 
-    unsigned NumParts = TTI->getNumberOfParts(getWidenedType(TreeRootIT, VF));
+    unsigned NumParts = TTI->getNumberOfParts(
+        getWidenedType(TreeRootIT, VF * ScalarTyNumElements));
 
     // The maximum bit width required to represent all the values that can be
     // demoted without loss of precision. It would be safe to truncate the roots
@@ -16020,7 +16044,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     // we can truncate the roots to this narrower type.
     for (Value *Root : E.Scalars) {
       unsigned NumSignBits = ComputeNumSignBits(Root, *DL, 0, AC, nullptr, DT);
-      TypeSize NumTypeBits = DL->getTypeSizeInBits(Root->getType());
+      TypeSize NumTypeBits =
+          DL->getTypeSizeInBits(Root->getType()->getScalarType());
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
       // If we can't prove that the sign bit is zero, we must add one to the
       // maximum bit width to account for the unknown sign bit. This preserves
@@ -16140,7 +16165,8 @@ void BoUpSLP::computeMinimumValueSizes() {
 
     for (unsigned Idx : RootDemotes) {
       if (all_of(VectorizableTree[Idx]->Scalars, [&](Value *V) {
-            uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+            uint32_t OrigBitWidth =
+                DL->getTypeSizeInBits(V->getType()->getScalarType());
             if (OrigBitWidth > MaxBitWidth) {
               APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
               return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
@@ -16191,7 +16217,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     // type, we can proceed with the narrowing. Otherwise, do nothing.
     if (MaxBitWidth == 0 ||
         MaxBitWidth >=
-            cast<IntegerType>(TreeRoot.front()->getType())->getBitWidth()) {
+            cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
+                ->getBitWidth()) {
       if (UserIgnoreList)
         AnalyzedMinBWVals.insert(TreeRoot.begin(), TreeRoot.end());
       continue;
