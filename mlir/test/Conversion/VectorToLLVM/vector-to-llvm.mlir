@@ -1245,9 +1245,9 @@ func.func @extract_element_with_value_2d(%arg0: vector<1x16xf32>, %arg1: index) 
 
 // -----
 
-// CHECK-LABEL: @insert_element_0d
+// CHECK-LABEL: @insertelement_0d
 // CHECK-SAME: %[[A:.*]]: f32,
-func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
+func.func @insertelement_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
   // CHECK: %[[B:.*]] =  builtin.unrealized_conversion_cast %{{.*}} :
   // CHECK:   vector<f32> to vector<1xf32>
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -1258,17 +1258,29 @@ func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
 
 // -----
 
-func.func @insert_element(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
+func.func @insertelement(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
   %0 = arith.constant 3 : i32
   %1 = vector.insertelement %arg0, %arg1[%0 : i32] : vector<4xf32>
   return %1 : vector<4xf32>
 }
-// CHECK-LABEL: @insert_element(
+// CHECK-LABEL: @insertelement(
 // CHECK-SAME: %[[A:.*]]: f32,
 // CHECK-SAME: %[[B:.*]]: vector<4xf32>)
 //       CHECK:   %[[c:.*]] = arith.constant 3 : i32
 //       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[c]] : i32] : vector<4xf32>
 //       CHECK:   return %[[x]] : vector<4xf32>
+
+func.func @insertelement_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<[4]xf32> {
+  %0 = arith.constant 3 : i32
+  %1 = vector.insertelement %arg0, %arg1[%0 : i32] : vector<[4]xf32>
+  return %1 : vector<[4]xf32>
+}
+// CHECK-LABEL: @insertelement_scalable(
+// CHECK-SAME: %[[A:.*]]: f32,
+// CHECK-SAME: %[[B:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[c:.*]] = arith.constant 3 : i32
+//       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[c]] : i32] : vector<[4]xf32>
+//       CHECK:   return %[[x]] : vector<[4]xf32>
 
 // -----
 
@@ -1285,6 +1297,19 @@ func.func @insert_element_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf3
 //       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[i]] : i64] : vector<4xf32>
 //       CHECK:   return %[[x]] : vector<4xf32>
 
+func.func @insertelement_index_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<[4]xf32> {
+  %0 = arith.constant 3 : index
+  %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<[4]xf32>
+  return %1 : vector<[4]xf32>
+}
+// CHECK-LABEL: @insertelement_index_scalable(
+//  CHECK-SAME: %[[A:.*]]: f32,
+//  CHECK-SAME: %[[B:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[c:.*]] = arith.constant 3 : index
+//       CHECK:   %[[i:.*]] = builtin.unrealized_conversion_cast %[[c]] : index to i64
+//       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[i]] : i64] : vector<[4]xf32>
+//       CHECK:   return %[[x]] : vector<[4]xf32>
+
 // -----
 
 func.func @insert_element_into_vec_1d(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
@@ -1295,6 +1320,15 @@ func.func @insert_element_into_vec_1d(%arg0: f32, %arg1: vector<4xf32>) -> vecto
 //       CHECK:   llvm.mlir.constant(3 : i64) : i64
 //       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : i64] : vector<4xf32>
 //       CHECK:   return {{.*}} : vector<4xf32>
+
+func.func @insert_element_into_vec_1d_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<[4]xf32> {
+  %0 = vector.insert %arg0, %arg1[3] : f32 into vector<[4]xf32>
+  return %0 : vector<[4]xf32>
+}
+// CHECK-LABEL: @insert_element_into_vec_1d_scalable
+//       CHECK:   llvm.mlir.constant(3 : i64) : i64
+//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : i64] : vector<[4]xf32>
+//       CHECK:   return {{.*}} : vector<[4]xf32>
 
 // -----
 
@@ -1312,6 +1346,21 @@ func.func @insert_index_element_into_vec_1d(%arg0: index, %arg1: vector<4xindex>
 //       CHECK:   %[[T5:.*]] = builtin.unrealized_conversion_cast %[[T4]] : vector<4xi64> to vector<4xindex>
 //       CHECK:   return %[[T5]] : vector<4xindex>
 
+
+func.func @insert_index_element_into_vec_1d_scalable(%arg0: index, %arg1: vector<[4]xindex>) -> vector<[4]xindex> {
+  %0 = vector.insert %arg0, %arg1[3] : index into vector<[4]xindex>
+  return %0 : vector<[4]xindex>
+}
+// CHECK-LABEL: @insert_index_element_into_vec_1d_scalable(
+// CHECK-SAME: %[[A:.*]]: index,
+// CHECK-SAME: %[[B:.*]]: vector<[4]xindex>)
+//       CHECK-DAG:   %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : index to i64
+//       CHECK-DAG:   %[[T1:.*]] = builtin.unrealized_conversion_cast %[[B]] : vector<[4]xindex> to vector<[4]xi64>
+//       CHECK:   %[[T3:.*]] = llvm.mlir.constant(3 : i64) : i64
+//       CHECK:   %[[T4:.*]] = llvm.insertelement %[[T0]], %[[T1]][%[[T3]] : i64] : vector<[4]xi64>
+//       CHECK:   %[[T5:.*]] = builtin.unrealized_conversion_cast %[[T4]] : vector<[4]xi64> to vector<[4]xindex>
+//       CHECK:   return %[[T5]] : vector<[4]xindex>
+
 // -----
 
 func.func @insert_vec_2d_into_vec_3d(%arg0: vector<8x16xf32>, %arg1: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
@@ -1322,6 +1371,14 @@ func.func @insert_vec_2d_into_vec_3d(%arg0: vector<8x16xf32>, %arg1: vector<4x8x
 //       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm.array<4 x array<8 x vector<16xf32>>>
 //       CHECK:   return {{.*}} : vector<4x8x16xf32>
 
+func.func @insert_vec_2d_into_vec_3d_scalable(%arg0: vector<8x[16]xf32>, %arg1: vector<4x8x[16]xf32>) -> vector<4x8x[16]xf32> {
+  %0 = vector.insert %arg0, %arg1[3] : vector<8x[16]xf32> into vector<4x8x[16]xf32>
+  return %0 : vector<4x8x[16]xf32>
+}
+// CHECK-LABEL: @insert_vec_2d_into_vec_3d_scalable
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3] : !llvm.array<4 x array<8 x vector<[16]xf32>>>
+//       CHECK:   return {{.*}} : vector<4x8x[16]xf32>
+
 // -----
 
 func.func @insert_vec_1d_into_vec_3d(%arg0: vector<16xf32>, %arg1: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
@@ -1331,6 +1388,14 @@ func.func @insert_vec_1d_into_vec_3d(%arg0: vector<16xf32>, %arg1: vector<4x8x16
 // CHECK-LABEL: @insert_vec_1d_into_vec_3d
 //       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<16xf32>>>
 //       CHECK:   return {{.*}} : vector<4x8x16xf32>
+
+func.func @insert_vec_1d_into_vec_3d_scalable(%arg0: vector<[16]xf32>, %arg1: vector<4x8x[16]xf32>) -> vector<4x8x[16]xf32> {
+  %0 = vector.insert %arg0, %arg1[3, 7] : vector<[16]xf32> into vector<4x8x[16]xf32>
+  return %0 : vector<4x8x[16]xf32>
+}
+// CHECK-LABEL: @insert_vec_1d_into_vec_3d_scalable
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<[16]xf32>>>
+//       CHECK:   return {{.*}} : vector<4x8x[16]xf32>
 
 // -----
 
@@ -1345,6 +1410,17 @@ func.func @insert_element_into_vec_3d(%arg0: f32, %arg1: vector<4x8x16xf32>) -> 
 //       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<16xf32>>>
 //       CHECK:   return {{.*}} : vector<4x8x16xf32>
 
+func.func @insert_element_into_vec_3d_scalable(%arg0: f32, %arg1: vector<4x8x[16]xf32>) -> vector<4x8x[16]xf32> {
+  %0 = vector.insert %arg0, %arg1[3, 7, 15] : f32 into vector<4x8x[16]xf32>
+  return %0 : vector<4x8x[16]xf32>
+}
+// CHECK-LABEL: @insert_element_into_vec_3d_scalable
+//       CHECK:   llvm.extractvalue {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<[16]xf32>>>
+//       CHECK:   llvm.mlir.constant(15 : i64) : i64
+//       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : i64] : vector<[16]xf32>
+//       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<[16]xf32>>>
+//       CHECK:   return {{.*}} : vector<4x8x[16]xf32>
+
 // -----
 
 func.func @insert_element_with_value_1d(%arg0: vector<16xf32>, %arg1: f32, %arg2: index)
@@ -1357,6 +1433,17 @@ func.func @insert_element_with_value_1d(%arg0: vector<16xf32>, %arg1: f32, %arg2
 //  CHECK-SAME:   %[[DST:.+]]: vector<16xf32>, %[[SRC:.+]]: f32, %[[INDEX:.+]]: index
 //       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
 //       CHECK:   llvm.insertelement %[[SRC]], %[[DST]][%[[UC]] : i64] : vector<16xf32>
+
+func.func @insert_element_with_value_1d_scalable(%arg0: vector<[16]xf32>, %arg1: f32, %arg2: index)
+                                      -> vector<[16]xf32> {
+  %0 = vector.insert %arg1, %arg0[%arg2]: f32 into vector<[16]xf32>
+  return %0 : vector<[16]xf32>
+}
+
+// CHECK-LABEL: @insert_element_with_value_1d_scalable
+//  CHECK-SAME:   %[[DST:.+]]: vector<[16]xf32>, %[[SRC:.+]]: f32, %[[INDEX:.+]]: index
+//       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
+//       CHECK:   llvm.insertelement %[[SRC]], %[[DST]][%[[UC]] : i64] : vector<[16]xf32>
 
 // -----
 
