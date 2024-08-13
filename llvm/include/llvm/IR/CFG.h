@@ -305,7 +305,7 @@ template <> struct GraphTraits<BasicBlock*> {
   static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 
-  static unsigned getNumber(BasicBlock *BB) { return BB->getNumber(); }
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
 
 static_assert(GraphHasNodeNumbers<BasicBlock *>,
@@ -339,7 +339,7 @@ template <> struct GraphTraits<Inverse<BasicBlock*>> {
   static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 
-  static unsigned getNumber(BasicBlock *BB) { return BB->getNumber(); }
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
 
 static_assert(GraphHasNodeNumbers<Inverse<BasicBlock *>>,
@@ -383,8 +383,10 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
 
   static size_t size(Function *F) { return F->size(); }
 
-  static unsigned getMaxNumber(Function *F) { return F->getMaxBlockNumber(); }
-  static unsigned getNumberEpoch(Function *F) {
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
     return F->getBlockNumberEpoch();
   }
 };
@@ -424,8 +426,10 @@ template <> struct GraphTraits<Inverse<Function*>> :
     return &G.Graph->getEntryBlock();
   }
 
-  static unsigned getMaxNumber(Function *F) { return F->getMaxBlockNumber(); }
-  static unsigned getNumberEpoch(Function *F) {
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
     return F->getBlockNumberEpoch();
   }
 };
