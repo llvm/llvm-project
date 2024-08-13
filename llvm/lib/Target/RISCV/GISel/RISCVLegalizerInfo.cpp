@@ -330,9 +330,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
     // we will take the custom lowering logic if we have scalable vector types
     // with non-standard alignments
-    LoadStoreActions.customIf(
-          LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                                  typeIsLegalPtrVec(0, PtrVecTys, ST)));
+    LoadStoreActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+
+    // Pointers require that XLen sized elements are legal.
+    if (XLen <= ST.getELen())
+      LoadStoreActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
   }
 
   LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
