@@ -222,3 +222,19 @@ entry:
   %cmp = icmp ugt <4 x i32> %vbsl, <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i1> %cmp
 }
+
+define void @test7() {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i64> @llvm.vector.insert.v16i64.v8i64(<16 x i64> poison, <8 x i64> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i64> @llvm.vector.insert.v16i64.v8i64(<16 x i64> [[TMP1]], <8 x i64> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i64> [[TMP2]] to <16 x i16>
+; CHECK-NEXT:    store <16 x i16> [[TMP3]], ptr null, align 2
+; CHECK-NEXT:    ret void
+;
+  %1 = getelementptr i8, ptr null, i64 16
+  %2 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %2, ptr %1, align 2
+  %3 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %3, ptr null, align 2
+  ret void
+}
