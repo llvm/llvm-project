@@ -2231,7 +2231,8 @@ def GetGlobalOp : CIR_Op<"get_global",
     The `cir.get_global` operation retrieves the address pointing to a
     named global variable. If the global variable is marked constant, writing
     to the resulting address (such as through a `cir.store` operation) is
-    undefined. Resulting type must always be a `!cir.ptr<...>` type.
+    undefined. Resulting type must always be a `!cir.ptr<...>` type with the
+    same address space as the global variable.
 
     Addresses of thread local globals can only be retrieved if this operation
     is marked `thread_local`, which indicates the address isn't constant.
@@ -2241,6 +2242,9 @@ def GetGlobalOp : CIR_Op<"get_global",
     %x = cir.get_global @foo : !cir.ptr<i32>
     ...
     %y = cir.get_global thread_local @batata : !cir.ptr<i32>
+    ...
+    cir.global external addrspace(offload_global) @gv = #cir.int<0> : !s32i
+    %z = cir.get_global @gv : !cir.ptr<!s32i, addrspace(offload_global)>
     ```
   }];
 

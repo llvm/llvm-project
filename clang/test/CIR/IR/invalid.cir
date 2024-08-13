@@ -1272,3 +1272,16 @@ module {
     }
 }
 
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global external addrspace(offload_global) @gv = #cir.int<0> : !s32i
+
+  cir.func @test_get_global() {
+    // expected-error@+1 {{'cir.get_global' op result type address space does not match the address space of the global @gv}}
+    %addr = cir.get_global @gv : !cir.ptr<!s32i>
+    cir.return
+  }
+}

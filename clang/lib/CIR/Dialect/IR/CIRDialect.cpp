@@ -2044,8 +2044,10 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' does not reference a valid cir.global or cir.func";
 
   mlir::Type symTy;
+  mlir::cir::AddressSpaceAttr symAddrSpace{};
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
+    symAddrSpace = g.getAddrSpaceAttr();
     // Verify that for thread local global access, the global needs to
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
@@ -2060,6 +2062,14 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("result type pointee type '")
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
+
+  if (symAddrSpace != resultType.getAddrSpace()) {
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << getName();
+  }
+
   return success();
 }
 
