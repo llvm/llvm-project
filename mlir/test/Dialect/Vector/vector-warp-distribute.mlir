@@ -621,14 +621,16 @@ func.func @vector_reduction(%laneid: index) -> (f32) {
 // -----
 
 // CHECK-PROP-LABEL: func @warp_distribute(
-// CHECK-PROP-SAME:   %[[ID:.*]]: index, %[[SRC:.+]]: memref<128xf32>, %[[DEST:.+]]: memref<128xf32>)
-// CHECK-PROP:   vector.warp_execute_on_lane_0(%[[ID]])[32]
-// CHECK-PROP-NEXT:     "some_def"() : () -> vector<4096xf32>
-// CHECK-PROP-NEXT: %{{.*}} = vector.reduction
-// CHECK-PROP-DAG: %[[DEF:.*]] = arith.divf %{{.*}}, %{{.*}} : vector<1xf32>
-// CHECK-PROP-NOT:   vector.warp_execute_on_lane_0
-// CHECK-PROP: scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}}
-// CHECK-PROP: %{{.*}} = arith.subf %{{.*}}, %[[DEF]] : vector<1xf32>
+//  CHECK-PROP-SAME:    %[[ID:[a-zA-Z0-9]+]]
+//  CHECK-PROP-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+//  CHECK-PROP-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+//       CHECK-PROP:    vector.warp_execute_on_lane_0(%[[ID]])[32]
+//  CHECK-PROP-NEXT:      "some_def"() : () -> vector<4096xf32>
+//  CHECK-PROP-NEXT:      %{{.*}} = vector.reduction
+//       CHECK-PROP:      %[[DEF:.*]] = arith.divf %{{.*}}, %{{.*}} : vector<1xf32>
+//   CHECK-PROP-NOT:      vector.warp_execute_on_lane_0
+//       CHECK-PROP:      scf.for
+//       CHECK-PROP:        %{{.*}} = arith.subf %{{.*}}, %[[DEF]] : vector<1xf32>
 func.func @warp_distribute(%arg0: index, %src: memref<128xf32>, %dest: memref<128xf32>){
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
