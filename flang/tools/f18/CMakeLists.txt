@@ -87,7 +87,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       # flang-new defaults to LLVM_DEFAULT_TARGET_TRIPLE as target, but
       # currently we can build the runtime for the same target as the host
       # compiler.
-      set(compile_with -target ${LLVM_TARGET_TRIPLE} -c -o ${object_output})
+      set(compile_with -target ${LLVM_HOST_TRIPLE} -c -o ${object_output})
       set(include_in_link TRUE)
     endif()
 
