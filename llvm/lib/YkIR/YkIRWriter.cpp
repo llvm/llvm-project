@@ -579,7 +579,10 @@ private:
     assert(I->getCalledFunction()->isIntrinsic());
     assert(I->getIntrinsicID() == Intrinsic::experimental_stackmap);
     // stackmap ID:
-    serialiseOperand(I, FLCtxt, I->getOperand(0));
+    Value *Op = I->getOperand(0);
+    assert(isa<ConstantInt>(Op));
+    uint64_t SMId = (cast<ConstantInt>(Op))->getZExtValue();
+    OutStreamer.emitInt64(SMId);
 
     // num_lives:
     OutStreamer.emitInt32(I->arg_size() - 2);
