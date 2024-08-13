@@ -1,7 +1,9 @@
-// RUN: %clang++ -foffload-via-llvm --offload-arch=native %s -o %t
+// clang-format off
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %s -o %t
 // RUN: %t | %fcheck-generic
-// RUN: %clang++ -foffload-via-llvm --offload-arch=native %s -o %t -fopenmp
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %s -o %t -fopenmp 
 // RUN: %t | %fcheck-generic
+// clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
