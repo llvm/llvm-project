@@ -272,3 +272,27 @@ for.body:
   %5 = phi <2 x float> [ %5, %for.body ], [ zeroinitializer, %entry ]
   br i1 false, label %for0, label %for.body
 }
+
+define void @test9() {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP0]], <4 x i16> zeroinitializer, i64 4)
+; CHECK-NEXT:    br label [[FOR_BODY13:%.*]]
+; CHECK:       for.body13:
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr null, align 4
+; CHECK-NEXT:    br label [[FOR_BODY13]]
+;
+entry:
+  br label %for.body13
+
+for.body13:                                       ; preds = %for.body13, %entry
+  %vmovl.i111 = sext <4 x i16> zeroinitializer to <4 x i32>
+  %vmovl.i110 = sext <4 x i16> zeroinitializer to <4 x i32>
+  store <4 x i32> %vmovl.i111, ptr null, align 4
+  %add.ptr29 = getelementptr i8, ptr null, i64 16
+  store <4 x i32> %vmovl.i110, ptr %add.ptr29, align 4
+  br label %for.body13
+}
