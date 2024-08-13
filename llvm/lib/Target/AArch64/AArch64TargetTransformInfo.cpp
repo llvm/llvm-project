@@ -3413,22 +3413,23 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 
 // This function returns gather/scatter overhead either from
 // user-provided value or specialized values per-target from \p ST.
-static unsigned getSVEGatherScatterOverhead(unsigned Opcode, const AArch64Subtarget* ST) {
+static unsigned getSVEGatherScatterOverhead(unsigned Opcode,
+                                            const AArch64Subtarget *ST) {
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-          "Should be called on only load or stores.");
-  switch(Opcode) {
-    case Instruction::Load:
-      if (SVEGatherOverhead.getNumOccurrences() > 0)
-        return SVEGatherOverhead;
-      return ST->getGatherOverhead();
-      break;
-    case Instruction::Store:
-      if (SVEScatterOverhead.getNumOccurrences() > 0)
-        return SVEScatterOverhead;
-      return ST->getScatterOverhead();
+         "Should be called on only load or stores.");
+  switch (Opcode) {
+  case Instruction::Load:
+    if (SVEGatherOverhead.getNumOccurrences() > 0)
+      return SVEGatherOverhead;
+    return ST->getGatherOverhead();
     break;
-    default:
-      llvm_unreachable("Shouldn't have reached here");
+  case Instruction::Store:
+    if (SVEScatterOverhead.getNumOccurrences() > 0)
+      return SVEScatterOverhead;
+    return ST->getScatterOverhead();
+    break;
+  default:
+    llvm_unreachable("Shouldn't have reached here");
   }
 }
 
