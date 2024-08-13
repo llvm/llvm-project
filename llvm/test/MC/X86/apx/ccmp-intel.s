@@ -1373,3 +1373,42 @@
 # CHECK: ccmpt	{dfv=}	r15, r9
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x39,0xcf]
          {evex} cmp	r15, r9
+
+## Condition Code Aliases
+
+# CHECK: ccmpb {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpc {dfv=of} edx, ecx
+# CHECK: ccmpb {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpnae {dfv=of} edx, ecx
+# CHECK: ccmpae {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpnb {dfv=of} edx, ecx
+# CHECK: ccmpae {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpnc {dfv=of} edx, ecx
+# CHECK: ccmpe {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x39,0xca]
+         ccmpz {dfv=of} edx, ecx
+# CHECK: ccmpne {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x39,0xca]
+         ccmpnz {dfv=of} edx, ecx
+# CHECK: ccmpa {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x39,0xca]
+         ccmpnbe {dfv=of} edx, ecx
+# CHECK: ccmpl {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x39,0xca]
+         ccmpnge {dfv=of} edx, ecx
+# CHECK: ccmpge {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x39,0xca]
+         ccmpnl {dfv=of} edx, ecx
+# CHECK: ccmple {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x39,0xca]
+         ccmpng {dfv=of} edx, ecx
+# CHECK: ccmpg {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x39,0xca]
+         ccmpnle {dfv=of} edx, ecx
+# CHECK: ccmpbe {dfv=of} edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x39,0xca]
+         ccmpna {dfv=of} edx, ecx
