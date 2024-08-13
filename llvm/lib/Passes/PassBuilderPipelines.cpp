@@ -309,6 +309,11 @@ cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
 
+static cl::opt<bool> EnableEarlyOpenMPOpt(
+    "enable-early-openmp-opt", cl::init(false), cl::Hidden,
+    cl::desc("Enable early execution of the OpenMP optimization pass"
+             " (default = off)"));
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
@@ -1081,6 +1086,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // frontend. Not necessary with LTO post link pipelines since the pre link
   // pipeline already cleaned up the frontend output.
   if (Phase != ThinOrFullLTOPhase::ThinLTOPostLink) {
+
+    if (EnableEarlyOpenMPOpt)
+      MPM.addPass(OpenMPOptPass());
+
     // Do basic inference of function attributes from known properties of system
     // libraries and other oracles.
     MPM.addPass(InferFunctionAttrsPass());
