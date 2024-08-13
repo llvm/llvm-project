@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: no-filesystem, no-localization, no-tzdb, has-no-zdump
+// UNSUPPORTED: no-filesystem, no-localization, no-tzdb, has-no-zdump, zdump-time_t-32bit
 // REQUIRES: long_tests
 
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
-
-// TODO TZDB Investigate
-// UNSUPPORTED: target={{armv(7|8)l-linux-gnueabihf}}
 
 #include <chrono>
 #include <format>

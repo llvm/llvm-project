@@ -352,6 +352,18 @@ DEFAULT_FEATURES = [
         name="has-no-zdump",
         when=lambda cfg: runScriptExitCode(cfg, ["zdump --version"]) != 0,
     ),
+    # zdump built with 32 bit time_t will truncate times into the 32 bit range.
+    # Starting with glibc 2.34, some architectures, like armhf, started building
+    # zdump with time_t as 64 bit which allows it to handle the maximum range.
+    # If zdump was built with time_t 64 bit, it will show the 1869 entries for
+    # this zone, which would be out of range for 32 bit.
+    Feature(
+        name="zdump-time_t-32bit",
+        when=lambda cfg: runScriptExitCode(
+            cfg, ["zdump -V -c1800,2100 Africa/Addis_Ababa | grep -q 1869"]
+        )
+        != 0,
+    ),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
