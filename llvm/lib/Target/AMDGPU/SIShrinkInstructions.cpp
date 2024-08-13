@@ -1061,7 +1061,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
               MachineFunctionProperties::Property::NoVRegs))
         continue;
 
-      if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
+      if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
           !shouldShrinkTrue16(MI))
         continue;
 
