@@ -120,7 +120,7 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
 namespace {
 
 class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
+  using LayoutInfoTy = DenseMap<StructType *, StructLayout *>;
   LayoutInfoTy LayoutInfo;
 
 public:
@@ -133,9 +133,7 @@ public:
     }
   }
 
-  StructLayout *&operator[](StructType *STy) {
-    return LayoutInfo[STy];
-  }
+  StructLayout *&operator[](StructType *STy) { return LayoutInfo[STy]; }
 };
 
 } // end anonymous namespace
