@@ -998,7 +998,8 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
-  bool shouldExpandPartialReductionIntrinsic(const CallInst *I) const override;
+  bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
 
   bool shouldExpandCttzElements(EVT VT) const override;
 

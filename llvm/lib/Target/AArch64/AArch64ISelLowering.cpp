@@ -1989,10 +1989,7 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
-    const CallInst *CI) const {
-
-  auto *I = dyn_cast<IntrinsicInst>(CI);
-  assert(I && "shouldExpandPartialReductionIntrinsic expects an intrinisc");
+    const IntrinsicInst *I) const {
 
   VectorType *RetTy = dyn_cast<VectorType>(I->getType());
   if (!RetTy || !RetTy->isScalableTy())

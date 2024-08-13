@@ -8006,7 +8006,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
 
-    if (!TLI.shouldExpandPartialReductionIntrinsic(&I)) {
+    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
