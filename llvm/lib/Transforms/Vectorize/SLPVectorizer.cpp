@@ -12586,8 +12586,15 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
     }
     if (IsSameVE) {
       auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
+        // V may be affected by MinBWs.
+        // We want ShuffleInstructionBuilder to correctly support REVEC. The key
+        // factor is the number of elements, not their type.
+        Type *ScalarTy = cast<VectorType>(V->getType())->getElementType();
+        unsigned NumElements = getNumElements(VL.front()->getType());
         ShuffleInstructionBuilder ShuffleBuilder(
-            cast<VectorType>(V->getType())->getElementType(), Builder, *this);
+            NumElements != 1 ? FixedVectorType::get(ScalarTy, NumElements)
+                             : ScalarTy,
+            Builder, *this);
         ShuffleBuilder.add(V, Mask);
         return ShuffleBuilder.finalize(std::nullopt);
       };
