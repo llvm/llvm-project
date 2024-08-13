@@ -16165,14 +16165,7 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
-  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
-    return true;
-
-  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
-  // checking it.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+  return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
 }
 
 /// \return Action to perform on AtomicRMWInsts for integer operations.
