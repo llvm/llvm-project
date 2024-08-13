@@ -2015,8 +2015,7 @@ struct StructWithZeroSizedArray {
   int a[0];
 };
 
-typedef float float4 __attribute__((vector_type(4)));
-typedef float ext_float4 __attribute__((ext_vector_type(4)));
+typedef float float4 __attribute__((ext_vector_type(4)));
 
 void is_implicit_lifetime(int n) {
   static_assert(!__builtin_is_implicit_lifetime(void));
@@ -2080,7 +2079,6 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(__bf16));
   static_assert(__builtin_is_implicit_lifetime(_Complex double));
   static_assert(__builtin_is_implicit_lifetime(float4));
-  static_assert(__builtin_is_implicit_lifetime(ext_float4));
 }
 
 void is_signed()
