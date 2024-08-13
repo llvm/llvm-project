@@ -1,5 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2c %s
 
+#ifndef __cpp_variadic_friend
+#  error No variadic friends?
+#endif
+
+static_assert(__cpp_variadic_friend == 202403L);
+
 template <typename> struct TS; // #template
 
 struct Errors {
