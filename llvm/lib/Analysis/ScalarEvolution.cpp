@@ -11951,62 +11951,94 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   // We avoid subtracting expressions here because this function is usually
   // fairly deep in the call stack (i.e. is called many times).
 
-  // X - X = 0.
   unsigned BW = getTypeSizeInBits(More->getType());
-  if (More == Less)
-    return APInt(BW, 0);
+  APInt Diff(BW, 0);
+  // Try various simplifications to reduce the difference to a constant. Limit
+  // the number of allowed simplifications to keep compile-time low.
+  for (unsigned I = 0; I < 4; ++I) {
+    if (More == Less)
+      return Diff;
 
-  if (isa<SCEVAddRecExpr>(Less) && isa<SCEVAddRecExpr>(More)) {
-    const auto *LAR = cast<SCEVAddRecExpr>(Less);
-    const auto *MAR = cast<SCEVAddRecExpr>(More);
+    // Reduce addrecs with identical steps to their start value.
+    if (isa<SCEVAddRecExpr>(Less) && isa<SCEVAddRecExpr>(More)) {
+      const auto *LAR = cast<SCEVAddRecExpr>(Less);
+      const auto *MAR = cast<SCEVAddRecExpr>(More);
 
-    if (LAR->getLoop() != MAR->getLoop())
+      if (LAR->getLoop() != MAR->getLoop())
+        return std::nullopt;
+
+      // We look at affine expressions only; not for correctness but to keep
+      // getStepRecurrence cheap.
+      if (!LAR->isAffine() || !MAR->isAffine())
+        return std::nullopt;
+
+      if (LAR->getStepRecurrence(*this) != MAR->getStepRecurrence(*this))
+        return std::nullopt;
+
+      Less = LAR->getStart();
+      More = MAR->getStart();
+      continue;
+    }
+
+    // Try to cancel out common factors in two add expressions.
+    SmallDenseMap<const SCEV *, int, 8> Multiplicity;
+    auto Add = [&](const SCEV *S, int Mul) {
+      if (auto *C = dyn_cast<SCEVConstant>(S)) {
+        if (Mul == 1) {
+          Diff += C->getAPInt();
+        } else {
+          assert(Mul == -1);
+          Diff -= C->getAPInt();
+        }
+      } else
+        Multiplicity[S] += Mul;
+    };
+    auto Decompose = [&](const SCEV *S, int Mul) {
+      if (isa<SCEVAddExpr>(S)) {
+        for (const SCEV *Op : S->operands())
+          Add(Op, Mul);
+      } else
+        Add(S, Mul);
+    };
+    Decompose(More, 1);
+    Decompose(Less, -1);
+
+    // Check whether all the non-constants cancel out, or reduce to new
+    // More/Less values.
+    const SCEV *NewMore = nullptr, *NewLess = nullptr;
+    for (const auto [S, Mul] : Multiplicity) {
+      if (Mul == 0)
+        continue;
+      if (Mul == 1) {
+        if (NewMore)
+          return std::nullopt;
+        NewMore = S;
+      } else if (Mul == -1) {
+        if (NewLess)
+          return std::nullopt;
+        NewLess = S;
+      } else
+        return std::nullopt;
+    }
+
+    // Values stayed the same, no point in trying further.
+    if (NewMore == More || NewLess == Less)
       return std::nullopt;
 
-    // We look at affine expressions only; not for correctness but to keep
-    // getStepRecurrence cheap.
-    if (!LAR->isAffine() || !MAR->isAffine())
+    More = NewMore;
+    Less = NewLess;
+
+    // Reduced to constant.
+    if (!More && !Less)
+      return Diff;
+
+    // Left with variable on only one side, bail out.
+    if (!More || !Less)
       return std::nullopt;
-
-    if (LAR->getStepRecurrence(*this) != MAR->getStepRecurrence(*this))
-      return std::nullopt;
-
-    Less = LAR->getStart();
-    More = MAR->getStart();
-
-    // fall through
   }
 
-  // Try to cancel out common factors in two add expressions.
-  SmallDenseMap<const SCEV *, int, 8> Multiplicity;
-  APInt Diff(BW, 0);
-  auto Add = [&](const SCEV *S, int Mul) {
-    if (auto *C = dyn_cast<SCEVConstant>(S)) {
-      if (Mul == 1) {
-        Diff += C->getAPInt();
-      } else {
-        assert(Mul == -1);
-        Diff -= C->getAPInt();
-      }
-    } else
-      Multiplicity[S] += Mul;
-  };
-  auto Decompose = [&](const SCEV *S, int Mul) {
-    if (isa<SCEVAddExpr>(S)) {
-      for (const SCEV *Op : S->operands())
-        Add(Op, Mul);
-    } else
-      Add(S, Mul);
-  };
-  Decompose(More, 1);
-  Decompose(Less, -1);
-
-  // Check whether all the non-constants cancel out.
-  for (const auto &[_, Mul] : Multiplicity)
-    if (Mul != 0)
-      return std::nullopt;
-
-  return Diff;
+  // Did not reduce to constant.
+  return std::nullopt;
 }
 
 bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
