@@ -96,8 +96,11 @@ struct BuiltinTypeDeclBuilder {
         nullptr, false, InClassInitStyle::ICIS_NoInit);
     Field->setAccess(Access);
     Field->setImplicit(true);
-    for (Attr *A : Attrs)
-      Field->addAttr(A);
+    for (Attr *A : Attrs) {
+      if (A)
+        Field->addAttr(A);
+    }
+
     Record->addDecl(Field);
     Fields[Name] = Field;
     return *this;
@@ -120,10 +123,10 @@ struct BuiltinTypeDeclBuilder {
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
     Attr *ResourceAttr =
         HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
-    if (IsROV)
-      Fields["h"]->addAttr(
-          HLSLROVAttr::CreateImplicit(Record->getASTContext()));
+    Attr *ROVAttr =
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr;
+    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
+                      Access);
 
     return *this;
   }
