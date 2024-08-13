@@ -18469,7 +18469,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       if (EltTy->isReferenceType()) {
         const bool HaveMSExt =
             getLangOpts().MicrosoftExt &&
-            !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2017);
+            !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015);
 
         Diag(NewFD->getLocation(),
              HaveMSExt ? diag::ext_union_member_of_reference_type

@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -std=c++11 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17 -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
 // RUN: %clang_cc1 -std=c++14 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify=expected,precxx17 -fexceptions -fcxx-exceptions -DTEST2
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -fms-compatibility -verify -DTEST3
-// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify -fms-extensions -fms-compatibility-version=19.00 -DTEST4
-// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify -fms-extensions -fms-compatibility-version=19.10 -DTEST5
+// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify -fms-extensions -fms-compatibility-version=18.00 -DTEST4
+// RUN: %clang_cc1 -std=c++17 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -verify -fms-extensions -fms-compatibility-version=19.00 -DTEST5
 
 #if TEST1
 
