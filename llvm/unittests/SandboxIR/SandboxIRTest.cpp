@@ -1497,7 +1497,7 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
     // Check hasNoUnsignedWrap().
     EXPECT_EQ(GEP->hasNoUnsignedWrap(), LLVMGEP->hasNoUnsignedWrap());
     // Check accumulateConstantOffset().
-    DataLayout DL(M.get());
+    const DataLayout &DL = M->getDataLayout();
     APInt Offset1 =
         APInt::getZero(DL.getIndexSizeInBits(GEP->getPointerAddressSpace()));
     APInt Offset2 =
@@ -1577,7 +1577,7 @@ define void @foo() {
   ret void
 }
 )IR");
-  DataLayout DL(M.get());
+  const DataLayout &DL = M->getDataLayout();
   llvm::Function &LLVMF = *M->getFunction("foo");
   llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
   auto LLVMIt = LLVMBB->begin();
