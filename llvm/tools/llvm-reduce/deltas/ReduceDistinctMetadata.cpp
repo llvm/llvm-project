@@ -14,8 +14,8 @@
 #include "ReduceDistinctMetadata.h"
 #include "Delta.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/InstIterator.h"
 #include <algorithm>
 #include <queue>
@@ -25,11 +25,11 @@ using namespace llvm;
 
 // Traverse the graph breadth-first and try to remove unnamed metadata nodes
 void reduceNodes(MDNode *Root,
-                 DenseSet<std::pair<unsigned int, MDNode *>> &NodesToDelete,
+                 SetVector<std::pair<unsigned int, MDNode *>> &NodesToDelete,
                  MDNode *TemporaryNode, Oracle &O, Module &Program) {
   std::queue<MDNode *> NodesToTraverse{};
   // Keep track of visited nodes not to get into loops
-  DenseSet<MDNode *> VisitedNodes{};
+  SetVector<MDNode *> VisitedNodes{};
   NodesToTraverse.push(Root);
 
   while (!NodesToTraverse.empty()) {
@@ -38,11 +38,9 @@ void reduceNodes(MDNode *Root,
 
     // Mark the nodes for removal
     for (unsigned int I = 0; I < CurrentNode->getNumOperands(); ++I) {
-      MDNode* Operand = dyn_cast<MDNode>(CurrentNode->getOperand(I).get());
-      if (Operand) {
+      if (MDNode* Operand = dyn_cast<MDNode>(CurrentNode->getOperand(I).get())) {
         // Check whether node has been visited
-        if (VisitedNodes.find(Operand) ==
-            VisitedNodes.end()) {
+        if (!VisitedNodes.contains(Operand)) {
           NodesToTraverse.push(Operand);
           VisitedNodes.insert(Operand);
         }
@@ -67,14 +65,14 @@ void reduceNodes(MDNode *Root,
 void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
                         Module &Program) {
   std::queue<MDTuple *> NodesToTraverse{};
-  DenseSet<MDTuple *> VisitedNodes{};
+  SetVector<MDTuple *> VisitedNodes{};
 
   // Push all first level operands of the named node to the queue
   for (auto I = NamedNode.op_begin(); I != NamedNode.op_end(); ++I) {
     // If the node hasn't been traversed yet, add it to the queue of nodes to
     // traverse.
     if (MDTuple* TupleI = dyn_cast<MDTuple>((*I))) {
-      if (VisitedNodes.find(TupleI) == VisitedNodes.end()) {
+      if (!VisitedNodes.contains(TupleI)) {
         NodesToTraverse.push(TupleI);
         VisitedNodes.insert(TupleI);
       }
@@ -114,9 +112,7 @@ void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
     // Push the remaining nodes into the queue
     for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
       MDTuple *Operand = dyn_cast<MDTuple>(CurrentTuple->getOperand(I).get());
-      if (Operand &&
-          VisitedNodes.find(Operand) ==
-              VisitedNodes.end()) {
+      if (Operand && !VisitedNodes.contains(Operand)) {
         NodesToTraverse.push(Operand);
         // If the node hasn't been traversed yet, add it to the queue of nodes
         // to traverse.
@@ -132,13 +128,12 @@ static void extractDistinctMetadataFromModule(Oracle &O,
   MDTuple *TemporaryTuple = MDTuple::getDistinct(
       Program.getContext(), SmallVector<Metadata *, 1>{llvm::MDString::get(
                                 Program.getContext(), "temporary_tuple")});
-  DenseSet<std::pair<unsigned int, MDNode *>> NodesToDelete{};
+  SetVector<std::pair<unsigned int, MDNode *>> NodesToDelete{};
   for (NamedMDNode &NamedNode :
        Program.named_metadata()) { // Iterate over the named nodes
     for (unsigned int I = 0; I < NamedNode.getNumOperands();
          ++I) { // Iterate over first level unnamed nodes..
-      MDTuple *Operand = dyn_cast<MDTuple>(NamedNode.getOperand(I));
-      if (Operand)
+      if (MDTuple *Operand = dyn_cast<MDTuple>(NamedNode.getOperand(I)))
         reduceNodes(Operand, NodesToDelete,
                     TemporaryTuple, O, Program);
     }
