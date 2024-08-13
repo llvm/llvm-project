@@ -33,7 +33,7 @@ if.end:
   ret void
 }
 
-;; load + zext
+;; load + zext.
 define void @load_zext(i1 %cond, ptr %b, ptr %p) {
 ; CHECK-LABEL: load_zext:
 ; CHECK:       # %bb.0: # %entry
@@ -59,7 +59,7 @@ if.end:
   ret void
 }
 
-;; load + sext
+;; load + sext.
 define void @load_sext(i1 %cond, ptr %b, ptr %q) {
 ; CHECK-LABEL: load_sext:
 ; CHECK:       # %bb.0: # %entry

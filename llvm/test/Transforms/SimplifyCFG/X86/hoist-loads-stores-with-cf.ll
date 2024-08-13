@@ -253,7 +253,7 @@ if.false:
   ret i16 %ret
 }
 
-;; Not crash when working with opt controlled by simplifycfg-hoist-cond-stores
+;; Not crash when working with opt controlled by simplifycfg-hoist-cond-stores.
 define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @hoist_cond_stores(
 ; CHECK-NEXT:  entry:
@@ -379,7 +379,7 @@ if.then:
   br label %if.end
 }
 
-;; Not hoist b/c i8 is not supported by conditional faulting
+;; Not hoist b/c i8 is not supported by conditional faulting.
 define void @not_supported_type(i8 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: @not_supported_type(
 ; CHECK-NEXT:  entry:
