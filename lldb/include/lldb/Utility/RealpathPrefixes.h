@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_REALPATHPREFIXES_H
-#define LLDB_CORE_REALPATHPREFIXES_H
+#ifndef LLDB_UTILITY_REALPATHPREFIXES_H
+#define LLDB_UTILITY_REALPATHPREFIXES_H
 
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -44,7 +44,7 @@ public:
   }
   uint32_t GetSourceRealpathAttemptCount() const {
     return m_source_realpath_attempt_count;
-  };
+  }
   void IncreaseSourceRealpathCompatibleCount() {
     ++m_source_realpath_compatible_count;
   }
@@ -74,4 +74,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_REALPATHPREFIXES_H
+#endif // LLDB_UTILITY_REALPATHPREFIXES_H
