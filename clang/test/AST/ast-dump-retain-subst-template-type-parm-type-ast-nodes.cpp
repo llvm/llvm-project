@@ -12,7 +12,7 @@ using dump = X<int>;
 // CHECK-NEXT:      | `-TypeAliasTemplateDecl
 // CHECK-NEXT:      |-TemplateArgument
 // CHECK-NEXT:      | `-BuiltinType {{.+}} 'int'
-// CHECK-NEXT:      `-SubstTemplateTypeParmType 0x{{[0-9]+}} 'int' sugar class depth 0 index 0 T
+// CHECK-NEXT:      `-SubstTemplateTypeParmType 0x{{[0-9a-f]+}} 'int' sugar class depth 0 index 0 T
 // CHECK-NEXT:        |-TypeAliasTemplate {{.+}} 'X'
 // CHECK-NEXT:        `-BuiltinType {{.+}} 'int'
 } // namespace t1
