@@ -157,8 +157,8 @@ public:
           (NumTPLists == 0) ? getFriendLoc()
                             : getTrailingObjects<TemplateParameterList *>()[0]
                                   ->getTemplateLoc();
-      SourceLocation EndL =
-          isPackExpansion() ? getEllipsisLoc() : TInfo->getTypeLoc().getEndLoc();
+      SourceLocation EndL = isPackExpansion() ? getEllipsisLoc()
+                                              : TInfo->getTypeLoc().getEndLoc();
       return SourceRange(StartL, EndL);
     }
 

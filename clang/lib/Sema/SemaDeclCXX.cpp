@@ -17446,14 +17446,13 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   assert(SS.isNotEmpty() && "valid templated tag with no SS and no direct?");
 
-
   // CWG 2917: if it (= the friend-type-specifier) is a pack expansion
   // (13.7.4 [temp.variadic]), any packs expanded by that pack expansion
   // shall not have been introduced by the template-declaration.
   SmallVector<UnexpandedParameterPack, 1> Unexpanded;
   collectUnexpandedParameterPacks(QualifierLoc, Unexpanded);
   unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
-  for (UnexpandedParameterPack& U : Unexpanded) {
+  for (UnexpandedParameterPack &U : Unexpanded) {
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
       auto *ND = U.first.dyn_cast<NamedDecl *>();
       if (!ND)
