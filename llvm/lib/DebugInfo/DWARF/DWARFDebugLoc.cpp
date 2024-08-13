@@ -113,8 +113,10 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
                            ArrayRef<uint8_t> Data, bool IsLittleEndian,
                            unsigned AddressSize, DWARFUnit *U) {
   DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
-  DWARFExpression(Extractor, AddressSize, U->getFormat())
-      .print(OS, DumpOpts, U);
+  std::optional<dwarf::DwarfFormat> Format;
+  if (U)
+    Format = U->getFormat();
+  DWARFExpression(Extractor, AddressSize, Format).print(OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(
