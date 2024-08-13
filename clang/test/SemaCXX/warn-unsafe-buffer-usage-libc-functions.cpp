@@ -70,13 +70,20 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function sscanf introduces unsafe buffer access}}
   sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function sscanf_s introduces unsafe buffer access}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function fprintf introduces unsafe buffer access}} expected-note{{use 'std::string::c_str' or string literal as string pointer to guarantee null-termination}}
+  fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn
+  snprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   strlen("hello");// no warn
 }
 
-void v(std::string s1) {
-  snprintf(s1.data(), s1.size_bytes(), "%s%d", s1.c_str(), 0); // no warn
+void v(std::string s1, int *p) {
+  snprintf(s1.data(), s1.size_bytes(), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str()); // no warn
+  snprintf(s1.data(), s1.size_bytes(), s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());      // no warn
+  printf("%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());              // no warn
+  printf(s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                   // no warn
+  fprintf((FILE*)0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());   // no warn
+  fprintf((FILE*)0, s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());        // no warn
 }
 
 
