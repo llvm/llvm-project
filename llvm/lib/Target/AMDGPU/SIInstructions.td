@@ -1155,12 +1155,14 @@ def V_LOAD_IDX : VPseudoInstSI <
   (outs VGPR_IDX_DATA_OP:$data_op),
   (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
     let mayLoad = 1;
+    let VALU = 1;
     let UseNamedOperandTable = 1;
 }
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
   (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
     let mayStore = 1;
+    let VALU = 1;
     let UseNamedOperandTable = 1;
 }
 

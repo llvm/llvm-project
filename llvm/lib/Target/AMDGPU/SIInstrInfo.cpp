@@ -8964,8 +8964,10 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
   int Cnt = 0;
   while (++I != E && I->isInsideBundle()) {
     assert(!I->isBundle() && "No nested bundle!");
-    if (isWaitcnt(I->getOpcode()))
+    // TODO-GFX13: any other do-not-care cases?
+    if (I->isDebugInstr() || isWaitcnt(I->getOpcode()))
       continue;
+
     if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
       if (!CoreMI) {
         CoreMI = &*I;
@@ -8981,6 +8983,38 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
     }
   }
   return Cnt ? CoreMI : nullptr;
+}
+
+const MachineInstr *
+SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
+                                    const MachineOperand &Op) {
+  if (!MI.isBundled())
+    return nullptr;
+  if (!Op.isReg())
+    return nullptr;
+  // TODO-GFX13 should check if the operand is a staging-register
+  // auto *RC = MRI->getRegClass(Op.getReg());
+  // if (RC == &AMDGPU::STAGING_REGRegClass)
+  //   return nullptr;
+  auto RegNo = Op.getReg();
+  if (Op.isDef()) {
+    auto I = MI.getIterator();
+    auto E = MI.getParent()->instr_end();
+    while (++I != E && I->isInsideBundle()) {
+      if (I->getOpcode() == AMDGPU::V_STORE_IDX &&
+          I->getOperand(0).getReg() == RegNo)
+        return &*I;
+    }
+  } else if (Op.isUse()) {
+    auto I = MI.getReverseIterator();
+    auto E = MI.getParent()->instr_rend();
+    while (++I != E && I->isInsideBundle()) {
+      if (I->getOpcode() == AMDGPU::V_LOAD_IDX &&
+          I->getOperand(0).getReg() == RegNo)
+        return &*I;
+    }
+  }
+  return nullptr;
 }
 
 unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {

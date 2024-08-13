@@ -118,11 +118,14 @@ struct HardwareLimits {
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 };
 
+// VGPR encoding includes two sections: lane-shared vgpr and
+// private vgpr. Lane-shared vgpr section is at the beginning.
 struct RegisterEncoding {
   unsigned VGPR0;
   unsigned VGPRL;
   unsigned SGPR0;
   unsigned SGPRL;
+  unsigned LaneSharedSize;
 };
 
 enum WaitEventType {
@@ -175,6 +178,7 @@ enum RegisterMapping {
   // instruction's location is unknown.
   EXTRA_VGPR_LDS = 0,
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
+  NUM_IDX_REGS = 4,
 };
 
 // Enumerate different types of result-returning VMEM operations. Although
@@ -363,6 +367,11 @@ public:
 
   bool merge(const WaitcntBrackets &Other);
 
+  // Get the vgpr range that v_load/store_idx access
+  RegInterval getRegIndexingInterval(const MachineInstr *MI,
+                                     const MachineRegisterInfo *MRI,
+                                     const SIRegisterInfo *TRI) const;
+
   RegInterval getRegInterval(const MachineInstr *MI,
                              const MachineRegisterInfo *MRI,
                              const SIRegisterInfo *TRI,
@@ -428,6 +437,12 @@ public:
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
     return LDSDMAStores;
   }
+
+  void setGprIdxImmedVal(unsigned Idx, int64_t Imm) {
+    GprIdxImmedVals[Idx] = Imm;
+  }
+
+  void clearGprIdxImmedVal(unsigned Idx) { GprIdxImmedVals[Idx] = {}; }
 
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
@@ -500,6 +515,8 @@ private:
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
   SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
+  // Track the possible immediate value stored in gpr-idx registers
+  std::optional<int64_t> GprIdxImmedVals[NUM_IDX_REGS];
 };
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -813,10 +830,63 @@ public:
 
 } // end anonymous namespace
 
+RegInterval
+WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
+                                        const MachineRegisterInfo *MRI,
+                                        const SIRegisterInfo *TRI) const {
+  assert(MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
+         MI->getOpcode() == AMDGPU::V_STORE_IDX);
+  RegInterval Result;
+  auto IdxSrcIdx =
+      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::idx);
+  unsigned Idx = MI->getOperand(IdxSrcIdx).getReg() - AMDGPU::IDX0;
+  assert(Idx < NUM_IDX_REGS);
+  assert(MI->hasOneMemOperand());
+  const MachineMemOperand *MMO = *(MI->memoperands_begin());
+  bool IsLaneShared = MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED;
+  Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
+  auto MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
+  if (GprIdxImmedVals[Idx].has_value()) {
+    auto OffsetSrcIdx =
+        AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
+    auto Offset = MI->getOperand(OffsetSrcIdx).getImm();
+    Result.first += GprIdxImmedVals[Idx].value() + Offset;
+    const TargetRegisterClass *DataOpRC =
+        TRI->getPhysRegBaseClass(MI->getOperand(0).getReg());
+    unsigned Size = TRI->getRegSizeInBits(*DataOpRC);
+    Result.second = Result.first + divideCeil(Size, 32);
+    // Handle the case where the range is out of bound.
+    Result.first = Result.first % MaxNumVGPRs;
+    Result.second = Result.second % MaxNumVGPRs;
+    if (Result.first >= Result.second) {
+      Result.first = 0;
+      Result.second = MaxNumVGPRs;
+    }
+  } else if (IsLaneShared) {
+    // Claim the entire lane-shared range when idx is unknown
+    // TODO-GFX13:
+    // We want to build an event-queue and apply alias analysis to
+    // get more accurate result in this case.
+    Result.second = Encoding.LaneSharedSize;
+  } else {
+    llvm_unreachable("unhandled v_load/store_idx on private vgpr");
+    // TODO-GFX13: we may have more accurate range info for
+    // v_load/store_idx on private vgpr?
+    Result.second = MaxNumVGPRs;
+  }
+  return Result;
+}
+
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                             const MachineRegisterInfo *MRI,
                                             const SIRegisterInfo *TRI,
                                             const MachineOperand &Op) const {
+
+  // Handle indirect operand represented as v_load/store_idx.
+  if (auto VLDST = SIInstrInfo::getBundledIndexingInst(*MI, Op)) {
+    return getRegIndexingInterval(VLDST, MRI, TRI);
+  }
+
   if (!TRI->isInAllocatableClass(Op.getReg()))
     return {-1, -1};
 
@@ -830,7 +900,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0;
+    Result.first = Reg - Encoding.VGPR0 + Encoding.LaneSharedSize;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
@@ -966,6 +1036,15 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
   } else if (T == VA_VDST || T == VM_VSRC) {
+    // Handle the register-interval written by v_store_idx.
+    if (T == VA_VDST && Inst.getOpcode() == AMDGPU::V_STORE_IDX) {
+      RegInterval Interval = getRegIndexingInterval(&Inst, MRI, TRI);
+      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
+        setRegScore(RegNo, T, CurrScore);
+    }
+    // v_load_idx not bundled with some vmem instr should not have VM_VSRC
+    // event.
+    assert(T != VM_VSRC || Inst.getOpcode() != AMDGPU::V_LOAD_IDX);
     // Match the score to the VGPR destination or source registers as
     // appropriate
     for (const MachineOperand &Op : Inst.operands()) {
@@ -1931,6 +2010,69 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
             ScoreBrackets.determineWait(SmemAccessCounter, RegNo, Wait);
         }
       }
+    } else if (MI.getOpcode() == AMDGPU::V_LOAD_IDX) {
+      // Determine waitcnt due to RAW.
+      // On the load-side, try to resolve gpr-indexing.
+      RegInterval Interval =
+          ScoreBrackets.getRegIndexingInterval(&MI, MRI, TRI);
+      // TODO-GFX13: when the interval is too large due to dynamic indexing,
+      // we need to calculate waitcnt using event-queue and alias analysis.
+      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+        ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
+        ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+        ScoreBrackets.determineWait(SAMPLE_CNT, RegNo, Wait);
+        ScoreBrackets.determineWait(BVH_CNT, RegNo, Wait);
+        ScoreBrackets.clearVgprVmemTypes(RegNo);
+        ScoreBrackets.determineWait(DS_CNT, RegNo, Wait);
+      }
+      // Determine waitcnt due to WAW or WAR.
+      // When dest is a physical vgpr (not in bundle) or dest goes to
+      // v_store_idx.
+      bool NeedCheck = (!MI.isBundled());
+      auto It = MI.getIterator();
+      while (!NeedCheck && It->isBundledWithSucc()) {
+        ++It;
+        if (It->findRegisterUseOperandIdx(MI.getOperand(0).getReg(), TRI,
+                                          false) >= 0) {
+          NeedCheck = (It->getOpcode() == AMDGPU::V_STORE_IDX);
+          break;
+        }
+      }
+      if (NeedCheck) {
+        Interval =
+            ScoreBrackets.getRegInterval(&MI, MRI, TRI, MI.getOperand(0));
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
+          ScoreBrackets.determineWait(VM_VSRC, RegNo, Wait);
+          if (ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
+            ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
+          }
+          ScoreBrackets.determineWait(DS_CNT, RegNo, Wait);
+        }
+      }
+    } else if (MI.getOpcode() == AMDGPU::V_STORE_IDX) {
+      // Skip processing a bundled v_store_idx here.
+      if (!MI.isBundled()) {
+        // Look into waitcnt due to RAW dependence.
+        RegInterval Interval =
+            ScoreBrackets.getRegInterval(&MI, MRI, TRI, MI.getOperand(0));
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
+          ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+          ScoreBrackets.determineWait(SAMPLE_CNT, RegNo, Wait);
+          ScoreBrackets.determineWait(BVH_CNT, RegNo, Wait);
+          ScoreBrackets.clearVgprVmemTypes(RegNo);
+          ScoreBrackets.determineWait(DS_CNT, RegNo, Wait);
+        }
+        // Determine waitcnt due to WAR or WAW dependence
+        Interval = ScoreBrackets.getRegIndexingInterval(&MI, MRI, TRI);
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
+          ScoreBrackets.determineWait(VM_VSRC, RegNo, Wait);
+          ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
+          ScoreBrackets.determineWait(DS_CNT, RegNo, Wait);
+        }
+      }
     } else {
       // FIXME: Should not be relying on memoperands.
       // Look at the source operands of every instruction to see if
@@ -1989,6 +2131,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       for (const MachineOperand &Op : MI.operands()) {
         if (!Op.isReg())
           continue;
+
+        // Also skip the source operand coming from v_load_idx in bundle.
+        // Those operands are handled when we process the v_load_idx.
+        if (auto VLDST = TII->getBundledIndexingInst(MI, Op)) {
+          if (VLDST->getOpcode() == AMDGPU::V_LOAD_IDX)
+            continue;
+        }
 
         // If the instruction does not read tied source, skip the operand.
         if (Op.isTied() && Op.isUse() && TII->doesNotReadTiedSource(MI))
@@ -2177,14 +2326,24 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
       return VGPR_DPMACC_WRITE;
-
+    // The vgpr written by the v_store_idx does not triggers an event
+    // when it is bundled because it is processed as an indirect-operand
+    // of other instructions.
+    if (Inst.getOpcode() == AMDGPU::V_STORE_IDX && Inst.isBundled())
+      return {};
+    // TODO-GFX13: remove this condition after we introduce staging-reg.
+    // This is a hack to avoid fake valu-write event, however this mess up
+    // the case in which v_load_idx destination is a v_store_idx
+    if (Inst.getOpcode() == AMDGPU::V_LOAD_IDX && Inst.isBundled())
+      return {};
     return VGPR_CSMACC_WRITE;
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order
   // with respect to each other and all other VMEM instructions, so
   // each of these also has a separate event.
-
+  // Note that v_load_idx does not directly trigger any event about VM_VSRC,
+  // it is processed as an indirect-operands of other instructions.
   if (TII->isFLAT(Inst))
     return VGPR_FLAT_READ;
 
@@ -2530,6 +2689,17 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       ++Iter;
       continue;
     }
+    // Track the gpr-idx value in case that is an immed.
+    // TODO-GFX13: need to handle s_add_gpr_idx_u32 when it is added.
+    if (Inst.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
+      auto SrcOpnd = Inst.getOperand(1);
+      unsigned Idx = Inst.getOperand(0).getReg() - AMDGPU::IDX0;
+      assert(Idx < NUM_IDX_REGS);
+      if (SrcOpnd.isImm())
+        ScoreBrackets.setGprIdxImmedVal(Idx, SrcOpnd.getImm());
+      else
+        ScoreBrackets.clearGprIdxImmedVal(Idx);
+    }
 
     bool FlushVmCnt = Block.getFirstTerminator() == Inst &&
                       isPreheaderToFlush(Block, ScoreBrackets);
@@ -2800,6 +2970,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
   Encoding.SGPR0 = TRI->getHWRegIndex(AMDGPU::SGPR0);
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
+  Encoding.LaneSharedSize = divideCeil(MFI->getLaneSharedVGPRSize(), 4u);
 
   BlockInfos.clear();
   bool Modified = false;

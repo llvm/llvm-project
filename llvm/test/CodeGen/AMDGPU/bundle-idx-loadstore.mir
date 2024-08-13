@@ -1475,7 +1475,6 @@ body:             |
     ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 54321, killed $sgpr0, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
     ; LOWERED-NEXT: DS_WRITE_B32_gfx9 renamable $vgpr0, killed renamable $vgpr1, 4, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; LOWERED-NEXT: S_WAIT_DSCNT 0
     ; LOWERED-NEXT: undef $vgpr20 = DS_READ_B32_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 3)
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
