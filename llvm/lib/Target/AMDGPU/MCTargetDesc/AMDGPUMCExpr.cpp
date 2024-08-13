@@ -341,9 +341,7 @@ void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KBM[Expr] = KnownBits(BitWidth);
     return;
   case MCBinaryExpr::Opcode::Add: {
-    const APInt APZero(/*BitWidth=*/1, 0, /*isSigned=*/true);
-    KBM[Expr] = KnownBits::computeForAddCarry(LHSKnown, RHSKnown,
-                                              KnownBits::makeConstant(APZero));
+    KBM[Expr] = KnownBits::add(LHSKnown, RHSKnown);
     return;
   }
   case MCBinaryExpr::Opcode::And:
@@ -413,9 +411,7 @@ void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KBM[Expr] = KnownBits::lshr(LHSKnown, RHSKnown);
     return;
   case MCBinaryExpr::Opcode::Sub: {
-    const APInt APZero(/*BitWidth=*/1, 0, /*isSigned=*/true);
-    KBM[Expr] = KnownBits::computeForSubBorrow(LHSKnown, RHSKnown,
-                                               KnownBits::makeConstant(APZero));
+    KBM[Expr] = KnownBits::sub(LHSKnown, RHSKnown);
     return;
   }
   case MCBinaryExpr::Opcode::Xor:
@@ -550,7 +546,7 @@ void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM, unsigned Depth) {
   }
 }
 
-static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+static const MCExpr *tryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
                                    MCContext &Ctx) {
   if (!KBM.count(Expr))
     return Expr;
@@ -592,29 +588,29 @@ static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       return Expr;
     case MCBinaryExpr::Opcode::Sub: {
       if (ValueCheckKnownBits(KBM[RHS], 0))
-        return TryFoldHelper(LHS, KBM, Ctx);
+        return tryFoldHelper(LHS, KBM, Ctx);
       break;
     }
     case MCBinaryExpr::Opcode::Add:
     case MCBinaryExpr::Opcode::Or: {
       if (ValueCheckKnownBits(KBM[LHS], 0))
-        return TryFoldHelper(RHS, KBM, Ctx);
+        return tryFoldHelper(RHS, KBM, Ctx);
       if (ValueCheckKnownBits(KBM[RHS], 0))
-        return TryFoldHelper(LHS, KBM, Ctx);
+        return tryFoldHelper(LHS, KBM, Ctx);
       break;
     }
     case MCBinaryExpr::Opcode::Mul: {
       if (ValueCheckKnownBits(KBM[LHS], 1))
-        return TryFoldHelper(RHS, KBM, Ctx);
+        return tryFoldHelper(RHS, KBM, Ctx);
       if (ValueCheckKnownBits(KBM[RHS], 1))
-        return TryFoldHelper(LHS, KBM, Ctx);
+        return tryFoldHelper(LHS, KBM, Ctx);
       break;
     }
     case MCBinaryExpr::Opcode::Shl:
     case MCBinaryExpr::Opcode::AShr:
     case MCBinaryExpr::Opcode::LShr: {
       if (ValueCheckKnownBits(KBM[RHS], 0))
-        return TryFoldHelper(LHS, KBM, Ctx);
+        return tryFoldHelper(LHS, KBM, Ctx);
       if (ValueCheckKnownBits(KBM[LHS], 0))
         return MCConstantExpr::create(0, Ctx);
       break;
@@ -625,8 +621,8 @@ static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       break;
     }
     }
-    const MCExpr *NewLHS = TryFoldHelper(LHS, KBM, Ctx);
-    const MCExpr *NewRHS = TryFoldHelper(RHS, KBM, Ctx);
+    const MCExpr *NewLHS = tryFoldHelper(LHS, KBM, Ctx);
+    const MCExpr *NewRHS = tryFoldHelper(RHS, KBM, Ctx);
     if (NewLHS != LHS || NewRHS != RHS)
       return MCBinaryExpr::create(BExpr->getOpcode(), NewLHS, NewRHS, Ctx,
                                   BExpr->getLoc());
@@ -635,7 +631,7 @@ static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case MCExpr::ExprKind::Unary: {
     const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
     const MCExpr *SubExpr = UExpr->getSubExpr();
-    const MCExpr *NewSubExpr = TryFoldHelper(SubExpr, KBM, Ctx);
+    const MCExpr *NewSubExpr = tryFoldHelper(SubExpr, KBM, Ctx);
     if (SubExpr != NewSubExpr)
       return MCUnaryExpr::create(UExpr->getOpcode(), NewSubExpr, Ctx,
                                  UExpr->getLoc());
@@ -646,7 +642,7 @@ static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     SmallVector<const MCExpr *, 8> NewArgs;
     bool Changed = false;
     for (const MCExpr *Arg : AGVK->getArgs()) {
-      const MCExpr *NewArg = TryFoldHelper(Arg, KBM, Ctx);
+      const MCExpr *NewArg = tryFoldHelper(Arg, KBM, Ctx);
       NewArgs.push_back(NewArg);
       Changed |= Arg != NewArg;
     }
@@ -656,16 +652,16 @@ static const MCExpr *TryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   return Expr;
 }
 
-const MCExpr *llvm::AMDGPU::AMDGPUFoldMCExpr(const MCExpr *Expr,
+const MCExpr *llvm::AMDGPU::foldAMDGPUMCExpr(const MCExpr *Expr,
                                              MCContext &Ctx) {
   KnownBitsMap KBM;
   knownBitsMapHelper(Expr, KBM);
-  const MCExpr *NewExpr = TryFoldHelper(Expr, KBM, Ctx);
+  const MCExpr *NewExpr = tryFoldHelper(Expr, KBM, Ctx);
 
   return Expr != NewExpr ? NewExpr : Expr;
 }
 
-void llvm::AMDGPU::AMDGPUMCExprPrint(const MCExpr *Expr, raw_ostream &OS,
+void llvm::AMDGPU::printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
                                      const MCAsmInfo *MAI) {
   int64_t Val;
   if (Expr->evaluateAsAbsolute(Val)) {

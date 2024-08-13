@@ -112,10 +112,10 @@ namespace AMDGPU {
 // ((unevaluatable_sym | 1) & 1) won't evaluate due to unevaluatable_sym and
 // would verbosely print the full expression; however, KnownBits should deduce
 // the value to be 1. Particularly useful for AMDGPU metadata MCExprs.
-void AMDGPUMCExprPrint(const MCExpr *Expr, raw_ostream &OS,
+void printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
                        const MCAsmInfo *MAI);
 
-const MCExpr *AMDGPUFoldMCExpr(const MCExpr *Expr, MCContext &Ctx);
+const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 
 } // end namespace AMDGPU
 } // end namespace llvm

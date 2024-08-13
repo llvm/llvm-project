@@ -397,8 +397,8 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   raw_svector_ostream OSS(Str);
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
-  const MCExpr *New = AMDGPUFoldMCExpr(Value, Context);
-  AMDGPUMCExprPrint(New, OSS, MAI);
+  const MCExpr *New = foldAMDGPUMCExpr(Value, Context);
+  printAMDGPUMCExpr(New, OSS, MAI);
   return Str;
 }
 
