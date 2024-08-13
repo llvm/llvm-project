@@ -798,16 +798,16 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
   return false;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readOnDemand(
-    const DenseSet<StringRef> &FuncsToUse, SampleProfileMap &Profiles) {
+std::error_code
+SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
+                                       SampleProfileMap &Profiles) {
   Data = LBRProfileSecRange.first;
   End = LBRProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
 
-  if (std::error_code EC =
-          readFuncMetadataOnDemand(ProfileHasAttribute, Profiles))
+  if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, Profiles))
     return EC;
   return sampleprof_error::success;
 }
@@ -945,6 +945,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
         return EC;
     }
   }
+
+  return sampleprof_error::success;
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
@@ -1273,16 +1275,16 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadataOnDemand(
-    bool ProfileHasAttribute, SampleProfileMap &Profiles) {
-  if (FContextToMetaDataSecRange.empty())
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
+                                                   SampleProfileMap &Profiles) {
+  if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
   for (auto &I : Profiles) {
     FunctionSamples *FProfile = &I.second;
-    auto R =
-        FContextToMetaDataSecRange.find(FProfile->getContext().getHashCode());
-    if (R == FContextToMetaDataSecRange.end())
+    auto R = FuncMetadataIndex.find(FProfile->getContext().getHashCode());
+    if (R == FuncMetadataIndex.end())
       continue;
 
     Data = R->second.first;
@@ -1310,7 +1312,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
     if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
       return EC;
 
-    FContextToMetaDataSecRange[FContext.getHashCode()] = {Start, Data};
+    FuncMetadataIndex[FContext.getHashCode()] = {Start, Data};
   }
 
   assert(Data == End && "More data is read than expected");

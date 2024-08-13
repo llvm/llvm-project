@@ -782,16 +782,15 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   float Similarity = 0.0;
 
   const auto *FSFlattened = getFlattenedSamplesFor(ProfFunc);
-  // Check if the function is top-level function. For extended profile format,
-  // if a function profile is unused and it's top-level, even if the profile is
-  // matched, it's not found in the profile. This is because sample reader only
-  // read the used profile at the beginning, we need to read the profile
-  // on-demand. Also save it into the FlattenedProfiles for future look-up.
+  // With extbinary profile format, initial profile loading only reads profile
+  // based on current function names in the module.
+  // However, if a function is renamed, sample loader fails to load its original
+  // profile(which has a different name), we will miss this case. To address
+  // this, we load the top-level profile candidate explicitly for the matching.
   if (!FSFlattened) {
-    DenseSet<StringRef> TopLevelFunc;
-    TopLevelFunc.insert(ProfFunc.stringRef());
+    DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
     SampleProfileMap TopLevelProfile;
-    Reader.readOnDemand(TopLevelFunc, TopLevelProfile);
+    Reader.read(TopLevelFunc, TopLevelProfile);
     assert(TopLevelProfile.size() <= 1 &&
            "More than one profile is found for top-level function");
     if (!TopLevelProfile.empty()) {
@@ -883,13 +882,13 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
   return Matched;
 }
 
-void SampleProfileMatcher::UpdateSampleLoaderWithRecoveredProfiles() {
-  DenseSet<StringRef> RecoveredFuncs;
+void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
+  DenseSet<StringRef> ProfileSalvagedFuncs;
   // Update FuncNameToProfNameMap and SymbolMap.
   for (auto &I : FuncToProfileNameMap) {
     assert(I.first && "New function is null");
     FunctionId FuncName(I.first->getName());
-    RecoveredFuncs.insert(I.second.stringRef());
+    ProfileSalvagedFuncs.insert(I.second.stringRef());
     FuncNameToProfNameMap->emplace(FuncName, I.second);
 
     // We need to remove the old entry to avoid duplicating the function
@@ -898,21 +897,11 @@ void SampleProfileMatcher::UpdateSampleLoaderWithRecoveredProfiles() {
     SymbolMap->emplace(I.second, I.first);
   }
 
-  // Read the top-level profiles for the recovered function profiles. This is
-  // because in extended binary format it only loads the top-level profile for
-  // the functions in the new build but not the recovered functions which is
-  // from the old build.
-  SampleProfileMap TopLevelRecoveredProfiles;
-  Reader.readOnDemand(RecoveredFuncs, TopLevelRecoveredProfiles);
-  auto &Profiles = Reader.getProfiles();
-  for (auto &I : TopLevelRecoveredProfiles) {
-    LLVM_DEBUG(dbgs() << "Top-level function " << I.second.getFunction()
-                      << " is recovered and re-read by the sample reader.\n");
-    auto &Ctx = I.second.getContext();
-    assert(Profiles.find(Ctx) == Profiles.end() &&
-           "Top level profile is found for the unused profile");
-    Profiles.create(Ctx) = std::move(I.second);
-  }
+  // With extbinary profile format, initial profile loading only reads profile
+  // based on current function names in the module, so we need to load top-level
+  // profiles for functions with different profile name explicitly after
+  // function-profile name map is established with stale profile matching.
+  Reader.read(ProfileSalvagedFuncs, Reader.getProfiles());
   Reader.setFuncNameToProfNameMap(FuncNameToProfNameMap);
 }
 
@@ -934,7 +923,7 @@ void SampleProfileMatcher::runOnModule() {
   }
 
   if (SalvageUnusedProfile)
-    UpdateSampleLoaderWithRecoveredProfiles();
+    UpdateWithSalvagedProfiles();
 
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();

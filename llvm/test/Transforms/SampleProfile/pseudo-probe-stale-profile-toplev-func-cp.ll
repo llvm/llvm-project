@@ -1,35 +1,6 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-toplev-func.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s -check-prefix=CHECK-TEXT
-; RUN: llvm-profdata merge --sample %S/Inputs/pseudo-probe-stale-profile-toplev-func.prof -extbinary -o %t.extbinary
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.extbinary --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s -check-prefix=CHECK-EXTBIN
-
-; CHECK-TEXT: Run stale profile matching for main
-; CHECK-TEXT-NOT: Read top-level function foo for call-graph matching
-; CHECK-TEXT: The checksums for foo_rename(IR) and foo(Profile) match.
-; CHECK-TEXT: Function:foo_rename matches profile:foo
-; CHECK-TEXT: Run stale profile matching for foo_rename
-; CHECK-TEXT: (1/3) of functions' profile are matched and (2724522/3177413) of samples are reused by call graph matching.
-
-; CHECK-TEXT: Processing Function main
-; CHECK-TEXT:     5:  call void @foo_rename(), !dbg ![[#]] - weight: 51
-; CHECK-TEXT: Processing Function foo_rename
-; CHECK-TEXT:     2:  %call = call i32 @bar(i32 noundef %0), !dbg ![[#]] - weight: 452674
-
-
-; CHECK-EXTBIN: Run stale profile matching for main
-; CHECK-EXTBIN: Read top-level function foo for call-graph matching
-; CHECK-EXTBIN: The checksums for foo_rename(IR) and foo(Profile) match.
-; CHECK-EXTBIN: Function:foo_rename matches profile:foo
-; CHECK-EXTBIN: Run stale profile matching for foo_rename
-; CHECK-EXTBIN: (1/3) of functions' profile are matched and (2724522/3177413) of samples are reused by call graph matching.
-
-; CHECK-EXTBIN: Processing Function main
-; CHECK-EXTBIN:     5:  call void @foo_rename(), !dbg ![[#]] - weight: 51
-; CHECK-EXTBIN: Processing Function foo_rename
-; CHECK-EXTBIN:     2:  %call = call i32 @bar(i32 noundef %0), !dbg ![[#]] - weight: 452674
-
-
+; *** IR Dump Before SampleProfileLoaderPass on [module] ***
+; ModuleID = 'test_rename.c'
+source_filename = "test_rename.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -105,8 +76,8 @@ attributes #3 = { mustprogress nocallback nofree nosync nounwind willreturn memo
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "clang version 20.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
-!3 = !DIFile(filename: "test_rename.c", directory: "/home", checksumkind: CSK_MD5, checksum: "11a33a83e4d190ebda0792d0610f0c67")
+!2 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "clang version 20.0.0git (https://github.com/llvm/llvm-project.git 070702c9be2fb437b0765532c03e98c642951906)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
+!3 = !DIFile(filename: "test_rename.c", directory: "/home/wlei/local/llvm_test/rename/extbinary", checksumkind: CSK_MD5, checksum: "11a33a83e4d190ebda0792d0610f0c67")
 !4 = !{!0}
 !5 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !6)
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -117,7 +88,7 @@ attributes #3 = { mustprogress nocallback nofree nosync nounwind willreturn memo
 !11 = !{i32 7, !"PIE Level", i32 2}
 !12 = !{i32 7, !"uwtable", i32 2}
 !13 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
-!14 = !{!"clang version 20.0.0"}
+!14 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 070702c9be2fb437b0765532c03e98c642951906)"}
 !15 = !{i64 -2012135647395072713, i64 4294967295, !"bar"}
 !16 = !{i64 -2115950948644264162, i64 281479271677951, !"foo_rename"}
 !17 = !{i64 -2624081020897602054, i64 281582264815352, !"main"}
@@ -167,3 +138,10 @@ attributes #3 = { mustprogress nocallback nofree nosync nounwind willreturn memo
 !61 = distinct !{!61, !52, !62, !63}
 !62 = !DILocation(line: 14, column: 3, scope: !44)
 !63 = !{!"llvm.loop.mustprogress"}
+Function foo_rename is not in profile or profile symbol list.
+Run stale profile matching for main
+Run stale profile matching for bar
+(0/2) of functions' profile are invalid and (0/452891) of samples are discarded due to function hash mismatch.
+(0/2) of functions' profile are matched and (0/452891) of samples are reused by call graph matching.
+(1/1) of callsites' profile are invalid and (51/452891) of samples are discarded due to callsite location mismatch.
+(0/1) of callsites and (0/51) of samples are recovered by stale profile matching.

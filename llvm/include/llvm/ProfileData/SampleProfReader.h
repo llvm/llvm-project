@@ -380,6 +380,13 @@ public:
     return sampleprof_error::success;
   }
 
+  /// Read sample profiles for the given functions. Currently it's only used 
+  /// for extended binary format to load the profiles on-demand.
+  virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                               SampleProfileMap &Profiles) {
+    return sampleprof_error::not_implemented;
+  };
+
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
 
@@ -391,11 +398,6 @@ public:
   /// reader has been given a module. Always return false for reader
   /// which doesn't support loading function profiles on demand.
   virtual bool collectFuncsFromModule() { return false; }
-
-  virtual std::error_code readOnDemand(const DenseSet<StringRef> &FuncsToUse,
-                                       SampleProfileMap &Profiles) {
-    return sampleprof_error::not_implemented;
-  };
 
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
@@ -551,7 +553,7 @@ protected:
   // A map from a function's context hash to its meta data section range, used
   // for on-demand read function profile metadata.
   std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
-      FContextToMetaDataSecRange;
+      FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> LBRProfileSecRange;
 
@@ -757,8 +759,8 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
-  std::error_code readFuncMetadataOnDemand(bool ProfileHasAttribute,
-                                           SampleProfileMap &Profiles);
+  std::error_code readFuncMetadata(bool ProfileHasAttribute,
+                                   SampleProfileMap &Profiles);
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
   std::error_code readFuncMetadata(bool ProfileHasAttribute,
                                    FunctionSamples *FProfile);
@@ -818,10 +820,11 @@ public:
   bool collectFuncsFromModule() override;
 
   /// Read the profiles on-demand for the given functions. This is used after
-  /// stale call graph matching finds new functions whose profiles aren't read
-  /// at the beginning and we need to re-read the profiles.
-  std::error_code readOnDemand(const DenseSet<StringRef> &FuncsToUse,
-                               SampleProfileMap &Profiles) override;
+  /// stale call graph matching finds new functions whose profiles aren't loaded
+  /// at the beginning and we need to loaded the profiles explicitly for 
+  /// potential matching.
+  std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                       SampleProfileMap &Profiles) override;
 
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
