@@ -10872,8 +10872,8 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget->hasFractBug()) {
     SDValue Fabs = DAG.getNode(ISD::FABS, dl, VT, Val);
-    SDValue Inf = DAG.getConstantFP(
-        APFloat::getInf(SelectionDAG::EVTToAPFloatSemantics(VT)), dl, VT);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
 
     SDValue IsFinite = DAG.getSetCC(dl, MVT::i1, Fabs, Inf, ISD::SETOLT);
     SDValue Zero = DAG.getConstant(0, dl, InstrExpVT);
@@ -12578,9 +12578,8 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   SDValue N0 = N->getOperand(0);
 
   if (N0.isUndef()) {
-    return DCI.DAG.getConstantFP(
-        APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT)), SDLoc(N),
-        VT);
+    return DCI.DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()),
+                                 SDLoc(N), VT);
   }
 
   if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
@@ -12964,7 +12963,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   // fcanonicalize undef -> qnan
   if (N0.isUndef()) {
-    APFloat QNaN = APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT));
+    APFloat QNaN = APFloat::getQNaN(VT.getFltSemantics());
     return DAG.getConstantFP(QNaN, SDLoc(N), VT);
   }
 
