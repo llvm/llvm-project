@@ -674,9 +674,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 float dot(float4, float4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
-double dot(double, double);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 int dot(int, int);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 int dot(int2, int2);
@@ -916,7 +913,7 @@ float4 lerp(float4, float4, float4);
 /// \brief Returns the length of the specified floating-point vector.
 /// \param x [in] The vector of floats, or a scalar float.
 ///
-/// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + …).
+/// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
