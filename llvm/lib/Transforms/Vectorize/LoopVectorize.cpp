@@ -3705,7 +3705,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     auto *I = cast<Instruction>(V);
     auto UsersAreMemAccesses =
       llvm::all_of(I->users(), [&](User *U) -> bool {
-        return isVectorizedMemAccessUse(cast<Instruction>(U), V);
+        auto *UI = cast<Instruction>(U);
+        return TheLoop->contains(UI) && isVectorizedMemAccessUse(UI, V);
       });
     if (UsersAreMemAccesses)
       addToWorklistIfAllowed(I);
