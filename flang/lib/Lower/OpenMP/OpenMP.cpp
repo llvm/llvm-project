@@ -1230,7 +1230,7 @@ static void genTargetEnterExitUpdateDataClauses(
   } else {
     cp.processMap(loc, stmtCtx, clauseOps);
   }
-  
+
   cp.processNowait(clauseOps);
 }
 
