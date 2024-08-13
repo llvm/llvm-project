@@ -181,7 +181,7 @@ Executor *Executor::getDefaultExecutor() {
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
   return Exec.get();
 #else
-  // ManagedStatic is not desired on other platforms. When `Exec` is terminated
+  // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS
   // destructors. This can lead to race conditions if other threads attempt to
   // access TLS objects that have already been destroyed.

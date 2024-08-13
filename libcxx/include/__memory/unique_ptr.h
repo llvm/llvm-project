@@ -36,7 +36,6 @@
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_extent.h>
-#include <__type_traits/remove_pointer.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -51,17 +50,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Ptr>
-struct __is_noexcept_deref_or_void {
-  static constexpr bool value = noexcept(*std::declval<_Ptr>());
-};
-
-template <>
-struct __is_noexcept_deref_or_void<void*> : true_type {};
-#endif
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete {
@@ -266,7 +254,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
-      _NOEXCEPT_(__is_noexcept_deref_or_void<pointer>::value) {
+      _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
     return *__ptr_.first();
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_.first(); }

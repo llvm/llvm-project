@@ -2435,7 +2435,7 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
 
   EVT SetCCVT =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ExpVT);
-  const fltSemantics &FltSem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
 
   const APFloat::ExponentType MaxExpVal = APFloat::semanticsMaxExponent(FltSem);
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
@@ -2535,7 +2535,7 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   if (AsIntVT == EVT()) // TODO: How to handle f80?
     return SDValue();
 
-  const fltSemantics &FltSem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const unsigned Precision = APFloat::semanticsPrecision(FltSem);
   const unsigned BitSize = VT.getScalarSizeInBits();
@@ -2797,7 +2797,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   // The following optimization is valid only if every value in SrcVT (when
   // treated as signed) is representable in DestVT.  Check that the mantissa
   // size of DestVT is >= than the number of bits in SrcVT -1.
-  assert(APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(DestVT)) >=
+  assert(APFloat::semanticsPrecision(DestVT.getFltSemantics()) >=
              SrcVT.getSizeInBits() - 1 &&
          "Cannot perform lossless SINT_TO_FP!");
 
