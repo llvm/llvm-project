@@ -151,7 +151,7 @@ struct BubbleUpExpandThroughParallelCollapse
                                 PatternRewriter &rewriter) const override {
     auto collapseOp =
         expandOp.getSrc().getDefiningOp<tensor::CollapseShapeOp>();
-    if (!collapseOp || !collapseOp->hasOneUse())
+    if (!collapseOp)
       return failure();
     auto expandReInds = expandOp.getReassociationIndices();
     auto collapseReInds = collapseOp.getReassociationIndices();
