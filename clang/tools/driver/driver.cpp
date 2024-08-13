@@ -225,7 +225,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   return 1;
 }
 
-// Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的.
+// Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -237,7 +237,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     return 1;
 
   // clang-format off
-  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets.
+  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets
   // clang-format on
   llvm::InitializeAllTargets();
 
@@ -247,9 +247,23 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
+  // clang-format off
+  // Cratels:clang-cl 是一个Clang驱动器的另一个命令行接口的选择，被设计用来兼容Visual C++ 的编译器cl.exe
+  // Cratels:clang --driver-mode可以用来指定 clang driver 的工作模式
+  // Cratels:There are two ways to put clang in CL compatibility mode: ProgName is either clang-cl or cl, or --driver-mode=cl is on the command line
+  // clang-format on
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
+  // clang-format off
+  // Cratels:On some systems (such as older UNIX systems and certain Windows variants) command-lines have relatively limited lengths.
+  // Cratels: Windows compilers therefore support "response files". These files are mentioned on the command-line (using the "@file") syntax.
+  // Cratels: The compiler reads these files and inserts the contents into argv, thereby working around the command-line length limits.
+  // Cratels:一些编译环境（比如 windows）对命令行的长度有限制，不能超过 127字符，但是现实环境中确实存在很长命令行的需求，此时可以使用 response file 来绕过这个限制
+  // Cratels:详细信息请看：https://learn.microsoft.com/en-us/cpp/build/reference/at-specify-a-compiler-response-file?view=msvc-170
+  // Cratels:见本目录的 response_file.md文档
+  // Cratels:这里的操作就是展开 response file 并将其内容写入 Args 里面
+  // clang-format on
   if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
