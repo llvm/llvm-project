@@ -593,8 +593,7 @@ class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv<string opcodestr, bits<7> funct7>
-    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, "">;
+    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins), opcodestr, "">;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class Priv_rr<string opcodestr, bits<7> funct7>
@@ -1207,16 +1206,13 @@ def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def sexti16 : ComplexPattern<XLenVT, 1, "selectSExtBits<16>">;
-def sexti16i32 : ComplexPattern<i32, 1, "selectSExtBits<16>">;
 def sexti32 : ComplexPattern<i64, 1, "selectSExtBits<32>">;
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExtBits<32>">;
 def zexti16 : ComplexPattern<XLenVT, 1, "selectZExtBits<16>">;
-def zexti16i32 : ComplexPattern<i32, 1, "selectZExtBits<16>">;
 def zexti8 : ComplexPattern<XLenVT, 1, "selectZExtBits<8>">;
-def zexti8i32 : ComplexPattern<i32, 1, "selectZExtBits<8>">;
 
 def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
@@ -1543,8 +1539,8 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_sret_glue), (SRET (XLenVT X0), (XLenVT X0))>;
-def : Pat<(riscv_mret_glue), (MRET (XLenVT X0), (XLenVT X0))>;
+def : Pat<(riscv_sret_glue), (SRET)>;
+def : Pat<(riscv_mret_glue), (MRET)>;
 
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in
@@ -1960,77 +1956,6 @@ let Predicates = [IsRV64] in {
 def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                  (AddiPairImmSmall AddiPair:$rs2))>;
-}
-
-//===----------------------------------------------------------------------===//
-// Experimental RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
-
-def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
-
-// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
-// checking happy so we can use ADDIW which expects an XLen immediate.
-def as_i64imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
-def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
-  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  return Known.isNonNegative();
-}]>;
-
-let Predicates = [IsRV64] in {
-def : LdPat<sextloadi8, LB, i32>;
-def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<sextloadi16, LH, i32>;
-def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
-
-def : StPat<truncstorei8, SB, GPR, i32>;
-def : StPat<truncstorei16, SH, GPR, i32>;
-
-def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
-def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
-def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
-
-def : PatGprGpr<add, ADDW, i32, i32>;
-def : PatGprGpr<sub, SUBW, i32, i32>;
-def : PatGprGpr<and, AND, i32, i32>;
-def : PatGprGpr<or, OR, i32, i32>;
-def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
-def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
-def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
-
-def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
-          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
-          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
-          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : PatGprImm<shl, SLLIW, uimm5, i32>;
-def : PatGprImm<srl, SRLIW, uimm5, i32>;
-def : PatGprImm<sra, SRAIW, uimm5, i32>;
-
-def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
-                (i64 (XLenSubTrailingOnes $mask)))>;
-
-// Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
-}
-
-let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
-
-// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
-// shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//

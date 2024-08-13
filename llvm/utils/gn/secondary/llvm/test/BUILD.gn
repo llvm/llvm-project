@@ -266,6 +266,7 @@ group("test") {
     "//llvm/tools/llvm-cat",
     "//llvm/tools/llvm-cfi-verify",
     "//llvm/tools/llvm-cov",
+    "//llvm/tools/llvm-ctxprof-util",
     "//llvm/tools/llvm-cvtres",
     "//llvm/tools/llvm-cxxdump",
     "//llvm/tools/llvm-cxxfilt",

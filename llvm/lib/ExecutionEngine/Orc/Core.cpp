@@ -933,7 +933,8 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
             SymbolsInErrorState.insert(KV.first);
           else {
             if (SymI->second.getFlags() & JITSymbolFlags::Common) {
-              auto WeakOrCommon = JITSymbolFlags::Weak | JITSymbolFlags::Common;
+              [[maybe_unused]] auto WeakOrCommon =
+                  JITSymbolFlags::Weak | JITSymbolFlags::Common;
               assert((KV.second.getFlags() & WeakOrCommon) &&
                      "Common symbols must be resolved as common or weak");
               assert((KV.second.getFlags() & ~WeakOrCommon) ==

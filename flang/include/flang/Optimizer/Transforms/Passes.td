@@ -429,4 +429,11 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some CUF operations to runtime calls";
+  let dependentDialects = [
+    "fir::FIROpsDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

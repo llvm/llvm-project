@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 
@@ -351,6 +352,7 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx);
 static std::vector<std::unique_ptr<TagNode>>
 genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
         StringRef ParentInfoDir);
+static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C);
 
 static std::vector<std::unique_ptr<TagNode>>
 genEnumsBlock(const std::vector<EnumInfo> &Enums,
@@ -417,9 +419,13 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
     if (Access != "")
       Access = Access + " ";
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(Access));
-    LIBody->Children.emplace_back(genReference(M.Type, ParentInfoDir));
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    if (!M.Description.empty())
+      LIBody->Children.emplace_back(genHTML(M.Description));
+    LIBody->Children.emplace_back(std::move(MemberDecl));
     ULBody->Children.emplace_back(std::move(LIBody));
   }
   return Out;
@@ -979,6 +985,18 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
                                    "error creating index file: " +
                                        FileErr.message());
   }
+  llvm::SmallString<128> RootPath(CDCtx.OutDirectory);
+  if (llvm::sys::path::is_relative(RootPath)) {
+    llvm::sys::fs::make_absolute(RootPath);
+  }
+  // Replace the escaped characters with a forward slash. It shouldn't matter
+  // when rendering the webpage in a web browser. This helps to prevent the
+  // JavaScript from escaping characters incorrectly, and introducing  bad paths
+  // in the URLs.
+  std::string RootPathEscaped = RootPath.str().str();
+  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
+
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
   std::function<void(Index)> IndexToJSON = [&](const Index &I) {

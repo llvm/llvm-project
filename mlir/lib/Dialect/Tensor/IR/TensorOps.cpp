@@ -178,8 +178,7 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
 static RankedTensorType
 foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
-  SmallVector<int64_t> staticShape(type.getShape().begin(),
-                                   type.getShape().end());
+  SmallVector<int64_t> staticShape(type.getShape());
   assert(type.getNumDynamicDims() ==
              static_cast<int64_t>(dynamicSizes.size()) &&
          "incorrect number of dynamic sizes");
@@ -2810,8 +2809,7 @@ struct InsertSliceOpSourceCastInserter final
     RankedTensorType srcType = insertSliceOp.getSourceType();
     if (srcType.getRank() != insertSliceOp.getDestType().getRank())
       return failure();
-    SmallVector<int64_t> newSrcShape(srcType.getShape().begin(),
-                                     srcType.getShape().end());
+    SmallVector<int64_t> newSrcShape(srcType.getShape());
     for (int64_t i = 0; i < srcType.getRank(); ++i) {
       if (std::optional<int64_t> constInt =
               getConstantIntValue(insertSliceOp.getMixedSizes()[i])) {

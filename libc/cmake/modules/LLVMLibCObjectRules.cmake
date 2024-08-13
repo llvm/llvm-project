@@ -279,6 +279,17 @@ function(create_entrypoint_object fq_target_name)
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
 
+  # Builtin recognition causes issues when trying to implement the builtin
+  # functions themselves. The GPU backends do not use libcalls so we disable the
+  # known problematic ones on the entrypoints that implement them.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                      memset strcmp strstr)
+    if(${ADD_ENTRYPOINT_OBJ_NAME} IN_LIST libc_builtins)
+      target_compile_options(${fq_target_name} PRIVATE -fno-builtin-${ADD_ENTRYPOINT_OBJ_NAME})
+    endif()
+  endif()
+
   set_target_properties(
     ${fq_target_name}
     PROPERTIES

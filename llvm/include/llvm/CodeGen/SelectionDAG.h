@@ -76,6 +76,7 @@ struct KnownBits;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
+class MachineModuleInfo;
 class MCSymbol;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
@@ -2318,6 +2319,11 @@ public:
     return isConstantIntBuildVectorOrConstantInt(N) ||
            isConstantFPBuildVectorOrConstantFP(N);
   }
+
+  /// Check if a value \op N is a constant using the target's BooleanContent for
+  /// its type.
+  std::optional<bool> isBoolConstant(SDValue N,
+                                     bool AllowTruncation = false) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {

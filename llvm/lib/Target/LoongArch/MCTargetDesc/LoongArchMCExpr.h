@@ -75,6 +75,10 @@ public:
     VK_LoongArch_TLS_LE_HI20_R,
     VK_LoongArch_TLS_LE_ADD_R,
     VK_LoongArch_TLS_LE_LO12_R,
+    VK_LoongArch_PCREL20_S2,
+    VK_LoongArch_TLS_LD_PCREL20_S2,
+    VK_LoongArch_TLS_GD_PCREL20_S2,
+    VK_LoongArch_TLS_DESC_PCREL20_S2,
     VK_LoongArch_Invalid // Must be the last item.
   };
 

@@ -93,6 +93,14 @@ void elf::errorOrWarn(const Twine &msg) {
 
 void Ctx::reset() {
   driver = LinkerDriver();
+
+  bufferStart = nullptr;
+  tlsPhdr = nullptr;
+  out = OutSections{};
+  outputSections.clear();
+
+  sym = ElfSym{};
+
   memoryBuffers.clear();
   objectFiles.clear();
   sharedFiles.clear();
@@ -101,11 +109,14 @@ void Ctx::reset() {
   lazyBitcodeFiles.clear();
   inputSections.clear();
   ehInputSections.clear();
+
+  symAux.clear();
   duplicates.clear();
   nonPrevailingSyms.clear();
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  tar.reset();
   internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
@@ -135,10 +146,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     elf::ctx.reset();
     symtab = SymbolTable();
 
-    outputSections.clear();
-    symAux.clear();
-
-    tar = nullptr;
     in.reset();
 
     partitions.clear();
@@ -153,7 +160,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   config = ConfigWrapper();
   script = ScriptWrapper();
 
-  symAux.emplace_back();
+  elf::ctx.symAux.emplace_back();
 
   partitions.clear();
   partitions.emplace_back();
@@ -224,14 +231,15 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 
   std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
-  bool addToTar = file->isThin() && tar;
+  bool addToTar = file->isThin() && ctx.tar;
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
+      ctx.tar->append(relativeToRoot(check(c.getFullName())),
+                      mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -445,6 +453,8 @@ static void checkOptions() {
       error("-r and --export-dynamic may not be used together");
     if (config->debugNames)
       error("-r and --debug-names may not be used together");
+    if (!config->zSectionHeader)
+      error("-r and -z nosectionheader may not be used together");
   }
 
   if (config->executeOnly) {
@@ -640,9 +650,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
         TarWriter::create(path, path::stem(path));
     if (errOrWriter) {
-      tar = std::move(*errOrWriter);
-      tar->append("response.txt", createResponseFile(args));
-      tar->append("version.txt", getLLDVersion() + "\n");
+      ctx.tar = std::move(*errOrWriter);
+      ctx.tar->append("response.txt", createResponseFile(args));
+      ctx.tar->append("version.txt", getLLDVersion() + "\n");
       StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
       if (!ltoSampleProfile.empty())
         readFile(ltoSampleProfile);
@@ -834,6 +844,8 @@ static ICFLevel getICF(opt::InputArgList &args) {
 static StripPolicy getStrip(opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
+  if (!config->zSectionHeader)
+    return StripPolicy::All;
 
   auto *arg = args.getLastArg(OPT_strip_all, OPT_strip_debug);
   if (!arg)
@@ -991,6 +1003,15 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     const Elf_Shdr_Impl<ELFT> &sec = objSections[i];
     if (sec.sh_info == inputObj->cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_CREL) {
+        auto crels =
+            CHECK(obj.crels(sec), "could not retrieve cg profile rela section");
+        for (const auto &rel : crels.first)
+          symbolIndices.push_back(rel.getSymbol(false));
+        for (const auto &rel : crels.second)
+          symbolIndices.push_back(rel.getSymbol(false));
+        break;
+      }
       if (sec.sh_type == SHT_RELA) {
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
@@ -1409,7 +1430,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->soName = args.getLastArgValue(OPT_soname);
   config->sortSection = getSortSection(args);
   config->splitStackAdjustSize = args::getInteger(args, OPT_split_stack_adjust_size, 16384);
-  config->strip = getStrip(args);
+  config->zSectionHeader =
+      getZFlag(args, "sectionheader", "nosectionheader", true);
+  config->strip = getStrip(args); // needs zSectionHeader
   config->sysroot = args.getLastArgValue(OPT_sysroot);
   config->target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
   config->target2 = getTarget2(args);
@@ -1911,13 +1934,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      StringRef from;
-      StringRef to;
-      std::tie(from, to) = StringRef(arg->getValue()).split('=');
-      if (from.empty() || to.empty())
-        error("--defsym: syntax error: " + StringRef(arg->getValue()));
-      else
-        readDefsym(from, MemoryBufferRef(to, "--defsym"));
+      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -2932,7 +2949,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!config->relocatable)

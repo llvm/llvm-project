@@ -146,27 +146,27 @@ typedef enum {
 } LLVMOpcode;
 
 typedef enum {
-  LLVMVoidTypeKind,      /**< type with no size */
-  LLVMHalfTypeKind,      /**< 16 bit floating point type */
-  LLVMFloatTypeKind,     /**< 32 bit floating point type */
-  LLVMDoubleTypeKind,    /**< 64 bit floating point type */
-  LLVMX86_FP80TypeKind,  /**< 80 bit floating point type (X87) */
-  LLVMFP128TypeKind,     /**< 128 bit floating point type (112-bit mantissa)*/
-  LLVMPPC_FP128TypeKind, /**< 128 bit floating point type (two 64-bits) */
-  LLVMLabelTypeKind,     /**< Labels */
-  LLVMIntegerTypeKind,   /**< Arbitrary bit width integers */
-  LLVMFunctionTypeKind,  /**< Functions */
-  LLVMStructTypeKind,    /**< Structures */
-  LLVMArrayTypeKind,     /**< Arrays */
-  LLVMPointerTypeKind,   /**< Pointers */
-  LLVMVectorTypeKind,    /**< Fixed width SIMD vector type */
-  LLVMMetadataTypeKind,  /**< Metadata */
-  LLVMX86_MMXTypeKind,   /**< X86 MMX */
-  LLVMTokenTypeKind,     /**< Tokens */
-  LLVMScalableVectorTypeKind, /**< Scalable SIMD vector type */
-  LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
-  LLVMX86_AMXTypeKind,   /**< X86 AMX */
-  LLVMTargetExtTypeKind, /**< Target extension type */
+  LLVMVoidTypeKind = 0,     /**< type with no size */
+  LLVMHalfTypeKind = 1,     /**< 16 bit floating point type */
+  LLVMFloatTypeKind = 2,    /**< 32 bit floating point type */
+  LLVMDoubleTypeKind = 3,   /**< 64 bit floating point type */
+  LLVMX86_FP80TypeKind = 4, /**< 80 bit floating point type (X87) */
+  LLVMFP128TypeKind = 5, /**< 128 bit floating point type (112-bit mantissa)*/
+  LLVMPPC_FP128TypeKind = 6, /**< 128 bit floating point type (two 64-bits) */
+  LLVMLabelTypeKind = 7,     /**< Labels */
+  LLVMIntegerTypeKind = 8,   /**< Arbitrary bit width integers */
+  LLVMFunctionTypeKind = 9,  /**< Functions */
+  LLVMStructTypeKind = 10,   /**< Structures */
+  LLVMArrayTypeKind = 11,    /**< Arrays */
+  LLVMPointerTypeKind = 12,  /**< Pointers */
+  LLVMVectorTypeKind = 13,   /**< Fixed width SIMD vector type */
+  LLVMMetadataTypeKind = 14, /**< Metadata */
+                             /* 15 previously used by LLVMX86_MMXTypeKind */
+  LLVMTokenTypeKind = 16,    /**< Tokens */
+  LLVMScalableVectorTypeKind = 17, /**< Scalable SIMD vector type */
+  LLVMBFloatTypeKind = 18,         /**< 16 bit brain floating point type */
+  LLVMX86_AMXTypeKind = 19,        /**< X86 AMX */
+  LLVMTargetExtTypeKind = 20,      /**< Target extension type */
 } LLVMTypeKind;
 
 typedef enum {
@@ -1717,11 +1717,6 @@ LLVMTypeRef LLVMVoidTypeInContext(LLVMContextRef C);
 LLVMTypeRef LLVMLabelTypeInContext(LLVMContextRef C);
 
 /**
- * Create a X86 MMX type in a context.
- */
-LLVMTypeRef LLVMX86MMXTypeInContext(LLVMContextRef C);
-
-/**
  * Create a X86 AMX type in a context.
  */
 LLVMTypeRef LLVMX86AMXTypeInContext(LLVMContextRef C);
@@ -1742,7 +1737,6 @@ LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C);
  */
 LLVMTypeRef LLVMVoidType(void);
 LLVMTypeRef LLVMLabelType(void);
-LLVMTypeRef LLVMX86MMXType(void);
 LLVMTypeRef LLVMX86AMXType(void);
 
 /**

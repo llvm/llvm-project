@@ -67,6 +67,7 @@ def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
+def ArgTypePtr : ArgType { let Name = "const Type *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -230,6 +231,9 @@ def OffsetOf : Opcode {
 def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
+}
+def InitScope : Opcode {
+  let Args = [ArgUint32];
 }
 
 //===----------------------------------------------------------------------===//
@@ -396,6 +400,10 @@ def CheckEnumValue : Opcode {
   let HasGroup = 1;
 }
 
+def CheckLiteralType : Opcode {
+  let Args = [ArgTypePtr];
+}
+
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
 def GetGlobalUnchecked : AccessOpcode;
@@ -432,8 +440,6 @@ def SetThisField : AccessOpcode;
 // [Value] -> []
 def InitThisField : AccessOpcode;
 // [Value] -> []
-def InitThisFieldActive : AccessOpcode;
-// [Value] -> []
 def InitThisBitField : Opcode {
   let Types = [AluTypeClass];
   let Args = [ArgRecordField, ArgUint32];
@@ -443,8 +449,6 @@ def InitThisBitField : Opcode {
 def InitField : AccessOpcode;
 // [Pointer, Value] -> []
 def InitBitField : BitFieldOpcode;
-// [Pointer, Value] -> []
-def InitFieldActive : AccessOpcode;
 
 //===----------------------------------------------------------------------===//
 // Pointer access
@@ -721,12 +725,17 @@ def Dup : Opcode {
   let HasGroup = 1;
 }
 
+def Flip : Opcode {
+  let Types = [AllTypeClass, AllTypeClass];
+  let HasGroup = 1;
+}
+
 // [] -> []
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
-  let Args = [ArgCastKind];
+  let Args = [ArgCastKind, ArgBool];
 }
 
 def InvalidDeclRef : Opcode {

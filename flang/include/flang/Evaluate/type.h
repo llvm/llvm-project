@@ -494,7 +494,9 @@ bool IsCUDAIntrinsicType(const DynamicType &);
 // Determine whether two derived type specs are sufficiently identical
 // to be considered the "same" type even if declared separately.
 bool AreSameDerivedType(
-    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

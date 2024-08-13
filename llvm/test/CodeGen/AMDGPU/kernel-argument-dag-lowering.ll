@@ -27,6 +27,48 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}v5i8_arg:
+; GCN: s_load_dwordx2 s[0:1], s[8:9], 0x0
+define amdgpu_kernel void @v5i8_arg(<5 x i8> %in) nounwind {
+  store <5 x i8> %in, ptr addrspace(1) null
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v6i8_arg:
+; GCN: s_load_dwordx2 s[0:1], s[8:9], 0x0
+define amdgpu_kernel void @v6i8_arg(<6 x i8> %in) nounwind {
+  store <6 x i8> %in, ptr addrspace(1) null
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v5i16_arg:
+; GCN: s_load_dwordx4 s[0:3], s[8:9], 0x0
+define amdgpu_kernel void @v5i16_arg(<5 x i16> %in) nounwind {
+  store <5 x i16> %in, ptr addrspace(1) null
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v6i16_arg:
+; GCN-DAG: s_load_dwordx4 s[0:3], s[8:9], 0x0
+define amdgpu_kernel void @v6i16_arg(<6 x i16> %in) nounwind {
+  store <6 x i16> %in, ptr addrspace(1) null
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v5i32_arg:
+; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+define amdgpu_kernel void @v5i32_arg(<5 x i32> %in) nounwind {
+  store <5 x i32> %in, ptr addrspace(1) null
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v6i32_arg:
+; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+define amdgpu_kernel void @v6i32_arg(<6 x i32> %in) nounwind {
+  store <6 x i32> %in, ptr addrspace(1) null
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}i65_arg:
 ; HSA-VI: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[8:9], 0x0
 

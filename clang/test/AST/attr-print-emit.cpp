@@ -32,8 +32,8 @@ int *aa(int i) __attribute__((alloc_align(1)));
 void ownt(int *, int *) __attribute__((ownership_takes(foo, 1, 2)));
 // CHECK: void ownh(int *, int *) __attribute__((ownership_holds(foo, 1, 2)));
 void ownh(int *, int *) __attribute__((ownership_holds(foo, 1, 2)));
-// CHECK: void ownr(int) __attribute__((ownership_returns(foo, 1)));
-void ownr(int) __attribute__((ownership_returns(foo, 1)));
+// CHECK: void *ownr(int) __attribute__((ownership_returns(foo, 1)));
+void *ownr(int) __attribute__((ownership_returns(foo, 1)));
 
 // CHECK: void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 3, 2)));
 void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 3, 2)));
@@ -65,8 +65,8 @@ class C {
   void ownt(int *, int *) __attribute__((ownership_takes(foo, 2, 3)));
   // CHECK: void ownh(int *, int *) __attribute__((ownership_holds(foo, 2, 3)));
   void ownh(int *, int *) __attribute__((ownership_holds(foo, 2, 3)));
-  // CHECK: void ownr(int) __attribute__((ownership_returns(foo, 2)));
-  void ownr(int) __attribute__((ownership_returns(foo, 2)));
+  // CHECK: void *ownr(int) __attribute__((ownership_returns(foo, 2)));
+  void *ownr(int) __attribute__((ownership_returns(foo, 2)));
 
   // CHECK: void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 4, 3)));
   void awtt(int, int, ...) __attribute__((argument_with_type_tag(foo, 4, 3)));
