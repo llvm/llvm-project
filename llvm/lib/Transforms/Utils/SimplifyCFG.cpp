@@ -123,6 +123,12 @@ static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
     cl::desc("Hoist loads/stores if the target supports "
              "conditional faulting"));
 
+static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
+    "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
+    cl::desc("Control the maximal conditonal load/store that we are willing "
+             "to speculatively execute to eliminate conditional branch "
+             "(default = 6)"));
+
 static cl::opt<unsigned>
     HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
                          cl::init(20),
@@ -3077,7 +3083,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
-  bool HositLoadsStores = HoistLoadsStoresWithCondFaulting &&
+  bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
                           Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
@@ -3108,8 +3114,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
-    bool IsSafeCheapLoadStore =
-        HositLoadsStores && isSafeCheapLoadStore(&I, TTI);
+    bool IsSafeCheapLoadStore = HoistLoadsStores &&
+                                isSafeCheapLoadStore(&I, TTI) &&
+                                SpeculatedConditionalLoadsStores.size() <
+                                    HoistLoadsStoresWithCondFaultingThreshold;
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
     if (IsSafeCheapLoadStore)
@@ -3338,10 +3346,12 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
     // !nonnull, !align : Not support pointer type, no need to keep.
-    // !range: load type is changed from scalar to vector, no idea how to keep
-    //         it.
-    // !annotation: Not impact semantics, keep it.
-    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
+    // !range: Load type is changed from scalar to vector, but the metadata on
+    //         vector specifies a per-element range, so the semantics stay the
+    //         same. Keep it.
+    // !annotation: Not impact semantics. Keep it.
+    I->dropUBImplyingAttrsAndUnknownMetadata(
+        {LLVMContext::MD_range, LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
     at::deleteAssignmentMarkers(I);

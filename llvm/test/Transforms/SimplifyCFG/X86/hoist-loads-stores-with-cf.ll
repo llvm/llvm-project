@@ -203,17 +203,17 @@ if.true:
   ret i32 %res
 }
 
-;; Only annotation metadata is kept.
+;; Metadata range/annotation are kept.
 define void @nondebug_metadata(i1 %cond, ptr %p, ptr %q) {
 ; CHECK-LABEL: @nondebug_metadata(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison), !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META5:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison), !annotation [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP2]] to <1 x i16>
-; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META5]]
+; CHECK-NEXT:    call void @llvm.masked.store.v1i16.p0(<1 x i16> [[TMP5]], ptr [[Q]], i32 4, <1 x i1> [[TMP0]]), !annotation [[META6]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
 ; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr [[P]], i32 2, <1 x i1> [[TMP0]])
 ; CHECK-NEXT:    ret void
@@ -305,6 +305,69 @@ if.end:
 if.then:
   %0 = load i32, ptr %q
   store i32 %0, ptr %p
+  ret void
+}
+
+;; Hoist 6 stores.
+define void @threshold_6(i1 %cond, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6) {
+; CHECK-LABEL: @threshold_6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 1>, ptr [[P1:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 2>, ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 3>, ptr [[P3:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 4>, ptr [[P4:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 5>, ptr [[P5:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 6>, ptr [[P6:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  store i32 1, ptr %p1, align 4
+  store i32 2, ptr %p2, align 4
+  store i32 3, ptr %p3, align 4
+  store i32 4, ptr %p4, align 4
+  store i32 5, ptr %p5, align 4
+  store i32 6, ptr %p6, align 4
+  br label %if.false
+
+if.false:
+  ret void
+}
+
+;; Not hoist 7 stores.
+define void @threshold_7(i1 %cond, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7) {
+; CHECK-LABEL: @threshold_7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    store i32 1, ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    store i32 3, ptr [[P3:%.*]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[P4:%.*]], align 4
+; CHECK-NEXT:    store i32 5, ptr [[P5:%.*]], align 4
+; CHECK-NEXT:    store i32 6, ptr [[P6:%.*]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[P7:%.*]], align 4
+; CHECK-NEXT:    br label [[IF_FALSE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  store i32 1, ptr %p1, align 4
+  store i32 2, ptr %p2, align 4
+  store i32 3, ptr %p3, align 4
+  store i32 4, ptr %p4, align 4
+  store i32 5, ptr %p5, align 4
+  store i32 6, ptr %p6, align 4
+  store i32 7, ptr %p7, align 4
+  br label %if.false
+
+if.false:
   ret void
 }
 
@@ -522,7 +585,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @not_likely_to_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then:
