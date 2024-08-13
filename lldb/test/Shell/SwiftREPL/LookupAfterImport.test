@@ -8,7 +8,7 @@
 // RUN: %lldb --repl="-I%t -L%t -lA" < %s 2>&1 | FileCheck %s
 
 "".foo()
-// CHECK: error: value of type 'String' has no member 'foo'
+// CHECK: value of type 'String' has no member 'foo'
 
 import A
 
