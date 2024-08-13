@@ -13,9 +13,11 @@ void simd_sqrt(const float *input, float *output, size_t size) {
     __m256 vec = _mm256_loadu_ps(&input[i]);
     __m256 result = _mm256_sqrt_ps(vec);
     _mm256_storeu_ps(&output[i], result);
+    // when simd is used, the warning is not triggered
   }
   for (; i < size; ++i) {
     output[i] = std::sqrt(input[i]);
+    // CHECK: WARNING: NumericalStabilitySanitizer: NaN detected
   }
 }
 
@@ -27,6 +29,7 @@ int main() {
   simd_sqrt(input, output, 20);
   for (int i = 0; i < 20; ++i) {
     std::cout << output[i] << std::endl;
+    // CHECK: WARNING: NumericalStabilitySanitizer: NaN detected
   }
   return 0;
 }
