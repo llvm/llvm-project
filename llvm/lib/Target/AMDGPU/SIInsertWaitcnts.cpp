@@ -2796,10 +2796,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT_DSCNT))
           .addImm(0);
       for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
-          continue;
-
-        if (!hasXcnt() && CT == X_CNT)
+        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT)
           continue;
 
         if (!ST->hasImageInsts() &&
