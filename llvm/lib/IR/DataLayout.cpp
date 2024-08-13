@@ -117,6 +117,27 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   return SI - MemberOffsets.begin();
 }
 
+namespace {
+
+class StructLayoutMap {
+  using LayoutInfoTy = DenseMap<StructType *, StructLayout *>;
+  LayoutInfoTy LayoutInfo;
+
+public:
+  ~StructLayoutMap() {
+    // Remove any layouts.
+    for (const auto &I : LayoutInfo) {
+      StructLayout *Value = I.second;
+      Value->~StructLayout();
+      free(Value);
+    }
+  }
+
+  StructLayout *&operator[](StructType *STy) { return LayoutInfo[STy]; }
+};
+
+} // end anonymous namespace
+
 //===----------------------------------------------------------------------===//
 // LayoutAlignElem, LayoutAlign support
 //===----------------------------------------------------------------------===//
@@ -191,36 +212,31 @@ static const std::pair<AlignTypeEnum, LayoutAlignElem> DefaultAlignments[] = {
     {VECTOR_ALIGN, {128, Align(16), Align(16)}}, // v16i8, v8i16, v4i32, ...
 };
 
-void DataLayout::reset(StringRef Desc) {
-  clear();
-
-  LayoutMap = nullptr;
+DataLayout::DataLayout(StringRef LayoutString) {
   BigEndian = false;
   AllocaAddrSpace = 0;
-  StackNaturalAlign.reset();
   ProgramAddrSpace = 0;
   DefaultGlobalsAddrSpace = 0;
-  FunctionPtrAlign.reset();
   TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
   ManglingMode = MM_None;
-  NonIntegralAddressSpaces.clear();
   StructAlignment = LayoutAlignElem::get(Align(1), Align(8), 0);
 
   // Default alignments
   for (const auto &[Kind, Layout] : DefaultAlignments) {
     if (Error Err = setAlignment(Kind, Layout.ABIAlign, Layout.PrefAlign,
                                  Layout.TypeBitWidth))
-      return report_fatal_error(std::move(Err));
+      report_fatal_error(std::move(Err));
   }
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
-    return report_fatal_error(std::move(Err));
+    report_fatal_error(std::move(Err));
 
-  if (Error Err = parseSpecifier(Desc))
-    return report_fatal_error(std::move(Err));
+  if (Error Err = parseSpecifier(LayoutString))
+    report_fatal_error(std::move(Err));
 }
 
 DataLayout &DataLayout::operator=(const DataLayout &Other) {
-  clear();
+  delete static_cast<StructLayoutMap *>(LayoutMap);
+  LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
   BigEndian = Other.BigEndian;
   AllocaAddrSpace = Other.AllocaAddrSpace;
@@ -693,42 +709,7 @@ Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
   return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 }
 
-namespace {
-
-class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
-  LayoutInfoTy LayoutInfo;
-
-public:
-  ~StructLayoutMap() {
-    // Remove any layouts.
-    for (const auto &I : LayoutInfo) {
-      StructLayout *Value = I.second;
-      Value->~StructLayout();
-      free(Value);
-    }
-  }
-
-  StructLayout *&operator[](StructType *STy) {
-    return LayoutInfo[STy];
-  }
-};
-
-} // end anonymous namespace
-
-void DataLayout::clear() {
-  LegalIntWidths.clear();
-  IntAlignments.clear();
-  FloatAlignments.clear();
-  VectorAlignments.clear();
-  Pointers.clear();
-  delete static_cast<StructLayoutMap *>(LayoutMap);
-  LayoutMap = nullptr;
-}
-
-DataLayout::~DataLayout() {
-  clear();
-}
+DataLayout::~DataLayout() { delete static_cast<StructLayoutMap *>(LayoutMap); }
 
 const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   if (!LayoutMap)
