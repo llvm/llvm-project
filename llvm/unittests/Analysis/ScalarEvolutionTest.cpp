@@ -1202,8 +1202,8 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), std::nullopt); // TODO
-    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), std::nullopt); // TODO
+    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), 3);
+    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), -3);
     EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
     EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);

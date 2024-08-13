@@ -858,3 +858,46 @@ namespace DefinitionLoc {
   constexpr NonConstexprCopy ncc2 = ncc1; // both-error {{constant expression}} \
                                           // both-note {{non-constexpr constructor}}
 }
+
+namespace VirtDtor {
+  class B {
+  public:
+    constexpr B(char *p) : p(p) {}
+    virtual constexpr ~B() {
+      *p = 'B';
+      ++p;
+    }
+
+    char *p;
+  };
+
+  class C : public B {
+  public:
+    constexpr C(char *p) : B(p) {}
+    virtual constexpr ~C() override {
+      *p = 'C';
+      ++p;
+    }
+  };
+
+  union U {
+    constexpr U(char *p) : c(p) {}
+    constexpr ~U() {}
+
+    C c;
+  };
+
+  constexpr int test(char a, char b) {
+    char buff[2] = {};
+    U u(buff);
+
+    /// U is a union, so it won't call the destructor of its fields.
+    /// We do this manually here. Explicitly calling ~C() here should
+    /// also call the destructor of the base classes however.
+    u.c.~C();
+
+    return buff[0] == a && buff[1] == b;
+  }
+
+  static_assert(test('C', 'B'));
+}

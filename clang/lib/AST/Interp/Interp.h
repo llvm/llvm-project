@@ -2633,9 +2633,10 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
-      // FieldDesc of our pointer, just get the DeclDesc instead, which
-      // is the furthest we might go up in the hierarchy.
-      ThisPtr = ThisPtr.getDeclPtr();
+      // FieldDesc of our pointer, just go up the hierarchy of this field
+      // the furthest we can go.
+      while (ThisPtr.isBaseClass())
+        ThisPtr = ThisPtr.getBase();
     }
   }
 

@@ -125,12 +125,18 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isActive())
     return true;
 
+  assert(Ptr.inUnion());
+  assert(Ptr.isField() && Ptr.getField());
+
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
   while (!U.isRoot() && U.inUnion() && !U.isActive()) {
-    C = U;
+    if (U.getField())
+      C = U;
     U = U.getBase();
   }
+  assert(C.isField());
+
   // Get the inactive field descriptor.
   const FieldDecl *InactiveField = C.getField();
   assert(InactiveField);
@@ -155,8 +161,8 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   assert(R && R->isUnion() && "Not a union");
 
   const FieldDecl *ActiveField = nullptr;
-  for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {
-    const Pointer &Field = U.atField(R->getField(I)->Offset);
+  for (const Record::Field &F : R->fields()) {
+    const Pointer &Field = U.atField(F.Offset);
     if (Field.isActive()) {
       ActiveField = Field.getField();
       break;
@@ -865,23 +871,6 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Fields.
-  for (const Record::Field &Field : llvm::reverse(R->fields())) {
-    const Descriptor *D = Field.Desc;
-    if (D->isRecord()) {
-      if (!runRecordDestructor(S, OpPC, BasePtr.atField(Field.Offset), D))
-        return false;
-    } else if (D->isCompositeArray()) {
-      const Descriptor *ElemDesc = Desc->ElemDesc;
-      assert(ElemDesc->isRecord());
-      for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-        if (!runRecordDestructor(S, OpPC, BasePtr.atIndex(I).narrow(),
-                                 ElemDesc))
-          return false;
-      }
-    }
-  }
-
   // Destructor of this record.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
       Dtor && !Dtor->isTrivial()) {
@@ -893,13 +882,6 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
     if (!Call(S, OpPC, DtorFunc, 0))
       return false;
   }
-
-  // Bases.
-  for (const Record::Base &Base : llvm::reverse(R->bases())) {
-    if (!runRecordDestructor(S, OpPC, BasePtr.atField(Base.Offset), Base.Desc))
-      return false;
-  }
-
   return true;
 }
 
