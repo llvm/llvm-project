@@ -1,0 +1,3 @@
+## Tests the 'unset' command when no arguments are provided.
+
+# RUN: unset

@@ -1,0 +1,3 @@
+## Test the behavior of the 'unset' command when trying to unset a variable that does not exist.
+
+# RUN: unset NONEXISTENT

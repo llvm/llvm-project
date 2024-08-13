@@ -1,0 +1,3 @@
+## Tests the 'unset' command with multiple variables.
+
+# RUN: unset FOO BAR
