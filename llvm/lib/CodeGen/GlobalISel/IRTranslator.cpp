@@ -3339,7 +3339,7 @@ void IRTranslator::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;
   GISelObserverWrapper WrapperObserver(&Verifier);
-  RAIIDelegateInstaller DelInstall(*MF, &WrapperObserver);
+  RAIIMFObsDelInstaller ObsInstall(*MF, WrapperObserver);
 #endif // ifndef NDEBUG
   for (auto &Phi : PendingPHIs) {
     const PHINode *PI = Phi.first;
@@ -3966,8 +3966,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     DILocationVerifier Verifier;
     WrapperObserver.addObserver(&Verifier);
 #endif // ifndef NDEBUG
-    RAIIDelegateInstaller DelInstall(*MF, &WrapperObserver);
-    RAIIMFObserverInstaller ObsInstall(*MF, WrapperObserver);
+    RAIIMFObsDelInstaller ObsInstall(*MF, WrapperObserver);
     for (const BasicBlock *BB : RPOT) {
       MachineBasicBlock &MBB = getMBB(*BB);
       // Set the insertion point of all the following translations to
