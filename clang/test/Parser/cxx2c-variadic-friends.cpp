@@ -24,6 +24,9 @@ struct C { template<class T> class Nested; };
 template <typename, typename>
 struct D { template<class T> class Nested; };
 
+template <bool>
+struct E { template<class T> class Nested; };
+
 template<class... Ts> // expected-note {{template parameter is declared here}}
 struct VS {
   friend Ts...;
@@ -39,7 +42,6 @@ struct VS {
 
   template<class... Us> // expected-note {{is declared here}}
   friend class Us...; // expected-error {{declaration of 'Us' shadows template parameter}}
-                      // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
 
   template<class U>
   friend class C<Ts>::template Nested<U>...; // expected-error {{cannot specialize a dependent template}}
@@ -47,21 +49,20 @@ struct VS {
   template<class... Us>
   friend class C<Ts...>::template Nested<Us>...; // expected-error {{cannot specialize a dependent template}}
 
-  // FIXME: Should be valid, but we currently can’t handle packs in NNSs.
-  template<class ...T>
-  friend class TS<Ts>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-                                  // expected-warning@-1 {{dependent nested name specifier 'TS<Ts>::' for friend template declaration is not supported; ignoring this friend declaration}}
-
-  // FIXME: This I legitimately have no idea what to do with. I *think* it might
-  // be well-formed by the same logic as the previous one?
-  template<class T>
-  friend class D<T, Ts>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-                                    // expected-warning@-1 {{dependent nested name specifier 'D<T, Ts>::' for friend class declaration is not supported; turning off access control for 'VS'}}
-
-  // FIXME: Ill-formed... probably?
+  // Nonsense (see CWG 2917).
   template<class... Us>
-  friend class C<Us>::Nested...; // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-                                 // expected-warning@-1 {{dependent nested name specifier 'C<Us>::' for friend class declaration is not supported; turning off access control for 'VS'}}
+  friend class C<Us>::Nested...; // expected-error {{friend declaration expands pack 'Us' that is declared it its own template parameter list}}
+
+  template<bool... Bs>
+  friend class E<Bs>::Nested...; // expected-error {{friend declaration expands pack 'Bs' that is declared it its own template parameter list}}
+
+  // FIXME: Both of these should be valid, but we can't handle these at
+  // the moment because the NNS is dependent.
+  template<class ...T>
+  friend class TS<Ts>::Nested...; // expected-warning {{dependent nested name specifier 'TS<Ts>::' for friend template declaration is not supported; ignoring this friend declaration}}
+
+  template<class T>
+  friend class D<T, Ts>::Nested...; // expected-warning {{dependent nested name specifier 'D<T, Ts>::' for friend class declaration is not supported; turning off access control for 'VS'}}
 };
 
 namespace length_mismatch {

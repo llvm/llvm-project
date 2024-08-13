@@ -17361,11 +17361,6 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   bool IsMemberSpecialization = false;
   bool Invalid = false;
 
-  // FIXME: This works for now; revisit once we support packs in NNSs.
-  if (EllipsisLoc.isValid())
-    Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
-        << SourceRange(FriendLoc, NameLoc);
-
   if (TemplateParameterList *TemplateParams =
           MatchTemplateParametersToScopeSpecifier(
               TagLoc, NameLoc, SS, nullptr, TempParamLists, /*friend*/ true,
@@ -17404,6 +17399,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   // If it's explicit specializations all the way down, just forget
   // about the template header and build an appropriate non-templated
   // friend.  TODO: for source fidelity, remember the headers.
+  NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   if (isAllExplicitSpecializations) {
     if (SS.isEmpty()) {
       bool Owned = false;
@@ -17419,7 +17415,6 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                       /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside);
     }
 
-    NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
     ElaboratedTypeKeyword Keyword
       = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
     QualType T = CheckTypenameType(Keyword, TagLoc, QualifierLoc,
@@ -17452,6 +17447,22 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   assert(SS.isNotEmpty() && "valid templated tag with no SS and no direct?");
 
 
+  // CWG 2917: if it (= the friend-type-specifier) is a pack expansion
+  // (13.7.4 [temp.variadic]), any packs expanded by that pack expansion
+  // shall not have been introduced by the template-declaration.
+  SmallVector<UnexpandedParameterPack, 1> Unexpanded;
+  collectUnexpandedParameterPacks(QualifierLoc, Unexpanded);
+  unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
+  for (UnexpandedParameterPack& U : Unexpanded) {
+    if (getDepthAndIndex(U).first >= FriendDeclDepth) {
+      auto *ND = U.first.dyn_cast<NamedDecl *>();
+      if (!ND)
+        ND = U.first.get<const TemplateTypeParmType *>()->getDecl();
+      Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)
+          << ND->getDeclName() << SourceRange(SS.getBeginLoc(), EllipsisLoc);
+      return true;
+    }
+  }
 
   // Handle the case of a templated-scope friend class.  e.g.
   //   template <class T> class A<T>::B;
