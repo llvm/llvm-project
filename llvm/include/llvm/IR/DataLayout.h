@@ -70,9 +70,6 @@ struct LayoutAlignElem {
   Align ABIAlign;
   Align PrefAlign;
 
-  static LayoutAlignElem get(Align ABIAlign, Align PrefAlign,
-                             uint32_t BitWidth);
-
   bool operator==(const LayoutAlignElem &rhs) const;
 };
 
@@ -85,11 +82,6 @@ struct PointerAlignElem {
   Align ABIAlign;
   Align PrefAlign;
   uint32_t IndexBitWidth;
-
-  /// Initializer
-  static PointerAlignElem getInBits(uint32_t AddressSpace, Align ABIAlign,
-                                    Align PrefAlign, uint32_t TypeBitWidth,
-                                    uint32_t IndexBitWidth);
 
   bool operator==(const PointerAlignElem &rhs) const;
 };

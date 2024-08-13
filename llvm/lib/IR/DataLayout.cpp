@@ -142,16 +142,6 @@ public:
 // LayoutAlignElem, LayoutAlign support
 //===----------------------------------------------------------------------===//
 
-LayoutAlignElem LayoutAlignElem::get(Align ABIAlign, Align PrefAlign,
-                                     uint32_t BitWidth) {
-  assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
-  LayoutAlignElem retval;
-  retval.ABIAlign = ABIAlign;
-  retval.PrefAlign = PrefAlign;
-  retval.TypeBitWidth = BitWidth;
-  return retval;
-}
-
 bool LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
   return ABIAlign == rhs.ABIAlign && PrefAlign == rhs.PrefAlign &&
          TypeBitWidth == rhs.TypeBitWidth;
@@ -160,20 +150,6 @@ bool LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
 //===----------------------------------------------------------------------===//
 // PointerAlignElem, PointerAlign support
 //===----------------------------------------------------------------------===//
-
-PointerAlignElem PointerAlignElem::getInBits(uint32_t AddressSpace,
-                                             Align ABIAlign, Align PrefAlign,
-                                             uint32_t TypeBitWidth,
-                                             uint32_t IndexBitWidth) {
-  assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
-  PointerAlignElem retval;
-  retval.AddressSpace = AddressSpace;
-  retval.ABIAlign = ABIAlign;
-  retval.PrefAlign = PrefAlign;
-  retval.TypeBitWidth = TypeBitWidth;
-  retval.IndexBitWidth = IndexBitWidth;
-  return retval;
-}
 
 bool
 PointerAlignElem::operator==(const PointerAlignElem &rhs) const {
@@ -654,7 +630,7 @@ Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
     I->PrefAlign = PrefAlign;
   } else {
     // Insert before I to keep the vector sorted.
-    Alignments->insert(I, LayoutAlignElem::get(ABIAlign, PrefAlign, BitWidth));
+    Alignments->insert(I, LayoutAlignElem{BitWidth, ABIAlign, PrefAlign});
   }
   return Error::success();
 }
@@ -689,9 +665,8 @@ Error DataLayout::setPointerAlignmentInBits(uint32_t AddrSpace, Align ABIAlign,
     return A.AddressSpace < AddressSpace;
   });
   if (I == Pointers.end() || I->AddressSpace != AddrSpace) {
-    Pointers.insert(I,
-                    PointerAlignElem::getInBits(AddrSpace, ABIAlign, PrefAlign,
-                                                TypeBitWidth, IndexBitWidth));
+    Pointers.insert(I, PointerAlignElem{AddrSpace, TypeBitWidth, ABIAlign,
+                                        PrefAlign, IndexBitWidth});
   } else {
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
