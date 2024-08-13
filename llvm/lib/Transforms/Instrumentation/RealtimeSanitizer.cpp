@@ -53,7 +53,10 @@ PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
   if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
     insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
     insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
-    return PreservedAnalyses::none();
+
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
   }
 
   return PreservedAnalyses::all();

@@ -593,7 +593,32 @@ add_entrypoint_object(
   HDRS
     ../fadd.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  faddl
+  SRCS
+    faddl.cpp
+  HDRS
+    ../faddl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  faddf128
+  SRCS
+    faddf128.cpp
+  HDRS
+    ../faddf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
@@ -1334,16 +1359,15 @@ add_entrypoint_object(
   HDRS
     ../expf16.h
   DEPENDS
+    .expxf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.CPP.array
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -1579,6 +1603,27 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.include.errno
     libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  expm1f16
+  SRCS
+    expm1f16.cpp
+  HDRS
+    ../expm1f16.h
+  DEPENDS
+    .expxf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
 )
@@ -4369,6 +4414,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  totalorderl
+  SRCS
+    totalorderl.cpp
+  HDRS
+    ../totalorderl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   totalorderf16
   SRCS
     totalorderf16.cpp
@@ -5055,4 +5112,7 @@ add_header_library(
     expxf16.h
   DEPENDS
     libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
 )

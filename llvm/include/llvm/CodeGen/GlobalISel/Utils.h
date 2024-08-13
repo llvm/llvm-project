@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+
 #include <cstdint>
 
 namespace llvm {
@@ -177,6 +178,9 @@ std::optional<APInt> getIConstantVRegVal(Register VReg,
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t returns it.
 std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
+
+/// \p VReg is defined by a G_CONSTANT, return the corresponding value.
+APInt getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.

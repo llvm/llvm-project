@@ -11383,7 +11383,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
                                           N->getMemoryVT(), DCI);
     if (NewPtr) {
-      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 8> NewOps(N->ops());
 
       NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -15103,7 +15103,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    SmallVector<SDValue, 9> Ops(Node->ops());
     Ops[1] = Src0;
     Ops[3] = Src1;
     Ops[5] = Src2;
@@ -16165,14 +16165,7 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
-  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
-    return true;
-
-  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
-  // checking it.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+  return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
 }
 
 /// \return Action to perform on AtomicRMWInsts for integer operations.
@@ -16647,6 +16640,9 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  // If the return value isn't used, do not introduce a false use in the phi.
+  bool ReturnValueIsUsed = !AI->use_empty();
+
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
@@ -16710,14 +16706,18 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
-  Loaded->addIncoming(LoadedShared, SharedBB);
-  Loaded->addIncoming(LoadedPrivate, PrivateBB);
-  Loaded->addIncoming(LoadedGlobal, GlobalBB);
+
+  if (ReturnValueIsUsed) {
+    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    Loaded->addIncoming(LoadedShared, SharedBB);
+    Loaded->addIncoming(LoadedPrivate, PrivateBB);
+    Loaded->addIncoming(LoadedGlobal, GlobalBB);
+    Loaded->takeName(AI);
+    AI->replaceAllUsesWith(Loaded);
+  }
+
   Builder.CreateBr(ExitBB);
 
-  Loaded->takeName(AI);
-  AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
 

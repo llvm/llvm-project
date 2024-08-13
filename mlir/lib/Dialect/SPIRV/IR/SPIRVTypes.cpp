@@ -817,8 +817,8 @@ SampledImageType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 Type SampledImageType::getImageType() const { return getImpl()->imageType; }
 
 LogicalResult
-SampledImageType::verify(function_ref<InFlightDiagnostic()> emitError,
-                         Type imageType) {
+SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                   Type imageType) {
   if (!llvm::isa<ImageType>(imageType))
     return emitError() << "expected image type";
 
@@ -1181,8 +1181,9 @@ MatrixType MatrixType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           columnCount);
 }
 
-LogicalResult MatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 Type columnType, uint32_t columnCount) {
+LogicalResult
+MatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                             Type columnType, uint32_t columnCount) {
   if (columnCount < 2 || columnCount > 4)
     return emitError() << "matrix can have 2, 3, or 4 columns only";
 

@@ -372,3 +372,12 @@ define ptr @my_calloc_constant_size() {
   %call = call ptr @my_calloc(i64 32, i64 4)
   ret ptr %call
 }
+
+define ptr @virtual_constant_size(ptr %alloc) {
+; CHECK-LABEL: @virtual_constant_size(
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(16) ptr [[ALLOC:%.*]](i64 16) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    ret ptr [[CALL]]
+;
+  %call = call ptr %alloc(i64 16) allocsize(0)
+  ret ptr %call
+}

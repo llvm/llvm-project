@@ -1652,24 +1652,25 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   //                      In0)))
   // Note that Mask0 is never used: lanes for which no path reaches this phi and
   // are essentially undef are taken from In0.
- VectorParts Entry(State.UF);
- bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
- for (unsigned In = 0; In < NumIncoming; ++In) {
-   for (unsigned Part = 0; Part < State.UF; ++Part) {
-     // We might have single edge PHIs (blocks) - use an identity
-     // 'select' for the first PHI operand.
-     Value *In0 = State.get(getIncomingValue(In), Part, OnlyFirstLaneUsed);
-     if (In == 0)
-       Entry[Part] = In0; // Initialize with the first incoming value.
-     else {
-       // Select between the current value and the previous incoming edge
-       // based on the incoming mask.
-       Value *Cond = State.get(getMask(In), Part, OnlyFirstLaneUsed);
-       Entry[Part] =
-           State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
-     }
-   }
- }
+  VectorParts Entry(State.UF);
+  bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+  for (unsigned In = 0; In < NumIncoming; ++In) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      // We might have single edge PHIs (blocks) - use an identity
+      // 'select' for the first PHI operand.
+      Value *In0 = State.get(getIncomingValue(In), Part, OnlyFirstLaneUsed);
+      if (In == 0)
+        Entry[Part] = In0; // Initialize with the first incoming value.
+      else {
+        // Select between the current value and the previous incoming edge
+        // based on the incoming mask.
+        Value *Cond = State.get(getMask(In), Part, OnlyFirstLaneUsed);
+        Entry[Part] =
+            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+      }
+    }
+  }
+
   for (unsigned Part = 0; Part < State.UF; ++Part)
     State.set(this, Entry[Part], Part, OnlyFirstLaneUsed);
 }
@@ -2007,7 +2008,49 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   printOperands(O, SlotTracker);
 }
+#endif
 
+void VPWidenLoadRecipe::execute(VPTransformState &State) {
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGather = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *NewLI;
+    Value *Mask = nullptr;
+    if (auto *VPMask = getMask()) {
+      // Mask reversal is only needed for non-all-one (null) masks, as reverse
+      // of a null all-one mask is a null mask.
+      Mask = State.get(VPMask, Part);
+      if (isReverse())
+        Mask = Builder.CreateVectorReverse(Mask, "reverse");
+    }
+
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
+    if (CreateGather) {
+      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
+                                         "wide.masked.gather");
+    } else if (Mask) {
+      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                       PoisonValue::get(DataTy),
+                                       "wide.masked.load");
+    } else {
+      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
+    }
+    // Add metadata to the load, but setVectorValue to the reverse shuffle.
+    State.addMetadata(NewLI, LI);
+    if (Reverse)
+      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+    State.set(this, NewLI, Part);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
