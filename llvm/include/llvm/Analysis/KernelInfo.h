@@ -25,8 +25,7 @@ class Function;
 /// Data structure holding function info for kernels.
 class KernelInfo {
   void updateForBB(const BasicBlock &BB, int64_t Direction,
-                   OptimizationRemarkEmitter &ORE,
-                   const TargetTransformInfo &TTI);
+                   OptimizationRemarkEmitter &ORE);
 
 public:
   static KernelInfo getKernelInfo(Function &F, FunctionAnalysisManager &FAM);
@@ -89,7 +88,10 @@ public:
   /// Number of calls of type InvokeInst.
   int64_t Invokes = 0;
 
-  /// Number of flat addrspace memory accesses (via load, store, etc.).
+  /// Target-specific flat address space.
+  unsigned FlatAddrspace;
+
+  /// Number of flat address space memory accesses (via load, store, etc.).
   int64_t FlatAddrspaceAccesses = 0;
 };
 
