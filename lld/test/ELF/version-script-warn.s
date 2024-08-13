@@ -28,8 +28,8 @@
 # RUN: ld.lld --retain-symbols-file=%t_retain.txt --version-script %t_local.ver %t.o -shared -o %t.so --fatal-warnings
 # RUN: ld.lld --retain-symbols-file=%t_retain.txt --version-script %t_global.ver %t.o -shared -o %t.so --fatal-warnings
 
-# MULTVER: warning: Wildcard pattern '*' is used for multiple version definitions in version script
-# LOCGLOB: warning: Wildcard pattern '*' is used for both 'local' and 'global' scopes in version script
+# MULTVER: warning: wildcard pattern '*' is used for multiple version definitions in version script
+# LOCGLOB: warning: wildcard pattern '*' is used for both 'local' and 'global' scopes in version script
 
 .globl foo
 foo:

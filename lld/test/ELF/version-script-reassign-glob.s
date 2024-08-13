@@ -22,7 +22,7 @@
 
 ## When there are multiple * patterns, the last wins.
 # BAR2: GLOBAL DEFAULT 7 foo@@bar2
-# DUPWARN: warning: Wildcard pattern '*' is used for multiple version definitions in version script
+# DUPWARN: warning: wildcard pattern '*' is used for multiple version definitions in version script
 
 .globl foo
 foo:

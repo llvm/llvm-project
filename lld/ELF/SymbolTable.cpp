@@ -328,11 +328,11 @@ void SymbolTable::scanVersionScript() {
     if (!asteriskWildcardReported && (isLocal || ver->id > VER_NDX_LOCAL)) {
       if ((isLocal && globalAsteriskWildcardFound) ||
           (!isLocal && localAsteriskWildcardFound)) {
-        warn("Wildcard pattern '*' is used for both 'local' and 'global' "
+        warn("wildcard pattern '*' is used for both 'local' and 'global' "
              "scopes in version script");
         asteriskWildcardReported = true;
       } else if (!isLocal && globalAsteriskWildcardFound) {
-        warn("Wildcard pattern '*' is used for multiple version definitions in "
+        warn("wildcard pattern '*' is used for multiple version definitions in "
              "version script");
         asteriskWildcardReported = true;
       } else {
