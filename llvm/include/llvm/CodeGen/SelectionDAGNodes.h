@@ -452,6 +452,20 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
+  bool operator==(const SDNodeFlags &other) const {
+    return NoUnsignedWrap == other.NoUnsignedWrap &&
+           NoSignedWrap == other.NoSignedWrap && Exact == other.Exact &&
+           Disjoint == other.Disjoint && NonNeg == other.NonNeg &&
+           NoNaNs == other.NoNaNs && NoInfs == other.NoInfs &&
+           NoSignedZeros == other.NoSignedZeros &&
+           AllowReciprocal == other.AllowReciprocal &&
+           AllowContract == other.AllowContract &&
+           ApproximateFuncs == other.ApproximateFuncs &&
+           AllowReassociation == other.AllowReassociation &&
+           NoFPExcept == other.NoFPExcept &&
+           Unpredictable == other.Unpredictable;
+  }
+
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
   void intersectWith(const SDNodeFlags Flags) {
