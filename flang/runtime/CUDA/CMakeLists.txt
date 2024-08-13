@@ -7,14 +7,20 @@
 #===------------------------------------------------------------------------===#
 
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
-find_library(CUDA_RUNTIME_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
 
 add_flang_library(CufRuntime
   allocator.cpp
   descriptor.cpp
 )
+
+if (BUILD_SHARED_LIBS)
+  set(CUF_LIBRARY ${CUDA_LIBRARIES})
+else()
+  set(CUF_LIBRARY ${CUDA_cudart_static_LIBRARY})
+endif()
+
 target_link_libraries(CufRuntime
   PRIVATE
   FortranRuntime
-  ${CUDA_RUNTIME_LIBRARY}
+  ${CUF_LIBRARY}
 )
