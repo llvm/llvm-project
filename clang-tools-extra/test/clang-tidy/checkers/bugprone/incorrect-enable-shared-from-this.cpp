@@ -39,13 +39,13 @@ class BadMultiClass3Example : dummy_class1, dummy_class2, std::enable_shared_fro
 
 template <typename T> class enable_shared_from_this {};
 
-class NoStdClassExample : public enable_shared_from_this<NoStdClassExample> {};
+class BadInitClassExample : public enable_shared_from_this<BadInitClassExample> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Should be std::enable_shared_from_this [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: public std::enable_shared_from_this<NoStdClassExample>
+// CHECK-FIXES: public std::enable_shared_from_this<BadInitClassExample>
 
-struct NoStdStructExample : enable_shared_from_this<NoStdStructExample> {};
+struct BadInitStructExample : enable_shared_from_this<BadInitStructExample> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: Should be std::enable_shared_from_this [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: std::enable_shared_from_this<NoStdStructExample>
+// CHECK-FIXES: std::enable_shared_from_this<BadInitStructExample>
 
 class BadMixedProblemExample : enable_shared_from_this<BadMixedProblemExample> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Should be std::enable_shared_from_this and inheritance from std::enable_shared_from_this should be public inheritance, otherwise the internal weak_ptr won't be initialized [bugprone-incorrect-enable-shared-from-this]

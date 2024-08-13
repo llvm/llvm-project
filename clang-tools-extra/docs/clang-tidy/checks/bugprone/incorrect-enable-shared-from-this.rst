@@ -1,22 +1,21 @@
 .. title:: clang-tidy - bugprone-incorrect-enable-shared-from-this
 
 bugprone-incorrect-enable-shared-from-this
-=======================================
+==========================================
 
-Checks if class/struct publicly derives from ``std::enable_shared_from_this``,
-because otherwise when ``shared_from_this`` is called it will throw 
-``std::bad_weak_ptr``.
+Checks if class/struct publicly inherits from 
+``std::enable_shared_from_this``, because otherwise when ``shared_from_this``
+is called it will throw ``std::bad_weak_ptr``.
 
 Consider the following code:
 
 .. code-block:: c++
     #include <memory>
 
+    // private inheritance
     class BadExample : std::enable_shared_from_this<BadExample> {
-    // warning: inheritance from std::enable_shared_from_this 
-    // should be public inheritance,
-    // otherwise the internal weak_ptr won't be initialized 
-    // [bugprone-incorrect-enable-shared-from-this]
+    
+    // ``shared_from_this``` returns uninitialized ``weak_ptr``
         public:
         BadExample* foo() { return shared_from_this().get(); }
         void bar() { return; }

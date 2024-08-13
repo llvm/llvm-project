@@ -13,7 +13,10 @@
 
 namespace clang::tidy::bugprone {
 
-/// Checks if a class deriving from enable_shared_from_this has public access specifiers, because otherwise the program will crash when shared_from_this is called.
+/// Checks if class/struct publicly inherits from
+/// ``std::enable_shared_from_this``, because otherwise when
+/// ``shared_from_this`` is called it will throw
+/// ``std::bad_weak_ptr``.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-shared-from-this.html
