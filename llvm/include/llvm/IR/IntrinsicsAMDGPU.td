@@ -611,9 +611,9 @@ def int_amdgcn_cvt_sr_bf8_f16 : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
 
-// llvm.amdgcn.cvt.scale.pk32.f16.bf6 v32f16 vdst, v6i32 src0, i8 scale_sel [0..7]
+// llvm.amdgcn.cvt.scale.pk32.f16.bf6 v32f16 vdst, v6i32 src0, i32 scale_sel [0..7]
 class AMDGPUCvtScaleIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
-  [DstTy], [Src0Ty, llvm_i32_ty, llvm_i8_ty], [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]
+  [DstTy], [Src0Ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleF32Intrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
@@ -834,7 +834,7 @@ def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
 
 def int_amdgcn_bitop3 :
   DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 } // TargetPrefix = "amdgcn"
