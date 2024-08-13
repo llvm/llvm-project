@@ -2984,14 +2984,23 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
   return BIEndProb < Likely;
 }
 
-static bool isSafeCheapLoadStore(const Instruction &I,
+static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
+  // Not handle Volatile or atomic.
+  if (auto *L = dyn_cast<LoadInst>(I)) {
+    if (!L->isSimple())
+      return false;
+  } else if (auto *S = dyn_cast<StoreInst>(I)) {
+    if (!S->isSimple())
+      return false;
+  } else
+    return false;
+
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         TTI.hasConditionalLoadStoreForType(getLoadStoreType(&I)) &&
-         getLoadStoreAlignment(&I) < Value::MaximumAlignment;
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+         getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
 /// Speculate a conditional basic block flattening the CFG.
@@ -3100,7 +3109,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
     bool IsSafeCheapLoadStore =
-        HositLoadsStores && isSafeCheapLoadStore(I, TTI);
+        HositLoadsStores && isSafeCheapLoadStore(&I, TTI);
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
     if (IsSafeCheapLoadStore)

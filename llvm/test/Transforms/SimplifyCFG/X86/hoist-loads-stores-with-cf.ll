@@ -449,140 +449,71 @@ if.end:
   ret void
 }
 
-;; Not hoist if the instruction to be hoist is atomic/volatile.
-define void @not_simple(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @not_simple(
+;; Not hoist if the instruction to be hoist is atomic.
+define void @not_atomic(i1 %cond, ptr %p) {
+; CHECK-LABEL: @not_atomic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    store atomic i32 1, ptr [[Q:%.*]] seq_cst, align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    store atomic i32 1, ptr [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    br label [[IF_TRUE]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cond = icmp eq i32 %a, 0
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  store atomic i32 1, ptr %q seq_cst, align 4
-  br label %if.end
+  store atomic i32 1, ptr %p seq_cst, align 4
+  br label %if.true
 
 if.true:
-  %0 = load i32, ptr %b, align 4
-  store i32 %0, ptr %p, align 4
-  br label %if.end
-
-if.end:
   ret void
 }
 
-;; Not hoist if there is a load/store that can not be hoisted in the same bb.
-define void @not_hoistable_store(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @not_hoistable_store(
+;; Not hoist if the instruction to be hoist is volatile.
+define void @not_volatile(i1 %cond, ptr %p) {
+; CHECK-LABEL: @not_volatile(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[IF_TRUE]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cond = icmp eq i32 %a, 0
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  store i32 1, ptr %q, align 4
-  br label %if.end
+  %0 = load volatile i32, ptr %p, align 4
+  br label %if.true
 
 if.true:
-  %0 = load i32, ptr %b, align 4
-  store volatile i32 %0, ptr %p, align 4
-  br label %if.end
-
-if.end:
   ret void
 }
 
 ;; Not hoist if there is an instruction that has side effect in the same bb.
-define void @not_hoistable_sideeffect(i32 %a, ptr %b, ptr %p, ptr %q) {
+define void @not_hoistable_sideeffect(i1 %cond, ptr %p, ptr %q) {
 ; CHECK-LABEL: @not_hoistable_sideeffect(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK-NEXT:    [[RMW:%.*]] = atomicrmw xchg ptr [[Q:%.*]], double 4.000000e+00 seq_cst, align 8
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[IF_TRUE]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[RMW:%.*]] = atomicrmw xchg ptr [[Q]], double 4.000000e+00 seq_cst, align 8
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cond = icmp eq i32 %a, 0
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  store i32 1, ptr %q, align 4
-  br label %if.end
-
-if.true:
-  %0 = load i32, ptr %b, align 4
   %rmw= atomicrmw xchg ptr %q, double 4.0 seq_cst
-  store i32 %0, ptr %p, align 4
-  br label %if.end
-
-if.end:
-  ret void
-}
-
-;; Not hoist b/c the operand of store does not dominate the branch.
-;; TODO: Could we improve it?
-define void @not_ops_dominate_br(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @not_ops_dominate_br(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if.false:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 2
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %cond = icmp eq i32 %a, 0
-  br i1 %cond, label %if.true, label %if.false
-
-if.false:
-  %add = add i32 %a, 2
-  store i32 %add, ptr %q, align 4
-  br label %if.end
+  store i32 1, ptr %p, align 4
+  br label %if.true
 
 if.true:
-  %1 = load i32, ptr %b, align 4
-  store i32 %1, ptr %p, align 4
-  br label %if.end
-
-if.end:
   ret void
 }
 
