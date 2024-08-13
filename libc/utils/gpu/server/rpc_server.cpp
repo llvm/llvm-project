@@ -11,6 +11,9 @@
 #define __has_builtin(x) 0
 #endif
 
+// Make sure these are included first so they don't conflict with the system.
+#include <limits.h>
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"

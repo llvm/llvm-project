@@ -2722,7 +2722,6 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
   // instruction not in that chain.
   using MemAccPair = std::pair<MemoryAccess *, MemoryAccess *>;
   DenseMap<MemAccPair, MemoryAccess::ReductionType> ValidCandidates;
-  DominatorTree *DT = Stmt.getParent()->getDT();
 
   // Iterate over all write memory accesses and check the loads flowing into
   // it for reduction candidate pairs.

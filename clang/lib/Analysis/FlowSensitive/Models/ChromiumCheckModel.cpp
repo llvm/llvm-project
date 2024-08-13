@@ -56,7 +56,8 @@ bool ChromiumCheckModel::transfer(const CFGElement &Element, Environment &Env) {
     return false;
   auto Stmt = CS->getStmt();
   if (const auto *Call = dyn_cast<CallExpr>(Stmt)) {
-    if (const auto *M = dyn_cast<CXXMethodDecl>(Call->getDirectCallee())) {
+    if (const auto *M =
+            dyn_cast_or_null<CXXMethodDecl>(Call->getDirectCallee())) {
       if (isCheckLikeMethod(CheckDecls, *M)) {
         // Mark this branch as unreachable.
         Env.assume(Env.arena().makeLiteral(false));

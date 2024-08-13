@@ -129,7 +129,7 @@ module __fortran_ieee_exceptions
   public :: ieee_set_modes
 
   interface ieee_set_status
-    subroutine ieee_set_status_0(status)
+    pure subroutine ieee_set_status_0(status)
       import ieee_status_type
       type(ieee_status_type), intent(in) :: status
     end subroutine ieee_set_status_0
