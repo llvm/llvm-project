@@ -132,6 +132,8 @@ struct CallableInfo {
     Effects = FunctionEffectKindSet(DeclEffects);
   }
 
+  CallableType type() const { return CType; }
+
   bool isCalledDirectly() const {
     return CType == CallableType::Function || CType == CallableType::Block;
   }
@@ -745,13 +747,15 @@ private:
               DeclAnalysis.completedAnalysisForDecl(CalleeInfo.CDecl);
           if (Completed == nullptr) {
             // No result - could be
-            // - non-inline
+            // - non-inline and extern
             // - indirect (virtual or through function pointer)
             // - effect has been explicitly disclaimed (e.g. "blocking")
-            if (CalleeInfo.CType == CallableType::Virtual)
+
+            CallableType CType = CalleeInfo.type();
+            if (CType == CallableType::Virtual)
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_virtual)
                   << effectName;
-            else if (CalleeInfo.CType == CallableType::Unknown)
+            else if (CType == CallableType::Unknown)
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
@@ -760,10 +764,13 @@ private:
                      diag::note_func_effect_call_disallows_inference)
                   << effectName
                   << FunctionEffect(Viol1.Effect.oppositeKind()).name();
-            else
+            else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+                     FD == nullptr || FD->getBuiltinID() == 0) {
+              // A builtin callee generally doesn't have a useful source
+              // location at which to insert a note.
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
                   << effectName;
-
+            }
             break;
           }
           const Violation *PtrViol2 =
@@ -887,14 +894,39 @@ private:
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
     // other AST construct. CallableInfo pertains to the callee.
     void followCall(const CallableInfo &CI, SourceLocation CallLoc) {
-      // Currently, built-in functions are always considered safe.
-      // FIXME: Some are not.
       if (const auto *FD = dyn_cast<FunctionDecl>(CI.CDecl);
-          FD && FD->getBuiltinID() != 0)
+          FD && isSafeBuiltinFunction(FD))
         return;
 
       Outer.followCall(CurrentCaller, CurrentFunction, CI, CallLoc,
                        /*AssertNoFurtherInference=*/false);
+    }
+
+    // FIXME: This is currently specific to the `nonblocking` and
+    // `nonallocating` effects. More ideally, the builtin functions themselves
+    // would have the `allocating` attribute.
+    static bool isSafeBuiltinFunction(const FunctionDecl *FD) {
+      unsigned BuiltinID = FD->getBuiltinID();
+      switch (BuiltinID) {
+      case 0: // not builtin
+        return false;
+      default: // not disallowed via cases below
+        return true;
+
+      // Disallow list
+      case Builtin::ID::BIaligned_alloc:
+      case Builtin::ID::BI__builtin_calloc:
+      case Builtin::ID::BI__builtin_malloc:
+      case Builtin::ID::BI__builtin_realloc:
+      case Builtin::ID::BI__builtin_free:
+      case Builtin::ID::BIcalloc:
+      case Builtin::ID::BImalloc:
+      case Builtin::ID::BImemalign:
+      case Builtin::ID::BIrealloc:
+      case Builtin::ID::BIfree:
+        return false;
+      }
+      llvm_unreachable("above switch is exhaustive");
     }
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {

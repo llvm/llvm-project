@@ -209,6 +209,13 @@ void nb18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 	ref();
 }
 
+// Builtin functions
+void nb18a() [[clang::nonblocking]] {
+	__builtin_assume(1);
+	void *ptr = __builtin_malloc(1); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_malloc'}}
+	__builtin_free(ptr); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_free'}}
+}
+
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
   static void problem1(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
