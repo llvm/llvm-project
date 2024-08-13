@@ -2923,6 +2923,9 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   if (_unwindInfoMissing)
     return UNW_STEP_END;
 
+  unw_word_t previousIP = getReg(UNW_REG_IP);
+  unw_word_t previousSP = getReg(UNW_REG_SP);
+
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
@@ -2951,6 +2954,14 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 
   // update info based on new PC
   if (result == UNW_STEP_SUCCESS) {
+    // Detect cycles of length 1. In particular this happens in musl's
+    // __clone(), which has incorrect DWARF unwind information.
+    // We don't check all registers, so it's not strictly guaranteed that
+    // unwinding would be stuck in a cycle, but seems like a reasonable
+    // heuristic.
+    if (getReg(UNW_REG_SP) == previousSP && getReg(UNW_REG_IP) == previousIP)
+      return UNW_EBADFRAME;
+
     this->setInfoBasedOnIPRegister(true);
     if (_unwindInfoMissing)
       return UNW_STEP_END;
