@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include <stdint.h>
 
@@ -45,7 +46,7 @@ struct ExpRangeReduction {
   float exp_lo;
 };
 
-ExpRangeReduction exp_range_reduction(float16 x) {
+LIBC_INLINE ExpRangeReduction exp_range_reduction(float16 x) {
   // For -18 < x < 12, to compute exp(x), we perform the following range
   // reduction: find hi, mid, lo, such that:
   //   x = hi + mid + lo, in which
