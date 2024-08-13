@@ -163,7 +163,7 @@ v_bpermute_b32 v5, 0xfe0b, v3
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_bpermute_b32 v5, v2, src_private_base
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 
 v_bpermute_b32 v5, v2, v3 aux_data:2
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

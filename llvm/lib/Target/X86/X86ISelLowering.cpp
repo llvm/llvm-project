@@ -42521,6 +42521,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
       // Zero upper elements.
     case X86ISD::VZEXT_MOVL:
+      // Variable blend.
+    case X86ISD::BLENDV:
       // Target unary shuffles by immediate:
     case X86ISD::PSHUFD:
     case X86ISD::PSHUFLW:
@@ -57165,8 +57167,10 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::VFPEXT, DL, VT, InVec.getOperand(0));
       }
     }
-    // v4i32 CVTPS2DQ(v4f32).
-    if (InOpcode == ISD::FP_TO_SINT && VT == MVT::v4i32) {
+    // v4i32 CVTPS2DQ(v4f32) / CVTPS2UDQ(v4f32).
+    if ((InOpcode == ISD::FP_TO_SINT ||
+         (InOpcode == ISD::FP_TO_UINT && Subtarget.hasVLX())) &&
+        VT == MVT::v4i32) {
       SDValue Src = InVec.getOperand(0);
       if (Src.getValueType().getScalarType() == MVT::f32)
         return DAG.getNode(InOpcode, DL, VT,
