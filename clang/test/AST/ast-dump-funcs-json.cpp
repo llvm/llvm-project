@@ -1407,7 +1407,7 @@ struct TestFriends {
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "Ts"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "variadic": true
+// CHECK-NEXT:      "isPackExpansion": true
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }

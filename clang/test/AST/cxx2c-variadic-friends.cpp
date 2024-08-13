@@ -54,15 +54,15 @@ struct N {
 // CHECK-LABEL: ClassTemplateDecl {{.*}} Variadic
 // PRINT-LABEL: template <typename ...Pack> struct Variadic {
 template <typename ...Pack> struct Variadic {
-  // CHECK: FriendDecl {{.*}} 'Pack' variadic
+  // CHECK: FriendDecl {{.*}} 'Pack'...
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
-  // CHECK-NEXT: FriendDecl {{.*}} 'Pack' variadic
+  // CHECK-NEXT: FriendDecl {{.*}} 'Pack'...
   // PRINT-NEXT: friend Pack...;
   // PRINT-NEXT: friend long;
   // PRINT-NEXT: friend Pack...;
   friend Pack..., long, Pack...;
 
-  // CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>' variadic
+  // CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>'...
   // PRINT-NEXT: friend TS<Pack>...;
   friend TS<Pack>...;
 };
@@ -70,11 +70,11 @@ template <typename ...Pack> struct Variadic {
 // CHECK-LABEL: ClassTemplateDecl {{.*}} S2
 // PRINT-LABEL: template <class ...Ts> struct S2 {
 template<class ...Ts> struct S2 {
-  // CHECK: FriendDecl {{.*}} 'class C<Ts>':'C<Ts>' variadic
+  // CHECK: FriendDecl {{.*}} 'class C<Ts>':'C<Ts>'...
   // PRINT-NEXT: friend class C<Ts>...;
   friend class C<Ts>...;
 
-  // CHECK-NEXT: FriendDecl {{.*}} 'class N::C<Ts>':'C<Ts>' variadic
+  // CHECK-NEXT: FriendDecl {{.*}} 'class N::C<Ts>':'C<Ts>'...
   // PRINT-NEXT: friend class N::C<Ts>...
   friend class N::C<Ts>...;
 };
