@@ -5649,7 +5649,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     QualType UnqualT = T->getCanonicalTypeUnqualified();
     if (UnqualT->isScalarType())
       return true;
-    if (UnqualT->isArrayType())
+    if (UnqualT->isArrayType() || UnqualT->isVectorType())
       return true;
     const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
     if (!RD)

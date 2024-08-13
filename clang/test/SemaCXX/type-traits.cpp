@@ -2007,6 +2007,17 @@ struct ConstrainedUserProvidedDestructor {
 };
 #endif
 
+struct StructWithFAM {
+  int a[];
+};
+
+struct StructWithZeroSizedArray {
+  int a[0];
+};
+
+typedef float float4 __attribute__((vector_type(4)));
+typedef float ext_float4 __attribute__((ext_vector_type(4)));
+
 void is_implicit_lifetime(int n) {
   static_assert(!__builtin_is_implicit_lifetime(void));
   static_assert(!__builtin_is_implicit_lifetime(const void));
@@ -2014,6 +2025,9 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int));
   static_assert(!__builtin_is_implicit_lifetime(int&));
   static_assert(!__builtin_is_implicit_lifetime(int&&));
+  static_assert(__builtin_is_implicit_lifetime(float));
+  static_assert(__builtin_is_implicit_lifetime(double));
+  static_assert(__builtin_is_implicit_lifetime(long double));
   static_assert(__builtin_is_implicit_lifetime(int*));
   static_assert(__builtin_is_implicit_lifetime(int[]));
   static_assert(__builtin_is_implicit_lifetime(int[5]));
@@ -2055,6 +2069,18 @@ void is_implicit_lifetime(int n) {
   static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<false>));
   static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<true>));
 #endif
+
+  static_assert(__builtin_is_implicit_lifetime(__int128));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(8)));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(128)));
+  static_assert(__builtin_is_implicit_lifetime(int[0]));
+  static_assert(__builtin_is_implicit_lifetime(StructWithFAM));
+  static_assert(__builtin_is_implicit_lifetime(StructWithZeroSizedArray));
+  static_assert(__builtin_is_implicit_lifetime(__fp16));
+  static_assert(__builtin_is_implicit_lifetime(__bf16));
+  static_assert(__builtin_is_implicit_lifetime(_Complex double));
+  static_assert(__builtin_is_implicit_lifetime(float4));
+  static_assert(__builtin_is_implicit_lifetime(ext_float4));
 }
 
 void is_signed()
