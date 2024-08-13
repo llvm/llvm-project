@@ -148,8 +148,8 @@ entry:
   ret void
 }
 
-define <4 x i1> @test5(ptr %in1, ptr %in2) {
-; CHECK-LABEL: @test5(
+define <4 x i1> @test6(ptr %in1, ptr %in2) {
+; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[IN1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[IN2:%.*]], align 2
