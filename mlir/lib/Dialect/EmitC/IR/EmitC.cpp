@@ -1108,8 +1108,7 @@ parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
   while (succeeded(parser.parseOptionalKeyword("case"))) {
     int64_t value;
     Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
-
-    if (parser.parseInteger(value) || parser.parseColon() ||
+    if (parser.parseInteger(value) ||
         parser.parseRegion(region, /*arguments=*/{}))
       return failure();
     caseValues.push_back(value);
@@ -1123,67 +1122,9 @@ static void printSwitchCases(OpAsmPrinter &p, Operation *op,
                              DenseI64ArrayAttr cases, RegionRange caseRegions) {
   for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
     p.printNewline();
-    p << "case " << value << ": ";
+    p << "case " << value << ' ';
     p.printRegion(*region, /*printEntryBlockArgs=*/false);
   }
-}
-
-ParseResult SwitchOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::UnresolvedOperand arg;
-  DenseI64ArrayAttr casesAttr;
-  SmallVector<std::unique_ptr<Region>, 2> caseRegionsRegions;
-  std::unique_ptr<Region> defaultRegionRegion = std::make_unique<Region>();
-
-  if (parser.parseOperand(arg))
-    return failure();
-
-  Type argType;
-  // Parse the case's type.
-  if (parser.parseColon() || parser.parseType(argType))
-    return failure();
-
-  auto loc = parser.getCurrentLocation();
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  if (failed(verifyInherentAttrs(result.name, result.attributes, [&]() {
-        return parser.emitError(loc)
-               << "'" << result.name.getStringRef() << "' op ";
-      })))
-    return failure();
-
-  auto odsResult = parseSwitchCases(parser, casesAttr, caseRegionsRegions);
-  if (odsResult)
-    return failure();
-
-  result.getOrAddProperties<SwitchOp::Properties>().cases = casesAttr;
-
-  if (parser.parseKeyword("default") || parser.parseColon())
-    return failure();
-
-  if (parser.parseRegion(*defaultRegionRegion))
-    return failure();
-
-  result.addRegion(std::move(defaultRegionRegion));
-  result.addRegions(caseRegionsRegions);
-
-  if (parser.resolveOperand(arg, argType, result.operands))
-    return failure();
-
-  return success();
-}
-
-void SwitchOp::print(OpAsmPrinter &p) {
-  p << ' ' << getArg();
-  SmallVector<StringRef, 2> elidedAttrs;
-  elidedAttrs.push_back("cases");
-  p.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
-  p << ' ';
-  printSwitchCases(p, *this, getCasesAttr(), getCaseRegions());
-  p.printNewline();
-  p << "default ";
-  p.printRegion(getDefaultRegion(), /*printEntryBlockArgs=*/true,
-                /*printBlockTerminators=*/true);
 }
 
 static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,

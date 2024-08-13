@@ -1320,8 +1320,9 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     not equal any of the case values, control-flow transfer to the "default"
     region.
 
-    The operation does not return any value. Moreover, case regions and 
-    default region must be explicitly terminated using the `emitc.yield` operation.
+    The operation does not return any value. Moreover, case regions must be
+    explicitly terminated using the `emitc.yield` operation. Default region is
+    yielded implicitly.
 
     Example:
 
@@ -1339,7 +1340,6 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     default: {
       %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
       emitc.call_opaque "func2" (%3) : (f32) -> ()
-      emitc.yield
     }
 
     // Output:
@@ -1365,6 +1365,11 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
   let regions = (region SizedRegion<1>:$defaultRegion,
                         VariadicRegion<SizedRegion<1>>:$caseRegions);
 
+  let assemblyFormat = [{
+    $arg `:` type($arg) attr-dict custom<SwitchCases>($cases, $caseRegions) `\n`
+    `` `default` $defaultRegion
+  }];
+
   let extraClassDeclaration = [{
     /// Get the number of cases.
     unsigned getNumCases();
@@ -1376,7 +1381,6 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     Block &getCaseBlock(unsigned idx);
   }];
 
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
