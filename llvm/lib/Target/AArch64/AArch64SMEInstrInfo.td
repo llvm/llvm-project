@@ -858,7 +858,7 @@ defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, nxv8f16, int_aarch
 }
 
 // SME2 ZA-targeting non-widening BFloat16 instructions
-let Predicates = [HasSME2, HasB16B16] in {
+let Predicates = [HasSMEB16B16] in {
 defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16,    int_aarch64_sme_add_za16_vg1x2>;
 defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16,  int_aarch64_sme_add_za16_vg1x4>;
 defm BFSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfsub", 0b1101, MatrixOp16, ZZ_h_mul_r,  nxv8bf16,   int_aarch64_sme_sub_za16_vg1x2>;

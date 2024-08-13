@@ -9,6 +9,7 @@
 #ifndef NSAN_THREAD_H
 #define NSAN_THREAD_H
 
+#include "nsan_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_posix.h"
 
@@ -34,6 +35,8 @@ public:
   void StartSwitchFiber(uptr bottom, uptr size);
   void FinishSwitchFiber(uptr *bottom_old, uptr *size_old);
 
+  NsanThreadLocalMallocStorage &malloc_storage() { return malloc_storage_; }
+
   int destructor_iterations_;
   __sanitizer_sigset_t starting_sigset_;
 
@@ -56,6 +59,8 @@ private:
 
   uptr tls_begin_;
   uptr tls_end_;
+
+  NsanThreadLocalMallocStorage malloc_storage_;
 };
 
 NsanThread *GetCurrentThread();

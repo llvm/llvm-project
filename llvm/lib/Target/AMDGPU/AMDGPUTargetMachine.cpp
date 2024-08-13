@@ -384,6 +384,11 @@ static cl::opt<bool> EnableHipStdPar(
   cl::Hidden);
 
 static cl::opt<bool>
+    EnableAMDGPUAttributor("amdgpu-attributor-enable",
+                           cl::desc("Enable AMDGPUAttributorPass"),
+                           cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
     EnablePromoteLaneShared("amdgpu-promote-lane-shared",
                             cl::desc("Enable promoting lane-shared into VGPR"),
                             cl::init(true), cl::Hidden);
@@ -771,6 +776,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // module is partitioned for codegen.
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(

@@ -1896,8 +1896,8 @@ static void trackInlinedStores(Function::iterator Start, Function::iterator End,
   LLVM_DEBUG(errs() << "trackInlinedStores into "
                     << Start->getParent()->getName() << " from "
                     << CB.getCalledFunction()->getName() << "\n");
-  std::unique_ptr<DataLayout> DL = std::make_unique<DataLayout>(CB.getModule());
-  at::trackAssignments(Start, End, collectEscapedLocals(*DL, CB), *DL);
+  const DataLayout &DL = CB.getDataLayout();
+  at::trackAssignments(Start, End, collectEscapedLocals(DL, CB), DL);
 }
 
 /// Update inlined instructions' DIAssignID metadata. We need to do this
