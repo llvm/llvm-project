@@ -55,13 +55,13 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
   std::unique_ptr<MemoryBuffer> Buffer;
   // The inline asm source manager will outlive AsmStr, so make a copy of the
   // string for SourceMgr to own.
-  Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, Scope ? Scope->getFilename()
-                                                        : "<inline asm>");
+  Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, "<inline asm>");
 
   // Tell SrcMgr about this buffer, it takes ownership of the buffer.
   unsigned BufNum =
-      DbgLoc
-          ? SrcMgr.AddNewSourceBuffer(std::move(Buffer), DbgLoc->getLine() - 1,
+      (DbgLoc && Scope)
+          ? SrcMgr.AddNewSourceBuffer(std::move(Buffer), Scope->getFilename(),
+                                      DbgLoc->getLine() - 1,
                                       DbgLoc->getCol() - 1, SMLoc())
           : SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
