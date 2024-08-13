@@ -474,11 +474,13 @@ public:
   }
 
 private:
+  // Recursively parse an inlining tree encoded in pseudo_probe section. Returns
+  // whether the the top-level node should be skipped.
   template <bool IsTopLevelFunc>
-  void buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
+  bool buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
                              uint64_t &LastAddr, const Uint64Set &GuildFilter,
                              const Uint64Map &FuncStartAddrs,
-                             uint32_t &CurChild);
+                             const uint32_t CurChildIndex);
 };
 
 } // end namespace llvm
