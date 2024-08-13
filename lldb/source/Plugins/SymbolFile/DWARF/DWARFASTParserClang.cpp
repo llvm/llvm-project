@@ -278,8 +278,8 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   // we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
+  CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
   if (ast_importer.CanImport(tag_decl_ctx)) {
-    CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
     auto qual_type = ClangUtil::GetQualType(type);
     if (ast_importer.RequireCompleteType(qual_type))
       return;
@@ -290,8 +290,15 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   }
 
   // We don't have a type definition and/or the import failed, but we need to
-  // add members to it. Start the definition to make that possible.
-  tag_decl_ctx->startDefinition();
+  // add members to it. Start the definition to make that possible. If the type
+  // has no external storage we also have to complete the definition. Otherwise,
+  // that will happen when we are asked to complete the type
+  // (CompleteTypeFromDWARF).
+  ast.StartTagDeclarationDefinition(type);
+  if (!tag_decl_ctx->hasExternalLexicalStorage()) {
+    ast.SetDeclIsForcefullyCompleted(tag_decl_ctx);
+    ast.CompleteTagDeclarationDefinition(type);
+  }
 }
 
 void DWARFASTParserClang::RegisterDIE(DWARFDebugInfoEntry *die,
