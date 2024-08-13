@@ -380,7 +380,7 @@ public:
     return sampleprof_error::success;
   }
 
-  /// Read sample profiles for the given functions. Currently it's only used 
+  /// Read sample profiles for the given functions. Currently it's only used
   /// for extended binary format to load the profiles on-demand.
   virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
                                SampleProfileMap &Profiles) {
@@ -821,7 +821,7 @@ public:
 
   /// Read the profiles on-demand for the given functions. This is used after
   /// stale call graph matching finds new functions whose profiles aren't loaded
-  /// at the beginning and we need to loaded the profiles explicitly for 
+  /// at the beginning and we need to loaded the profiles explicitly for
   /// potential matching.
   std::error_code read(const DenseSet<StringRef> &FuncsToUse,
                        SampleProfileMap &Profiles) override;
