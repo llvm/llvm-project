@@ -239,8 +239,8 @@ define void @test7() {
   ret void
 }
 
-define void @test5() {
-; CHECK-LABEL: @test5(
+define void @test7() {
+; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> poison, <2 x float> zeroinitializer, i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP0]], <2 x float> zeroinitializer, i64 2)
