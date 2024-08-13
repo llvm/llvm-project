@@ -513,7 +513,7 @@ def : GCNPat<
     (V_CVT_F16_F32_e32 $src)
 >;
 }
-let OtherPredicates = [HasTrue16BitInsts] in {
+let OtherPredicates = [UseRealTrue16Insts] in {
 def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_t16_e32 $src)
@@ -521,6 +521,16 @@ def : GCNPat<
 def : GCNPat<
     (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_t16_e32 $src)
+>;
+}
+let OtherPredicates = [UseFakeTrue16Insts] in {
+def : GCNPat<
+    (f32 (f16_to_fp i16:$src)),
+    (V_CVT_F32_F16_fake16_e32 $src)
+>;
+def : GCNPat<
+    (i16 (AMDGPUfp_to_f16 f32:$src)),
+    (V_CVT_F16_F32_fake16_e32 $src)
 >;
 }
 
@@ -1421,7 +1431,6 @@ def : GCNPat<
 >;
 } // End OtherPredicates = [UseFakeTrue16Insts]
 
-
 let OtherPredicates = [UseRealTrue16Insts] in {
 def : GCNPat<
   (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
@@ -1447,9 +1456,7 @@ def : GCNPat <
   (i16 (trunc i64:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
-
 } // End OtherPredicates = [UseRealTrue16Insts]
-
 //===----------------------------------------------------------------------===//
 // GFX9
 //===----------------------------------------------------------------------===//
