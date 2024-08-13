@@ -111,7 +111,7 @@ class DeviceAllocatorT {
     Header header, *h;
     {
       SpinMutexLock l(&mutex_);
-      uptr idx, end;
+      uptr idx;
       uptr p_ = reinterpret_cast<uptr>(p);
       EnsureSortedChunks();  // Avoid doing the sort while iterating.
       for (idx = 0; idx < n_chunks_; idx++) {
@@ -121,7 +121,7 @@ class DeviceAllocatorT {
       CHECK_EQ(chunks_[idx], p_);
       CHECK_LT(idx, n_chunks_);
       h = GetHeader(chunks_[idx], &header);
-      CHECK_NE(h, nullptr);
+      CHECK(!dev_runtime_unloaded_);
       chunks_[idx] = chunks_[--n_chunks_];
       chunks_sorted_ = false;
       stats.n_frees++;
@@ -136,10 +136,10 @@ class DeviceAllocatorT {
   uptr TotalMemoryUsed() {
     Header header;
     SpinMutexLock l(&mutex_);
-    uptr res = 0, beg, end;
+    uptr res = 0;
     for (uptr i = 0; i < n_chunks_; i++) {
       Header *h = GetHeader(chunks_[i], &header);
-      CHECK_NE(h, nullptr);
+      CHECK(!dev_runtime_unloaded_);
       res += RoundUpMapSize(h->map_size);
     }
     return res;
@@ -152,14 +152,14 @@ class DeviceAllocatorT {
   uptr GetActuallyAllocatedSize(void *p) {
     Header header;
     uptr p_ = reinterpret_cast<uptr>(p);
-    Header *h = GetHeader(p_, &header);
+    Header *h = GetHeaderAnyPointer(p_, &header);
     return h ? h->map_size : 0;
   }
 
   void *GetMetaData(const void *p) {
     Header header;
     uptr p_ = reinterpret_cast<uptr>(p);
-    Header *h = GetHeader(p_, &header);
+    Header *h = GetHeaderAnyPointer(p_, &header);
     return h ? reinterpret_cast<void *>(h->map_beg + h->map_size -
                                         kMetadataSize_)
              : nullptr;
@@ -183,12 +183,13 @@ class DeviceAllocatorT {
       return nullptr;
     if (p != nearest_chunk) {
       Header *h = GetHeader(nearest_chunk, &header);
-      CHECK_NE(h, nullptr);
       CHECK_GE(nearest_chunk, h->map_beg);
       CHECK_LT(nearest_chunk, h->map_beg + h->map_size);
       CHECK_LE(nearest_chunk, p);
-      if (h->map_beg + h->map_size <= p)
+      if (h->map_beg + h->map_size <= p) {
+        CHECK(!dev_runtime_unloaded_);
         return nullptr;
+      }
     }
     return GetUser(nearest_chunk);
   }
@@ -211,11 +212,17 @@ class DeviceAllocatorT {
     EnsureSortedChunks();
     Header header, *h;
     h = GetHeader(chunks_[n - 1], &header);
-    CHECK_NE(h, nullptr);
     uptr min_mmap_ = chunks_[0];
     uptr max_mmap_ = chunks_[n - 1] + h->map_size;
-    if (p < min_mmap_ || p >= max_mmap_)
+    if (p < min_mmap_)
       return nullptr;
+    if (p >= max_mmap_) {
+      // TODO (bingma): If dev_runtime_unloaded_ = true, map_size is limited
+      // to one page and we might miss a valid 'ptr'. If we hit cases where
+      // this kind of miss is unacceptable, we will need to implement a full
+      // solution with higher cost
+      return nullptr;
+    }
     uptr beg = 0, end = n - 1;
     // This loop is a log(n) lower_bound. It does not check for the exact match
     // to avoid expensive cache-thrashing loads.
@@ -237,8 +244,12 @@ class DeviceAllocatorT {
     if (p != chunks_[beg]) {
       h = GetHeader(chunks_[beg], &header);
       CHECK_NE(h, nullptr);
-      if (h->map_beg + h->map_size <= p || p < h->map_beg)
+      if (p < h->map_beg)
         return nullptr;
+      if (h->map_beg + h->map_size <= p) {
+        // TODO (bingma): See above TODO in this function
+        return nullptr;
+      }
     }
     return GetUser(chunks_[beg]);
   }
@@ -288,9 +299,21 @@ class DeviceAllocatorT {
 
   typedef DevivePointerInfo Header;
 
-  Header *GetHeader(uptr p, Header* h) const {
+  Header *GetHeaderAnyPointer(uptr p, Header* h) const {
     CHECK(IsAligned(p, page_size_));
     return DeviceMemFuncs::GetPointerInfo(p, h) ? h : nullptr;
+  }
+
+  Header* GetHeader(uptr chunk, Header* h) const {
+    if (dev_runtime_unloaded_ || !DeviceMemFuncs::GetPointerInfo(chunk, h)) {
+      // Device allocator has dependency on device runtime. If device runtime
+      // is unloaded, GetPointerInfo() will fail. For such case, we can still
+      // return a valid value for map_beg, map_size will be limited to one page
+      h->map_beg = chunk;
+      h->map_size = page_size_;
+      dev_runtime_unloaded_ = true;
+    }
+    return h;
   }
 
   void *GetUser(const uptr ptr) const {
@@ -303,6 +326,7 @@ class DeviceAllocatorT {
 
   bool enabled_;
   bool mem_funcs_inited_;
+  mutable bool dev_runtime_unloaded_;
   // Maximum of mem_funcs_init_count_ is 2:
   //   1. The initial init called from Init(...), it could fail if
   //      libhsa-runtime64.so is dynamically loaded with dlopen()
