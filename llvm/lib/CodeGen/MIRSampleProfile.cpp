@@ -369,13 +369,15 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto *MPDT =
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   MF.RenumberBlocks();
   MDT->updateBlockNumbers();
   MPDT->updateBlockNumbers();
+  MLI->updateBlockNumbers();
 
   MIRSampleLoader->setInitVals(
-      MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
+      MDT, MPDT, MLI, MBFI,
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
 
   if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&

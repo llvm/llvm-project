@@ -75,6 +75,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -396,11 +397,14 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
 
-  // We renumber blocks, so update the dominator tree we want to preserve.
+  // We renumber blocks, so update the dominator tree and the loop info we want
+  // to preserve.
   if (auto *WP = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
     WP->getDomTree().updateBlockNumbers();
   if (auto *WP = getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>())
     WP->getPostDomTree().updateBlockNumbers();
+  if (auto *WP = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>())
+    WP->getLI().updateBlockNumbers();
 
   return R1 || R2;
 }
@@ -410,6 +414,7 @@ void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

@@ -689,20 +689,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     MSSA->verifyMemorySSA();
 
   if (LI) {
+    SmallPtrSet<BasicBlock *, 8> Blocks;
+    Blocks.insert(L->block_begin(), L->block_end());
+
     // Erase the instructions and the blocks without having to worry
     // about ordering because we already dropped the references.
-    // NOTE: This iteration is safe because erasing the block does not remove
-    // its entry from the loop's block list.  We do that in the next section.
-    for (BasicBlock *BB : L->blocks())
-      BB->eraseFromParent();
-
-    // Finally, the blocks from loopinfo.  This has to happen late because
-    // otherwise our loop iterators won't work.
-
-    SmallPtrSet<BasicBlock *, 8> blocks;
-    blocks.insert(L->block_begin(), L->block_end());
-    for (BasicBlock *BB : blocks)
+    // Remove blocks from loopinfo before erasing them, otherwise the loopinfo
+    // cannot find the loop using block numbers.
+    for (BasicBlock *BB : Blocks) {
       LI->removeBlock(BB);
+      BB->eraseFromParent();
+    }
 
     // The last step is to update LoopInfo now that we've eliminated this loop.
     // Note: LoopInfo::erase remove the given loop and relink its subloops with
