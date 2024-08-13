@@ -16,6 +16,7 @@
 "`P0767R1 <https://wg21.link/P0767R1>`__","Deprecate POD","2017-11 (Albuquerque)","|Complete|","7.0",""
 "`P0768R1 <https://wg21.link/P0768R1>`__","Library Support for the Spaceship (Comparison) Operator","2017-11 (Albuquerque)","|Complete|","",""
 "`P0777R1 <https://wg21.link/P0777R1>`__","Treating Unnecessary ``decay``\ ","2017-11 (Albuquerque)","|Complete|","7.0",""
+"","","","","",""
 "`P0122R7 <https://wg21.link/P0122R7>`__","<span>","2018-03 (Jacksonville)","|Complete|","7.0",""
 "`P0355R7 <https://wg21.link/P0355R7>`__","Extending chrono to Calendars and Time Zones","2018-03 (Jacksonville)","|Partial| [#note-P0355]_","",""
 "`P0551R3 <https://wg21.link/P0551R3>`__","Thou Shalt Not Specialize ``std``\  Function Templates!","2018-03 (Jacksonville)","|Complete|","11.0",""
