@@ -12,6 +12,7 @@
 
 #include <ranges>
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 #include <vector>
