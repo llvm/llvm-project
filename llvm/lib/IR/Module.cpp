@@ -388,9 +388,7 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   setModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
 }
 
-void Module::setDataLayout(StringRef Desc) {
-  DL.reset(Desc);
-}
+void Module::setDataLayout(StringRef Desc) { DL = DataLayout(Desc); }
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
