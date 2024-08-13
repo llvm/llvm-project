@@ -1577,6 +1577,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   switch (DtorType) {
   case Dtor_Comdat: llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting: llvm_unreachable("already handled deleting case");
+  case Dtor_VectorDeleting: llvm_unreachable("already handled vector deleting case");
 
   case Dtor_Complete:
     assert((Body || getTarget().getCXXABI().isMicrosoft()) &&

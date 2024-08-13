@@ -175,7 +175,10 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // requires explicit comdat support in the IL.
   if (llvm::GlobalValue::isWeakForLinker(TargetLinkage))
     return true;
-
+/*
+  EmitDefinitionAsAlias(AliasDecl, TargetDecl);
+  return false;
+*/
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
@@ -200,8 +203,26 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
 
   return false;
 }
-
+/*
+/// Emit a definition as a global alias for another definition, unconditionally.
+/// Use this function with care as it can produce invalid aliases.  Generally
+/// this function should be used only where there is an ABI requirement to emit
+/// an alias.
+void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
+                                          GlobalDecl TargetDecl) {
+  llvm::GlobalValue::LinkageTypes Linkage = getFunctionLinkage(AliasDecl);
+}
+*/
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
+  /*
+  // The Microsoft ABI requires that the vector deleting destructor
+  // be weak aliased to the scalar deleting destructor.
+  // TODO: emission of the vector deleting destructor (when required).
+  if (getTarget().getCXXABI().isMicrosoft() && GD.getDtorType() == Dtor_VectorDeleting) {
+    EmitDefinitionAsAlias(GlobalDecl(dtor, Dtor_VectorDeleting),
+                          GlobalDecl(dtor, Dtor_Deleting));
+    return;
+  } */
   const CGFunctionInfo &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto *Fn = cast<llvm::Function>(
       getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
