@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/FormatString.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
@@ -611,6 +612,38 @@ static bool isNullTermPointer(const Expr *Ptr) {
   return false;
 }
 
+// Return true iff at least one of following cases holds:
+//  1. Format string is a literal and there is an unsafe pointer argument
+//     corresponding to an `s` specifier;
+//  2. Format string is not a literal and there is least an unsafe pointer
+//     argument (including the formatter argument).
+static bool hasUnsafeFormatOrSArg(const Expr *Fmt, unsigned FmtArgIdx,
+                                  const CallExpr *Call, ASTContext &Ctx) {
+  if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
+    StringRef FmtStr = SL->getString();
+    auto I = FmtStr.begin();
+    auto E = FmtStr.end();
+    unsigned ArgIdx = FmtArgIdx;
+
+    do {
+      ArgIdx = analyze_format_string::ParseFormatStringFirstSArgIndex(
+          I, E, ArgIdx, Ctx.getLangOpts(), Ctx.getTargetInfo());
+      if (ArgIdx && Call->getNumArgs() > ArgIdx &&
+          !isNullTermPointer(Call->getArg(ArgIdx)))
+        return true;
+    } while (ArgIdx);
+    return false;
+  }
+  // If format is not a string literal, we cannot analyze the format string.
+  // In this case, this call is considered unsafe if at least one argument
+  // (including the format argument) is unsafe pointer.
+  return llvm::any_of(
+      llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
+      [](const Expr *Arg) {
+        return Arg->getType()->isPointerType() && !isNullTermPointer(Arg);
+      });
+}
+
 // Matches a call to one of the `-printf" functions (excluding the ones with
 // va_list, or `-sprintf`s) that taking pointer-to-char-as-string arguments but
 // fail to guarantee their null-termination.  In other words, these calls are
@@ -626,19 +659,18 @@ AST_MATCHER_P(CallExpr, unsafeStringInPrintfs, StringRef, CoreName) {
   if (Prefix.ends_with("w"))
     Prefix = Prefix.drop_back(1);
 
-  auto AnyUnsafeStrPtr = [](const Expr *Arg) -> bool {
-    return Arg->getType()->isPointerType() && !isNullTermPointer(Arg);
-  };
-
   if (Prefix.empty() ||
       Prefix == "k") // printf: all pointer args should be null-terminated
-    return any_of(Node.arguments(), AnyUnsafeStrPtr);
-  if (Prefix == "f" && Node.getNumArgs() > 1)
-    return any_of(llvm::make_range(Node.arg_begin() + 1, Node.arg_end()),
-                  AnyUnsafeStrPtr);
-  if (Prefix == "sn" && Node.getNumArgs() > 2) {
-    return any_of(llvm::make_range(Node.arg_begin() + 2, Node.arg_end()),
-                  AnyUnsafeStrPtr);
+    return hasUnsafeFormatOrSArg(Node.getArg(0), 0, &Node,
+                                 Finder->getASTContext());
+  if (Prefix == "f")
+    return hasUnsafeFormatOrSArg(Node.getArg(1), 1, &Node,
+                                 Finder->getASTContext());
+  if (Prefix == "sn") {
+    // The first two arguments need to be in safe patterns, which is checked
+    // by `isSafeSizedby`:
+    return hasUnsafeFormatOrSArg(Node.getArg(2), 2, &Node,
+                                 Finder->getASTContext());
   }
   return false; // A call to a "-printf" falls into another category.
 }
@@ -775,7 +807,7 @@ AST_MATCHER_P(CallExpr, ignoreLibcPrefixAndSuffix,
 
   StringRef CoreName =
       TheLittleParser.matchName(II->getName(), FD->getBuiltinID());
-      
+
   return InnerMatcher(CoreName).matches(Node, Finder, Builder);
 }
 } // namespace clang::ast_matchers
