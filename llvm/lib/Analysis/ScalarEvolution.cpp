@@ -12007,13 +12007,18 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
 
     More = NewMore;
     Less = NewLess;
+
+    // Reduced to constant.
+    if (!More && !Less)
+      return Diff;
+
+    // Left with variable on only one side, bail out.
     if (!More || !Less)
-      break;
+      return std::nullopt;
   }
 
-  if (More || Less)
-    return std::nullopt; // Did not reduce to constant.
-  return Diff;
+  // Did not reduce to constant.
+  return std::nullopt;
 }
 
 bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
