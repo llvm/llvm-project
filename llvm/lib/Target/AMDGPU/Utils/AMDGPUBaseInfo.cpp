@@ -2554,7 +2554,7 @@ unsigned getHWRegIndex(MCRegister Reg, const MCRegisterInfo &MRI) {
 
 bool isVGPR(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned EV = MRI.getEncodingValue(Reg);
-  return (EV & HWEncoding::IS_VGPR_OR_AGPR) && !(EV & HWEncoding::IS_AGPR);
+  return EV & HWEncoding::IS_VGPR;
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {

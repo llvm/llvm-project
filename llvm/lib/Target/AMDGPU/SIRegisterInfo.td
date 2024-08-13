@@ -131,7 +131,7 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 //===----------------------------------------------------------------------===//
 //  Declarations that describe the SI registers
 //===----------------------------------------------------------------------===//
-class SIReg <string n, bits<10> regIdx = 0, bit isAGPROrVGPR = 0,
+class SIReg <string n, bits<10> regIdx = 0, bit isVGPR = 0,
              bit isAGPR = 0, bit isHi = 0> : Register<n> {
   let Namespace = "AMDGPU";
 
@@ -139,7 +139,7 @@ class SIReg <string n, bits<10> regIdx = 0, bit isAGPROrVGPR = 0,
   // codes. They should not be assumed to match any particular register
   // encodings on any particular subtargets.
   let HWEncoding{9-0} = regIdx;
-  let HWEncoding{10} = isAGPROrVGPR;
+  let HWEncoding{10} = isVGPR;
   let HWEncoding{11} = isAGPR;
   let HWEncoding{12} = isHi;
 
@@ -167,10 +167,10 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 }
 
 multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
-                        bit isAGPROrVGPR = 0, bit isAGPR = 0> {
-  def _LO16 : SIReg<n#".l", regIdx, isAGPROrVGPR, isAGPR>;
-  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isAGPROrVGPR,
-                    isAGPR, /* isHi */ 1> {
+                        bit isVGPR = 0, bit isAGPR = 0> {
+  def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
+  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
+                    /* isHi */ 1> {
     let isArtificial = ArtificialHigh;
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
@@ -180,7 +180,7 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
     let CoveredBySubRegs = !not(ArtificialHigh);
 
     let HWEncoding{9-0} = regIdx;
-    let HWEncoding{10} = isAGPROrVGPR;
+    let HWEncoding{10} = isVGPR;
     let HWEncoding{11} = isAGPR;
 
     int Index = !cast<int>(regIdx);
@@ -374,7 +374,8 @@ foreach Index = 0...105 in {
 // VGPR registers
 foreach Index = 0...1023 in {
   defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index, 0, 1>,
+    SIRegLoHi16 <"v"#Index, Index, /* ArtificialHigh= */ 0,
+                 /* isVGPR= */ 1, /* isAGPR= */ 0>,
     DwarfRegNum<[!if(!le(Index, 511), !add(Index, 2560), !add(Index, 2816)),
                  !if(!le(Index, 511), !add(Index, 1536), !add(Index, 1792))]>;
 }
@@ -382,7 +383,8 @@ foreach Index = 0...1023 in {
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :
-      SIRegLoHi16 <"a"#Index, Index, 1, 1, 1>,
+      SIRegLoHi16 <"a"#Index, Index, /* ArtificialHigh= */ 1,
+                   /* isVGPR= */ 0, /* isAGPR= */ 1>,
       DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]>;
 }
 
