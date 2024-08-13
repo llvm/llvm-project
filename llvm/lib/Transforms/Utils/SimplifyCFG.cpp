@@ -2986,8 +2986,12 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
 
 static bool isSafeCheapLoadStore(const Instruction &I,
                                  const TargetTransformInfo &TTI) {
+  // llvm.masked.load/store use i32 for alignment while load/store use i64.
+  // That's why we have the alignment limitation.
+  // FIXME: Update the prototype of the intrinsics?
   return (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         TTI.hasConditionalLoadStoreForType(getLoadStoreType(&I));
+         TTI.hasConditionalLoadStoreForType(getLoadStoreType(&I)) &&
+         getLoadStoreAlignment(&I) < Value::MaximumAlignment;
 }
 
 /// Speculate a conditional basic block flattening the CFG.

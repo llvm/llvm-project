@@ -658,6 +658,28 @@ if.end:
   ret void
 }
 
+;; Not transform if alignment = 2^32.
+define void @not_maximum_alignment(i1 %cond, ptr %p) {
+; CHECK-LABEL: @not_maximum_alignment(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4294967296
+; CHECK-NEXT:    br label [[IF_FALSE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  store i32 0, ptr %p, align 4294967296
+  br label %if.false
+
+if.false:
+  ret void
+}
+
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !llvm.dbg.cu = !{!0}
