@@ -14,6 +14,7 @@
 #include "ReduceDistinctMetadata.h"
 #include "Delta.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstIterator.h"
 #include <algorithm>
@@ -24,11 +25,11 @@ using namespace llvm;
 
 // Traverse the graph breadth-first and try to remove unnamed metadata nodes
 void reduceNodes(MDNode *Root,
-                 std::set<std::pair<unsigned int, MDNode *>> &NodesToDelete,
+                 DenseSet<std::pair<unsigned int, MDNode *>> &NodesToDelete,
                  MDNode *TemporaryNode, Oracle &O, Module &Program) {
   std::queue<MDNode *> NodesToTraverse{};
   // Keep track of visited nodes not to get into loops
-  std::set<MDNode *> VisitedNodes{};
+  DenseSet<MDNode *> VisitedNodes{};
   NodesToTraverse.push(Root);
 
   while (!NodesToTraverse.empty()) {
@@ -37,25 +38,25 @@ void reduceNodes(MDNode *Root,
 
     // Mark the nodes for removal
     for (unsigned int I = 0; I < CurrentNode->getNumOperands(); ++I) {
-      Metadata *Operand = CurrentNode->getOperand(I).get();
-      if (isa_and_nonnull<MDNode>(Operand)) {
+      MDNode* Operand = dyn_cast<MDNode>(CurrentNode->getOperand(I).get());
+      if (Operand) {
         // Check whether node has been visited
-        if (VisitedNodes.find(static_cast<MDNode *>(Operand)) ==
+        if (VisitedNodes.find(Operand) ==
             VisitedNodes.end()) {
-          NodesToTraverse.push(static_cast<MDNode *>(Operand));
-          VisitedNodes.insert(static_cast<MDNode *>(Operand));
+          NodesToTraverse.push(Operand);
+          VisitedNodes.insert(Operand);
         }
         // Delete the node only if it is distinct
-        if (static_cast<MDNode *>(Operand)->isDistinct())
+        if (Operand->isDistinct())
           // Add to removal list
           NodesToDelete.insert(std::make_pair(I, CurrentNode));
       }
     }
 
     // Remove the nodes
-    for (std::pair<unsigned int, MDNode *> Node : NodesToDelete) {
+    for (auto [PositionToReplace, Node] : NodesToDelete) {
       if (!O.shouldKeep())
-        Node.second->replaceOperandWith(Node.first, TemporaryNode);
+        Node->replaceOperandWith(PositionToReplace, TemporaryNode);
     }
     NodesToDelete.clear();
   }
@@ -66,15 +67,17 @@ void reduceNodes(MDNode *Root,
 void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
                         Module &Program) {
   std::queue<MDTuple *> NodesToTraverse{};
-  std::set<MDTuple *> VisitedNodes{};
+  DenseSet<MDTuple *> VisitedNodes{};
 
   // Push all first level operands of the named node to the queue
   for (auto I = NamedNode.op_begin(); I != NamedNode.op_end(); ++I) {
     // If the node hasn't been traversed yet, add it to the queue of nodes to
     // traverse.
-    if (VisitedNodes.find(static_cast<MDTuple *>(*I)) == VisitedNodes.end()) {
-      NodesToTraverse.push(static_cast<MDTuple *>(*I));
-      VisitedNodes.insert(static_cast<MDTuple *>(*I));
+    if (MDTuple* TupleI = dyn_cast<MDTuple>((*I))) {
+      if (VisitedNodes.find(TupleI) == VisitedNodes.end()) {
+        NodesToTraverse.push(TupleI);
+        VisitedNodes.insert(TupleI);
+      }
     }
   }
 
@@ -110,14 +113,14 @@ void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
 
     // Push the remaining nodes into the queue
     for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
-      Metadata *Operand = CurrentTuple->getOperand(I).get();
-      if (isa_and_nonnull<MDTuple>(Operand) &&
-          VisitedNodes.find(static_cast<MDTuple *>(Operand)) ==
+      MDTuple *Operand = dyn_cast<MDTuple>(CurrentTuple->getOperand(I).get());
+      if (Operand &&
+          VisitedNodes.find(Operand) ==
               VisitedNodes.end()) {
-        NodesToTraverse.push(static_cast<MDTuple *>(Operand));
+        NodesToTraverse.push(Operand);
         // If the node hasn't been traversed yet, add it to the queue of nodes
         // to traverse.
-        VisitedNodes.insert(static_cast<MDTuple *>(Operand));
+        VisitedNodes.insert(Operand);
       }
     }
   }
@@ -129,14 +132,14 @@ static void extractDistinctMetadataFromModule(Oracle &O,
   MDTuple *TemporaryTuple = MDTuple::getDistinct(
       Program.getContext(), SmallVector<Metadata *, 1>{llvm::MDString::get(
                                 Program.getContext(), "temporary_tuple")});
-  std::set<std::pair<unsigned int, MDNode *>> NodesToDelete{};
+  DenseSet<std::pair<unsigned int, MDNode *>> NodesToDelete{};
   for (NamedMDNode &NamedNode :
        Program.named_metadata()) { // Iterate over the named nodes
     for (unsigned int I = 0; I < NamedNode.getNumOperands();
          ++I) { // Iterate over first level unnamed nodes..
-      Metadata *Operand = NamedNode.getOperand(I);
-      if (isa_and_nonnull<MDTuple>(Operand))
-        reduceNodes(static_cast<MDTuple *>(Operand), NodesToDelete,
+      MDTuple *Operand = dyn_cast<MDTuple>(NamedNode.getOperand(I));
+      if (Operand)
+        reduceNodes(Operand, NodesToDelete,
                     TemporaryTuple, O, Program);
     }
   }

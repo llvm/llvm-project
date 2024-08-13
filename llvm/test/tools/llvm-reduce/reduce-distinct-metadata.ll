@@ -1,6 +1,6 @@
-; Test that every boring node is removed and all interesting distinct nodes remain.
+; Test that every boring node is removed and all interesting distinct nodes remain after aggressive distinct metadata reduction.
 
-; RUN: llvm-reduce --test %python --test-arg %p/Inputs/reduce-distinct-metadata.py %s -o %t
+; RUN: llvm-reduce --aggressive-md --test %python --test-arg %p/Inputs/reduce-distinct-metadata.py %s -o %t
 ; RUN: FileCheck %s < %t
 
 ; CHECK-NOT: {{.*}}boring{{.*}}

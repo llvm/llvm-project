@@ -20,6 +20,12 @@
 
 using namespace llvm;
 
+extern cl::OptionCategory LLVMReduceOptions;
+
+static cl::opt<bool> AggressiveMetadataReduction("aggressive-md",
+     cl::desc("Reduce named metadata without taking its type into account"),
+     cl::cat(LLVMReduceOptions));
+
 static bool shouldKeepDebugIntrinsicMetadata(Instruction &I, MDNode &MD) {
   return isa<DILocation>(MD) && isa<DbgInfoIntrinsic>(I);
 }
@@ -28,11 +34,32 @@ static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
   return MD.getName() == "llvm.dbg.cu" && MD.getNumOperands() != 0;
 }
 
+// Named metadata with simple list-like behavior, so that it's valid to remove
+// operands individually.
+static constexpr StringLiteral ListNamedMetadata[] = {
+  "llvm.module.flags",
+  "llvm.ident",
+  "opencl.spir.version",
+  "opencl.ocl.version",
+  "opencl.used.extensions",
+  "opencl.used.optional.core.features",
+  "opencl.compiler.options"
+};
+
 /// Remove unneeded arguments to named metadata.
 static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &M = WorkItem.getModule();
 
   for (NamedMDNode &I : M.named_metadata()) {
+    // If we don't want to reduce mindlessly, check if our node is part of ListNamedMetadata before reducing it
+    if (!AggressiveMetadataReduction) {
+      bool found = false;
+      for (StringRef MDName : ListNamedMetadata) {
+        if (I.getName() == MDName) found = true;
+      }
+      if (!found) continue;
+    }
+
     bool MadeChange = false;
     SmallVector<MDNode *> KeptOperands;
     for (auto J : seq<unsigned>(0, I.getNumOperands())) {
