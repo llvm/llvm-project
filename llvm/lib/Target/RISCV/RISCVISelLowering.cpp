@@ -268,10 +268,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::i32, Custom);
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
-    setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
-                       MVT::i32, Custom);
+    setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT}, MVT::i32,
+                       Custom);
     if (!Subtarget.hasStdExtZbb())
-      setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, MVT::i32, Custom);
+      setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, MVT::i32,
+                         Custom);
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
