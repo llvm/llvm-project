@@ -79,14 +79,22 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
       if (!I.getType()->isVoidTy())
         Defs[&I].insert(cast<Value>(&I));
 
-      // Record what this instruction uses.
+      // For normal instructions we just iterate over all operands and mark
+      // them as used. We can't do this for PHI nodes though, since depending
+      // on the control flow (i.e. which block we are coming from) only one of
+      // the operands is used at a time. For example:
       //
-      // In order to track the operands of PHI nodes we need to be a bit crafty
-      // as otherwise we end up with live values in blocks where they actually
-      // don't exist. To avoid this, we need to mark as live any PHI operand
-      // from one block at the end of all other blocks. This leads to those
-      // values being killed immediately after entering the block in the
-      // backwards pass and thus the value never being live there.
+      //   phi [%1, bb1], [%2, bb2], [%3, bb3]
+      //
+      // Here, when the previous block was bb1, then only %1 is used, %2 if we
+      // come from bb2, and so on.
+      //
+      // The next problem is that we can't mark the operand as used in the
+      // current block, since that use would perculate upwards when looking at
+      // the predecessor blocks, and thus consider the operand used in blocks
+      // where it isn't. Instead, we want to mark the operand as used
+      // only in the predecssor block: %1 is marked as used at the end of bb1,
+      // %2 at the end of bb2, and so on.
       //
       // The book doesn't cover this quirk, as it explains liveness for
       // non-SSA form, and thus doesn't need to worry about Phi nodes.
@@ -98,24 +106,15 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
           if (isa<Constant>(IV)) {
             continue;
           }
-          // For each block that isn't the incoming block create a Def for this
-          // value. This means when we do the backwards liveness pass this
-          // value is immediately killed in the block.
-          for (auto *BBB = P->block_begin(); BBB != P->block_end(); BBB++) {
-            if (*BBB != IBB) {
-              Instruction *Last = &((*BBB)->back());
-              Defs[Last].insert(IV);
-            }
-          }
-          Uses[&I].insert(IV);
+          Instruction *Last = &IBB->back();
+          Uses[Last].insert(IV);
         }
-        continue;
+      } else {
+        for (auto *U = I.op_begin(); U < I.op_end(); U++)
+          if ((!isa<Constant>(U)) && (!isa<BasicBlock>(U)) &&
+              (!isa<MetadataAsValue>(U)) && (!isa<InlineAsm>(U)))
+            Uses[&I].insert(*U);
       }
-
-      for (auto *U = I.op_begin(); U < I.op_end(); U++)
-        if ((!isa<Constant>(U)) && (!isa<BasicBlock>(U)) &&
-            (!isa<MetadataAsValue>(U)) && (!isa<InlineAsm>(U)))
-          Uses[&I].insert(*U);
     }
   }
 
