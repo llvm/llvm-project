@@ -350,7 +350,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
-          // the deive to point to the memory on the host.
+          // the device to point to the memory on the host.
           if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
