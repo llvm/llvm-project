@@ -185,9 +185,9 @@ AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
     if (!Entry.second)
       return Entry.first->second;
 
-    unsigned Offset;
-    Offset = LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize, 4u);
+    unsigned Offset = LaneSharedVGPRSize;
     LaneSharedVGPRSize += DL.getTypeAllocSize(GV.getValueType());
+    LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize, 4u);
     Entry.first->second = Offset;
     return Offset;
   }

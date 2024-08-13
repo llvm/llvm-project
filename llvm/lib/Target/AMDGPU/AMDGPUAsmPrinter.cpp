@@ -984,7 +984,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     auto WorkGroupSize = getReqdWorkGroupSize(MF.getFunction()).value();
     NumWavesPerVGPRAlloc =
         divideCeil(WorkGroupSize[0] * WorkGroupSize[1] * WorkGroupSize[2], 128);
-    unsigned NumLaneSharedVGPRs = divideCeil(MFI->getLaneSharedVGPRSize(), 4);
+    unsigned NumLaneSharedVGPRs = MFI->getLaneSharedVGPRSize() / 4;
 
     const MCExpr *NumWavesPerVGPRAllocExpr = MCConstantExpr::create(NumWavesPerVGPRAlloc, Ctx);
     const MCExpr *NumLaneSharedVGPRsExpr = MCConstantExpr::create(NumLaneSharedVGPRs, Ctx);
