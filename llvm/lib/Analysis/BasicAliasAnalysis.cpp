@@ -530,8 +530,6 @@ struct VariableGEPIndex {
     return Scale == Other.Scale;
   }
 
-  bool isSubtracted() const { return IsNegated || Scale.isNegative(); }
-
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
@@ -1113,6 +1111,13 @@ AliasResult BasicAAResult::aliasGEP(
   if (DecompGEP1.Base == GEP1 && DecompGEP2.Base == V2)
     return AliasResult::MayAlias;
 
+  // Swap GEP1 and GEP2 if GEP2 has more variable indices.
+  if (DecompGEP1.VarIndices.size() < DecompGEP2.VarIndices.size()) {
+    std::swap(DecompGEP1, DecompGEP2);
+    std::swap(V1Size, V2Size);
+    std::swap(UnderlyingV1, UnderlyingV2);
+  }
+
   // Subtract the GEP2 pointer from the GEP1 pointer to find out their
   // symbolic difference.
   subtractDecomposedGEPs(DecompGEP1, DecompGEP2, AAQI);
@@ -1121,20 +1126,18 @@ AliasResult BasicAAResult::aliasGEP(
   // for the two to alias, then we can assume noalias.
   // TODO: Remove !isScalable() once BasicAA fully support scalable location
   // size
-  if (DecompGEP1.NWFlags->isInBounds() && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() && !V2Size.isScalable() &&
-      DecompGEP1.Offset.sge(V2Size.getValue()) &&
+  if (DecompGEP1.NWFlags && DecompGEP1.NWFlags->isInBounds() &&
+      DecompGEP1.VarIndices.empty() && V2Size.hasValue() &&
+      !V2Size.isScalable() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
-  if (isa<GEPOperator>(V2)) {
-    // Symmetric case to above.
-    if (DecompGEP2.NWFlags->isInBounds() && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() && !V1Size.isScalable() &&
-        DecompGEP1.Offset.sle(-V1Size.getValue()) &&
-        isBaseOfObject(DecompGEP1.Base))
-      return AliasResult::NoAlias;
-  }
+  // Symmetric case to above.
+  if (DecompGEP2.NWFlags && DecompGEP2.NWFlags->isInBounds() &&
+      DecompGEP1.VarIndices.empty() && V1Size.hasValue() &&
+      !V1Size.isScalable() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+      isBaseOfObject(DecompGEP1.Base))
+    return AliasResult::NoAlias;
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
@@ -1250,20 +1253,9 @@ AliasResult BasicAAResult::aliasGEP(
   //    |-->VLeftSize    |                     |-------> VRightSize
   //   LHS                                    RHS
   if (!DecompGEP1.VarIndices.empty() &&
-      llvm::all_of(DecompGEP1.VarIndices, [&](const VariableGEPIndex &V) {
-        return V.isSubtracted() == DecompGEP1.VarIndices.front().isSubtracted();
-      })) {
-    const APInt &Off = DecompGEP1.Offset;
-    bool Swapped = Off.isNegative();
-    LocationSize VLeftSize = Swapped ? V1Size : V2Size;
-    const DecomposedGEP &DecompRight = Swapped ? DecompGEP2 : DecompGEP1;
-
-    bool IndicesAdded = DecompGEP1.VarIndices.front().isSubtracted() == Swapped;
-    if (IndicesAdded && DecompRight.NWFlags->hasNoUnsignedWrap())
-      if (VLeftSize.hasValue() && !VLeftSize.isScalable() &&
-          Off.abs().uge(VLeftSize.getValue()))
-        return AliasResult::NoAlias;
-  }
+      DecompGEP1.NWFlags->hasNoUnsignedWrap() && V2Size.hasValue() &&
+      !V2Size.isScalable() && DecompGEP1.Offset.sge(V2Size.getValue()))
+    return AliasResult::NoAlias;
 
   // Bail on analysing scalable LocationSize
   if (V1Size.isScalable() || V2Size.isScalable())
@@ -1867,14 +1859,12 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
 
 /// Computes the symbolic difference between two de-composed GEPs.
 void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
-                                           DecomposedGEP &SrcGEP,
+                                           const DecomposedGEP &SrcGEP,
                                            const AAQueryInfo &AAQI) {
   // Drop nuw flag from GEP if subtraction of constant offsets overflows in an
   // unsigned sense.
   if (DestGEP.Offset.ult(SrcGEP.Offset))
     DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
-  else if (SrcGEP.Offset.ult(DestGEP.Offset) && SrcGEP.NWFlags)
-    SrcGEP.NWFlags = SrcGEP.NWFlags->withoutNoUnsignedWrap();
 
   DestGEP.Offset -= SrcGEP.Offset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
@@ -1902,8 +1892,6 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
         // unsigned sense.
         if (Dest.Scale.ult(Src.Scale))
           DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
-        else if (SrcGEP.NWFlags)
-          SrcGEP.NWFlags = SrcGEP.NWFlags->withoutNoUnsignedWrap();
 
         Dest.Scale -= Src.Scale;
         Dest.IsNSW = false;
@@ -1919,6 +1907,9 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
                                 /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
+
+      // Drop nuw flag when we have unconsumed variable indices from SrcGEP.
+      DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
     }
   }
 }

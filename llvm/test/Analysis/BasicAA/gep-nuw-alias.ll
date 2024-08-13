@@ -158,24 +158,6 @@ define void @constant_offset_overflow(ptr %p, i64 %i) {
   ret void
 }
 
-; CHECK-LABEL: constant_offset_overflow_rev_order
-;
-; Same as above test, just verifying correct behaviour when GEPs encountered
-; in the reverse order;
-;
-; CHECK-DAG: MayAlias: i32* %a, i32* %b
-
-define void @constant_offset_overflow_rev_order(ptr %p, i64 %i) {
-  %a = getelementptr i8, ptr %p, i64 -8
-  %add = getelementptr nuw i8, ptr %p, i64 4
-  %b = getelementptr nuw i8, ptr %add, i64 %i
-
-  load i32, ptr %b
-  load i32, ptr %a
-
-  ret void
-}
-
 ; CHECK-LABEL: equal_var_idx_noalias
 ;
 ; If GEPs have equal variable indices, we can prove NoAlias when the Scale of
