@@ -53,9 +53,11 @@ MATCHER_P(named, N, "") {
 }
 
 MATCHER_P(FileNamed, N, "") {
-  if (arg.getFileEntry().tryGetRealPathName() == N)
+  llvm::StringRef ActualName = arg.getName();
+  ActualName.consume_front("./");
+  if (ActualName == N)
     return true;
-  *result_listener << arg.getFileEntry().tryGetRealPathName().str();
+  *result_listener << ActualName.str();
   return false;
 }
 
