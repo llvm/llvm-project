@@ -10137,7 +10137,7 @@ let Predicates = [HasD128] in {
 // 2023 Architecture Extensions:
 //===----------------------------===//
 
-let Uses=[FPMR, FPCR], Predicates = [HasFP8] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
   defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
@@ -10152,7 +10152,7 @@ let Predicates = [HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
 } // End let Predicates = [HasFAMAXMIN]
 
-let Uses=[FPMR, FPCR], Predicates = [HasFP8FMA] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8FMA] in {
  defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
  defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
  defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
@@ -10168,12 +10168,12 @@ let Uses=[FPMR, FPCR], Predicates = [HasFP8FMA] in {
  defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
 } // End let Predicates = [HasFP8FMA]
 
-let Uses=[FPMR, FPCR], Predicates = [HasFP8DOT2] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT2] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
 } // End let Predicates = [HasFP8DOT2]
 
-let Uses=[FPMR, FPCR], Predicates = [HasFP8DOT4] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]

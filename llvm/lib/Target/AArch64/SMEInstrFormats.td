@@ -2241,7 +2241,7 @@ multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
 // SME2 multi-vec FP8 down convert two registers
 multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, {op, 0b1000}, ZPR8, ZZ_h_mul_r>{
-    let Uses=[FPMR, FPCR];
+    let Uses = [FPMR, FPCR];
   }
 }
 
@@ -2276,7 +2276,7 @@ multiclass sme2p1_fp_cvt_vector_vg2_single<string mnemonic, bit l> {
 // SME2 multi-vec FP8 up convert two registers
 multiclass sme2p1_fp8_cvt_vector_vg2_single<string mnemonic, bits<2> opc, bit L> {
   def _NAME : sme2_cvt_unpk_vector_vg2<opc, 0b110, L, ZZ_h_mul_r, ZPR8, mnemonic>{
-    let Uses=[FPMR, FPCR];
+    let Uses = [FPMR, FPCR];
   }
 }
 
@@ -2540,7 +2540,7 @@ class sme2_fp8_multi_vec_array_vg4_index<string mnemonic, bit T>
   let Inst{10} = i{1};
   let Inst{3}  = i{0};
   let AsmString = !strconcat(mnemonic, "{\t$ZAda[$Rv, $imm3, vgx4], $Zn, $Zm$i}");
-  let Uses=[FPMR, FPCR];
+  let Uses = [FPMR, FPCR];
 }
 
 // SME2 multi-vec ternary indexed two registers 64-bit
