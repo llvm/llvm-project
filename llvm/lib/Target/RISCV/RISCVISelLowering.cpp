@@ -21024,6 +21024,11 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
     // which ends up using scalar sequences.
     return MVT::Other;
 
+  // If the minimum VLEN is less than RISCV::RVVBitsPerBlock we don't support
+  // fixed vectors.
+  if (MinVLenInBytes <= RISCV::RVVBitsPerBlock / 8)
+    return MVT::Other;
+
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
   // a large scalar constant and instead use vmv.v.x/i to do the
   // broadcast.  For everything else, prefer ELenVT to minimize VL and thus
