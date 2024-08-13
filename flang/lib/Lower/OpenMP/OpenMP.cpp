@@ -1700,10 +1700,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     // map for it.
     if (const Fortran::semantics::Symbol *common =
             Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
-      if (llvm::find(mapSyms, common) != mapSyms.end())
+      if (llvm::is_contained(mapSyms, common))
         return;
 
-    if (llvm::find(mapSyms, &sym) == mapSyms.end()) {
+    if (!llvm::is_contained(mapSyms, &sym)) {
       mlir::Value baseOp = converter.getSymbolAddress(sym);
       if (!baseOp)
         if (const auto *details =
