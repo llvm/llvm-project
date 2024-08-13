@@ -27,12 +27,16 @@ TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
   StructType *Ty = StructType::get(PointerType::getUnqual(Ctx));
 
   // Initialize struct layout caches.
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getSizeInBits(), 32U);
   EXPECT_EQ(DL1.getStructLayout(Ty)->getAlignment(), Align(4));
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getSizeInBits(), 64U);
   EXPECT_EQ(DL2.getStructLayout(Ty)->getAlignment(), Align(8));
 
   // The copy should invalidate DL1's cache.
   DL1 = DL2;
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getSizeInBits(), 64U);
   EXPECT_EQ(DL1.getStructLayout(Ty)->getAlignment(), Align(8));
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getSizeInBits(), 64U);
   EXPECT_EQ(DL2.getStructLayout(Ty)->getAlignment(), Align(8));
 }
 
