@@ -106,6 +106,7 @@ public:
   }
 };
 
+namespace AMDGPU {
 // Tries to leverage KnownBits for MCExprs to reduce and limit any composed
 // MCExprs printing. E.g., for an expression such as
 // ((unevaluatable_sym | 1) & 1) won't evaluate due to unevaluatable_sym and
@@ -114,8 +115,9 @@ public:
 void AMDGPUMCExprPrint(const MCExpr *Expr, raw_ostream &OS,
                        const MCAsmInfo *MAI);
 
-const MCExpr *TryFold(const MCExpr *Expr, MCContext &Ctx);
+const MCExpr *AMDGPUFoldMCExpr(const MCExpr *Expr, MCContext &Ctx);
 
+} // end namespace AMDGPU
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H
