@@ -125,6 +125,8 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isActive())
     return true;
 
+  assert(Ptr.inUnion());
+
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
   while (!U.isRoot() && U.inUnion() && !U.isActive()) {
@@ -155,8 +157,8 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   assert(R && R->isUnion() && "Not a union");
 
   const FieldDecl *ActiveField = nullptr;
-  for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {
-    const Pointer &Field = U.atField(R->getField(I)->Offset);
+  for (const Record::Field &F : R->fields()) {
+    const Pointer &Field = U.atField(F.Offset);
     if (Field.isActive()) {
       ActiveField = Field.getField();
       break;

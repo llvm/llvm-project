@@ -171,30 +171,31 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                      unsigned FieldOffset, bool IsVirtualBase) {
   assert(D);
   assert(D->ElemRecord);
+  assert(!D->ElemRecord->isUnion()); // Unions cannot be base classes.
 
-  bool IsUnion = D->ElemRecord->isUnion();
   auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
   Desc->Offset = FieldOffset;
   Desc->Desc = D;
   Desc->IsInitialized = D->IsArray;
   Desc->IsBase = true;
   Desc->IsVirtualBase = IsVirtualBase;
-  Desc->IsActive = IsActive && !IsUnion;
+  Desc->IsActive = IsActive && !InUnion;
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
+  Desc->InUnion = InUnion;
 
   for (const auto &V : D->ElemRecord->bases())
     initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, InUnion,
              V.Desc, V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
     initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, InUnion,
-              IsUnion, F.Desc, F.Offset);
+              InUnion, F.Desc, F.Offset);
 }
 
 static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, bool InUnion, const Descriptor *D) {
   for (const auto &V : D->ElemRecord->bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, false, V.Desc, V.Offset,
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, InUnion, V.Desc, V.Offset,
              false);
   for (const auto &F : D->ElemRecord->fields()) {
     bool IsUnionField = D->isUnion();
@@ -202,7 +203,7 @@ static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
               InUnion || IsUnionField, F.Desc, F.Offset);
   }
   for (const auto &V : D->ElemRecord->virtual_bases())
-    initBase(B, Ptr, IsConst, IsMutable, IsActive, false, V.Desc, V.Offset,
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, InUnion, V.Desc, V.Offset,
              true);
 }
 

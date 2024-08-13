@@ -34,6 +34,7 @@
 #include "nsan_flags.h"
 #include "nsan_stats.h"
 #include "nsan_suppressions.h"
+#include "nsan_thread.h"
 
 #include <assert.h>
 #include <math.h>
@@ -817,6 +818,11 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
     Die();
 
   InitializeInterceptors();
+  NsanTSDInit(NsanTSDDtor);
+
+  NsanThread *main_thread = NsanThread::Create(nullptr, nullptr);
+  SetCurrentThread(main_thread);
+  main_thread->Init();
 
   InitializeStats();
   if (flags().print_stats_on_exit)
