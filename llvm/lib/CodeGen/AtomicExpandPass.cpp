@@ -1514,7 +1514,6 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // Look for any users of the cmpxchg that are just comparing the loaded value
   // against the desired one, and replace them with the CFG-derived version.
-  SmallVector<ExtractValueInst *, 2> PrunedInsts;
   for (auto *User : CI->users()) {
     ExtractValueInst *EV = dyn_cast<ExtractValueInst>(User);
     if (!EV)
@@ -1527,13 +1526,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
       EV->replaceAllUsesWith(Loaded);
     else
       EV->replaceAllUsesWith(Success);
-
-    PrunedInsts.push_back(EV);
   }
-
-  // We can remove the instructions now we're no longer iterating through them.
-  for (auto *EV : PrunedInsts)
-    EV->eraseFromParent();
 
   if (!CI->use_empty()) {
     // Some use of the full struct return that we don't understand has happened,

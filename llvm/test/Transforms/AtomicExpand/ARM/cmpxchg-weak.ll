@@ -34,6 +34,9 @@ define i32 @test_cmpxchg_seq_cst(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_END]]:
 ; CHECK-NEXT:    [[LOADED_EXIT:%.*]] = phi i32 [ [[LOADED_TRYSTORE]], %[[CMPXCHG_SUCCESS]] ], [ [[LOADED_FAILURE]], %[[CMPXCHG_FAILURE]] ]
 ; CHECK-NEXT:    [[SUCCESS1:%.*]] = phi i1 [ true, %[[CMPXCHG_SUCCESS]] ], [ false, %[[CMPXCHG_FAILURE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[LOADED_EXIT]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[SUCCESS1]], 1
+; CHECK-NEXT:    [[OLDVAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CHECK-NEXT:    ret i32 [[LOADED_EXIT]]
 ;
   %pair = cmpxchg weak ptr %addr, i32 %desired, i32 %new seq_cst seq_cst
@@ -72,6 +75,9 @@ define i1 @test_cmpxchg_weak_fail(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_END]]:
 ; CHECK-NEXT:    [[LOADED_EXIT:%.*]] = phi i32 [ [[LOADED_TRYSTORE]], %[[CMPXCHG_SUCCESS]] ], [ [[LOADED_FAILURE]], %[[CMPXCHG_FAILURE]] ]
 ; CHECK-NEXT:    [[SUCCESS1:%.*]] = phi i1 [ true, %[[CMPXCHG_SUCCESS]] ], [ false, %[[CMPXCHG_FAILURE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[LOADED_EXIT]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[SUCCESS1]], 1
+; CHECK-NEXT:    [[OLDVAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CHECK-NEXT:    ret i1 [[SUCCESS1]]
 ;
   %pair = cmpxchg weak ptr %addr, i32 %desired, i32 %new seq_cst monotonic
@@ -108,6 +114,9 @@ define i32 @test_cmpxchg_monotonic(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK:       [[CMPXCHG_END]]:
 ; CHECK-NEXT:    [[LOADED_EXIT:%.*]] = phi i32 [ [[LOADED_TRYSTORE]], %[[CMPXCHG_SUCCESS]] ], [ [[LOADED_FAILURE]], %[[CMPXCHG_FAILURE]] ]
 ; CHECK-NEXT:    [[SUCCESS1:%.*]] = phi i1 [ true, %[[CMPXCHG_SUCCESS]] ], [ false, %[[CMPXCHG_FAILURE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[LOADED_EXIT]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[SUCCESS1]], 1
+; CHECK-NEXT:    [[OLDVAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CHECK-NEXT:    ret i32 [[LOADED_EXIT]]
 ;
   %pair = cmpxchg weak ptr %addr, i32 %desired, i32 %new monotonic monotonic
@@ -147,6 +156,9 @@ define i32 @test_cmpxchg_seq_cst_minsize(ptr %addr, i32 %desired, i32 %new) mins
 ; CHECK:       [[CMPXCHG_END]]:
 ; CHECK-NEXT:    [[LOADED_EXIT:%.*]] = phi i32 [ [[LOADED_TRYSTORE]], %[[CMPXCHG_SUCCESS]] ], [ [[LOADED_FAILURE]], %[[CMPXCHG_FAILURE]] ]
 ; CHECK-NEXT:    [[SUCCESS1:%.*]] = phi i1 [ true, %[[CMPXCHG_SUCCESS]] ], [ false, %[[CMPXCHG_FAILURE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[LOADED_EXIT]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[SUCCESS1]], 1
+; CHECK-NEXT:    [[OLDVAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CHECK-NEXT:    ret i32 [[LOADED_EXIT]]
 ;
   %pair = cmpxchg weak ptr %addr, i32 %desired, i32 %new seq_cst seq_cst
