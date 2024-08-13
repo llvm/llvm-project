@@ -861,7 +861,8 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 
   if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
     diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
-                         FuncDecl->getReturnType(), FuncDecl, FuncDecl->getLocation());
+                         FuncDecl->getReturnType(), FuncDecl,
+                         FuncDecl->getLocation());
     for (ParmVarDecl *PVD : FuncDecl->parameters()) {
       diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
                            PVD, FuncDecl->getLocation());
