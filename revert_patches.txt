@@ -137,3 +137,7 @@ Revert: causing issues with IRVerifiery heterodebug
 [IR] Don't verify module flags on every access (#102153)
 Ron
 ---
+Revert: Depends upon older [ctx_prof] reverts (e.g. c99bd3ce)
+6807ca8e937e [nfc][ctx_prof] Use one flag for the "use" scenario (#103377)
+contact : mhalk (Michael Halkenhaeuser)
+---

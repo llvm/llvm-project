@@ -174,9 +174,7 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
-static cl::opt<std::string>
-    ContextualProfile("thinlto-pgo-ctx-prof",
-                      cl::desc("Path to a contextual profile."), cl::Hidden);
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;

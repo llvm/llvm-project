@@ -15,12 +15,16 @@ set_output_directory(DynamicLibraryLib
   LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}
   )
 
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/DynamicLibraryTests.exports)
+
 add_llvm_unittest(DynamicLibraryTests
   DynamicLibraryTest.cpp
 
   EXPORT_SYMBOLS
   )
 target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
+
+unset(LLVM_EXPORTED_SYMBOL_FILE)
 
 function(dynlib_add_module NAME)
   add_library(${NAME} MODULE
