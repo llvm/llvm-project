@@ -3321,10 +3321,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       MaskedLoadStore = Builder.CreateMaskedStore(
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
     }
-    // For non-debug metadata, only !annotation, !range, !nonull and !align are
+    // For non-debug metadata, only !annotation, !range, !nonnull and !align are
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
-    // !nonull, !align : Not support pointer type, no need to keep.
+    // !nonnull, !align : Not support pointer type, no need to keep.
     // !range: load type is changed from scalar to vector, no idea how to keep
     //         it.
     // !annotation: Not impact semantics, keep it.
