@@ -44,33 +44,6 @@ X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI) {
          "GPRs should hold up to 64-bit");
 }
 
-const RegisterBank &
-X86RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                            LLT) const {
-
-  if (X86::GR8RegClass.hasSubClassEq(&RC) ||
-      X86::GR16RegClass.hasSubClassEq(&RC) ||
-      X86::GR32RegClass.hasSubClassEq(&RC) ||
-      X86::GR64RegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESSRegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESS_RBPRegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::GPRRegBankID);
-
-  if (X86::FR32XRegClass.hasSubClassEq(&RC) ||
-      X86::FR64XRegClass.hasSubClassEq(&RC) ||
-      X86::VR128XRegClass.hasSubClassEq(&RC) ||
-      X86::VR256XRegClass.hasSubClassEq(&RC) ||
-      X86::VR512RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::VECRRegBankID);
-
-  if (X86::RFP80RegClass.hasSubClassEq(&RC) ||
-      X86::RFP32RegClass.hasSubClassEq(&RC) ||
-      X86::RFP64RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::PSRRegBankID);
-
-  llvm_unreachable("Unsupported register kind yet.");
-}
-
 // \returns true if a given intrinsic only uses and defines FPRs.
 static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
                           const MachineInstr &MI) {

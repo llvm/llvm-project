@@ -1052,15 +1052,15 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
 fir::MutableBoxValue Fortran::lower::createMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable &var, mlir::Value boxAddr,
-    mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
-
+    mlir::ValueRange nonDeferredParams, bool alwaysUseBox, unsigned allocator) {
   fir::MutableProperties mutableProperties = createMutableProperties(
       converter, loc, var, nonDeferredParams, alwaysUseBox);
   fir::MutableBoxValue box(boxAddr, nonDeferredParams, mutableProperties);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))
     fir::factory::disassociateMutableBox(builder, loc, box,
-                                         /*polymorphicSetType=*/false);
+                                         /*polymorphicSetType=*/false,
+                                         allocator);
   return box;
 }
 
@@ -1104,14 +1104,14 @@ void Fortran::lower::associateMutableBox(
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsAllocatable(*sym);
+    return Fortran::semantics::IsAllocatable(sym->GetUltimate());
   return false;
 }
 
 bool Fortran::lower::isWholePointer(const Fortran::lower::SomeExpr &expr) {
   if (const Fortran::semantics::Symbol *sym =
           Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
-    return Fortran::semantics::IsPointer(*sym);
+    return Fortran::semantics::IsPointer(sym->GetUltimate());
   return false;
 }
 

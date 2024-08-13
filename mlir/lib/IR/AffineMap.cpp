@@ -158,6 +158,19 @@ bool AffineMap::isMinorIdentity() const {
              getMinorIdentityMap(getNumDims(), getNumResults(), getContext());
 }
 
+SmallVector<unsigned> AffineMap::getBroadcastDims() const {
+  SmallVector<unsigned> broadcastedDims;
+  for (const auto &[resIdx, expr] : llvm::enumerate(getResults())) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      if (constExpr.getValue() != 0)
+        continue;
+      broadcastedDims.push_back(resIdx);
+    }
+  }
+
+  return broadcastedDims;
+}
+
 /// Returns true if this affine map is a minor identity up to broadcasted
 /// dimensions which are indicated by value 0 in the result.
 bool AffineMap::isMinorIdentityWithBroadcasting(
@@ -746,7 +759,7 @@ AffineMap mlir::simplifyAffineMap(AffineMap map) {
 
 AffineMap mlir::removeDuplicateExprs(AffineMap map) {
   auto results = map.getResults();
-  SmallVector<AffineExpr, 4> uniqueExprs(results.begin(), results.end());
+  SmallVector<AffineExpr, 4> uniqueExprs(results);
   uniqueExprs.erase(llvm::unique(uniqueExprs), uniqueExprs.end());
   return AffineMap::get(map.getNumDims(), map.getNumSymbols(), uniqueExprs,
                         map.getContext());
@@ -926,9 +939,8 @@ mlir::expandDimsToRank(AffineMap map, int64_t rank,
 //===----------------------------------------------------------------------===//
 
 MutableAffineMap::MutableAffineMap(AffineMap map)
-    : results(map.getResults().begin(), map.getResults().end()),
-      numDims(map.getNumDims()), numSymbols(map.getNumSymbols()),
-      context(map.getContext()) {}
+    : results(map.getResults()), numDims(map.getNumDims()),
+      numSymbols(map.getNumSymbols()), context(map.getContext()) {}
 
 void MutableAffineMap::reset(AffineMap map) {
   results.clear();

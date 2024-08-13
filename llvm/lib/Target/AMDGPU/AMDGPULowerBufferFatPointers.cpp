@@ -700,7 +700,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
   // Subtarget info, needed for determining what cache control bits to set.
   const TargetMachine *TM;
-  const GCNSubtarget *ST;
+  const GCNSubtarget *ST = nullptr;
 
   IRBuilder<> IRB;
 
@@ -740,7 +740,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
 
 public:
   SplitPtrStructs(LLVMContext &Ctx, const TargetMachine *TM)
-      : TM(TM), ST(nullptr), IRB(Ctx) {}
+      : TM(TM), IRB(Ctx) {}
 
   void processFunction(Function &F);
 
@@ -1092,8 +1092,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
 
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   if (isa<LoadInst>(I))
-    // TODO: Do we need to do something about atomic loads?
-    IID = Intrinsic::amdgcn_raw_ptr_buffer_load;
+    IID = Order == AtomicOrdering::NotAtomic
+              ? Intrinsic::amdgcn_raw_ptr_buffer_load
+              : Intrinsic::amdgcn_raw_ptr_atomic_buffer_load;
   else if (isa<StoreInst>(I))
     IID = Intrinsic::amdgcn_raw_ptr_buffer_store;
   else if (auto *RMW = dyn_cast<AtomicRMWInst>(I)) {

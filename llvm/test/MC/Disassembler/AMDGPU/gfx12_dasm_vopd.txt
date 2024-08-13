@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX12
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX12
 
 # GFX12: v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v6, v1, v3 ; encoding: [0x04,0x05,0x08,0xc9,0x01,0x07,0x06,0xff]
 0x04,0x05,0x08,0xc9,0x01,0x07,0x06,0xff

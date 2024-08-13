@@ -214,6 +214,18 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FSINCOS:                    return "fsincos";
   case ISD::FTAN:                       return "ftan";
   case ISD::STRICT_FTAN:                return "strict_ftan";
+  case ISD::FASIN:                      return "fasin";
+  case ISD::STRICT_FASIN:               return "strict_fasin";
+  case ISD::FACOS:                      return "facos";
+  case ISD::STRICT_FACOS:               return "strict_facos";
+  case ISD::FATAN:                      return "fatan";
+  case ISD::STRICT_FATAN:               return "strict_fatan";
+  case ISD::FSINH:                      return "fsinh";
+  case ISD::STRICT_FSINH:               return "strict_fsinh";
+  case ISD::FCOSH:                      return "fcosh";
+  case ISD::STRICT_FCOSH:               return "strict_fcosh";
+  case ISD::FTANH:                      return "ftanh";
+  case ISD::STRICT_FTANH:               return "strict_ftanh";
   case ISD::FTRUNC:                     return "ftrunc";
   case ISD::STRICT_FTRUNC:              return "strict_ftrunc";
   case ISD::FFLOOR:                     return "ffloor";
@@ -422,6 +434,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::MSTORE:                     return "masked_store";
   case ISD::MGATHER:                    return "masked_gather";
   case ISD::MSCATTER:                   return "masked_scatter";
+  case ISD::VECTOR_COMPRESS:            return "vector_compress";
   case ISD::VAARG:                      return "vaarg";
   case ISD::VACOPY:                     return "vacopy";
   case ISD::VAEND:                      return "vaend";

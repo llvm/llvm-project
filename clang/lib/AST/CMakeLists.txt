@@ -66,6 +66,7 @@ add_clang_library(clangAST
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/Compiler.cpp
+  Interp/CompilerComplex.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
   Interp/Disasm.cpp
@@ -75,6 +76,7 @@ add_clang_library(clangAST
   Interp/InterpBuiltin.cpp
   Interp/Floating.cpp
   Interp/EvaluationResult.cpp
+  Interp/DynamicAllocator.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp

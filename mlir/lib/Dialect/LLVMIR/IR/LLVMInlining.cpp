@@ -658,7 +658,7 @@ static Value handleByValArgument(OpBuilder &builder, Operation *callable,
                                  Value argument, Type elementType,
                                  uint64_t requestedAlignment) {
   auto func = cast<LLVM::LLVMFuncOp>(callable);
-  LLVM::MemoryEffectsAttr memoryEffects = func.getMemoryAttr();
+  LLVM::MemoryEffectsAttr memoryEffects = func.getMemoryEffectsAttr();
   // If there is no memory effects attribute, assume that the function is
   // not read-only.
   bool isReadOnly = memoryEffects &&

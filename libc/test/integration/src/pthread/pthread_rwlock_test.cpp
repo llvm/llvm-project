@@ -6,14 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/time_macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/linux/rwlock.h"
 #include "src/__support/threads/sleep.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
+#include "src/pthread/pthread_rwlock_clockrdlock.h"
+#include "src/pthread/pthread_rwlock_clockwrlock.h"
 #include "src/pthread/pthread_rwlock_destroy.h"
 #include "src/pthread/pthread_rwlock_init.h"
 #include "src/pthread/pthread_rwlock_rdlock.h"
@@ -37,18 +42,18 @@
 #include "src/time/clock_gettime.h"
 #include "src/unistd/fork.h"
 #include "test/IntegrationTest/test.h"
-#include <errno.h>
 #include <pthread.h>
-#include <time.h>
 
-namespace LIBC_NAMESPACE::rwlock {
+namespace LIBC_NAMESPACE_DECL {
+namespace rwlock {
 class RwLockTester {
 public:
   static constexpr int full_reader_state() {
     return (~0) & (~RwState::PENDING_MASK) & (~RwState::ACTIVE_WRITER_BIT);
   }
 };
-} // namespace LIBC_NAMESPACE::rwlock
+} // namespace rwlock
+} // namespace LIBC_NAMESPACE_DECL
 
 static void smoke_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
@@ -109,6 +114,12 @@ static void nullptr_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_wrlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(nullptr, &ts), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(nullptr, &ts), EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(nullptr, CLOCK_MONOTONIC, &ts),
+      EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(nullptr, CLOCK_MONOTONIC, &ts),
+      EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_trywrlock(nullptr), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(nullptr), EINVAL);
@@ -156,16 +167,40 @@ static void unusual_timespec_test() {
   timespec ts = {0, -1};
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
   ts.tv_nsec = 1'000'000'000;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
   ts.tv_nsec += 1;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts), EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      EINVAL);
   ts.tv_nsec = 0;
   ts.tv_sec = -1;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts),
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts),
             ETIMEDOUT);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      ETIMEDOUT);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      ETIMEDOUT);
 }
 
 static void timedlock_with_deadlock_test() {
@@ -181,6 +216,13 @@ static void timedlock_with_deadlock_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts),
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_REALTIME, &ts),
+      ETIMEDOUT);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_REALTIME, &ts),
+      0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   // notice that ts is already expired, but the following should still succeed.
@@ -267,9 +309,11 @@ enum class Operation : int {
   WRITE = 1,
   TIMED_READ = 2,
   TIMED_WRITE = 3,
-  TRY_READ = 4,
-  TRY_WRITE = 5,
-  COUNT = 6
+  CLOCK_READ = 4,
+  CLOCK_WRITE = 5,
+  TRY_READ = 6,
+  TRY_WRITE = 7,
+  COUNT = 8
 };
 
 LIBC_NAMESPACE::RawMutex *io_mutex;
@@ -350,6 +394,24 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
   case Operation::TIMED_WRITE: {
     timespec ts = get_ts();
     if (LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&data->lock, &ts) == 0) {
+      write_ops();
+      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    }
+    break;
+  }
+  case Operation::CLOCK_READ: {
+    timespec ts = get_ts();
+    if (LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&data->lock, CLOCK_MONOTONIC,
+                                                   &ts) == 0) {
+      read_ops();
+      LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
+    }
+    break;
+  }
+  case Operation::CLOCK_WRITE: {
+    timespec ts = get_ts();
+    if (LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&data->lock, CLOCK_MONOTONIC,
+                                                   &ts) == 0) {
       write_ops();
       LIBC_NAMESPACE::pthread_rwlock_unlock(&data->lock);
     }

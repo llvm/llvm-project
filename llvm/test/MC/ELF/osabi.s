@@ -10,3 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd %s | llvm-readobj -h - | \
 # RUN:   FileCheck %s --check-prefix=FREEBSD
 # FREEBSD: OS/ABI: FreeBSD
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd %s | llvm-readobj -h - | \
+# RUN:   FileCheck %s --check-prefix=OPENBSD
+# OPENBSD: OS/ABI: OpenBSD

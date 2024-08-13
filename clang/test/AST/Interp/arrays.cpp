@@ -114,7 +114,7 @@ static_assert(*(&arr[0]) == 1, "");
 static_assert(*(&arr[1]) == 2, "");
 
 constexpr const int *OOB = (arr + 3) - 3; // both-error {{must be initialized by a constant expression}} \
-                                          // both-note {{cannot refer to element 3 of array of 2}}
+                                          // both-note {{cannot refer to element 3 of array of 2 elements}}
 
 template<typename T>
 constexpr T getElementOf(T* array, int i) {
@@ -625,3 +625,10 @@ constexpr int *get2() {
   return same_entity_2;
 }
 static_assert(get2() == same_entity_2, "failed to find previous decl");
+
+constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+constexpr int fail(const int &p) {
+  return (&p)[64]; // both-note {{cannot refer to element 64 of array of 2 elements}}
+}
+static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
+                                                                                    // both-note {{in call to}}

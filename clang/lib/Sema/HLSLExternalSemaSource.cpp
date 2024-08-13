@@ -80,7 +80,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &
-  addMemberVariable(StringRef Name, QualType Type,
+  addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -96,13 +96,16 @@ struct BuiltinTypeDeclBuilder {
         nullptr, false, InClassInitStyle::ICIS_NoInit);
     Field->setAccess(Access);
     Field->setImplicit(true);
+    for (Attr *A : Attrs)
+      Field->addAttr(A);
     Record->addDecl(Field);
     Fields[Name] = Field;
     return *this;
   }
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(AccessSpecifier Access = AccessSpecifier::AS_private) {
+  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV,
+                  AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
     QualType Ty = Record->getASTContext().VoidPtrTy;
@@ -112,15 +115,13 @@ struct BuiltinTypeDeclBuilder {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
     }
-    return addMemberVariable("h", Ty, Access);
-  }
-
-  BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
-                                                ResourceKind RK, bool IsROV) {
-    if (Record->isCompleteDefinition())
-      return *this;
-    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
-                                                     RC, RK, IsROV));
+    // add handle member
+    llvm::SmallVector<Attr *, 2> Attrs;
+    Attr *ResourceClassAttr =
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
+    Attr *ResourceAttr =
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV);
+    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
     return *this;
   }
 
@@ -171,7 +172,6 @@ struct BuiltinTypeDeclBuilder {
 
     DeclRefExpr *Fn =
         lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
-
     Expr *RCExpr = emitResourceClassExpr(AST, RC);
     Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
@@ -481,12 +481,6 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
 
 void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLVectorAlias();
-
-  ResourceDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Resource")
-                     .startDefinition()
-                     .addHandleMember(AccessSpecifier::AS_public)
-                     .completeDefinition()
-                     .Record;
 }
 
 /// Set up common members and attributes for buffer types
@@ -494,9 +488,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
-      .addHandleMember()
-      .addDefaultHandleConstructor(S, RC)
-      .annotateResourceClass(RC, RK, IsROV);
+      .addHandleMember(RC, RK, IsROV)
+      .addDefaultHandleConstructor(S, RC);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {

@@ -330,6 +330,8 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue>);
   void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
+  enum class NearestProc { Nearest, NextAfter, NextDown, NextUp };
+  template <NearestProc>
   mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -347,6 +349,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReduceDim(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRename(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
@@ -355,6 +359,8 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSecond(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSelectedCharKind(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -418,9 +424,12 @@ struct IntrinsicLibrary {
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
-  /// Generate code to raise \p except if \p cond is absent,
+  /// Generate code to raise \p excepts if \p cond is absent,
   /// or present and true.
-  void genRaiseExcept(int except, mlir::Value cond = {});
+  void genRaiseExcept(int excepts, mlir::Value cond = {});
+
+  /// Generate a quiet NaN of a given floating point type.
+  mlir::Value genQNan(mlir::Type resultType);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.

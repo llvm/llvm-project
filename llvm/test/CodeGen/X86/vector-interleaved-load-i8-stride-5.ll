@@ -1419,31 +1419,37 @@ define void @load_i8_stride5_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX-NEXT:    vpshufb %xmm7, %xmm6, %xmm6
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[2,7,12]
 ; AVX-NEXT:    vpor %xmm6, %xmm8, %xmm6
-; AVX-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,xmm2[1,6,11,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = xmm3[u,u,u,u,u,u],zero,zero,zero,zero,xmm3[4,9,14,u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm8 = xmm8[0,1,2],xmm9[3,4,5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = xmm0[2,7,12],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm10 = xmm1[u,u,u,u,u,u,0,5,10,15],zero,zero,zero,xmm1[u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm9 = xmm9[0,1,2],xmm10[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm8 = [128,128,128,1,6,11,128,128,128,128,4,9,14,u,u,u]
+; AVX-NEXT:    vpshufb %xmm8, %xmm2, %xmm9
+; AVX-NEXT:    vpshufb %xmm8, %xmm3, %xmm8
+; AVX-NEXT:    vpblendw {{.*#+}} xmm8 = xmm9[0,1,2],xmm8[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm9 = [2,7,12,128,128,128,0,5,10,15,128,128,128,u,u,u]
+; AVX-NEXT:    vpshufb %xmm9, %xmm0, %xmm10
+; AVX-NEXT:    vpshufb %xmm9, %xmm1, %xmm9
+; AVX-NEXT:    vpblendw {{.*#+}} xmm9 = xmm10[0,1,2],xmm9[3,4,5,6,7]
 ; AVX-NEXT:    vpor %xmm8, %xmm9, %xmm8
 ; AVX-NEXT:    vpshufb %xmm7, %xmm8, %xmm8
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[3,8,13]
 ; AVX-NEXT:    vpor %xmm9, %xmm8, %xmm8
-; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm2[2,7,12,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm10 = xmm1[u,u,u,u,u,u,1,6,11],zero,zero,zero,zero,xmm1[u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm9 = xmm9[0,1,2],xmm10[3,4,5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm10 = xmm0[3,8,13],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm11 = xmm3[u,u,u,u,u,u],zero,zero,zero,xmm3[0,5,10,15,u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm10 = xmm10[0,1,2],xmm11[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm9 = [128,128,128,2,7,12,1,6,11,128,128,128,128,u,u,u]
+; AVX-NEXT:    vpshufb %xmm9, %xmm2, %xmm10
+; AVX-NEXT:    vpshufb %xmm9, %xmm1, %xmm9
+; AVX-NEXT:    vpblendw {{.*#+}} xmm9 = xmm10[0,1,2],xmm9[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm10 = [3,8,13,128,128,128,128,128,128,0,5,10,15,u,u,u]
+; AVX-NEXT:    vpshufb %xmm10, %xmm0, %xmm11
+; AVX-NEXT:    vpshufb %xmm10, %xmm3, %xmm10
+; AVX-NEXT:    vpblendw {{.*#+}} xmm10 = xmm11[0,1,2],xmm10[3,4,5,6,7]
 ; AVX-NEXT:    vpor %xmm9, %xmm10, %xmm9
 ; AVX-NEXT:    vpshufb %xmm7, %xmm9, %xmm7
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[4,9,14]
 ; AVX-NEXT:    vpor %xmm7, %xmm9, %xmm7
-; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,u,u,u],zero,zero,zero,xmm3[1,6,11,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,xmm2[3,8,13,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm9 = [128,128,128,3,8,13,128,128,128,1,6,11,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm9, %xmm3, %xmm3
+; AVX-NEXT:    vpshufb %xmm9, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[3,4,5],xmm2[6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,2,7,12],zero,zero,zero,xmm1[u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,9,14],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [4,9,14,128,128,128,2,7,12,128,128,128,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3,4,5],xmm0[6,7]
 ; AVX-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm4[u,u,u,u,u,u,u,u,u,u,u,u,0,5,10,15]
@@ -2735,78 +2741,84 @@ define void @load_i8_stride5_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX-NEXT:    vpblendvb %xmm13, %xmm14, %xmm6, %xmm6
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm2[u,u,u],zero,zero,zero,zero,xmm2[4,9,14,u,u,u,u,u,u]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm3[u,u,u,0,5,10,15],zero,zero,zero,xmm3[u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm13, %xmm14, %xmm13
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm14 = [128,128,128,3,4,5,6,7,8,9,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb %xmm14, %xmm13, %xmm13
+; AVX-NEXT:    vpor %xmm13, %xmm14, %xmm14
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm13 = [128,128,128,3,4,5,6,7,8,9,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm13, %xmm14, %xmm14
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm4[1,6,11],zero,zero,zero,zero,zero,zero,zero,xmm4[u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm15, %xmm13, %xmm13
-; AVX-NEXT:    vpblendw {{.*#+}} xmm11 = xmm13[0,1,2,3,4],xmm11[5,6,7]
+; AVX-NEXT:    vpor %xmm15, %xmm14, %xmm14
+; AVX-NEXT:    vpblendw {{.*#+}} xmm11 = xmm14[0,1,2,3,4],xmm11[5,6,7]
 ; AVX-NEXT:    vandps %ymm6, %ymm12, %ymm6
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm5[u,u,u,u,u,u,u,u,u,u,u,u,u,2,7,12]
-; AVX-NEXT:    vandnps %ymm13, %ymm12, %ymm13
-; AVX-NEXT:    vorps %ymm6, %ymm13, %ymm6
+; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm5[u,u,u,u,u,u,u,u,u,u,u,u,u,2,7,12]
+; AVX-NEXT:    vandnps %ymm14, %ymm12, %ymm14
+; AVX-NEXT:    vorps %ymm6, %ymm14, %ymm6
 ; AVX-NEXT:    vinsertf128 $1, %xmm11, %ymm6, %ymm6
 ; AVX-NEXT:    vmovups %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vpshufb {{.*#+}} xmm6 = xmm0[u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm0[3,8,13]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm1[u,u,u,u,u,u,u,u,u,u,4,9,14],zero,zero,zero
-; AVX-NEXT:    vpor %xmm6, %xmm13, %xmm6
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm3[u,u,u,1,6,11],zero,zero,zero,zero,xmm3[u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm2[u,u,u],zero,zero,zero,xmm2[0,5,10,15,u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm13, %xmm15, %xmm13
-; AVX-NEXT:    vpshufb %xmm14, %xmm13, %xmm13
-; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm4[2,7,12],zero,zero,zero,zero,zero,zero,zero,xmm4[u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm14, %xmm13, %xmm13
-; AVX-NEXT:    vpblendw {{.*#+}} xmm6 = xmm13[0,1,2,3,4],xmm6[5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = zero,zero,zero,xmm9[1,6,11,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm10[u,u,u,u,u,u],zero,zero,zero,zero,xmm10[4,9,14,u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm13 = xmm13[0,1,2],xmm14[3,4,5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm7[2,7,12],zero,zero,zero,xmm7[u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm8[u,u,u,u,u,u,0,5,10,15],zero,zero,zero,xmm8[u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm14 = xmm14[0,1,2],xmm15[3,4,5,6,7]
-; AVX-NEXT:    vpor %xmm13, %xmm14, %xmm13
-; AVX-NEXT:    vandps %ymm12, %ymm13, %ymm13
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm6 = [128,128,128,1,6,11,128,128,128,128,4,9,14,u,u,u]
+; AVX-NEXT:    vpshufb %xmm6, %xmm9, %xmm14
+; AVX-NEXT:    vpshufb %xmm6, %xmm10, %xmm6
+; AVX-NEXT:    vpblendw {{.*#+}} xmm6 = xmm14[0,1,2],xmm6[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm14 = [2,7,12,128,128,128,0,5,10,15,128,128,128,u,u,u]
+; AVX-NEXT:    vpshufb %xmm14, %xmm7, %xmm15
+; AVX-NEXT:    vpshufb %xmm14, %xmm8, %xmm14
+; AVX-NEXT:    vpblendw {{.*#+}} xmm14 = xmm15[0,1,2],xmm14[3,4,5,6,7]
+; AVX-NEXT:    vpor %xmm6, %xmm14, %xmm6
+; AVX-NEXT:    vandps %ymm6, %ymm12, %ymm6
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm5[u,u,u,u,u,u,u,u,u,u,u,u,u,3,8,13]
 ; AVX-NEXT:    vandnps %ymm14, %ymm12, %ymm12
-; AVX-NEXT:    vorps %ymm12, %ymm13, %ymm12
-; AVX-NEXT:    vinsertf128 $1, %xmm6, %ymm12, %ymm12
-; AVX-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,zero,xmm9[2,7,12,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm8[u,u,u,u,u,u,1,6,11],zero,zero,zero,zero,xmm8[u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm6 = xmm6[0,1,2],xmm13[3,4,5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm7[3,8,13],zero,zero,zero,xmm7[u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm10[u,u,u,u,u,u],zero,zero,zero,xmm10[0,5,10,15,u,u,u]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm13 = xmm13[0,1,2],xmm14[3,4,5,6,7]
+; AVX-NEXT:    vorps %ymm6, %ymm12, %ymm6
+; AVX-NEXT:    vpshufb {{.*#+}} xmm12 = xmm0[u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm0[3,8,13]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm1[u,u,u,u,u,u,u,u,u,u,4,9,14],zero,zero,zero
+; AVX-NEXT:    vpor %xmm12, %xmm14, %xmm12
+; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm3[u,u,u,1,6,11],zero,zero,zero,zero,xmm3[u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm2[u,u,u],zero,zero,zero,xmm2[0,5,10,15,u,u,u,u,u,u]
+; AVX-NEXT:    vpor %xmm14, %xmm15, %xmm14
+; AVX-NEXT:    vpshufb %xmm13, %xmm14, %xmm13
+; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm4[2,7,12],zero,zero,zero,zero,zero,zero,zero,xmm4[u,u,u,u,u,u]
+; AVX-NEXT:    vpor %xmm14, %xmm13, %xmm13
+; AVX-NEXT:    vpblendw {{.*#+}} xmm12 = xmm13[0,1,2,3,4],xmm12[5,6,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm12, %ymm6, %ymm12
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm6 = [128,128,128,2,7,12,1,6,11,128,128,128,128,u,u,u]
+; AVX-NEXT:    vpshufb %xmm6, %xmm9, %xmm13
+; AVX-NEXT:    vpshufb %xmm6, %xmm8, %xmm6
+; AVX-NEXT:    vpblendw {{.*#+}} xmm6 = xmm13[0,1,2],xmm6[3,4,5,6,7]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm13 = [3,8,13,128,128,128,128,128,128,0,5,10,15,u,u,u]
+; AVX-NEXT:    vpshufb %xmm13, %xmm7, %xmm14
+; AVX-NEXT:    vpshufb %xmm13, %xmm10, %xmm13
+; AVX-NEXT:    vpblendw {{.*#+}} xmm13 = xmm14[0,1,2],xmm13[3,4,5,6,7]
 ; AVX-NEXT:    vpor %xmm6, %xmm13, %xmm6
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm2[u,u,u],zero,zero,zero,xmm2[1,6,11,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm3[u,u,u,2,7,12],zero,zero,zero,xmm3[u,u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm13, %xmm14, %xmm13
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm14 = [128,128,128,3,4,5,6,7,8,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb %xmm14, %xmm13, %xmm13
+; AVX-NEXT:    vpor %xmm13, %xmm14, %xmm14
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm13 = [128,128,128,3,4,5,6,7,8,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm13, %xmm14, %xmm14
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm4[3,8,13],zero,zero,zero,zero,zero,zero,xmm4[u,u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm15, %xmm13, %xmm13
+; AVX-NEXT:    vpor %xmm15, %xmm14, %xmm14
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm5[u,u,u,u,u,u,u,u,u,u,u,u,u,4,9,14]
-; AVX-NEXT:    vinsertf128 $1, %xmm13, %ymm15, %ymm13
+; AVX-NEXT:    vinsertf128 $1, %xmm14, %ymm15, %ymm14
 ; AVX-NEXT:    vmovaps {{.*#+}} ymm15 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255]
 ; AVX-NEXT:    vandps %ymm6, %ymm15, %ymm6
-; AVX-NEXT:    vandnps %ymm13, %ymm15, %ymm13
-; AVX-NEXT:    vorps %ymm6, %ymm13, %ymm6
-; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm0[u,u,u,u,u,u,u,u,u],zero,zero,zero,zero,xmm0[4,9,14]
+; AVX-NEXT:    vandnps %ymm14, %ymm15, %ymm14
+; AVX-NEXT:    vorps %ymm6, %ymm14, %ymm6
+; AVX-NEXT:    vpshufb {{.*#+}} xmm14 = xmm0[u,u,u,u,u,u,u,u,u],zero,zero,zero,zero,xmm0[4,9,14]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm15 = xmm1[u,u,u,u,u,u,u,u,u,0,5,10,15],zero,zero,zero
-; AVX-NEXT:    vpor %xmm13, %xmm15, %xmm13
+; AVX-NEXT:    vpor %xmm14, %xmm15, %xmm14
 ; AVX-NEXT:    vextractf128 $1, %ymm6, %xmm15
 ; AVX-NEXT:    vpmovsxwq {{.*#+}} xmm11 = [18446744073709551615,255]
-; AVX-NEXT:    vpblendvb %xmm11, %xmm15, %xmm13, %xmm13
-; AVX-NEXT:    vinsertf128 $1, %xmm13, %ymm6, %ymm6
-; AVX-NEXT:    vpshufb {{.*#+}} xmm10 = xmm10[u,u,u,u,u,u],zero,zero,zero,xmm10[1,6,11,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm9[3,8,13,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpblendvb %xmm11, %xmm15, %xmm14, %xmm14
+; AVX-NEXT:    vinsertf128 $1, %xmm14, %ymm6, %ymm6
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm14 = [128,128,128,3,8,13,128,128,128,1,6,11,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm14, %xmm10, %xmm10
+; AVX-NEXT:    vpshufb %xmm14, %xmm9, %xmm9
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm9 = xmm9[0,1,2],xmm10[3,4,5],xmm9[6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[u,u,u,u,u,u,2,7,12],zero,zero,zero,xmm8[u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm7 = xmm7[4,9,14],zero,zero,zero,xmm7[u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm10 = [4,9,14,128,128,128,2,7,12,128,128,128,u,u,u,u]
+; AVX-NEXT:    vpshufb %xmm10, %xmm8, %xmm8
+; AVX-NEXT:    vpshufb %xmm10, %xmm7, %xmm7
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm7 = xmm7[0,1,2],xmm8[3,4,5],xmm7[6,7]
 ; AVX-NEXT:    vpor %xmm7, %xmm9, %xmm7
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u],zero,zero,zero,xmm2[2,7,12,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[u,u,u,3,8,13],zero,zero,zero,xmm3[u,u,u,u,u,u,u]
 ; AVX-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vpshufb %xmm14, %xmm2, %xmm2
+; AVX-NEXT:    vpshufb %xmm13, %xmm2, %xmm2
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = xmm4[4,9,14],zero,zero,zero,zero,zero,zero,xmm4[u,u,u,u,u,u,u]
 ; AVX-NEXT:    vpor %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,u,1,6,11],zero,zero,zero,zero

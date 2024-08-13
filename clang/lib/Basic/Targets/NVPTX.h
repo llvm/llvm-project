@@ -119,7 +119,6 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // FIXME: implement
     return TargetInfo::CharPtrBuiltinVaList;
   }
 

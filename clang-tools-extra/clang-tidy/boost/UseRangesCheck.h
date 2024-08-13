@@ -36,6 +36,7 @@ public:
 
 private:
   bool IncludeBoostSystem;
+  bool UseReversePipe;
 };
 
 } // namespace clang::tidy::boost

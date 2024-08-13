@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MATH_F16SUB_H
 #define LLVM_LIBC_SRC_MATH_F16SUB_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float16 f16sub(double x, double y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_F16SUB_H

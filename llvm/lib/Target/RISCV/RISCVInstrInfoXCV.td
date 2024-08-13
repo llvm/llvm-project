@@ -826,3 +826,36 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;
 }
+
+class PatCoreVMacGprGprGpr <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+class PatCoreVMacGprGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+class PatCoreVMacGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+
+let Predicates = [HasVendorXCVmac] in {
+  def : PatCoreVMacGprGprGpr<"mac", "MAC">;
+  def : PatCoreVMacGprGprGpr<"msu", "MSU">;
+
+  def : PatCoreVMacGprGprUimm5<"muluN", "MULUN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuN", "MULHHUN">;
+  def : PatCoreVMacGprGprUimm5<"mulsN", "MULSN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsN", "MULHHSN">;
+  def : PatCoreVMacGprGprUimm5<"muluRN", "MULURN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuRN", "MULHHURN">;
+  def : PatCoreVMacGprGprUimm5<"mulsRN", "MULSRN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsRN", "MULHHSRN">;
+
+  def : PatCoreVMacGprGprGprUimm5<"macuN", "MACUN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuN", "MACHHUN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsN", "MACSN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsN", "MACHHSN">;
+  def : PatCoreVMacGprGprGprUimm5<"macuRN", "MACURN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuRN", "MACHHURN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsRN", "MACSRN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsRN", "MACHHSRN">;
+}

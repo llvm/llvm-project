@@ -13,9 +13,10 @@
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using AtExitCallback = void(void *);
 using StdCAtExitCallback = void(void);
@@ -37,17 +38,33 @@ using ExitCallbackList = ReverseOrderBlockStore<AtExitUnit, 32>;
 using ExitCallbackList = FixedVector<AtExitUnit, CALLBACK_LIST_SIZE_FOR_TESTS>;
 #endif
 
-extern ExitCallbackList atexit_callbacks;
-extern ExitCallbackList at_quick_exit_callbacks;
-
+// This is handled by the 'atexit' implementation and shared by 'at_quick_exit'.
 extern Mutex handler_list_mtx;
 
-void stdc_at_exit_func(void *payload);
+LIBC_INLINE void stdc_at_exit_func(void *payload) {
+  reinterpret_cast<StdCAtExitCallback *>(payload)();
+}
 
-void call_exit_callbacks(ExitCallbackList &callbacks);
+LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks) {
+  handler_list_mtx.lock();
+  while (!callbacks.empty()) {
+    AtExitUnit &unit = callbacks.back();
+    callbacks.pop_back();
+    handler_list_mtx.unlock();
+    unit.callback(unit.payload);
+    handler_list_mtx.lock();
+  }
+  ExitCallbackList::destroy(&callbacks);
+}
 
-int add_atexit_unit(ExitCallbackList &callbacks, const AtExitUnit &unit);
+LIBC_INLINE int add_atexit_unit(ExitCallbackList &callbacks,
+                                const AtExitUnit &unit) {
+  cpp::lock_guard lock(handler_list_mtx);
+  if (callbacks.push_back(unit))
+    return 0;
+  return -1;
+}
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_EXIT_HANDLER_H

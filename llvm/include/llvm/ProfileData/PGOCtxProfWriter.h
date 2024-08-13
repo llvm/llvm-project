@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 #define LLVM_PROFILEDATA_PGOCTXPROFWRITER_H_
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
@@ -68,15 +69,7 @@ class PGOCtxProfileWriter final {
 
 public:
   PGOCtxProfileWriter(raw_ostream &Out,
-                      std::optional<unsigned> VersionOverride = std::nullopt)
-      : Writer(Out, 0) {
-    Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID,
-                         CodeLen);
-    const auto Version = VersionOverride ? *VersionOverride : CurrentVersion;
-    Writer.EmitRecord(PGOCtxProfileRecords::Version,
-                      SmallVector<unsigned, 1>({Version}));
-  }
-
+                      std::optional<unsigned> VersionOverride = std::nullopt);
   ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
 
   void write(const ctx_profile::ContextNode &);
@@ -85,6 +78,7 @@ public:
   static constexpr unsigned CodeLen = 2;
   static constexpr uint32_t CurrentVersion = 1;
   static constexpr unsigned VBREncodingBits = 6;
+  static constexpr StringRef ContainerMagic = "CTXP";
 };
 
 } // namespace llvm

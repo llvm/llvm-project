@@ -8,6 +8,7 @@
 #include "startup/linux/do_start.h"
 #include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
@@ -37,7 +38,7 @@ extern uintptr_t __fini_array_end[];
   gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);
@@ -132,7 +133,7 @@ static ThreadAttributes main_thread_attrib;
   // We register the cleanup_tls function to be the last atexit callback to be
   // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
   // as the stack protector canary).
-  atexit([]() { cleanup_tls(tls.tp, tls.size); });
+  atexit([]() { cleanup_tls(tls.addr, tls.size); });
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
@@ -150,4 +151,4 @@ static ThreadAttributes main_thread_attrib;
   exit(retval);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

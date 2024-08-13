@@ -150,7 +150,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   if (UseProfileData) {
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     // If we don't have a good profile (sample profile is not deemed
     // as a "good profile") and the function is not hot, then early
@@ -200,7 +200,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
 void MachineFunctionSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
-  AU.addRequired<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
 }
 

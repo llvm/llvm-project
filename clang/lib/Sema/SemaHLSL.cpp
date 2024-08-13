@@ -437,6 +437,28 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
+  if (!AL.isArgIdent(0)) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierLoc *Loc = AL.getArgAsIdent(0);
+  StringRef Identifier = Loc->Ident->getName();
+  SourceLocation ArgLoc = Loc->Loc;
+
+  // Validate.
+  llvm::dxil::ResourceClass RC;
+  if (!HLSLResourceClassAttr::ConvertStrToResourceClass(Identifier, RC)) {
+    Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+        << "ResourceClass" << Identifier;
+    return;
+  }
+
+  D->addAttr(HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc));
+}
+
 void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
   StringRef Space = "space0";
   StringRef Slot = "";
@@ -628,7 +650,10 @@ class DiagnoseHLSLAvailability
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
 
 public:
-  DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
+  DiagnoseHLSLAvailability(Sema &SemaRef)
+      : SemaRef(SemaRef),
+        CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
+        CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
 
   // AST traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
@@ -992,8 +1017,8 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
-  case Builtin::BI__builtin_hlsl_elementwise_all:
-  case Builtin::BI__builtin_hlsl_elementwise_any: {
+  case Builtin::BI__builtin_hlsl_all:
+  case Builtin::BI__builtin_hlsl_any: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     break;
@@ -1052,6 +1077,24 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_length: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    QualType RetTy;
+
+    if (auto *VTy = ArgTyA->getAs<VectorType>())
+      RetTy = VTy->getElementType();
+    else
+      RetTy = TheCall->getArg(0)->getType();
+
+    TheCall->setType(RetTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {

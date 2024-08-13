@@ -686,11 +686,6 @@ value llvm_label_type(value Context) {
   return to_val(LLVMLabelTypeInContext(Context_val(Context)));
 }
 
-/* llcontext -> lltype */
-value llvm_x86_mmx_type(value Context) {
-  return to_val(LLVMX86MMXTypeInContext(Context_val(Context)));
-}
-
 /* llmodule -> string -> lltype option */
 value llvm_type_by_name(value M, value Name) {
   return ptr_to_option(LLVMGetTypeByName(Module_val(M), String_val(Name)));

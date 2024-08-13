@@ -11,12 +11,13 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <dirent.h>
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Platform specific function which will open the directory |name|
 // and return its file descriptor. Upon failure, the error value is returned.
@@ -74,6 +75,6 @@ public:
   LIBC_INLINE int getfd() { return fd; }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
