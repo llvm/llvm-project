@@ -3332,17 +3332,16 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
-    // Only substitute for the innermost template argument list.
-    // NOTE: Some external resugarers rely on leaving a Subst* node here.
-    // Make the substituion non-final in that case.
-    // Note that these external resugarers are essentially broken
-    // for depending on this, because we don't provide
-    // enough context in the Subst* nodes in order
-    // to tell different template type alias specializations apart.
+    // Only substitute for the innermost template argument list.  NOTE: Some
+    // external resugarers rely on leaving a Subst* node here.  Make the
+    // substitution non-final in that case.  Note that these external resugarers
+    // will still miss some information in this representation, because we don't
+    // provide enough context in the Subst* nodes in order to tell different
+    // template type alias specializations apart.
     MultiLevelTemplateArgumentList TemplateArgLists;
     TemplateArgLists.addOuterTemplateArguments(
         Template, SugaredConverted,
-        /*Final=*/!getLangOpts().SupportBrokenExternalResugarers);
+        /*Final=*/!getLangOpts().RetainSubstTemplateTypeParmTypeAstNodes);
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 

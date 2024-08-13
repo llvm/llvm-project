@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fsupport-broken-external-resugarers -ast-dump -ast-dump-filter=dump %s | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -fsyntax-only -fretain-subst-template-type-parm-type-ast-nodes -ast-dump -ast-dump-filter=dump %s | FileCheck -strict-whitespace %s
 
 namespace t1 {
 template<class T> using X = T;
