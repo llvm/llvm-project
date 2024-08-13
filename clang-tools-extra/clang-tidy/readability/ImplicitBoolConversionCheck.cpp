@@ -39,14 +39,22 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
 }
 
 StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
-                                             QualType Type,
-                                             ASTContext &Context) {
+                                             QualType Type, ASTContext &Context,
+                                             bool UseUpperCaseSuffix) {
   switch (CastExprKind) {
-  case CK_IntegralToBoolean:
-    return Type->isUnsignedIntegerType() ? "0U" : "0";
+  case CK_IntegralToBoolean: {
+    if (Type->isUnsignedIntegerType()) {
+      return UseUpperCaseSuffix ? "0U" : "0u";
+    }
+    return "0";
+  }
 
-  case CK_FloatingToBoolean:
-    return Context.hasSameType(Type, Context.FloatTy) ? "0.0F" : "0.0";
+  case CK_FloatingToBoolean: {
+    if (Context.hasSameType(Type, Context.FloatTy)) {
+      return UseUpperCaseSuffix ? "0.0F" : "0.0f";
+    }
+    return "0.0";
+  }
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
@@ -66,7 +74,7 @@ bool isUnaryLogicalNotOperator(const Stmt *Statement) {
 
 void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
                               const ImplicitCastExpr *Cast, const Stmt *Parent,
-                              ASTContext &Context) {
+                              ASTContext &Context, bool UseUpperCaseSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
   bool InvertComparison =
@@ -113,7 +121,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   }
 
   EndLocInsertion += getZeroLiteralToCompareWithForType(
-      Cast->getCastKind(), SubExpr->getType(), Context);
+      Cast->getCastKind(), SubExpr->getType(), Context, UseUpperCaseSuffix);
 
   if (NeedOuterParens) {
     EndLocInsertion += ")";
@@ -192,7 +200,8 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 }
 
 StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                                      QualType DestType, ASTContext &Context) {
+                                      QualType DestType, ASTContext &Context,
+                                      bool UseUpperCaseSuffix) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -202,13 +211,19 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
 
   if (DestType->isFloatingType()) {
     if (Context.hasSameType(DestType, Context.FloatTy)) {
-      return BoolLiteral->getValue() ? "1.0F" : "0.0F";
+      if (BoolLiteral->getValue()) {
+        return UseUpperCaseSuffix ? "1.0F" : "1.0f";
+      }
+      return UseUpperCaseSuffix ? "0.0F" : "0.0f";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
   if (DestType->isUnsignedIntegerType()) {
-    return BoolLiteral->getValue() ? "1U" : "0U";
+    if (BoolLiteral->getValue()) {
+      return UseUpperCaseSuffix ? "1U" : "1u";
+    }
+    return UseUpperCaseSuffix ? "0U" : "0u";
   }
   return BoolLiteral->getValue() ? "1" : "0";
 }
@@ -248,12 +263,14 @@ ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
-      AllowPointerConditions(Options.get("AllowPointerConditions", false)) {}
+      AllowPointerConditions(Options.get("AllowPointerConditions", false)),
+      UseUpperCaseSuffix(Options.get("UseUpperCaseSuffix", false)) {}
 
 void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
+  Options.store(Opts, "UseUpperCaseSuffix", UseUpperCaseSuffix);
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
@@ -378,7 +395,7 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
   if (!EquivalentLiteral.empty()) {
     Diag << tooling::fixit::createReplacement(*Cast, EquivalentLiteral);
   } else {
-    fixGenericExprCastToBool(Diag, Cast, Parent, Context);
+    fixGenericExprCastToBool(Diag, Cast, Parent, Context, UseUpperCaseSuffix);
   }
 }
 
@@ -393,7 +410,8 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
     Diag << tooling::fixit::createReplacement(
-        *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context));
+        *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context,
+                                           UseUpperCaseSuffix));
   } else {
     fixGenericExprCastFromBool(Diag, Cast, Context, DestType.getAsString());
   }
