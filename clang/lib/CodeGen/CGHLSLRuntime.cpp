@@ -296,7 +296,6 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   for (auto *FD : RD->fields()) {
     const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
     const auto *HLSLResClassAttr = FD->getAttr<HLSLResourceClassAttr>();
-    const auto *ROVAttr = FD->getAttr<HLSLROVAttr>();
     if (!HLSLResAttr || !HLSLResClassAttr)
       continue;
 
