@@ -7361,14 +7361,25 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     const DebugLoc &DL = Inst.getDebugLoc();
     Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
-        .addImm(16)
-        .add(Inst.getOperand(1));
-    BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-        .addImm(0) // src0_modifiers
-        .addReg(TmpReg)
-        .addImm(0)  // clamp
-        .addImm(0); // omod
+    if (ST.useRealTrue16Insts()) {
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::COPY), TmpReg)
+          .add(Inst.getOperand(1));
+      BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+          .addImm(0) // src0_modifiers
+          .addReg(TmpReg, 0, AMDGPU::hi16)
+          .addImm(0)  // clamp
+          .addImm(0)  // omod
+          .addImm(0); // op_sel0
+    } else {
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+          .addImm(16)
+          .add(Inst.getOperand(1));
+      BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+          .addImm(0) // src0_modifiers
+          .addReg(TmpReg)
+          .addImm(0)  // clamp
+          .addImm(0); // omod
+    }
 
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
