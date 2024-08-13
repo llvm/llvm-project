@@ -73,7 +73,7 @@ void XCOFFDumper::printFileHeader() {
   printHex("Magic:", Obj.getMagic());
   printNumber("NumberOfSections:", Obj.getNumberOfSections());
 
-  int32_t Timestamp = Obj.getTimeStamp();
+  int32_t TimeStamp = Obj.getTimeStamp();
   if (TimeStamp > 0) {
     // This handling of the timestamp assumes that the host system's time_t is
     // compatible with AIX time_t. If a platform is not compatible, the lit
@@ -84,10 +84,9 @@ void XCOFFDumper::printFileHeader() {
 
     size_t BytesFormatted = std::strftime(FormattedTime, sizeof(FormattedTime),
                                           "%F %T", gmtime(&TimeDate));
-    if (BytesFormatted)
-      printStrHex("Timestamp:", FormattedTime, TimeStamp);
-    else
-      printHex("Timestamp:", TimeStamp);
+    assert(BytesFormatted && "The size of the buffer FormattedTime is less "
+                             "than the size of the date/time string.");
+    printStrHex("Timestamp:", FormattedTime, TimeStamp);
   } else {
     // Negative timestamp values are reserved for future use.
     printStrHex("Timestamp:", TimeStamp == 0 ? "None" : "Reserved Value",
