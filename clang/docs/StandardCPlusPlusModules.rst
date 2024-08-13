@@ -1238,7 +1238,7 @@ However, the name may be confusing since implementation partition units are not 
 units.
 
 According to `[module.reach]p1 <https://eel.is/c++draft/module.reach#1>`_ and
-`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_:
+`[module.reach]p2 <https://eel.is/c++draft/module.reach#2>`_ (from N4986):
 
   A translation unit U is necessarily reachable from a point P if U is a module
   interface unit on which the translation unit containing P has an interface
