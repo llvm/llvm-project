@@ -117,6 +117,29 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   return SI - MemberOffsets.begin();
 }
 
+namespace {
+
+class StructLayoutMap {
+  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
+  LayoutInfoTy LayoutInfo;
+
+public:
+  ~StructLayoutMap() {
+    // Remove any layouts.
+    for (const auto &I : LayoutInfo) {
+      StructLayout *Value = I.second;
+      Value->~StructLayout();
+      free(Value);
+    }
+  }
+
+  StructLayout *&operator[](StructType *STy) {
+    return LayoutInfo[STy];
+  }
+};
+
+} // end anonymous namespace
+
 //===----------------------------------------------------------------------===//
 // LayoutAlignElem, LayoutAlign support
 //===----------------------------------------------------------------------===//
@@ -214,7 +237,8 @@ DataLayout::DataLayout(StringRef LayoutString) {
 }
 
 DataLayout &DataLayout::operator=(const DataLayout &Other) {
-  // Copy everything except for LayoutMap, which will be recomputed on demand.
+  delete static_cast<StructLayoutMap *>(LayoutMap);
+  LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
   BigEndian = Other.BigEndian;
   AllocaAddrSpace = Other.AllocaAddrSpace;
@@ -686,29 +710,6 @@ Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
     --I;
   return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 }
-
-namespace {
-
-class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
-  LayoutInfoTy LayoutInfo;
-
-public:
-  ~StructLayoutMap() {
-    // Remove any layouts.
-    for (const auto &I : LayoutInfo) {
-      StructLayout *Value = I.second;
-      Value->~StructLayout();
-      free(Value);
-    }
-  }
-
-  StructLayout *&operator[](StructType *STy) {
-    return LayoutInfo[STy];
-  }
-};
-
-} // end anonymous namespace
 
 DataLayout::~DataLayout() { delete static_cast<StructLayoutMap *>(LayoutMap); }
 
