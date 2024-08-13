@@ -359,7 +359,10 @@ DEFAULT_FEATURES = [
     # this zone, which would be out of range for 32 bit.
     Feature(
         name="zdump-time_t-32bit",
-        when=lambda cfg: runScriptExitCode(
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!has-no-zdump", cfg.available_features
+        )
+        and runScriptExitCode(
             cfg, ["zdump -V -c1800,2100 Africa/Addis_Ababa | grep -q 1869"]
         )
         != 0,
