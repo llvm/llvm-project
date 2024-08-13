@@ -649,6 +649,8 @@ protected:
     /// It is 0 otherwise.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExcludedOverflowPattern : 1;
 
     SourceLocation OpLoc;
   };

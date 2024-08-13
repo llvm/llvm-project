@@ -4815,13 +4815,14 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   assert(!isCompoundAssignmentOp() &&
          "Use CompoundAssignOperator for compound assignments");
   BinaryOperatorBits.OpLoc = opLoc;
+  BinaryOperatorBits.ExcludedOverflowPattern = 0;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
   if (Ctx.getLangOpts().isOverflowPatternExcluded(
           LangOptions::OverflowPatternExclusionKind::AddOverflowTest)) {
     std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(this);
     if (Result.has_value())
-      Result.value()->ExcludedOverflowPattern = true;
+      Result.value()->BinaryOperatorBits.ExcludedOverflowPattern = 1;
   }
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
