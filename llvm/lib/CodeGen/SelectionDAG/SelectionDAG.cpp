@@ -1748,8 +1748,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   return Result;
 }
 
-SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT,
-                                         bool IsTarget, bool IsOpaque) {
+SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
+                                         bool IsOpaque) {
   return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
                      IsTarget, IsOpaque);
 }
