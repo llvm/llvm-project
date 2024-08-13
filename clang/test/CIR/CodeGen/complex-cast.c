@@ -70,6 +70,55 @@ void scalar_to_complex() {
 
 // CHECK: }
 
+void scalar_to_complex_explicit() {
+  cd = (double _Complex)sd;
+  ci = (int _Complex)si;
+  cd = (double _Complex)si;
+  ci = (int _Complex)sd;
+}
+
+// CHECK-LABEL: @scalar_to_complex_explicit()
+
+// CIR-BEFORE: %{{.+}} = cir.cast(float_to_complex, %{{.+}} : !cir.double), !cir.complex<!cir.double>
+
+//      CIR-AFTER: %[[#IMAG:]] = cir.const #cir.fp<0.000000e+00> : !cir.double
+// CIR-AFTER-NEXT: %{{.+}} = cir.complex.create %{{.+}}, %[[#IMAG]] : !cir.double -> !cir.complex<!cir.double>
+
+//      LLVM: %[[#A:]] = insertvalue { double, double } undef, double %{{.+}}, 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double 0.000000e+00, 1
+
+// CIR-BEFORE: %{{.+}} = cir.cast(int_to_complex, %{{.+}} : !s32i), !cir.complex<!s32i>
+
+//      CIR-AFTER: %[[#IMAG:]] = cir.const #cir.int<0> : !s32i
+// CIR-AFTER-NEXT: %{{.+}} = cir.complex.create %{{.+}}, %[[#IMAG]] : !s32i -> !cir.complex<!s32i>
+
+//      LLVM: %[[#A:]] = insertvalue { i32, i32 } undef, i32 %{{.+}}, 0
+// LLVM-NEXT: %{{.+}} = insertvalue { i32, i32 } %[[#A]], i32 0, 1
+
+//      CIR-BEFORE: %[[#A:]] = cir.cast(int_to_float, %{{.+}} : !s32i), !cir.double
+// CIR-BEFORE-NEXT: %{{.+}} = cir.cast(float_to_complex, %[[#A]] : !cir.double), !cir.complex<!cir.double>
+
+//      CIR-AFTER: %[[#REAL:]] = cir.cast(int_to_float, %11 : !s32i), !cir.double
+// CIR-AFTER-NEXT: %[[#IMAG:]] = cir.const #cir.fp<0.000000e+00> : !cir.double
+// CIR-AFTER-NEXT: %{{.+}} = cir.complex.create %[[#REAL]], %[[#IMAG]] : !cir.double -> !cir.complex<!cir.double>
+
+//      LLVM: %[[#REAL:]] = sitofp i32 %{{.+}} to double
+// LLVM-NEXT: %[[#A:]] = insertvalue { double, double } undef, double %[[#REAL]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[#A]], double 0.000000e+00, 1
+
+//      CIR-BEFORE: %[[#A:]] = cir.cast(float_to_int, %{{.+}} : !cir.double), !s32i
+// CIR-BEFORE-NEXT: %{{.+}} = cir.cast(int_to_complex, %[[#A]] : !s32i), !cir.complex<!s32i>
+
+//      CIR-AFTER: %[[#REAL:]] = cir.cast(float_to_int, %{{.+}} : !cir.double), !s32i
+// CIR-AFTER-NEXT: %[[#IMAG:]] = cir.const #cir.int<0> : !s32i
+// CIR-AFTER-NEXT: %{{.+}} = cir.complex.create %[[#REAL]], %[[#IMAG]] : !s32i -> !cir.complex<!s32i>
+
+//      LLVM: %[[#REAL:]] = fptosi double %{{.+}} to i32
+// LLVM-NEXT: %[[#A:]] = insertvalue { i32, i32 } undef, i32 %[[#REAL]], 0
+// LLVM-NEXT: %{{.+}} = insertvalue { i32, i32 } %[[#A]], i32 0, 1
+
+// CHECK: }
+
 void complex_to_scalar() {
   sd = (double)cd;
   si = (int)ci;
@@ -203,3 +252,7 @@ void complex_to_bool() {
 // LLVM-NEXT:   br label %{{.+}}
 
 // CHECK: }
+
+void promotion() {
+  cd = cf + cf;
+}

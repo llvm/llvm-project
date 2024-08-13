@@ -1701,14 +1701,15 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm_unreachable("NYI");
   case CK_CopyAndAutoreleaseBlockObject:
     llvm_unreachable("NYI");
+
   case CK_FloatingRealToComplex:
-    llvm_unreachable("NYI");
   case CK_FloatingComplexCast:
-    llvm_unreachable("NYI");
+  case CK_IntegralRealToComplex:
+  case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex:
-    llvm_unreachable("NYI");
   case CK_FloatingComplexToIntegralComplex:
-    llvm_unreachable("NYI");
+    llvm_unreachable("scalar cast to non-scalar value");
+
   case CK_ConstructorConversion:
     llvm_unreachable("NYI");
   case CK_ToUnion:
@@ -1854,6 +1855,29 @@ mlir::Value CIRGenFunction::buildScalarConversion(mlir::Value Src,
          "Invalid scalar expression to emit");
   return ScalarExprEmitter(*this, builder)
       .buildScalarConversion(Src, SrcTy, DstTy, Loc);
+}
+
+mlir::Value CIRGenFunction::buildComplexToScalarConversion(mlir::Value Src,
+                                                           QualType SrcTy,
+                                                           QualType DstTy,
+                                                           SourceLocation Loc) {
+  assert(SrcTy->isAnyComplexType() && hasScalarEvaluationKind(DstTy) &&
+         "Invalid complex -> scalar conversion");
+
+  auto ComplexElemTy = SrcTy->castAs<ComplexType>()->getElementType();
+  if (DstTy->isBooleanType()) {
+    auto Kind = ComplexElemTy->isFloatingType()
+                    ? mlir::cir::CastKind::float_complex_to_bool
+                    : mlir::cir::CastKind::int_complex_to_bool;
+    return builder.createCast(getLoc(Loc), Kind, Src, ConvertType(DstTy));
+  }
+
+  auto Kind = ComplexElemTy->isFloatingType()
+                  ? mlir::cir::CastKind::float_complex_to_real
+                  : mlir::cir::CastKind::int_complex_to_real;
+  auto Real =
+      builder.createCast(getLoc(Loc), Kind, Src, ConvertType(ComplexElemTy));
+  return buildScalarConversion(Real, ComplexElemTy, DstTy, Loc);
 }
 
 /// If the specified expression does not fold

@@ -128,7 +128,7 @@ public:
       return buildLoadOfLValue(E);
     return buildCast(E->getCastKind(), E->getSubExpr(), E->getType());
   }
-  mlir::Value VisitCastExpr(CastExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCastExpr(CastExpr *E);
   mlir::Value VisitCallExpr(const CallExpr *E);
   mlir::Value VisitStmtExpr(const StmtExpr *E) { llvm_unreachable("NYI"); }
 
@@ -522,6 +522,14 @@ mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
   llvm_unreachable("unknown cast resulting in complex value");
 }
 
+mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *E) {
+  if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
+    CGF.CGM.buildExplicitCastExprType(ECE, &CGF);
+  if (E->changesVolatileQualification())
+    return buildLoadOfLValue(E);
+  return buildCast(E->getCastKind(), E->getSubExpr(), E->getType());
+}
+
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
   if (E->getCallReturnType(CGF.getContext())->isReferenceType())
     return buildLoadOfLValue(E);
@@ -877,12 +885,22 @@ mlir::Value CIRGenFunction::buildPromotedComplexExpr(const Expr *E,
 
 mlir::Value CIRGenFunction::buildPromotedValue(mlir::Value result,
                                                QualType PromotionType) {
-  llvm_unreachable("complex type conversion is NYI");
+  assert(mlir::isa<mlir::cir::CIRFPTypeInterface>(
+             mlir::cast<mlir::cir::ComplexType>(result.getType())
+                 .getElementTy()) &&
+         "integral complex will never be promoted");
+  return builder.createCast(mlir::cir::CastKind::float_complex, result,
+                            ConvertType(PromotionType));
 }
 
 mlir::Value CIRGenFunction::buildUnPromotedValue(mlir::Value result,
-                                                 QualType PromotionType) {
-  llvm_unreachable("complex type conversion is NYI");
+                                                 QualType UnPromotionType) {
+  assert(mlir::isa<mlir::cir::CIRFPTypeInterface>(
+             mlir::cast<mlir::cir::ComplexType>(result.getType())
+                 .getElementTy()) &&
+         "integral complex will never be promoted");
+  return builder.createCast(mlir::cir::CastKind::float_complex, result,
+                            ConvertType(UnPromotionType));
 }
 
 mlir::Value CIRGenFunction::buildComplexExpr(const Expr *E) {
@@ -950,11 +968,4 @@ LValue CIRGenFunction::buildComplexCompoundAssignmentLValue(
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).buildCompoundAssignLValue(E, Op, Val);
-}
-
-mlir::Value CIRGenFunction::buildComplexToScalarConversion(mlir::Value Src,
-                                                           QualType SrcTy,
-                                                           QualType DstTy,
-                                                           SourceLocation Loc) {
-  llvm_unreachable("complex cast is NYI");
 }
