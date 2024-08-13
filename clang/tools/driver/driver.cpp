@@ -69,7 +69,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
-  void *P = (void*) (intptr_t) GetExecutablePath;
+  void *P = (void *)(intptr_t)GetExecutablePath;
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
@@ -102,10 +102,10 @@ static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
   }
 
   if (NameParts.TargetIsValid) {
-    const char *arr[] = {"-target", GetStableCStr(SavedStrings,
-                                                  NameParts.TargetPrefix)};
-    ArgVector.insert(ArgVector.begin() + InsertionPoint,
-                     std::begin(arr), std::end(arr));
+    const char *arr[] = {"-target",
+                         GetStableCStr(SavedStrings, NameParts.TargetPrefix)};
+    ArgVector.insert(ArgVector.begin() + InsertionPoint, std::begin(arr),
+                     std::end(arr));
   }
 }
 
@@ -225,6 +225,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   return 1;
 }
 
+// Cratels:clang driver的真正入口.main方法在build目录,是有cmake自动生成的.
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -235,6 +236,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
 
+  // clang-format off
+  // Cratels:初始化所有的target.如果在cmake configure的时候指定了target,这只会初始化对应的target,否则就初始化默认的targets.
+  // clang-format on
   llvm::InitializeAllTargets();
 
   llvm::BumpPtrAllocator A;
@@ -316,8 +320,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -423,8 +427,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     llvm::dbgs() << llvm::getBugReportMsg();
   if (FailingCommand != nullptr &&
-    TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
-                                                  *C, *FailingCommand))
+      TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                    *C, *FailingCommand))
     Res = 1;
 
   Diags.getClient()->finish();
