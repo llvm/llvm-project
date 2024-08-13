@@ -59,7 +59,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Yk/LivenessAnalysis.h"
 #include <map>
 
 #define DEBUG_TYPE "yk-control-point"
@@ -127,18 +126,6 @@ public:
         })) {
       ;
       Context.emitError("yk_mt_control_point() must be called inside a loop.");
-      return false;
-    }
-
-    // Find all live variables just before the call to the control point.
-    LivenessAnalysis LA(OldCtrlPointCall->getFunction());
-    const std::vector<Value *> LiveVals =
-        LA.getLiveVarsBefore(OldCtrlPointCall);
-    if (LiveVals.size() == 0) {
-      Context.emitError(
-          "The interpreter loop has no live variables!\n"
-          "ykllvm doesn't support this scenario, as such an interpreter would "
-          "make little sense.");
       return false;
     }
 
