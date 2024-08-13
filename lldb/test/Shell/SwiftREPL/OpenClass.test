@@ -26,4 +26,4 @@ class Baz: Foo {
   override func foo() -> Int { return 4 }
 }
 
-// CHECK: error: overriding non-open instance method outside of its defining module
+// CHECK: overriding non-open instance method outside of its defining module

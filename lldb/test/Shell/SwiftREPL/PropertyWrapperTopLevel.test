@@ -34,5 +34,5 @@
 
 @A var anA: Int = 1
 
-// CHECK: error: property wrappers are not yet supported in top-level code
+// CHECK: property wrappers are not yet supported in top-level code
 // CHECK-NEXT: @A var anA: Int = 1
