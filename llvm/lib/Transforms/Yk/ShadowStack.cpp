@@ -156,12 +156,21 @@ public:
             size_t AllocaSize = *AllocaSizeInBits / sizeof(uintptr_t);
             size_t Align = AI.getAlign().value();
             Offset = int((Offset + (Align - 1)) / Align) * Align;
-            GetElementPtrInst *GEP = GetElementPtrInst::Create(
-                Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "",
-                cast<Instruction>(&AI));
-            Builder.SetInsertPoint(GEP);
-            Builder.CreateBitCast(GEP, AI.getAllocatedType()->getPointerTo());
-            cast<Value>(I).replaceAllUsesWith(GEP);
+            if (Offset == 0) {
+              // If the offset is 0, we don't want to create `ptr_add
+              // %shadowstack, 0` as later parts of the pipeline are clever
+              // enough to recognise that as an alias: instead simply replace
+              // this variable with a direct reference to the shadow stack
+              // pointer.
+              cast<Value>(I).replaceAllUsesWith(SSPtr);
+            } else {
+              GetElementPtrInst *GEP = GetElementPtrInst::Create(
+                  Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "",
+                  cast<Instruction>(&AI));
+              Builder.SetInsertPoint(GEP);
+              Builder.CreateBitCast(GEP, AI.getAllocatedType()->getPointerTo());
+              cast<Value>(I).replaceAllUsesWith(GEP);
+            }
             RemoveAllocas.push_back(cast<Instruction>(&AI));
             Offset += AllocaSize;
           } else if (isa<CallInst>(I)) {
