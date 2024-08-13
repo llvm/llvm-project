@@ -1,4 +1,4 @@
-// RUN: set +o pipefail; clang -emit-llvm -c %s -g -o %t
+// RUN: clang -emit-llvm -c %s -g -o %t
 // RUN: llc %t 2>&1 | FileCheck %s
 void bad_asm() {
   asm volatile ("BAD SYNTAX$%"); // CHECK: inline-asm-debuginfo.c:4:16: <inline asm>:1:14: error: unknown token in expression
