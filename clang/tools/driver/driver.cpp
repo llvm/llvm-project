@@ -205,16 +205,27 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  // Cratels:再次展开 response file并将解析出来的option放进 ArgV 中
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
+
   StringRef Tool = ArgV[1];
+
+  // Cratels: 详细请看本目录 函数指针转换.md
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
+  // clang-format off
+  // Cratels:使用该 option 时 clang driver退化为 clang 前端，只进行前端的一些 action，包括打印 AST 等 action
+  // clang-format on
   if (Tool == "-cc1")
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+
+  // Cratels:处理汇编文件
   if (Tool == "-cc1as")
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
+
+  // Cratels:
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
@@ -270,6 +281,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
+  // Cratels:指定-cc1系列 option时的处理逻辑
   if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
