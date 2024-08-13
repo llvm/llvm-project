@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-454: error:
+# ERROR-COUNT-466: error:
 # ERROR-NOT: error:
 ## Condition flags
 
@@ -1376,3 +1376,42 @@
 # CHECK: ccmptq	{dfv=}	%r9, %r15
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x39,0xcf]
          {evex} cmpq	%r9, %r15
+
+## Condition Code Aliases
+
+# CHECK: ccmpbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpcl {dfv=of} %ecx, %edx
+# CHECK: ccmpbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
+         ccmpnael {dfv=of} %ecx, %edx
+# CHECK: ccmpael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpnbl {dfv=of} %ecx, %edx
+# CHECK: ccmpael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
+         ccmpncl {dfv=of} %ecx, %edx
+# CHECK: ccmpel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x39,0xca]
+         ccmpzl {dfv=of} %ecx, %edx
+# CHECK: ccmpnel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x39,0xca]
+         ccmpnzl {dfv=of} %ecx, %edx
+# CHECK: ccmpal {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x39,0xca]
+         ccmpnbel {dfv=of} %ecx, %edx
+# CHECK: ccmpll {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x39,0xca]
+         ccmpngel {dfv=of} %ecx, %edx
+# CHECK: ccmpgel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x39,0xca]
+         ccmpnll {dfv=of} %ecx, %edx
+# CHECK: ccmplel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x39,0xca]
+         ccmpngl {dfv=of} %ecx, %edx
+# CHECK: ccmpgl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x39,0xca]
+         ccmpnlel {dfv=of} %ecx, %edx
+# CHECK: ccmpbel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x39,0xca]
+         ccmpnal {dfv=of} %ecx, %edx
