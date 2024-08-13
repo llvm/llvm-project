@@ -1997,10 +1997,10 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
 
   Value *InputA;
   Value *InputB;
-  if (match(I, m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
-                   m_Value(),
-                   m_OneUse(m_Mul(m_OneUse(m_ZExtOrSExt(m_Value(InputA))),
-                                  m_OneUse(m_ZExtOrSExt(m_Value(InputB)))))))) {
+  if (match(I,
+            m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+                m_Value(), m_OneUse(m_Mul(m_ZExtOrSExt(m_Value(InputA)),
+                                          m_ZExtOrSExt(m_Value(InputB))))))) {
     VectorType *InputAType = dyn_cast<VectorType>(InputA->getType());
     VectorType *InputBType = dyn_cast<VectorType>(InputB->getType());
     if (!InputAType || !InputBType)
