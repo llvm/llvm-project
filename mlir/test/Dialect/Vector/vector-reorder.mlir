@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-reorder-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-sink-patterns -split-input-file | FileCheck %s
 
 //-----------------------------------------------------------------------------
 // [Pattern: ReorderElementwiseOpsOnBroadcast]

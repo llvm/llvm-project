@@ -144,13 +144,22 @@ void populateVectorTransferFullPartialPatterns(
 void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
-/// Patterns that remove redundant vector broadcasts.
-void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
-                                         PatternBenefit benefit = 1);
-
-/// Patterns that re-order transpose Ops.
-void populateReoderVectorTransposePatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
+/// Patterns that remove redundant Vector Ops by re-ordering them with
+/// e.g. elementwise Ops:
+/// ```
+/// %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+/// %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+/// %r = arith.addf %at, %bt : vector<2x4xf32>
+/// ```
+/// gets converted to:
+/// ```
+/// %0 = arith.addf %a, %b : vector<4x2xf32>
+/// %r = vector.transpose %0, [1, 0] : vector<2x4xf32>
+/// ```
+/// At the moment, these patterns are limited to vector.broadcast and
+/// vector.transpose.
+void populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
+                                   PatternBenefit benefit = 1);
 
 /// Patterns that fold chained vector reductions. These patterns assume that
 /// elementwise operations (e.g., `arith.addf` with vector operands) are

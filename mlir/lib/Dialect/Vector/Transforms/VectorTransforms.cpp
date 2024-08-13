@@ -2042,15 +2042,10 @@ void mlir::vector::
                                                    benefit);
 }
 
-void mlir::vector::populateSinkVectorBroadcastPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
-      patterns.getContext(), benefit);
-}
-
-void mlir::vector::populateReoderVectorTransposePatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderElementwiseOpsOnTranspose>(patterns.getContext(),
+void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit) {
+  patterns.add<ReorderElementwiseOpsOnTranspose, ReorderCastOpsOnBroadcast,
+               ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
                                                  benefit);
 }
 

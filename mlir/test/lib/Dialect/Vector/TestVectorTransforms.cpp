@@ -374,19 +374,18 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 };
 
-struct TestVectorReorderPatterns
-    : public PassWrapper<TestVectorReorderPatterns,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorReorderPatterns)
+struct TestVectorSinkPatterns
+    : public PassWrapper<TestVectorSinkPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorSinkPatterns)
 
-  TestVectorReorderPatterns() = default;
-  TestVectorReorderPatterns(const TestVectorReorderPatterns &pass) = default;
+  TestVectorSinkPatterns() = default;
+  TestVectorSinkPatterns(const TestVectorSinkPatterns &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, affine::AffineDialect>();
   }
 
-  StringRef getArgument() const final { return "test-vector-reorder-patterns"; }
+  StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
     return "Test lowering patterns that eliminate redundant brodacast "
@@ -395,8 +394,7 @@ struct TestVectorReorderPatterns
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateSinkVectorBroadcastPatterns(patterns);
-    populateReoderVectorTransposePatterns(patterns);
+    populateSinkVectorOpsPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -921,7 +919,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
-  PassRegistration<TestVectorReorderPatterns>();
+  PassRegistration<TestVectorSinkPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
