@@ -99,8 +99,6 @@ public:
   virtual void sortRelocs(const MCAssembler &Asm,
                           std::vector<ELFRelocationEntry> &Relocs);
 
-  virtual void addTargetSectionFlags(MCContext &Ctx, MCSectionELF &Sec);
-
   /// \name Accessors
   /// @{
   uint8_t getOSABI() const { return OSABI; }

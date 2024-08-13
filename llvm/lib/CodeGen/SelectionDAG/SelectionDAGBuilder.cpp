@@ -1952,7 +1952,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     return DAG.getMDNode(cast<MDNode>(MD->getMetadata()));
 
   if (const auto *BB = dyn_cast<BasicBlock>(V))
-    return DAG.getBasicBlock(FuncInfo.MBBMap[BB]);
+    return DAG.getBasicBlock(FuncInfo.getMBB(BB));
 
   llvm_unreachable("Can't get register for value!");
 }
@@ -1972,7 +1972,7 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
 
 void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
-  MachineBasicBlock *TargetMBB = FuncInfo.MBBMap[I.getSuccessor()];
+  MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
   TargetMBB->setIsEHCatchretTarget(true);
   DAG.getMachineFunction().setHasEHCatchret(true);
@@ -2000,7 +2000,7 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   else
     SuccessorColor = cast<Instruction>(ParentPad)->getParent();
   assert(SuccessorColor && "No parent funclet for catchret!");
-  MachineBasicBlock *SuccessorColorMBB = FuncInfo.MBBMap[SuccessorColor];
+  MachineBasicBlock *SuccessorColorMBB = FuncInfo.getMBB(SuccessorColor);
   assert(SuccessorColorMBB && "No MBB for SuccessorColor!");
 
   // Create the terminator node.
@@ -2056,14 +2056,14 @@ static void findWasmUnwindDestinations(
     const Instruction *Pad = EHPadBB->getFirstNonPHI();
     if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
+      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations. We don't
       // continue to the unwind destination of the catchswitch for wasm.
       for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
-        UnwindDests.emplace_back(FuncInfo.MBBMap[CatchPadBB], Prob);
+        UnwindDests.emplace_back(FuncInfo.getMBB(CatchPadBB), Prob);
         UnwindDests.back().first->setIsEHScopeEntry();
       }
       break;
@@ -2105,19 +2105,19 @@ static void findUnwindDestinations(
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
+      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       break;
     } else if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads. Cleanups are always funclet entries for all known
       // personalities.
-      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
+      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
       UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations.
       for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
-        UnwindDests.emplace_back(FuncInfo.MBBMap[CatchPadBB], Prob);
+        UnwindDests.emplace_back(FuncInfo.getMBB(CatchPadBB), Prob);
         // For MSVC++ and the CLR, catchblocks are funclets and need prologues.
         if (IsMSVCCXX || IsCoreCLR)
           UnwindDests.back().first->setIsEHFuncletEntry();
@@ -2777,7 +2777,7 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
   MachineBasicBlock *BrMBB = FuncInfo.MBB;
 
   // Update machine-CFG edges.
-  MachineBasicBlock *Succ0MBB = FuncInfo.MBBMap[I.getSuccessor(0)];
+  MachineBasicBlock *Succ0MBB = FuncInfo.getMBB(I.getSuccessor(0));
 
   if (I.isUnconditional()) {
     // Update machine-CFG edges.
@@ -2799,7 +2799,7 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
   // If this condition is one of the special cases we handle, do special stuff
   // now.
   const Value *CondVal = I.getCondition();
-  MachineBasicBlock *Succ1MBB = FuncInfo.MBBMap[I.getSuccessor(1)];
+  MachineBasicBlock *Succ1MBB = FuncInfo.getMBB(I.getSuccessor(1));
 
   // If this is a series of conditions that are or'd or and'd together, emit
   // this as a sequence of branches instead of setcc's with and/or operations.
@@ -2977,7 +2977,7 @@ void SelectionDAGBuilder::visitJumpTable(SwitchCG::JumpTable &JT) {
   // Emit the code for the jump table
   assert(JT.SL && "Should set SDLoc for SelectionDAG!");
   assert(JT.Reg != -1U && "Should lower JT Header first!");
-  EVT PTy = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+  EVT PTy = DAG.getTargetLoweringInfo().getJumpTableRegTy(DAG.getDataLayout());
   SDValue Index = DAG.getCopyFromReg(getControlRoot(), *JT.SL, JT.Reg, PTy);
   SDValue Table = DAG.getJumpTable(JT.JTI, PTy);
   SDValue BrJumpTable = DAG.getNode(ISD::BR_JT, *JT.SL, MVT::Other,
@@ -3005,12 +3005,13 @@ void SelectionDAGBuilder::visitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SwitchOp = DAG.getZExtOrTrunc(Sub, dl, TLI.getPointerTy(DAG.getDataLayout()));
+  SwitchOp =
+      DAG.getZExtOrTrunc(Sub, dl, TLI.getJumpTableRegTy(DAG.getDataLayout()));
 
   unsigned JumpTableReg =
-      FuncInfo.CreateReg(TLI.getPointerTy(DAG.getDataLayout()));
-  SDValue CopyTo = DAG.getCopyToReg(getControlRoot(), dl,
-                                    JumpTableReg, SwitchOp);
+      FuncInfo.CreateReg(TLI.getJumpTableRegTy(DAG.getDataLayout()));
+  SDValue CopyTo =
+      DAG.getCopyToReg(getControlRoot(), dl, JumpTableReg, SwitchOp);
   JT.Reg = JumpTableReg;
 
   if (!JTH.FallthroughUnreachable) {
@@ -3317,9 +3318,9 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Retrieve successors. Look through artificial IR level blocks like
   // catchswitch for successors.
-  MachineBasicBlock *Return = FuncInfo.MBBMap[I.getSuccessor(0)];
+  MachineBasicBlock *Return = FuncInfo.getMBB(I.getSuccessor(0));
   const BasicBlock *EHPadBB = I.getSuccessor(1);
-  MachineBasicBlock *EHPadMBB = FuncInfo.MBBMap[EHPadBB];
+  MachineBasicBlock *EHPadMBB = FuncInfo.getMBB(EHPadBB);
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
@@ -3427,13 +3428,13 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   // Retrieve successors.
   SmallPtrSet<BasicBlock *, 8> Dests;
   Dests.insert(I.getDefaultDest());
-  MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
+  MachineBasicBlock *Return = FuncInfo.getMBB(I.getDefaultDest());
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
   for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
     BasicBlock *Dest = I.getIndirectDest(i);
-    MachineBasicBlock *Target = FuncInfo.MBBMap[Dest];
+    MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
     Target->setIsInlineAsmBrIndirectTarget();
     Target->setMachineBlockAddressTaken();
     Target->setLabelMustBeEmitted();
@@ -3525,7 +3526,7 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
     if (!Inserted)
         continue;
 
-    MachineBasicBlock *Succ = FuncInfo.MBBMap[BB];
+    MachineBasicBlock *Succ = FuncInfo.getMBB(BB);
     addSuccessorWithProb(IndirectBrMBB, Succ);
   }
   IndirectBrMBB->normalizeSuccProbs();
@@ -4287,6 +4288,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   SDValue N = getValue(Op0);
   SDLoc dl = getCurSDLoc();
   auto &TLI = DAG.getTargetLoweringInfo();
+  GEPNoWrapFlags NW = cast<GEPOperator>(I).getNoWrapFlags();
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -4314,7 +4316,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
         SDNodeFlags Flags;
-        if (int64_t(Offset) >= 0 && cast<GEPOperator>(I).isInBounds())
+        if (NW.hasNoUnsignedWrap() ||
+            (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags.setNoUnsignedWrap(true);
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
@@ -4355,7 +4358,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
         SDNodeFlags Flags;
-        if (Offs.isNonNegative() && cast<GEPOperator>(I).isInBounds())
+        if (NW.hasNoUnsignedWrap() ||
+            (Offs.isNonNegative() && NW.hasNoUnsignedSignedWrap()))
           Flags.setNoUnsignedWrap(true);
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
@@ -7448,6 +7452,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         break;
       default: llvm_unreachable("unknown trap intrinsic");
       }
+      DAG.addNoMergeSiteInfo(DAG.getRoot().getNode(),
+                             I.hasFnAttr(Attribute::NoMerge));
       return;
     }
     TargetLowering::ArgListTy Args;
@@ -7464,7 +7470,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getExternalSymbol(TrapFuncName.data(),
                               TLI.getPointerTy(DAG.getDataLayout())),
         std::move(Args));
-
+    CLI.NoMerge = I.hasFnAttr(Attribute::NoMerge);
     std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
     DAG.setRoot(Result.second);
     return;
@@ -8626,7 +8632,7 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
   unsigned CallSiteIndex = FuncInfo.getCurrentCallSite();
   if (CallSiteIndex) {
     MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
-    LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
+    LPadToCallSiteMap[FuncInfo.getMBB(EHPadBB)].push_back(CallSiteIndex);
 
     // Now that the call site is handled, stop tracking it.
     FuncInfo.setCurrentCallSite(0);
@@ -8657,7 +8663,7 @@ SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
     EHInfo->addIPToStateRange(II, BeginLabel, EndLabel);
   } else if (!isScopedEHPersonality(Pers)) {
     assert(EHPadBB);
-    MF.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
+    MF.addInvoke(FuncInfo.getMBB(EHPadBB), BeginLabel, EndLabel);
   }
 
   return Chain;
@@ -11824,7 +11830,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
   // block.
   for (const BasicBlock *SuccBB : successors(LLVMBB->getTerminator())) {
     if (!isa<PHINode>(SuccBB->begin())) continue;
-    MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];
+    MachineBasicBlock *SuccMBB = FuncInfo.getMBB(SuccBB);
 
     // If this terminator has multiple identical successors (common for
     // switches), only handle each succ once.
@@ -12304,7 +12310,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   CaseClusterVector Clusters;
   Clusters.reserve(SI.getNumCases());
   for (auto I : SI.cases()) {
-    MachineBasicBlock *Succ = FuncInfo.MBBMap[I.getCaseSuccessor()];
+    MachineBasicBlock *Succ = FuncInfo.getMBB(I.getCaseSuccessor());
     const ConstantInt *CaseVal = I.getCaseValue();
     BranchProbability Prob =
         BPI ? BPI->getEdgeProbability(SI.getParent(), I.getSuccessorIndex())
@@ -12312,7 +12318,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     Clusters.push_back(CaseCluster::range(CaseVal, CaseVal, Succ, Prob));
   }
 
-  MachineBasicBlock *DefaultMBB = FuncInfo.MBBMap[SI.getDefaultDest()];
+  MachineBasicBlock *DefaultMBB = FuncInfo.getMBB(SI.getDefaultDest());
 
   // Cluster adjacent cases with the same destination. We do this at all
   // optimization levels because it's cheap to do and will make codegen faster
@@ -12366,7 +12372,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   // Scale the branchprobability for DefaultMBB if the peel occurs and
   // DefaultMBB is not replaced.
   if (PeeledCaseProb != BranchProbability::getZero() &&
-      DefaultMBB == FuncInfo.MBBMap[SI.getDefaultDest()])
+      DefaultMBB == FuncInfo.getMBB(SI.getDefaultDest()))
     DefaultProb = scaleCaseProbality(DefaultProb, PeeledCaseProb);
   WorkList.push_back(
       {PeeledSwitchMBB, First, Last, nullptr, nullptr, DefaultProb});

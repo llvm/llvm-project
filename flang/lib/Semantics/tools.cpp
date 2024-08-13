@@ -866,7 +866,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
 
 bool MayRequireFinalization(const DerivedTypeSpec &derived) {
   return IsFinalizable(derived) ||
-      FindPolymorphicAllocatableUltimateComponent(derived);
+      FindPolymorphicAllocatablePotentialComponent(derived);
 }
 
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
@@ -1404,11 +1404,11 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
   return std::find_if(directs.begin(), directs.end(), IsAllocatableOrPointer);
 }
 
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
   return std::find_if(
-      ultimates.begin(), ultimates.end(), IsPolymorphicAllocatable);
+      potentials.begin(), potentials.end(), IsPolymorphicAllocatable);
 }
 
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,

@@ -106,6 +106,11 @@ Changes to the RISC-V Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+* Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
+* ``-mcpu=sifive-p470`` was added.
+* Fixed length vector support using RVV instructions now requires VLEN>=64. This
+  means Zve32x and Zve32f will also require Zvl64b. The prior support was
+  largely untested.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -128,6 +133,8 @@ Changes to the X86 Backend
   incompatible, calling convention ABI. Such functions are not
   generally seen in the wild (Clang never generates them!), so this is
   not expected to result in real-world compatibility problems.
+
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
 
 Changes to the OCaml bindings
 -----------------------------

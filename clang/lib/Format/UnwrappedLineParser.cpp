@@ -2155,12 +2155,16 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   // Track these as they do not require line breaks to be introduced.
   bool HasSpecialAccessor = false;
   bool IsTrivialPropertyAccessor = true;
+  bool HasAttribute = false;
   while (!eof()) {
-    if (Tok->isAccessSpecifierKeyword() ||
-        Tok->isOneOf(tok::semi, Keywords.kw_internal, Keywords.kw_get,
-                     Keywords.kw_init, Keywords.kw_set)) {
-      if (Tok->isOneOf(Keywords.kw_get, Keywords.kw_init, Keywords.kw_set))
+    if (const bool IsAccessorKeyword =
+            Tok->isOneOf(Keywords.kw_get, Keywords.kw_init, Keywords.kw_set);
+        IsAccessorKeyword || Tok->isAccessSpecifierKeyword() ||
+        Tok->isOneOf(tok::l_square, tok::semi, Keywords.kw_internal)) {
+      if (IsAccessorKeyword)
         HasSpecialAccessor = true;
+      else if (Tok->is(tok::l_square))
+        HasAttribute = true;
       Tok = Tokens->getNextToken();
       continue;
     }
@@ -2169,7 +2173,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
     break;
   }
 
-  if (!HasSpecialAccessor) {
+  if (!HasSpecialAccessor || HasAttribute) {
     Tokens->setPosition(StoredPosition);
     return false;
   }
@@ -2534,6 +2538,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
   auto *LeftParen = FormatTok;
+  bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
   const bool MightBeStmtExpr = Tokens->peekNextToken()->is(tok::l_brace);
@@ -2553,10 +2558,14 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         const auto *Next = Tokens->peekNextToken();
         const bool DoubleParens =
             Prev && Prev->is(tok::l_paren) && Next && Next->is(tok::r_paren);
+        const bool CommaSeparated =
+            !DoubleParens && Prev && Prev->isOneOf(tok::l_paren, tok::comma) &&
+            Next && Next->isOneOf(tok::comma, tok::r_paren);
         const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
-        const bool Blacklisted =
+        const bool Excluded =
             PrevPrev &&
             (PrevPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
+             SeenComma ||
              (SeenEqual &&
               (PrevPrev->isOneOf(tok::kw_if, tok::kw_while) ||
                PrevPrev->endsSequence(tok::kw_constexpr, tok::kw_if))));
@@ -2566,7 +2575,8 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
              (!NestedLambdas.empty() && !NestedLambdas.back())) &&
             Prev && Prev->isOneOf(tok::kw_return, tok::kw_co_return) && Next &&
             Next->is(tok::semi);
-        if ((DoubleParens && !Blacklisted) || ReturnParens) {
+        if ((DoubleParens && !Excluded) || (CommaSeparated && !SeenComma) ||
+            ReturnParens) {
           LeftParen->Optional = true;
           FormatTok->Optional = true;
         }
@@ -2594,6 +2604,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
         parseBracedList();
       }
+      break;
+    case tok::comma:
+      SeenComma = true;
+      nextToken();
       break;
     case tok::ellipsis:
       MightBeFoldExpr = true;

@@ -186,18 +186,18 @@ public:
                       std::move(Emitter)),
         LastEMS(EMS_None) {
     auto *TO = getContext().getTargetOptions();
-    OptimizeMapSyms = TO && TO->OptimizeMapSyms;
+    ImplicitMapSyms = TO && TO->ImplicitMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
     // Save the mapping symbol state for potential reuse when revisiting the
-    // section. When OptimizeMapSyms is true, the initial state is
+    // section. When ImplicitMapSyms is true, the initial state is
     // EMS_A64 for text sections and EMS_Data for the others.
     LastMappingSymbols[getCurrentSection().first] = LastEMS;
     auto It = LastMappingSymbols.find(Section);
     if (It != LastMappingSymbols.end())
       LastEMS = It->second;
-    else if (OptimizeMapSyms)
+    else if (ImplicitMapSyms)
       LastEMS = Section->isText() ? EMS_A64 : EMS_Data;
     else
       LastEMS = EMS_None;
@@ -289,7 +289,7 @@ private:
 
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
-  bool OptimizeMapSyms;
+  bool ImplicitMapSyms;
 };
 } // end anonymous namespace
 
@@ -312,14 +312,14 @@ void AArch64TargetELFStreamer::finish() {
   MCContext &Ctx = S.getContext();
   auto &Asm = S.getAssembler();
 
-  // If OptimizeMapSyms is specified, ensure that text sections end with
+  // If ImplicitMapSyms is specified, ensure that text sections end with
   // the A64 state while non-text sections end with the data state. When
   // sections are combined by the linker, the subsequent section will start with
   // the right state. The ending mapping symbol is added right after the last
   // symbol relative to the section. When a dumb linker combines (.text.0; .word
   // 0) and (.text.1; .word 0), the ending $x of .text.0 precedes the $d of
   // .text.1, even if they have the same address.
-  if (S.OptimizeMapSyms) {
+  if (S.ImplicitMapSyms) {
     auto &Syms = Asm.getSymbols();
     const size_t NumSyms = Syms.size();
     DenseMap<MCSection *, MCSymbol *> EndMappingSym;

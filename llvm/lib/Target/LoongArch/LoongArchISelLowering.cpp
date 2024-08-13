@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -5572,6 +5573,24 @@ SDValue LoongArchTargetLowering::LowerReturn(
   return DAG.getNode(LoongArchISD::RET, DL, MVT::Other, RetOps);
 }
 
+bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
+                                               EVT VT) const {
+  if (!Subtarget.hasExtLSX())
+    return false;
+
+  if (VT == MVT::f32) {
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7e07ffff;
+    return (masked == 0x3e000000 || masked == 0x40000000);
+  }
+
+  if (VT == MVT::f64) {
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7fc0ffffffffffff;
+    return (masked == 0x3fc0000000000000 || masked == 0x4000000000000000);
+  }
+
+  return false;
+}
+
 bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                            bool ForCodeSize) const {
   // TODO: Maybe need more checks here after vector extension is supported.
@@ -5579,7 +5598,7 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
     return false;
-  return (Imm.isZero() || Imm.isExactlyValue(+1.0));
+  return (Imm.isZero() || Imm.isExactlyValue(1.0) || isFPImmVLDILegal(Imm, VT));
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
@@ -6160,5 +6179,25 @@ bool LoongArchTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
   if (Subtarget.isSoftFPABI() && (Type.isFloatingPoint() && !Type.isVector() &&
                                   Type.getSizeInBits() < Subtarget.getGRLen()))
     return false;
+  return true;
+}
+
+// memcpy, and other memory intrinsics, typically tries to use wider load/store
+// if the source/dest is aligned and the copy size is large enough. We therefore
+// want to align such objects passed to memory intrinsics.
+bool LoongArchTargetLowering::shouldAlignPointerArgs(CallInst *CI,
+                                                     unsigned &MinSize,
+                                                     Align &PrefAlign) const {
+  if (!isa<MemIntrinsic>(CI))
+    return false;
+
+  if (Subtarget.is64Bit()) {
+    MinSize = 8;
+    PrefAlign = Align(8);
+  } else {
+    MinSize = 4;
+    PrefAlign = Align(4);
+  }
+
   return true;
 }

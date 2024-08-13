@@ -304,6 +304,8 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+extern cl::opt<std::string> UseCtxProfile;
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
@@ -1169,15 +1171,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
-  assert(
-      !(IsPGOInstrGen && PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) &&
-      "Enabling both instrumented FDO and contextual instrumentation is not "
-      "supported.");
+  assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
+         "Enabling both instrumented PGO and contextual instrumentation is not "
+         "supported.");
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
-                            PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+                            PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
+  const bool IsCtxProfUse = !UseCtxProfile.empty() && !PGOOpt &&
+                            Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
-  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen)
+  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
+      IsCtxProfUse)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1187,8 +1191,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
-  } else if (IsCtxProfGen) {
+  } else if (IsCtxProfGen || IsCtxProfUse) {
     MPM.addPass(PGOInstrumentationGen(false));
+    // In pre-link, we just want the instrumented IR. We use the contextual
+    // profile in the post-thinlink phase.
+    // The instrumentation will be removed in post-thinlink after IPO.
+    if (IsCtxProfUse)
+      return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   }
@@ -1655,6 +1664,13 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // can.
   MPM.addPass(buildModuleSimplificationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPreLink));
+  // In pre-link, for ctx prof use, we stop here with an instrumented IR. We let
+  // thinlto use the contextual info to perform imports; then use the contextual
+  // profile in the post-thinlink phase.
+  if (!UseCtxProfile.empty() && !PGOOpt) {
+    addRequiredLTOPreLinkPasses(MPM);
+    return MPM;
+  }
 
   // Run partial inlining pass to partially inline functions that have
   // large bodies.

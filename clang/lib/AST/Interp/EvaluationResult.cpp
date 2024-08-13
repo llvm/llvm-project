@@ -10,7 +10,9 @@
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include <iterator>
 
 namespace clang {
 namespace interp {
@@ -122,19 +124,18 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   }
 
   // Check Fields in all bases
-  for (const Record::Base &B : R->bases()) {
+  for (auto [I, B] : llvm::enumerate(R->bases())) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
       const Descriptor *Desc = BasePtr.getDeclDesc();
-      if (Desc->asDecl())
-        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-                 diag::note_constexpr_uninitialized_base)
+      if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
+        const auto &BS = *std::next(CD->bases_begin(), I);
+        S.FFDiag(BS.getBaseTypeLoc(), diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType() << BS.getSourceRange();
+      } else {
+        S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
             << B.Desc->getType();
-      else
-        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
-                 diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-
+      }
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
