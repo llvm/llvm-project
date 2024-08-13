@@ -222,3 +222,77 @@ entry:
   %cmp = icmp ugt <4 x i32> %vbsl, <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i1> %cmp
 }
+
+define void @test7() {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i64> @llvm.vector.insert.v16i64.v8i64(<16 x i64> poison, <8 x i64> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i64> @llvm.vector.insert.v16i64.v8i64(<16 x i64> [[TMP1]], <8 x i64> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i64> [[TMP2]] to <16 x i16>
+; CHECK-NEXT:    store <16 x i16> [[TMP3]], ptr null, align 2
+; CHECK-NEXT:    ret void
+;
+  %1 = getelementptr i8, ptr null, i64 16
+  %2 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %2, ptr %1, align 2
+  %3 = trunc <8 x i64> zeroinitializer to <8 x i16>
+  store <8 x i16> %3, ptr null, align 2
+  ret void
+}
+
+define void @test8() {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> poison, <2 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP0]], <2 x float> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP1]], <2 x float> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP2]], <2 x float> zeroinitializer, i64 6)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP4]], <2 x float> zeroinitializer, i64 2)
+; CHECK-NEXT:    br i1 false, label [[FOR0:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for0:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x float> [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP7]], [[FOR_BODY]] ], [ [[TMP5]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP8]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    br i1 false, label [[FOR0]], label [[FOR_BODY]]
+;
+entry:
+  br i1 false, label %for0, label %for.body
+
+for0:
+  %0 = phi <2 x float> [ zeroinitializer, %entry ], [ %4, %for.body ]
+  %1 = phi <2 x float> [ zeroinitializer, %entry ], [ %5, %for.body ]
+  %2 = phi <2 x float> [ zeroinitializer, %entry ], [ %4, %for.body ]
+  %3 = phi <2 x float> [ zeroinitializer, %entry ], [ %5, %for.body ]
+  ret void
+
+for.body:
+  %4 = phi <2 x float> [ %4, %for.body ], [ zeroinitializer, %entry ]
+  %5 = phi <2 x float> [ %5, %for.body ], [ zeroinitializer, %entry ]
+  br i1 false, label %for0, label %for.body
+}
+
+define void @test9() {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP0]], <4 x i16> zeroinitializer, i64 4)
+; CHECK-NEXT:    br label [[FOR_BODY13:%.*]]
+; CHECK:       for.body13:
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr null, align 4
+; CHECK-NEXT:    br label [[FOR_BODY13]]
+;
+entry:
+  br label %for.body13
+
+for.body13:                                       ; preds = %for.body13, %entry
+  %vmovl.i111 = sext <4 x i16> zeroinitializer to <4 x i32>
+  %vmovl.i110 = sext <4 x i16> zeroinitializer to <4 x i32>
+  store <4 x i32> %vmovl.i111, ptr null, align 4
+  %add.ptr29 = getelementptr i8, ptr null, i64 16
+  store <4 x i32> %vmovl.i110, ptr %add.ptr29, align 4
+  br label %for.body13
+}
