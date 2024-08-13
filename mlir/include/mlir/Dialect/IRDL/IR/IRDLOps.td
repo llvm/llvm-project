@@ -182,7 +182,7 @@ def IRDL_OperationOp : IRDL_Op<"operation",
 
       irdl.operation @norm {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%0)
         irdl.operands(%1)
       }
@@ -216,7 +216,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
 
       irdl.operation @mul {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%1)
         irdl.operands(%1, %1)
       }
@@ -262,7 +262,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
       irdl.operation @get_values {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.results(%0, %0)
         irdl.operands(%1)
       }
@@ -472,7 +472,7 @@ def IRDL_BaseOp : IRDL_ConstraintOp<"base",
       }
 
       irdl.type @complex_wrapper {
-        %0 = irdl.base @complex
+        %0 = irdl.base @cmath::@complex
         irdl.parameters(%0)
       }
     }
@@ -521,7 +521,7 @@ def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
 
       irdl.operation @norm {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.operands(%1)
         irdl.results(%0)
       }
@@ -574,8 +574,8 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
     Example:
 
     ```mlir
-    irdl.dialect cmath {
-      irdl.type complex {
+    irdl.dialect @cmath {
+      irdl.type @complex {
         %0 = irdl.is i32
         %1 = irdl.is i64
         %2 = irdl.is f32
@@ -588,7 +588,7 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
 
     The above program defines a type `complex` inside the dialect `cmath` that
     can have a single type parameter that can be either `i32`, `i64`, `f32` or
-    `f32`.
+    `f64`.
   }];
 
   let arguments = (ins Variadic<IRDL_AttributeType>:$args);
@@ -607,8 +607,8 @@ def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
     Example:
 
     ```mlir
-    irdl.dialect cmath {
-      irdl.type complex_f32 {
+    irdl.dialect @cmath {
+      irdl.type @complex_f32 {
         %0 = irdl.is i32
         %1 = irdl.is f32
         %2 = irdl.any_of(%0, %1) // is 32-bit
