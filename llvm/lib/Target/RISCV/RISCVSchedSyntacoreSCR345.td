@@ -1,4 +1,4 @@
-//==- RISCVSchedSyntacoreSCR345.td - Syntacore SCR3, SCR4, SCR5 Scheduling Definitions -*- tablegen -*-=//
+//==- RISCVSchedSyntacoreSCR345.td - SCR3/4/5 Sched Defs -----*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,13 @@
 
 //===----------------------------------------------------------------------===//
 
-// This file covers scheduling models for Syntacore SCR3, SCR4 and SCR5 processors.
+// This file covers scheduling models for Syntacore SCR3, SCR4 and SCR5
+// processors.
 // Configurations:
 // * SCR3 rv32imc and rv64imac, overview https://syntacore.com/products/scr3
 // * SCR4 rv32imfdc and rv64imafdc, overview https://syntacore.com/products/scr4
-// * SCR5 rv32imafdc and rv64imafdc, overview https://syntacore.com/products/scr5
+// * SCR5 rv32imafdc and rv64imafdc, overview
+//   https://syntacore.com/products/scr5
 
 // SCR3-5 are single-issue in-order processors
 class SyntacoreSchedModel : SchedMachineModel {
