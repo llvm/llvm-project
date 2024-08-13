@@ -47,7 +47,6 @@
 // is shown as C code for easy comprehension.
 
 #include "llvm/Transforms/Yk/ControlPoint.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -59,7 +58,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include <map>
 
 #define DEBUG_TYPE "yk-control-point"
 
