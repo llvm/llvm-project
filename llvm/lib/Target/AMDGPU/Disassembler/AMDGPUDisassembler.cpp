@@ -1818,6 +1818,12 @@ MCOperand AMDGPUDisassembler::decodeGSrcSimple(unsigned Val) const {
   bool IsVGPR = Val & 0x400;
   if (IsVGPR)
     return createRegOperand(AMDGPU::VGPR_32RegClassID, Val & 0x3ff);
+  switch (Val) {
+  case 0xe6:
+    return createRegOperand(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO);
+  case 0xe7:
+    return createRegOperand(AMDGPU::SRC_FLAT_SCRATCH_BASE_HI);
+  }
   return decodeSrcOp(AMDGPUDisassembler::OPW32, /* EncImm= */ Val,
                      /* MandatoryLiteral= */ false, /* ImmWidth= */ 32,
                      AMDGPU::OperandSemantics::INT);
