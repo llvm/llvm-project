@@ -1,7 +1,7 @@
 // clang-format off
-// RUN: %clang++ -foffload-via-llvm --offload-arch=native %s -o %t.launch_tu.o -c
-// RUN: %clang++ -foffload-via-llvm --offload-arch=native -x cuda %S/kernel_tu.cu.inc -o %t.kernel_tu.o -c
-// RUN: %clang++ -foffload-via-llvm --offload-arch=native %t.launch_tu.o %t.kernel_tu.o -o %t
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %s -o %t.launch_tu.o -c
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native -x cuda %S/kernel_tu.cu.inc -o %t.kernel_tu.o -c
+// RUN: %clang++ %flags -foffload-via-llvm --offload-arch=native %t.launch_tu.o %t.kernel_tu.o -o %t
 // RUN: %t | %fcheck-generic
 // clang-format on
 
