@@ -246,9 +246,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s7
 ; GFX11-SDAG-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.h, 0x3c00
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -264,9 +262,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; GFX11-GISEL-NEXT:    buffer_load_u16 v0, off, s[4:7], 0
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v0.h, 0x3c00
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -390,9 +386,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s7
 ; GFX11-SDAG-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.h, 0x4000
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -408,9 +402,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; GFX11-GISEL-NEXT:    buffer_load_u16 v0, off, s[4:7], 0
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v0.h, 0x4000
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
 ; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

@@ -607,6 +607,15 @@ namespace llvm {
     VMINMAXS,
     VMINMAXS_SAE,
 
+    CVTP2IBS,
+    CVTP2IUBS,
+    CVTP2IBS_RND,
+    CVTP2IUBS_RND,
+    CVTTP2IBS,
+    CVTTP2IUBS,
+    CVTTP2IBS_SAE,
+    CVTTP2IUBS_SAE,
+
     MPSADBW,
 
     // Compress and expand.

@@ -6,6 +6,16 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 
+namespace std {
+  __extension__ typedef __SIZE_TYPE__ size_t;
+
+  template<typename E> struct initializer_list {
+    const E *p; size_t n;
+    initializer_list(const E *p, size_t n);
+    initializer_list();
+  };
+}
+
 #if __cplusplus >= 201103L
 namespace cwg2303 { // cwg2303: 12
 template <typename... T>
@@ -93,6 +103,95 @@ struct Z : W,
 
 // cwg2331: na
 // cwg2335 is in cwg2335.cxx
+
+namespace cwg2311 {  // cwg2311 is open with no proposed resolution
+#if __cplusplus >= 201707L
+template<typename T>
+void test() {
+  // Ensure none of these try to call a move constructor.
+  T a = T{T(0)};
+  T b{T(0)};
+  auto c{T(0)};
+  T d = {T(0)};
+  auto e = {T(0)};
+#if __cplusplus >= 202302L
+  auto f = auto{T(0)};
+#endif
+  void(*fn)(T);
+  fn({T(0)});
+}
+
+struct NonMovable {
+  NonMovable(int);
+  NonMovable(NonMovable&&) = delete;
+};
+struct NonMovableNonApplicableIList {
+  NonMovableNonApplicableIList(int);
+  NonMovableNonApplicableIList(NonMovableNonApplicableIList&&) = delete;
+  NonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct ExplicitMovable {
+  ExplicitMovable(int);
+  explicit ExplicitMovable(ExplicitMovable&&);
+};
+struct ExplicitNonMovable {
+  ExplicitNonMovable(int);
+  explicit ExplicitNonMovable(ExplicitNonMovable&&) = delete;
+};
+struct ExplicitNonMovableNonApplicableIList {
+  ExplicitNonMovableNonApplicableIList(int);
+  explicit ExplicitNonMovableNonApplicableIList(ExplicitNonMovableNonApplicableIList&&) = delete;
+  ExplicitNonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct CopyOnly {
+  CopyOnly(int);
+  CopyOnly(const CopyOnly&);
+  CopyOnly(CopyOnly&&) = delete;
+};
+struct ExplicitCopyOnly {
+  ExplicitCopyOnly(int);
+  explicit ExplicitCopyOnly(const ExplicitCopyOnly&);
+  explicit ExplicitCopyOnly(ExplicitCopyOnly&&) = delete;
+};
+
+template void test<NonMovable>();
+template void test<NonMovableNonApplicableIList>();
+template void test<ExplicitMovable>();
+template void test<ExplicitNonMovable>();
+template void test<ExplicitNonMovableNonApplicableIList>();
+template void test<CopyOnly>();
+template void test<ExplicitCopyOnly>();
+
+struct any {
+    template<typename T>
+    any(T&&);
+};
+
+template<typename T>
+struct X {
+    X();
+    X(T) = delete; // #cwg2311-X
+};
+
+X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
+// since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
+//   since-cxx17-note@#cwg2311-X {{'X' has been explicitly marked deleted here}}
+
+// Per the currently implemented resolution, this does not apply to std::initializer_list.
+// An initializer list initialized from `{ e }` always has exactly one element constructed
+// from `e`, where previously that could have been a copy of an init list or `e.operator std::initializer_list()`
+struct InitListCtor {
+  InitListCtor(int);
+  InitListCtor(InitListCtor&&) = delete;
+  InitListCtor(std::initializer_list<InitListCtor>) = delete; // #cwg2311-InitListCtor
+};
+
+std::initializer_list<InitListCtor> i;
+auto j = std::initializer_list<InitListCtor>{ i };
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+//   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
+#endif
+}
 
 #if __cplusplus >= 201103L
 namespace cwg2338 { // cwg2338: 12

@@ -398,18 +398,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  pow
-  SRCS
-    pow.cpp
-  HDRS
-    ../pow.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
   powi
   SRCS
     powi.cpp
@@ -475,6 +463,30 @@ add_entrypoint_object(
     tgammaf.cpp
   HDRS
     ../tgammaf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  lgamma
+  SRCS
+    lgamma.cpp
+  HDRS
+    ../lgamma.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  lgamma_r
+  SRCS
+    lgamma_r.cpp
+  HDRS
+    ../lgamma_r.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
