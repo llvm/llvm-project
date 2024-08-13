@@ -287,14 +287,6 @@ static std::optional<int64_t> parseNVPTXMDNodeAsInteger(Function &F,
 KernelInfo KernelInfo::getKernelInfo(Function &F,
                                      FunctionAnalysisManager &FAM) {
   KernelInfo KI;
-  // Only analyze modules for GPUs.
-  // TODO: This would be more maintainable if there were an isGPU.
-  const std::string &TT = F.getParent()->getTargetTriple();
-  llvm::Triple T(TT);
-  if (!T.isAMDGPU() && !T.isNVPTX())
-    return KI;
-  KI.IsValid = true;
-
   KI.FlatAddrspace = FAM.getResult<TargetIRAnalysis>(F).getFlatAddressSpace();
 
   // Record function properties.

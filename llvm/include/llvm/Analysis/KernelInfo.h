@@ -36,10 +36,6 @@ public:
 
   bool operator!=(const KernelInfo &FPI) const { return !(*this == FPI); }
 
-  /// If false, nothing was recorded here because the supplied function didn't
-  /// appear in a module compiled for a GPU.
-  bool IsValid = false;
-
   /// Whether the function has external linkage and is not a kernel function.
   bool ExternalNotKernel = false;
 
