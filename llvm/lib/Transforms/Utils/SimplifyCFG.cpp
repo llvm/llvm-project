@@ -2986,7 +2986,7 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
 
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
-  // Not handle Volatile or atomic.
+  // Not handle volatile or atomic.
   if (auto *L = dyn_cast<LoadInst>(I)) {
     if (!L->isSimple())
       return false;
