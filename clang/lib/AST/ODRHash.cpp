@@ -461,7 +461,7 @@ public:
     } else {
       AddDecl(D->getFriendDecl());
     }
-    Hash.AddBoolean(D->isVariadic());
+    Hash.AddBoolean(D->isPackExpansion());
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {

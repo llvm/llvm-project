@@ -158,11 +158,11 @@ public:
                             : getTrailingObjects<TemplateParameterList *>()[0]
                                   ->getTemplateLoc();
       SourceLocation EndL =
-          isVariadic() ? getEllipsisLoc() : TInfo->getTypeLoc().getEndLoc();
+          isPackExpansion() ? getEllipsisLoc() : TInfo->getTypeLoc().getEndLoc();
       return SourceRange(StartL, EndL);
     }
 
-    if (isVariadic())
+    if (isPackExpansion())
       return SourceRange(getFriendLoc(), getEllipsisLoc());
 
     if (NamedDecl *ND = getFriendDecl()) {
@@ -190,7 +190,7 @@ public:
     UnsupportedFriend = Unsupported;
   }
 
-  bool isVariadic() const { return EllipsisLoc.isValid(); }
+  bool isPackExpansion() const { return EllipsisLoc.isValid(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

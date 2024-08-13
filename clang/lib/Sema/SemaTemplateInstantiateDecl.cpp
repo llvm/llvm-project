@@ -1442,7 +1442,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     if (D->isUnsupportedFriend()) {
       InstTy = Ty;
     } else {
-      if (D->isVariadic()) {
+      if (D->isPackExpansion()) {
         SmallVector<UnexpandedParameterPack, 2> Unexpanded;
         SemaRef.collectUnexpandedParameterPacks(Ty->getTypeLoc(), Unexpanded);
         assert(!Unexpanded.empty() && "Pack expansion without packs");

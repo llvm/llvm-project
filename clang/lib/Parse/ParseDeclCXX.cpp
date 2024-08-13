@@ -449,7 +449,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 ///
 ///      export-function-declaration:
 ///         'export' function-declaration
-/// 
+///
 ///      export-declaration-group:
 ///         'export' '{' function-declaration-seq[opt] '}'
 ///
@@ -3090,34 +3090,26 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // Handle C++26's variadic friend declarations. These don't even have
   // declarators, so we get them out of the way early here.
   if (DS.isFriendSpecifiedFirst() && Tok.isOneOf(tok::comma, tok::ellipsis)) {
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                                ? diag::warn_cxx23_variadic_friends
+                                : diag::ext_variadic_friends);
+
     SourceLocation FriendLoc = DS.getFriendSpecLoc();
     SmallVector<Decl *> Decls;
-    auto DiagnoseCompat = [&, Diagnosed = false]() mutable {
-      if (Diagnosed)
-        return;
-      Diagnosed = true;
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
-                                  ? diag::warn_cxx23_variadic_friends
-                                  : diag::ext_variadic_friends);
-    };
 
     // Handles a single friend-type-specifier.
     auto ParsedFriendDecl = [&](ParsingDeclSpec &DeclSpec) {
-      bool Variadic = Tok.is(tok::ellipsis);
+      SourceLocation VariadicLoc;
+      TryConsumeToken(tok::ellipsis, VariadicLoc);
+
       RecordDecl *AnonRecord = nullptr;
       Decl *D = Actions.ParsedFreeStandingDeclSpec(
           getCurScope(), AS, DeclSpec, DeclAttrs, TemplateParams, false,
-          AnonRecord, Variadic ? Tok.getLocation() : SourceLocation());
+          AnonRecord, VariadicLoc);
       DeclSpec.complete(D);
       if (!D) {
         SkipUntil(tok::semi, tok::r_brace);
         return true;
-      }
-
-      // Eat the '...'.
-      if (Variadic) {
-        DiagnoseCompat();
-        ConsumeToken();
       }
 
       Decls.push_back(D);
@@ -3126,9 +3118,6 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
     if (ParsedFriendDecl(DS))
       return nullptr;
-
-    if (Tok.is(tok::comma))
-      DiagnoseCompat();
 
     while (TryConsumeToken(tok::comma)) {
       ParsingDeclSpec DeclSpec(*this, TemplateDiags);

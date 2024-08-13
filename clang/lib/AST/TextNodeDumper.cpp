@@ -2694,7 +2694,7 @@ void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
-  if (D->isVariadic())
+  if (D->isPackExpansion())
     OS << " variadic";
 }
 

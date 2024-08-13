@@ -5001,7 +5001,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
                                        MultiTemplateParamsArg TemplateParams,
                                        bool IsExplicitInstantiation,
                                        RecordDecl *&AnonRecord,
-                                       SourceLocation FriendEllipsisLoc) {
+                                       SourceLocation EllipsisLoc) {
   Decl *TagD = nullptr;
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
@@ -5068,10 +5068,10 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     // whatever routines created it handled the friendship aspect.
     if (TagD && !Tag)
       return nullptr;
-    return ActOnFriendTypeDecl(S, DS, TemplateParams, FriendEllipsisLoc);
+    return ActOnFriendTypeDecl(S, DS, TemplateParams, EllipsisLoc);
   }
 
-  assert(FriendEllipsisLoc.isInvalid() &&
+  assert(EllipsisLoc.isInvalid() &&
          "Friend ellipsis but not friend-specified?");
 
   // Track whether this decl-specifier declares anything.

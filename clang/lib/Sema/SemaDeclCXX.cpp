@@ -17477,7 +17477,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
 Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                                 MultiTemplateParamsArg TempParams,
-                                SourceLocation FriendEllipsisLoc) {
+                                SourceLocation EllipsisLoc) {
   SourceLocation Loc = DS.getBeginLoc();
   SourceLocation FriendLoc = DS.getFriendSpecLoc();
 
@@ -17520,14 +17520,14 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   // If '...' is present, the type must contain an unexpanded parameter
   // pack, and vice versa.
-  if (FriendEllipsisLoc.isInvalid() &&
+  if (EllipsisLoc.isInvalid() &&
       DiagnoseUnexpandedParameterPack(Loc, TSI, UPPC_FriendDeclaration))
     return nullptr;
-  if (FriendEllipsisLoc.isValid() &&
+  if (EllipsisLoc.isValid() &&
       !TSI->getType()->containsUnexpandedParameterPack()) {
-    Diag(FriendEllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
+    Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
         << TSI->getTypeLoc().getSourceRange();
-    FriendEllipsisLoc = SourceLocation();
+    EllipsisLoc = SourceLocation();
   }
 
   if (!T->isElaboratedTypeSpecifier()) {
@@ -17579,7 +17579,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                                    FriendLoc);
   else
     D = FriendDecl::Create(Context, CurContext, TSI->getTypeLoc().getBeginLoc(),
-                           TSI, FriendLoc, FriendEllipsisLoc);
+                           TSI, FriendLoc, EllipsisLoc);
 
   if (!D)
     return nullptr;

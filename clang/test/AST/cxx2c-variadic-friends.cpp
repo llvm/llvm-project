@@ -11,13 +11,16 @@ template <typename> struct TS; // #template
 struct Friends {
   // CHECK: FriendDecl {{.*}} 'int'
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
-  // PRINT-NEXT: friend int, long;
+  // PRINT-NEXT: friend int;
+  // PRINT-NEXT: friend long;
   friend int, long;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'int'
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
   // CHECK-NEXT: FriendDecl {{.*}} 'char'
-  // PRINT-NEXT: friend int, long, char;
+  // PRINT-NEXT: friend int;
+  // PRINT-NEXT: friend long;
+  // PRINT-NEXT: friend char;
   friend int, long, char;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
@@ -27,7 +30,9 @@ struct Friends {
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
-  // PRINT-NEXT: friend S, S, S;
+  // PRINT-NEXT: friend S;
+  // PRINT-NEXT: friend S;
+  // PRINT-NEXT: friend S;
   friend S, S, S;
 
   // CHECK-NEXT: FriendDecl
@@ -52,7 +57,9 @@ template <typename ...Pack> struct Variadic {
   // CHECK: FriendDecl {{.*}} 'Pack' variadic
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
   // CHECK-NEXT: FriendDecl {{.*}} 'Pack' variadic
-  // PRINT-NEXT: friend Pack..., long, Pack...;
+  // PRINT-NEXT: friend Pack...;
+  // PRINT-NEXT: friend long;
+  // PRINT-NEXT: friend Pack...;
   friend Pack..., long, Pack...;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>' variadic
