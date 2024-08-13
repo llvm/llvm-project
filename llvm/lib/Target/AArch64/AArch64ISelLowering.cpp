@@ -2011,7 +2011,6 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
          InputAType->getElementType()->isIntegerTy(16) &&
          InputAType->getElementCount() == ExpectedCount8 &&
          InputAType == InputBType) ||
-
         (RetTy->getScalarType()->isIntegerTy(32) &&
          InputAType->getElementType()->isIntegerTy(8) &&
          InputAType->getElementCount() == ExpectedCount16 &&
