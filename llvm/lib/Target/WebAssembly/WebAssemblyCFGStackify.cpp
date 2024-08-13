@@ -46,6 +46,7 @@ STATISTIC(NumCatchUnwindMismatches, "Number of catch unwind mismatches found");
 namespace {
 class WebAssemblyCFGStackify final : public MachineFunctionPass {
   MachineDominatorTree *MDT;
+  MachineLoopInfo *MLI;
 
   StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
 
@@ -468,9 +469,8 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
-  SortRegionInfo SRI(MLI, WEI);
+  SortRegionInfo SRI(*MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
   // Compute the nearest common dominator of all unwind predecessors
@@ -1441,6 +1441,7 @@ void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
   // created and inserted during fixing unwind mismatches.
   MF.RenumberBlocks();
   MDT->updateBlockNumbers();
+  MLI->updateBlockNumbers();
   ScopeTops.clear();
   ScopeTops.resize(MF.getNumBlockIDs());
   for (auto &MBB : reverse(MF)) {
@@ -1744,6 +1745,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getName() << '\n');
   const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   releaseMemory();
 

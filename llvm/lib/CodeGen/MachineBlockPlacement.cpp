@@ -3654,6 +3654,9 @@ void MachineBlockPlacement::assignBlockOrder(
   // TODO: move this to the point where the dominator tree is actually
   // invalidated (i.e., where blocks are removed without updating the domtree).
   MPDT = nullptr;
+  // Likewise, make an attempt to keep the loop information valid, even if the
+  // analysis is possibly outdated...
+  MLI->updateBlockNumbers();
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {

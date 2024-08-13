@@ -184,13 +184,14 @@ struct Entry {
 /// interrupted by blocks not dominated by their header.
 /// TODO: There are many opportunities for improving the heuristics here.
 /// Explore them.
-static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
+static void sortBlocks(MachineFunction &MF, MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
                        MachineDominatorTree &MDT) {
   // Remember original layout ordering, so we can update terminators after
   // reordering to point to the original layout successor.
   MF.RenumberBlocks();
   MDT.updateBlockNumbers();
+  MLI.updateBlockNumbers();
 
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
@@ -332,6 +333,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   assert(Entries.empty() && "Active sort region list not finished");
   MF.RenumberBlocks();
   MDT.updateBlockNumbers();
+  MLI.updateBlockNumbers();
 
 #ifndef NDEBUG
   SmallSetVector<const SortRegion *, 8> OnStack;
@@ -387,7 +389,7 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   // Liveness is not tracked for VALUE_STACK physreg.

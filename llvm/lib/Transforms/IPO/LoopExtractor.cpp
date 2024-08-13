@@ -241,9 +241,12 @@ bool LoopExtractor::extractLoop(Loop *L, LoopInfo &LI, DominatorTree &DT) {
   Function &Func = *L->getHeader()->getParent();
   AssumptionCache *AC = LookupAssumptionCache(Func);
   CodeExtractorAnalysisCache CEAC(Func);
-  CodeExtractor Extractor(DT, *L, false, nullptr, nullptr, AC);
-  if (Extractor.extractCodeRegion(CEAC)) {
+  CodeExtractor Extractor(L->getBlocks(), &DT, false, nullptr, nullptr, AC);
+  if (Extractor.isEligible()) {
+    // Remove loop while blocks are still in the current function
     LI.erase(L);
+    [[maybe_unused]] Function *ExtrF = Extractor.extractCodeRegion(CEAC);
+    assert(ExtrF && "CodeExtractor didn't extact eligible loop");
     --NumLoops;
     ++NumExtracted;
     return true;
