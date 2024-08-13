@@ -21853,10 +21853,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
 
       auto Type0Elements = Type0.getVectorNumElements();
       auto Type1Elements = Type1.getVectorNumElements();
-      auto Type0ElementSize =
-          Type0.getVectorElementType().getScalarSizeInBits();
-      auto Type1ElementSize =
-          Type1.getVectorElementType().getScalarSizeInBits();
 
       // If the types are equal then a single ADD is fine
       if (Type0 == Type1)
@@ -21871,10 +21867,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
         SDValue Subvec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Type0, Op1,
                                      DAG.getConstant(i, DL, MVT::i64));
 
-        if (Type1ElementSize < Type0ElementSize)
-          Subvec = DAG.getNode(ISD::ANY_EXTEND, DL, Type0, Subvec);
-        else if (Type1ElementSize > Type0ElementSize)
-          Subvec = DAG.getNode(ISD::TRUNCATE, DL, Type0, Subvec);
         Add = DAG.getNode(ISD::ADD, DL, Type0, {Add, Subvec});
       }
       return Add;
