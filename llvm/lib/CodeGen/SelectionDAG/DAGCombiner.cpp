@@ -17804,7 +17804,7 @@ static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
   unsigned InputSize = (int)SrcVT.getScalarSizeInBits() - IsInputSigned;
   unsigned OutputSize = (int)VT.getScalarSizeInBits();
   unsigned ActualSize = std::min(InputSize, OutputSize);
-  const fltSemantics &sem = DAG.EVTToAPFloatSemantics(N0.getValueType());
+  const fltSemantics &sem = N0.getValueType().getFltSemantics();
 
   // We can only fold away the float conversion if the input range can be
   // represented exactly in the float range.
@@ -22599,7 +22599,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     KnownBits KnownElt = DAG.computeKnownBits(VecOp, EltMask);
     if (KnownElt.isConstant()) {
       APFloat CstFP =
-          APFloat(DAG.EVTToAPFloatSemantics(ScalarVT), KnownElt.getConstant());
+          APFloat(ScalarVT.getFltSemantics(), KnownElt.getConstant());
       if (TLI.isFPImmLegal(CstFP, ScalarVT))
         return DAG.getConstantFP(CstFP, DL, ScalarVT);
     }
