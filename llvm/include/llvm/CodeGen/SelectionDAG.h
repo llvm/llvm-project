@@ -1819,12 +1819,6 @@ public:
     AllNodes.insert(Position, AllNodes.remove(N));
   }
 
-  /// Returns an APFloat semantics tag appropriate for the given type. If VT is
-  /// a vector type, the element semantics are returned.
-  static const fltSemantics &EVTToAPFloatSemantics(EVT VT) {
-    return VT.getFltSemantics();
-  }
-
   /// Add a dbg_value SDNode. If SD is non-null that means the
   /// value is produced by SD.
   void AddDbgValue(SDDbgValue *DB, bool isParameter);
@@ -2365,7 +2359,7 @@ public:
   /// Return the current function's default denormal handling kind for the given
   /// floating point type.
   DenormalMode getDenormalMode(EVT VT) const {
-    return MF->getDenormalMode(EVTToAPFloatSemantics(VT));
+    return MF->getDenormalMode(VT.getFltSemantics());
   }
 
   bool shouldOptForSize() const;
