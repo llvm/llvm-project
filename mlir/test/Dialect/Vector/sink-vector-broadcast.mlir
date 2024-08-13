@@ -13,7 +13,8 @@
 func.func @broadcast_scalar_with_bcast(%arg1: index, %arg2: index) -> vector<1x4xindex> {
   %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x4xindex>
-  %2 = arith.addi %0, %1 : vector<1x4xindex> return %2 : vector<1x4xindex>
+  %2 = arith.addi %0, %1 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
 }
 
 // CHECK-LABEL:   func.func @broadcast_scalar_with_bcast_scalable(
