@@ -10747,7 +10747,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
         llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
           // Check viable function only.
           return Cand->Viable && Cand->Function &&
-                 S.CUDA().IdentifyPreference(Caller, Cand->Function) ==
+                 S.CUDA().IdentifyPreference(Caller, Cand->Function) >=
                      SemaCUDA::CFP_SameSide;
         });
     if (ContainsSameSideCandidate) {

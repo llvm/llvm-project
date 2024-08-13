@@ -311,6 +311,9 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
   }
 
   Attrs.Range = SourceRange(StartLoc, EndLoc);
+
+  if (Actions.getLangOpts().CUDA)
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(Attrs);
 }
 
 /// Determine whether the given attribute has an identifier argument.
@@ -1003,6 +1006,9 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
   }
 
   Attrs.Range = SourceRange(StartLoc, EndLoc);
+
+  if (Actions.getLangOpts().CUDA)
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(Attrs);
 }
 
 void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {

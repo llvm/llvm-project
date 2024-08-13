@@ -104,6 +104,8 @@ public:
   CUDAFunctionTarget IdentifyTarget(const FunctionDecl *D,
                                     bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyTarget(const ParsedAttributesView &Attrs);
+  CUDAFunctionTarget IdentifyTarget(
+      const SmallVectorImpl<clang::AttributeCommonInfo::Kind> &AttrKinds);
 
   enum CUDAVariableTarget {
     CVT_Device,  /// Emitted on device side with a shadow variable on host side
@@ -120,21 +122,43 @@ public:
     CTCK_Unknown,       /// Unknown context
     CTCK_InitGlobalVar, /// Function called during global variable
                         /// initialization
+    CTCK_Declaration,   /// Function called in a declaration specifier or
+                        /// declarator outside of other contexts, usually in
+                        /// template arguments.
   };
 
   /// Define the current global CUDA host/device context where a function may be
   /// called. Only used when a function is called outside of any functions.
-  struct CUDATargetContext {
-    CUDAFunctionTarget Target = CUDAFunctionTarget::HostDevice;
+  class CUDATargetContext {
+  public:
     CUDATargetContextKind Kind = CTCK_Unknown;
-    Decl *D = nullptr;
+
+    CUDATargetContext() = default;
+
+    CUDATargetContext(SemaCUDA *S, CUDATargetContextKind Kind,
+                      CUDAFunctionTarget Target);
+
+    CUDAFunctionTarget getTarget();
+
+    /// If this is a CTCK_Declaration context, update the Target based on Attrs.
+    /// No-op otherwise.
+    /// Issues a diagnostic if the target changes after it has been queried
+    /// before.
+    void tryRegisterTargetAttrs(const ParsedAttributesView &Attrs);
+
+  private:
+    SemaCUDA *S = nullptr;
+    CUDAFunctionTarget Target = CUDAFunctionTarget::HostDevice;
+    SmallVector<clang::AttributeCommonInfo::Kind, 0> AttrKinds;
+    bool TargetQueried = false;
+
   } CurCUDATargetCtx;
 
   struct CUDATargetContextRAII {
     SemaCUDA &S;
     SemaCUDA::CUDATargetContext SavedCtx;
     CUDATargetContextRAII(SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K,
-                          Decl *D);
+                          Decl *D = nullptr);
     ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
   };
 

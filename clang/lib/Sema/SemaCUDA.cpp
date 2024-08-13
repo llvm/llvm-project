@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -68,13 +69,28 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                /*IsExecConfig=*/true);
 }
 
-CUDAFunctionTarget SemaCUDA::IdentifyTarget(const ParsedAttributesView &Attrs) {
+namespace {
+
+// This iterator adaptor enables sharing a IdentifyTarget implementation for
+// ParsedAttributesView and for vectors of AttributeCommonInfo::Kind.
+struct AttrKindIterator
+    : llvm::iterator_adaptor_base<
+          AttrKindIterator, ParsedAttributesView::const_iterator,
+          std::random_access_iterator_tag, clang::AttributeCommonInfo::Kind> {
+  AttrKindIterator() : iterator_adaptor_base(nullptr) {}
+  AttrKindIterator(ParsedAttributesView::const_iterator I)
+      : iterator_adaptor_base(I) {}
+  clang::AttributeCommonInfo::Kind operator*() const { return I->getKind(); }
+};
+
+template <typename AKIterRange>
+CUDAFunctionTarget IdentifyTargetImpl(const AKIterRange &AttrKinds) {
   bool HasHostAttr = false;
   bool HasDeviceAttr = false;
   bool HasGlobalAttr = false;
   bool HasInvalidTargetAttr = false;
-  for (const ParsedAttr &AL : Attrs) {
-    switch (AL.getKind()) {
+  for (const auto &AK : AttrKinds) {
+    switch (AK) {
     case ParsedAttr::AT_CUDAGlobal:
       HasGlobalAttr = true;
       break;
@@ -107,6 +123,18 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const ParsedAttributesView &Attrs) {
   return CUDAFunctionTarget::Host;
 }
 
+} // namespace
+
+CUDAFunctionTarget SemaCUDA::IdentifyTarget(const ParsedAttributesView &Attrs) {
+  return IdentifyTargetImpl(make_range(AttrKindIterator(Attrs.begin()),
+                                       AttrKindIterator(Attrs.end())));
+}
+
+CUDAFunctionTarget SemaCUDA::IdentifyTarget(
+    const SmallVectorImpl<clang::AttributeCommonInfo::Kind> &AttrKinds) {
+  return IdentifyTargetImpl(AttrKinds);
+}
+
 template <typename A>
 static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
   return D->hasAttrs() && llvm::any_of(D->getAttrs(), [&](Attr *Attribute) {
@@ -115,20 +143,65 @@ static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
          });
 }
 
+SemaCUDA::CUDATargetContext::CUDATargetContext(SemaCUDA *S,
+                                               CUDATargetContextKind Kind,
+                                               CUDAFunctionTarget Target)
+    : Kind(Kind), S(S), Target(Target) {}
+
+CUDAFunctionTarget SemaCUDA::CUDATargetContext::getTarget() {
+  TargetQueried = true;
+  return Target;
+}
+
+void SemaCUDA::CUDATargetContext::tryRegisterTargetAttrs(
+    const ParsedAttributesView &Attrs) {
+  if (Kind != CTCK_Declaration)
+    return;
+  for (const auto &A : Attrs) {
+    auto AK = A.getKind();
+    switch (AK) {
+    case ParsedAttr::AT_CUDAGlobal:
+    case ParsedAttr::AT_CUDAHost:
+    case ParsedAttr::AT_CUDADevice:
+    case ParsedAttr::AT_CUDAInvalidTarget:
+      break;
+    default:
+      continue;
+    }
+    AttrKinds.push_back(AK);
+    CUDAFunctionTarget NewTarget = S->IdentifyTarget(AttrKinds);
+    if (TargetQueried && (NewTarget != Target))
+      S->Diag(A.getLoc(), diag::warn_target_specfier_ignored);
+    Target = NewTarget;
+  }
+}
+
 SemaCUDA::CUDATargetContextRAII::CUDATargetContextRAII(
     SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K, Decl *D)
     : S(S_) {
   SavedCtx = S.CurCUDATargetCtx;
-  assert(K == SemaCUDA::CTCK_InitGlobalVar);
-  auto *VD = dyn_cast_or_null<VarDecl>(D);
-  if (VD && VD->hasGlobalStorage() && !VD->isStaticLocal()) {
-    auto Target = CUDAFunctionTarget::Host;
-    if ((hasAttr<CUDADeviceAttr>(VD, /*IgnoreImplicit=*/true) &&
-         !hasAttr<CUDAHostAttr>(VD, /*IgnoreImplicit=*/true)) ||
-        hasAttr<CUDASharedAttr>(VD, /*IgnoreImplicit=*/true) ||
-        hasAttr<CUDAConstantAttr>(VD, /*IgnoreImplicit=*/true))
-      Target = CUDAFunctionTarget::Device;
-    S.CurCUDATargetCtx = {Target, K, VD};
+
+  switch (K) {
+  case SemaCUDA::CTCK_InitGlobalVar: {
+    auto *VD = dyn_cast_or_null<VarDecl>(D);
+    if (VD && VD->hasGlobalStorage() && !VD->isStaticLocal()) {
+      auto Target = CUDAFunctionTarget::Host;
+      if ((hasAttr<CUDADeviceAttr>(VD, /*IgnoreImplicit=*/true) &&
+           !hasAttr<CUDAHostAttr>(VD, /*IgnoreImplicit=*/true)) ||
+          hasAttr<CUDASharedAttr>(VD, /*IgnoreImplicit=*/true) ||
+          hasAttr<CUDAConstantAttr>(VD, /*IgnoreImplicit=*/true))
+        Target = CUDAFunctionTarget::Device;
+      S.CurCUDATargetCtx = CUDATargetContext(&S, K, Target);
+    }
+    break;
+  }
+  case SemaCUDA::CTCK_Declaration:
+    // The target is updated once relevant attributes are parsed. Initialize
+    // with the target used if no attributes are present: Host.
+    S.CurCUDATargetCtx = CUDATargetContext(&S, K, CUDAFunctionTarget::Host);
+    break;
+  default:
+    llvm_unreachable("unexpected context kind");
   }
 }
 
@@ -137,7 +210,7 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
                                             bool IgnoreImplicitHDAttr) {
   // Code that lives outside a function gets the target from CurCUDATargetCtx.
   if (D == nullptr)
-    return CurCUDATargetCtx.Target;
+    return CurCUDATargetCtx.getTarget();
 
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CUDAFunctionTarget::InvalidTarget;
@@ -232,7 +305,7 @@ SemaCUDA::IdentifyPreference(const FunctionDecl *Caller,
   // trivial ctor/dtor without device attr to be used. Non-trivial ctor/dtor
   // will be diagnosed by checkAllowedInitializer.
   if (Caller == nullptr && CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
-      CurCUDATargetCtx.Target == CUDAFunctionTarget::Device &&
+      CurCUDATargetCtx.getTarget() == CUDAFunctionTarget::Device &&
       (isa<CXXConstructorDecl>(Callee) || isa<CXXDestructorDecl>(Callee)))
     return CFP_HostDevice;
 
@@ -297,8 +370,16 @@ SemaCUDA::IdentifyPreference(const FunctionDecl *Caller,
       (CallerTarget == CUDAFunctionTarget::Device &&
        CalleeTarget == CUDAFunctionTarget::Host) ||
       (CallerTarget == CUDAFunctionTarget::Global &&
-       CalleeTarget == CUDAFunctionTarget::Host))
+       CalleeTarget == CUDAFunctionTarget::Host)) {
+    // In declaration contexts outside of function bodies and variable
+    // initializers, tolerate mismatched function targets as long as they are
+    // not codegened.
+    if (CurCUDATargetCtx.Kind == CTCK_Declaration &&
+        !this->SemaRef.getCurFunctionDecl(/*AllowLambda=*/true))
+      return CFP_WrongSide;
+
     return CFP_Never;
+  }
 
   llvm_unreachable("All cases should've been handled by now.");
 }

@@ -27,6 +27,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2852,6 +2853,11 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     ParsedTemplateInfo &TemplateInfo, ParsingDeclRAIIObject *TemplateDiags) {
   assert(getLangOpts().CPlusPlus &&
          "ParseCXXClassMemberDeclaration should only be called in C++ mode");
+  SemaCUDA::CUDATargetContextRAII CTCRAII(Actions.CUDA(),
+                                          SemaCUDA::CTCK_Declaration);
+  if (Actions.getLangOpts().CUDA)
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(AccessAttrs);
+
   if (Tok.is(tok::at)) {
     if (getLangOpts().ObjC && NextToken().isObjCAtKeyword(tok::objc_defs))
       Diag(Tok, diag::err_at_defs_cxx);
