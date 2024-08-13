@@ -12006,7 +12006,7 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
     // Check whether all the non-constants cancel out, or reduce to new
     // More/Less values.
     const SCEV *NewMore = nullptr, *NewLess = nullptr;
-    for (const auto [S, Mul] : Multiplicity) {
+    for (const auto &[S, Mul] : Multiplicity) {
       if (Mul == 0)
         continue;
       if (Mul == 1) {
