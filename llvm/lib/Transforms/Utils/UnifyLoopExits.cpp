@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ControlFlowUtils.h"
 
 #define DEBUG_TYPE "unify-loop-exits"
 
@@ -34,7 +35,7 @@ using namespace llvm;
 static cl::opt<unsigned> MaxBooleansInControlFlowHub(
     "max-booleans-in-control-flow-hub", cl::init(32), cl::Hidden,
     cl::desc("Set the maximum number of outgoing blocks for using a boolean "
-             "value to record the exiting block in CreateControlFlowHub."));
+             "value to record the exiting block in the ControlFlowHub."));
 
 namespace {
 struct UnifyLoopExitsLegacyPass : public FunctionPass {
@@ -86,7 +87,7 @@ INITIALIZE_PASS_END(UnifyLoopExitsLegacyPass, "unify-loop-exits",
 // for creating the new PHI is well-known, and also the set of incoming blocks
 // to the new PHI.
 static void restoreSSA(const DominatorTree &DT, const Loop *L,
-                       const SetVector<BasicBlock *> &Incoming,
+                       SmallVectorImpl<BasicBlock *> &Incoming,
                        BasicBlock *LoopExitBlock) {
   using InstVector = SmallVector<Instruction *, 8>;
   using IIMap = MapVector<Instruction *, InstVector>;
@@ -140,53 +141,43 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
   }
 }
 
+static bool isExitBlock(Loop *L, BasicBlock *Succ, LoopInfo &LI) {
+  Loop *SL = LI.getLoopFor(Succ);
+  if (SL == L || L->contains(SL))
+    return false;
+  return true;
+}
+
 static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   // To unify the loop exits, we need a list of the exiting blocks as
   // well as exit blocks. The functions for locating these lists both
   // traverse the entire loop body. It is more efficient to first
   // locate the exiting blocks and then examine their successors to
   // locate the exit blocks.
-  SetVector<BasicBlock *> ExitingBlocks;
-  SetVector<BasicBlock *> Exits;
+  SmallVector<BasicBlock *, 8> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
 
-  // We need SetVectors, but the Loop API takes a vector, so we use a temporary.
-  SmallVector<BasicBlock *, 8> Temp;
-  L->getExitingBlocks(Temp);
-  for (auto *BB : Temp) {
-    ExitingBlocks.insert(BB);
-    for (auto *S : successors(BB)) {
-      auto SL = LI.getLoopFor(S);
-      // A successor is not an exit if it is directly or indirectly in the
-      // current loop.
-      if (SL == L || L->contains(SL))
-        continue;
-      Exits.insert(S);
-    }
-  }
+  // Redirect exiting edges through a control flow hub.
+  ControlFlowHub CHub;
+  for (auto *BB : ExitingBlocks) {
+    auto *Branch = cast<BranchInst>(BB->getTerminator());
+    BasicBlock *Succ0 = Branch->getSuccessor(0);
+    Succ0 = isExitBlock(L, Succ0, LI) ? Succ0 : nullptr;
 
-  LLVM_DEBUG(
-      dbgs() << "Found exit blocks:";
-      for (auto Exit : Exits) {
-        dbgs() << " " << Exit->getName();
-      }
-      dbgs() << "\n";
+    BasicBlock *Succ1 =
+        Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+    Succ1 = Succ1 && isExitBlock(L, Succ1, LI) ? Succ1 : nullptr;
+    CHub.addBranch(BB, Succ0, Succ1);
 
-      dbgs() << "Found exiting blocks:";
-      for (auto EB : ExitingBlocks) {
-        dbgs() << " " << EB->getName();
-      }
-      dbgs() << "\n";);
-
-  if (Exits.size() <= 1) {
-    LLVM_DEBUG(dbgs() << "loop does not have multiple exits; nothing to do\n");
-    return false;
+    LLVM_DEBUG(dbgs() << "Added internal branch: " << BB->getName() << " -> "
+                      << (Succ0 ? Succ0->getName() : "") << " "
+                      << (Succ1 ? Succ1->getName() : "") << "\n");
   }
 
   SmallVector<BasicBlock *, 8> GuardBlocks;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-  auto LoopExitBlock =
-      CreateControlFlowHub(&DTU, GuardBlocks, ExitingBlocks, Exits, "loop.exit",
-                           MaxBooleansInControlFlowHub.getValue());
+  BasicBlock *LoopExitBlock = CHub.finalize(
+      &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
 
   restoreSSA(DT, L, ExitingBlocks, LoopExitBlock);
 
