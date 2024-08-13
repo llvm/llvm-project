@@ -321,8 +321,6 @@ public:
         }
         CachedBlock PrevEntry = Quarantine[QuarantinePos];
         Quarantine[QuarantinePos] = Entry;
-        if (OldestTime == 0)
-          OldestTime = Entry.Time;
         Entry = PrevEntry;
       }
 
@@ -344,8 +342,6 @@ public:
 
       insert(Entry, (Entry.Time == 0) ? DECOMMITTED : COMMITTED);
 
-      if (OldestTime == 0)
-        OldestTime = Entry.Time;
     } while (0); // ScopedLock L(Mutex);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
@@ -585,32 +581,29 @@ private:
     }
   }
 
-  void releaseIfOlderThan(CachedBlock &Entry, u64 Time) REQUIRES(Mutex) {
-    if (!Entry.isValid() || !Entry.Time)
-      return;
-    if (Entry.Time > Time) {
-      if (OldestTime == 0 || Entry.Time < OldestTime)
-        OldestTime = Entry.Time;
-      return;
-    }
+  inline void release(CachedBlock &Entry) {
+    DCHECK(Entry.Time != 0);
     Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
     Entry.Time = 0;
   }
 
   void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
-      return;
-    OldestTime = 0;
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-      releaseIfOlderThan(Quarantine[I], Time);
-    for (u16 I = EntryLists[COMMITTED].Head; I != CachedBlock::InvalidEntry;
-         I = Entries[I].Next) {
-      if (Entries[I].Time && Entries[I].Time <= Time) {
-        unlink(I, COMMITTED);
-        pushFront(I, DECOMMITTED);
-      }
-      releaseIfOlderThan(Entries[I], Time);
+    for (uptr I = 0; I < Config::getQuarantineSize(); I++) {
+      CachedBlock &Entry = Quarantine[I];
+      if (!Entry.isValid() || Entry.Time > Time)
+        continue;
+      release(Entry);
+    }
+
+    // Release oldest entries first by releasing from tail
+    u16 ReleaseIndex = EntryLists[COMMITTED].Tail;
+    while (ReleaseIndex != CachedBlock::InvalidEntry &&
+           Entries[ReleaseIndex].Time <= Time) {
+      release(Entries[ReleaseIndex]);
+      unlink(ReleaseIndex, COMMITTED);
+      pushFront(ReleaseIndex, DECOMMITTED);
+      ReleaseIndex = Entries[ReleaseIndex].Prev;
     }
   }
 
@@ -619,7 +612,6 @@ private:
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
-  u64 OldestTime GUARDED_BY(Mutex) = 0;
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;

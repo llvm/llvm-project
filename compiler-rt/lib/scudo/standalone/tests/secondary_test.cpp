@@ -308,20 +308,45 @@ struct MapAllocatorCacheTest : public Test {
                                    scudo::uptr NumEntries, scudo::uptr Size) {
     for (scudo::uptr I = 0; I < NumEntries; I++) {
       MemMaps.emplace_back(allocate(Size));
-      auto &MemMap = MemMaps[I];
+      auto &MemMap = MemMaps.back();
       Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
                    MemMap.getBase(), MemMap);
     }
   }
 };
 
-TEST_F(MapAllocatorCacheTest, CacheOrder) {
+TEST_F(MapAllocatorCacheTest, CacheOrderNoRelease) {
   std::vector<scudo::MemMapT> MemMaps;
   Cache->setOption(scudo::Option::MaxCacheEntriesCount,
                    CacheConfig::getEntriesArraySize());
 
   fillCacheWithSameSizeBlocks(MemMaps, CacheConfig::getEntriesArraySize(),
                               TestAllocSize);
+
+  // Retrieval order should be the inverse of insertion order
+  for (scudo::uptr I = CacheConfig::getEntriesArraySize(); I > 0; I--) {
+    scudo::uptr EntryHeaderPos;
+    scudo::CachedBlock Entry =
+        Cache->retrieve(TestAllocSize, PageSize, 0, EntryHeaderPos);
+    EXPECT_EQ(Entry.MemMap.getBase(), MemMaps[I - 1].getBase());
+  }
+
+  // Clean up MemMaps
+  for (auto &MemMap : MemMaps)
+    MemMap.unmap();
+}
+
+TEST_F(MapAllocatorCacheTest, CacheOrderWithRelease) {
+  std::vector<scudo::MemMapT> MemMaps;
+  Cache->setOption(scudo::Option::MaxCacheEntriesCount,
+                   CacheConfig::getEntriesArraySize());
+
+  fillCacheWithSameSizeBlocks(MemMaps, CacheConfig::getEntriesArraySize(),
+                              TestAllocSize);
+
+  // Release all entries to transfer COMMITTED list contents to
+  // DECOMMITTED list
+  Cache->releaseToOS();
 
   // Retrieval order should be the inverse of insertion order
   for (scudo::uptr I = CacheConfig::getEntriesArraySize(); I > 0; I--) {
