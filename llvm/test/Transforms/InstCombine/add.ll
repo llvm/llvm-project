@@ -2046,6 +2046,60 @@ define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
   ret i8 %a
 }
 
+; negative test - avoid creating extra uses of args
+
+define i8 @mul_add_common_factor_use2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_use2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[N1:%.*]] = add i8 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[N1]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, %y
+  %n = mul i8 %x, %z
+  call void @use(i8 %m)
+  %a = add i8 %m, %n
+  ret i8 %a
+}
+
+; negative test - avoid disturbing redundant expressions for no immediate improvement
+
+define void @mul_add_chain_common_factor_uses(i64 %a, i64 %b, i32 %c) {
+; CHECK-LABEL: @mul_add_chain_common_factor_uses(
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SXT1:%.*]] = sext i32 [[C:%.*]] to i64
+; CHECK-NEXT:    [[MUL11:%.*]] = add i64 [[A]], [[SXT1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = mul i64 [[MUL11]], [[B]]
+; CHECK-NEXT:    call void @use(i64 [[ADD1]])
+; CHECK-NEXT:    [[SXT2:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[ADD12:%.*]] = add i64 [[MUL11]], [[SXT2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = mul i64 [[ADD12]], [[B]]
+; CHECK-NEXT:    call void @use(i64 [[ADD2]])
+; CHECK-NEXT:    [[SXT3:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[ADD23:%.*]] = add i64 [[ADD12]], [[SXT3]]
+; CHECK-NEXT:    [[ADD3:%.*]] = mul i64 [[ADD23]], [[B]]
+; CHECK-NEXT:    call void @use(i64 [[ADD3]])
+; CHECK-NEXT:    call void @use(i64 [[MUL1]])
+; CHECK-NEXT:    ret void
+;
+  %mul1 = mul i64 %a, %b
+  %sxt1 = sext i32 %c to i64
+  %mul2 = mul i64 %b, %sxt1
+  %add1 = add i64 %mul1, %mul2
+  call void @use(i64 %add1)
+  %sxt2 = sext i32 %c to i64
+  %mul3 = mul i64 %b, %sxt2
+  %add2 = add i64 %add1, %mul3
+  call void @use(i64 %add2)
+  %sxt3 = sext i32 %c to i64
+  %mul4 = mul i64 %b, %sxt3
+  %add3 = add i64 %add2, %mul4
+  call void @use(i64 %add3)
+  call void @use(i64 %mul1)
+  ret void
+}
+
 define i8 @not_mul(i8 %x) {
 ; CHECK-LABEL: @not_mul(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], -41
