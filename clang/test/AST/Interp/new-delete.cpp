@@ -514,8 +514,7 @@ namespace DeleteRunsDtors {
   static_assert(abc2() == 1);
 }
 
-/// FIXME: There is a slight difference in diagnostics here, because we don't
-/// create a new frame when we delete record fields or bases at all.
+/// FIXME: There is a slight difference in diagnostics here.
 namespace FaultyDtorCalledByDelete {
   struct InnerFoo {
     int *mem;
@@ -536,7 +535,7 @@ namespace FaultyDtorCalledByDelete {
       a = new int(13);
       IF.mem = new int(100);
     }
-    constexpr ~Foo() { delete a; }
+    constexpr ~Foo() { delete a; } // expected-note {{in call to}}
   };
 
   constexpr int abc() {

@@ -644,7 +644,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
   for (const auto [Kind, Word] : PreprocessorDirs) {
     if (StringRef(CurPtr, Word.size()) != Word)
       continue;
-    char NextChar = peekNextChar(Word.size());
+    int NextChar = peekNextChar(Word.size());
 
     // Check for whitespace after the directive. If there is no whitespace,
     // then we do not recognize it as a preprocessing directive.
