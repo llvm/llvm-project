@@ -3106,8 +3106,7 @@ declare void @llvm.assume(i1)
 ; Change an unsigned predicate to signed in icmp (add x, C1), C2
 define i1 @icmp_add_constant_with_constant_ult_to_slt(i32 range(i32 -4, 10) %x) {
 ; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 13
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 8
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = add nsw i32 %x, 5
@@ -3117,8 +3116,7 @@ define i1 @icmp_add_constant_with_constant_ult_to_slt(i32 range(i32 -4, 10) %x) 
 
 define i1 @icmp_add_constant_with_constant_ugt_to_sgt(i32 range(i32 -4, 10) %x) {
 ; CHECK-LABEL: @icmp_add_constant_with_constant_ugt_to_sgt(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X:%.*]], -3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -13
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = add nsw i32 %x, 10
