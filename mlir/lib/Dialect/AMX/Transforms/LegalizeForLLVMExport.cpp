@@ -94,8 +94,14 @@ public:
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
-      rewriter.create<amx::x86_amx_tilezero_plain>(op.getLoc(), *dstRegIndex);
-      rewriter.eraseOp(op);
+
+      Location loc = op.getLoc();
+      Value dstIndex = rewriter.create<LLVM::ConstantOp>(
+          loc, IntegerType::get(rewriter.getContext(), 8), *dstRegIndex);
+
+      rewriter.create<amx::x86_amx_tilezero_plain>(loc, *dstRegIndex);
+      rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+          op, op.getRes().getType(), dstIndex);
       return success();
     }
 
@@ -141,9 +147,15 @@ public:
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
+
+      Location loc = op.getLoc();
+      Value dstIndex = rewriter.create<LLVM::ConstantOp>(
+          loc, IntegerType::get(rewriter.getContext(), 8), *dstRegIndex);
+
       rewriter.create<amx::x86_amx_tileloadd64_plain>(op.getLoc(), *dstRegIndex,
                                                       ptr, stride);
-      rewriter.eraseOp(op);
+      rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+          op, op.getRes().getType(), dstIndex);
       return success();
     }
 
@@ -231,9 +243,14 @@ public:
 
       assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
              "Incomplete operation attribute for tile binding");
-      rewriter.create<amx::x86_amx_tdpbf16ps_plain>(op.getLoc(), *accRegIndex,
+      Location loc = op.getLoc();
+      Value accIndex = rewriter.create<LLVM::ConstantOp>(
+          loc, IntegerType::get(rewriter.getContext(), 8), *accRegIndex);
+
+      rewriter.create<amx::x86_amx_tdpbf16ps_plain>(loc, *accRegIndex,
                                                     *lhsRegIndex, *rhsRegIndex);
-      rewriter.eraseOp(op);
+      rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+          op, op.getRes().getType(), accIndex);
       return success();
     }
 
@@ -282,6 +299,10 @@ public:
 
       assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
              "Incomplete operation attribute for tile binding");
+      Location loc = op.getLoc();
+      Value accIndex = rewriter.create<LLVM::ConstantOp>(
+          loc, IntegerType::get(rewriter.getContext(), 8), *accRegIndex);
+
       if (zexta && zextb)
         rewriter.create<amx::x86_amx_tdpbuud_plain>(op.getLoc(), *accRegIndex,
                                                     *lhsRegIndex, *rhsRegIndex);
@@ -294,7 +315,8 @@ public:
       else
         rewriter.create<amx::x86_amx_tdpbssd_plain>(op.getLoc(), *accRegIndex,
                                                     *lhsRegIndex, *rhsRegIndex);
-      rewriter.eraseOp(op);
+      rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+          op, op.getRes().getType(), accIndex);
       return success();
     }
 
