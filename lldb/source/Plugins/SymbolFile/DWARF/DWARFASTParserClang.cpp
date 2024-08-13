@@ -278,8 +278,8 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   // we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
+  CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
   if (ast_importer.CanImport(tag_decl_ctx)) {
-    CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
     auto qual_type = ClangUtil::GetQualType(type);
     if (ast_importer.RequireCompleteType(qual_type))
       return;
