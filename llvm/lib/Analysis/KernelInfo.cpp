@@ -102,11 +102,11 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
   });
 }
 
-static void remarkAddrspaceZeroAccess(OptimizationRemarkEmitter &ORE,
+static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
                                       const Function &Caller,
                                       const Instruction &Inst) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, "AddrspaceZeroAccess", &Inst);
+    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &Inst);
     R << "in ";
     identifyFunction(R, Caller);
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst)) {
@@ -116,7 +116,7 @@ static void remarkAddrspaceZeroAccess(OptimizationRemarkEmitter &ORE,
     }
     if (Inst.hasName())
       R << " ('%" << Inst.getName() << "')";
-    R << " accesses memory in addrspace(0)";
+    R << " accesses memory in flat address space";
     return R;
   });
 }
@@ -172,35 +172,35 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       remarkCall(ORE, F, *Call, CallKind, RemarkKind);
       if (const AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Call)) {
         if (MI->getDestAddressSpace() == TTI.getFlatAddressSpace()) {
-          AddrspaceZeroAccesses += Direction;
-          remarkAddrspaceZeroAccess(ORE, F, I);
+          FlatAddrspaceAccesses += Direction;
+          remarkFlatAddrspaceAccess(ORE, F, I);
         } else if (const AnyMemTransferInst *MT =
                        dyn_cast<AnyMemTransferInst>(MI)) {
           if (MT->getSourceAddressSpace() == TTI.getFlatAddressSpace()) {
-            AddrspaceZeroAccesses += Direction;
-            remarkAddrspaceZeroAccess(ORE, F, I);
+            FlatAddrspaceAccesses += Direction;
+            remarkFlatAddrspaceAccess(ORE, F, I);
           }
         }
       }
     } else if (const LoadInst *Load = dyn_cast<LoadInst>(&I)) {
       if (Load->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
-        AddrspaceZeroAccesses += Direction;
-        remarkAddrspaceZeroAccess(ORE, F, I);
+        FlatAddrspaceAccesses += Direction;
+        remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const StoreInst *Store = dyn_cast<StoreInst>(&I)) {
       if (Store->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
-        AddrspaceZeroAccesses += Direction;
-        remarkAddrspaceZeroAccess(ORE, F, I);
+        FlatAddrspaceAccesses += Direction;
+        remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
       if (At->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
-        AddrspaceZeroAccesses += Direction;
-        remarkAddrspaceZeroAccess(ORE, F, I);
+        FlatAddrspaceAccesses += Direction;
+        remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
       if (At->getPointerAddressSpace() == TTI.getFlatAddressSpace()) {
-        AddrspaceZeroAccesses += Direction;
-        remarkAddrspaceZeroAccess(ORE, F, I);
+        FlatAddrspaceAccesses += Direction;
+        remarkFlatAddrspaceAccess(ORE, F, I);
       }
     }
   }
@@ -344,7 +344,7 @@ KernelInfo KernelInfo::getKernelInfo(Function &F,
   REMARK_PROPERTY(IndirectCalls);
   REMARK_PROPERTY(DirectCallsToDefinedFunctions);
   REMARK_PROPERTY(Invokes);
-  REMARK_PROPERTY(AddrspaceZeroAccesses);
+  REMARK_PROPERTY(FlatAddrspaceAccesses);
 #undef REMARK_PROPERTY
 
   return KI;

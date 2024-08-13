@@ -89,8 +89,8 @@ public:
   /// Number of calls of type InvokeInst.
   int64_t Invokes = 0;
 
-  /// Number of addrspace(0) memory accesses (via load, store, etc.).
-  int64_t AddrspaceZeroAccesses = 0;
+  /// Number of flat addrspace memory accesses (via load, store, etc.).
+  int64_t FlatAddrspaceAccesses = 0;
 };
 
 /// Analysis class for KernelInfo.

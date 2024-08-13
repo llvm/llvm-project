@@ -10,7 +10,7 @@
 ;      CHECK: remark: test.c:0:0: in artificial function '[[OFF_FUNC:__omp_offloading_[a-f0-9_]*_h_l12]]_debug__', artificial alloca 'dyn_ptr' with static size of 8 bytes
 ; CHECK-NEXT: remark: test.c:14:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:15:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'a' with static size of 8 bytes
-; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]_debug__', 'store' instruction accesses memory in addrspace(0)
+; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]_debug__', 'store' instruction accesses memory in flat address space
 ; CHECK-NEXT: remark: test.c:13:3: in artificial function '[[OFF_FUNC]]_debug__', direct call to defined function, callee is '__kmpc_target_init'
 ; CHECK-NEXT: remark: test.c:16:5: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is 'f'
 ; CHECK-NEXT: remark: test.c:17:5: in artificial function '[[OFF_FUNC]]_debug__', direct call to defined function, callee is 'g'
@@ -25,11 +25,11 @@
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', IndirectCalls = 0
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', DirectCallsToDefinedFunctions = 3
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', Invokes = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AddrspaceZeroAccesses = 1
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', FlatAddrspaceAccesses = 1
 
 ; CHECK-NEXT: remark: test.c:0:0: in artificial function '[[OFF_FUNC]]', artificial alloca 'dyn_ptr' with static size of 8 bytes
-; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]', 'store' instruction accesses memory in addrspace(0)
-; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', 'load' instruction accesses memory in addrspace(0)
+; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]', 'store' instruction accesses memory in flat address space
+; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', 'load' instruction accesses memory in flat address space
 ; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', direct call to defined function, callee is artificial '[[OFF_FUNC]]_debug__'
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', ExternalNotKernel = 0
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', Allocas = 1
@@ -39,7 +39,7 @@
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', IndirectCalls = 0
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', DirectCallsToDefinedFunctions = 1
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', Invokes = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AddrspaceZeroAccesses = 2
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', FlatAddrspaceAccesses = 2
 
 ; CHECK-NEXT: remark: test.c:4:7: in function 'g', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:5:7: in function 'g', alloca 'a' with static size of 8 bytes
@@ -53,7 +53,7 @@
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', IndirectCalls = 0
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', DirectCallsToDefinedFunctions = 1
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', Invokes = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AddrspaceZeroAccesses = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', FlatAddrspaceAccesses = 0
 ;  CHECK-NOT: remark: {{.*: in function 'g',.*}}
 
 ; A lot of internal functions (e.g., __kmpc_target_init) come next, but we don't
