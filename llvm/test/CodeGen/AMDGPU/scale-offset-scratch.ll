@@ -7,7 +7,6 @@ define amdgpu_ps float @scratch_load_b32_alloca_idxprom(i32 %idx) {
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b32 v0, v0, off scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %p = alloca [32 x i32], align 4, addrspace(5)
@@ -22,7 +21,6 @@ define amdgpu_ps float @scratch_load_b32_idxprom(ptr addrspace(5) align 4 inreg 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
@@ -36,7 +34,6 @@ define amdgpu_ps float @scratch_load_b32_idx32(ptr addrspace(5) align 4 inreg %p
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %arrayidx = getelementptr inbounds float, ptr addrspace(5) %p, i32 %idx
@@ -50,7 +47,6 @@ define amdgpu_ps float @scratch_load_b32_idxprom_wrong_stride(ptr addrspace(5) a
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    scratch_load_b32 v0, v0, s0
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
@@ -64,7 +60,6 @@ define amdgpu_ps float @scratch_load_b16_idxprom_ioffset(ptr addrspace(5) align 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
@@ -81,7 +76,6 @@ define amdgpu_ps <2 x float> @scratch_load_b64_idxprom(ptr addrspace(5) align 4 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
@@ -95,7 +89,6 @@ define amdgpu_ps <3 x float> @scratch_load_b96_idxprom(ptr addrspace(5) align 4 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
@@ -109,7 +102,6 @@ define amdgpu_ps <3 x float> @scratch_load_b96_idxpromi_ioffset(ptr addrspace(5)
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
@@ -124,7 +116,6 @@ define amdgpu_ps <4 x float> @scratch_load_b128_idxprom(ptr addrspace(5) align 4
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
@@ -141,7 +132,6 @@ define amdgpu_ps float @scratch_load_b32_idxprom_range(ptr addrspace(5) align 4 
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -159,7 +149,6 @@ define amdgpu_ps float @scratch_load_b32_idxprom_range_ioffset(ptr addrspace(5) 
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b32 v0, v0, s0 offset:64 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -178,7 +167,6 @@ define amdgpu_ps float @scratch_load_b8_idxprom_range_ioffset(ptr addrspace(5) a
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_u8 v0, v0, s0 offset:16
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -199,7 +187,6 @@ define amdgpu_ps float @scratch_load_b16_idxprom_range(ptr addrspace(5) align 4 
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_u16 v0, v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -219,7 +206,6 @@ define amdgpu_ps float @scratch_load_b16_idxprom_range_ioffset(ptr addrspace(5) 
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -240,7 +226,6 @@ define amdgpu_ps <2 x float> @scratch_load_b64_idxprom_range(ptr addrspace(5) al
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -260,7 +245,6 @@ define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range(ptr addrspace(5) al
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -278,7 +262,6 @@ define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range_ioffset(ptr addrspa
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
@@ -297,7 +280,6 @@ define amdgpu_ps <4 x float> @scratch_load_b128_idxprom_range(ptr addrspace(5) a
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
