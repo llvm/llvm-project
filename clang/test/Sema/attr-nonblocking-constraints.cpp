@@ -210,11 +210,53 @@ void nb18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 }
 
 // Builtin functions
-void nb18a() [[clang::nonblocking]] {
+void nb19() [[clang::nonblocking]] {
 	__builtin_assume(1);
 	void *ptr = __builtin_malloc(1); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_malloc'}}
 	__builtin_free(ptr); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_free'}}
+	
+	void *p2 = __builtin_operator_new(1); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_operator_new'}}
+	__builtin_operator_delete(p2); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function '__builtin_operator_delete'}}
 }
+
+// Function try-block
+void catches() try {} catch (...) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+
+void nb20() [[clang::nonblocking]] {
+	catches(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'catches'}}
+}
+
+struct S {
+    int x;
+    S(int x) try : x(x) {} catch (...) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+    S(double) : x((throw 3, 3)) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+};
+
+int badi(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+struct A {
+    int x = (throw 3, 3); // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+};
+
+struct B {
+    int y = badi(); // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badi'}}
+};
+
+void f() [[clang::nonblocking]] {
+    S s1(3);   // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'S::S'}}
+    S s2(3.0); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'S::S'}}
+    A a;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'A::A'}}
+    B b;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'B::B'}}
+}
+
+#if 0
+// FIXME: can we do better with default member initializers?
+struct T {
+	int x = badi();
+	T() [[clang::nonblocking]] {} // Warning: this calls bad().
+	T(int x) [[clang::nonblocking]] : x(x) {} // This does not.
+};
+#endif
 
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
@@ -251,6 +293,6 @@ void g() [[clang::nonblocking]] {
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
 
-void nb19() [[clang::nonblocking]] // expected-warning {{'nonblocking' function should be declared noexcept}}
+void needs_noexcept() [[clang::nonblocking]] // expected-warning {{'nonblocking' function should be declared noexcept}}
 {
 }

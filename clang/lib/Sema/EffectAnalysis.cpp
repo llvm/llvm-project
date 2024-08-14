@@ -607,10 +607,7 @@ private:
                             << Callee.isVerifiable() << "; callee ";
                CalleeEffects.dump(llvm::dbgs()); llvm::dbgs() << "\n";
                llvm::dbgs() << "  callee " << Callee.CDecl << " canonical "
-                            << Callee.CDecl->getCanonicalDecl() << " redecls";
-               for (Decl *D : Callee.CDecl->redecls()) llvm::dbgs() << " " << D;
-
-               llvm::dbgs() << "\n";);
+                            << Callee.CDecl->getCanonicalDecl() << "\n";);
 
     auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
       if (!Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects))
@@ -881,6 +878,8 @@ private:
       case Builtin::ID::BI__builtin_malloc:
       case Builtin::ID::BI__builtin_realloc:
       case Builtin::ID::BI__builtin_free:
+      case Builtin::ID::BI__builtin_operator_delete:
+      case Builtin::ID::BI__builtin_operator_new:
       case Builtin::ID::BIcalloc:
       case Builtin::ID::BImalloc:
       case Builtin::ID::BImemalign:
