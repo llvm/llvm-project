@@ -514,7 +514,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   Instruction *CmpIntr;
   if ((I.getOpcode() == Instruction::LShr ||
        I.getOpcode() == Instruction::AShr) &&
-      match(Op0, m_Instruction(CmpIntr)) && CmpIntr->hasOneUse() &&
+      match(Op0, m_OneUse(m_Instruction(CmpIntr))) &&
       isa<CmpIntrinsic>(CmpIntr) &&
       match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1))) {
     Value *Cmp =
