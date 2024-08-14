@@ -347,6 +347,11 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- The checker ``alpha.security.MallocOverflow`` was deleted because it was
+  badly implemented and its agressive logic produced too many false positives.
+  To detect too large arguments passed to malloc, consider using the checker
+  ``alpha.taint.TaintedAlloc``.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
