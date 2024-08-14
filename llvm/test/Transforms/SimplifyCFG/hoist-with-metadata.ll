@@ -319,7 +319,7 @@ out:
 define void @hoist_noalias_addrspace_both(i1 %c, ptr %p, i64 %val) {
 ; CHECK-LABEL: @hoist_noalias_addrspace_both(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -361,7 +361,7 @@ out:
 define void @hoist_noalias_addrspace_switch(i64 %i, ptr %p, i64 %val) {
 ; CHECK-LABEL: @hoist_noalias_addrspace_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META8:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -398,4 +398,6 @@ out:
 ; CHECK: [[RNG4]] = !{i32 0, i32 10}
 ; CHECK: [[META5]] = !{i64 4}
 ; CHECK: [[META6]] = !{float 2.500000e+00}
+; CHECK: [[META7]] = !{i32 5, i32 6}
+; CHECK: [[META8]] = !{i32 4, i32 8}
 ;.
