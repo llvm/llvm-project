@@ -1975,17 +1975,14 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
 
   // __sized_ptr_t struct return type { void*, size_t }
-  llvm::StructType *SizedPtrT =
-      llvm::StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
   FunctionCallee Func =
       M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, Name);
-  // Setting the name makes the tests easier to read.
-  CI->setName("sized_ptr");
+  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, "sized_ptr");
 
-  if (const Function *F =
-          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;
@@ -2003,17 +2000,15 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
 
   // __sized_ptr_t struct return type { void*, size_t }
-  llvm::StructType *SizedPtrT =
-      llvm::StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
   FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
                                                Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, Name);
-  // Setting the name makes the tests easier to read.
-  CI->setName("sized_ptr");
+  CallInst *CI =
+      B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, "sized_ptr");
 
-  if (const Function *F =
-          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;
