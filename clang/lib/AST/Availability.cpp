@@ -20,7 +20,6 @@ namespace {
 
 /// Represents the availability of a symbol across platforms.
 struct AvailabilitySet {
-  llvm::SmallVector<clang::AvailabilityInfo> Availabilities;
   bool UnconditionallyDeprecated = false;
   bool UnconditionallyUnavailable = false;
 
@@ -39,6 +38,9 @@ struct AvailabilitySet {
                              });
     return It == Availabilities.end() ? nullptr : It;
   }
+
+private:
+  llvm::SmallVector<clang::AvailabilityInfo> Availabilities;
 };
 
 static void createInfoForDecl(const clang::Decl *Decl,
