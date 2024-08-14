@@ -6245,6 +6245,8 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
     return;
 
   Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI);
+  if (MRI.getRegClass(ToSGPR) == &AMDGPU::SReg_64RegClass)
+    MRI.setRegClass(ToSGPR, &AMDGPU::SReg_64_XEXEC_XNULLRegClass);
   SAddr->setReg(ToSGPR);
 }
 
