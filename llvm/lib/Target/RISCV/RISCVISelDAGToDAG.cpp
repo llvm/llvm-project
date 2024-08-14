@@ -3027,7 +3027,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       // Look for (and (sra y, c2), c1) where c1 is a shifted mask with c3
       // leading zeros and c4 trailing zeros. If c2 is greater than c3, we can
       // use (srli (srai y, c2 - c3), c3 + c4) followed by a SHXADD with c4 as
-      // the X ammount.
+      // the X amount.
       if (isShiftedMask_64(Mask)) {
         unsigned XLen = Subtarget->getXLen();
         unsigned Leading = XLen - llvm::bit_width(Mask);
