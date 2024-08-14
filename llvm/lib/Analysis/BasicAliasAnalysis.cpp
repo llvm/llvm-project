@@ -556,17 +556,17 @@ struct BasicAAResult::DecomposedGEP {
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Nowrap flags common to all GEP operations involved in expression.
-  // (std::nullopt iff expression doesn't involve any geps)
-  std::optional<GEPNoWrapFlags> NWFlags;
+  GEPNoWrapFlags NWFlags = GEPNoWrapFlags::none();
 
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
   }
   void print(raw_ostream &OS) const {
-    OS << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
-       << ", nuw=" << ((NWFlags && NWFlags->hasNoUnsignedWrap()) ? "1" : "0")
-       << ", VarIndices=[";
+    OS << "(DecomposedGEP Base=" << Base->getName()
+       << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
+       << ", nuw=" << (NWFlags.hasNoUnsignedWrap() ? "1" : "0")
+       << ", Offset=" << Offset << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
         OS << ", ";
@@ -591,6 +591,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
   const Instruction *CxtI = dyn_cast<Instruction>(V);
+
+  bool SeenGEPNWFlags = false;
 
   unsigned MaxIndexSize = DL.getMaxIndexSizeInBits();
   DecomposedGEP Decomposed;
@@ -645,10 +647,12 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     }
 
     // Track the common nowrap flags for all GEPs we see.
-    if (Decomposed.NWFlags == std::nullopt)
+    if (SeenGEPNWFlags) {
+      Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
+    } else {
       Decomposed.NWFlags = GEPOp->getNoWrapFlags();
-    else
-      *Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
+      SeenGEPNWFlags = true;
+    }
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
@@ -1126,16 +1130,17 @@ AliasResult BasicAAResult::aliasGEP(
   // for the two to alias, then we can assume noalias.
   // TODO: Remove !isScalable() once BasicAA fully support scalable location
   // size
-  if (DecompGEP1.NWFlags && DecompGEP1.NWFlags->isInBounds() &&
-      DecompGEP1.VarIndices.empty() && V2Size.hasValue() &&
-      !V2Size.isScalable() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
+
+  if (DecompGEP1.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
+      V2Size.hasValue() && !V2Size.isScalable() &&
+      DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
   // Symmetric case to above.
-  if (DecompGEP2.NWFlags && DecompGEP2.NWFlags->isInBounds() &&
-      DecompGEP1.VarIndices.empty() && V1Size.hasValue() &&
-      !V1Size.isScalable() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+  if (DecompGEP2.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
+      V1Size.hasValue() && !V1Size.isScalable() &&
+      DecompGEP1.Offset.sle(-V1Size.getValue()) &&
       isBaseOfObject(DecompGEP1.Base))
     return AliasResult::NoAlias;
 
@@ -1250,11 +1255,11 @@ AliasResult BasicAAResult::aliasGEP(
   //    +                +                     +
   //    | BaseOffset     |   +<nuw> Indices    |
   //    ---------------->|-------------------->|
-  //    |-->VLeftSize    |                     |-------> VRightSize
+  //    |-->V2Size       |                     |-------> V1Size
   //   LHS                                    RHS
   if (!DecompGEP1.VarIndices.empty() &&
-      DecompGEP1.NWFlags->hasNoUnsignedWrap() && V2Size.hasValue() &&
-      !V2Size.isScalable() && DecompGEP1.Offset.sge(V2Size.getValue()))
+      DecompGEP1.NWFlags.hasNoUnsignedWrap() && V2Size.hasValue() &&
+      !V2Size.isScalable() && DecompGEP1.Offset.uge(V2Size.getValue()))
     return AliasResult::NoAlias;
 
   // Bail on analysing scalable LocationSize
@@ -1864,7 +1869,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
   // Drop nuw flag from GEP if subtraction of constant offsets overflows in an
   // unsigned sense.
   if (DestGEP.Offset.ult(SrcGEP.Offset))
-    DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
+    DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
 
   DestGEP.Offset -= SrcGEP.Offset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
@@ -1891,7 +1896,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
         // Drop nuw flag from GEP if subtraction of V's Scale overflows in an
         // unsigned sense.
         if (Dest.Scale.ult(Src.Scale))
-          DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
+          DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
 
         Dest.Scale -= Src.Scale;
         Dest.IsNSW = false;
@@ -1909,7 +1914,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       DestGEP.VarIndices.push_back(Entry);
 
       // Drop nuw flag when we have unconsumed variable indices from SrcGEP.
-      DestGEP.NWFlags = DestGEP.NWFlags->withoutNoUnsignedWrap();
+      DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
     }
   }
 }
