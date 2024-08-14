@@ -1909,7 +1909,6 @@ private:
                              const SMLoc &IDLoc);
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
-  bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   bool validateAuxData(const MCInst &Inst, const OperandVector &Operands);
@@ -2791,46 +2790,48 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
 
 static unsigned getSpecialRegForName(StringRef RegName) {
   return StringSwitch<unsigned>(RegName)
-    .Case("exec", AMDGPU::EXEC)
-    .Case("vcc", AMDGPU::VCC)
-    .Case("flat_scratch", AMDGPU::FLAT_SCR)
-    .Case("xnack_mask", AMDGPU::XNACK_MASK)
-    .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
-    .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
-    .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-    .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-    .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
-    .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
-    .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-    .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-    .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-    .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-    .Case("lds_direct", AMDGPU::LDS_DIRECT)
-    .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
-    .Case("m0", AMDGPU::M0)
-    .Case("vccz", AMDGPU::SRC_VCCZ)
-    .Case("src_vccz", AMDGPU::SRC_VCCZ)
-    .Case("execz", AMDGPU::SRC_EXECZ)
-    .Case("src_execz", AMDGPU::SRC_EXECZ)
-    .Case("scc", AMDGPU::SRC_SCC)
-    .Case("src_scc", AMDGPU::SRC_SCC)
-    .Case("tba", AMDGPU::TBA)
-    .Case("tma", AMDGPU::TMA)
-    .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
-    .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
-    .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
-    .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
-    .Case("vcc_lo", AMDGPU::VCC_LO)
-    .Case("vcc_hi", AMDGPU::VCC_HI)
-    .Case("exec_lo", AMDGPU::EXEC_LO)
-    .Case("exec_hi", AMDGPU::EXEC_HI)
-    .Case("tma_lo", AMDGPU::TMA_LO)
-    .Case("tma_hi", AMDGPU::TMA_HI)
-    .Case("tba_lo", AMDGPU::TBA_LO)
-    .Case("tba_hi", AMDGPU::TBA_HI)
-    .Case("pc", AMDGPU::PC_REG)
-    .Case("null", AMDGPU::SGPR_NULL)
-    .Default(AMDGPU::NoRegister);
+      .Case("exec", AMDGPU::EXEC)
+      .Case("vcc", AMDGPU::VCC)
+      .Case("flat_scratch", AMDGPU::FLAT_SCR)
+      .Case("xnack_mask", AMDGPU::XNACK_MASK)
+      .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
+      .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
+      .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+      .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+      .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
+      .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
+      .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+      .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+      .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+      .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+      .Case("lds_direct", AMDGPU::LDS_DIRECT)
+      .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
+      .Case("m0", AMDGPU::M0)
+      .Case("vccz", AMDGPU::SRC_VCCZ)
+      .Case("src_vccz", AMDGPU::SRC_VCCZ)
+      .Case("execz", AMDGPU::SRC_EXECZ)
+      .Case("src_execz", AMDGPU::SRC_EXECZ)
+      .Case("scc", AMDGPU::SRC_SCC)
+      .Case("src_scc", AMDGPU::SRC_SCC)
+      .Case("tba", AMDGPU::TBA)
+      .Case("tma", AMDGPU::TMA)
+      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
+      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+      .Case("src_flat_scratch_base_lo", SRC_FLAT_SCRATCH_BASE_LO)
+      .Case("src_flat_scratch_base_hi", SRC_FLAT_SCRATCH_BASE_HI)
+      .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
+      .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
+      .Case("vcc_lo", AMDGPU::VCC_LO)
+      .Case("vcc_hi", AMDGPU::VCC_HI)
+      .Case("exec_lo", AMDGPU::EXEC_LO)
+      .Case("exec_hi", AMDGPU::EXEC_HI)
+      .Case("tma_lo", AMDGPU::TMA_LO)
+      .Case("tma_hi", AMDGPU::TMA_HI)
+      .Case("tba_lo", AMDGPU::TBA_LO)
+      .Case("tba_hi", AMDGPU::TBA_HI)
+      .Case("pc", AMDGPU::PC_REG)
+      .Case("null", AMDGPU::SGPR_NULL)
+      .Default(AMDGPU::NoRegister);
 }
 
 bool AMDGPUAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -3204,7 +3205,8 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
     if (Reg == AMDGPU::SGPR_NULL) {
       Error(Loc, "'null' operand is not supported on this GPU");
     } else {
-      Error(Loc, "register not available on this GPU");
+      Error(Loc, Twine(AMDGPUInstPrinter::getRegisterName(Reg)) +
+                     " register not available on this GPU");
     }
     return false;
   }
@@ -5514,22 +5516,6 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
-  if (!isGFX11Plus())
-    return true;
-  for (auto &Operand : Operands) {
-    if (!Operand->isReg())
-      continue;
-    unsigned Reg = Operand->getReg();
-    if (Reg == SRC_EXECZ || Reg == SRC_VCCZ) {
-      Error(getRegLoc(Reg, Operands),
-            "execz and vccz are not supported on this GPU");
-      return false;
-    }
-  }
-  return true;
-}
-
 bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
                                   const OperandVector &Operands) {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
@@ -5692,9 +5678,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateWaitCnt(Inst, Operands)) {
-    return false;
-  }
-  if (!validateExeczVcczOperands(Operands)) {
     return false;
   }
   if (!validateTFE(Inst, Operands)) {
@@ -6768,40 +6751,45 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            unsigned RegNo) {
-
-  if (MRI.regsOverlap(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
+  if (MRI.regsOverlap(TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
-  if (MRI.regsOverlap(AMDGPU::SGPR104_SGPR105, RegNo))
+  if (MRI.regsOverlap(SGPR104_SGPR105, RegNo))
     return hasSGPR104_SGPR105();
 
   switch (RegNo) {
-  case AMDGPU::SRC_SHARED_BASE_LO:
-  case AMDGPU::SRC_SHARED_BASE:
-  case AMDGPU::SRC_SHARED_LIMIT_LO:
-  case AMDGPU::SRC_SHARED_LIMIT:
+  case SRC_SHARED_BASE_LO:
+  case SRC_SHARED_BASE:
+  case SRC_SHARED_LIMIT_LO:
+  case SRC_SHARED_LIMIT:
     return isGFX9Plus();
-  case AMDGPU::SRC_PRIVATE_BASE_LO:
-  case AMDGPU::SRC_PRIVATE_BASE:
-  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
-  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case SRC_PRIVATE_BASE_LO:
+  case SRC_PRIVATE_BASE:
+  case SRC_PRIVATE_LIMIT_LO:
+  case SRC_PRIVATE_LIMIT:
     return isGFX9Plus() && !isGFX13Plus();
-  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+  case SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
-  case AMDGPU::TBA:
-  case AMDGPU::TBA_LO:
-  case AMDGPU::TBA_HI:
-  case AMDGPU::TMA:
-  case AMDGPU::TMA_LO:
-  case AMDGPU::TMA_HI:
+  case TBA:
+  case TBA_LO:
+  case TBA_HI:
+  case TMA:
+  case TMA_LO:
+  case TMA_HI:
     return !isGFX9Plus();
-  case AMDGPU::XNACK_MASK:
-  case AMDGPU::XNACK_MASK_LO:
-  case AMDGPU::XNACK_MASK_HI:
+  case XNACK_MASK:
+  case XNACK_MASK_LO:
+  case XNACK_MASK_HI:
     return (isVI() || isGFX9()) && getTargetStreamer().getTargetID()->isXnackSupported();
-  case AMDGPU::SGPR_NULL:
+  case SGPR_NULL:
     return isGFX10Plus();
+  case SRC_EXECZ:
+  case SRC_VCCZ:
+    return !isGFX11Plus();
+  case SRC_FLAT_SCRATCH_BASE_LO:
+  case SRC_FLAT_SCRATCH_BASE_HI:
+    return isGFX13Plus();
   default:
     break;
   }
@@ -6814,9 +6802,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     // On GFX10Plus flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
     switch (RegNo) {
-    case AMDGPU::FLAT_SCR:
-    case AMDGPU::FLAT_SCR_LO:
-    case AMDGPU::FLAT_SCR_HI:
+    case FLAT_SCR:
+    case FLAT_SCR_LO:
+    case FLAT_SCR_HI:
       return false;
     default:
       return true;
@@ -6825,7 +6813,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  if (MRI.regsOverlap(AMDGPU::SGPR102_SGPR103, RegNo))
+  if (MRI.regsOverlap(SGPR102_SGPR103, RegNo))
     return hasSGPR102_SGPR103();
 
   return true;

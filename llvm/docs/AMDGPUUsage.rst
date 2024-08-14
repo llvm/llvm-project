@@ -1737,6 +1737,8 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              function which requires AGPRs is reached through any function marked
                                              with this attribute.
 
+     "amdgpu-wavegroup-enable"               GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
+                                             `!reqd_work_group_size` metadata on the kernel function.
      ======================================= ==========================================================
 
 Calling Conventions
@@ -4919,8 +4921,17 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     351:192 20                                      Reserved, must be 0.
+     319:192 16                                      Reserved, must be 0.
              bytes
+     351:320 4 bytes LANESHARED_SEGMENT_FIXED_SIZE   GFX6-GFX12
+                                                       Reserved, must be 0.
+                                                     GFX13
+                                                       The amount of fixed
+                                                       lane-shared memory required
+                                                       per wavegroup.
+
+                                                       Must be 0 if ENABLE_WAVEGROUP
+                                                       is not set.
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX90A, GFX940
@@ -5005,7 +5016,13 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      dynamically sized stack.
                                                      This is only set in code
                                                      object v5 and later.
-     463:460 4 bits                                  Reserved, must be 0.
+     460     1 bit   ENABLE_WAVEGROUP                GFX6-GFX12
+                                                       Reserved, must be 0.
+                                                     GFX13+
+                                                       If set to 1, execute the
+                                                       kernel in wavegroup
+                                                       launch mode.
+     463:461 3 bits                                  Reserved, must be 0.
      470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
                                                        - Reserved, must be 0.
                                                      GFX90A, GFX940
@@ -6040,9 +6057,12 @@ Frame Pointer
 +++++++++++++
 
 If the kernel needs a frame pointer for the reasons defined in
-``SIFrameLowering`` then SGPR33 is used and is always set to ``0`` in the
-kernel prolog. If a frame pointer is not required then all uses of the frame
-pointer are replaced with immediate ``0`` offsets.
+``SIFrameLowering`` then SGPR33 is used and is set to ``0`` in the kernel
+prolog of regular kernel dispatches. If a frame pointer is not required then
+all uses of the frame pointer are replaced with immediate ``0`` offsets.
+
+In wavegroup kernel dispatches, the kernel prolog sets the frame pointer to
+``laneshared_segment_size + wave_id_in_wavegroup * private_segment_size``.
 
 .. _amdgpu-amdhsa-kernel-prolog-flat-scratch:
 
@@ -15882,6 +15902,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_private_segment_fixed_size``                   0                   GFX6-GFX12   Controls PRIVATE_SEGMENT_FIXED_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_laneshared_segment_fixed_size``                0                   GFX13+       Controls LANESHARED_SEGMENT_FIXED_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_kernarg_size``                                 0                   GFX6-GFX12   Controls KERNARG_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_count``                              0                   GFX6-GFX12   Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
@@ -15907,6 +15929,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Specific
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_enable_wavegroup``                             0                   GFX13+       Controls ENABLE_WAVEGROUP in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.

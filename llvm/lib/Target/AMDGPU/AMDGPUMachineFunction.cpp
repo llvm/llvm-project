@@ -90,6 +90,26 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
     UsesDynamicLDS = true;
 }
 
+static bool isSemaphore(const GlobalVariable &GV) {
+  // TODO-GFX13: Allow arrays and structs, if all members are semaphores.
+  // TODO-GFX13: Disallow other uses of target("amdgcn.semaphore") including:
+  // - Structs containing a mixture of semaphores and other data.
+  // - Globals in other address spaces.
+  // - Allocas.
+  Type *Ty = GV.getValueType();
+  while (true) {
+    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "amdgcn.semaphore";
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->getNumElements() == 0)
+        return false;
+      Ty = STy->getElementType(0);
+      continue;
+    }
+    return false;
+  }
+}
+
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
                                                   const GlobalVariable &GV,
                                                   Align Trailing) {
@@ -102,6 +122,15 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (isSemaphore(GV)) {
+      unsigned Num = ++NumSemaphores;
+      Offset = 0x801000u | Num << 4;
+      // TODO-GFX13: OR-in the owning wave-id-in-wavegroup.
+      // TODO-GFX13: Diagnose trying to allocate more than the 5 semaphores
+      // supported by hardware.
+      Entry.first->second = Offset;
+      return Offset;
+    }
 
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
     if (MaybeAbs) {

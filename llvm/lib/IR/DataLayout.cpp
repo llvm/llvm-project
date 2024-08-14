@@ -22,7 +22,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -218,6 +217,45 @@ void DataLayout::reset(StringRef Desc) {
 
   if (Error Err = parseSpecifier(Desc))
     return report_fatal_error(std::move(Err));
+}
+
+DataLayout &DataLayout::operator=(const DataLayout &Other) {
+  clear();
+  StringRepresentation = Other.StringRepresentation;
+  BigEndian = Other.BigEndian;
+  AllocaAddrSpace = Other.AllocaAddrSpace;
+  ProgramAddrSpace = Other.ProgramAddrSpace;
+  DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
+  StackNaturalAlign = Other.StackNaturalAlign;
+  FunctionPtrAlign = Other.FunctionPtrAlign;
+  TheFunctionPtrAlignType = Other.TheFunctionPtrAlignType;
+  ManglingMode = Other.ManglingMode;
+  LegalIntWidths = Other.LegalIntWidths;
+  IntAlignments = Other.IntAlignments;
+  FloatAlignments = Other.FloatAlignments;
+  VectorAlignments = Other.VectorAlignments;
+  StructAlignment = Other.StructAlignment;
+  Pointers = Other.Pointers;
+  NonIntegralAddressSpaces = Other.NonIntegralAddressSpaces;
+  return *this;
+}
+
+bool DataLayout::operator==(const DataLayout &Other) const {
+  // NOTE: StringRepresentation might differ, it is not canonicalized.
+  // FIXME: NonIntegralAddressSpaces isn't compared.
+  return BigEndian == Other.BigEndian &&
+         AllocaAddrSpace == Other.AllocaAddrSpace &&
+         ProgramAddrSpace == Other.ProgramAddrSpace &&
+         DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
+         StackNaturalAlign == Other.StackNaturalAlign &&
+         FunctionPtrAlign == Other.FunctionPtrAlign &&
+         TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
+         ManglingMode == Other.ManglingMode &&
+         LegalIntWidths == Other.LegalIntWidths &&
+         IntAlignments == Other.IntAlignments &&
+         FloatAlignments == Other.FloatAlignments &&
+         VectorAlignments == Other.VectorAlignments &&
+         StructAlignment == Other.StructAlignment && Pointers == Other.Pointers;
 }
 
 Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
@@ -548,31 +586,6 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
   }
 
   return Error::success();
-}
-
-DataLayout::DataLayout(const Module *M) {
-  init(M);
-}
-
-void DataLayout::init(const Module *M) { *this = M->getDataLayout(); }
-
-bool DataLayout::operator==(const DataLayout &Other) const {
-  bool Ret = BigEndian == Other.BigEndian &&
-             AllocaAddrSpace == Other.AllocaAddrSpace &&
-             StackNaturalAlign == Other.StackNaturalAlign &&
-             ProgramAddrSpace == Other.ProgramAddrSpace &&
-             DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
-             FunctionPtrAlign == Other.FunctionPtrAlign &&
-             TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
-             ManglingMode == Other.ManglingMode &&
-             LegalIntWidths == Other.LegalIntWidths &&
-             IntAlignments == Other.IntAlignments &&
-             FloatAlignments == Other.FloatAlignments &&
-             VectorAlignments == Other.VectorAlignments &&
-             StructAlignment == Other.StructAlignment &&
-             Pointers == Other.Pointers;
-  // Note: getStringRepresentation() might differs, it is not canonicalized
-  return Ret;
 }
 
 static SmallVectorImpl<LayoutAlignElem>::const_iterator

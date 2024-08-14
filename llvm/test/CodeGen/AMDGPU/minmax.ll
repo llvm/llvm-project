@@ -15,7 +15,6 @@ define i32 @test_minmax_i32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_maxmin_i32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -88,7 +87,6 @@ define i32 @test_minmax_commuted_i32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_maxmin_i32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -108,7 +106,6 @@ define i32 @test_maxmin_i32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_minmax_i32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -128,7 +125,6 @@ define i32 @test_maxmin_commuted_i32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_minmax_i32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -149,7 +145,6 @@ define void @test_smed3_i32(ptr addrspace(1) %arg, i32 %x, i32 %y, i32 %z) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_med3_i32 v2, v2, v3, v4
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -174,7 +169,6 @@ define i32 @test_minmax_u32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_maxmin_u32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -247,7 +241,6 @@ define i32 @test_minmax_commuted_u32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_maxmin_u32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -267,7 +260,6 @@ define i32 @test_maxmin_u32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_minmax_u32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -287,7 +279,6 @@ define i32 @test_maxmin_commuted_u32(i32 %a, i32 %b, i32 %c) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_minmax_u32 v0, v0, v1, v2
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
@@ -308,7 +299,6 @@ define void @test_umed3_i32(ptr addrspace(1) %arg, i32 %x, i32 %y, i32 %z) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_med3_u32 v2, v2, v3, v4
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -344,7 +334,6 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
 ; GFX1210-SDAG-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX1210-SDAG-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
@@ -355,7 +344,6 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX1210-GISEL-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX1210-GISEL-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
@@ -454,7 +442,6 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
 ; GFX1210-SDAG-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX1210-SDAG-NEXT:    v_minmax_num_f32 v0, v0, v1, v2
@@ -465,7 +452,6 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX1210-GISEL-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX1210-GISEL-NEXT:    v_minmax_num_f32 v0, v0, v1, v2
@@ -503,7 +489,6 @@ define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) 
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_med3_num_f32 v2, v2, v3, v4
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -607,7 +592,6 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v0, v0, v0
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v2, v2, v2
@@ -619,7 +603,6 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v0, v0, v0
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v2, v2, v2
@@ -670,7 +653,6 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v0, v0, v0
 ; GFX1210-SDAG-NEXT:    v_max_num_f16_e32 v2, v2, v2
@@ -682,7 +664,6 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v0, v0, v0
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX1210-GISEL-NEXT:    v_max_num_f16_e32 v2, v2, v2
@@ -706,7 +687,6 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_med3_num_f16 v2, v2, v3, v4
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1210-NEXT:    s_wait_xcnt 0x0

@@ -1079,6 +1079,13 @@ def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
                         (anyext node:$op)]>;
 
+def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
+  return N->getFlags().hasNonNeg();
+}]>;
+def sext_like : PatFrags<(ops node:$src),
+                         [(zext_nneg node:$src),
+                          (sext node:$src)]>;
+
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal
 // definitions. When expanding a pattern, if the null fragment is referenced

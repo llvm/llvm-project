@@ -369,8 +369,7 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
     return Reg;
 
   unsigned Enc = MRI.getEncodingValue(Reg);
-  if (!(Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR) ||
-      (Enc & AMDGPU::HWEncoding::IS_AGPR))
+  if (!(Enc & AMDGPU::HWEncoding::IS_VGPR))
     return Reg;
 
   auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);

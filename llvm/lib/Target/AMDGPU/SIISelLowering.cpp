@@ -11133,6 +11133,37 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+  case Intrinsic::amdgcn_s_sema_set_limit: {
+    // TODO-GFX13: Implement this in tablegen with an SDNodeXForm.
+    SDValue Sem = Op->getOperand(2);
+    if (auto *SemAddr = dyn_cast<ConstantSDNode>(Sem)) {
+      unsigned SemID = (SemAddr->getZExtValue() >> 4) & 0xF;
+      unsigned Limit =
+          cast<ConstantSDNode>(Op->getOperand(3))->getZExtValue() & 0xFFF;
+      SDValue K = DAG.getTargetConstant(SemID << 13 | Limit, DL, MVT::i32);
+      auto NewMI = DAG.getMachineNode(AMDGPU::S_SEMA_SET_LIMIT, DL,
+                                      Op->getVTList(), {K, Chain});
+      return SDValue(NewMI, 0);
+    }
+    // TODO-GFX13: Handle non-constant semaphore ID.
+    return SDValue();
+  }
+  case Intrinsic::amdgcn_s_sema_signal: {
+    // TODO-GFX13: Implement this in tablegen with an SDNodeXForm.
+    SDValue Sem = Op->getOperand(2);
+    if (auto *SemAddr = dyn_cast<ConstantSDNode>(Sem)) {
+      unsigned SemIDAndRank = (SemAddr->getZExtValue() >> 4) & 0xFF;
+      unsigned Count =
+          cast<ConstantSDNode>(Op->getOperand(3))->getZExtValue() & 0xF;
+      SDValue K =
+          DAG.getTargetConstant(Count << 8 | SemIDAndRank, DL, MVT::i32);
+      auto NewMI = DAG.getMachineNode(AMDGPU::S_SEMA_SIGNAL, DL,
+                                      Op->getVTList(), {K, Chain});
+      return SDValue(NewMI, 0);
+    }
+    // TODO-GFX13: Handle non-constant semaphore ID.
+    return SDValue();
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -17912,6 +17943,9 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  // If the return value isn't used, do not introduce a false use in the phi.
+  bool ReturnValueIsUsed = !AI->use_empty();
+
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
@@ -17975,14 +18009,18 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
-  Loaded->addIncoming(LoadedShared, SharedBB);
-  Loaded->addIncoming(LoadedPrivate, PrivateBB);
-  Loaded->addIncoming(LoadedGlobal, GlobalBB);
+
+  if (ReturnValueIsUsed) {
+    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    Loaded->addIncoming(LoadedShared, SharedBB);
+    Loaded->addIncoming(LoadedPrivate, PrivateBB);
+    Loaded->addIncoming(LoadedGlobal, GlobalBB);
+    Loaded->takeName(AI);
+    AI->replaceAllUsesWith(Loaded);
+  }
+
   Builder.CreateBr(ExitBB);
 
-  Loaded->takeName(AI);
-  AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
 

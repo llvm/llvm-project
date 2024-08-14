@@ -34,6 +34,7 @@
 #include "nsan_flags.h"
 #include "nsan_stats.h"
 #include "nsan_suppressions.h"
+#include "nsan_thread.h"
 
 #include <assert.h>
 #include <math.h>
@@ -806,6 +807,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   if (nsan_initialized)
     return;
   nsan_init_is_running = true;
+  SanitizerToolName = "NumericalStabilitySanitizer";
 
   InitializeFlags();
   InitializeSuppressions();
@@ -813,10 +815,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
 
   DisableCoreDumperIfNecessary();
 
-  if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
+  if (!MmapFixedNoReserve(TypesAddr(), AllocatorAddr() - TypesAddr()))
     Die();
 
   InitializeInterceptors();
+  NsanTSDInit(NsanTSDDtor);
+  NsanAllocatorInit();
+
+  NsanThread *main_thread = NsanThread::Create(nullptr, nullptr);
+  SetCurrentThread(main_thread);
+  main_thread->Init();
 
   InitializeStats();
   if (flags().print_stats_on_exit)

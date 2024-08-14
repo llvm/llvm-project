@@ -25,7 +25,7 @@
 
 # RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300AC60800000000024000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_463
-# RES_463: ; error decoding test.kd: kernel descriptor reserved bits in range (463:460) set
+# RES_463: ; error decoding test.kd: kernel descriptor reserved bits in range (463:461) set
 # RES_463-NEXT: ; decoding failed region as bytes
 
 --- !ELF

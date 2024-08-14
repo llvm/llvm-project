@@ -644,6 +644,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, ScratchRSrcReg);
   }
 
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_LO);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_HI);
+
   Register LongBranchReservedReg = MFI->getLongBranchReservedReg();
   if (LongBranchReservedReg)
     reserveRegisterTuples(Reserved, LongBranchReservedReg);

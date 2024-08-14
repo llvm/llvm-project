@@ -225,7 +225,6 @@ define float @flat_atomic_fadd_f32_rtn(ptr %ptr, float %data) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -295,7 +294,6 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    flat_load_b32 v2, v[0:1]
 ; GFX1210-NEXT:    s_mov_b32 s0, 0
 ; GFX1210-NEXT:  .LBB4_1: ; %atomicrmw.start
@@ -380,7 +378,6 @@ define <2 x half> @flat_atomic_fadd_v2f16_rtn(ptr %ptr, <2 x half> %data) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -445,7 +442,6 @@ define <2 x i16> @flat_atomic_fadd_v2bf16_rtn(ptr %ptr, <2 x i16> %data) {
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -512,7 +508,6 @@ define <2 x i16> @global_atomic_fadd_v2bf16_rtn(ptr addrspace(1) %ptr, <2 x i16>
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    global_atomic_pk_add_bf16 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -583,7 +578,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -653,7 +647,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe

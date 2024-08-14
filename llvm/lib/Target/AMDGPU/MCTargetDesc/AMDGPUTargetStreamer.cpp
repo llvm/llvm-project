@@ -1015,6 +1015,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
       sizeof(amdhsa::kernel_descriptor_t::kernel_code_entry_byte_offset));
   for (uint32_t i = 0; i < sizeof(amdhsa::kernel_descriptor_t::reserved1); ++i)
     Streamer.emitInt8(0u);
+  Streamer.emitInt32(0u); // TODO-GFX13: laneshared_segment_fixed_size
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc3,
                      sizeof(amdhsa::kernel_descriptor_t::compute_pgm_rsrc3));
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc1,

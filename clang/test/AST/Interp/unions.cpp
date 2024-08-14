@@ -358,4 +358,51 @@ namespace CopyCtor {
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
 }
+
+namespace UnionInBase {
+  struct Base {
+    int y; // both-note {{subobject declared here}}
+  };
+  struct A : Base {
+    int x;
+    int arr[3];
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int b;
+  };
+  constexpr int read_wrong_member_indirect() { // both-error {{never produces a constant}}
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    return *p; // both-note 2{{read of member 'a' of union with active member 'b'}}
+
+  }
+  static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{in call to}}
+  constexpr int read_uninitialized() {
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    b.a.x = 1;
+    return *p; // both-note {{read of uninitialized object}}
+  }
+  static_assert(read_uninitialized() == 0); // both-error {{constant}} \
+                                            // both-note {{in call}}
+  constexpr int write_uninitialized() {
+    B b = {.b = 1};
+    int *p = &b.a.y;
+    b.a.x = 1;
+    *p = 1;
+    return *p;
+  }
+
+  constexpr B return_uninit() {
+    B b = {.b = 1};
+    b.a.x = 2;
+    return b;
+  }
+  constexpr B uninit = return_uninit(); // both-error {{constant expression}} \
+                                        // both-note {{subobject 'y' is not initialized}}
+  static_assert(return_uninit().a.x == 2);
+}
 #endif

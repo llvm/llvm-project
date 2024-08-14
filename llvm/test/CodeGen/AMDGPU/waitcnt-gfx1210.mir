@@ -8,7 +8,6 @@ body: |
     ; GCN-LABEL: name: no_wait_between_low_and_high_vgpr
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr256, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -24,7 +23,6 @@ body: |
     ; GCN-LABEL: name: wait_between_high_and_high_vgpr
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr511 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr511, 0, 0, implicit $exec, implicit $flat_scr
@@ -41,7 +39,6 @@ body: |
     ; GCN-LABEL: name: no_wait_between_low_and_high_vgpr_512
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr512, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -57,7 +54,6 @@ body: |
     ; GCN-LABEL: name: wait_between_high_and_high_vgpr_512
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr512 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr512, 0, 0, implicit $exec, implicit $flat_scr
@@ -74,7 +70,6 @@ body: |
     ; GCN-LABEL: name: no_wait_between_high_vgpr_768_and_high_vgpr_512
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr768 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr512, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
@@ -90,7 +85,6 @@ body: |
     ; GCN-LABEL: name: wait_between_high_and_high_vgpr_768
     ; GCN: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr768 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr768, 0, 0, implicit $exec, implicit $flat_scr

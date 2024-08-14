@@ -833,6 +833,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit);
 
+  // Opaque types in the AMDGPU name space.
+  if (Name == "amdgcn.semaphore") {
+    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
+                          TargetExtType::CanBeGlobal);
+  }
+
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 

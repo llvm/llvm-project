@@ -108,11 +108,11 @@ v_bpermute_b32 v5, 0.15915494, v3
 v_bpermute_b32 v5, src_scc, v3
 // GFX13: v_bpermute_b32 v5, src_scc, v3          ; encoding: [0x05,0x80,0x01,0xdc,0xfd,0x60,0x80,0x00]
 
-// TODO: v_bpermute_b32 v5, src_flat_scratch_base_lo, v3
-// COM: GFX13: v_bpermute_b32 v5, src_flat_scratch_base_lo, v3 ; encoding: [0x05,0x80,0x01,0xdc,0xe6,0x60,0x80,0x00]
+v_bpermute_b32 v5, src_flat_scratch_base_lo, v3
+// GFX13: v_bpermute_b32 v5, src_flat_scratch_base_lo, v3 ; encoding: [0x05,0x80,0x01,0xdc,0xe6,0x60,0x80,0x00]
 
-// TODO: v_bpermute_b32 v5, src_flat_scratch_base_hi, v3
-// COM: GFX13: v_bpermute_b32 v5, src_flat_scratch_base_hi, v3 ; encoding: [0x05,0x80,0x01,0xdc,0xe7,0x60,0x80,0x00]
+v_bpermute_b32 v5, src_flat_scratch_base_hi, v3
+// GFX13: v_bpermute_b32 v5, src_flat_scratch_base_hi, v3 ; encoding: [0x05,0x80,0x01,0xdc,0xe7,0x60,0x80,0x00]
 
 v_bpermute_b32 v5, src_shared_limit, v3
 // GFX13: v_bpermute_b32 v5, src_shared_limit, v3 ; encoding: [0x05,0x80,0x01,0xdc,0xec,0x60,0x80,0x00]
@@ -147,11 +147,11 @@ v_bpermute_b32 v5, v2, 0.15915494
 v_bpermute_b32 v5, v2, src_scc
 // GFX13: v_bpermute_b32 v5, v2, src_scc          ; encoding: [0x05,0x80,0x01,0xdc,0x02,0xa4,0x1f,0x00]
 
-// TODO: v_bpermute_b32 v5, v2, src_flat_scratch_base_lo
-// COM: GFX13: v_bpermute_b32 v5, v2, src_flat_scratch_base_lo ; encoding: [0x05,0x80,0x01,0xdc,0x02,0xc4,0x1c,0x00]
+v_bpermute_b32 v5, v2, src_flat_scratch_base_lo
+// GFX13: v_bpermute_b32 v5, v2, src_flat_scratch_base_lo ; encoding: [0x05,0x80,0x01,0xdc,0x02,0xc4,0x1c,0x00]
 
-// TODO: v_bpermute_b32 v5, v2, src_flat_scratch_base_hi
-// COM: GFX13: v_bpermute_b32 v5, v2, src_flat_scratch_base_hi ; encoding: [0x05,0x80,0x01,0xdc,0x02,0xe4,0x1c,0x00]
+v_bpermute_b32 v5, v2, src_flat_scratch_base_hi
+// GFX13: v_bpermute_b32 v5, v2, src_flat_scratch_base_hi ; encoding: [0x05,0x80,0x01,0xdc,0x02,0xe4,0x1c,0x00]
 
 v_bpermute_b32 v5, v2, src_shared_limit
 // GFX13: v_bpermute_b32 v5, v2, src_shared_limit ; encoding: [0x05,0x80,0x01,0xdc,0x02,0x84,0x1d,0x00]
@@ -163,7 +163,7 @@ v_bpermute_b32 v5, 0xfe0b, v3
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_bpermute_b32 v5, v2, src_private_base
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 
 v_bpermute_b32 v5, v2, v3 aux_data:2
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
@@ -201,11 +201,11 @@ v_permute_pair_bcast_b32 v5, 0.15915494
 v_permute_pair_bcast_b32 v5, src_scc
 // GFX13: v_permute_pair_bcast_b32 v5, src_scc    ; encoding: [0x05,0x00,0x01,0xdc,0xfd,0x00,0x00,0x00]
 
-// TODO: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_lo
-// COM: GFX13: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_lo ; encoding: [0x05,0x00,0x01,0xdc,0xe6,0x00,0x00,0x00]
+v_permute_pair_bcast_b32 v5, src_flat_scratch_base_lo
+// GFX13: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_lo ; encoding: [0x05,0x00,0x01,0xdc,0xe6,0x00,0x00,0x00]
 
-// TODO: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_hi
-// COM: GFX13: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_hi ; encoding: [0x05,0x00,0x01,0xdc,0xe7,0x00,0x00,0x00]
+v_permute_pair_bcast_b32 v5, src_flat_scratch_base_hi
+// GFX13: v_permute_pair_bcast_b32 v5, src_flat_scratch_base_hi ; encoding: [0x05,0x00,0x01,0xdc,0xe7,0x00,0x00,0x00]
 
 v_permute_pair_bcast_b32 v5, src_shared_limit
 // GFX13: v_permute_pair_bcast_b32 v5, src_shared_limit ; encoding: [0x05,0x00,0x01,0xdc,0xec,0x00,0x00,0x00]
@@ -255,11 +255,11 @@ v_permute_pair_gensgpr_b32 v5, 0.15915494, s[4:5]
 v_permute_pair_gensgpr_b32 v5, src_scc, s[4:5]
 // GFX13: v_permute_pair_gensgpr_b32 v5, src_scc, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xfd,0x80,0x00,0x00]
 
-// TODO: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_lo, s[4:5]
-// COM: GFX13: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_lo, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xe6,0x80,0x00,0x00]
+v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_lo, s[4:5]
+// GFX13: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_lo, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xe6,0x80,0x00,0x00]
 
-// TODO: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_hi, s[4:5]
-// COM: GFX13: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_hi, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xe7,0x80,0x00,0x00]
+v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_hi, s[4:5]
+// GFX13: v_permute_pair_gensgpr_b32 v5, src_flat_scratch_base_hi, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xe7,0x80,0x00,0x00]
 
 v_permute_pair_gensgpr_b32 v5, src_shared_limit, s[4:5]
 // GFX13: v_permute_pair_gensgpr_b32 v5, src_shared_limit, s[4:5] ; encoding: [0x05,0x80,0x00,0xdc,0xec,0x80,0x00,0x00]
@@ -306,11 +306,11 @@ v_permute_pair_2src_rotate_group_b32 v5, 0.15915494, v3
 v_permute_pair_2src_rotate_group_b32 v5, src_scc, v3
 // GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_scc, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xfd,0x60,0x80,0x00]
 
-// TODO: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_lo, v3
-// COM: GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_lo, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xe6,0x60,0x80,0x00]
+v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_lo, v3
+// GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_lo, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xe6,0x60,0x80,0x00]
 
-// TODO: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_hi, v3
-// COM: GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_hi, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xe7,0x60,0x80,0x00]
+v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_hi, v3
+// GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_flat_scratch_base_hi, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xe7,0x60,0x80,0x00]
 
 v_permute_pair_2src_rotate_group_b32 v5, src_shared_limit, v3
 // GFX13: v_permute_pair_2src_rotate_group_b32 v5, src_shared_limit, v3 ; encoding: [0x05,0x00,0x00,0xdc,0xec,0x60,0x80,0x00]
@@ -345,11 +345,11 @@ v_permute_pair_2src_rotate_group_b32 v5, v2, 0.15915494
 v_permute_pair_2src_rotate_group_b32 v5, v2, src_scc
 // GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_scc ; encoding: [0x05,0x00,0x00,0xdc,0x02,0xa4,0x1f,0x00]
 
-// TODO: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_lo
-// COM: GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_lo ; encoding: [0x05,0x00,0x00,0xdc,0x02,0xc4,0x1c,0x00]
+v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_lo
+// GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_lo ; encoding: [0x05,0x00,0x00,0xdc,0x02,0xc4,0x1c,0x00]
 
-// TODO: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_hi
-// COM: GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_hi ; encoding: [0x05,0x00,0x00,0xdc,0x02,0xe4,0x1c,0x00]
+v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_hi
+// GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_flat_scratch_base_hi ; encoding: [0x05,0x00,0x00,0xdc,0x02,0xe4,0x1c,0x00]
 
 v_permute_pair_2src_rotate_group_b32 v5, v2, src_shared_limit
 // GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, src_shared_limit ; encoding: [0x05,0x00,0x00,0xdc,0x02,0x84,0x1d,0x00]

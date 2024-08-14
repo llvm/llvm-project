@@ -566,12 +566,14 @@ void AMDGPUMCCodeEmitter::getAVOperandEncoding(
   unsigned Reg = MI.getOperand(OpNo).getReg();
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
-  bool IsVGPROrAGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
-  bool IsAGPR = Enc & AMDGPU::HWEncoding::IS_AGPR;
+  bool IsVGPROrAGPR =
+      Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
 
   // VGPR and AGPR have the same encoding, but SrcA and SrcB operands of mfma
   // instructions use acc[0:1] modifier bits to distinguish. These bits are
   // encoded as a virtual 9th bit of the register for these operands.
+  bool IsAGPR = Enc & AMDGPU::HWEncoding::IS_AGPR;
+
   Op = Idx | (IsVGPROrAGPR << 8) | (IsAGPR << 9);
 }
 
@@ -606,8 +608,9 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   if (MO.isReg()){
     unsigned Enc = MRI.getEncodingValue(MO.getReg());
     unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
-    bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
-    Op = Idx | (IsVGPR << 8);
+    bool IsVGPROrAGPR =
+        Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
+    Op = Idx | (IsVGPROrAGPR << 8);
     return;
   }
   unsigned OpNo = &MO - MI.begin();
@@ -621,7 +624,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16(
   if (MO.isReg()) {
     unsigned Enc = MRI.getEncodingValue(MO.getReg());
     unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
-    bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+    bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR;
     Op = Idx | (IsVGPR << 8);
     return;
   }
@@ -669,7 +672,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
     uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
     unsigned RegIdx = Encoding & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI;
-    bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+    bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR;
     assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
     Op = (IsVGPR ? 0x100 : 0) | (IsHi ? 0x80 : 0) | RegIdx;
     return;
