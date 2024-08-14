@@ -22,7 +22,6 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_and_b32 s2, s6, 31
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s2
@@ -66,7 +65,6 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_and_b32 s2, s6, 31
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s2

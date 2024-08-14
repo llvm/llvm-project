@@ -3135,7 +3135,6 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s3, 0
@@ -3355,10 +3354,8 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_ashr_i32 s3, s2, 31
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50

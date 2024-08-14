@@ -529,7 +529,6 @@ body: |
     ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 16, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $sgpr2 = S_ADD_I32 $sgpr0, 100, implicit-def $scc
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 20, implicit $exec
     $sgpr2_sgpr3 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 0, 0 :: (load (s64), addrspace 4)
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec

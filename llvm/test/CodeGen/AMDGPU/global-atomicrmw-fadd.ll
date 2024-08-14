@@ -24919,7 +24919,6 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #1 {
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_cvt_f32_ubyte0_e32 v1, s0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_atomic_add_f32 v0, v1, s[2:3] scope:SCOPE_DEV

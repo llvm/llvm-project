@@ -42,7 +42,6 @@ define amdgpu_kernel void @v_permlane_bcast_b32_vll(ptr addrspace(1) %out, i32 %
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_movk_i32 s2, 0x64
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -136,7 +135,6 @@ define amdgpu_kernel void @v_permlane_down_b32_vll(ptr addrspace(1) %out, i32 %s
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_movk_i32 s2, 0x64
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -230,7 +228,6 @@ define amdgpu_kernel void @v_permlane_up_b32_vll(ptr addrspace(1) %out, i32 %src
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_movk_i32 s2, 0x64
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -324,7 +321,6 @@ define amdgpu_kernel void @v_permlane_xor_b32_vll(ptr addrspace(1) %out, i32 %sr
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_movk_i32 s2, 0x64
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)

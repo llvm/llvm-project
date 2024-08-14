@@ -985,7 +985,6 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_load_u8 s1, s[0:1], 0x8
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s0, s2, 8
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s2, s3, 24
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s3, s4, 16
@@ -1223,7 +1222,6 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ; GFX1210-NOUNALIGNED-NEXT:    s_load_u16 s6, s[0:1], 0x4
 ; GFX1210-NOUNALIGNED-NEXT:    s_load_u16 s7, s[0:1], 0x8
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s0, s2, 16
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s1, s3, 16
 ; GFX1210-NOUNALIGNED-NEXT:    s_lshl_b32 s2, s4, 16
@@ -1480,63 +1478,24 @@ define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(ptr addrspace(4) inreg 
 }
 
 define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg %ptr) {
-; GFX12-UNALIGNED-LABEL: s_load_constant_v12i8_align8:
-; GFX12-UNALIGNED:       ; %bb.0:
-; GFX12-UNALIGNED-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
-; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s13, s0, 8
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s3, s0, 24
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s5, s1, 8
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s6, s1, 16
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s7, s1, 24
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s9, s2, 8
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s10, s2, 16
-; GFX12-UNALIGNED-NEXT:    s_lshr_b32 s11, s2, 24
-; GFX12-UNALIGNED-NEXT:    s_mov_b32 s4, s1
-; GFX12-UNALIGNED-NEXT:    s_mov_b32 s8, s2
-; GFX12-UNALIGNED-NEXT:    s_mov_b32 s1, s13
-; GFX12-UNALIGNED-NEXT:    s_mov_b32 s2, s12
-; GFX12-UNALIGNED-NEXT:    ; return to shader part epilog
-;
-; GFX12-NOUNALIGNED-LABEL: s_load_constant_v12i8_align8:
-; GFX12-NOUNALIGNED:       ; %bb.0:
-; GFX12-NOUNALIGNED-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
-; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s13, s0, 8
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s3, s0, 24
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s5, s1, 8
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s6, s1, 16
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s7, s1, 24
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s9, s2, 8
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s10, s2, 16
-; GFX12-NOUNALIGNED-NEXT:    s_lshr_b32 s11, s2, 24
-; GFX12-NOUNALIGNED-NEXT:    s_mov_b32 s4, s1
-; GFX12-NOUNALIGNED-NEXT:    s_mov_b32 s8, s2
-; GFX12-NOUNALIGNED-NEXT:    s_mov_b32 s1, s13
-; GFX12-NOUNALIGNED-NEXT:    s_mov_b32 s2, s12
-; GFX12-NOUNALIGNED-NEXT:    ; return to shader part epilog
-;
-; GFX1210-LABEL: s_load_constant_v12i8_align8:
-; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_lshr_b32 s13, s0, 8
-; GFX1210-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX1210-NEXT:    s_lshr_b32 s3, s0, 24
-; GFX1210-NEXT:    s_lshr_b32 s5, s1, 8
-; GFX1210-NEXT:    s_lshr_b32 s6, s1, 16
-; GFX1210-NEXT:    s_lshr_b32 s7, s1, 24
-; GFX1210-NEXT:    s_lshr_b32 s9, s2, 8
-; GFX1210-NEXT:    s_lshr_b32 s10, s2, 16
-; GFX1210-NEXT:    s_lshr_b32 s11, s2, 24
-; GFX1210-NEXT:    s_mov_b32 s4, s1
-; GFX1210-NEXT:    s_mov_b32 s8, s2
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_mov_b32 s1, s13
-; GFX1210-NEXT:    s_mov_b32 s2, s12
-; GFX1210-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_load_constant_v12i8_align8:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 s13, s0, 8
+; GFX12-NEXT:    s_lshr_b32 s12, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s3, s0, 24
+; GFX12-NEXT:    s_lshr_b32 s5, s1, 8
+; GFX12-NEXT:    s_lshr_b32 s6, s1, 16
+; GFX12-NEXT:    s_lshr_b32 s7, s1, 24
+; GFX12-NEXT:    s_lshr_b32 s9, s2, 8
+; GFX12-NEXT:    s_lshr_b32 s10, s2, 16
+; GFX12-NEXT:    s_lshr_b32 s11, s2, 24
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s8, s2
+; GFX12-NEXT:    s_mov_b32 s1, s13
+; GFX12-NEXT:    s_mov_b32 s2, s12
+; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_load_constant_v12i8_align8:
 ; GFX9:       ; %bb.0:

@@ -786,7 +786,6 @@ define amdgpu_kernel void @mul64_sext_c(ptr addrspace(1) %out, i32 %in) {
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_ashr_i32 s3, s2, 31
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_mul_u64 s[4:5], s[2:3], 0x50
@@ -2681,7 +2680,6 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1210-NEXT:    s_mov_b32 s4, -1
 ; GFX1210-NEXT:    ; implicit-def: $sgpr5
 ; GFX1210-NEXT:  .LBB15_3: ; %Flow
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
@@ -2698,7 +2696,6 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1210-NEXT:  .LBB15_6: ; %endif
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -2987,7 +2984,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX1210-NEXT:  .LBB16_5: ; %endif
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0

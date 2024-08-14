@@ -365,6 +365,7 @@ public:
   void determineWait(InstCounterType T, int RegNo, AMDGPU::Waitcnt &Wait) const;
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
+  void applyXcnt(const AMDGPU::Waitcnt &Wait);
   void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
@@ -1218,7 +1219,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
   applyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   applyWaitcnt(BVH_CNT, Wait.BvhCnt);
   applyWaitcnt(KM_CNT, Wait.KmCnt);
-  applyWaitcnt(X_CNT, Wait.XCnt);
+  applyXcnt(Wait);
   applyWaitcnt(VA_VDST, Wait.VaVdst);
   applyWaitcnt(VM_VSRC, Wait.VmVsrc);
 }
@@ -1235,6 +1236,18 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, UB);
     PendingEvents &= ~WaitEventMaskForInst[T];
   }
+}
+
+void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
+  // Wait on XCNT is redundant if we are already waiting for a load to complete.
+  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
+  // zero.
+
+  // The same optimization is not done for VMEM because we are not tracking
+  // stores, so having a wait on LOADCnt does not guarantee all translations are
+  // done.
+  applyWaitcnt(
+      X_CNT, (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) ? 0 : Wait.XCnt);
 }
 
 // Where there are multiple types of event in the bracket of a counter,
@@ -2132,6 +2145,11 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n"
                       << "Update Instr: " << *It);
   }
+
+  // XCnt may be already consumed by a load wait
+  if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
+      !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
+    Wait.XCnt = ~0u;
 
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
