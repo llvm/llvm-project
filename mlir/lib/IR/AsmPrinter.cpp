@@ -2738,7 +2738,8 @@ void AsmPrinter::Impl::printNamedAttribute(
 
   os << " = ";
   if (printNamedAttrFn && succeeded(printNamedAttrFn(attr))) {
-    /// If we print via the `printNamedAttrFn` callback skip printing.
+    /// If we print via the `printNamedAttrFn` callback, skip the generic
+    /// attribute printing (i.e. the call to `printAttribute`).
     return;
   }
   printAttribute(attr.getValue());
