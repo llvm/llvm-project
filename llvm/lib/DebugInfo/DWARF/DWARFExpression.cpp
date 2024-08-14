@@ -90,6 +90,8 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_implicit_value] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeBlock);
   Descriptions[DW_OP_stack_value] = Desc(Op::Dwarf4);
+  Descriptions[DW_OP_implicit_pointer] =
+      Desc(Op::Dwarf5, Op::SizeRefAddr, Op::SignedSizeLEB);
   Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
