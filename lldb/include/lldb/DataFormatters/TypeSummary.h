@@ -304,7 +304,6 @@ struct StringSummaryFormat : public TypeSummaryImpl {
   }
 
 private:
-  void SetProviderName(const char *f);
   StringSummaryFormat(const StringSummaryFormat &) = delete;
   const StringSummaryFormat &operator=(const StringSummaryFormat &) = delete;
   ConstString m_provider_name;
