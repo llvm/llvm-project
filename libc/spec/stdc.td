@@ -1475,6 +1475,7 @@ def StdC : StandardSpec<"stdc"> {
          StructTmType,
          StructTimeSpec,
          TimeTType,
+         SizeTType,
       ],
       [], // Enumerations
       [
@@ -1562,6 +1563,7 @@ def StdC : StandardSpec<"stdc"> {
         Char8TType,
         Char16TType,
         Char32TType,
+        SizeTType,
       ],
       [], // Enumerations
       []
