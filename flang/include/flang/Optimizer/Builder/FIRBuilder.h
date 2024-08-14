@@ -214,20 +214,20 @@ public:
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
   /// hoisting is required.
-  mlir::Value
-  createTemporaryAlloc(mlir::Location loc, mlir::Type type,
-                       llvm::StringRef name, mlir::ValueRange lenParams = {},
-                       mlir::ValueRange shape = {},
-                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+  mlir::Value createTemporaryAlloc(
+      mlir::Location loc, mlir::Type type, llvm::StringRef name,
+      mlir::ValueRange lenParams = {}, mlir::ValueRange shape = {},
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
 
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read
   /// and written using `fir.load` and `fir.store`, resp.  The temporary can be
   /// given a name via a front-end `Symbol` or a `StringRef`.
-  mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
-                              llvm::StringRef name = {},
-                              mlir::ValueRange shape = {},
-                              mlir::ValueRange lenParams = {},
-                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+  mlir::Value createTemporary(
+      mlir::Location loc, mlir::Type type, llvm::StringRef name = {},
+      mlir::ValueRange shape = {}, mlir::ValueRange lenParams = {},
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,

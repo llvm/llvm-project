@@ -9,9 +9,17 @@
 #include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPU.h"
 #include "AMDGPUISelDAGToDAG.h"
+#include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUTargetMachine.h"
+#include "AMDGPUUnifyDivergentExitNodes.h"
 #include "SIFixSGPRCopies.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Transforms/Scalar/FlattenCFG.h"
+#include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Scalar/StructurizeCFG.h"
+#include "llvm/Transforms/Utils/FixIrreducible.h"
+#include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/UnifyLoopExits.h"
 
 using namespace llvm;
 
@@ -28,8 +36,51 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
-  // TODO: Add passes pre instruction selection.
-  // Test only, convert to real IR passes in future.
+  const bool LateCFGStructurize = AMDGPUTargetMachine::EnableLateStructurizeCFG;
+  const bool DisableStructurizer = AMDGPUTargetMachine::DisableStructurizer;
+  const bool EnableStructurizerWorkarounds =
+      AMDGPUTargetMachine::EnableStructurizerWorkarounds;
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(FlattenCFGPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SinkingPass());
+
+  addPass(AMDGPULateCodeGenPreparePass(TM));
+
+  // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
+  // regions formed by them.
+
+  addPass(AMDGPUUnifyDivergentExitNodesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    if (EnableStructurizerWorkarounds) {
+      addPass(FixIrreduciblePass());
+      addPass(UnifyLoopExitsPass());
+    }
+
+    addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
+  }
+
+  addPass(AMDGPUAnnotateUniformValuesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    addPass(SIAnnotateControlFlowPass(TM));
+
+    // TODO: Move this right after structurizeCFG to avoid extra divergence
+    // analysis. This depends on stopping SIAnnotateControlFlow from making
+    // control flow modifications.
+    addPass(AMDGPURewriteUndefForPHIPass());
+  }
+
+  addPass(LCSSAPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    addPass(AMDGPUPerfHintAnalysisPass(TM));
+
+  // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
+  // isn't this in addInstSelector?
   addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
 }
 

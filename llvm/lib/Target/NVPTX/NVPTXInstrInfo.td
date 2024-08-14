@@ -159,6 +159,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
+def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -3919,6 +3920,33 @@ let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in
     }
 }
 
+
+foreach a_type = ["s", "u"] in {
+  foreach b_type = ["s", "u"] in {
+
+    def DOT4_ # a_type # b_type :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                "dp4a." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                [(set Int32Regs:$dst,
+                    (!cast<Intrinsic>("int_nvvm_idp4a_" # a_type # "_" # b_type)
+                     (i32 Int32Regs:$a), (i32 Int32Regs:$b), (i32 Int32Regs:$c)))]>,
+                Requires<[hasDotInstructions]>;
+
+    foreach is_hi = [0, -1] in {
+      defvar lohi_suffix = !if(is_hi, "hi", "lo");
+
+      def DOT2_ # lohi_suffix # _ # a_type # b_type :
+        NVPTXInst<(outs Int32Regs:$dst),
+                  (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                  "dp2a." # lohi_suffix # "." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                  [(set Int32Regs:$dst,
+                      (!cast<Intrinsic>("int_nvvm_idp2a_" # a_type # "_" # b_type)
+                       (i32 Int32Regs:$a), (i32 Int32Regs:$b), is_hi, (i32 Int32Regs:$c)))]>,
+                  Requires<[hasDotInstructions]>;
+    }
+  }
+}
 
 include "NVPTXIntrinsics.td"
 
