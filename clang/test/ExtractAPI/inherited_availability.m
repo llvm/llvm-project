@@ -146,4 +146,30 @@ __attribute__((availability(macos, unavailable)))
 // CIP-NEXT: ]
 @end
 
+@interface D
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix DIP
+@property int DIP __attribute__((availability(macos, introduced=10.0, deprecated=11.0, obsoleted=19.0)));
+// DIP-LABEL: "!testLabel": "c:objc(cs)D(py)DIP"
+// DIP:      "availability": [
+// DIP-NEXT:   {
+// DIP-NEXT:     "deprecated": {
+// DIP-NEXT:       "major": 11,
+// DIP-NEXT:       "minor": 0,
+// DIP-NEXT:       "patch": 0
+// DIP-NEXT:     }
+// DIP-NEXT:     "domain": "macos"
+// DIP-NEXT:     "introduced": {
+// DIP-NEXT:       "major": 10,
+// DIP-NEXT:       "minor": 0,
+// DIP-NEXT:       "patch": 0
+// DIP-NEXT:     }
+// DIP-NEXT:     "obsoleted": {
+// DIP-NEXT:       "major": 19,
+// DIP-NEXT:       "minor": 0,
+// DIP-NEXT:       "patch": 0
+// DIP-NEXT:     }
+// DIP-NEXT:   }
+// DIP-NEXT: ]
+@end
+
 // expected-no-diagnostics
