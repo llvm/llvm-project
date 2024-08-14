@@ -2155,12 +2155,16 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   // Track these as they do not require line breaks to be introduced.
   bool HasSpecialAccessor = false;
   bool IsTrivialPropertyAccessor = true;
+  bool HasAttribute = false;
   while (!eof()) {
-    if (Tok->isAccessSpecifierKeyword() ||
-        Tok->isOneOf(tok::semi, Keywords.kw_internal, Keywords.kw_get,
-                     Keywords.kw_init, Keywords.kw_set)) {
-      if (Tok->isOneOf(Keywords.kw_get, Keywords.kw_init, Keywords.kw_set))
+    if (const bool IsAccessorKeyword =
+            Tok->isOneOf(Keywords.kw_get, Keywords.kw_init, Keywords.kw_set);
+        IsAccessorKeyword || Tok->isAccessSpecifierKeyword() ||
+        Tok->isOneOf(tok::l_square, tok::semi, Keywords.kw_internal)) {
+      if (IsAccessorKeyword)
         HasSpecialAccessor = true;
+      else if (Tok->is(tok::l_square))
+        HasAttribute = true;
       Tok = Tokens->getNextToken();
       continue;
     }
@@ -2169,7 +2173,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
     break;
   }
 
-  if (!HasSpecialAccessor) {
+  if (!HasSpecialAccessor || HasAttribute) {
     Tokens->setPosition(StoredPosition);
     return false;
   }

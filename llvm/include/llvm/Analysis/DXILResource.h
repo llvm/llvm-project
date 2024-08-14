@@ -268,6 +268,8 @@ public:
   void dump() const;
 };
 
+ModulePass *createDXILResourceWrapperPassPass();
+
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DXILRESOURCE_H

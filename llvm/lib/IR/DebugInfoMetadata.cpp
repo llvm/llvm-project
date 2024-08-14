@@ -1861,7 +1861,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
               [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
     assert(ArgNo == 0 &&
            "Location Index must be 0 for a non-variadic expression.");
-    SmallVector<uint64_t, 8> NewOps(Ops.begin(), Ops.end());
+    SmallVector<uint64_t, 8> NewOps(Ops);
     return DIExpression::prependOpcodes(Expr, NewOps, StackValue);
   }
 

@@ -384,6 +384,8 @@ end
 * `BIND(C, NAME="...", CDEFINED)` signifies that the storage for an
   interoperable variable will be allocated outside of Fortran,
   probably by a C or C++ external definition.
+* An automatic data object may be declared in the specification part
+  of the main program.
 
 ### Extensions supported when enabled by options
 

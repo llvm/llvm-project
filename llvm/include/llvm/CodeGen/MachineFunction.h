@@ -293,6 +293,10 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
 
+  // MBBNumbering epoch, incremented after renumbering to detect use of old
+  // block numbers.
+  unsigned MBBNumberingEpoch = 0;
+
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
 
@@ -856,6 +860,11 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
+  /// Return the numbering "epoch" of block numbers, incremented after each
+  /// numbering. Intended for asserting that no renumbering was performed when
+  /// used by, e.g., preserved analyses.
+  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
   /// dense, and match the ordering of the blocks within the function.  If a
@@ -1404,6 +1413,13 @@ template <> struct GraphTraits<MachineFunction*> :
   }
 
   static unsigned       size       (MachineFunction *F) { return F->size(); }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
@@ -1423,6 +1439,13 @@ template <> struct GraphTraits<const MachineFunction*> :
   static unsigned       size       (const MachineFunction *F)  {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -1435,11 +1458,25 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   public GraphTraits<Inverse<const MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
+  }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

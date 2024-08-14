@@ -196,6 +196,9 @@ public:
   /// LLVM dialect operation.
   LogicalResult convertLinkerOptionsMetadata();
 
+  /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
+  LogicalResult convertIdentMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.
@@ -369,6 +372,10 @@ private:
   ModuleOp mlirModule;
   /// The LLVM module being imported.
   std::unique_ptr<llvm::Module> llvmModule;
+  /// Nameless globals.
+  DenseMap<llvm::GlobalVariable *, FlatSymbolRefAttr> namelessGlobals;
+  /// Counter used to assign a unique ID to each nameless global.
+  unsigned namelessGlobalId = 0;
 
   /// A dialect interface collection used for dispatching the import to specific
   /// dialects.

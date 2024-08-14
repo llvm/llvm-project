@@ -317,7 +317,10 @@ public:
   /// Returns true if opcode \p Opc is a memory operation. If it is, set
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
-  /// For unscaled instructions, \p Scale is set to 1.
+  /// For unscaled instructions, \p Scale is set to 1. All values are in bytes.
+  /// MinOffset/MaxOffset are the un-scaled limits of the immediate in the
+  /// instruction, the actual offset limit is [MinOffset*Scale,
+  /// MaxOffset*Scale].
   static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 

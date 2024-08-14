@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
@@ -71,6 +72,11 @@ static std::string diagMD(const llvm::Metadata *node,
 /// Returns the name of the global_ctors global variables.
 static constexpr StringRef getGlobalCtorsVarName() {
   return "llvm.global_ctors";
+}
+
+/// Prefix used for symbols of nameless llvm globals.
+static constexpr StringRef getNamelessGlobalPrefix() {
+  return "mlir.llvm.nameless_global";
 }
 
 /// Returns the name of the global_dtors global variables.
@@ -512,6 +518,23 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertIdentMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    // llvm.ident should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (named.getName() != LLVMDialect::getIdentAttrName())
+      continue;
+
+    if (named.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -539,6 +562,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertIdentMetadata()))
     return failure();
   return success();
 }
@@ -689,7 +714,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   if (!isScalarType(elementType))
     return {};
 
-  SmallVector<int64_t> shape(arrayShape.begin(), arrayShape.end());
+  SmallVector<int64_t> shape(arrayShape);
   shape.push_back(numElements.getKnownMinValue());
   return VectorType::get(shape, elementType);
 }
@@ -884,9 +909,22 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     globalExpressionAttr =
         debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
 
+  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
+  // always requires a symbol name.
+  SmallString<128> globalName(globalVar->getName());
+  if (globalName.empty()) {
+    // Make sure the symbol name does not clash with an existing symbol.
+    globalName = SymbolTable::generateSymbolName<128>(
+        getNamelessGlobalPrefix(),
+        [this](StringRef newName) {
+          return llvmModule->getNamedValue(newName);
+        },
+        namelessGlobalId);
+    namelessGlobals[globalVar] = FlatSymbolRefAttr::get(context, globalName);
+  }
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
-      convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
+      convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
@@ -1061,7 +1099,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert global variable accesses.
   if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
     Type type = convertType(globalVar->getType());
-    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+    StringRef globalName = globalVar->getName();
+    FlatSymbolRefAttr symbolRef;
+    if (globalName.empty())
+      symbolRef = namelessGlobals[globalVar];
+    else
+      symbolRef = FlatSymbolRefAttr::get(context, globalName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
