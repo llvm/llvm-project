@@ -308,8 +308,11 @@ CC1DepScanDProtocol::getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
   if (Error E = getResultKind(Result))
     return E;
 
-  if (Result == ErrorResult)
-    return getString(Saver, FailedReason);
+  if (Result == ErrorResult) {
+    if (Error E = getString(Saver, FailedReason))
+      return E;
+    return getString(Saver, DiagnosticOutput);
+  }
 
   if (Result == InvalidResult) {
     FailedReason = "invalid scan result";
@@ -334,10 +337,14 @@ llvm::Error CC1DepScanDProtocol::putScanResultSuccess(
   return putString(DiagnosticOutput);
 }
 
-llvm::Error CC1DepScanDProtocol::putScanResultFailed(StringRef Reason) {
+llvm::Error
+CC1DepScanDProtocol::putScanResultFailed(StringRef Reason,
+                                         StringRef DiagnosticOutput) {
   if (Error E = putResultKind(ErrorResult))
     return E;
-  return putString(Reason);
+  if (Error E = putString(Reason))
+    return E;
+  return putString(DiagnosticOutput);
 }
 
 #endif /* LLVM_ON_UNIX */

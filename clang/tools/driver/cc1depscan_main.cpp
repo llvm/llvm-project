@@ -370,7 +370,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
 static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &NewArgs,
-    bool &DiagnosticErrorOccurred, StringRef Path,
+    StringRef &DiagnosticOutput, StringRef Path,
     const DepscanSharing &Sharing,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     llvm::cas::ObjectStore &CAS) {
@@ -394,7 +394,6 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   SmallVector<const char *> RawNewArgs;
-  StringRef DiagnosticOutput;
   CC1DepScanDProtocol::ResultKind Result;
   StringRef FailedReason;
   StringRef RootID;
@@ -410,11 +409,6 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
   NewArgs.resize(RawNewArgs.size());
   for (int I = 0, E = RawNewArgs.size(); I != E; ++I)
     NewArgs[I] = SaveArg(RawNewArgs[I]);
-
-  DiagnosticErrorOccurred = !DiagnosticOutput.empty();
-  if (DiagnosticErrorOccurred) {
-    llvm::errs() << DiagnosticOutput;
-  }
 
   return CAS.parseID(RootID);
 }
@@ -510,19 +504,22 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   if (ProduceIncludeTree)
     Sharing.CASArgs.push_back("-fdepscan-include-tree");
 
+  StringRef DiagnosticOutput;
   bool DiagnosticErrorOccurred = false;
   auto ScanAndUpdate = [&]() {
     if (std::optional<std::string> DaemonPath =
             makeDepscanDaemonPath(Mode, Sharing))
       return scanAndUpdateCC1UsingDaemon(Exec, OldArgs, WorkingDirectory,
-                                         NewArgs, DiagnosticErrorOccurred,
-                                         *DaemonPath, Sharing, SaveArg, *DB);
+                                         NewArgs, DiagnosticOutput, *DaemonPath,
+                                         Sharing, SaveArg, *DB);
     return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
                                   ProduceIncludeTree, DiagnosticErrorOccurred,
                                   SaveArg, CASOpts, DB, Cache);
   };
   if (llvm::Error E = ScanAndUpdate().moveInto(RootID)) {
     Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
+    if (!DiagnosticOutput.empty())
+      llvm::errs() << DiagnosticOutput;
     return 1;
   }
   return DiagnosticErrorOccurred;
@@ -959,7 +956,8 @@ int ScanServer::listen() {
           *Tool, *DiagsConsumer, &DiagsOS, Argv0, Args, WorkingDirectory,
           NewArgs, *CAS, [&](const Twine &T) { return Saver.save(T).data(); });
       if (!RootID) {
-        consumeError(Comms.putScanResultFailed(toString(RootID.takeError())));
+        consumeError(Comms.putScanResultFailed(toString(RootID.takeError()),
+                                               DiagsOS.str()));
         SharedOS.applyLocked([&](raw_ostream &OS) {
           printScannedCC1(OS);
           OS << I << ": failed to create compiler invocation\n";
