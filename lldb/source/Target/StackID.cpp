@@ -86,13 +86,14 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
     return HeapCFAComparisonResult::NoOpinion;
 
   // FIXME: rdar://76119439
-  // At the boundary between an async parent frame calling a regular child
-  // frame, the CFA of the parent async function is a heap addresses, and the
-  // CFA of concrete child function is a stack address. Therefore, if lhs is
-  // on stack, and rhs is not, lhs is considered less than rhs, independent of
-  // address values.
+  // If one of the frames has a CFA on the stack and the other doesn't, we are
+  // at the boundary between an asynchronous and a synchronous function.
+  // Synchronous functions cannot call asynchronous functions, therefore the
+  // synchronous frame is always younger.
   if (lhs_cfa_on_stack && !rhs_cfa_on_stack)
     return HeapCFAComparisonResult::Younger;
+  if (!lhs_cfa_on_stack && rhs_cfa_on_stack)
+    return HeapCFAComparisonResult::Older;
   return HeapCFAComparisonResult::NoOpinion;
 }
 // END SWIFT
