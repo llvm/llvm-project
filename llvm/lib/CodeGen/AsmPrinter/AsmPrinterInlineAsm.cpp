@@ -58,12 +58,11 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
   Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, "<inline asm>");
 
   // Tell SrcMgr about this buffer, it takes ownership of the buffer.
-  unsigned BufNum =
-      (DbgLoc && Scope)
-          ? SrcMgr.AddNewSourceBuffer(std::move(Buffer), Scope->getFilename(),
-                                      DbgLoc->getLine() - 1,
-                                      DbgLoc->getCol() - 1, SMLoc())
-          : SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+  unsigned BufNum = (DbgLoc && Scope)
+                        ? SrcMgr.AddNewSourceBuffer(
+                              std::move(Buffer), Scope->getFilename(),
+                              DbgLoc->getLine(), DbgLoc->getCol(), SMLoc())
+                        : SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
   // Store LocMDNode in DiagInfo, using BufNum as an identifier.
   if (LocMDNode) {

@@ -208,8 +208,8 @@ SourceMgr::getDebugLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   auto &SB = getBufferInfo(BufferID);
 
   std::pair<unsigned, unsigned> LineAndCol = getLineAndColumn(Loc, BufferID);
-  return std::make_pair(SB.BaseLine + LineAndCol.first,
-                        SB.BaseCol + LineAndCol.second);
+  return std::make_pair(LineAndCol.first + (SB.BaseLine ? SB.BaseLine : 1) - 1,
+                        LineAndCol.second + (SB.BaseCol ? SB.BaseCol : 1) - 1);
 }
 
 std::pair<unsigned, unsigned>
