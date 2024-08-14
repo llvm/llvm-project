@@ -1,7 +1,8 @@
 ! test that -fveclib= is passed to the backend
 ! -target aarch64 so that ArmPL is available
-! RUN: %flang -S -Ofast -fveclib=LIBMVEC -o - %s | FileCheck %s
-! RUN: %flang -S -Ofast -fveclib=NoLibrary -o - %s | FileCheck %s --check-prefix=NOLIB
+! REQUIRES: x86-registered-target
+! RUN: %flang -S -Ofast -target x86_64-unknown-linux-gnu -fveclib=LIBMVEC -o - %s | FileCheck %s
+! RUN: %flang -S -Ofast -target x86_64-unknown-linux-gnu -fveclib=NoLibrary -o - %s | FileCheck %s --check-prefix=NOLIB
 
 subroutine sb(a, b)
   real :: a(:), b(:)
