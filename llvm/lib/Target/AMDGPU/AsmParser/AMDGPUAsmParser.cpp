@@ -8546,7 +8546,7 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
   uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
   if (DstOp.isReg() &&
       MRI.getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg())) {
-    if (AMDGPU::isHi(DstOp.getReg(), MRI))
+    if (AMDGPU::isHi16Reg(DstOp.getReg(), MRI))
       ModVal |= SISrcMods::DST_OP_SEL;
   } else {
     if ((OpSel & (1 << SrcNum)) != 0)
@@ -8826,7 +8826,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (SrcOp.isReg() && getMRI()
                              ->getRegClass(AMDGPU::VGPR_16RegClassID)
                              .contains(SrcOp.getReg())) {
-      bool VGPRSuffixIsHi = AMDGPU::isHi(SrcOp.getReg(), *getMRI());
+      bool VGPRSuffixIsHi = AMDGPU::isHi16Reg(SrcOp.getReg(), *getMRI());
       if (VGPRSuffixIsHi)
         ModVal |= SISrcMods::OP_SEL_0;
     } else {
