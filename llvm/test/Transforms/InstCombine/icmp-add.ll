@@ -3171,3 +3171,15 @@ define i1 @icmp_add_constant_with_constant_ult_to_slt_neg4(i32 range(i32 -4, 10)
   %cmp = icmp ult i32 %add, 2
   ret i1 %cmp
 }
+
+; Same as before, but infer the range of ucmp
+define i1 @icmp_of_ucmp_plus_const_with_const(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_of_ucmp_plus_const_with_const(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %add = add i8 %cmp1, 1
+  %cmp2 = icmp ult i8 %add, 2
+  ret i1 %cmp2
+}
