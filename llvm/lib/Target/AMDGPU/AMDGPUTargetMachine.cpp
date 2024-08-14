@@ -32,7 +32,6 @@
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
-#include "R600MachineFunctionInfo.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
 #include "SIMachineFunctionInfo.h"
@@ -1191,13 +1190,6 @@ AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
-}
-
-MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
-    BumpPtrAllocator &Allocator, const Function &F,
-    const TargetSubtargetInfo *STI) const {
-  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
-      Allocator, F, static_cast<const R600Subtarget *>(STI));
 }
 
 //===----------------------------------------------------------------------===//
