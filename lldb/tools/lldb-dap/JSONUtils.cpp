@@ -1180,6 +1180,19 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
   return description.trim().str();
 }
 
+lldb::addr_t GetMemoryReference(lldb::SBValue v) {
+  if (!v.GetType().IsPointerType() && !v.GetType().IsArrayType()) {
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  lldb::SBValue deref = v.Dereference();
+  if (!deref.IsValid()) {
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return deref.GetLoadAddress();
+}
+
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -1239,8 +1252,16 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
 //     }
-//
-//
+//     "memoryReference": {
+//        "type": "string",
+//        "description": "A memory reference associated with this variable.
+//                        For pointer type variables, this is generally a
+//                        reference to the memory address contained in the
+//                        pointer. For executable data, this reference may later
+//                        be used in a `disassemble` request. This attribute may
+//                        be returned by a debug adapter if corresponding
+//                        capability `supportsMemoryReferences` is true."
+//      },
 //     "$__lldb_extensions": {
 //       "description": "Unofficial extensions to the protocol",
 //       "properties": {
@@ -1347,6 +1368,10 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     object.try_emplace("variablesReference", variablesReference);
   else
     object.try_emplace("variablesReference", (int64_t)0);
+
+  if (lldb::addr_t addr = GetMemoryReference(v); addr != LLDB_INVALID_ADDRESS) {
+    object.try_emplace("memoryReference", "0x" + llvm::utohexstr(addr));
+  }
 
   object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));
