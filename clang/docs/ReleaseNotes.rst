@@ -1207,6 +1207,11 @@ Arm and AArch64 Support
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).
+- ``-mbranch-protection=gcs`` has been added which enables support for the
+  Guarded Control Stack extension, and ``-mbranch-protection=standard`` also
+  enables this. Enabling GCS causes the GCS GNU property bit to be set on output
+  objects. It doesn't cause any code generation changes, as the code generated
+  by clang is already compatible with GCS.
 
 Android Support
 ^^^^^^^^^^^^^^^
