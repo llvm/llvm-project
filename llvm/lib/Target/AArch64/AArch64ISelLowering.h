@@ -745,6 +745,11 @@ public:
   bool generateFMAsInMachineCombiner(EVT VT,
                                      CodeGenOptLevel OptLevel) const override;
 
+  /// Return true if the target has native support for
+  /// the specified value type and it is 'desirable' to use the type for the
+  /// given node type.
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
+
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
@@ -1074,6 +1079,8 @@ private:
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;

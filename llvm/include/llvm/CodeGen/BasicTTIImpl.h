@@ -525,7 +525,7 @@ public:
         TM.getCodeModel() == CodeModel::Large)
       return false;
 
-    Triple TargetTriple = TM.getTargetTriple();
+    const Triple &TargetTriple = TM.getTargetTriple();
     if (!TargetTriple.isArch64Bit())
       return false;
 
