@@ -57140,6 +57140,11 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   auto IsExtractFree = [](SDValue V) {
+    if (V.hasOneUse()) {
+      V = peekThroughOneUseBitcasts(V);
+      if (V.getOpcode() == ISD::LOAD)
+        return true;
+    }
     V = peekThroughBitcasts(V);
     if (ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
       return true;
