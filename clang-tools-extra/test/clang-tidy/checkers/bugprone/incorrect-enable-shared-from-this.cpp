@@ -51,6 +51,22 @@ class BadMixedProblemExample : enable_shared_from_this<BadMixedProblemExample> {
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Should be std::enable_shared_from_this and inheritance from std::enable_shared_from_this should be public inheritance, otherwise the internal weak_ptr won't be initialized [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: public std::enable_shared_from_this<BadMixedProblemExample>
 
-//FIXME: can't do anything about this, clang-check -ast-dump doesn't show A's internals in class B's AST
-class A : public std::enable_shared_from_this<A> {};
-class B : private A{};
+class ClassBase : public std::enable_shared_from_this<ClassBase> {};
+class PrivateInheritClassBase : private ClassBase{};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: inheritance from std::enable_shared_from_this should be public inheritance, otherwise the internal weak_ptr won't be initialized [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: class PrivateInheritClassBase : public ClassBase{};
+
+class DefaultInheritClassBase : ClassBase{};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: inheritance from std::enable_shared_from_this should be public inheritance, otherwise the internal weak_ptr won't be initialized [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: class DefaultInheritClassBase : public ClassBase{};
+
+class PublicInheritClassBase : public ClassBase{};
+
+struct StructBase : public std::enable_shared_from_this<StructBase> {};
+struct PrivateInheritStructBase : private StructBase{};
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: inheritance from std::enable_shared_from_this should be public inheritance, otherwise the internal weak_ptr won't be initialized [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: struct PrivateInheritStructBase : public StructBase{};
+
+struct DefaultInheritStructBase : StructBase{};
+
+struct PublicInheritStructBase : StructBase{};

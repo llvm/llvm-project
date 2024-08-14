@@ -8,89 +8,110 @@
 
 #include "IncorrectEnableSharedFromThisCheck.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
 void IncorrectEnableSharedFromThisCheck::registerMatchers(
-    MatchFinder *match_finder) {
-  match_finder->addMatcher(
-      cxxRecordDecl(
-          unless(isExpansionInSystemHeader()),
-          hasAnyBase(cxxBaseSpecifier(unless(isPublic()),
-                                      hasType(cxxRecordDecl(hasName(
-                                          "::std::enable_shared_from_this"))))))
-          .bind("class-base-std-enable"),
-      this);
-  match_finder->addMatcher(
-      cxxRecordDecl(unless(isExpansionInSystemHeader()),
-                    hasAnyBase(cxxBaseSpecifier(hasType(
-                        cxxRecordDecl(hasName("enable_shared_from_this"))))))
-          .bind("class-missing-std"),
-      this);
+    MatchFinder *Finder) {
+  Finder->addMatcher(translationUnitDecl(), this);
 }
 
 void IncorrectEnableSharedFromThisCheck::check(
-    const MatchFinder::MatchResult &result) {
-  const auto *StdEnableSharedClassDecl =
-      result.Nodes.getNodeAs<CXXRecordDecl>("class-base-std-enable");
-  const auto *MissingStdSharedClassDecl =
-      result.Nodes.getNodeAs<CXXRecordDecl>("class-missing-std");
+  const MatchFinder::MatchResult &Result) {
 
-  if (StdEnableSharedClassDecl) {
-    for (const CXXBaseSpecifier &Base : StdEnableSharedClassDecl->bases()) {
-      const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
-      if (BaseType && BaseType->getQualifiedNameAsString() ==
-                          "std::enable_shared_from_this") {
-        const SourceRange ReplacementRange = Base.getSourceRange();
-        const std::string ReplacementString =
-            "public " + Base.getType().getAsString();
-        const FixItHint Hint =
-            FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
-        diag(
-            StdEnableSharedClassDecl->getLocation(),
-            "inheritance from std::enable_shared_from_this should be public "
-            "inheritance, otherwise the internal weak_ptr won't be initialized",
-            DiagnosticIDs::Warning)
-            << Hint;
-        break;
+  class Visitor : public RecursiveASTVisitor<Visitor> {
+    IncorrectEnableSharedFromThisCheck &Check;
+    llvm::SmallPtrSet<const CXXRecordDecl*, 16> EnableSharedClassSet;
+
+  public:
+    explicit Visitor(IncorrectEnableSharedFromThisCheck &Check) : Check(Check), EnableSharedClassSet(EnableSharedClassSet) {}
+  
+    bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
+      for (const auto &Base : RDecl->bases()) {
+        VisitCXXBaseSpecifier(Base, RDecl);
       }
+      for (const auto &Base : RDecl->bases()) {
+        const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
+        if (BaseType && BaseType->getQualifiedNameAsString() ==
+                            "std::enable_shared_from_this") {
+          EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
+        }
+      }
+      return true;     
     }
-  }
 
-  if (MissingStdSharedClassDecl) {
-    for (const CXXBaseSpecifier &Base : MissingStdSharedClassDecl->bases()) {
+    bool VisitCXXBaseSpecifier(const CXXBaseSpecifier &Base, CXXRecordDecl *RDecl) {
       const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
-      if (BaseType &&
-          BaseType->getQualifiedNameAsString() == "enable_shared_from_this") {
-        const clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
+      const clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
+
+      if ( BaseType && BaseType->getQualifiedNameAsString() ==
+                          "enable_shared_from_this") {
         if (AccessSpec == clang::AS_public) {
           const SourceLocation InsertLocation = Base.getBaseTypeLoc();
           const FixItHint Hint = FixItHint::CreateInsertion(InsertLocation, "std::");
-          diag(MissingStdSharedClassDecl->getLocation(),
-               "Should be std::enable_shared_from_this", DiagnosticIDs::Warning)
+          Check.diag(RDecl->getLocation(),
+              "Should be std::enable_shared_from_this", DiagnosticIDs::Warning)
               << Hint;
-          break;
+          
         } else {
           const SourceRange ReplacementRange = Base.getSourceRange();
           const std::string ReplacementString =
               "public std::" + Base.getType().getAsString();
           const FixItHint Hint =
               FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
-          diag(MissingStdSharedClassDecl->getLocation(),
-               "Should be std::enable_shared_from_this and "
-               "inheritance from std::enable_shared_from_this should be public "
-               "inheritance, otherwise the internal weak_ptr won't be "
-               "initialized",
-               DiagnosticIDs::Warning)
+          Check.diag(RDecl->getLocation(),
+              "Should be std::enable_shared_from_this and "
+              "inheritance from std::enable_shared_from_this should be public "
+              "inheritance, otherwise the internal weak_ptr won't be "
+              "initialized",
+              DiagnosticIDs::Warning)
               << Hint;
-          break;
         }
       }
+      else if ( BaseType && BaseType->getQualifiedNameAsString() ==
+                          "std::enable_shared_from_this") {
+        if (AccessSpec != clang::AS_public) {
+          const SourceRange ReplacementRange = Base.getSourceRange();
+          const std::string ReplacementString =
+              "public " + Base.getType().getAsString();
+          const FixItHint Hint =
+              FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
+          Check.diag(
+              RDecl->getLocation(),
+              "inheritance from std::enable_shared_from_this should be public "
+              "inheritance, otherwise the internal weak_ptr won't be initialized",
+              DiagnosticIDs::Warning)
+              << Hint;
+        }
+      } 
+      else if (EnableSharedClassSet.contains(BaseType->getCanonicalDecl())) {
+        if (AccessSpec != clang::AS_public) {
+          const SourceRange ReplacementRange = Base.getSourceRange();
+          const std::string ReplacementString =
+              "public " + Base.getType().getAsString();
+          const FixItHint Hint =
+              FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
+          Check.diag(
+              RDecl->getLocation(),
+              "inheritance from std::enable_shared_from_this should be public "
+              "inheritance, otherwise the internal weak_ptr won't be initialized",
+              DiagnosticIDs::Warning)
+              << Hint;
+        }            
+      }
+      return true;
     }
-  }
+  };
+ 
+  Visitor(*this).TraverseAST(*Result.Context);
+  
 }
 
 } // namespace clang::tidy::bugprone
