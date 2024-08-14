@@ -1987,6 +1987,22 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
+  for (const Pointer &P : {LHS, RHS}) {
+    if (P.isZeroSizeArray()) {
+      QualType PtrT = P.getType();
+      while (auto *AT = dyn_cast<ArrayType>(PtrT))
+        PtrT = AT->getElementType();
+
+      QualType ArrayTy = S.getCtx().getConstantArrayType(
+          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_pointer_subtraction_zero_size)
+          << ArrayTy;
+
+      return false;
+    }
+  }
+
   if (RHS.isZero()) {
     S.Stk.push<T>(T::from(LHS.getIndex()));
     return true;
