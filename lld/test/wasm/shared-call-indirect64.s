@@ -69,6 +69,7 @@ _start:
 # CHECK-NEXT:          Index:           0
 # CHECK-NEXT:          ElemType:        FUNCREF
 # CHECK-NEXT:          Limits:
+# CHECK-NEXT:            Flags:           [ IS_64 ]
 # CHECK-NEXT:            Minimum:         0x2
 # CHECK-NEXT:      - Module:          env
 # CHECK-NEXT:        Field:           __memory_base
@@ -79,11 +80,6 @@ _start:
 # CHECK-NEXT:        Field:           __table_base
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        GlobalType:      I64
-# CHECK-NEXT:        GlobalMutable:   false
-# CHECK-NEXT:      - Module:          env
-# CHECK-NEXT:        Field:           __table_base32
-# CHECK-NEXT:        Kind:            GLOBAL
-# CHECK-NEXT:        GlobalType:      I32
 # CHECK-NEXT:        GlobalMutable:   false
 # CHECK-NEXT:      - Module:          GOT.func
 # CHECK-NEXT:        Field:           shared_func
@@ -110,7 +106,7 @@ _start:
 # CHECK-NEXT:    Segments:
 # CHECK-NEXT:      - Offset:
 # CHECK-NEXT:          Opcode:          GLOBAL_GET
-# CHECK-NEXT:          Index:           2
+# CHECK-NEXT:          Index:           1
 # CHECK-NEXT:        Functions:       [ 3, 5 ]
 
 
