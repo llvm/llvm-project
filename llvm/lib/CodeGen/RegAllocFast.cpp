@@ -270,6 +270,8 @@ private:
   SmallVector<unsigned, 0> UsedInInstr;
 
   SmallVector<unsigned, 8> DefOperandIndexes;
+  SmallVector<unsigned, 8> UseOperandIndexes;
+
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
 
@@ -336,6 +338,7 @@ private:
                             Register Reg) const;
 
   void findAndSortDefOperandIndexes(const MachineInstr &MI);
+  void findAndSortUseOperandIndexes(const MachineInstr &MI);
 
   void allocateInstruction(MachineInstr &MI);
   void handleDebugValue(MachineInstr &MI);
@@ -1368,6 +1371,40 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
+/// Compute \ref UseOperandIndexes so it contains the indices of "use" operands
+/// that are to be allocated. Those are ordered in a way that high-priority
+/// classes are allocated first.
+void RegAllocFastImpl::findAndSortUseOperandIndexes(const MachineInstr &MI) {
+  UseOperandIndexes.clear();
+
+  for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (MO.isUse() && Reg.isVirtual() && shouldAllocateRegister(Reg))
+      UseOperandIndexes.push_back(I);
+  }
+
+  llvm::sort(UseOperandIndexes, [&](unsigned I0, unsigned I1) {
+    const MachineOperand &MO0 = MI.getOperand(I0);
+    const MachineOperand &MO1 = MI.getOperand(I1);
+    Register Reg0 = MO0.getReg();
+    Register Reg1 = MO1.getReg();
+    const TargetRegisterClass &RC0 = *MRI->getRegClass(Reg0);
+    const TargetRegisterClass &RC1 = *MRI->getRegClass(Reg1);
+
+    // Allocate register classes with a high allocation priority first.
+    if (RC0.AllocationPriority > RC1.AllocationPriority)
+      return true;
+    if (RC0.AllocationPriority < RC1.AllocationPriority)
+      return false;
+
+    // Tie-break rule: operand index.
+    return I0 < I1;
+  });
+}
+
 // Returns true if MO is tied and the operand it's tied to is not Undef (not
 // Undef is not the same thing as Def).
 static bool isTiedToNotUndef(const MachineOperand &MO) {
@@ -1569,7 +1606,9 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
-    for (MachineOperand &MO : MI.operands()) {
+    findAndSortUseOperandIndexes(MI);
+    for (unsigned OpIdx : UseOperandIndexes) {
+      MachineOperand &MO = MI.getOperand(OpIdx);
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
