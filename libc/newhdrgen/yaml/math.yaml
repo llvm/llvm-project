@@ -1212,7 +1212,7 @@ functions:
   - name: fsqrt
     standards:
       - stdc
-    return_type: float type
+    return_type: float
     arguments:
       - type: double
   - name: fsqrtl
