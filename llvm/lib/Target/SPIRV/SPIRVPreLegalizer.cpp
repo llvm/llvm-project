@@ -323,8 +323,7 @@ static const TargetRegisterClass *getRegClass(SPIRVType *SpvType,
   case SPIRV::OpTypeFloat:
     return &SPIRV::fIDRegClass;
   case SPIRV::OpTypePointer:
-    return GR.getPointerSize() == 64 ? &SPIRV::pID64RegClass
-                                     : &SPIRV::pID32RegClass;
+    return &SPIRV::pIDRegClass;
   case SPIRV::OpTypeVector: {
     SPIRVType *ElemType =
         GR.getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
@@ -332,8 +331,7 @@ static const TargetRegisterClass *getRegClass(SPIRVType *SpvType,
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
     if (ElemOpcode == SPIRV::OpTypePointer)
-      return GR.getPointerSize() == 64 ? &SPIRV::vpID64RegClass
-                                       : &SPIRV::vpID32RegClass;
+      return &SPIRV::vpIDRegClass;
     return &SPIRV::vIDRegClass;
   }
   }
@@ -356,10 +354,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
     bool IsVec = SrcLLT.isVector();
     if (IsVec)
       NewT = LLT::fixed_vector(2, NewT);
-    if (PtrSz == 64)
-      GetIdOp = IsVec ? SPIRV::GET_vpID64 : SPIRV::GET_pID64;
-    else
-      GetIdOp = IsVec ? SPIRV::GET_vpID32 : SPIRV::GET_pID32;
+    GetIdOp = IsVec ? SPIRV::GET_vpID : SPIRV::GET_pID;
   } else if (SrcLLT.isVector()) {
     NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
     NewT = LLT::fixed_vector(2, NewT);
@@ -501,6 +496,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
               isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name))
             continue;
+          if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
+            NeedAssignType = false;
         }
         Type *Ty = nullptr;
         if (MIOp == TargetOpcode::G_CONSTANT) {
@@ -619,8 +616,8 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         if (UseMI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST)
           continue;
       }
-      if (MRI.getType(DstReg).isPointer())
-        MRI.setType(DstReg, LLT::pointer(0, GR->getPointerSize()));
+//      if (MRI.getType(DstReg).isPointer())
+//        MRI.setType(DstReg, LLT::pointer(0, GR->getPointerSize()));
     }
   }
 }
@@ -634,7 +631,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   for (unsigned i = 0, Sz = ToProcess.size(); i + 1 < Sz; i += 2) {
     MachineInstr *I1 = ToProcess[i], *I2 = ToProcess[i + 1];
     assert(isSpvIntrinsic(*I1, Intrinsic::spv_inline_asm) && I2->isInlineAsm());
-    MIRBuilder.setInsertPt(*I1->getParent(), *I1);
+    MIRBuilder.setInsertPt(*I2->getParent(), *I2);
 
     if (!AsmTargetReg.isValid()) {
       // define vendor specific assembly target or dialect
@@ -714,10 +711,10 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     unsigned IntrIdx = 2;
     for (unsigned Idx : Ops) {
       ++IntrIdx;
-      const MachineOperand &MO = I2->getOperand(Idx);
-      if (MO.isReg())
-        AsmCall.addUse(MO.getReg());
-      else
+      //const MachineOperand &MO = I2->getOperand(Idx);
+      //if (MO.isReg())
+      //  AsmCall.addUse(MO.getReg());
+      //else
         AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
     }
   }

@@ -371,7 +371,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   }
 
   auto MRI = MIRBuilder.getMRI();
-  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+  Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
@@ -557,7 +557,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (const Argument &Arg : CF->args()) {
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
-      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(64));
       MRI->setRegClass(Reg, &SPIRV::iIDRegClass);
       ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
