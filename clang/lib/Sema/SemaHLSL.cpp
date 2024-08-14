@@ -538,16 +538,6 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-int ConvertStrToTextureDimension(StringRef Str) {
-  // Str should be an integer between 1 and 3
-  unsigned Num;
-  if (Str.getAsInteger(10, Num))
-    return 0;
-  if (Num < 1 || Num > 3)
-    return 0;
-  return Num;
-}
-
 void SemaHLSL::handleTextureDimensionAttr(Decl *D, const ParsedAttr &AL) {
   Expr *E = AL.getArgAsExpr(0);
   if (!E) {
@@ -563,7 +553,6 @@ void SemaHLSL::handleTextureDimensionAttr(Decl *D, const ParsedAttr &AL) {
   if (I.has_value())
     arg0 = I->getZExtValue();
   else {
-
     Diag(E->getExprLoc(), diag::err_attribute_argument_type)
         << AL << AANT_ArgumentIntegerConstant;
     return;
