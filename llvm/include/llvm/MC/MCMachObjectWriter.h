@@ -154,8 +154,8 @@ private:
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
-  std::optional<unsigned> PtrAuthABIVersion;
-  bool PtrAuthKernelABIVersion;
+  std::optional<unsigned> PtrAuthABIVersion = std::nullopt;
+  bool PtrAuthKernelABIVersion = false;
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
