@@ -171,8 +171,8 @@ private:
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
-  std::optional<unsigned> PtrAuthABIVersion;
-  bool PtrAuthKernelABIVersion;
+  std::optional<unsigned> PtrAuthABIVersion = std::nullopt;
+  bool PtrAuthKernelABIVersion = false;
 
   // The list of linker options for LC_LINKER_OPTION.
   std::vector<std::vector<std::string>> LinkerOptions;
