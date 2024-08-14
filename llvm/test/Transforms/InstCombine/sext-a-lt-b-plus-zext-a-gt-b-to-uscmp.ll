@@ -5,11 +5,7 @@
 define i8 @signed_add(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_add(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LT8:%.*]] = sext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp slt i32 %a, %b
@@ -24,11 +20,7 @@ define i8 @signed_add(i32 %a, i32 %b) {
 define i8 @unsigned_add(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @unsigned_add(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LT8:%.*]] = sext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp ult i32 %a, %b
@@ -43,11 +35,7 @@ define i8 @unsigned_add(i32 %a, i32 %b) {
 define i8 @signed_add_commuted1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_add_commuted1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LT8:%.*]] = zext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = sext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[B]], i32 [[A]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp slt i32 %a, %b
@@ -61,11 +49,7 @@ define i8 @signed_add_commuted1(i32 %a, i32 %b) {
 define i8 @signed_add_commuted2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_add_commuted2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp sgt i32 [[B]], [[A]]
-; CHECK-NEXT:    [[LT8:%.*]] = sext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp sgt i32 %b, %a
@@ -80,11 +64,7 @@ define i8 @signed_add_commuted2(i32 %a, i32 %b) {
 define i8 @signed_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @signed_sub(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp slt i32 %a, %b
@@ -99,11 +79,7 @@ define i8 @signed_sub(i32 %a, i32 %b) {
 define i8 @unsigned_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @unsigned_sub(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    [[LT8_NEG:%.*]] = sext i1 [[LT]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[GT8:%.*]] = zext i1 [[GT]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[LT8_NEG]], [[GT8]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt = icmp ult i32 %a, %b
