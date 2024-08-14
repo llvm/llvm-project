@@ -181,8 +181,7 @@ private:
 /// A class that represents statistics about a TypeSummaryProviders invocations
 class SummaryStatistics {
 public:
-  explicit SummaryStatistics(std::string name,
-                             std::string impl_type)
+  explicit SummaryStatistics(std::string name, std::string impl_type)
       : m_total_time(), m_impl_type(impl_type), m_name(name),
         m_summary_count(0) {}
 
@@ -199,8 +198,8 @@ public:
 
   llvm::json::Value ToJSON() const;
 
-  void IncrementSummaryCount() { 
-    m_summary_count.fetch_add(1, std::memory_order_relaxed); 
+  void IncrementSummaryCount() {
+    m_summary_count.fetch_add(1, std::memory_order_relaxed);
   }
 
 private:
@@ -217,22 +216,23 @@ public:
   /// In the future this can be extended to collect information about the
   /// elapsed time for a single request.
   class SummaryInvocation {
-    public:
-      SummaryInvocation(SummaryStatistics &summary, SummaryStatisticsCache &cache)
-          : m_provider_key(summary.GetName()), m_cache(cache), m_elapsed_time(summary.GetDurationReference()) {}
-      ~SummaryInvocation() { m_cache.OnInvoked(m_provider_key); }
+  public:
+    SummaryInvocation(SummaryStatistics &summary, SummaryStatisticsCache &cache)
+        : m_provider_key(summary.GetName()), m_cache(cache),
+          m_elapsed_time(summary.GetDurationReference()) {}
+    ~SummaryInvocation() { m_cache.OnInvoked(m_provider_key); }
 
-      /// Delete the copy constructor and assignment operator to prevent
-      /// accidental double counting.
-      /// @{
-      SummaryInvocation(const SummaryInvocation &) = delete;
-      SummaryInvocation &operator=(const SummaryInvocation &) = delete;
-      /// @}
+    /// Delete the copy constructor and assignment operator to prevent
+    /// accidental double counting.
+    /// @{
+    SummaryInvocation(const SummaryInvocation &) = delete;
+    SummaryInvocation &operator=(const SummaryInvocation &) = delete;
+    /// @}
 
-    private:
-      std::string m_provider_key;
-      SummaryStatisticsCache &m_cache;
-      ElapsedTime m_elapsed_time;
+  private:
+    std::string m_provider_key;
+    SummaryStatisticsCache &m_cache;
+    ElapsedTime m_elapsed_time;
   };
 
   /// Get the SummaryStatistics object for a given provider name, or insert
@@ -240,8 +240,8 @@ public:
   SummaryStatisticsCache::SummaryInvocation
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
-    auto pair = m_summary_stats_map.try_emplace(provider.GetName(), provider.GetName(),
-                                    provider.GetSummaryKindName());
+    auto pair = m_summary_stats_map.try_emplace(
+        provider.GetName(), provider.GetName(), provider.GetSummaryKindName());
 
     return SummaryInvocation(pair.first->second, *this);
   }
@@ -257,7 +257,6 @@ private:
   llvm::StringMap<lldb_private::SummaryStatistics> m_summary_stats_map;
   std::mutex m_map_mutex;
 };
-
 
 /// A class that represents statistics for a since lldb_private::Target.
 class TargetStats {

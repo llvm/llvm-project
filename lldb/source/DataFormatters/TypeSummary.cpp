@@ -148,13 +148,9 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
   return std::string(sstr.GetString());
 }
 
-std::string CXXFunctionSummaryFormat::GetName() {
-  return m_description;
-}
+std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
 
-std::string CXXFunctionSummaryFormat::GetSummaryKindName() {
-  return "c++";
-}
+std::string CXXFunctionSummaryFormat::GetSummaryKindName() { return "c++"; }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
@@ -171,7 +167,8 @@ ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
     m_script_formatter_name = python_script;
   }
 
-  m_script_formatter_name = m_script_formatter_name.erase(0, m_script_formatter_name.find_first_not_of(' '));
+  m_script_formatter_name = m_script_formatter_name.erase(
+      0, m_script_formatter_name.find_first_not_of(' '));
 }
 
 bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
