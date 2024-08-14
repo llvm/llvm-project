@@ -44,7 +44,7 @@ module {
     %5 = cir.unary(dec, %4) : !cir.float, !cir.float
     cir.store %5, %0 : !cir.float, !cir.ptr<!cir.float>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(-1.000000e+00 : f32) : f32
-    // MLIR: = llvm.fsub %[[#D_ONE]], %{{[0-9]+}}  : f32
+    // MLIR: = llvm.fadd %[[#D_ONE]], %{{[0-9]+}}  : f32
 
     %6 = cir.load %1 : !cir.ptr<!cir.double>, !cir.double
     %7 = cir.unary(inc, %6) : !cir.double, !cir.double
@@ -56,7 +56,7 @@ module {
     %9 = cir.unary(dec, %8) : !cir.double, !cir.double
     cir.store %9, %1 : !cir.double, !cir.ptr<!cir.double>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(-1.000000e+00 : f64) : f64
-    // MLIR: = llvm.fsub %[[#D_ONE]], %{{[0-9]+}}  : f64
+    // MLIR: = llvm.fadd %[[#D_ONE]], %{{[0-9]+}}  : f64
 
     cir.return
   }

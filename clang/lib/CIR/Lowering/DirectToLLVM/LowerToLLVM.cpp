@@ -2143,7 +2143,7 @@ public:
         auto negOneAttr = rewriter.getFloatAttr(llvmType, -1.0);
         auto negOneConst =
             rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, negOneAttr);
-        rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(
             op, llvmType, negOneConst, adaptor.getInput());
         return mlir::success();
       }
