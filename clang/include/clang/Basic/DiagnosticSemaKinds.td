@@ -10952,10 +10952,10 @@ def warn_func_effect_throws_or_catches : Warning<
 def note_func_effect_throws_or_catches : Note<
   "function cannot be inferred '%0' because it throws or catches exceptions">;
 def warn_func_effect_has_static_local : Warning<
-  "'%0' function must not have static locals">,
+  "'%0' function must not have static local variables">,
   InGroup<FunctionEffects>;
 def note_func_effect_has_static_local : Note<
-  "function cannot be inferred '%0' because it has a static local">;
+  "function cannot be inferred '%0' because it has a static local variable">;
 def warn_func_effect_uses_thread_local : Warning<
   "'%0' function must not use thread-local variables">,
   InGroup<FunctionEffects>;

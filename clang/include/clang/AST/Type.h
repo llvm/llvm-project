@@ -4766,22 +4766,22 @@ public:
   /// function.
   std::optional<FunctionEffect>
   effectProhibitingInference(const Decl &Callee,
-                             const FunctionEffectKindSet &CalleeFX) const;
+                             FunctionEffectKindSet CalleeFX) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
   bool shouldDiagnoseFunctionCall(bool Direct,
-                                  const FunctionEffectKindSet &CalleeFX) const;
+                                  FunctionEffectKindSet CalleeFX) const;
 
-  friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator==(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind == RHS.FKind;
   }
-  friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator!=(FunctionEffect LHS, FunctionEffect RHS) {
     return !(LHS == RHS);
   }
-  friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator<(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind < RHS.FKind;
   }
 };
@@ -4810,8 +4810,7 @@ struct FunctionEffectWithCondition {
   EffectConditionExpr Cond;
 
   FunctionEffectWithCondition() = default;
-  FunctionEffectWithCondition(const FunctionEffect &E,
-                              const EffectConditionExpr &C)
+  FunctionEffectWithCondition(FunctionEffect E, const EffectConditionExpr &C)
       : Effect(E), Cond(C) {}
 
   /// Return a textual description of the effect, and its condition, if any.
@@ -4972,22 +4971,20 @@ public:
   iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, EndBitPos); }
 
-  void insert(const FunctionEffect &Effect) {
-    KindBits |= kindToBit(Effect.kind());
-  }
+  void insert(FunctionEffect Effect) { KindBits |= kindToBit(Effect.kind()); }
   void insert(FunctionEffectsRef FX) {
-    for (const FunctionEffect &Item : FX.effects())
+    for (FunctionEffect Item : FX.effects())
       insert(Item);
   }
-  void insert(const FunctionEffectKindSet &Set) { KindBits |= Set.KindBits; }
+  void insert(FunctionEffectKindSet Set) { KindBits |= Set.KindBits; }
 
   bool contains(const FunctionEffect::Kind EK) const {
     return (KindBits & kindToBit(EK)) != 0;
   }
   void dump(llvm::raw_ostream &OS) const;
 
-  static FunctionEffectKindSet difference(const FunctionEffectKindSet &LHS,
-                                          const FunctionEffectKindSet &RHS) {
+  static FunctionEffectKindSet difference(FunctionEffectKindSet LHS,
+                                          FunctionEffectKindSet RHS) {
     return FunctionEffectKindSet(LHS.KindBits & ~RHS.KindBits);
   }
 };

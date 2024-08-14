@@ -54,7 +54,7 @@ struct Violation {
 
   Violation() = default;
 
-  Violation(const FunctionEffect &Effect, ViolationID ID, SourceLocation Loc,
+  Violation(FunctionEffect Effect, ViolationID ID, SourceLocation Loc,
             const Decl *Callee = nullptr,
             const FunctionEffect *CalleeEffect = nullptr)
       : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {
@@ -204,7 +204,7 @@ public:
   size_t size() const { return Impl ? Impl->size() : 0; }
 
 private:
-  ImplVec::iterator _find(const FunctionEffect &key) {
+  ImplVec::iterator _find(FunctionEffect key) {
     // A linear search suffices for a tiny number of possible effects.
     auto *End = Impl->end();
     for (auto *Iter = Impl->begin(); Iter != End; ++Iter)
@@ -250,14 +250,13 @@ private:
   SmallVector<DirectCall, 0> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(
-      Sema &Sem, const CallableInfo &CInfo,
-      const FunctionEffectKindSet &AllInferrableEffectsToVerify)
+  PendingFunctionAnalysis(Sema &Sem, const CallableInfo &CInfo,
+                          FunctionEffectKindSet AllInferrableEffectsToVerify)
       : DeclaredVerifiableEffects(CInfo.Effects) {
     // Check for effects we are not allowed to infer
     FunctionEffectKindSet InferrableFX;
 
-    for (const FunctionEffect &effect : AllInferrableEffectsToVerify) {
+    for (FunctionEffect effect : AllInferrableEffectsToVerify) {
       std::optional<FunctionEffect> ProblemCalleeEffect =
           effect.effectProhibitingInference(*CInfo.CDecl, CInfo.Effects);
       if (!ProblemCalleeEffect)
@@ -296,12 +295,18 @@ public:
     return InferrableEffectToFirstViolation.lookup(effect);
   }
 
-  ArrayRef<DirectCall> unverifiedCalls() {
+  // Mutable because caller may need to set a DirectCall's Recursing flag.
+  MutableArrayRef<DirectCall> unverifiedCalls() {
     assert(!isComplete());
     return UnverifiedDirectCalls;
   }
 
-  ArrayRef<Violation> getViolationsForExplicitFX() {
+  ArrayRef<Violation> getSortedViolationsForExplicitFX(SourceManager &SM) {
+    if (!ViolationsForExplicitFX.empty())
+      std::sort(ViolationsForExplicitFX.begin(), ViolationsForExplicitFX.end(),
+                [&SM](const Violation &LHS, const Violation &RHS) {
+                  return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
+                });
     return ViolationsForExplicitFX;
   }
 
@@ -339,12 +344,11 @@ private:
 
 public:
   // The incoming Pending analysis is consumed (member(s) are moved-from).
-  CompleteFunctionAnalysis(
-      ASTContext &Ctx, PendingFunctionAnalysis &Pending,
-      const FunctionEffectKindSet &DeclaredEffects,
-      const FunctionEffectKindSet &AllInferrableEffectsToVerify)
+  CompleteFunctionAnalysis(ASTContext &Ctx, PendingFunctionAnalysis &Pending,
+                           FunctionEffectKindSet DeclaredEffects,
+                           FunctionEffectKindSet AllInferrableEffectsToVerify)
       : VerifiedEffects(DeclaredEffects) {
-    for (const FunctionEffect &effect : AllInferrableEffectsToVerify)
+    for (FunctionEffect effect : AllInferrableEffectsToVerify)
       if (Pending.violationForInferrableEffect(effect) == nullptr)
         VerifiedEffects.insert(effect);
 
@@ -352,7 +356,7 @@ public:
         std::move(Pending.InferrableEffectToFirstViolation);
   }
 
-  const Violation *firstViolationForEffect(const FunctionEffect &Effect) {
+  const Violation *firstViolationForEffect(FunctionEffect Effect) {
     return InferrableEffectToFirstViolation.lookup(Effect);
   }
 
@@ -441,7 +445,7 @@ public:
   void run(const TranslationUnitDecl &TU) {
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
-    for (const FunctionEffect &Effect : Sem.AllEffectsToVerify) {
+    for (FunctionEffect Effect : Sem.AllEffectsToVerify) {
       const FunctionEffect::Flags Flags = Effect.flags();
       if (Flags & FunctionEffect::FE_InferrableOnCallees)
         AllInferrableEffectsToVerify.insert(Effect);
@@ -487,7 +491,7 @@ public:
 
         // This indicates recursion (not necessarily direct). For the
         // purposes of effect analysis, we can just ignore it since
-        // no effects forbid recursion.        
+        // no effects forbid recursion.
         assert(isa<PendingFunctionAnalysis *>(AP));
         Call.Recursed = true;
       }
@@ -510,7 +514,7 @@ private:
     // effects forbid throwing (e.g. nonblocking) then the function should also
     // be declared noexcept.
     if (Sem.getLangOpts().CPlusPlus && !isExternC) {
-      for (const FunctionEffect &Effect : CInfo.Effects) {
+      for (FunctionEffect Effect : CInfo.Effects) {
         if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
           continue;
 
@@ -559,7 +563,8 @@ private:
   // inserted in the container.
   void completeAnalysis(const CallableInfo &CInfo,
                         PendingFunctionAnalysis &Pending) {
-    if (ArrayRef<Violation> Viols = Pending.getViolationsForExplicitFX();
+    if (ArrayRef<Violation> Viols =
+            Pending.getSortedViolationsForExplicitFX(Sem.getSourceManager());
         !Viols.empty())
       emitDiagnostics(Viols, CInfo, Sem);
 
@@ -632,7 +637,7 @@ private:
 
                llvm::dbgs() << "\n";);
 
-    auto Check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+    auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
       if (!Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects))
         return;
 
@@ -653,26 +658,21 @@ private:
       }
     };
 
-    for (const FunctionEffect &Effect : PFA.DeclaredVerifiableEffects)
-      check1Effect(Effect, false);
+    for (FunctionEffect Effect : PFA.DeclaredVerifiableEffects)
+      Check1Effect(Effect, false);
 
-    for (const FunctionEffect &Effect : PFA.FXToInfer)
-      check1Effect(Effect, true);
+    for (FunctionEffect Effect : PFA.FXToInfer)
+      Check1Effect(Effect, true);
   }
 
   // Should only be called when function's analysis is determined to be
   // complete.
-  void emitDiagnostics(ArrayRef<Violation> Viols,
-                       const CallableInfo &CInfo, Sema &S) {
+  void emitDiagnostics(ArrayRef<Violation> Viols, const CallableInfo &CInfo,
+                       Sema &S) {
     if (Viols.empty())
       return;
-    const SourceManager &SM = S.getSourceManager();
-    std::sort(Viols.begin(), Viols.end(),
-              [&SM](const Violation &LHS, const Violation &RHS) {
-                return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
-              });
 
-    auto CheckAddTemplateNote = [&](const Decl *D) {
+    auto MaybeAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
         while (FD != nullptr && FD->isTemplateInstantiation()) {
           S.Diag(FD->getPointOfInstantiation(),
@@ -693,32 +693,32 @@ private:
         break;
       case ViolationID::AllocatesMemory:
         S.Diag(Viol1.Loc, diag::warn_func_effect_allocates) << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::Throws:
       case ViolationID::Catches:
         S.Diag(Viol1.Loc, diag::warn_func_effect_throws_or_catches)
             << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::HasStaticLocal:
         S.Diag(Viol1.Loc, diag::warn_func_effect_has_static_local)
             << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::AccessesThreadLocal:
         S.Diag(Viol1.Loc, diag::warn_func_effect_uses_thread_local)
             << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsObjC:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_objc) << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
             << effectName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
         break;
 
       case ViolationID::CallsDeclWithoutEffect: {
@@ -727,7 +727,7 @@ private:
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
             << effectName << CalleeName;
-        checkAddTemplateNote(CInfo.CDecl);
+        MaybeAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
         // the callee safe?
@@ -806,7 +806,7 @@ private:
                 << effectName << MaybeNextCallee->name(S);
             break;
           }
-          checkAddTemplateNote(Callee);
+          MaybeAddTemplateNote(Callee);
           Callee = Viol2.Callee;
           if (MaybeNextCallee) {
             CalleeInfo = *MaybeNextCallee;
@@ -826,8 +826,7 @@ private:
   //      being checked for implicit conformance.
   //
   // Violations are always routed to a PendingFunctionAnalysis.
-  struct FunctionBodyASTVisitor
-      : RecursiveASTVisitor<FunctionBodyASTVisitor> {
+  struct FunctionBodyASTVisitor : RecursiveASTVisitor<FunctionBodyASTVisitor> {
 
     Analyzer &Outer;
     PendingFunctionAnalysis &CurrentFunction;
@@ -836,7 +835,7 @@ private:
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
                            CallableInfo &CurrentCaller)
-        : Outer(outer), CurrentFunction(CurrentFunction),
+        : Outer(Outer), CurrentFunction(CurrentFunction),
           CurrentCaller(CurrentCaller) {}
 
     // -- Entry point --
@@ -860,8 +859,7 @@ private:
                                    const Decl *Callee = nullptr) {
       // If there are any declared verifiable effects which forbid the construct
       // represented by the flag, store just one violation.
-      for (const FunctionEffect &Effect :
-           CurrentFunction.DeclaredVerifiableEffects) {
+      for (FunctionEffect Effect : CurrentFunction.DeclaredVerifiableEffects) {
         if (Effect.flags() & Flag) {
           addViolation(/*inferring=*/false, Effect, VID, Loc, Callee);
           break;
@@ -869,14 +867,13 @@ private:
       }
       // For each inferred effect which forbids the construct, store a
       // violation, if we don't already have a violation for that effect.
-      for (const FunctionEffect &Effect : CurrentFunction.FXToInfer)
+      for (FunctionEffect Effect : CurrentFunction.FXToInfer)
         if (Effect.flags() & Flag)
           addViolation(/*inferring=*/true, Effect, VID, Loc, Callee);
     }
 
-    void addViolation(bool Inferring, const FunctionEffect &Effect,
-                      ViolationID D, SourceLocation Loc,
-                      const Decl *Callee = nullptr) {
+    void addViolation(bool Inferring, FunctionEffect Effect, ViolationID D,
+                      SourceLocation Loc, const Decl *Callee = nullptr) {
       CurrentFunction.checkAddViolation(Inferring,
                                         Violation(Effect, D, Loc, Callee));
     }
@@ -925,19 +922,18 @@ private:
       if (FPT)
         CalleeFX.insert(FPT->getFunctionEffects());
 
-      auto Check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+      auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
         if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
                                   /*direct=*/false, CalleeFX))
           addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
                        Call->getBeginLoc());
       };
 
-      for (const FunctionEffect &Effect :
-           CurrentFunction.DeclaredVerifiableEffects)
-        check1Effect(Effect, false);
+      for (FunctionEffect Effect : CurrentFunction.DeclaredVerifiableEffects)
+        Check1Effect(Effect, false);
 
-      for (const FunctionEffect &Effect : CurrentFunction.FXToInfer)
-        check1Effect(Effect, true);
+      for (FunctionEffect Effect : CurrentFunction.FXToInfer)
+        Check1Effect(Effect, true);
     }
 
     // This destructor's body should be followed by the caller, but here we

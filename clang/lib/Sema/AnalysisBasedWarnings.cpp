@@ -2397,8 +2397,6 @@ public:
 };
 } // namespace
 
-// =============================================================================
-
 //===----------------------------------------------------------------------===//
 // AnalysisBasedWarnings - Worker object used by Sema to execute analysis-based
 //  warnings on a function, method, or block.

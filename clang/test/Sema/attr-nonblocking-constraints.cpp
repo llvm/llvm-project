@@ -15,7 +15,7 @@ void nb1() [[clang::nonblocking]]
 
 void nb2() [[clang::nonblocking]]
 {
-	static int global; // expected-warning {{'nonblocking' function must not have static locals}}
+	static int global; // expected-warning {{'nonblocking' function must not have static local variables}}
 }
 
 void nb3() [[clang::nonblocking]]
@@ -178,7 +178,7 @@ void nb11() [[clang::nonblocking]]
 
 // Verify that when attached to a redeclaration, the attribute successfully attaches.
 void nb12() {
-	static int x; // expected-warning {{'nonblocking' function must not have static locals}}
+	static int x; // expected-warning {{'nonblocking' function must not have static local variables}}
 }
 void nb12() [[clang::nonblocking]];
 void nb13() [[clang::nonblocking]] { nb12(); }

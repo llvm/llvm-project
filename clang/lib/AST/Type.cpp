@@ -5138,11 +5138,11 @@ StringRef FunctionEffect::name() const {
 }
 
 std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
-    const Decl &Callee, const FunctionEffectKindSet &CalleeFX) const {
+    const Decl &Callee, FunctionEffectKindSet CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
-    for (const FunctionEffect &Effect : CalleeFX) {
+    for (FunctionEffect Effect : CalleeFX) {
       // nonblocking/nonallocating cannot call allocating.
       if (Effect.kind() == Kind::Allocating)
         return Effect;
@@ -5166,12 +5166,12 @@ std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, const FunctionEffectKindSet &CalleeFX) const {
+    bool Direct, FunctionEffectKindSet CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
     const Kind CallerKind = kind();
-    for (const FunctionEffect &Effect : CalleeFX) {
+    for (FunctionEffect Effect : CalleeFX) {
       const Kind EK = Effect.kind();
       // Does callee have same or stronger constraint?
       if (EK == CallerKind ||
