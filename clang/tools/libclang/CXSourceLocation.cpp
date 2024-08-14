@@ -56,10 +56,9 @@ unsigned clang_lessThanLocations(CXSourceLocation loc1, CXSourceLocation loc2) {
 
   const SourceManager &SM =
       *static_cast<const SourceManager *>(loc1.ptr_data[0]);
-  if (!SM.isWrittenInSameFile(Loc1, Loc2))
-    return 0;
-
-  return Loc1 < Loc2;
+  // Use the appropriate SourceManager method here rather than operator< because
+  // ordering is meaningful only if LHS and RHS have the same FileID
+  return SM.isBeforeInTranslationUnit(Loc1, Loc2);
 }
 
 CXSourceRange clang_getNullRange() {

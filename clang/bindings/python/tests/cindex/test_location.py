@@ -133,41 +133,20 @@ int one;
 
     def test_operator_lt(self):
         tu = get_tu("aaaaa")
-        t1_f1 = tu.get_file(tu.spelling)
+        t1_f = tu.get_file(tu.spelling)
+        tu2 = get_tu("aaaaa")
 
-        tu2 = TranslationUnit.from_source(
-            tu.spelling,
-            unsaved_files=[
-                (
-                    tu.spelling,
-                    '#include "fake2.c"',
-                ),
-                (
-                    "./fake2.c",
-                    "aaaaa",
-                ),
-            ],
-        )
-        t2_f1 = tu2.get_file(tu.spelling)
-        t2_f2 = tu2.get_file("./fake2.c")
+        l_t1_12 = SourceLocation.from_position(tu, t1_f, 1, 2)
+        l_t1_13 = SourceLocation.from_position(tu, t1_f, 1, 3)
+        l_t1_14 = SourceLocation.from_position(tu, t1_f, 1, 4)
 
-        l_t1_f1_12 = SourceLocation.from_position(tu, t1_f1, 1, 2)
-        l_t1_f1_13 = SourceLocation.from_position(tu, t1_f1, 1, 3)
-        l_t1_f1_14 = SourceLocation.from_position(tu, t1_f1, 1, 4)
-
-        l_t2_f1_13 = SourceLocation.from_position(tu2, t2_f1, 1, 3)
-        l_t2_f2_12 = SourceLocation.from_position(tu2, t2_f2, 1, 2)
-        l_t2_f2_14 = SourceLocation.from_position(tu2, t2_f2, 1, 4)
+        l_t2_13 = SourceLocation.from_position(tu2, tu2.get_file(tu2.spelling), 1, 3)
 
         # In same file
-        assert l_t1_f1_12 < l_t1_f1_13 < l_t1_f1_14
-        assert not l_t1_f1_13 < l_t1_f1_12
+        assert l_t1_12 < l_t1_13 < l_t1_14
+        assert not l_t1_13 < l_t1_12
 
         # In same file, different TU
-        assert l_t1_f1_12 < l_t2_f1_13 < l_t1_f1_14
-        assert not l_t2_f1_13 < l_t1_f1_12
-        assert not l_t1_f1_14 < l_t2_f1_13
-
-        # In different file, same TU
-        assert not l_t2_f1_13 < l_t2_f2_14
-        assert not l_t2_f2_12 < l_t2_f1_13
+        assert l_t1_12 < l_t2_13 < l_t1_14
+        assert not l_t2_13 < l_t1_12
+        assert not l_t1_14 < l_t2_13
