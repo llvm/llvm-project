@@ -5226,10 +5226,8 @@ define <64 x i8> @PR103564(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512VLVBMI:       # %bb.0:
 ; AVX512VLVBMI-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512VLVBMI-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512VLVBMI-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
-; AVX512VLVBMI-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
-; AVX512VLVBMI-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,64,1,65,2,66,3,67,4,68,5,69,6,70,7,71,8,72,9,73,10,74,11,75,12,76,13,77,14,78,15,79,48,112,49,113,50,114,51,115,52,116,53,117,54,118,55,119,56,120,57,121,58,122,59,123,60,124,61,125,62,126,63,127]
-; AVX512VLVBMI-NEXT:    vpermi2b %zmm1, %zmm2, %zmm0
+; AVX512VLVBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,64,1,65,2,66,3,67,4,68,5,69,6,70,7,71,8,72,9,73,10,74,11,75,12,76,13,77,14,78,15,79,16,80,17,81,18,82,19,83,20,84,21,85,22,86,23,87,24,88,25,89,26,90,27,91,28,92,29,93,30,94,31,95]
+; AVX512VLVBMI-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: PR103564:
