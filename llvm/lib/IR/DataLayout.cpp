@@ -198,38 +198,38 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
   return "-m:e";
 }
 
-static const std::pair<AlignTypeEnum, LayoutAlignElem> DefaultAlignments[] = {
-    {INTEGER_ALIGN, {1, Align(1), Align(1)}},    // i1
-    {INTEGER_ALIGN, {8, Align(1), Align(1)}},    // i8
-    {INTEGER_ALIGN, {16, Align(2), Align(2)}},   // i16
-    {INTEGER_ALIGN, {32, Align(4), Align(4)}},   // i32
-    {INTEGER_ALIGN, {64, Align(4), Align(8)}},   // i64
-    {FLOAT_ALIGN, {16, Align(2), Align(2)}},     // half, bfloat
-    {FLOAT_ALIGN, {32, Align(4), Align(4)}},     // float
-    {FLOAT_ALIGN, {64, Align(8), Align(8)}},     // double
-    {FLOAT_ALIGN, {128, Align(16), Align(16)}},  // ppcf128, quad, ...
-    {VECTOR_ALIGN, {64, Align(8), Align(8)}},    // v2i32, v1i64, ...
-    {VECTOR_ALIGN, {128, Align(16), Align(16)}}, // v16i8, v8i16, v4i32, ...
+// Default primitive type specifications.
+// NOTE: These arrays must be sorted by type bit width.
+constexpr LayoutAlignElem DefaultIntSpecs[] = {
+    {1, Align::Constant<1>(), Align::Constant<1>()},  // i1:8:8
+    {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
+    {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
+    {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
+    {64, Align::Constant<4>(), Align::Constant<8>()}, // i64:32:64
+};
+constexpr LayoutAlignElem DefaultFloatSpecs[] = {
+    {16, Align::Constant<2>(), Align::Constant<2>()},    // f16:16:16
+    {32, Align::Constant<4>(), Align::Constant<4>()},    // f32:32:32
+    {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
+    {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
+};
+constexpr LayoutAlignElem DefaultVectorSpecs[] = {
+    {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
+    {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
 };
 
-DataLayout::DataLayout(StringRef LayoutString) {
-  BigEndian = false;
-  AllocaAddrSpace = 0;
-  ProgramAddrSpace = 0;
-  DefaultGlobalsAddrSpace = 0;
-  TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
-  ManglingMode = MM_None;
-  StructAlignment = LayoutAlignElem::get(Align(1), Align(8), 0);
+// Default pointer type specifications.
+constexpr PointerAlignElem DefaultPointerSpecs[] = {
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64} // p0:64:64:64:64
+};
 
-  // Default alignments
-  for (const auto &[Kind, Layout] : DefaultAlignments) {
-    if (Error Err = setAlignment(Kind, Layout.ABIAlign, Layout.PrefAlign,
-                                 Layout.TypeBitWidth))
-      report_fatal_error(std::move(Err));
-  }
-  if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
-    report_fatal_error(std::move(Err));
+DataLayout::DataLayout()
+    : IntAlignments(ArrayRef(DefaultIntSpecs)),
+      FloatAlignments(ArrayRef(DefaultFloatSpecs)),
+      VectorAlignments(ArrayRef(DefaultVectorSpecs)),
+      Pointers(ArrayRef(DefaultPointerSpecs)) {}
 
+DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
   if (Error Err = parseSpecifier(LayoutString))
     report_fatal_error(std::move(Err));
 }
@@ -250,8 +250,9 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   IntAlignments = Other.IntAlignments;
   FloatAlignments = Other.FloatAlignments;
   VectorAlignments = Other.VectorAlignments;
-  StructAlignment = Other.StructAlignment;
   Pointers = Other.Pointers;
+  StructABIAlignment = Other.StructABIAlignment;
+  StructPrefAlignment = Other.StructPrefAlignment;
   NonIntegralAddressSpaces = Other.NonIntegralAddressSpaces;
   return *this;
 }
@@ -271,11 +272,13 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          IntAlignments == Other.IntAlignments &&
          FloatAlignments == Other.FloatAlignments &&
          VectorAlignments == Other.VectorAlignments &&
-         StructAlignment == Other.StructAlignment && Pointers == Other.Pointers;
+         Pointers == Other.Pointers &&
+         StructABIAlignment == Other.StructABIAlignment &&
+         StructPrefAlignment == Other.StructPrefAlignment;
 }
 
 Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
-  DataLayout Layout("");
+  DataLayout Layout;
   if (Error Err = Layout.parseSpecifier(LayoutDescription))
     return std::move(Err);
   return Layout;
@@ -628,8 +631,8 @@ Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
   SmallVectorImpl<LayoutAlignElem> *Alignments;
   switch (AlignType) {
   case AGGREGATE_ALIGN:
-    StructAlignment.ABIAlign = ABIAlign;
-    StructAlignment.PrefAlign = PrefAlign;
+    StructABIAlignment = ABIAlign;
+    StructPrefAlignment = PrefAlign;
     return Error::success();
   case INTEGER_ALIGN:
     Alignments = &IntAlignments;
@@ -801,8 +804,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    const Align Align =
-        abi_or_pref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
+    const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:

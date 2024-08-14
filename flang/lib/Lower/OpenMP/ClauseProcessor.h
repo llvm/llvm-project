@@ -57,7 +57,6 @@ public:
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
-  bool processDefault() const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;

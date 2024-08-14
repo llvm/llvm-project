@@ -186,28 +186,6 @@ ObjcCategoryChecker::ObjcCategoryChecker()
       roClassLayout(target->wordSize), listHeaderLayout(target->wordSize),
       methodLayout(target->wordSize) {}
 
-// \p r must point to an offset within a CStringInputSection or a
-// ConcatInputSection
-static StringRef getReferentString(const Reloc &r) {
-  if (auto *isec = r.referent.dyn_cast<InputSection *>())
-    return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
-
-  auto *sym = cast<Defined>(r.referent.get<Symbol *>());
-  auto *symIsec = sym->isec();
-  auto symOffset = sym->value + r.addend;
-
-  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
-    return s->getStringRefAtOffset(symOffset);
-
-  if (isa<ConcatInputSection>(symIsec)) {
-    auto strData = symIsec->data.slice(symOffset);
-    const char *pszData = reinterpret_cast<const char *>(strData.data());
-    return StringRef(pszData, strnlen(pszData, strData.size()));
-  }
-
-  llvm_unreachable("unknown reference section in getReferentString");
-}
-
 void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                                        const Symbol *methodContainerSym,
                                        const ConcatInputSection *containerIsec,
@@ -219,7 +197,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
         methodLayout.nameOffset)
       continue;
 
-    CachedHashStringRef methodName(getReferentString(r));
+    CachedHashStringRef methodName(r.getReferentString());
     // +load methods are special: all implementations are called by the runtime
     // even if they are part of the same class. Thus there is no need to check
     // for duplicates.
@@ -251,14 +229,14 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                          ->getReferentInputSection();
       nameReloc = roIsec->getRelocAt(roClassLayout.nameOffset);
     }
-    StringRef containerName = getReferentString(*nameReloc);
+    StringRef containerName = nameReloc->getReferentString();
     StringRef methPrefix = mKind == MK_Instance ? "-" : "+";
 
     // We should only ever encounter collisions when parsing category methods
     // (since the Class struct is parsed before any of its categories).
     assert(mcKind == MCK_Category);
     StringRef newCatName =
-        getReferentString(*containerIsec->getRelocAt(catLayout.nameOffset));
+        containerIsec->getRelocAt(catLayout.nameOffset)->getReferentString();
 
     auto formatObjAndSrcFileName = [](const InputSection *section) {
       lld::macho::InputFile *inputFile = section->getFile();
@@ -809,7 +787,7 @@ void ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
   assert(extInfo.objFileForMergeData &&
          "Expected to already have valid objextInfo.objFileForMergeData");
 
-  StringRef catName = getReferentString(*catNameReloc);
+  StringRef catName = catNameReloc->getReferentString();
   extInfo.mergedContainerName += catName.str();
 
   // Parse base class

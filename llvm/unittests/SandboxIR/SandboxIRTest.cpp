@@ -1569,6 +1569,65 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
 }
 
+TEST_F(SandboxIRTest, Flags) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg) {
+  %add = add i32 %arg, %arg
+  %fadd = fadd float %farg, %farg
+  %udiv = udiv i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMAdd = &*LLVMIt++;
+  auto *LLVMFAdd = &*LLVMIt++;
+  auto *LLVMUDiv = &*LLVMIt++;
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Add = &*It++;
+  auto *FAdd = &*It++;
+  auto *UDiv = &*It++;
+
+#define CHECK_FLAG(I, LLVMI, GETTER, SETTER)                                   \
+  {                                                                            \
+    EXPECT_EQ(I->GETTER(), LLVMI->GETTER());                                   \
+    bool NewFlagVal = !I->GETTER();                                            \
+    I->SETTER(NewFlagVal);                                                     \
+    EXPECT_EQ(I->GETTER(), NewFlagVal);                                        \
+    EXPECT_EQ(I->GETTER(), LLVMI->GETTER());                                   \
+  }
+
+  CHECK_FLAG(Add, LLVMAdd, hasNoUnsignedWrap, setHasNoUnsignedWrap);
+  CHECK_FLAG(Add, LLVMAdd, hasNoSignedWrap, setHasNoSignedWrap);
+  CHECK_FLAG(FAdd, LLVMFAdd, isFast, setFast);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowReassoc, setHasAllowReassoc);
+  CHECK_FLAG(UDiv, LLVMUDiv, isExact, setIsExact);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoNaNs, setHasNoNaNs);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoInfs, setHasNoInfs);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoSignedZeros, setHasNoSignedZeros);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowReciprocal, setHasAllowReciprocal);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowContract, setHasAllowContract);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasApproxFunc, setHasApproxFunc);
+
+  // Check getFastMathFlags(), copyFastMathFlags().
+  FAdd->setFastMathFlags(FastMathFlags::getFast());
+  EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
+  FastMathFlags OrigFMF = FAdd->getFastMathFlags();
+  FastMathFlags NewFMF;
+  NewFMF.setAllowReassoc(true);
+  EXPECT_TRUE(NewFMF != OrigFMF);
+  FAdd->setFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
+  FAdd->copyFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
+}
+
 TEST_F(SandboxIRTest, AtomicCmpXchgInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
