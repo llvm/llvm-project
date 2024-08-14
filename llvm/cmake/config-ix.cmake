@@ -247,6 +247,17 @@ else()
   set(HAVE_LIBEDIT 0)
 endif()
 
+if(LLVM_HAS_LOGF128)
+  include(CheckCXXSymbolExists)
+  check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+
+  if(LLVM_HAS_LOGF128 STREQUAL FORCE_ON AND NOT HAS_LOGF128)
+    message(FATAL_ERROR "Failed to configure logf128")
+  endif()
+
+  set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
+endif()
+
 # function checks
 check_symbol_exists(arc4random "stdlib.h" HAVE_DECL_ARC4RANDOM)
 find_package(Backtrace)
@@ -258,12 +269,6 @@ set(BACKTRACE_HEADER ${Backtrace_HEADER})
 check_c_compiler_flag("-Werror=unguarded-availability-new" "C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW")
 if(C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unguarded-availability-new")
-endif()
-
-check_cxx_symbol_exists(logf128 cmath HAS_LOGF128)
-if(HAS_LOGF128)
-    set(LLVM_HAS_LOGF128 On)
-    add_compile_definitions(HAS_LOGF128)
 endif()
 
 # Determine whether we can register EH tables.
