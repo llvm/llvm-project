@@ -16577,9 +16577,21 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
-  return CmpX->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
-             : AtomicExpansionKind::None;
+  unsigned AddrSpace = CmpX->getPointerAddressSpace();
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
+    return AtomicExpansionKind::NotAtomic;
+
+  if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
+    return AtomicExpansionKind::None;
+
+  const DataLayout &DL = CmpX->getDataLayout();
+
+  Type *ValTy = CmpX->getNewValOperand()->getType();
+
+  // If a 64-bit flat atomic may alias private, we need to avoid using the
+  // atomic in the private case.
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+                                           : AtomicExpansionKind::None;
 }
 
 const TargetRegisterClass *
@@ -16745,40 +16757,8 @@ bool SITargetLowering::checkForPhysRegDependency(
   return false;
 }
 
-void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
-  AtomicRMWInst::BinOp Op = AI->getOperation();
-
-  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
-      Op == AtomicRMWInst::Xor) {
-    if (auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
-        ConstVal && ConstVal->isNullValue()) {
-      // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
-      AI->setOperation(AtomicRMWInst::Add);
-
-      // TODO: Turn the below private handling into a no-op for idempotent
-      // cases.
-    }
-  }
-
-  // The non-flat expansions should only perform the de-canonicalization of
-  // identity values.
-  if (AI->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
-    return;
-
-  // FullFlatEmulation is true if we need to issue the private, shared, and
-  // global cases.
-  //
-  // If this is false, we are only dealing with the flat-targeting-private case,
-  // where we only insert a check for private and still use the flat instruction
-  // for global and shared.
-
-  // TODO: Avoid the private check for the fadd case depending on
-  // noalias.addrspace.
-
-  bool FullFlatEmulation = Op == AtomicRMWInst::FAdd &&
-                           Subtarget->hasAtomicFaddInsts() &&
-                           AI->getType()->isFloatTy();
-
+void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
+    Instruction *AI) const {
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //
   // With this expansion we produce the following code:
@@ -16825,6 +16805,34 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  auto *RMW = dyn_cast<AtomicRMWInst>(AI);
+  const unsigned PtrOpIdx = RMW ? AtomicRMWInst::getPointerOperandIndex()
+                                : AtomicCmpXchgInst::getPointerOperandIndex();
+  Value *Addr = AI->getOperand(PtrOpIdx);
+
+  /// TODO: Only need to check private, then emit flat-known-not private (no
+  /// need for shared block, or cast to global).
+  AtomicCmpXchgInst *CX = dyn_cast<AtomicCmpXchgInst>(AI);
+
+  Align Alignment;
+  if (RMW)
+    Alignment = RMW->getAlign();
+  else if (CX)
+    Alignment = CX->getAlign();
+  else
+    llvm_unreachable("unhandled atomic operation");
+
+  // FullFlatEmulation is true if we need to issue the private, shared, and
+  // global cases.
+  //
+  // If this is false, we are only dealing with the flat-targeting-private case,
+  // where we only insert a check for private and still use the flat instruction
+  // for global and shared.
+
+  bool FullFlatEmulation = RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
+                           Subtarget->hasAtomicFaddInsts() &&
+                           RMW->getType()->isFloatTy();
+
   // If the return value isn't used, do not introduce a false use in the phi.
   bool ReturnValueIsUsed = !AI->use_empty();
 
@@ -16846,11 +16854,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   BasicBlock *GlobalBB = BasicBlock::Create(Ctx, "atomicrmw.global", F, ExitBB);
   BasicBlock *PhiBB = BasicBlock::Create(Ctx, "atomicrmw.phi", F, ExitBB);
 
-  Value *Val = AI->getValOperand();
-  Type *ValTy = Val->getType();
-  Value *Addr = AI->getPointerOperand();
-  Align Alignment = AI->getAlign();
-
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
 
@@ -16865,8 +16868,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
     Instruction *Clone = AI->clone();
     Clone->insertInto(SharedBB, SharedBB->end());
-    Clone->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
-        .set(CastToLocal);
+    Clone->getOperandUse(PtrOpIdx).set(CastToLocal);
     LoadedShared = Clone;
 
     Builder.CreateBr(PhiBB);
@@ -16878,14 +16880,29 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
 
   Builder.SetInsertPoint(PrivateBB);
+
   Value *CastToPrivate = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::PRIVATE_ADDRESS));
-  Value *LoadedPrivate = Builder.CreateAlignedLoad(ValTy, CastToPrivate,
-                                                   Alignment, "loaded.private");
 
-  Value *NewVal = buildAtomicRMWValue(Op, Builder, LoadedPrivate, Val);
+  Value *LoadedPrivate;
+  if (RMW) {
+    LoadedPrivate = Builder.CreateAlignedLoad(
+        RMW->getType(), CastToPrivate, RMW->getAlign(), "loaded.private");
 
-  Builder.CreateAlignedStore(NewVal, CastToPrivate, Alignment);
+    Value *NewVal = buildAtomicRMWValue(RMW->getOperation(), Builder,
+                                        LoadedPrivate, RMW->getValOperand());
+
+    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign());
+  } else {
+    auto [ResultLoad, Equal] =
+        buildAtomicCmpXchgValue(Builder, CastToPrivate, CX->getCompareOperand(),
+                                CX->getNewValOperand(), CX->getAlign());
+
+    Value *Insert = Builder.CreateInsertValue(PoisonValue::get(CX->getType()),
+                                              ResultLoad, 0);
+    LoadedPrivate = Builder.CreateInsertValue(Insert, Equal, 1);
+  }
+
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(GlobalBB);
@@ -16895,8 +16912,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   if (FullFlatEmulation) {
     Value *CastToGlobal = Builder.CreateAddrSpaceCast(
         Addr, PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS));
-    AI->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
-        .set(CastToGlobal);
+    AI->getOperandUse(PtrOpIdx).set(CastToGlobal);
   }
 
   AI->removeFromParent();
@@ -16920,7 +16936,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.SetInsertPoint(PhiBB);
 
   if (ReturnValueIsUsed) {
-    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    PHINode *Loaded = Builder.CreatePHI(AI->getType(), 3);
     AI->replaceAllUsesWith(Loaded);
     if (FullFlatEmulation)
       Loaded->addIncoming(LoadedShared, SharedBB);
@@ -16930,6 +16946,34 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   }
 
   Builder.CreateBr(ExitBB);
+}
+
+void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+      Op == AtomicRMWInst::Xor) {
+    if (const auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
+        ConstVal && ConstVal->isNullValue()) {
+      // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
+      AI->setOperation(AtomicRMWInst::Add);
+
+      // We may still need the private-alias-flat handling below.
+
+      // TODO: Skip this for cases where we cannot access remote memory.
+    }
+  }
+
+  // The non-flat expansions should only perform the de-canonicalization of
+  // identity values.
+  if (AI->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
+    return;
+
+  emitExpandAtomicAddrSpacePredicate(AI);
+}
+
+void SITargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  emitExpandAtomicAddrSpacePredicate(CI);
 }
 
 LoadInst *
