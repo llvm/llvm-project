@@ -75,8 +75,6 @@ dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 b7e4fba6e5dc Cleanup x86_mmx after removing IR type  (#100646) (Reason: dependent on dfeb3991fb48)
 Ron: still broken 9-6-24
 ---
-revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo for AMDAttributor
----
 revert : breaks build of amdgpu flat intrinsics
 ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051) 
 ---
