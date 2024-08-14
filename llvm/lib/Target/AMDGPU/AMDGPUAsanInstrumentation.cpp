@@ -181,7 +181,7 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
 
 void getInterestingMemoryOperands(
     Module &M, Instruction *I,
-    SmallVectorImpl<MemoryRefInfo> &Interesting) {
+    SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   const DataLayout &DL = M.getDataLayout();
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,

@@ -262,7 +262,10 @@ protected:
       SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeStorageTy DomTreeNodes;
   // For graphs where blocks don't have numbers, create a numbering here.
-  DenseMap<const NodeT *, unsigned> NodeNumberMap;
+  // TODO: use an empty struct with [[no_unique_address]] in C++20.
+  std::conditional_t<!GraphHasNodeNumbers<NodeT *>,
+                     DenseMap<const NodeT *, unsigned>, std::tuple<>>
+      NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
@@ -355,12 +358,8 @@ protected:
   }
 
 private:
-  template <typename T>
-  using has_number_t =
-      decltype(GraphTraits<T *>::getNumber(std::declval<T *>()));
-
   std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
-    if constexpr (is_detected<has_number_t, NodeT>::value) {
+    if constexpr (GraphHasNodeNumbers<NodeT *>) {
       // BB can be nullptr, map nullptr to index 0.
       assert(BlockNumberEpoch ==
                  GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
@@ -374,7 +373,7 @@ private:
   }
 
   unsigned getNodeIndexForInsert(const NodeT *BB) {
-    if constexpr (is_detected<has_number_t, NodeT>::value) {
+    if constexpr (GraphHasNodeNumbers<NodeT *>) {
       // getNodeIndex will never fail if nodes have getNumber().
       unsigned Idx = *getNodeIndex(BB);
       if (Idx >= DomTreeNodes.size()) {
@@ -736,7 +735,8 @@ public:
     }
 
     DomTreeNodes[*IdxOpt] = nullptr;
-    NodeNumberMap.erase(BB);
+    if constexpr (!GraphHasNodeNumbers<NodeT *>)
+      NodeNumberMap.erase(BB);
 
     if (!IsPostDom) return;
 
@@ -830,7 +830,7 @@ public:
 private:
   void updateBlockNumberEpoch() {
     // Nothing to do for graphs that don't number their blocks.
-    if constexpr (is_detected<has_number_t, NodeT>::value)
+    if constexpr (GraphHasNodeNumbers<NodeT *>)
       BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
   }
 
@@ -849,9 +849,8 @@ public:
   }
 
   /// Update dominator tree after renumbering blocks.
-  template <class T_ = NodeT>
-  std::enable_if_t<is_detected<has_number_t, T_>::value, void>
-  updateBlockNumbers() {
+  template <typename T = NodeT>
+  std::enable_if_t<GraphHasNodeNumbers<T *>, void> updateBlockNumbers() {
     updateBlockNumberEpoch();
 
     unsigned MaxNumber = GraphTraits<ParentPtr>::getMaxNumber(Parent);
@@ -889,7 +888,8 @@ public:
 
   void reset() {
     DomTreeNodes.clear();
-    NodeNumberMap.clear();
+    if constexpr (!GraphHasNodeNumbers<NodeT *>)
+      NodeNumberMap.clear();
     Roots.clear();
     RootNode = nullptr;
     Parent = nullptr;
@@ -989,7 +989,8 @@ protected:
   /// assignable and destroyable state, but otherwise invalid.
   void wipe() {
     DomTreeNodes.clear();
-    NodeNumberMap.clear();
+    if constexpr (!GraphHasNodeNumbers<NodeT *>)
+      NodeNumberMap.clear();
     RootNode = nullptr;
     Parent = nullptr;
   }

@@ -52,7 +52,7 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
 /// that needs to be instrumented
 void getInterestingMemoryOperands(
     Module &M, Instruction *I,
-    SmallVectorImpl<MemoryRefInfo> &Interesting);
+    SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
 } // end namespace AMDGPU
 } // end namespace llvm

@@ -29,7 +29,6 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Demangle/Demangle.h"
@@ -697,8 +696,8 @@ public:
       if (EHPad && EHPad->isEHPad()) {
         // Replace CI with a clone with an added funclet OperandBundle
         OperandBundleDef OB("funclet", EHPad);
-        auto *NewCall =
-            CallBase::addOperandBundle(CI, LLVMContext::OB_funclet, OB, CI);
+        auto *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
+                                                   OB, CI->getIterator());
         NewCall->copyMetadata(*CI);
         CI->replaceAllUsesWith(NewCall);
         CI->eraseFromParent();
@@ -761,13 +760,12 @@ struct AddressSanitizer {
   bool isInterestingAlloca(const AllocaInst &AI);
 
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
-  void getMemoryRefInfos(Instruction *I,
-                         SmallVectorImpl<MemoryRefInfo> &Interesting,
-                         const TargetTransformInfo *TTI);
+  void getInterestingMemoryOperands(
+      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
-  void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis, MemoryRefInfo &O,
-                     bool UseCalls, const DataLayout &DL,
-                     RuntimeCallInserter &RTCI);
+  void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
+                     InterestingMemoryOperand &O, bool UseCalls,
+                     const DataLayout &DL, RuntimeCallInserter &RTCI);
   void instrumentPointerComparisonOrSubtraction(Instruction *I,
                                                 RuntimeCallInserter &RTCI);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
@@ -803,8 +801,7 @@ struct AddressSanitizer {
   void instrumentMemIntrinsic(MemIntrinsic *MI, RuntimeCallInserter &RTCI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
-  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI,
-                          const TargetTransformInfo *TTI);
+  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
@@ -1261,6 +1258,11 @@ AddressSanitizerPass::AddressSanitizerPass(
 
 PreservedAnalyses AddressSanitizerPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_address module flag is present for the module.
+  // This implies that asan pass has already run before.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_address"))
+    return PreservedAnalyses::all();
+
   ModuleAddressSanitizer ModuleSanitizer(
       M, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
       UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind);
@@ -1274,8 +1276,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
         Options.MaxInlinePoisoningSize, Options.CompileKernel, Options.Recover,
         Options.UseAfterScope, Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
-    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI, &TTI);
+    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
   }
   Modified |= ModuleSanitizer.instrumentModule(M);
   if (!Modified)
@@ -1412,9 +1413,8 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   return false;
 }
 
-void AddressSanitizer::getMemoryRefInfos(
-    Instruction *I, SmallVectorImpl<MemoryRefInfo> &Interesting,
-    const TargetTransformInfo *TTI) {
+void AddressSanitizer::getInterestingMemoryOperands(
+    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
     return;
@@ -1532,9 +1532,6 @@ void AddressSanitizer::getMemoryRefInfos(
       break;
     }
     default:
-      if (auto *II = dyn_cast<IntrinsicInst>(I))
-        if (TTI->getMemoryRefInfo(Interesting, II))
-          return;
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(I, CI->getArgOperand(ArgNo)))
@@ -1598,7 +1595,7 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
   if (CLAsanDormant)
     IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)), I,
-        false));
+        false, MDBuilder(*C).createUnlikelyBranchWeights()));
 
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
@@ -1706,7 +1703,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
 }
 
 void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
-                                     MemoryRefInfo &O, bool UseCalls,
+                                     InterestingMemoryOperand &O, bool UseCalls,
                                      const DataLayout &DL,
                                      RuntimeCallInserter &RTCI) {
   Value *Addr = O.getPtr();
@@ -1754,11 +1751,11 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     InstrumentationIRBuilder IRB(InsertPoint);
     InsertPoint = SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+<<<<<<< HEAD
         InsertPoint, false);
-  }
-
+=======
+        InsertPoint, false, MDBuilder(*C).createUnlikelyBranchWeights());
   unsigned Granularity = 1 << Mapping.Scale;
-  if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
                                 O.MaybeStride, InsertPoint, Addr, O.Alignment,
                                 Granularity, O.OpType, O.IsWrite, nullptr,
@@ -2974,8 +2971,7 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 }
 
 bool AddressSanitizer::instrumentFunction(Function &F,
-                                          const TargetLibraryInfo *TLI,
-                                          const TargetTransformInfo *TTI) {
+                                          const TargetLibraryInfo *TLI) {
   if (F.empty())
     return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
@@ -3015,7 +3011,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
   SmallPtrSet<Value *, 16> TempsToInstrument;
-  SmallVector<MemoryRefInfo, 16> OperandsToInstrument;
+  SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
@@ -3031,8 +3027,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
-      SmallVector<MemoryRefInfo, 1> InterestingOperands;
-      getMemoryRefInfos(&Inst, InterestingOperands, TTI);
+      SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
+      getInterestingMemoryOperands(&Inst, InterestingOperands);
 
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {

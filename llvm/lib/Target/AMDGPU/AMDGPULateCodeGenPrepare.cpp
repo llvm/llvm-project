@@ -42,10 +42,10 @@ static cl::opt<bool>
 namespace {
 
 class AMDGPULateCodeGenPrepare
-    : public FunctionPass,
-      public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
+    : public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
+  const GCNSubtarget &ST;
 
   AssumptionCache *AC = nullptr;
   UniformityInfo *UA = nullptr;
@@ -53,24 +53,10 @@ class AMDGPULateCodeGenPrepare
   SmallVector<WeakTrackingVH, 8> DeadInsts;
 
 public:
-  static char ID;
-
-  AMDGPULateCodeGenPrepare() : FunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "AMDGPU IR late optimizations";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
-
+  AMDGPULateCodeGenPrepare(Module &M, const GCNSubtarget &ST,
+                           AssumptionCache *AC, UniformityInfo *UA)
+      : Mod(&M), DL(&M.getDataLayout()), ST(ST), AC(AC), UA(UA) {}
+  bool run(Function &F);
   bool visitInstruction(Instruction &) { return false; }
 
   // Check if the specified value is at least DWORD aligned.
@@ -148,23 +134,7 @@ public:
 
 } // end anonymous namespace
 
-bool AMDGPULateCodeGenPrepare::doInitialization(Module &M) {
-  Mod = &M;
-  DL = &Mod->getDataLayout();
-  return false;
-}
-
-bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
+bool AMDGPULateCodeGenPrepare::run(Function &F) {
   // "Optimize" the virtual regs that cross basic block boundaries. When
   // building the SelectionDAG, vectors of illegal types that cross basic blocks
   // will be scalarized and widened, with each scalar living in its
@@ -505,16 +475,72 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   return true;
 }
 
-INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+PreservedAnalyses
+AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
+  UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
+
+  AMDGPULateCodeGenPrepare Impl(*F.getParent(), ST, &AC, &UI);
+
+  bool Changed = Impl.run(F);
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  if (!Changed)
+    return PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+class AMDGPULateCodeGenPrepareLegacy : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPULateCodeGenPrepareLegacy() : FunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "AMDGPU IR late optimizations";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override;
+};
+
+bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC =
+      getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+
+  AMDGPULateCodeGenPrepare Impl(*F.getParent(), ST, &AC, &UI);
+
+  return Impl.run(F);
+}
+
+INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                       "AMDGPU IR late optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 
-char AMDGPULateCodeGenPrepare::ID = 0;
+char AMDGPULateCodeGenPrepareLegacy::ID = 0;
 
-FunctionPass *llvm::createAMDGPULateCodeGenPreparePass() {
-  return new AMDGPULateCodeGenPrepare();
+FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass() {
+  return new AMDGPULateCodeGenPrepareLegacy();
 }

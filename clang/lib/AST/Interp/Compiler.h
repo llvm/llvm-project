@@ -357,6 +357,8 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool compileConstructor(const CXXConstructorDecl *Ctor);
+  bool compileDestructor(const CXXDestructorDecl *Dtor);
 
   bool checkLiteralType(const Expr *E);
 

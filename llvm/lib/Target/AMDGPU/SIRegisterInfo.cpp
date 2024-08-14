@@ -797,6 +797,23 @@ int64_t SIRegisterInfo::getScratchInstrOffset(const MachineInstr *MI) const {
 
 int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
                                                  int Idx) const {
+  switch (MI->getOpcode()) {
+  case AMDGPU::V_ADD_U32_e32:
+  case AMDGPU::V_ADD_U32_e64:
+  case AMDGPU::V_ADD_CO_U32_e32: {
+    int OtherIdx = Idx == 1 ? 2 : 1;
+    const MachineOperand &OtherOp = MI->getOperand(OtherIdx);
+    return OtherOp.isImm() ? OtherOp.getImm() : 0;
+  }
+  case AMDGPU::V_ADD_CO_U32_e64: {
+    int OtherIdx = Idx == 2 ? 3 : 2;
+    const MachineOperand &OtherOp = MI->getOperand(OtherIdx);
+    return OtherOp.isImm() ? OtherOp.getImm() : 0;
+  }
+  default:
+    break;
+  }
+
   if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return 0;
 
@@ -809,7 +826,60 @@ int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
   return getScratchInstrOffset(MI);
 }
 
+static bool isFIPlusImmOrVGPR(const SIRegisterInfo &TRI,
+                              const MachineInstr &MI) {
+  assert(MI.getDesc().isAdd());
+  const MachineOperand &Src0 = MI.getOperand(1);
+  const MachineOperand &Src1 = MI.getOperand(2);
+
+  if (Src0.isFI()) {
+    return Src1.isImm() || (Src1.isReg() && TRI.isVGPR(MI.getMF()->getRegInfo(),
+                                                       Src1.getReg()));
+  }
+
+  if (Src1.isFI()) {
+    return Src0.isImm() || (Src0.isReg() && TRI.isVGPR(MI.getMF()->getRegInfo(),
+                                                       Src0.getReg()));
+  }
+
+  return false;
+}
+
 bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
+  // TODO: Handle v_add_co_u32, v_or_b32, v_and_b32 and scalar opcodes.
+  switch (MI->getOpcode()) {
+  case AMDGPU::V_ADD_U32_e32: {
+    // TODO: We could handle this but it requires work to avoid violating
+    // operand restrictions.
+    if (ST.getConstantBusLimit(AMDGPU::V_ADD_U32_e32) < 2 &&
+        !isFIPlusImmOrVGPR(*this, *MI))
+      return false;
+    [[fallthrough]];
+  }
+  case AMDGPU::V_ADD_U32_e64:
+    // FIXME: This optimization is barely profitable enableFlatScratch as-is.
+    //
+    // Much of the benefit with the MUBUF handling is we avoid duplicating the
+    // shift of the frame register, which isn't needed with scratch.
+    //
+    // materializeFrameBaseRegister doesn't know the register classes of the
+    // uses, and unconditionally uses an s_add_i32, which will end up using a
+    // copy for the vector uses.
+    return !ST.enableFlatScratch();
+  case AMDGPU::V_ADD_CO_U32_e32:
+    if (ST.getConstantBusLimit(AMDGPU::V_ADD_CO_U32_e32) < 2 &&
+        !isFIPlusImmOrVGPR(*this, *MI))
+      return false;
+    // We can't deal with the case where the carry out has a use (though this
+    // should never happen)
+    return MI->getOperand(3).isDead();
+  case AMDGPU::V_ADD_CO_U32_e64:
+    // TODO: Should we check use_empty instead?
+    return MI->getOperand(1).isDead();
+  default:
+    break;
+  }
+
   if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 
@@ -860,6 +930,8 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addFrameIndex(FrameIdx);
 
   if (ST.enableFlatScratch() ) {
+    // FIXME: Mark scc as dead
+    // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
         .addReg(FIReg);
@@ -877,6 +949,86 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                        int64_t Offset) const {
   const SIInstrInfo *TII = ST.getInstrInfo();
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_ADD_U32_e32:
+  case AMDGPU::V_ADD_CO_U32_e32: {
+    MachineOperand *FIOp = &MI.getOperand(2);
+    MachineOperand *ImmOp = &MI.getOperand(1);
+    if (!FIOp->isFI())
+      std::swap(FIOp, ImmOp);
+
+    if (!ImmOp->isImm()) {
+      assert(Offset == 0);
+      FIOp->ChangeToRegister(BaseReg, false);
+      TII->legalizeOperandsVOP2(MI.getMF()->getRegInfo(), MI);
+      return;
+    }
+
+    int64_t TotalOffset = ImmOp->getImm() + Offset;
+    if (TotalOffset == 0) {
+      MI.setDesc(TII->get(AMDGPU::COPY));
+      for (unsigned I = MI.getNumOperands() - 1; I != 1; --I)
+        MI.removeOperand(I);
+
+      MI.getOperand(1).ChangeToRegister(BaseReg, false);
+      return;
+    }
+
+    ImmOp->setImm(TotalOffset);
+
+    MachineBasicBlock *MBB = MI.getParent();
+    MachineFunction *MF = MBB->getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+
+    // FIXME: materializeFrameBaseRegister does not know the register class of
+    // the uses of the frame index, and assumes SGPR for enableFlatScratch. Emit
+    // a copy so we have a legal operand and hope the register coalescer can
+    // clean it up.
+    if (isSGPRReg(MRI, BaseReg)) {
+      Register BaseRegVGPR =
+          MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), BaseRegVGPR)
+          .addReg(BaseReg);
+      MI.getOperand(2).ChangeToRegister(BaseRegVGPR, false);
+    } else {
+      MI.getOperand(2).ChangeToRegister(BaseReg, false);
+    }
+    return;
+  }
+  case AMDGPU::V_ADD_U32_e64:
+  case AMDGPU::V_ADD_CO_U32_e64: {
+    int Src0Idx = MI.getNumExplicitDefs();
+    MachineOperand *FIOp = &MI.getOperand(Src0Idx);
+    MachineOperand *ImmOp = &MI.getOperand(Src0Idx + 1);
+    if (!FIOp->isFI())
+      std::swap(FIOp, ImmOp);
+
+    if (!ImmOp->isImm()) {
+      FIOp->ChangeToRegister(BaseReg, false);
+      TII->legalizeOperandsVOP3(MI.getMF()->getRegInfo(), MI);
+      return;
+    }
+
+    int64_t TotalOffset = ImmOp->getImm() + Offset;
+    if (TotalOffset == 0) {
+      MI.setDesc(TII->get(AMDGPU::COPY));
+
+      for (unsigned I = MI.getNumOperands() - 1; I != 1; --I)
+        MI.removeOperand(I);
+
+      MI.getOperand(1).ChangeToRegister(BaseReg, false);
+    } else {
+      FIOp->ChangeToRegister(BaseReg, false);
+      ImmOp->setImm(TotalOffset);
+    }
+
+    return;
+  }
+  default:
+    break;
+  }
+
   bool IsFlat = TII->isFLATScratch(MI);
 
 #ifndef NDEBUG
@@ -925,6 +1077,18 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                         Register BaseReg,
                                         int64_t Offset) const {
+
+  switch (MI->getOpcode()) {
+  case AMDGPU::V_ADD_U32_e32:
+  case AMDGPU::V_ADD_CO_U32_e32:
+    return true;
+  case AMDGPU::V_ADD_U32_e64:
+  case AMDGPU::V_ADD_CO_U32_e64:
+    return ST.hasVOP3Literal() || AMDGPU::isInlinableIntLiteral(Offset);
+  default:
+    break;
+  }
+
   if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 

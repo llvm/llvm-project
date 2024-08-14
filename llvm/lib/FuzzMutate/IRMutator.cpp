@@ -148,7 +148,7 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   for (const auto &Pred : ArrayRef(OpDesc->SourcePreds).slice(1))
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
 
-  if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP])) {
+  if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP]->getIterator())) {
     // Find a sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Op);
   }
@@ -388,9 +388,9 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   }
   bool isRetVoid = (F->getReturnType() == Type::getVoidTy(M->getContext()));
   auto BuilderFunc = [FTy, F, isRetVoid](ArrayRef<Value *> Srcs,
-                                         Instruction *Inst) {
+                                         BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
-    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst);
+    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
@@ -414,7 +414,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
   }
 
-  if (Value *Op = BuilderFunc(Srcs, Insts[IP])) {
+  if (Value *Op = BuilderFunc(Srcs, Insts[IP]->getIterator())) {
     // Find a sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Op);
   }
@@ -543,7 +543,7 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   if (&BB == &BB.getParent()->getEntryBlock())
     return;
   Type *Ty = IB.randomType();
-  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", &BB.front());
+  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", BB.begin());
 
   // Use a map to make sure the same incoming basic block has the same value.
   DenseMap<BasicBlock *, Value *> IncomingValues;
