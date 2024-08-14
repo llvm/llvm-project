@@ -807,6 +807,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   if (nsan_initialized)
     return;
   nsan_init_is_running = true;
+  SanitizerToolName = "NumericalStabilitySanitizer";
 
   InitializeFlags();
   InitializeSuppressions();
@@ -814,11 +815,12 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
 
   DisableCoreDumperIfNecessary();
 
-  if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
+  if (!MmapFixedNoReserve(TypesAddr(), AllocatorAddr() - TypesAddr()))
     Die();
 
   InitializeInterceptors();
   NsanTSDInit(NsanTSDDtor);
+  NsanAllocatorInit();
 
   NsanThread *main_thread = NsanThread::Create(nullptr, nullptr);
   SetCurrentThread(main_thread);

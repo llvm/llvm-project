@@ -871,23 +871,6 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Fields.
-  for (const Record::Field &Field : llvm::reverse(R->fields())) {
-    const Descriptor *D = Field.Desc;
-    if (D->isRecord()) {
-      if (!runRecordDestructor(S, OpPC, BasePtr.atField(Field.Offset), D))
-        return false;
-    } else if (D->isCompositeArray()) {
-      const Descriptor *ElemDesc = Desc->ElemDesc;
-      assert(ElemDesc->isRecord());
-      for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-        if (!runRecordDestructor(S, OpPC, BasePtr.atIndex(I).narrow(),
-                                 ElemDesc))
-          return false;
-      }
-    }
-  }
-
   // Destructor of this record.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
       Dtor && !Dtor->isTrivial()) {
@@ -899,13 +882,6 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
     if (!Call(S, OpPC, DtorFunc, 0))
       return false;
   }
-
-  // Bases.
-  for (const Record::Base &Base : llvm::reverse(R->bases())) {
-    if (!runRecordDestructor(S, OpPC, BasePtr.atField(Base.Offset), Base.Desc))
-      return false;
-  }
-
   return true;
 }
 

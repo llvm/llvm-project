@@ -3139,12 +3139,10 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     return WideningDecision != CM_GatherScatter;
   };
 
-  // A helper that returns true if the given value is a bitcast or
-  // getelementptr instruction contained in the loop.
-  auto isLoopVaryingBitCastOrGEP = [&](Value *V) {
-    return ((isa<BitCastInst>(V) && V->getType()->isPointerTy()) ||
-            isa<GetElementPtrInst>(V)) &&
-           !TheLoop->isLoopInvariant(V);
+  // A helper that returns true if the given value is a getelementptr
+  // instruction contained in the loop.
+  auto isLoopVaryingGEP = [&](Value *V) {
+    return isa<GetElementPtrInst>(V) && !TheLoop->isLoopInvariant(V);
   };
 
   // A helper that evaluates a memory access's use of a pointer. If the use will
@@ -3154,7 +3152,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
-    if (!isLoopVaryingBitCastOrGEP(Ptr))
+    if (!isLoopVaryingGEP(Ptr))
       return;
 
     // If the pointer has already been identified as scalar (e.g., if it was
@@ -3220,7 +3218,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   unsigned Idx = 0;
   while (Idx != Worklist.size()) {
     Instruction *Dst = Worklist[Idx++];
-    if (!isLoopVaryingBitCastOrGEP(Dst->getOperand(0)))
+    if (!isLoopVaryingGEP(Dst->getOperand(0)))
       continue;
     auto *Src = cast<Instruction>(Dst->getOperand(0));
     if (llvm::all_of(Src->users(), [&](User *U) -> bool {
@@ -3705,7 +3703,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     auto *I = cast<Instruction>(V);
     auto UsersAreMemAccesses =
       llvm::all_of(I->users(), [&](User *U) -> bool {
-        return isVectorizedMemAccessUse(cast<Instruction>(U), V);
+        auto *UI = cast<Instruction>(U);
+        return TheLoop->contains(UI) && isVectorizedMemAccessUse(UI, V);
       });
     if (UsersAreMemAccesses)
       addToWorklistIfAllowed(I);
@@ -10177,22 +10176,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   return true;
 }
 
-LoopVectorizeResult LoopVectorizePass::runImpl(
-    Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
-    DominatorTree &DT_, BlockFrequencyInfo *BFI_, TargetLibraryInfo *TLI_,
-    DemandedBits &DB_, AssumptionCache &AC_, LoopAccessInfoManager &LAIs_,
-    OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_) {
-  SE = &SE_;
-  LI = &LI_;
-  TTI = &TTI_;
-  DT = &DT_;
-  BFI = BFI_;
-  TLI = TLI_;
-  AC = &AC_;
-  LAIs = &LAIs_;
-  DB = &DB_;
-  ORE = &ORE_;
-  PSI = PSI_;
+LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
@@ -10252,53 +10236,51 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 
 PreservedAnalyses LoopVectorizePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-    auto &LI = AM.getResult<LoopAnalysis>(F);
-    // There are no loops in the function. Return before computing other expensive
-    // analyses.
-    if (LI.empty())
-      return PreservedAnalyses::all();
-    auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
-    auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-    auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-    auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-    auto &AC = AM.getResult<AssumptionAnalysis>(F);
-    auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
-    auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  LI = &AM.getResult<LoopAnalysis>(F);
+  // There are no loops in the function. Return before computing other
+  // expensive analyses.
+  if (LI->empty())
+    return PreservedAnalyses::all();
+  SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  TTI = &AM.getResult<TargetIRAnalysis>(F);
+  DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  TLI = &AM.getResult<TargetLibraryAnalysis>(F);
+  AC = &AM.getResult<AssumptionAnalysis>(F);
+  DB = &AM.getResult<DemandedBitsAnalysis>(F);
+  ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  LAIs = &AM.getResult<LoopAccessAnalysis>(F);
 
-    LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    BlockFrequencyInfo *BFI = nullptr;
-    if (PSI && PSI->hasProfileSummary())
-      BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-    LoopVectorizeResult Result =
-        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AC, LAIs, ORE, PSI);
-    if (!Result.MadeAnyChange)
-      return PreservedAnalyses::all();
-    PreservedAnalyses PA;
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  BFI = nullptr;
+  if (PSI && PSI->hasProfileSummary())
+    BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  LoopVectorizeResult Result = runImpl(F);
+  if (!Result.MadeAnyChange)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
 
-    if (isAssignmentTrackingEnabled(*F.getParent())) {
-      for (auto &BB : F)
-        RemoveRedundantDbgInstrs(&BB);
-    }
+  if (isAssignmentTrackingEnabled(*F.getParent())) {
+    for (auto &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
+  }
 
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<ScalarEvolutionAnalysis>();
-    PA.preserve<LoopAccessAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<LoopAccessAnalysis>();
 
-    if (Result.MadeCFGChange) {
-      // Making CFG changes likely means a loop got vectorized. Indicate that
-      // extra simplification passes should be run.
-      // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
-      // be run if runtime checks have been added.
-      AM.getResult<ShouldRunExtraVectorPasses>(F);
-      PA.preserve<ShouldRunExtraVectorPasses>();
-    } else {
-      PA.preserveSet<CFGAnalyses>();
-    }
-    return PA;
+  if (Result.MadeCFGChange) {
+    // Making CFG changes likely means a loop got vectorized. Indicate that
+    // extra simplification passes should be run.
+    // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
+    // be run if runtime checks have been added.
+    AM.getResult<ShouldRunExtraVectorPasses>(F);
+    PA.preserve<ShouldRunExtraVectorPasses>();
+  } else {
+    PA.preserveSet<CFGAnalyses>();
+  }
+  return PA;
 }
 
 void LoopVectorizePass::printPipeline(
