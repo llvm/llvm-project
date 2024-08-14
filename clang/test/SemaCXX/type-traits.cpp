@@ -2003,6 +2003,7 @@ struct ConstrainedUserDeclaredDefaultConstructor{
 
 template<bool B>
 struct ConstrainedUserProvidedDestructor {
+  ~ConstrainedUserProvidedDestructor() = default;
   ~ConstrainedUserProvidedDestructor() requires B {}
 };
 #endif
@@ -2016,8 +2017,13 @@ struct StructWithZeroSizedArray {
 };
 
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef int *align_value_int __attribute__((align_value(16)));
+
+struct [[clang::enforce_read_only_placement]] EnforceReadOnlyPlacement {};
+struct [[clang::type_visibility("hidden")]] TypeVisibility {};
 
 void is_implicit_lifetime(int n) {
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
   static_assert(!__builtin_is_implicit_lifetime(void));
   static_assert(!__builtin_is_implicit_lifetime(const void));
   static_assert(!__builtin_is_implicit_lifetime(volatile void));
@@ -2067,6 +2073,7 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<true>));
   static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<false>));
   static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<true>));
+  static_assert(__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<false>));
 #endif
 
   static_assert(__builtin_is_implicit_lifetime(__int128));
@@ -2079,6 +2086,15 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(__bf16));
   static_assert(__builtin_is_implicit_lifetime(_Complex double));
   static_assert(__builtin_is_implicit_lifetime(float4));
+  static_assert(__builtin_is_implicit_lifetime(align_value_int));
+  static_assert(__builtin_is_implicit_lifetime(int[[clang::annotate_type("category2")]] *));
+  static_assert(__builtin_is_implicit_lifetime(int __attribute__((btf_type_tag("user"))) *));
+  static_assert(__builtin_is_implicit_lifetime(EnforceReadOnlyPlacement));
+  static_assert(__builtin_is_implicit_lifetime(int __attribute__((noderef)) *));
+  static_assert(__builtin_is_implicit_lifetime(TypeVisibility));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nonnull));
+  static_assert(__builtin_is_implicit_lifetime(int * _Null_unspecified));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nullable));
 }
 
 void is_signed()
