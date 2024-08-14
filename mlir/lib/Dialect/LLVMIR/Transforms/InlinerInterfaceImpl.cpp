@@ -224,10 +224,11 @@ static ArrayAttr concatArrayAttr(ArrayAttr lhs, ArrayAttr rhs) {
 
 /// Attempts to return the set of all underlying pointer values that
 /// `pointerValue` is based on. This function traverses through select
-/// operations and block arguments unlike getUnderlyingObject.
-static SmallVector<Value> getUnderlyingObjectSet(Value pointerValue) {
+/// operations and block arguments.
+static FailureOr<SmallVector<Value>>
+getUnderlyingObjectSet(Value pointerValue) {
   SmallVector<Value> result;
-  walkBackwardSlice(pointerValue, [&](Value val) {
+  WalkContinuation walkResult = walkSlice(pointerValue, [&](Value val) {
     if (auto gepOp = val.getDefiningOp<LLVM::GEPOp>())
       return WalkContinuation::advanceTo(gepOp.getBase());
 
@@ -239,11 +240,27 @@ static SmallVector<Value> getUnderlyingObjectSet(Value pointerValue) {
       return WalkContinuation::advanceTo(
           {selectOp.getTrueValue(), selectOp.getFalseValue()});
 
-    if (isa<OpResult>(val))
-      result.push_back(val);
+    // Attempt to advance to control flow predecessors.
+    std::optional<SmallVector<Value>> controlFlowPredecessors =
+        getControlFlowPredecessors(val);
+    if (controlFlowPredecessors)
+      return WalkContinuation::advanceTo(*controlFlowPredecessors);
 
-    return WalkContinuation::advance();
+    // For all non-control flow results, consider `val` an underlying object.
+    if (isa<OpResult>(val)) {
+      result.push_back(val);
+      return WalkContinuation::skip();
+    }
+
+    // If this place is reached, `val` is a block argument that is not
+    // understood. Therfore, we conservatively interrupt.
+    // Note: Dealing with the function arguments is not necessary, as the slice
+    // would have to go through an SSACopyOp first.
+    return WalkContinuation::interrupt();
   });
+
+  if (walkResult.wasInterrupted())
+    return failure();
 
   return result;
 }
@@ -306,9 +323,14 @@ static void createNewAliasScopesFromNoAliasParameter(
 
       // Find the set of underlying pointers that this pointer is based on.
       SmallPtrSet<Value, 4> basedOnPointers;
-      for (Value pointer : pointerArgs)
-        llvm::copy(getUnderlyingObjectSet(pointer),
+      for (Value pointer : pointerArgs) {
+        FailureOr<SmallVector<Value>> underlyingObjectSet =
+            getUnderlyingObjectSet(pointer);
+        if (failed(underlyingObjectSet))
+          return;
+        llvm::copy(*underlyingObjectSet,
                    std::inserter(basedOnPointers, basedOnPointers.begin()));
+      }
 
       bool aliasesOtherKnownObject = false;
       // Go through the based on pointers and check that they are either:

@@ -15,7 +15,6 @@ namespace mlir {
 
 /// A class to signal how to proceed with the walk of the backward slice:
 /// - Interrupt: Stops the walk.
-/// - Advance: Continues the walk to control flow predecessors values.
 /// - AdvanceTo: Continues the walk to user-specified values.
 /// - Skip: Continues the walk, but skips the predecessors of the current value.
 class WalkContinuation {
@@ -23,8 +22,6 @@ public:
   enum class WalkAction {
     /// Stops the walk.
     Interrupt,
-    /// Continues the walk to control flow predecessors values.
-    Advance,
     /// Continues the walk to user-specified values.
     AdvanceTo,
     /// Continues the walk, but skips the predecessors of the current value.
@@ -33,10 +30,6 @@ public:
 
   WalkContinuation(WalkAction action, mlir::ValueRange nextValues)
       : action(action), nextValues(nextValues) {}
-
-  /// Allows LogicalResult to interrupt the walk on failure.
-  explicit WalkContinuation(llvm::LogicalResult action)
-      : action(failed(action) ? WalkAction::Interrupt : WalkAction::Advance) {}
 
   /// Allows diagnostics to interrupt the walk.
   explicit WalkContinuation(mlir::Diagnostic &&)
@@ -56,12 +49,6 @@ public:
   /// add the control flow predecessor values to the work list.
   static WalkContinuation advanceTo(mlir::ValueRange nextValues) {
     return WalkContinuation(WalkAction::AdvanceTo, nextValues);
-  }
-
-  /// Creates a continuation that adds the control flow predecessor values to
-  /// the work list and advances the walk.
-  static WalkContinuation advance() {
-    return WalkContinuation(WalkAction::Advance, {});
   }
 
   /// Creates a continuation that advances the walk without adding any
@@ -89,34 +76,23 @@ private:
 };
 
 /// A callback that is invoked for each value encountered during the walk of the
-/// backward slice. The callback takes the current value, and returns the walk
+/// slice. The callback takes the current value, and returns the walk
 /// continuation, which determines if the walk should proceed and if yes, with
 /// which values.
 using WalkCallback = mlir::function_ref<WalkContinuation(mlir::Value)>;
 
-/// Walks the backward slice starting from the `rootValues` using a depth-first
-/// traversal following the use-def chains. The walk calls the provided
-/// `walkCallback` for each value encountered in the backward slice and uses the
-/// returned walk continuation to determine how to proceed. Additionally, the
-/// walk also transparently traverses through select operations and control flow
-/// operations that implement RegionBranchOpInterface or BranchOpInterface.
-WalkContinuation walkBackwardSlice(mlir::ValueRange rootValues,
-                                   WalkCallback walkCallback);
+/// Walks the slice starting from the `rootValues` using a depth-first
+/// traversal. The walk calls the provided `walkCallback` for each value
+/// encountered in the slice and uses the returned walk continuation to
+/// determine how to proceed.
+WalkContinuation walkSlice(mlir::ValueRange rootValues,
+                           WalkCallback walkCallback);
 
-/// A callback that is invoked for each value encountered during the walk of the
-/// backward slice. The callback takes the current value, and returns the walk
-/// continuation, which determines if the walk should proceed and if yes, with
-/// which values.
-using WalkCallback = mlir::function_ref<WalkContinuation(mlir::Value)>;
-
-/// Walks the backward slice starting from the `rootValues` using a depth-first
-/// traversal following the use-def chains. The walk calls the provided
-/// `walkCallback` for each value encountered in the backward slice and uses the
-/// returned walk continuation to determine how to proceed. Additionally, the
-/// walk also transparently traverses through select operations and control flow
-/// operations that implement RegionBranchOpInterface or BranchOpInterface.
-WalkContinuation walkBackwardSlice(mlir::ValueRange rootValues,
-                                   WalkCallback walkCallback);
+/// Computes a vector of all control predecessors of `value`. Relies on
+/// RegionBranchOpInterface and BranchOpInterface to determine predecessors.
+/// Returns nullopt if value has no predecessors or when the relevant operations
+/// are missing the interface implementations.
+std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
 
 } // namespace mlir
 

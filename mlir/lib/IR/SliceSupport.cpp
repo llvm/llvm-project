@@ -3,6 +3,35 @@
 
 using namespace mlir;
 
+WalkContinuation mlir::walkSlice(ValueRange rootValues,
+                                 WalkCallback walkCallback) {
+  // Search the backward slice starting from the root values.
+  SmallVector<Value> workList = rootValues;
+  llvm::SmallDenseSet<Value, 16> seenValues;
+  while (!workList.empty()) {
+    // Search the backward slice of the current value.
+    Value current = workList.pop_back_val();
+
+    // Skip the current value if it has already been seen.
+    if (!seenValues.insert(current).second)
+      continue;
+
+    // Call the walk callback with the current value.
+    WalkContinuation continuation = walkCallback(current);
+    if (continuation.wasInterrupted())
+      return continuation;
+    if (continuation.wasSkipped())
+      continue;
+
+    assert(continuation.wasAdvancedTo());
+    // Add the next values to the work list if the walk should continue.
+    workList.append(continuation.getNextValues().begin(),
+                    continuation.getNextValues().end());
+  }
+
+  return WalkContinuation::skip();
+}
+
 /// Returns the operands from all predecessor regions that match `operandNumber`
 /// for the `successor` region within `regionOp`.
 static SmallVector<Value>
@@ -49,15 +78,20 @@ getRegionPredecessorOperands(RegionBranchOpInterface regionOp,
   return predecessorOperands;
 }
 
-/// Returns the predecessor branch operands that match `blockArg`.
-static SmallVector<Value> getBlockPredecessorOperands(BlockArgument blockArg) {
+/// Returns the predecessor branch operands that match `blockArg`. Returns a
+/// nullopt when some of the predecessor terminators do not implement the
+/// BranchOpInterface.
+static std::optional<SmallVector<Value>>
+getBlockPredecessorOperands(BlockArgument blockArg) {
   Block *block = blockArg.getOwner();
 
   // Search the predecessor operands for all predecessor terminators.
   SmallVector<Value> predecessorOperands;
   for (auto it = block->pred_begin(); it != block->pred_end(); ++it) {
     Block *predecessor = *it;
-    auto branchOp = cast<BranchOpInterface>(predecessor->getTerminator());
+    auto branchOp = dyn_cast<BranchOpInterface>(predecessor->getTerminator());
+    if (!branchOp)
+      return std::nullopt;
     SuccessorOperands successorOperands =
         branchOp.getSuccessorOperands(it.getSuccessorIndex());
     // Store the predecessor operand if the block argument matches an operand
@@ -69,62 +103,38 @@ static SmallVector<Value> getBlockPredecessorOperands(BlockArgument blockArg) {
   return predecessorOperands;
 }
 
-mlir::WalkContinuation mlir::walkBackwardSlice(ValueRange rootValues,
-                                               WalkCallback walkCallback) {
-  // Search the backward slice starting from the root values.
-  SmallVector<Value> workList = rootValues;
-  llvm::SmallDenseSet<Value, 16> seenValues;
-  while (!workList.empty()) {
-    // Search the backward slice of the current value.
-    Value current = workList.pop_back_val();
-
-    // Skip the current value if it has already been seen.
-    if (!seenValues.insert(current).second)
-      continue;
-
-    // Call the walk callback with the current value.
-    WalkContinuation continuation = walkCallback(current);
-    if (continuation.wasInterrupted())
-      return continuation;
-    if (continuation.wasSkipped())
-      continue;
-
-    // Add the next values to the work list if the walk should continue.
-    if (continuation.wasAdvancedTo()) {
-      workList.append(continuation.getNextValues().begin(),
-                      continuation.getNextValues().end());
-      continue;
-    }
-
+std::optional<SmallVector<Value>>
+mlir::getControlFlowPredecessors(Value value) {
+  SmallVector<Value> result;
+  if (OpResult opResult = dyn_cast<OpResult>(value)) {
+    auto regionOp = dyn_cast<RegionBranchOpInterface>(opResult.getOwner());
+    // If the interface is not implemented, there are no control flow
+    // predecessors to work with.
+    if (!regionOp)
+      return std::nullopt;
     // Add the control flow predecessor operands to the work list.
-    if (OpResult opResult = dyn_cast<OpResult>(current)) {
-      auto regionOp = dyn_cast<RegionBranchOpInterface>(opResult.getOwner());
-      if (!regionOp)
-        continue;
-      RegionSuccessor region(regionOp->getResults());
-      SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
-          regionOp, region, opResult.getResultNumber());
-      workList.append(predecessorOperands.begin(), predecessorOperands.end());
-      continue;
-    }
+    RegionSuccessor region(regionOp->getResults());
+    SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
+        regionOp, region, opResult.getResultNumber());
+    return predecessorOperands;
+  }
 
-    auto blockArg = cast<BlockArgument>(current);
-    Block *block = blockArg.getOwner();
-    // Search the region predecessor operands for structured control flow.
-    auto regionBranchOp =
-        dyn_cast<RegionBranchOpInterface>(block->getParentOp());
-    if (block->isEntryBlock() && regionBranchOp) {
+  auto blockArg = cast<BlockArgument>(value);
+  Block *block = blockArg.getOwner();
+  // Search the region predecessor operands for structured control flow.
+  if (block->isEntryBlock()) {
+    if (auto regionBranchOp =
+            dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
       RegionSuccessor region(blockArg.getParentRegion());
       SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
           regionBranchOp, region, blockArg.getArgNumber());
-      workList.append(predecessorOperands.begin(), predecessorOperands.end());
-      continue;
+      return predecessorOperands;
     }
-    // Search the block predecessor operands for unstructured control flow.
-    SmallVector<Value> predecessorOperands =
-        getBlockPredecessorOperands(blockArg);
-    workList.append(predecessorOperands.begin(), predecessorOperands.end());
+    // Unclear how to deal with this operation, conservatively return a
+    // failure.
+    return std::nullopt;
   }
 
-  return WalkContinuation::advance();
+  // Search the block predecessor operands for unstructured control flow.
+  return getBlockPredecessorOperands(blockArg);
 }
