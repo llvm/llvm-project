@@ -97,7 +97,8 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
-option(LIBCXX_HAS_TERMINAL_AVAILABLE "Build libc++ with terminal checking support" ON)
+option(LIBCXX_HAS_TERMINAL_AVAILABLE
+  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
