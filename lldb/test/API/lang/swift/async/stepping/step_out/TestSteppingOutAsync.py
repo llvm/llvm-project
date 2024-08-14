@@ -30,7 +30,6 @@ class TestCase(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=["windows", "linux"])
-    @skipIf("rdar://133849022")
     def test(self):
         """Test `frame variable` in async functions"""
         self.build()

@@ -39,11 +39,19 @@ public:
 };
 
 struct MockProcess : Process {
+  llvm::DenseMap<addr_t, addr_t> memory_map;
+
   MockProcess(TargetSP target_sp, ListenerSP listener_sp)
       : Process(target_sp, listener_sp) {}
+  MockProcess(TargetSP target_sp, ListenerSP listener_sp,
+              llvm::DenseMap<addr_t, addr_t> &&memory_map)
+      : Process(target_sp, listener_sp), memory_map(memory_map) {}
   size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
-    return 0;
+    assert(memory_map.contains(vm_addr));
+    assert(size == sizeof(addr_t));
+    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
+    return sizeof(addr_t);
   }
   size_t ReadMemory(addr_t addr, void *buf, size_t size,
                     Status &status) override {
@@ -87,4 +95,31 @@ TEST_F(StackIDTest, StackHeapCFAComparison) {
 
   EXPECT_TRUE(StackID::IsYounger(cfa_on_stack, cfa_on_heap, process));
   EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, process));
+}
+
+TEST_F(StackIDTest, HeapHeapCFAComparison) {
+  // Create a mock async continuation chain:
+  // 100 -> 108 -> 116 -> 0
+  // This should be read as:
+  // "Async context whose address is 100 has a continuation context whose
+  // address is 108", etc.
+  llvm::DenseMap<addr_t, addr_t> memory_map;
+  memory_map[100] = 108;
+  memory_map[108] = 116;
+  memory_map[116] = 0;
+  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"),
+                             std::move(memory_map));
+
+  MockStackID oldest_cfa(/*cfa*/ 116, OnStack::No);
+  MockStackID middle_cfa(/*cfa*/ 108, OnStack::No);
+  MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
+
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, process));
+
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, process));
+
+  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, process));
 }
