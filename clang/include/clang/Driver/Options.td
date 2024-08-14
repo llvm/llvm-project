@@ -1302,6 +1302,12 @@ def no_offload_compress : Flag<["--"], "no-offload-compress">;
 def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
+
+defm offload_via_llvm : BoolFOption<"offload-via-llvm",
+  LangOpts<"OffloadViaLLVM">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't use">,
+  BothFlags<[], [ClangOption], " LLVM/Offload as portable offloading runtime.">>;
 }
 
 // CUDA options
@@ -3449,6 +3455,12 @@ defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-arg
   PosFlag<SetTrue, [], [], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
+defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
+  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
+  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,

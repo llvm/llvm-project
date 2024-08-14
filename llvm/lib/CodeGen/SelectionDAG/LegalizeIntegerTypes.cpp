@@ -1078,15 +1078,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   bool IsShift = Opcode == ISD::USHLSAT || Opcode == ISD::SSHLSAT;
 
   // FIXME: We need vp-aware PromotedInteger functions.
-  SDValue Op1Promoted, Op2Promoted;
   if (IsShift) {
-    Op1Promoted = GetPromotedInteger(Op1);
-    Op2Promoted = ZExtPromotedInteger(Op2);
+    Op1 = GetPromotedInteger(Op1);
+    Op2 = ZExtPromotedInteger(Op2);
   } else {
-    Op1Promoted = SExtPromotedInteger(Op1);
-    Op2Promoted = SExtPromotedInteger(Op2);
+    Op1 = SExtPromotedInteger(Op1);
+    Op2 = SExtPromotedInteger(Op2);
   }
-  EVT PromotedType = Op1Promoted.getValueType();
+  EVT PromotedType = Op1.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
@@ -1110,14 +1109,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     unsigned SHLAmount = NewBits - OldBits;
     SDValue ShiftAmount =
         DAG.getShiftAmountConstant(SHLAmount, PromotedType, dl);
-    Op1Promoted =
-        DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
+    Op1 = DAG.getNode(ISD::SHL, dl, PromotedType, Op1, ShiftAmount);
     if (!IsShift)
-      Op2Promoted =
-          matcher.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
+      Op2 = matcher.getNode(ISD::SHL, dl, PromotedType, Op2, ShiftAmount);
 
-    SDValue Result =
-        matcher.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
+    SDValue Result = matcher.getNode(Opcode, dl, PromotedType, Op1, Op2);
     return matcher.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
   }
 
@@ -1126,8 +1122,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
   SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
   SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-  SDValue Result =
-      matcher.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
+  SDValue Result = matcher.getNode(AddOp, dl, PromotedType, Op1, Op2);
   Result = matcher.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
   Result = matcher.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
   return Result;

@@ -4857,12 +4857,58 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
+  const RecordDecl *RD = Dtor->getParent();
+  const Record *R = this->getRecord(RD);
+  if (!R)
+    return false;
+
+  if (!Dtor->isTrivial() && Dtor->getBody()) {
+    if (!this->visitStmt(Dtor->getBody()))
+      return false;
+  }
+
+  if (!this->emitThis(Dtor))
+    return false;
+
+  assert(R);
+  if (!R->isUnion()) {
+    // First, destroy all fields.
+    for (const Record::Field &Field : llvm::reverse(R->fields())) {
+      const Descriptor *D = Field.Desc;
+      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
+        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+          return false;
+        if (!this->emitDestruction(D))
+          return false;
+        if (!this->emitPopPtr(SourceInfo{}))
+          return false;
+      }
+    }
+  }
+
+  for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
+      return false;
+    if (!this->emitRecordDestruction(Base.R))
+      return false;
+    if (!this->emitPopPtr(SourceInfo{}))
+      return false;
+  }
+
+  // FIXME: Virtual bases.
+  return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F))
     return this->compileConstructor(Ctor);
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(F))
+    return this->compileDestructor(Dtor);
 
   // Emit custom code if this is a lambda static invoker.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
@@ -5573,46 +5619,19 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 template <class Emitter>
 bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
-  if (!R->isUnion()) {
-    // First, destroy all fields.
-    for (const Record::Field &Field : llvm::reverse(R->fields())) {
-      const Descriptor *D = Field.Desc;
-      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
-          return false;
-        if (!this->emitDestruction(D))
-          return false;
-        if (!this->emitPopPtr(SourceInfo{}))
-          return false;
-      }
-    }
-  }
+  const CXXDestructorDecl *Dtor = R->getDestructor();
+  if (!Dtor || Dtor->isTrivial())
+    return true;
 
-  // Now emit the destructor and recurse into base classes.
-  if (const CXXDestructorDecl *Dtor = R->getDestructor();
-      Dtor && !Dtor->isTrivial()) {
-    const Function *DtorFunc = getFunction(Dtor);
-    if (!DtorFunc)
-      return false;
-    assert(DtorFunc->hasThisPointer());
-    assert(DtorFunc->getNumParams() == 1);
-    if (!this->emitDupPtr(SourceInfo{}))
-      return false;
-    if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
-      return false;
-  }
-
-  for (const Record::Base &Base : llvm::reverse(R->bases())) {
-    if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
-      return false;
-    if (!this->emitRecordDestruction(Base.R))
-      return false;
-    if (!this->emitPopPtr(SourceInfo{}))
-      return false;
-  }
-
-  // FIXME: Virtual bases.
-  return true;
+  assert(Dtor);
+  const Function *DtorFunc = getFunction(Dtor);
+  if (!DtorFunc)
+    return false;
+  assert(DtorFunc->hasThisPointer());
+  assert(DtorFunc->getNumParams() == 1);
+  if (!this->emitDupPtr(SourceInfo{}))
+    return false;
+  return this->emitCall(DtorFunc, 0, SourceInfo{});
 }
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
