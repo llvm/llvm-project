@@ -1,4 +1,4 @@
-#include "mlir/IR/SliceWalk.h"
+#include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 using namespace mlir;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_SLICEWALK_IR
-#define MLIR_IR_SLICEWALK_IR
+#ifndef MLIR_ANALYSIS_SLICEWALK_IR
+#define MLIR_ANALYSIS_SLICEWALK_IR
 
 #include "mlir/IR/ValueRange.h"
 
@@ -95,4 +95,4 @@ std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
 
 } // namespace mlir
 
-#endif // MLIR_IR_SLICEWALK_IR
+#endif // MLIR_ANALYSIS_SLICEWALK_IR
