@@ -354,6 +354,9 @@ struct CastedValue {
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
+    if (V->getType() != Other.V->getType())
+      return false;
+
     if (ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
         TruncBits == Other.TruncBits)
       return true;
@@ -1159,8 +1162,6 @@ AliasResult BasicAAResult::aliasGEP(
     APInt &Off = DecompGEP1.Offset;
 
     // Initialize for Off >= 0 (V2 <= GEP1) case.
-    const Value *LeftPtr = V2;
-    const Value *RightPtr = GEP1;
     LocationSize VLeftSize = V2Size;
     LocationSize VRightSize = V1Size;
     const bool Swapped = Off.isNegative();
@@ -1172,7 +1173,6 @@ AliasResult BasicAAResult::aliasGEP(
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      std::swap(LeftPtr, RightPtr);
       std::swap(VLeftSize, VRightSize);
       Off = -Off;
     }

@@ -45,7 +45,6 @@ namespace llvm {
 
 class GlobalVariable;
 class LLVMContext;
-class Module;
 class StructLayout;
 class Triple;
 class Value;
@@ -148,7 +147,6 @@ private:
   AlignmentsTy IntAlignments;
   AlignmentsTy FloatAlignments;
   AlignmentsTy VectorAlignments;
-  LayoutAlignElem StructAlignment;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
@@ -157,6 +155,10 @@ private:
   PointersTy Pointers;
 
   const PointerAlignElem &getPointerAlignElem(uint32_t AddressSpace) const;
+
+  // Struct type ABI and preferred alignments. The default spec is "a:8:64".
+  Align StructABIAlignment = Align::Constant<1>();
+  Align StructPrefAlignment = Align::Constant<8>();
 
   // The StructType -> StructLayout map.
   mutable void *LayoutMap = nullptr;
@@ -186,17 +188,10 @@ private:
   /// if the string is malformed.
   Error parseSpecifier(StringRef Desc);
 
-  // Free all internal data structures.
-  void clear();
-
 public:
-  /// Constructs a DataLayout from a specification string. See reset().
-  explicit DataLayout(StringRef LayoutDescription) {
-    reset(LayoutDescription);
-  }
-
-  /// Initialize target data from properties stored in the module.
-  explicit DataLayout(const Module *M);
+  /// Constructs a DataLayout from a specification string.
+  /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
+  explicit DataLayout(StringRef LayoutString);
 
   DataLayout(const DataLayout &DL) { *this = DL; }
 
@@ -206,11 +201,6 @@ public:
 
   bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
-
-  void init(const Module *M);
-
-  /// Parse a data layout string (with fallback to default values).
-  void reset(StringRef LayoutDescription);
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.
