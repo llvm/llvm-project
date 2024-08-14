@@ -263,7 +263,8 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
     bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen,
-    SparseEmitStrategy emitStrategy);
+    SparseEmitStrategy emitStrategy,
+    SparseParallelizationStrategy parallelizationStrategy);
 
 //===----------------------------------------------------------------------===//
 // Sparse Iteration Transform Passes
