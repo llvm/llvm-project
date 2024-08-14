@@ -20,7 +20,7 @@ namespace LLVM {
 
 /// Register the `LLVMInlinerInterface` implementation of
 /// `DialectInlinerInterface` with the LLVM dialect.
-void registerLLVMInlinerInterface(DialectRegistry &registry);
+void registerInlinerInterface(DialectRegistry &registry);
 
 } // namespace LLVM
 } // namespace mlir

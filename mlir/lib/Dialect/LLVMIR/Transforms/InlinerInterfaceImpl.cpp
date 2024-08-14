@@ -850,7 +850,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 } // end anonymous namespace
 
-void mlir::LLVM::registerLLVMInlinerInterface(DialectRegistry &registry) {
+void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
