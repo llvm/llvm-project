@@ -117,8 +117,8 @@ Changes in existing checks
   remove `->`, when redundant `get()` is removed.
 
 - Added option `UseUpperCaseSuffix` to :doc:`readablility-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check specify the
-  case of the explicit literal
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check to select the
+  case of the literal suffix in fixes.
 
 Removed checks
 ^^^^^^^^^^^^^^

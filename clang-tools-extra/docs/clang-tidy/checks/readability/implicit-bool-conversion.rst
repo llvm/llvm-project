@@ -136,8 +136,8 @@ Options
 
 .. option::  UseUpperCaseSuffix
 
-   When `true`, the check will allow new explicit conversion use an uppercase
-   suffix when it applies.
+   When `true`, the replacements will use an uppercase literal suffix in the
+   provided fixes.
 
 Example
 ^^^^^^^

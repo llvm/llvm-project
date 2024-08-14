@@ -43,9 +43,9 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
                                              bool UseUpperCaseSuffix) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean: {
-    if (Type->isUnsignedIntegerType()) {
+    if (Type->isUnsignedIntegerType())
       return UseUpperCaseSuffix ? "0U" : "0u";
-    }
+
     return "0";
   }
 
@@ -211,18 +211,18 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
 
   if (DestType->isFloatingType()) {
     if (Context.hasSameType(DestType, Context.FloatTy)) {
-      if (BoolLiteral->getValue()) {
+      if (BoolLiteral->getValue())
         return UseUpperCaseSuffix ? "1.0F" : "1.0f";
-      }
+
       return UseUpperCaseSuffix ? "0.0F" : "0.0f";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
   if (DestType->isUnsignedIntegerType()) {
-    if (BoolLiteral->getValue()) {
+    if (BoolLiteral->getValue())
       return UseUpperCaseSuffix ? "1U" : "1u";
-    }
+
     return UseUpperCaseSuffix ? "0U" : "0u";
   }
   return BoolLiteral->getValue() ? "1" : "0";
