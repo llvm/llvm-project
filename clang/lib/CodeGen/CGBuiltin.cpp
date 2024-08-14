@@ -756,9 +756,7 @@ static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &context,
                              const clang::QualType Type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
-  unsigned Width = Type->isBooleanType()  ? 1
-                   : Type->isBitIntType() ? context.getIntWidth(Type)
-                                          : context.getTypeInfo(Type).Width;
+  unsigned Width = context.getIntWidth(Type);
   bool Signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
@@ -14372,13 +14370,13 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 }
 
 Value *CodeGenFunction::EmitRISCVCpuInit() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {VoidPtrTy}, false);
   llvm::FunctionCallee Func =
       CGM.CreateRuntimeFunction(FTy, "__init_riscv_feature_bits");
   auto *CalleeGV = cast<llvm::GlobalValue>(Func.getCallee());
   CalleeGV->setDSOLocal(true);
   CalleeGV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-  return Builder.CreateCall(Func);
+  return Builder.CreateCall(Func, {llvm::ConstantPointerNull::get(VoidPtrTy)});
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {
@@ -18585,6 +18583,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(),
         CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.length");
+  }
+  case Builtin::BI__builtin_hlsl_normalize: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "normalize operand must have a float representation");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType(),
+        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.normalize");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

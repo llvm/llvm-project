@@ -6462,44 +6462,55 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'thread_limit'
 /// with single expression 'n'.
-class OMPThreadLimitClause : public OMPClause, public OMPClauseWithPreInit {
-  friend class OMPClauseReader;
+///
+/// When 'ompx_bare' clause exists on a 'target' directive, 'thread_limit'
+/// clause can accept up to three expressions.
+///
+/// \code
+/// #pragma omp target teams ompx_bare thread_limit(x, y, z)
+/// \endcode
+class OMPThreadLimitClause final
+    : public OMPVarListClause<OMPThreadLimitClause>,
+      public OMPClauseWithPreInit,
+      private llvm::TrailingObjects<OMPThreadLimitClause, Expr *> {
+  friend OMPVarListClause;
+  friend TrailingObjects;
 
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// ThreadLimit number.
-  Stmt *ThreadLimit = nullptr;
+  OMPThreadLimitClause(const ASTContext &C, SourceLocation StartLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc,
+                       unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_thread_limit, StartLoc, LParenLoc,
+                         EndLoc, N),
+        OMPClauseWithPreInit(this) {}
 
-  /// Set the ThreadLimit number.
-  ///
-  /// \param E ThreadLimit number.
-  void setThreadLimit(Expr *E) { ThreadLimit = E; }
+  /// Build an empty clause.
+  OMPThreadLimitClause(unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_thread_limit, SourceLocation(),
+                         SourceLocation(), SourceLocation(), N),
+        OMPClauseWithPreInit(this) {}
 
 public:
-  /// Build 'thread_limit' clause.
+  /// Creates clause with a list of variables \a VL.
   ///
-  /// \param E Expression associated with this clause.
-  /// \param HelperE Helper Expression associated with this clause.
-  /// \param CaptureRegion Innermost OpenMP region where expressions in this
-  /// clause must be captured.
+  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPThreadLimitClause(Expr *E, Stmt *HelperE,
-                       OpenMPDirectiveKind CaptureRegion,
-                       SourceLocation StartLoc, SourceLocation LParenLoc,
-                       SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_thread_limit, StartLoc, EndLoc),
-        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), ThreadLimit(E) {
-    setPreInitStmt(HelperE, CaptureRegion);
-  }
+  /// \param VL List of references to the variables.
+  /// \param PreInit
+  static OMPThreadLimitClause *
+  Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+         SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
 
-  /// Build an empty clause.
-  OMPThreadLimitClause()
-      : OMPClause(llvm::omp::OMPC_thread_limit, SourceLocation(),
-                  SourceLocation()),
-        OMPClauseWithPreInit(this) {}
+  /// Creates an empty clause with \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPThreadLimitClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -6507,16 +6518,22 @@ public:
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// Return ThreadLimit number.
-  Expr *getThreadLimit() { return cast<Expr>(ThreadLimit); }
+  /// Return ThreadLimit expressions.
+  ArrayRef<Expr *> getThreadLimit() { return getVarRefs(); }
 
-  /// Return ThreadLimit number.
-  Expr *getThreadLimit() const { return cast<Expr>(ThreadLimit); }
+  /// Return ThreadLimit expressions.
+  ArrayRef<Expr *> getThreadLimit() const {
+    return const_cast<OMPThreadLimitClause *>(this)->getThreadLimit();
+  }
 
-  child_range children() { return child_range(&ThreadLimit, &ThreadLimit + 1); }
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
 
   const_child_range children() const {
-    return const_child_range(&ThreadLimit, &ThreadLimit + 1);
+    auto Children = const_cast<OMPThreadLimitClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   child_range used_children() {

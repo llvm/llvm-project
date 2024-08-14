@@ -292,6 +292,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
 //   KEYFIXEDPOINT - This is a keyword according to the N1169 fixed point
 //                   extension.
+//   KEYZOS - This is a keyword in C/C++ on z/OS
 //
 KEYWORD(auto                        , KEYALL)
 KEYWORD(break                       , KEYALL)
@@ -501,6 +502,7 @@ TYPE_TRAIT_1(__has_trivial_move_assign, HasTrivialMoveAssign, KEYCXX)
 TYPE_TRAIT_1(__has_trivial_move_constructor, HasTrivialMoveConstructor, KEYCXX)
 
 // GNU and MS Type Traits
+TYPE_TRAIT_1(__builtin_is_implicit_lifetime, IsImplicitLifetime, KEYCXX)
 TYPE_TRAIT_2(__builtin_is_virtual_base_of, IsVirtualBaseOf, KEYCXX)
 TYPE_TRAIT_1(__has_nothrow_assign, HasNothrowAssign, KEYCXX)
 TYPE_TRAIT_1(__has_nothrow_copy, HasNothrowCopy, KEYCXX)
@@ -725,7 +727,7 @@ KEYWORD(__funcref                     , KEYALL)
 
 // Microsoft extensions which should be disabled in strict conformance mode
 KEYWORD(__ptr64                       , KEYMS)
-KEYWORD(__ptr32                       , KEYMS)
+KEYWORD(__ptr32                       , KEYMS | KEYZOS)
 KEYWORD(__sptr                        , KEYMS)
 KEYWORD(__uptr                        , KEYMS)
 KEYWORD(__w64                         , KEYMS)

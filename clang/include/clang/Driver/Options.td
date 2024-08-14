@@ -1302,6 +1302,12 @@ def no_offload_compress : Flag<["--"], "no-offload-compress">;
 def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
+
+defm offload_via_llvm : BoolFOption<"offload-via-llvm",
+  LangOpts<"OffloadViaLLVM">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't use">,
+  BothFlags<[], [ClangOption], " LLVM/Offload as portable offloading runtime.">>;
 }
 
 // CUDA options
@@ -3066,6 +3072,10 @@ dll version.}]>;
 def fms_omit_default_lib : Joined<["-"], "fms-omit-default-lib">,
   Group<f_Group>, Flags<[]>,
   Visibility<[ClangOption, CLOption]>;
+def fzos_extensions : Flag<["-"], "fzos-extensions">, Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Accept some non-standard constructs supported by the z/OS compiler">;
+def fno_zos_extensions : Flag<["-"], "fno-zos-extensions">, Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not accept non-standard constructs supported by the z/OS compiler">;
 defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   LangOpts<"DelayedTemplateParsing">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -3445,6 +3455,12 @@ defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-arg
   PosFlag<SetTrue, [], [], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
+defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
+  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
+  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -8109,13 +8125,6 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
   HelpText<"Time to be used in __DATE__, __TIME__, and __TIMESTAMP__ macros">;
 
 } // let Visibility = [CC1Option]
-
-defm err_pragma_mc_func_aix : BoolFOption<"err-pragma-mc-func-aix",
-  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Treat uses of #pragma mc_func as errors">,
-  NegFlag<SetFalse,[], [ClangOption, CC1Option],
-          "Ignore uses of #pragma mc_func">>;
 
 //===----------------------------------------------------------------------===//
 // CUDA Options

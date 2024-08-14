@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes %s -ast-dump | FileCheck %s
 
 #define __sized_by(f)  __attribute__((sized_by(f)))
 

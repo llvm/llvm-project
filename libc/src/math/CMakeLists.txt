@@ -88,6 +88,7 @@ add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(daddl)
 add_math_entrypoint_object(daddf128)
+add_math_entrypoint_object(ddivl)
 add_math_entrypoint_object(ddivf128)
 add_math_entrypoint_object(dmull)
 add_math_entrypoint_object(dmulf128)
@@ -120,6 +121,7 @@ add_math_entrypoint_object(exp10f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
+add_math_entrypoint_object(expm1f16)
 
 add_math_entrypoint_object(f16add)
 add_math_entrypoint_object(f16addf)
@@ -160,7 +162,10 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+
 add_math_entrypoint_object(fadd)
+add_math_entrypoint_object(faddl)
+add_math_entrypoint_object(faddf128)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
@@ -426,7 +431,11 @@ add_math_entrypoint_object(roundevenl)
 add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 
+add_math_entrypoint_object(scalbln)
+add_math_entrypoint_object(scalblnf)
+add_math_entrypoint_object(scalblnl)
 add_math_entrypoint_object(scalblnf16)
+add_math_entrypoint_object(scalblnf128)
 
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
@@ -474,6 +483,7 @@ add_math_entrypoint_object(lgamma_r)
 
 add_math_entrypoint_object(totalorder)
 add_math_entrypoint_object(totalorderf)
+add_math_entrypoint_object(totalorderl)
 add_math_entrypoint_object(totalorderf16)
 add_math_entrypoint_object(totalorderf128)
 

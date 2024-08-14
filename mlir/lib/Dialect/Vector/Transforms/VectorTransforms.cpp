@@ -979,15 +979,18 @@ struct ReorderElementwiseOpsOnBroadcast final
     if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
+      return rewriter.notifyMatchFailure(
+          op, "Op doesn't have ElementwiseMappableTraits");
+    if (op->getNumOperands() == 0)
       return failure();
-    if (op->getNumOperands() == 0 ||
-        op->getResults()[0].getType() != op->getOperand(0).getType()) {
-      return failure();
-    }
-    // Avoid operations that only accept vector types, since broadcast
-    // source might be scalar types.
+    if (op->getResults()[0].getType() != op->getOperand(0).getType())
+      return rewriter.notifyMatchFailure(op,
+                                         "result and operand type mismatch");
     if (isa<vector::FMAOp>(op)) {
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op,
+          "Op only accepts vector types - not supported as broadcast source "
+          "might be a scalar");
     }
 
     // Get the type of the lhs operand
@@ -1771,6 +1774,13 @@ struct DropUnitDimsFromTransposeOp final
       newPerm.push_back(idx - droppedDimsBefore[idx]);
     }
 
+    // Fixup for `newPerm`. The `sourceTypeWithoutUnitDims` could be vector<1xT>
+    // type when the dimensions are unit dimensions. In this case, the newPerm
+    // should be [0].
+    if (newPerm.empty()) {
+      newPerm.push_back(0);
+    }
+
     Location loc = op.getLoc();
     // Drop the unit dims via shape_cast.
     auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
@@ -1782,7 +1792,7 @@ struct DropUnitDimsFromTransposeOp final
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, op.getResultVectorType(), tranposeWithoutUnitDims);
 
-    return failure();
+    return success();
   }
 };
 

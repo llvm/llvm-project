@@ -333,7 +333,7 @@ def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
-                                              NoSchedModel,
+                                              SyntacoreSCR4RV32Model,
                                               [Feature32Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,
@@ -345,7 +345,33 @@ def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
-                                              NoSchedModel,
+                                              SyntacoreSCR4RV64Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV32 : RISCVProcessorModel<"syntacore-scr5-rv32",
+                                              SyntacoreSCR5RV32Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV64 : RISCVProcessorModel<"syntacore-scr5-rv64",
+                                              SyntacoreSCR5RV64Model,
                                               [Feature64Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,

@@ -159,6 +159,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
+def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -3879,6 +3880,73 @@ def DYNAMIC_STACKALLOC64 :
             "cvta.local.u64 \t$ptr, $ptr;",
             [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
             Requires<[hasPTX<73>, hasSM<52>]>;
+
+
+//
+// BRX
+//
+
+def SDTBrxStartProfile : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def SDTBrxItemProfile : SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>;
+def SDTBrxEndProfile : SDTypeProfile<0, 3, [SDTCisVT<0, OtherVT>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def brx_start :
+  SDNode<"NVPTXISD::BrxStart", SDTBrxStartProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
+def brx_item :
+  SDNode<"NVPTXISD::BrxItem", SDTBrxItemProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+def brx_end :
+  SDNode<"NVPTXISD::BrxEnd", SDTBrxEndProfile,
+         [SDNPHasChain, SDNPInGlue, SDNPSideEffect]>;
+
+let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
+
+  def BRX_START :
+    NVPTXInst<(outs), (ins i32imm:$id),
+              "$$L_brx_$id: .branchtargets",
+              [(brx_start (i32 imm:$id))]>;
+
+  def BRX_ITEM :
+    NVPTXInst<(outs), (ins brtarget:$target),
+              "\t$target,",
+              [(brx_item bb:$target)]>;
+
+  def BRX_END :
+    NVPTXInst<(outs), (ins brtarget:$target, Int32Regs:$val, i32imm:$id),
+              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
+              [(brx_end bb:$target, (i32 Int32Regs:$val), (i32 imm:$id))]> {
+      let isBarrier = 1;
+    }
+}
+
+
+foreach a_type = ["s", "u"] in {
+  foreach b_type = ["s", "u"] in {
+
+    def DOT4_ # a_type # b_type :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                "dp4a." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                [(set Int32Regs:$dst,
+                    (!cast<Intrinsic>("int_nvvm_idp4a_" # a_type # "_" # b_type)
+                     (i32 Int32Regs:$a), (i32 Int32Regs:$b), (i32 Int32Regs:$c)))]>,
+                Requires<[hasDotInstructions]>;
+
+    foreach is_hi = [0, -1] in {
+      defvar lohi_suffix = !if(is_hi, "hi", "lo");
+
+      def DOT2_ # lohi_suffix # _ # a_type # b_type :
+        NVPTXInst<(outs Int32Regs:$dst),
+                  (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                  "dp2a." # lohi_suffix # "." # a_type # "32." # b_type # "32 \t$dst, $a, $b, $c;",
+                  [(set Int32Regs:$dst,
+                      (!cast<Intrinsic>("int_nvvm_idp2a_" # a_type # "_" # b_type)
+                       (i32 Int32Regs:$a), (i32 Int32Regs:$b), is_hi, (i32 Int32Regs:$c)))]>,
+                  Requires<[hasDotInstructions]>;
+    }
+  }
+}
 
 include "NVPTXIntrinsics.td"
 

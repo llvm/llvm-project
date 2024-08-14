@@ -920,12 +920,13 @@ consteval int aConstevalFunction() { // expected-error {{consteval function neve
 namespace GH50055 {
 enum E {e1=0, e2=1};
 consteval int testDefaultArgForParam(E eParam = (E)-1) {
-// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 1] for the enumeration type 'E'}}
+// expected-note@-1 {{integer value -1 is outside the valid range of values [0, 1] for the enumeration type 'E'}}
   return (int)eParam;
 }
 
 int test() {
   return testDefaultArgForParam() + testDefaultArgForParam((E)1);
+  // expected-error@-1 {{call to consteval function 'GH50055::testDefaultArgForParam' is not a constant expression}}
 }
 }
 

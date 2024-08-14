@@ -18,6 +18,7 @@
 #include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -101,8 +102,9 @@ void InterpFrame::popArgs() {
 }
 
 template <typename T>
-static void print(llvm::raw_ostream &OS, const T &V, ASTContext &, QualType) {
-  OS << V;
+static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
+                  QualType Ty) {
+  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
 }
 
 template <>
@@ -169,11 +171,32 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
       F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
     return;
 
+  const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
-  if (const auto *M = dyn_cast<CXXMethodDecl>(F);
-      M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
-    print(OS, This, S.getCtx(), S.getCtx().getRecordType(M->getParent()));
-    OS << "->";
+  bool IsMemberCall = isa<CXXMethodDecl>(F) && !isa<CXXConstructorDecl>(F) &&
+                      cast<CXXMethodDecl>(F)->isImplicitObjectMemberFunction();
+  if (Func->hasThisPointer() && IsMemberCall) {
+    if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
+      const Expr *Object = MCE->getImplicitObjectArgument();
+      Object->printPretty(OS, /*Helper=*/nullptr,
+                          S.getCtx().getPrintingPolicy(),
+                          /*Indentation=*/0);
+      if (Object->getType()->isPointerType())
+        OS << "->";
+      else
+        OS << ".";
+    } else if (const auto *OCE =
+                   dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
+      OCE->getArg(0)->printPretty(OS, /*Helper=*/nullptr,
+                                  S.getCtx().getPrintingPolicy(),
+                                  /*Indentation=*/0);
+      OS << ".";
+    } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
+      print(OS, This, S.getCtx(),
+            S.getCtx().getLValueReferenceType(
+                S.getCtx().getRecordType(M->getParent())));
+      OS << ".";
+    }
   }
 
   F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
