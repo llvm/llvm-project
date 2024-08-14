@@ -3394,6 +3394,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         if (DoesKMove)
           K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
+      case LLVMContext::MD_noalias_addrspace:
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -3435,7 +3439,8 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
                          LLVMContext::MD_noundef,
-                         LLVMContext::MD_mmra};
+                         LLVMContext::MD_mmra,
+                         LLVMContext::MD_noalias_addrspace};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
