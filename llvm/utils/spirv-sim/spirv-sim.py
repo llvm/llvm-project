@@ -11,6 +11,7 @@ import re
 
 RE_EXPECTS = re.compile(r"^([0-9]+,)*[0-9]+$")
 
+
 # Parse the SPIR-V instructions. Some instructions are ignored because
 # not required to simulate this module.
 # Instructions are to be implemented in instructions.py
@@ -44,6 +45,7 @@ def parseInstruction(i):
         )
     return Type(i.line)
 
+
 # Split a list of instructions into pieces. Pieces are delimited by instructions of the type splitType.
 # The delimiter is the first instruction of the next piece.
 # This function returns no empty pieces:
@@ -59,6 +61,7 @@ def splitInstructions(
             blocks.append([])
         blocks[-1].append(instruction)
     return blocks
+
 
 # Defines a BasicBlock in the simulator.
 # Begins at an OpLabel, and ends with a control-flow instruction.
