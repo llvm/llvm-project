@@ -1,4 +1,4 @@
-//===-- R600CodeGenPassBuilder.cpp ------ Build R600 CodeGen pipeline -----===//
+//===-- R600TargetMachine.cpp - TargetMachine for hw codegen targets-------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,11 @@
 /// This file contains both AMDGPU-R600 target machine and the CodeGen pass
 /// builder. The target machine contains all of the hardware specific
 /// information needed to emit code for R600 GPUs and the CodeGen pass builder
-/// handles the same for new pass manager infrastructure.
+/// handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
-#include "R600CodeGenPassBuilder.h"
+#include "R600TargetMachine.h"
 #include "R600.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
@@ -46,7 +46,7 @@ static MachineSchedRegistry R600SchedRegistry("r600",
                                               createR600MachineScheduler);
 
 //===----------------------------------------------------------------------===//
-// R600 Target Machine (R600 -> Cayman) - Legacy Pass Manager interface.
+// R600 Target Machine (R600 -> Cayman)
 //===----------------------------------------------------------------------===//
 
 R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
@@ -109,7 +109,7 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// R600 Legacy Pass Setup
+// R600 Pass Setup
 //===----------------------------------------------------------------------===//
 
 bool R600PassConfig::addPreISel() {
@@ -155,7 +155,7 @@ Error R600TargetMachine::buildCodeGenPipeline(
 }
 
 //===----------------------------------------------------------------------===//
-// R600 Target Machine (R600 -> Cayman)
+// R600 CodeGen Pass Builder interface.
 //===----------------------------------------------------------------------===//
 
 R600CodeGenPassBuilder::R600CodeGenPassBuilder(
