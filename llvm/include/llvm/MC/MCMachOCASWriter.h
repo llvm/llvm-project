@@ -34,7 +34,7 @@ class ObjectStore;
 class CASID;
 } // namespace cas
 
-class MachOCASWriter : public MCObjectWriter {
+class MachOCASWriter : public MachObjectWriter {
 public:
   /// ObjectStore
   const Triple Target;
@@ -57,89 +57,11 @@ public:
 
   uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                                const MCFixup &Fixup, MCValue Target,
-                                uint64_t &FixedValue) override {
-    MOW.recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
-  }
-
-  void executePostLayoutBinding(MCAssembler &Asm) override {
-    MOW.executePostLayoutBinding(Asm);
-  }
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override {
-    return MOW.isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB, InSet,
-                                                      IsPCRel);
-  }
-
-  uint64_t getPaddingSize(MCAssembler &Asm, const MCSection *SD) const {
-    return MOW.getPaddingSize(Asm, SD);
-  }
-
-  void prepareObject(MCAssembler &Asm) { MOW.prepareObject(Asm); }
-
-  void writeMachOHeader(MCAssembler &Asm) { MOW.writeMachOHeader(Asm); }
-
-  void writeSectionData(MCAssembler &Asm) { MOW.writeSectionData(Asm); }
-
-  void writeRelocations(MCAssembler &Asm) { MOW.writeRelocations(Asm); }
-
-  void writeDataInCodeRegion(MCAssembler &Asm) {
-    MOW.writeDataInCodeRegion(Asm);
-  }
-
-  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
-                     unsigned Update,
-                     VersionTuple SDKVersion = VersionTuple()) override {
-    MOW.setVersionMin(Type, Major, Minor, Update, SDKVersion);
-  }
-  void setBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
-                       unsigned Update,
-                       VersionTuple SDKVersion = VersionTuple()) override {
-    MOW.setBuildVersion(Platform, Major, Minor, Update, SDKVersion);
-  }
-  void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
-                                    unsigned Minor, unsigned Update,
-                                    VersionTuple SDKVersion) override {
-    MOW.setTargetVariantBuildVersion(Platform, Major, Minor, Update,
-                                     SDKVersion);
-  }
-
-  std::optional<unsigned> getPtrAuthABIVersion() const override {
-    return MOW.getPtrAuthABIVersion();
-  }
-  void setPtrAuthABIVersion(unsigned V) override {
-    MOW.setPtrAuthABIVersion(V);
-  }
-  bool getPtrAuthKernelABIVersion() const override {
-    return MOW.getPtrAuthKernelABIVersion();
-  }
-  void setPtrAuthKernelABIVersion(bool V) override {
-    MOW.setPtrAuthKernelABIVersion(V);
-  }
-
-  bool getSubsectionsViaSymbols() const override {
-    return MOW.getSubsectionsViaSymbols();
-  }
-  void setSubsectionsViaSymbols(bool Value) override {
-    MOW.setSubsectionsViaSymbols(Value);
-  }
-
-  void writeSymbolTable(MCAssembler &Asm) { MOW.writeSymbolTable(Asm); }
-
   uint64_t writeObject(MCAssembler &Asm) override;
 
   void resetBuffer() { OSOffset = InternalOS.tell(); }
 
   StringRef getContent() const { return InternalBuffer.substr(OSOffset); }
-
-  DenseMap<const MCSection *, std::vector<MachObjectWriter::RelAndSymbol>> &
-  getRelocations() {
-    return MOW.getRelocations();
-  }
 
 private:
   raw_pwrite_stream &OS;
@@ -147,8 +69,6 @@ private:
 
   SmallString<512> InternalBuffer;
   raw_svector_ostream InternalOS;
-
-  MachObjectWriter MOW;
 
   uint64_t OSOffset = 0;
 

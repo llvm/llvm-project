@@ -49,18 +49,21 @@ void MachObjectWriter::reset() {
   Relocations.clear();
   IndirectSymBase.clear();
   IndirectSymbols.clear();
+  DataRegions.clear();
   SectionAddress.clear();
   SectionOrder.clear();
   StringTable.clear();
   LocalSymbolData.clear();
   ExternalSymbolData.clear();
   UndefinedSymbolData.clear();
+  LOHContainer.reset();
   VersionInfo.Major = 0;
   VersionInfo.SDKVersion = VersionTuple();
   TargetVariantVersionInfo.Major = 0;
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
   PtrAuthABIVersion = std::nullopt;
   PtrAuthKernelABIVersion = false;
+  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -1094,11 +1097,10 @@ void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm) {
     else
       report_fatal_error("Data region not terminated");
 
-    LLVM_DEBUG(dbgs() << "data in code region-- kind: "
-                      << (MachO::DataRegionType)Data.Kind << "  start: "
-                      << Start << "(" << Data.Start->getName() << ")"
-                      << "  end: " << End << "(" << Data.End->getName() << ")"
-                      << "  size: " << End - Start << "\n");
+    LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data.Kind
+                      << "  start: " << Start << "(" << Data.Start->getName()
+                      << ")" << "  end: " << End << "(" << Data.End->getName()
+                      << ")" << "  size: " << End - Start << "\n");
     W.write<uint32_t>(Start);
     W.write<uint16_t>(End - Start);
     W.write<uint16_t>(Data.Kind);

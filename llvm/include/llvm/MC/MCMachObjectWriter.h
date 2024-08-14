@@ -84,8 +84,14 @@ public:
   /// @}
 };
 
-class MachObjectWriter final : public MCObjectWriter {
+class MachObjectWriter : public MCObjectWriter {
 public:
+  struct DataRegionData {
+    MachO::DataRegionType Kind;
+    MCSymbol *Start;
+    MCSymbol *End;
+  };
+
   // A Major version of 0 indicates that no version information was supplied
   // and so the corresponding load command should not be emitted.
   using VersionInfoType = struct {
@@ -112,6 +118,11 @@ private:
     bool operator<(const MachSymbolData &RHS) const;
   };
 
+  struct IndirectSymbolData {
+    MCSymbol *Symbol;
+    MCSection *Section;
+  };
+
   /// The target specific Mach-O writer instance.
   std::unique_ptr<MCMachObjectTargetWriter> TargetObjectWriter;
 
@@ -132,7 +143,10 @@ public:
 
 private:
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
+  std::vector<IndirectSymbolData> IndirectSymbols;
   DenseMap<const MCSection *, unsigned> IndirectSymBase;
+
+  std::vector<DataRegionData> DataRegions;
 
   SectionAddrMap SectionAddress;
 
@@ -151,11 +165,17 @@ private:
 
   /// @}
 
+  // Used to communicate Linker Optimization Hint information.
+  MCLOHContainer LOHContainer;
+
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
   std::optional<unsigned> PtrAuthABIVersion;
   bool PtrAuthKernelABIVersion;
+
+  // The list of linker options for LC_LINKER_OPTION.
+  std::vector<std::vector<std::string>> LinkerOptions;
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
@@ -194,10 +214,15 @@ public:
 
   bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
+  std::vector<IndirectSymbolData> &getIndirectSymbols() {
+    return IndirectSymbols;
+  }
+  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
   SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
+  MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
@@ -216,7 +241,7 @@ public:
   /// Mach-O deployment target version information.
   void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
                      unsigned Update,
-                     VersionTuple SDKVersion = VersionTuple()) override {
+                     VersionTuple SDKVersion = VersionTuple()) {
     VersionInfo.EmitBuildVersion = false;
     VersionInfo.TypeOrPlatform.Type = Type;
     VersionInfo.Major = Major;
@@ -224,37 +249,35 @@ public:
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
   }
-  void setBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
-                       unsigned Update,
-                       VersionTuple SDKVersion = VersionTuple()) override {
+  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
+                       unsigned Minor, unsigned Update,
+                       VersionTuple SDKVersion = VersionTuple()) {
     VersionInfo.EmitBuildVersion = true;
-    VersionInfo.TypeOrPlatform.Platform = (MachO::PlatformType)Platform;
+    VersionInfo.TypeOrPlatform.Platform = Platform;
     VersionInfo.Major = Major;
     VersionInfo.Minor = Minor;
     VersionInfo.Update = Update;
     VersionInfo.SDKVersion = SDKVersion;
   }
-  void setTargetVariantBuildVersion(unsigned Platform, unsigned Major,
-                                    unsigned Minor, unsigned Update,
-                                    VersionTuple SDKVersion) override {
+  void setTargetVariantBuildVersion(MachO::PlatformType Platform,
+                                    unsigned Major, unsigned Minor,
+                                    unsigned Update, VersionTuple SDKVersion) {
     TargetVariantVersionInfo.EmitBuildVersion = true;
-    TargetVariantVersionInfo.TypeOrPlatform.Platform =
-        (MachO::PlatformType)Platform;
+    TargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
     TargetVariantVersionInfo.Major = Major;
     TargetVariantVersionInfo.Minor = Minor;
     TargetVariantVersionInfo.Update = Update;
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
 
-  std::optional<unsigned> getPtrAuthABIVersion() const override {
+  std::optional<unsigned> getPtrAuthABIVersion() const {
     return PtrAuthABIVersion;
   }
-  void setPtrAuthABIVersion(unsigned V) override { PtrAuthABIVersion = V; }
-  bool getPtrAuthKernelABIVersion() const override {
-    return PtrAuthKernelABIVersion;
-  }
-  void setPtrAuthKernelABIVersion(bool V) override {
-    PtrAuthKernelABIVersion = V;
+  void setPtrAuthABIVersion(unsigned V) { PtrAuthABIVersion = V; }
+  bool getPtrAuthKernelABIVersion() const { return PtrAuthKernelABIVersion; }
+  void setPtrAuthKernelABIVersion(bool V) { PtrAuthKernelABIVersion = V; }
+  std::vector<std::vector<std::string>> &getLinkerOptions() {
+    return LinkerOptions;
   }
 
   /// @}
