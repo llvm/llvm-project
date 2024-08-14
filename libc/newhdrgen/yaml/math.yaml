@@ -1220,14 +1220,7 @@ functions:
       - stdc
     return_type: float
     arguments:
-      - type: long double 
-  - name: fsub
-    standards:
-      - stdc
-    return_type: float
-    arguments:
-      - type: double
-      - type: double
+      - type: long double
   - name: fsqrtf128
     standards:
       - llvm_libc_ext
@@ -1235,6 +1228,13 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fsub
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: double
+      - type: double
   - name: fsubf128
     standards:
       - llvm_libc_ext
