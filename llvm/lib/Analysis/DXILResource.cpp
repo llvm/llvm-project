@@ -400,3 +400,7 @@ void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 INITIALIZE_PASS(DXILResourceWrapperPass, DEBUG_TYPE, "DXIL Resource analysis",
                 false, true)
 char DXILResourceWrapperPass::ID = 0;
+
+ModulePass *llvm::createDXILResourceWrapperPassPass() {
+  return new DXILResourceWrapperPass();
+}

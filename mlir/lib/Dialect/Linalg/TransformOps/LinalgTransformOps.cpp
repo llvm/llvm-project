@@ -1117,10 +1117,8 @@ transform::InterchangeOp::applyToOne(transform::TransformRewriter &rewriter,
            << ") different from the number of loops in the target operation ("
            << numLoops << ")";
   }
-  FailureOr<GenericOp> res =
-      interchangeGenericOp(rewriter, target,
-                           SmallVector<unsigned>(interchangeVector.begin(),
-                                                 interchangeVector.end()));
+  FailureOr<GenericOp> res = interchangeGenericOp(
+      rewriter, target, SmallVector<unsigned>(interchangeVector));
   if (failed(res))
     return emitDefiniteFailure() << "failed to apply";
   results.push_back(res->getOperation());

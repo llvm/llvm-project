@@ -910,7 +910,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(SrcStr, "str");
+    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
+                               /*M=*/nullptr, /*AddNull=*/false);
   }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);

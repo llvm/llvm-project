@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_OPTEMITTER_H
-#define LLVM_UTILS_TABLEGEN_OPTEMITTER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_OPTEMITTER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_OPTEMITTER_H
 
 namespace llvm {
 class Record;
 int CompareOptionRecords(Record *const *Av, Record *const *Bv);
 } // namespace llvm
-#endif
+
+#endif // LLVM_UTILS_TABLEGEN_COMMON_OPTEMITTER_H

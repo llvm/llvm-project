@@ -1675,7 +1675,8 @@ Currently, only the following parameter attributes are defined:
     -  The pair ``a,b`` represents the range ``[a,b)``.
     -  Both ``a`` and ``b`` are constants.
     -  The range is allowed to wrap.
-    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    -  The empty range is represented using ``0,0``.
+    -  Otherwise, ``a`` and ``b`` are not allowed to be equal.
     
     This attribute may only be applied to parameters or return values with integer 
     or vector of integer types.
@@ -2309,6 +2310,10 @@ example:
     This attribute indicates that MemTagSanitizer checks
     (dynamic address safety analysis based on Armv8 MTE) are enabled for
     this function.
+``sanitize_realtime``
+    This attribute indicates that RealtimeSanitizer checks
+    (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
+    for this function.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -25182,7 +25187,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.load``' intrinsic is designed for conditional reading of selected vector elements in a single IR operation. It is useful for targets that support vector masked loads and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar load operations.
-The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask. However, using this intrinsic prevents exceptions on memory access to masked-off lanes.
+The result of this operation is equivalent to a regular vector load instruction followed by a 'select' between the loaded and the passthru values, predicated on the same mask, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 
 ::
@@ -25224,7 +25232,10 @@ Semantics:
 """"""""""
 
 The '``llvm.masked.store``' intrinsics is designed for conditional writing of selected vector elements in a single IR operation. It is useful for targets that support vector masked store and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar store operations.
-The result of this operation is equivalent to a load-modify-store sequence. However, using this intrinsic prevents exceptions and data races on memory access to masked-off lanes.
+The result of this operation is equivalent to a load-modify-store sequence, except that the masked-off lanes are not accessed.
+Only the masked-on lanes of the vector need to be inbounds of an allocation (but all these lanes need to be inbounds of the same allocation).
+In particular, using this intrinsic prevents exceptions on memory accesses to masked-off lanes.
+Masked-off lanes are also not considered accessed for the purpose of data races or ``noalias`` constraints.
 
 ::
 

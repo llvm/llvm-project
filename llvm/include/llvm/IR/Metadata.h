@@ -1489,8 +1489,7 @@ class MDTuple : public MDNode {
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(
-                                          Operands.begin(), Operands.end()));
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(Operands));
   }
 
 public:
