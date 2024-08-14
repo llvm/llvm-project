@@ -181,7 +181,7 @@ EXTERN int __tgt_target_teams_nowait_mapper(
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
                                                 uint64_t LoopTripcount) {
   TIMESCOPE_WITH_IDENT(Loc);
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return;
   }

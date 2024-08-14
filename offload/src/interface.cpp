@@ -13,8 +13,11 @@
 
 #include "OpenMP/OMPT/Interface.h"
 #include "OmptCommonDefs.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/omp.h"
 #include "PluginManager.h"
+#include "omptarget.h"
 #include "private.h"
 
 #include "Shared/APITypes.h"
@@ -33,6 +36,43 @@
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+
+// If offload is enabled, ensure that device DeviceID has been initialized.
+//
+// The return bool indicates if the offload is to the host device
+// There are three possible results:
+// - Return false if the taregt device is ready for offload
+// - Return true without reporting a runtime error if offload is
+//   disabled, perhaps because the initial device was specified.
+// - Report a runtime error and return true.
+//
+// If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
+// This step might be skipped if offload is disabled.
+bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED) {
+    DP("Offload is disabled\n");
+    return true;
+  }
+
+  if (DeviceID == OFFLOAD_DEVICE_DEFAULT) {
+    DeviceID = omp_get_default_device();
+    DP("Use default device id %" PRId64 "\n", DeviceID);
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    handleTargetOutcome(false, Loc);
+    return true;
+  }
+
+  if (DeviceID == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       DeviceID);
+    return true;
+  }
+  return false;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
@@ -88,7 +128,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
 
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return;
   }
@@ -293,7 +333,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
      "\n",
      DeviceId, DPxPTR(HostPtr));
 
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }
@@ -435,7 +475,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                                       uint64_t LoopTripCount) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }

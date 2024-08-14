@@ -1698,7 +1698,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       mlir::Type ptrBoxType =
           Fortran::lower::getCrayPointeeBoxType(base.getType());
-      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+      mlir::Value boxAlloc = builder.createTemporary(
+          loc, ptrBoxType,
+          /*name=*/{}, /*shape=*/{}, /*lenParams=*/{}, /*attrs=*/{},
+          Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate()));
 
       // Declare a local pointer variable.
       auto newBase = builder.create<hlfir::DeclareOp>(
