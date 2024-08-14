@@ -9,7 +9,11 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/InitializePasses.h"
+
+#define DEBUG_TYPE "dxil-resource"
 
 using namespace llvm;
 using namespace dxil;
@@ -326,4 +330,77 @@ std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   return {Word0, Word1};
 }
 
-#define DEBUG_TYPE "dxil-resource"
+//===----------------------------------------------------------------------===//
+// DXILResourceAnalysis and DXILResourcePrinterPass
+
+// Provide an explicit template instantiation for the static ID.
+AnalysisKey DXILResourceAnalysis::Key;
+
+DXILResourceMap DXILResourceAnalysis::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  DXILResourceMap Data;
+  return Data;
+}
+
+PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  DXILResourceMap &Data =
+      AM.getResult<DXILResourceAnalysis>(M);
+
+  for (const auto &[Handle, Info] : Data) {
+    OS << "Binding for ";
+    Handle->print(OS);
+    OS << "\n";
+    // TODO: Info.print(OS);
+    OS << "\n";
+  }
+
+  return PreservedAnalyses::all();
+}
+
+//===----------------------------------------------------------------------===//
+// DXILResourceWrapperPass
+
+DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
+  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+
+DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
+
+void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+}
+
+bool DXILResourceWrapperPass::runOnModule(Module &M) {
+  ResourceMap.reset(new DXILResourceMap());
+  return false;
+}
+
+void DXILResourceWrapperPass::releaseMemory() { ResourceMap.reset(); }
+
+void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *) const {
+  if (!ResourceMap) {
+    OS << "No resource map has been built!\n";
+    return;
+  }
+  for (const auto &[Handle, Info] : *ResourceMap) {
+    OS << "Binding for ";
+    Handle->print(OS);
+    OS << "\n";
+    // TODO: Info.print(OS);
+    OS << "\n";
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
+#endif
+
+INITIALIZE_PASS(DXILResourceWrapperPass, DEBUG_TYPE, "DXIL Resource analysis",
+                false, true)
+char DXILResourceWrapperPass::ID = 0;
+
+ModulePass *llvm::createDXILResourceWrapperPassPass() {
+  return new DXILResourceWrapperPass();
+}
