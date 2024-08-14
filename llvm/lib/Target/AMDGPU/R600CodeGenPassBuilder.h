@@ -9,12 +9,48 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600CODEGENPASSBUILDER_H
 #define LLVM_LIB_TARGET_AMDGPU_R600CODEGENPASSBUILDER_H
 
+#include "AMDGPUCodeGenPassBuilder.h"
+#include "R600Subtarget.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
+#include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
-class R600TargetMachine;
+//===----------------------------------------------------------------------===//
+// R600 Target Machine (R600 -> Cayman) - For Legacy Pass Manager.
+//===----------------------------------------------------------------------===//
+
+class R600TargetMachine final : public AMDGPUTargetMachine {
+private:
+  mutable StringMap<std::unique_ptr<R600Subtarget>> SubtargetMap;
+
+public:
+  R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                    StringRef FS, const TargetOptions &Options,
+                    std::optional<Reloc::Model> RM,
+                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                    bool JIT);
+
+  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt,
+                             PassInstrumentationCallbacks *PIC) override;
+
+  const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+
+  bool isMachineVerifierClean() const override { return false; }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+};
 
 class R600CodeGenPassBuilder
     : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
