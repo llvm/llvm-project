@@ -57204,24 +57204,36 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext);
     }
-    if ((InOpcode == X86ISD::CMPP || InOpcode == X86ISD::PCMPEQ ||
-         InOpcode == X86ISD::PCMPGT) &&
-        (IsExtractFree(InVec.getOperand(0)) ||
-         IsExtractFree(InVec.getOperand(1))) &&
-        SizeInBits == 128) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      SDValue Ext1 =
-          extractSubVector(InVec.getOperand(1), IdxVal, DAG, DL, SizeInBits);
-      if (InOpcode == X86ISD::CMPP)
-        return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, InVec.getOperand(2));
-      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1);
-    }
-    if (InOpcode == X86ISD::MOVDDUP &&
-        (SizeInBits == 128 || SizeInBits == 256)) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      return DAG.getNode(InOpcode, DL, VT, Ext0);
+
+    if (SizeInBits == 128 || SizeInBits == 256) {
+      switch (InOpcode) {
+      case X86ISD::MOVDDUP:
+        return DAG.getNode(
+            InOpcode, DL, VT,
+            extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits));
+      case X86ISD::PCMPEQ:
+      case X86ISD::PCMPGT:
+      case X86ISD::UNPCKH:
+      case X86ISD::UNPCKL:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits));
+        break;
+      case X86ISD::CMPP:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             InVec.getOperand(2));
+        break;
+      }
     }
   }
 
