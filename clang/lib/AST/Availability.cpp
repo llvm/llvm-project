@@ -96,9 +96,9 @@ void AvailabilityInfo::mergeWith(AvailabilityInfo Other) {
 
 AvailabilityInfo AvailabilityInfo::createFromDecl(const Decl *D) {
   AvailabilitySet Availabilities;
-  createInfoForDecl(D, Availabilities);
-  // Traverse
-  for (const auto *Ctx = llvm::cast_or_null<Decl>(D->getDeclContext()); Ctx;
+  // Walk DeclContexts upwards starting from D to find the combined availability
+  // of the symbol.
+  for (const auto *Ctx = D; Ctx;
        Ctx = llvm::cast_or_null<Decl>(Ctx->getDeclContext()))
     createInfoForDecl(Ctx, Availabilities);
 
