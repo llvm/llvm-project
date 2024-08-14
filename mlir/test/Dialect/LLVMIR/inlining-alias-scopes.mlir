@@ -323,6 +323,27 @@ llvm.func @region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !ll
 
 // -----
 
+llvm.func @missing_region_branch(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
+  %0 = llvm.mlir.constant(5 : i64) : i32
+  "test.one_region_op"() ({
+  ^bb0(%arg2: !llvm.ptr):
+    llvm.store %0, %arg2 : i32, !llvm.ptr
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @missing_region_branch_inlining
+// CHECK: llvm.store
+// CHECK-NOT: alias_scopes
+// CHECK-NOT: noalias_scopes
+llvm.func @missing_region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+  llvm.call @missing_region_branch(%arg0, %arg2) : (!llvm.ptr, !llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
 // CHECK-DAG: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}>
 // CHECK-DAG: #[[$ARG0_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
 // CHECK-DAG: #[[$ARG1_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
