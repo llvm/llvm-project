@@ -12033,14 +12033,17 @@ public:
 
   void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
-  Decl *ActOnConceptDefinition(Scope *S,
-                               MultiTemplateParamsArg TemplateParameterLists,
-                               const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr,
-                               const ParsedAttributesView &Attrs);
+  ConceptDecl *ActOnStartConceptDefinition(
+      Scope *S, MultiTemplateParamsArg TemplateParameterLists,
+      const IdentifierInfo *Name, SourceLocation NameLoc);
+
+  ConceptDecl *ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
+                                            Expr *ConstraintExpr,
+                                            const ParsedAttributesView &Attrs);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
+  bool CheckConceptUseIndefinition(ConceptDecl *Concept, SourceLocation Loc);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                const CXXScopeSpec &SS,

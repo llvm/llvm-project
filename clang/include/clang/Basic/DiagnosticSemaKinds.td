@@ -3012,6 +3012,8 @@ def err_concept_no_parameters : Error<
   "specialization of concepts is not allowed">;
 def err_concept_extra_headers : Error<
   "extraneous template parameter list in concept definition">;
+def err_recursive_concept : Error<
+  "a concept definition cannot refer to itself">;
 def err_concept_no_associated_constraints : Error<
   "concept cannot have associated constraints">;
 def err_non_constant_constraint_expression : Error<
