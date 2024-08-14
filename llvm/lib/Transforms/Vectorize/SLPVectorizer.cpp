@@ -16398,10 +16398,10 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   }
   R.reorderTopToBottom();
   R.reorderBottomToTop();
+  R.transformNodes();
   R.buildExternalUses();
 
   R.computeMinimumValueSizes();
-  R.transformNodes();
 
   Size = R.getTreeSize();
   if (S.getOpcode() == Instruction::Load)
@@ -16968,10 +16968,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       R.reorderBottomToTop(
           /*IgnoreReorder=*/!isa<InsertElementInst>(Ops.front()) &&
           !R.doesRootHaveInTreeUses());
+      R.transformNodes();
       R.buildExternalUses();
 
       R.computeMinimumValueSizes();
-      R.transformNodes();
       InstructionCost Cost = R.getTreeCost();
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
@@ -17906,10 +17906,10 @@ public:
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
             LocalExternallyUsedValues[RdxVal];
+        V.transformNodes();
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();
-        V.transformNodes();
 
         // Estimate cost.
         InstructionCost TreeCost = V.getTreeCost(VL);
