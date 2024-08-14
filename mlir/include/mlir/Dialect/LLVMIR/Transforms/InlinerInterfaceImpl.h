@@ -1,4 +1,4 @@
-//===- LLVMInlining.h - Registration of LLVMInlinerInterface ----*- C++ -*-===//
+//===- InlinerInterfaceImpl.h - Inlining for LLVM the dialect ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,28 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Allows registering the LLVM DialectInlinerInterface with the LLVM dialect
-// during initialization.
+// Allows registering the LLVM DialectInlinerInterface with the LLVM dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_LLVMIR_IR_LLVMINLINING_H
-#define DIALECT_LLVMIR_IR_LLVMINLINING_H
+#ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_INLINERINTERFACEIMPL_H
+#define MLIR_DIALECT_LLVMIR_TRANSFORMS_INLINERINTERFACEIMPL_H
 
 namespace mlir {
+class DialectRegistry;
+
 namespace LLVM {
-
-class LLVMDialect;
-
-namespace detail {
 
 /// Register the `LLVMInlinerInterface` implementation of
 /// `DialectInlinerInterface` with the LLVM dialect.
-void addLLVMInlinerInterface(LLVMDialect *dialect);
-
-} // namespace detail
+void registerInlinerInterface(DialectRegistry &registry);
 
 } // namespace LLVM
 } // namespace mlir
 
-#endif // DIALECT_LLVMIR_IR_LLVMINLINING_H
+#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_INLINERINTERFACEIMPL_H
