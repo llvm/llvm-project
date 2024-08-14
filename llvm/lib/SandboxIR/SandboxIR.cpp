@@ -472,6 +472,103 @@ bool Instruction::classof(const sandboxir::Value *From) {
   }
 }
 
+void Instruction::setHasNoUnsignedWrap(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoUnsignedWrap,
+                                       &Instruction::setHasNoUnsignedWrap>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoUnsignedWrap(B);
+}
+
+void Instruction::setHasNoSignedWrap(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoSignedWrap,
+                                       &Instruction::setHasNoSignedWrap>>(this);
+  cast<llvm::Instruction>(Val)->setHasNoSignedWrap(B);
+}
+
+void Instruction::setFast(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::isFast, &Instruction::setFast>>(this);
+  cast<llvm::Instruction>(Val)->setFast(B);
+}
+
+void Instruction::setIsExact(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::isExact, &Instruction::setIsExact>>(this);
+  cast<llvm::Instruction>(Val)->setIsExact(B);
+}
+
+void Instruction::setHasAllowReassoc(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowReassoc,
+                                       &Instruction::setHasAllowReassoc>>(this);
+  cast<llvm::Instruction>(Val)->setHasAllowReassoc(B);
+}
+
+void Instruction::setHasNoNaNs(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::hasNoNaNs, &Instruction::setHasNoNaNs>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoNaNs(B);
+}
+
+void Instruction::setHasNoInfs(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::hasNoInfs, &Instruction::setHasNoInfs>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoInfs(B);
+}
+
+void Instruction::setHasNoSignedZeros(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoSignedZeros,
+                                       &Instruction::setHasNoSignedZeros>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoSignedZeros(B);
+}
+
+void Instruction::setHasAllowReciprocal(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowReciprocal,
+                                       &Instruction::setHasAllowReciprocal>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasAllowReciprocal(B);
+}
+
+void Instruction::setHasAllowContract(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowContract,
+                                       &Instruction::setHasAllowContract>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasAllowContract(B);
+}
+
+void Instruction::setFastMathFlags(FastMathFlags FMF) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
+                                       &Instruction::copyFastMathFlags>>(this);
+  cast<llvm::Instruction>(Val)->setFastMathFlags(FMF);
+}
+
+void Instruction::copyFastMathFlags(FastMathFlags FMF) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
+                                       &Instruction::copyFastMathFlags>>(this);
+  cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
+}
+
+void Instruction::setHasApproxFunc(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasApproxFunc,
+                                       &Instruction::setHasApproxFunc>>(this);
+  cast<llvm::Instruction>(Val)->setHasApproxFunc(B);
+}
+
 #ifndef NDEBUG
 void Instruction::dumpOS(raw_ostream &OS) const {
   OS << "Unimplemented! Please override dump().";
