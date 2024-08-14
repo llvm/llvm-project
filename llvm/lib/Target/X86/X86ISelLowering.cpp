@@ -57233,6 +57233,19 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                                               DL, SizeInBits),
                              InVec.getOperand(2));
         break;
+      case X86ISD::BLENDI:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1))) {
+          uint64_t M = InVec.getConstantOperandVal(2) & 255;
+          M = VT.getScalarType() == MVT::i16 ? M : (M >> IdxVal);
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
       }
     }
   }
