@@ -2932,13 +2932,15 @@ error.
   or from that address space is always an evaluation error.
 
   For targets which support the generic address space, converting from
-  ``DW_ASPACE_AMDGPU_generic`` to ``DW_ASPACE_LLVM_none`` is always defined and
-  requires no change to the literal value of the address.
+  ``DW_ASPACE_AMDGPU_generic`` to ``DW_ASPACE_LLVM_none`` is defined when the
+  generic address is in the global address space. The conversion requires no
+  change to the literal value of the address.
 
   Converting from ``DW_ASPACE_AMDGPU_generic`` to any of
   ``DW_ASPACE_AMDGPU_local``, ``DW_ASPACE_AMDGPU_private_wave`` or
   ``DW_ASPACE_AMDGPU_private_lane`` is defined when the relevant hardware
-  support is present and setup has been completed. Conversion to
+  support is present, any required hardware setup has been completed, and the
+  generic address is in the corresponding address space. Conversion to
   ``DW_ASPACE_AMDGPU_private_lane`` additionally requires the context to
   include the active lane.
 
