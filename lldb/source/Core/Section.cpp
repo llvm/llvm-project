@@ -462,9 +462,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
   case eSectionTypeLLDBTypeSummaries:
-#ifdef LLDB_ENABLE_SWIFT
   case eSectionTypeSwiftModules:
-#endif
     return true;
   }
   return false;
