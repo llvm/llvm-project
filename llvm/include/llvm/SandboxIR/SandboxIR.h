@@ -130,6 +130,7 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class AtomicCmpXchgInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -248,6 +249,7 @@ protected:
   friend class InvokeInst;         // For getting `Val`.
   friend class CallBrInst;         // For getting `Val`.
   friend class GetElementPtrInst;  // For getting `Val`.
+  friend class AtomicCmpXchgInst;  // For getting `Val`.
   friend class AllocaInst;         // For getting `Val`.
   friend class CastInst;           // For getting `Val`.
   friend class PHINode;            // For getting `Val`.
@@ -628,6 +630,7 @@ protected:
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class AtomicCmpXchgInst;  // For getTopmostLLVMInstruction().
   friend class AllocaInst;         // For getTopmostLLVMInstruction().
   friend class CastInst;           // For getTopmostLLVMInstruction().
   friend class PHINode;            // For getTopmostLLVMInstruction().
@@ -1337,6 +1340,91 @@ public:
   // TODO: Add missing member functions.
 };
 
+class AtomicCmpXchgInst
+    : public SingleLLVMInstructionImpl<llvm::AtomicCmpXchgInst> {
+  AtomicCmpXchgInst(llvm::AtomicCmpXchgInst *Atomic, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::AtomicCmpXchg,
+                                  Instruction::Opcode::AtomicCmpXchg, Atomic,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
+  Align getAlign() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getAlign();
+  }
+
+  void setAlignment(Align Align);
+  /// Return true if this is a cmpxchg from a volatile memory
+  /// location.
+  bool isVolatile() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->isVolatile();
+  }
+  /// Specify whether this is a volatile cmpxchg.
+  void setVolatile(bool V);
+  /// Return true if this cmpxchg may spuriously fail.
+  bool isWeak() const { return cast<llvm::AtomicCmpXchgInst>(Val)->isWeak(); }
+  void setWeak(bool IsWeak);
+  static bool isValidSuccessOrdering(AtomicOrdering Ordering) {
+    return llvm::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering);
+  }
+  static bool isValidFailureOrdering(AtomicOrdering Ordering) {
+    return llvm::AtomicCmpXchgInst::isValidFailureOrdering(Ordering);
+  }
+  AtomicOrdering getSuccessOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getSuccessOrdering();
+  }
+  void setSuccessOrdering(AtomicOrdering Ordering);
+
+  AtomicOrdering getFailureOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getFailureOrdering();
+  }
+  void setFailureOrdering(AtomicOrdering Ordering);
+  AtomicOrdering getMergedOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getMergedOrdering();
+  }
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getSyncScopeID();
+  }
+  void setSyncScopeID(SyncScope::ID SSID);
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getPointerOperand();
+  }
+
+  Value *getCompareOperand();
+  const Value *getCompareOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getCompareOperand();
+  }
+
+  Value *getNewValOperand();
+  const Value *getNewValOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getNewValOperand();
+  }
+
+  /// Returns the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getPointerAddressSpace();
+  }
+
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         Instruction *InsertBefore, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         BasicBlock *InsertAtEnd, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+};
+
 class AllocaInst final : public UnaryInstruction {
   AllocaInst(llvm::AllocaInst *AI, Context &Ctx)
       : UnaryInstruction(ClassID::Alloca, Instruction::Opcode::Alloca, AI,
@@ -1696,6 +1784,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
+  friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
   AllocaInst *createAllocaInst(llvm::AllocaInst *I);
   friend AllocaInst; // For createAllocaInst()
   CastInst *createCastInst(llvm::CastInst *I);
