@@ -153,6 +153,24 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
          IndexBitWidth == Other.IndexBitWidth;
 }
 
+namespace {
+// Predicate to sort primitive specs by bit width.
+struct LessPrimitiveBitWidth {
+  bool operator()(const DataLayout::PrimitiveSpec &LHS,
+                  unsigned RHSBitWidth) const {
+    return LHS.BitWidth < RHSBitWidth;
+  }
+};
+
+// Predicate to sort pointer specs by address space number.
+struct LessPointerAddrSpace {
+  bool operator()(const DataLayout::PointerSpec &LHS,
+                  unsigned RHSAddrSpace) const {
+    return LHS.AddrSpace < RHSAddrSpace;
+  }
+};
+} // namespace
+
 const char *DataLayout::getManglingComponent(const Triple &T) {
   if (T.isOSBinFormatGOFF())
     return "-m:l";
@@ -581,15 +599,6 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
   return Error::success();
 }
 
-static SmallVectorImpl<DataLayout::PrimitiveSpec>::const_iterator
-findPrimitiveSpecLowerBound(
-    const SmallVectorImpl<DataLayout::PrimitiveSpec> &Specs,
-    uint32_t BitWidth) {
-  return partition_point(Specs, [BitWidth](const DataLayout::PrimitiveSpec &E) {
-    return E.BitWidth < BitWidth;
-  });
-}
-
 Error DataLayout::setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
                                    Align ABIAlign, Align PrefAlign) {
   // AlignmentsTy::ABIAlign and AlignmentsTy::PrefAlign were once stored as
@@ -620,9 +629,7 @@ Error DataLayout::setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
     break;
   }
 
-  auto I = partition_point(*Specs, [BitWidth](const PrimitiveSpec &E) {
-    return E.BitWidth < BitWidth;
-  });
+  auto I = lower_bound(*Specs, BitWidth, LessPrimitiveBitWidth());
   if (I != Specs->end() && I->BitWidth == BitWidth) {
     // Update the abi, preferred alignments.
     I->ABIAlign = ABIAlign;
@@ -637,10 +644,7 @@ Error DataLayout::setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
 const DataLayout::PointerSpec &
 DataLayout::getPointerSpec(uint32_t AddrSpace) const {
   if (AddrSpace != 0) {
-    auto I = lower_bound(PointerSpecs, AddrSpace,
-                         [](const PointerSpec &Spec, uint32_t AddrSpace) {
-                           return Spec.AddrSpace < AddrSpace;
-                         });
+    auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
     if (I != PointerSpecs.end() && I->AddrSpace == AddrSpace)
       return *I;
   }
@@ -658,10 +662,7 @@ Error DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
   if (IndexBitWidth > BitWidth)
     return reportError("Index width cannot be larger than pointer width");
 
-  auto I = lower_bound(PointerSpecs, AddrSpace,
-                       [](const PointerSpec &A, uint32_t AddrSpace) {
-                         return A.AddrSpace < AddrSpace;
-                       });
+  auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
                                        IndexBitWidth});
@@ -676,7 +677,7 @@ Error DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = findPrimitiveSpecLowerBound(IntSpecs, BitWidth);
+  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
@@ -792,7 +793,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();
-    auto I = findPrimitiveSpecLowerBound(FloatSpecs, BitWidth);
+    auto I = lower_bound(FloatSpecs, BitWidth, LessPrimitiveBitWidth());
     if (I != FloatSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
@@ -807,7 +808,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
-    auto I = findPrimitiveSpecLowerBound(VectorSpecs, BitWidth);
+    auto I = lower_bound(VectorSpecs, BitWidth, LessPrimitiveBitWidth());
     if (I != VectorSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
