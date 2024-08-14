@@ -18,6 +18,7 @@
 
 namespace {
 
+/// Represents the availability of a symbol across platforms.
 struct AvailabilitySet {
   llvm::SmallVector<clang::AvailabilityInfo> Availabilities;
   bool UnconditionallyDeprecated = false;
