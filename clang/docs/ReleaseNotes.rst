@@ -220,6 +220,12 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
+  Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
+  Clang now follows the MSVC behavior in this scenario.
+  When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
+  allowed as VS2013 and prior allow it.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
