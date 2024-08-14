@@ -671,8 +671,9 @@ def Dot4 :  DXILOp<56, dot4> {
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;
-  let arguments = [i32Ty];
-  let result = i32Ty;
+  let arguments = [overloadTy];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [i32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
@@ -680,8 +681,9 @@ def ThreadId :  DXILOp<93, threadId> {
 def GroupId :  DXILOp<94, groupId> {
   let Doc = "Reads the group ID (SV_GroupID)";
   let LLVMIntrinsic = int_dx_group_id;
-  let arguments = [i32Ty];
-  let result = i32Ty;
+  let arguments = [overloadTy];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [i32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
@@ -689,8 +691,9 @@ def GroupId :  DXILOp<94, groupId> {
 def ThreadIdInGroup :  DXILOp<95, threadIdInGroup> {
   let Doc = "Reads the thread ID within the group  (SV_GroupThreadID)";
   let LLVMIntrinsic = int_dx_thread_id_in_group;
-  let arguments = [i32Ty];
-  let result = i32Ty;
+  let arguments = [overloadTy];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [i32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
@@ -699,7 +702,8 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let Doc = "Provides a flattened index for a given thread within a given "
             "group (SV_GroupIndex)";
   let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
-  let result = i32Ty;
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [i32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
