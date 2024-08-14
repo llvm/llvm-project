@@ -432,9 +432,7 @@ public:
   }
 
   /// Returns a list of all known histogram operations in the loop.
-  const SmallVectorImpl<HistogramInfo> &getHistograms() const {
-    return Histograms;
-  }
+  bool hasHistograms() const { return !Histograms.empty(); }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -501,9 +499,9 @@ private:
   bool canVectorizeMemory();
 
   /// If LAA cannot determine whether all dependences are safe, we may be able
-  /// to further analyse some unknown dependences and if they match a certain
-  /// pattern (like a histogram) then we may still be able to vectorize.
-  bool canVectorizeUncheckedDependences();
+  /// to further analyse some IndirectUnsafe dependences and if they match a
+  /// certain pattern (like a histogram) then we may still be able to vectorize.
+  bool canVectorizeIndirectUnsafeDependences();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.

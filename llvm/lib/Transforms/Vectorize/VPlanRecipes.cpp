@@ -1035,7 +1035,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
 
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *Address = State.get(getOperand(0), Part);
-    Value *IncVec = State.get(getOperand(1), Part);
+    Value *IncAmt = State.get(getOperand(1), Part, /*IsScalar=*/true);
     VectorType *VTy = cast<VectorType>(Address->getType());
 
     // The histogram intrinsic requires a mask even if the recipe doesn't;
@@ -1048,18 +1048,12 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
       Mask = Builder.CreateVectorSplat(
           VTy->getElementCount(), ConstantInt::getTrue(Builder.getInt1Ty()));
 
-    // Not sure how to make IncAmt stay scalar yet. For now just extract the
-    // first element and tidy up later.
-    // FIXME: Do we actually want this to be scalar? We just splat it in the
-    //        backend anyway...
-    Value *IncAmt = Builder.CreateExtractElement(IncVec, Builder.getInt64(0));
-
     // If this is a subtract, we want to invert the increment amount. We may
     // add a separate intrinsic in future, but for now we'll try this.
     if (Opcode == Instruction::Sub)
       IncAmt = Builder.CreateNeg(IncAmt);
     else
-      assert(Opcode == Instruction::Add);
+      assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
     State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
                                   {VTy, IncAmt->getType()},

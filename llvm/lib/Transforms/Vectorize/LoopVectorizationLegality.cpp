@@ -1132,29 +1132,38 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   return true;
 }
 
-bool LoopVectorizationLegality::canVectorizeUncheckedDependences() {
-  // For now, we only support an unknown dependency that calculates a histogram
+bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
+  // For now, we only support an IndirectUnsafe dependency that calculates
+  // a histogram
   if (!EnableHistogramVectorization)
     return false;
 
-  // FIXME: Support more than one unchecked dependence, and check to see if some
-  //        are handled by runtime checks before looking for histograms.
+  // Find a single IndirectUnsafe dependency.
   LAI = &LAIs.getInfo(*TheLoop);
+  const MemoryDepChecker::Dependence *IUDep = nullptr;
   const MemoryDepChecker &DepChecker = LAI->getDepChecker();
   const auto *Deps = DepChecker.getDependences();
-  if (!Deps || Deps->size() != 1)
-    return false;
+  for (const MemoryDepChecker::Dependence &Dep : *Deps) {
+    // Ignore dependencies that are either known to be safe or can be
+    // checked at runtime.
+    if (MemoryDepChecker::Dependence::isSafeForVectorization(Dep.Type) !=
+        MemoryDepChecker::VectorizationSafetyStatus::Unsafe)
+      continue;
 
-  const MemoryDepChecker::Dependence &Dep = (*Deps).front();
+    // We're only interested in IndirectUnsafe dependencies here, where the
+    // address might come from a load from memory. We also only want to handle
+    // one such dependency, at least for now.
+    if (Dep.Type != MemoryDepChecker::Dependence::IndirectUnsafe || IUDep)
+      return false;
 
-  // We're only interested in Unknown or IndirectUnsafe dependences.
-  if (Dep.Type != MemoryDepChecker::Dependence::Unknown &&
-      Dep.Type != MemoryDepChecker::Dependence::IndirectUnsafe)
+    IUDep = &Dep;
+  }
+  if (!IUDep)
     return false;
 
   // For now only normal loads and stores are supported.
-  LoadInst *LI = dyn_cast<LoadInst>(Dep.getSource(DepChecker));
-  StoreInst *SI = dyn_cast<StoreInst>(Dep.getDestination(DepChecker));
+  LoadInst *LI = dyn_cast<LoadInst>(IUDep->getSource(DepChecker));
+  StoreInst *SI = dyn_cast<StoreInst>(IUDep->getDestination(DepChecker));
 
   if (!LI || !SI)
     return false;
@@ -1174,7 +1183,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (!LAI->canVectorizeMemory())
-    return canVectorizeUncheckedDependences();
+    return canVectorizeIndirectUnsafeDependences();
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
     reportVectorizationFailure("We don't allow storing to uniform addresses",

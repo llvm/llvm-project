@@ -208,6 +208,17 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
+;; Confirm cost calculation for runtime checks
+; CHECK-LABEL: LV: Checking a loop in 'simple_histogram_rtdepcheck'
+; CHECK: Calculating cost of runtime checks:
+; CHECK: Total cost of runtime checks:
+; CHECK: LV: Minimum required TC for runtime checks to be profitable:
+
+;; Confirm inability to vectorize with potential alias to buckets
+; CHECK-LABEL: LV: Checking a loop in 'simple_histogram_unsafe_alias'
+; CHECK: LV: Can't vectorize due to memory conflicts
+; CHECK-NEXT: LV: Not vectorizing: Cannot prove legality.
+
 define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
 ; CHECK-LABEL: define void @simple_histogram(
 ; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -812,6 +823,140 @@ for.body:
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !2
+
+for.exit:
+  ret void
+}
+
+;; Check that we can still vectorize a histogram when LAA found another dependency
+;; that doesn't conflict with the buckets.
+define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_rtdepcheck(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr [[ARRAY:%.*]], ptr [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP2]], [[N]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoint ptr [[ARRAY]] to i64
+; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoint ptr [[INDICES]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul nsw i64 [[TMP6]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNEG]], [[N]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw nsw i32 [[TMP10]], 2
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[TMP9]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP13]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP14]], i32 1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[VEC_IND]], ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[TMP17]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP18]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[IDX_ADDR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[IV]]
+; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    store i32 [[IV_TRUNC]], ptr [[IDX_ADDR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom1 = zext i32 %0 to i64
+  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %inc = add nsw i32 %1, 1
+  store i32 %inc, ptr %arrayidx2, align 4
+  %idx.addr = getelementptr inbounds i32, ptr %array, i64 %iv
+  %iv.trunc = trunc i64 %iv to i32
+  store i32 %iv.trunc, ptr %idx.addr, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+;; Make sure we don't vectorize if there's a potential alias between buckets
+;; and indices.
+define void @simple_histogram_unsafe_alias(ptr %buckets, ptr %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_unsafe_alias(
+; CHECK-SAME: ptr [[BUCKETS:%.*]], ptr [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[TMP12]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP13]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom1 = zext i32 %0 to i64
+  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %inc = add nsw i32 %1, 1
+  store i32 %inc, ptr %arrayidx2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
 
 for.exit:
   ret void
