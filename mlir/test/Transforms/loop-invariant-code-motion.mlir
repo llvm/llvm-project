@@ -943,7 +943,7 @@ func.func @no_speculate_divsi_range(
   %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   scf.for %i = %lb to %ub step %step {
 // CHECK: scf.for
-// CHECK-COUNT2: arith.divsi
+// CHECK-COUNT-2: arith.divsi
     %val0 = arith.divsi %num, %denom0 : i8
     %val1 = arith.divsi %num, %denom1 : i8
   }
@@ -971,7 +971,7 @@ func.func @no_speculate_ceildivsi_range(
   %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   scf.for %i = %lb to %ub step %step {
 // CHECK: scf.for
-// CHECK-COUNT2: arith.ceildivsi
+// CHECK-COUNT-2: arith.ceildivsi
     %val0 = arith.ceildivsi %num, %denom0 : i8
     %val1 = arith.ceildivsi %num, %denom1 : i8
   }
@@ -998,7 +998,7 @@ func.func @speculate_divsi_range(
   %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   scf.for %i = %lb to %ub step %step {
-// CHECK-COUNT2: arith.divsi
+// CHECK-COUNT-2: arith.divsi
 // CHECK: scf.for
     %val0 = arith.divsi %num, %denom0 : i8
     %val1 = arith.divsi %num, %denom1 : i8
@@ -1027,7 +1027,7 @@ func.func @speculate_ceildivsi_range(
   %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
   scf.for %i = %lb to %ub step %step {
-// CHECK-COUNT2: arith.ceildivsi
+// CHECK-COUNT-2: arith.ceildivsi
 // CHECK: scf.for
     %val0 = arith.ceildivsi %num, %denom0 : i8
     %val1 = arith.ceildivsi %num, %denom1 : i8
