@@ -2216,7 +2216,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              lldb_private::Type *type,
-                                             const CompilerType &clang_type) {
+                                             CompilerType clang_type) {
   if (TypeSystemClang::UseRedeclCompletion())
     if (!m_currently_parsed_record_dies.insert(die.GetDIE()).second)
       return true;
