@@ -2752,6 +2752,8 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
     .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
     .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+    .Case("src_flat_scratch_base_lo", AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)
+    .Case("src_flat_scratch_base_hi", AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)
     .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
     .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
     .Case("lds_direct", AMDGPU::LDS_DIRECT)
@@ -6666,6 +6668,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
     return isGFX9Plus();
+  case SRC_FLAT_SCRATCH_BASE_LO:
+  case SRC_FLAT_SCRATCH_BASE_HI:
+    return isGFX1210();
   case SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
   case TBA:
