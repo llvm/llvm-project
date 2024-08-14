@@ -3808,8 +3808,8 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
   }
 
   // Do not reason about locations passed inside inline assembly.
-  for (const Expr *O : A->inputs()) {
-    SVal X = state->getSVal(O, Pred->getLocationContext());
+  for (const Expr *I : A->inputs()) {
+    SVal X = state->getSVal(I, Pred->getLocationContext());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
       state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());

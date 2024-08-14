@@ -17,14 +17,12 @@ void *MyMemcpy(void *d, const void *s, const int n) {
     "cld\n rep movsb\n"
     :: "S" (s), "D" (d), "c" (n) : "memory"
   );
-
   return d;
 }
 
 void testInlineAsmMemcpy(void)
 {
     int a, b = 10, c;
-
     MyMemcpy(&a, &b, sizeof(b));
     c = a; // no-warning
 }
@@ -32,7 +30,6 @@ void testInlineAsmMemcpy(void)
 void testInlineAsmMemcpyArray(void)
 {
     int a[10], b[10] = {}, c;
-
     MyMemcpy(&a, &b, sizeof(b));
     c = a[8]; // no-warning
 }
@@ -40,7 +37,6 @@ void testInlineAsmMemcpyArray(void)
 void testInlineAsmMemcpyUninit(void)
 {
     int a[10], b[10] = {}, c;
-
     MyMemcpy(&a[1], &b[1], sizeof(b) - sizeof(b[1]));
     c = a[0]; // expected-warning{{Assigned value is garbage or undefined}}
 }
