@@ -260,7 +260,7 @@ public:
   void SetDebugUtilityExpression(bool debug);
 
   bool GetDebugUtilityExpression() const;
-
+  
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
