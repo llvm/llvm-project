@@ -11471,8 +11471,7 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
       // the result for float (23 mantissa bits) is 2 and for double (52
       // mantissa bits) is 3.
       constexpr unsigned AccurateBits = 8;
-      unsigned DesiredBits =
-          APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(VT));
+      unsigned DesiredBits = APFloat::semanticsPrecision(VT.getFltSemantics());
       ExtraSteps = DesiredBits <= AccurateBits
                        ? 0
                        : Log2_64_Ceil(DesiredBits) - Log2_64_Ceil(AccurateBits);

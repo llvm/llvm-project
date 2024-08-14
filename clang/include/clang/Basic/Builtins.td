@@ -4725,6 +4725,12 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLNormalize : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_normalize"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rcp"];
   let Attributes = [NoThrow, Const];

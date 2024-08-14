@@ -3271,14 +3271,14 @@ gentbl_cc_library(
         (
             [
                 "-gen-typedef-decls",
-		"-typedefs-dialect=mesh",
+                "-typedefs-dialect=mesh",
             ],
             "include/mlir/Dialect/Mesh/IR/MeshTypes.h.inc",
         ),
         (
             [
                 "-gen-typedef-defs",
-		"-typedefs-dialect=mesh",
+                "-typedefs-dialect=mesh",
             ],
             "include/mlir/Dialect/Mesh/IR/MeshTypes.cpp.inc",
         ),
@@ -3338,8 +3338,8 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":MeshDialect",
-        ":MeshShardingInterfaceIncGen",
         ":MeshShardingInterface",
+        ":MeshShardingInterfaceIncGen",
         ":Support",
         ":TensorDialect",
         "//llvm:Support",
@@ -4860,7 +4860,7 @@ cc_library(
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
         ":ControlFlowToLLVM",
-	":DLTITransformOps",
+        ":DLTITransformOps",
         ":FuncExtensions",
         ":FuncToLLVM",
         ":FuncTransformOps",
@@ -5199,6 +5199,32 @@ cc_library(
         ":PDLLParser",
         ":Support",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TableGenLspServerLib",
+    srcs = glob([
+        "lib/Tools/tblgen-lsp-server/*.cpp",
+        "lib/Tools/tblgen-lsp-server/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Tools/tblgen-lsp-server/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":MlirLspServerSupportLib",
+        ":Support",
+        "//llvm:Support",
+        "//llvm:TableGen",
+    ],
+)
+
+cc_binary(
+    name = "tblgen-lsp-server",
+    srcs = ["tools/tblgen-lsp-server/tblgen-lsp-server.cpp"],
+    includes = ["include"],
+    deps = [
+        ":Support",
+        ":TableGenLspServerLib",
     ],
 )
 
@@ -9560,7 +9586,7 @@ cc_library(
         ":SparseTensorTransforms",
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",
-	":TensorShardingInterfaceImpl",
+        ":TensorShardingInterfaceImpl",
         ":TensorTilingInterfaceImpl",
         ":TensorTransformOps",
         ":TensorTransforms",
@@ -11268,7 +11294,7 @@ cc_library(
         ":AffineDialect",
         ":Analysis",
         ":ArithDialect",
-	":ArithUtils",
+        ":ArithUtils",
         ":AsmParser",
         ":BufferizationDialect",
         ":BufferizationTransforms",
@@ -14067,12 +14093,12 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/DLTI/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
+        ":DLTIDialect",
+        ":DLTITransformOpsIncGen",
         ":DataLayoutInterfaces",
-	":DLTIDialect",
-	":DLTITransformOpsIncGen",
-	":TransformDialect",
-	":TransformDialectInterfaces",
-	":TransformDialectUtils",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformDialectUtils",
     ],
 )
 
