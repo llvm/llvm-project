@@ -308,8 +308,8 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
 
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
   static constexpr unsigned BitWidth = 64;
-  const APInt True(BitWidth, 1, /*isSigned=*/false);
-  const APInt False(BitWidth, 0, /*isSigned=*/false);
+  const APInt True(BitWidth, 1);
+  const APInt False(BitWidth, 0);
   if (CompareResult) {
     return *CompareResult ? KnownBits::makeConstant(True)
                           : KnownBits::makeConstant(False);
@@ -320,11 +320,11 @@ static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
 }
 
 using KnownBitsMap = DenseMap<const MCExpr *, KnownBits>;
-void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
-                        unsigned Depth = 0);
+static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                               unsigned Depth = 0);
 
-void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
-                                unsigned Depth) {
+static void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                       unsigned Depth) {
   static constexpr unsigned BitWidth = 64;
   const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
   const MCExpr *LHS = BExpr->getLHS();
@@ -334,40 +334,43 @@ void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   knownBitsMapHelper(RHS, KBM, Depth + 1);
   KnownBits LHSKnown = KBM[LHS];
   KnownBits RHSKnown = KBM[RHS];
-  std::optional<bool> CompareRes;
 
   switch (BExpr->getOpcode()) {
   default:
     KBM[Expr] = KnownBits(BitWidth);
     return;
-  case MCBinaryExpr::Opcode::Add: {
+  case MCBinaryExpr::Opcode::Add:
     KBM[Expr] = KnownBits::add(LHSKnown, RHSKnown);
     return;
-  }
   case MCBinaryExpr::Opcode::And:
     KBM[Expr] = LHSKnown & RHSKnown;
     return;
   case MCBinaryExpr::Opcode::Div:
     KBM[Expr] = KnownBits::sdiv(LHSKnown, RHSKnown);
     return;
-  case MCBinaryExpr::Opcode::EQ:
-    CompareRes = KnownBits::eq(LHSKnown, RHSKnown);
+  case MCBinaryExpr::Opcode::EQ: {
+    std::optional<bool> CompareRes = KnownBits::eq(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
-  case MCBinaryExpr::Opcode::NE:
-    CompareRes = KnownBits::ne(LHSKnown, RHSKnown);
+  }
+  case MCBinaryExpr::Opcode::NE: {
+    std::optional<bool> CompareRes = KnownBits::ne(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
-  case MCBinaryExpr::Opcode::GT:
-    CompareRes = KnownBits::sgt(LHSKnown, RHSKnown);
+  }
+  case MCBinaryExpr::Opcode::GT: {
+    std::optional<bool> CompareRes = KnownBits::sgt(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
-  case MCBinaryExpr::Opcode::GTE:
-    CompareRes = KnownBits::sge(LHSKnown, RHSKnown);
+  }
+  case MCBinaryExpr::Opcode::GTE: {
+    std::optional<bool> CompareRes = KnownBits::sge(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
+  }
   case MCBinaryExpr::Opcode::LAnd: {
-    const APInt False(BitWidth, 0, /*isSigned=*/false);
+    std::optional<bool> CompareRes;
+    const APInt False(BitWidth, 0);
     std::optional<bool> LHSBool =
         KnownBits::ne(LHSKnown, KnownBits::makeConstant(False));
     std::optional<bool> RHSBool =
@@ -378,20 +381,23 @@ void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     return;
   }
   case MCBinaryExpr::Opcode::LOr: {
-    const APInt False(BitWidth, 0, /*isSigned=*/false);
+    const APInt False(BitWidth, 0);
     KnownBits Bits = LHSKnown | RHSKnown;
-    CompareRes = KnownBits::ne(Bits, KnownBits::makeConstant(False));
+    std::optional<bool> CompareRes =
+        KnownBits::ne(Bits, KnownBits::makeConstant(False));
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
   }
-  case MCBinaryExpr::Opcode::LT:
-    CompareRes = KnownBits::slt(LHSKnown, RHSKnown);
+  case MCBinaryExpr::Opcode::LT: {
+    std::optional<bool> CompareRes = KnownBits::slt(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
-  case MCBinaryExpr::Opcode::LTE:
-    CompareRes = KnownBits::sle(LHSKnown, RHSKnown);
+  }
+  case MCBinaryExpr::Opcode::LTE: {
+    std::optional<bool> CompareRes = KnownBits::sle(LHSKnown, RHSKnown);
     KBM[Expr] = fromOptionalToKnownBits(CompareRes);
     return;
+  }
   case MCBinaryExpr::Opcode::Mod:
     KBM[Expr] = KnownBits::srem(LHSKnown, RHSKnown);
     return;
@@ -410,18 +416,17 @@ void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case MCBinaryExpr::Opcode::LShr:
     KBM[Expr] = KnownBits::lshr(LHSKnown, RHSKnown);
     return;
-  case MCBinaryExpr::Opcode::Sub: {
+  case MCBinaryExpr::Opcode::Sub:
     KBM[Expr] = KnownBits::sub(LHSKnown, RHSKnown);
     return;
-  }
   case MCBinaryExpr::Opcode::Xor:
     KBM[Expr] = LHSKnown ^ RHSKnown;
     return;
   }
 }
 
-void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
-                               unsigned Depth) {
+static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                      unsigned Depth) {
   static constexpr unsigned BitWidth = 64;
   const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
   knownBitsMapHelper(UExpr->getSubExpr(), KBM, Depth + 1);
@@ -450,8 +455,8 @@ void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   }
 }
 
-void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
-                                unsigned Depth) {
+static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                       unsigned Depth) {
   static constexpr unsigned BitWidth = 64;
   const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
 
@@ -485,7 +490,7 @@ void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case AMDGPUMCExpr::VariantKind::AGVK_Occupancy: {
     int64_t Val;
     if (AGVK->evaluateAsAbsolute(Val)) {
-      APInt APValue(BitWidth, Val, /*isSigned=*/false);
+      APInt APValue(BitWidth, Val);
       KBM[Expr] = KnownBits::makeConstant(APValue);
       return;
     }
@@ -495,7 +500,8 @@ void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   }
 }
 
-void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM, unsigned Depth) {
+static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                               unsigned Depth) {
   static constexpr unsigned BitWidth = 64;
 
   int64_t Val;
