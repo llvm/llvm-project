@@ -171,11 +171,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   if (ST.is64Bit()) {
     ExtActions.legalFor({{sXLen, s32}});
     getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({sXLen})
+        .customFor({s32, sXLen})
         .maxScalar(0, sXLen)
         .lower();
   } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG).maxScalar(0, sXLen).lower();
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .customFor({s32})
+        .maxScalar(0, sXLen)
+        .lower();
   }
   ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
@@ -869,6 +872,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
   MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
@@ -893,9 +897,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_LSHR:
     return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
-    // Source size of 32 is sext.w.
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     int64_t SizeInBits = MI.getOperand(2).getImm();
-    if (SizeInBits == 32)
+    // Source size of 32 is sext.w.
+    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
+      return true;
+
+    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
       return true;
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==

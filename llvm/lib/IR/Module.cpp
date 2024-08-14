@@ -73,7 +73,7 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
 }
@@ -274,6 +274,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
     NMD = new NamedMDNode(Name);
     NMD->setParent(this);
     insertNamedMDNode(NMD);
+    if (Name == "llvm.module.flags")
+      ModuleFlags = NMD;
   }
   return NMD;
 }
@@ -282,6 +284,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
 /// delete it.
 void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   NamedMDSymTab.erase(NMD->getName());
+  if (NMD == ModuleFlags)
+    ModuleFlags = nullptr;
   eraseNamedMDNode(NMD);
 }
 
@@ -340,17 +344,12 @@ Metadata *Module::getModuleFlag(StringRef Key) const {
   return nullptr;
 }
 
-/// getModuleFlagsMetadata - Returns the NamedMDNode in the module that
-/// represents module-level flags. This method returns null if there are no
-/// module-level flags.
-NamedMDNode *Module::getModuleFlagsMetadata() const {
-  return getNamedMetadata("llvm.module.flags");
-}
-
 /// getOrInsertModuleFlagsMetadata - Returns the NamedMDNode in the module that
 /// represents module-level flags. If module-level flags aren't found, it
 /// creates the named metadata that contains them.
 NamedMDNode *Module::getOrInsertModuleFlagsMetadata() {
+  if (ModuleFlags)
+    return ModuleFlags;
   return getOrInsertNamedMetadata("llvm.module.flags");
 }
 

@@ -77,7 +77,7 @@ void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 extern "C" {
 #ifdef __AMDGCN__
 #ifdef USE_BUMP_ALLOCATOR
-[[gnu::weak]] void *malloc(uint64_t Size) { return allocator::alloc(Size); }
+[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
 #else
 void *malloc(uint64_t Size) { return internal_malloc(Size); }
@@ -85,7 +85,8 @@ void free(void *Ptr) { internal_free(Ptr); }
 #endif
 #else
 #ifdef USE_BUMP_ALLOCATOR
-[[gnu::weak, gnu::leaf]] void *malloc(uint64_t Size);
+
+[[gnu::weak, gnu::leaf]] void *malloc(size_t Size);
 [[gnu::weak, gnu::leaf]] void free(void *Ptr);
 #else
 __attribute__((leaf)) void *malloc(uint64_t Size);

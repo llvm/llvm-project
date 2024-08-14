@@ -1,4 +1,4 @@
-//===- LLVMInlining.cpp - LLVM inlining interface and logic -----*- C++ -*-===//
+//===- InlinerInterfaceImpl.cpp - Inlining for LLVM the dialect -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LLVMInlining.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -850,6 +850,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 } // end anonymous namespace
 
-void LLVM::detail::addLLVMInlinerInterface(LLVM::LLVMDialect *dialect) {
-  dialect->addInterfaces<LLVMInlinerInterface>();
+void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+    dialect->addInterfaces<LLVMInlinerInterface>();
+  });
 }

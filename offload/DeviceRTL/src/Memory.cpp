@@ -26,12 +26,12 @@ void omp_set_default_allocator(omp_allocator_handle_t a) {
 omp_allocator_handle_t omp_get_default_allocator(void) {
   return omp_default_mem_alloc;
 }
-
+#if 0
 void *omp_alloc(uint64_t size,
                 omp_allocator_handle_t allocator) {
   return (void *)global_allocate(size);
 }
-
+#endif
 void *omp_aligned_alloc(uint64_t align, uint64_t size,
                         omp_allocator_handle_t allocator) {
   // TODO
@@ -57,9 +57,6 @@ void *omp_realloc(void *ptr, uint64_t size,
   return (void *)0;
 }
 
-void omp_free(void *ptr, omp_allocator_handle_t allocator) {
-  global_free(ptr);
-}
 
 } // extern "C"
 

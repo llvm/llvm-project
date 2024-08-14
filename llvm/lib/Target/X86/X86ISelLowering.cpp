@@ -56377,8 +56377,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             break;
           for (int M : SubMask) {
             if (0 <= M) {
+              int Src = M < NumSrcElts ? 0 : 2;
               M += M < NumSrcElts ? 0 : NumSrcElts;
-              M += i * NumSrcElts;
+
+              // Reference the lowest sub if they upper sub is the same.
+              if (Ops[0].getOperand(Src) != Ops[i].getOperand(Src))
+                M += i * NumSrcElts;
             }
             ConcatMask.push_back(M);
           }
@@ -57135,6 +57139,11 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   auto IsExtractFree = [](SDValue V) {
+    if (V.hasOneUse()) {
+      V = peekThroughOneUseBitcasts(V);
+      if (V.getOpcode() == ISD::LOAD)
+        return true;
+    }
     V = peekThroughBitcasts(V);
     if (ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
       return true;
@@ -57199,24 +57208,49 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext);
     }
-    if ((InOpcode == X86ISD::CMPP || InOpcode == X86ISD::PCMPEQ ||
-         InOpcode == X86ISD::PCMPGT) &&
-        (IsExtractFree(InVec.getOperand(0)) ||
-         IsExtractFree(InVec.getOperand(1))) &&
-        SizeInBits == 128) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      SDValue Ext1 =
-          extractSubVector(InVec.getOperand(1), IdxVal, DAG, DL, SizeInBits);
-      if (InOpcode == X86ISD::CMPP)
-        return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, InVec.getOperand(2));
-      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1);
-    }
-    if (InOpcode == X86ISD::MOVDDUP &&
-        (SizeInBits == 128 || SizeInBits == 256)) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      return DAG.getNode(InOpcode, DL, VT, Ext0);
+
+    if (SizeInBits == 128 || SizeInBits == 256) {
+      switch (InOpcode) {
+      case X86ISD::MOVDDUP:
+        return DAG.getNode(
+            InOpcode, DL, VT,
+            extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits));
+      case X86ISD::PCMPEQ:
+      case X86ISD::PCMPGT:
+      case X86ISD::UNPCKH:
+      case X86ISD::UNPCKL:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits));
+        break;
+      case X86ISD::CMPP:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             InVec.getOperand(2));
+        break;
+      case X86ISD::BLENDI:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1))) {
+          uint64_t M = InVec.getConstantOperandVal(2) & 255;
+          M = VT.getScalarType() == MVT::i16 ? M : (M >> IdxVal);
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
+      }
     }
   }
 

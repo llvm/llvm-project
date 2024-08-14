@@ -16905,18 +16905,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Value *Val = AI->getValOperand();
   Type *ValTy = Val->getType();
   Value *Addr = AI->getPointerOperand();
-
-  auto CreateNewAtomicRMW = [AI](IRBuilder<> &Builder, Value *Addr,
-                                 Value *Val) -> Value * {
-    AtomicRMWInst *OldVal =
-        Builder.CreateAtomicRMW(AI->getOperation(), Addr, Val, AI->getAlign(),
-                                AI->getOrdering(), AI->getSyncScopeID());
-    SmallVector<std::pair<unsigned, MDNode *>> MDs;
-    AI->getAllMetadata(MDs);
-    for (auto &P : MDs)
-      OldVal->setMetadata(P.first, P.second);
-    return OldVal;
-  };
+  Align Alignment = AI->getAlign();
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
@@ -16927,7 +16916,13 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.SetInsertPoint(SharedBB);
   Value *CastToLocal = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS));
-  Value *LoadedShared = CreateNewAtomicRMW(Builder, CastToLocal, Val);
+
+  Instruction *Clone = AI->clone();
+  Clone->insertInto(SharedBB, SharedBB->end());
+  Clone->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
+      .set(CastToLocal);
+  Instruction *LoadedShared = Clone;
+
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(CheckPrivateBB);
@@ -16938,34 +16933,38 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.SetInsertPoint(PrivateBB);
   Value *CastToPrivate = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::PRIVATE_ADDRESS));
-  Value *LoadedPrivate =
-      Builder.CreateLoad(ValTy, CastToPrivate, "loaded.private");
+  Value *LoadedPrivate = Builder.CreateAlignedLoad(ValTy, CastToPrivate,
+                                                   Alignment, "loaded.private");
 
   Value *NewVal = buildAtomicRMWValue(Op, Builder, LoadedPrivate, Val);
 
-  Builder.CreateStore(NewVal, CastToPrivate);
+  Builder.CreateAlignedStore(NewVal, CastToPrivate, Alignment);
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(GlobalBB);
   Value *CastToGlobal = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS));
-  Value *LoadedGlobal = CreateNewAtomicRMW(Builder, CastToGlobal, Val);
+  Value *LoadedGlobal = AI;
+
+  AI->getOperandUse(AtomicRMWInst::getPointerOperandIndex()).set(CastToGlobal);
+
+  AI->removeFromParent();
+  AI->insertInto(GlobalBB, GlobalBB->end());
+
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
 
   if (ReturnValueIsUsed) {
     PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    AI->replaceAllUsesWith(Loaded);
     Loaded->addIncoming(LoadedShared, SharedBB);
     Loaded->addIncoming(LoadedPrivate, PrivateBB);
     Loaded->addIncoming(LoadedGlobal, GlobalBB);
     Loaded->takeName(AI);
-    AI->replaceAllUsesWith(Loaded);
   }
 
   Builder.CreateBr(ExitBB);
-
-  AI->eraseFromParent();
 }
 
 LoadInst *
