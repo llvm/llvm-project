@@ -2121,7 +2121,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = selRef->getVA();
     assert(selRef->data.size() == sizeof(target->wordSize) &&
            "Expected one selref per ConcatInputSection");
-  } else if (reloc->referent.is<Symbol*>()) {
+  } else if (reloc->referent.is<Symbol *>()) {
     auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
     assert(def && "Expected all syms in __objc_methlist to be defined");
     symVA = def->getVA();
