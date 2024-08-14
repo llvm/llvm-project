@@ -249,6 +249,31 @@ static mlir::LogicalResult verify(TransposeOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// MatmulOp
+
+void MatmulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                     mlir::Value value1, mlir::Value value2) {
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+  state.addOperands(value1);
+  state.addOperands(value2);
+}
+
+static mlir::LogicalResult verify(MatmulOp op) {
+  auto inputType = op.getOperand(0).getType().dyn_cast<RankedTensorType>();
+  auto resultType = op.getType().dyn_cast<RankedTensorType>();
+  if (!inputType || !resultType)
+    return mlir::success();
+
+  auto inputShape = inputType.getShape();
+  if (!std::equal(inputShape.begin(), inputShape.end(),
+                  resultType.getShape().rbegin())) {
+    return op.emitError()
+           << "expected result shape to be a matmul of the input";
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
