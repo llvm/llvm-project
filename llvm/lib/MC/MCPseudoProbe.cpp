@@ -291,8 +291,8 @@ void MCDecodedPseudoProbe::getInlineContext(
   // Note that it won't include the probe's belonging function(leaf location)
   while (Cur->hasInlineSite()) {
     StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, Cur->Parent->Guid);
-    ContextStack.emplace_back(
-        MCPseudoProbeFrameLocation(FuncName, Cur->ProbeId));
+    ContextStack.emplace_back(MCPseudoProbeFrameLocation(
+        FuncName, std::get<1>(Cur->getInlineSite())));
     Cur = static_cast<MCDecodedPseudoProbeInlineTree *>(Cur->Parent);
   }
   // Make the ContextStack in caller-callee order
@@ -420,17 +420,17 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
 }
 
 template <bool IsTopLevelFunc>
-void MCPseudoProbeDecoder::buildAddress2ProbeMap(
+bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     MCDecodedPseudoProbeInlineTree *Cur, uint64_t &LastAddr,
     const Uint64Set &GuidFilter, const Uint64Map &FuncStartAddrs,
-    uint32_t &CurChild) {
+    const uint32_t CurChildIndex) {
   // The pseudo_probe section encodes an inline forest and each tree has a
   // format defined in MCPseudoProbe.h
 
   uint32_t Index = 0;
   if (IsTopLevelFunc) {
     // Use a sequential id for top level inliner.
-    Index = CurChild;
+    Index = CurChildIndex;
   } else {
     // Read inline site for inlinees
     Index = cantFail(errorOrToExpected(readUnsignedNumber<uint32_t>()));
@@ -446,19 +446,14 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
   // If the incoming node is null, all its children nodes should be disgarded.
   if (Cur) {
     // Switch/add to a new tree node(inlinee)
-    Cur->Children[CurChild] = MCDecodedPseudoProbeInlineTree(Guid, Index, Cur);
-    Cur = &Cur->Children[CurChild];
+    Cur->getChildren()[CurChildIndex] =
+        MCDecodedPseudoProbeInlineTree(InlineSite(Guid, Index), Cur);
+    Cur = &Cur->getChildren()[CurChildIndex];
     if (IsTopLevelFunc && !EncodingIsAddrBased) {
       if (auto V = FuncStartAddrs.lookup(Guid))
         LastAddr = V;
     }
   }
-  // Advance CurChild for non-skipped top-level functions and unconditionally
-  // for inlined functions.
-  if (IsTopLevelFunc)
-    CurChild += !!Cur;
-  else
-    ++CurChild;
 
   // Read number of probes in the current node.
   uint32_t NodeCount =
@@ -512,15 +507,16 @@ void MCPseudoProbeDecoder::buildAddress2ProbeMap(
   }
 
   if (Cur) {
-    Cur->Probes =
-        MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount).begin();
-    Cur->NumProbes = CurrentProbeCount;
+    Cur->setProbes(
+        MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount));
     InlineTreeVec.resize(InlineTreeVec.size() + ChildrenToProcess);
-    Cur->Children = MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
+    Cur->getChildren() =
+        MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
   }
-  for (uint32_t I = 0; I < ChildrenToProcess;) {
+  for (uint32_t I = 0; I < ChildrenToProcess; I++) {
     buildAddress2ProbeMap<false>(Cur, LastAddr, GuidFilter, FuncStartAddrs, I);
   }
+  return Cur;
 }
 
 template <bool IsTopLevelFunc>
@@ -624,21 +620,21 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
 
   // Allocate top-level function records as children of DummyInlineRoot.
   InlineTreeVec.resize(TopLevelFuncs);
-  DummyInlineRoot.Children = MutableArrayRef(InlineTreeVec);
+  DummyInlineRoot.getChildren() = MutableArrayRef(InlineTreeVec);
 
   Data = Start;
   End = Data + Size;
   uint64_t LastAddr = 0;
-  uint32_t Child = 0;
+  uint32_t CurChildIndex = 0;
   while (Data < End)
-    buildAddress2ProbeMap<true>(&DummyInlineRoot, LastAddr, GuidFilter,
-                                FuncStartAddrs, Child);
+    CurChildIndex += buildAddress2ProbeMap<true>(
+        &DummyInlineRoot, LastAddr, GuidFilter, FuncStartAddrs, CurChildIndex);
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
 
   std::vector<std::pair<uint64_t, uint32_t>> SortedA2P(ProbeCount);
   for (const auto &[I, Probe] : llvm::enumerate(PseudoProbeVec))
     SortedA2P[I] = {Probe.getAddress(), I};
-  llvm::stable_sort(SortedA2P, llvm::less_first());
+  llvm::sort(SortedA2P);
   Address2ProbesMap.reserve(ProbeCount);
   for (const uint32_t I : llvm::make_second_range(SortedA2P))
     Address2ProbesMap.emplace_back(PseudoProbeVec[I]);

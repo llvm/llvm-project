@@ -530,15 +530,23 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           MachineInstr *ElemMI = MRI.getVRegDef(MI.getOperand(1).getReg());
           assert(ElemMI);
 
-          if (ElemMI->getOpcode() == TargetOpcode::G_CONSTANT)
+          if (ElemMI->getOpcode() == TargetOpcode::G_CONSTANT) {
             ElemTy = ElemMI->getOperand(1).getCImm()->getType();
-          else if (ElemMI->getOpcode() == TargetOpcode::G_FCONSTANT)
+          } else if (ElemMI->getOpcode() == TargetOpcode::G_FCONSTANT) {
             ElemTy = ElemMI->getOperand(1).getFPImm()->getType();
+          } else {
+            // There may be a case when we already know Reg's type.
+            MachineInstr *NextMI = MI.getNextNode();
+            if (!NextMI || NextMI->getOpcode() != SPIRV::ASSIGN_TYPE ||
+                NextMI->getOperand(1).getReg() != Reg)
+              llvm_unreachable("Unexpected opcode");
+          }
+          if (ElemTy)
+            Ty = VectorType::get(
+                ElemTy, MI.getNumExplicitOperands() - MI.getNumExplicitDefs(),
+                false);
           else
-            llvm_unreachable("Unexpected opcode");
-          unsigned NumElts =
-              MI.getNumExplicitOperands() - MI.getNumExplicitDefs();
-          Ty = VectorType::get(ElemTy, NumElts, false);
+            NeedAssignType = false;
         }
         if (NeedAssignType)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
