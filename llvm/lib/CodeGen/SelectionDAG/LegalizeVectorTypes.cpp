@@ -885,7 +885,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
   return DAG.getBuildVector(N->getValueType(0), SDLoc(N), Ops);
 }
 
-/// The inserted subvector is to be scalarized - use insert vector element instead.
+/// The inserted subvector is to be scalarized - use insert vector element
+/// instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
                                                           unsigned OpNo) {
   auto Elt = GetScalarizedVector(N->getOperand(OpNo));
