@@ -252,7 +252,6 @@ static bool expandNormalizeIntrinsic(CallInst *Orig) {
     return true;
   }
 
-  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
   unsigned XVecSize = XVec->getNumElements();
   Value *DotProduct = nullptr;
   // use the dot intrinsic corresponding to the vector size
