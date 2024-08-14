@@ -26994,11 +26994,6 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   bool IsBothSplatVector = N0.getOpcode() == ISD::SPLAT_VECTOR &&
                            N1.getOpcode() == ISD::SPLAT_VECTOR;
 
-  // If binop is legal or custom on EltVT, scalarize should be profitable. The
-  // check is the same as isOperationLegalOrCustom without isTypeLegal. We
-  // can do this only before LegalTypes, because it may generate illegal `op
-  // EltVT` from legal `op VT (splat EltVT)`, where EltVT is not legal type but
-  // the result type of splat is legal.
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
