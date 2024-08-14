@@ -219,7 +219,6 @@ DataLayout::DataLayout(StringRef LayoutString) {
   DefaultGlobalsAddrSpace = 0;
   TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
   ManglingMode = MM_None;
-  StructAlignment = LayoutAlignElem::get(Align(1), Align(8), 0);
 
   // Default alignments
   for (const auto &[Kind, Layout] : DefaultAlignments) {
@@ -250,8 +249,9 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   IntAlignments = Other.IntAlignments;
   FloatAlignments = Other.FloatAlignments;
   VectorAlignments = Other.VectorAlignments;
-  StructAlignment = Other.StructAlignment;
   Pointers = Other.Pointers;
+  StructABIAlignment = Other.StructABIAlignment;
+  StructPrefAlignment = Other.StructPrefAlignment;
   NonIntegralAddressSpaces = Other.NonIntegralAddressSpaces;
   return *this;
 }
@@ -271,7 +271,9 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          IntAlignments == Other.IntAlignments &&
          FloatAlignments == Other.FloatAlignments &&
          VectorAlignments == Other.VectorAlignments &&
-         StructAlignment == Other.StructAlignment && Pointers == Other.Pointers;
+         Pointers == Other.Pointers &&
+         StructABIAlignment == Other.StructABIAlignment &&
+         StructPrefAlignment == Other.StructPrefAlignment;
 }
 
 Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
@@ -628,8 +630,8 @@ Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
   SmallVectorImpl<LayoutAlignElem> *Alignments;
   switch (AlignType) {
   case AGGREGATE_ALIGN:
-    StructAlignment.ABIAlign = ABIAlign;
-    StructAlignment.PrefAlign = PrefAlign;
+    StructABIAlignment = ABIAlign;
+    StructPrefAlignment = PrefAlign;
     return Error::success();
   case INTEGER_ALIGN:
     Alignments = &IntAlignments;
@@ -801,8 +803,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    const Align Align =
-        abi_or_pref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
+    const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:

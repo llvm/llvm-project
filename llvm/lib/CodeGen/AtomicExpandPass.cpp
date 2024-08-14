@@ -441,6 +441,8 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
 
 AtomicRMWInst *
 AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
+  assert(RMWI->getOperation() == AtomicRMWInst::Xchg);
+
   auto *M = RMWI->getModule();
   Type *NewTy =
       getCorrespondingIntegerType(RMWI->getType(), M->getDataLayout());
