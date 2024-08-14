@@ -412,12 +412,10 @@ bool RuntimePointerChecking::needsChecking(
 /// Return nullptr in case we couldn't find an answer.
 static const SCEV *getMinFromExprs(const SCEV *I, const SCEV *J,
                                    ScalarEvolution *SE) {
-  const SCEV *Diff = SE->getMinusSCEV(J, I);
-  const SCEVConstant *C = dyn_cast<const SCEVConstant>(Diff);
-
-  if (!C)
+  std::optional<APInt> Diff = SE->computeConstantDifference(J, I);
+  if (!Diff)
     return nullptr;
-  return C->getValue()->isNegative() ? J : I;
+  return Diff->isNegative() ? J : I;
 }
 
 bool RuntimeCheckingPtrGroup::addPointer(
