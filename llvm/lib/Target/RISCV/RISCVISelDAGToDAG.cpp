@@ -1451,8 +1451,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     const uint64_t C1 = N1C->getZExtValue();
 
-    // Turn (and (sra x, c2), c1) -> (srli (srai x, c2-c3), c3) if c1 is a mask
-    // with c3 leading zeros and c2 is larger than c3.
     if (N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
         N0.hasOneUse()) {
       unsigned C2 = N0.getConstantOperandVal(1);
@@ -1466,6 +1464,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                   X.getOpcode() == ISD::SHL &&
                   isa<ConstantSDNode>(X.getOperand(1)) &&
                   X.getConstantOperandVal(1) == 32;
+      // Turn (and (sra x, c2), c1) -> (srli (srai x, c2-c3), c3) if c1 is a
+      // mask with c3 leading zeros and c2 is larger than c3.
       if (isMask_64(C1) && !Skip) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 > Leading) {
@@ -1476,6 +1476,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
               RISCV::SRLI, DL, VT, SDValue(SRAI, 0),
               CurDAG->getTargetConstant(Leading, DL, VT));
           ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+
+      // Look for (and (sra y, c2), c1) where c1 is a shifted mask with c3
+      // leading zeros and c4 trailing zeros. If c2 is greater than c3, we can
+      // use (slli (srli (srai y, c2 - c3), c3 + c4), c4).
+      if (isShiftedMask_64(C1)) {
+        unsigned Leading = XLen - llvm::bit_width(C1);
+        unsigned Trailing = llvm::countr_zero(C1);
+        if (C2 > Leading && Trailing > 0) {
+          SDNode *SRAI = CurDAG->getMachineNode(
+              RISCV::SRAI, DL, VT, N0.getOperand(0),
+              CurDAG->getTargetConstant(C2 - Leading, DL, VT));
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, SDValue(SRAI, 0),
+              CurDAG->getTargetConstant(Leading + Trailing, DL, VT));
+          SDNode *SLLI = CurDAG->getMachineNode(
+              RISCV::SLLI, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI);
           return;
         }
       }
