@@ -202,6 +202,9 @@ private:
                              ///< ID and FunctionType maps to the extension that
                              ///< is used to make the intrinsic name unique.
 
+  /// llvm.module.flags metadata
+  NamedMDNode *ModuleFlags = nullptr;
+
   friend class Constant;
 
 /// @}
@@ -528,7 +531,7 @@ public:
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// This method returns null if there are no module-level flags.
-  NamedMDNode *getModuleFlagsMetadata() const;
+  NamedMDNode *getModuleFlagsMetadata() const { return ModuleFlags; }
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// If module-level flags aren't found, it creates the named metadata that
