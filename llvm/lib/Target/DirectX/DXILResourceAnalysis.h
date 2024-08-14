@@ -57,6 +57,10 @@ public:
   /// Calculate the DXILResource for the module.
   bool runOnModule(Module &M) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
   void print(raw_ostream &O, const Module *M = nullptr) const override;
 };
 } // namespace llvm
