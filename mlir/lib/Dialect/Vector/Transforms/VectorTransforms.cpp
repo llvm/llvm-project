@@ -979,15 +979,18 @@ struct ReorderElementwiseOpsOnBroadcast final
     if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
+      return rewriter.notifyMatchFailure(
+          op, "Op doesn't have ElementwiseMappableTraits");
+    if (op->getNumOperands() == 0)
       return failure();
-    if (op->getNumOperands() == 0 ||
-        op->getResults()[0].getType() != op->getOperand(0).getType()) {
-      return failure();
-    }
-    // Avoid operations that only accept vector types, since broadcast
-    // source might be scalar types.
+    if (op->getResults()[0].getType() != op->getOperand(0).getType())
+      return rewriter.notifyMatchFailure(op,
+                                         "result and operand type mismatch");
     if (isa<vector::FMAOp>(op)) {
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op,
+          "Op only accepts vector types - not supported as broadcast source "
+          "might be a scalar");
     }
 
     // Get the type of the lhs operand
