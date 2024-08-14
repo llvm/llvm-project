@@ -5,13 +5,10 @@ from clang.cindex import SourceLocation, SourceRange
 from .util import get_tu
 
 
-def create_location(tu, line, column):
-    return SourceLocation.from_position(tu, tu.get_file(tu.spelling), line, column)
-
-
 def create_range(tu, line1, column1, line2, column2):
     return SourceRange.from_locations(
-        create_location(tu, line1, column1), create_location(tu, line2, column2)
+        SourceLocation.from_position(tu, tu.get_file(tu.spelling), line1, column1),
+        SourceLocation.from_position(tu, tu.get_file(tu.spelling), line2, column2),
     )
 
 
@@ -23,15 +20,16 @@ aaaaa
 aaaaa
 aaaaa"""
         )
+        file = tu.get_file(tu.spelling)
 
-        l13 = create_location(tu, 1, 3)
-        l21 = create_location(tu, 2, 1)
-        l22 = create_location(tu, 2, 2)
-        l23 = create_location(tu, 2, 3)
-        l24 = create_location(tu, 2, 4)
-        l25 = create_location(tu, 2, 5)
-        l33 = create_location(tu, 3, 3)
-        l31 = create_location(tu, 3, 1)
+        l13 = SourceLocation.from_position(tu, file, 1, 3)
+        l21 = SourceLocation.from_position(tu, file, 2, 1)
+        l22 = SourceLocation.from_position(tu, file, 2, 2)
+        l23 = SourceLocation.from_position(tu, file, 2, 3)
+        l24 = SourceLocation.from_position(tu, file, 2, 4)
+        l25 = SourceLocation.from_position(tu, file, 2, 5)
+        l33 = SourceLocation.from_position(tu, file, 3, 3)
+        l31 = SourceLocation.from_position(tu, file, 3, 1)
         r22_24 = create_range(tu, 2, 2, 2, 4)
         r23_23 = create_range(tu, 2, 3, 2, 3)
         r24_32 = create_range(tu, 2, 4, 3, 2)

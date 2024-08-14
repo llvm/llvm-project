@@ -270,14 +270,6 @@ class SourceLocation(Structure):
             self._data = (f, int(l.value), int(c.value), int(o.value))
         return self._data
 
-    def __le__(self, other):
-        if self.line < other.line:
-            return True
-        if self.line == other.line and self.column <= other.column:
-            return True
-        # when self.line > other.line
-        return False
-
     @staticmethod
     def from_position(tu, file, line, column):
         """
@@ -326,6 +318,12 @@ class SourceLocation(Structure):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other: SourceLocation) -> bool:
+        return conf.lib.clang_lessThanLocations(self, other)  # type: ignore [no-any-return]
+
+    def __le__(self, other: SourceLocation) -> bool:
+        return self < other or self == other
 
     def __repr__(self):
         if self.file:
@@ -3905,6 +3903,7 @@ functionList: list[LibFunc] = [
     ("clang_isUnexposed", [CursorKind], bool),
     ("clang_isVirtualBase", [Cursor], bool),
     ("clang_isVolatileQualifiedType", [Type], bool),
+    ("clang_lessThanLocations", [SourceLocation, SourceLocation], bool),
     (
         "clang_parseTranslationUnit",
         [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int],

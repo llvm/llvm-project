@@ -50,6 +50,18 @@ unsigned clang_equalLocations(CXSourceLocation loc1, CXSourceLocation loc2) {
           loc1.int_data == loc2.int_data);
 }
 
+unsigned clang_lessThanLocations(CXSourceLocation loc1, CXSourceLocation loc2) {
+  const SourceLocation Loc1 = SourceLocation::getFromRawEncoding(loc1.int_data);
+  const SourceLocation Loc2 = SourceLocation::getFromRawEncoding(loc2.int_data);
+
+  const SourceManager &SM =
+      *static_cast<const SourceManager *>(loc1.ptr_data[0]);
+  if (!SM.isWrittenInSameFile(Loc1, Loc2))
+    return 0;
+
+  return Loc1 < Loc2;
+}
+
 CXSourceRange clang_getNullRange() {
   CXSourceRange Result = { { nullptr, nullptr }, 0, 0 };
   return Result;
