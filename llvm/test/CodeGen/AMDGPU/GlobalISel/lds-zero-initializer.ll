@@ -11,8 +11,8 @@
 define amdgpu_kernel void @load_zeroinit_lds_global(ptr addrspace(1) %out, i1 %p) {
   ; GCN-LABEL: name: load_zeroinit_lds_global
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN:   liveins: $sgpr2_sgpr3
-  ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+  ; GCN:   liveins: $sgpr4_sgpr5
+  ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
   ; GFX8:  [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 40
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @lds
   ; GFX8:  [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_1]], [[S_MOV_B32_]], implicit-def dead $scc
@@ -31,7 +31,7 @@ define amdgpu_kernel void @load_zeroinit_lds_global(ptr addrspace(1) %out, i1 %p
   ; GFX9:  [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; GFX9:  FLAT_STORE_DWORD [[COPY2]], [[DS_READ_B32_]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   S_ENDPGM 0
- %gep = getelementptr [256 x i32], ptr addrspace(3) @lds, i32 0, i32 10
+  %gep = getelementptr [256 x i32], ptr addrspace(3) @lds, i32 0, i32 10
   %ld = load i32, ptr addrspace(3) %gep
   store i32 %ld, ptr addrspace(1) %out
   ret void

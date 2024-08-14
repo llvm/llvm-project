@@ -287,20 +287,24 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  {
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_add_u32 s0, s6, 8
-; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; GFX8V5-NEXT:    s_addc_u32 s1, s7, 0
-; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0xd0
+; GFX8V5-NEXT:    s_add_u32 s2, s6, 8
+; GFX8V5-NEXT:    s_addc_u32 s3, s7, 0
+; GFX8V5-NEXT:    v_mov_b32_e32 v2, s8
+; GFX8V5-NEXT:    v_mov_b32_e32 v3, s9
+; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX8V5-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8V5-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX8V5-NEXT:    v_mov_b32_e32 v2, s8
-; GFX8V5-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s1
@@ -327,16 +331,18 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  {
 ;
 ; GFX9V5-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX9V5:       ; %bb.0:
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0xd0
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9V5-NEXT:    ; kill: killed $sgpr0_sgpr1
+; GFX9V5-NEXT:    ; kill: killed $sgpr4_sgpr5
+; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[0:1] glc
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[6:7] offset:8 glc
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
-; GFX9V5-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX9V5-NEXT:    v_mov_b32_e32 v1, s9
-; GFX9V5-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
