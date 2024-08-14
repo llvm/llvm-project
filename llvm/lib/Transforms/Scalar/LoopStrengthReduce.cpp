@@ -7174,8 +7174,6 @@ PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
 
 char LoopStrengthReduce::ID = 0;
 
-char &llvm::LoopStrengthReduceID = LoopStrengthReduce::ID;
-
 INITIALIZE_PASS_BEGIN(LoopStrengthReduce, "loop-reduce",
                       "Loop Strength Reduction", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

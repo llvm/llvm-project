@@ -201,9 +201,6 @@ namespace llvm {
   // register allocator.
   extern char &InitUndefID;
 
-  extern char &LoopStrengthReduceID;
-  extern char &LoopTermFoldID;
-
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///

@@ -336,6 +336,7 @@ public:
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
     setEnableSinkAndFold(EnableSinkFold);
+    EnableLoopTailFold = true;
   }
 
   RISCVTargetMachine &getRISCVTargetMachine() const {
@@ -427,10 +428,8 @@ void RISCVPassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
   }
-  insertPass(&LoopStrengthReduceID, &LoopTermFoldID);
 
   TargetPassConfig::addIRPasses();
-
 }
 
 bool RISCVPassConfig::addPreISel() {

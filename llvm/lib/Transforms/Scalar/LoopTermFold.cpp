@@ -372,7 +372,6 @@ PreservedAnalyses LoopTermFoldPass::run(Loop &L, LoopAnalysisManager &AM,
 }
 
 char LoopTermFold::ID = 0;
-char &llvm::LoopTermFoldID = LoopTermFold::ID;
 
 INITIALIZE_PASS_BEGIN(LoopTermFold, "loop-term-fold",
                       "Loop Terminator Folding", false, false)

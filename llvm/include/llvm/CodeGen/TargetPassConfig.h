@@ -140,6 +140,9 @@ protected:
   /// callers.
   bool RequireCodeGenSCCOrder = false;
 
+  /// Enable LoopTailFold immediately after LSR
+  bool EnableLoopTailFold = false;
+
   /// Add the actual instruction selection passes. This does not include
   /// preparation passes on IR.
   bool addCoreISelPasses();
