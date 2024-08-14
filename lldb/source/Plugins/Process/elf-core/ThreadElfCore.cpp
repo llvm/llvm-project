@@ -499,32 +499,25 @@ ELFLinuxPrPsInfo::Populate(const lldb::ProcessSP &process_sp) {
   static_assert(fname_len > 0, "This should always be non zero");
   const llvm::StringRef fname = info.GetNameAsStringRef();
   auto fname_begin = fname.begin();
-  std::copy(fname_begin,
-            std::next(fname_begin, std::min(fname_len, fname.size())),
-            prpsinfo.pr_fname);
+  std::copy_n(fname_begin, std::min(fname_len, fname.size()),
+              prpsinfo.pr_fname);
   prpsinfo.pr_fname[fname_len - 1] = '\0';
   auto args = info.GetArguments();
-  if (!args.empty()) {
-    constexpr size_t psargs_len = std::extent_v<decltype(prpsinfo.pr_psargs)>;
-    static_assert(psargs_len > 0, "This should always be non zero");
-    size_t i = psargs_len;
-    auto argentry_iterator = std::begin(args);
-    char *psargs = prpsinfo.pr_psargs;
-    while (i > 0 && argentry_iterator != args.end()) {
-      llvm::StringRef argentry = argentry_iterator->ref();
-      size_t len = std::min(i, argentry.size());
-      auto arg_iterator = std::begin(argentry);
-      std::copy(arg_iterator, std::next(arg_iterator, len), psargs);
-      i -= len;
-      psargs += len;
-      if (i > 0) {
-        *(psargs++) = ' ';
-        --i;
-      }
-      ++argentry_iterator;
+  auto argentry_iterator = std::begin(args);
+  char *psargs = prpsinfo.pr_psargs;
+  char *psargs_end = std::end(prpsinfo.pr_psargs);
+  while (psargs < psargs_end && argentry_iterator != args.end()) {
+    llvm::StringRef argentry = argentry_iterator->ref();
+    size_t len =
+        std::min<size_t>(std::distance(psargs, psargs_end), argentry.size());
+    auto arg_iterator = std::begin(argentry);
+    psargs = std::copy_n(arg_iterator, len, psargs);
+    if (psargs != psargs_end) {
+      *(psargs++) = ' ';
     }
-    prpsinfo.pr_psargs[psargs_len - 1] = '\0';
+    ++argentry_iterator;
   }
+  *(psargs_end - 1) = '\0';
   return prpsinfo;
 }
 
