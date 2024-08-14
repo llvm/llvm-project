@@ -637,11 +637,11 @@ mlir::Value CIRGenModule::getGlobalValue(const Decl *D) {
   return CurCGF->symbolTable.lookup(D);
 }
 
-mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
-                                                 mlir::Location loc,
-                                                 StringRef name, mlir::Type t,
-                                                 bool isCst,
-                                                 mlir::Operation *insertPoint) {
+mlir::cir::GlobalOp
+CIRGenModule::createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
+                             StringRef name, mlir::Type t, bool isCst,
+                             mlir::cir::AddressSpaceAttr addrSpace,
+                             mlir::Operation *insertPoint) {
   mlir::cir::GlobalOp g;
   auto &builder = CGM.getBuilder();
   {
@@ -655,7 +655,8 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
     if (curCGF)
       builder.setInsertionPoint(curCGF->CurFn);
 
-    g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isCst);
+    g = builder.create<mlir::cir::GlobalOp>(
+        loc, name, t, isCst, GlobalLinkageKind::ExternalLinkage, addrSpace);
     if (!curCGF) {
       if (insertPoint)
         CGM.getModule().insert(insertPoint, g);
@@ -742,6 +743,12 @@ void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
   // If the types does not match, update all references to Old to the new type.
   auto OldTy = Old.getSymType();
   auto NewTy = New.getSymType();
+  mlir::cir::AddressSpaceAttr oldAS = Old.getAddrSpaceAttr();
+  mlir::cir::AddressSpaceAttr newAS = New.getAddrSpaceAttr();
+  // TODO(cir): If the AS differs, we should also update all references.
+  if (oldAS != newAS) {
+    llvm_unreachable("NYI");
+  }
   if (OldTy != NewTy) {
     auto OldSymUses = Old.getSymbolUses(theModule.getOperation());
     if (OldSymUses.has_value()) {
@@ -809,7 +816,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *Op, const VarDecl &D) const {
 /// mangled name but some other type.
 mlir::cir::GlobalOp
 CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
-                                   LangAS AddrSpace, const VarDecl *D,
+                                   LangAS langAS, const VarDecl *D,
                                    ForDefinition_t IsForDefinition) {
   // Lookup the entry, lazily creating it if necessary.
   mlir::cir::GlobalOp Entry;
@@ -818,8 +825,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     Entry = dyn_cast_or_null<mlir::cir::GlobalOp>(V);
   }
 
-  // unsigned TargetAS = astCtx.getTargetAddressSpace(AddrSpace);
+  mlir::cir::AddressSpaceAttr cirAS = builder.getAddrSpaceAttr(langAS);
   if (Entry) {
+    auto entryCIRAS = Entry.getAddrSpaceAttr();
     if (WeakRefReferences.erase(Entry)) {
       if (D && !D->hasAttr<WeakAttr>()) {
         auto LT = mlir::cir::GlobalLinkageKind::ExternalLinkage;
@@ -837,8 +845,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     if (langOpts.OpenMP && !langOpts.OpenMPSimd && D)
       getOpenMPRuntime().registerTargetGlobalVariable(D, Entry);
 
-    // TODO(cir): check TargetAS matches Entry address space
-    if (Entry.getSymType() == Ty && !MissingFeatures::addressSpaceInGlobalVar())
+    if (Entry.getSymType() == Ty && entryCIRAS == cirAS)
       return Entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -867,6 +874,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // TODO(cir): LLVM codegen makes sure the result is of the correct type
     // by issuing a address space cast.
+    if (entryCIRAS != cirAS)
+      llvm_unreachable("NYI");
 
     // (If global is requested for a definition, we always need to create a new
     // global, not just return a bitcast.)
@@ -874,7 +883,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
       return Entry;
   }
 
-  // TODO(cir): auto DAddrSpace = GetGlobalVarAddressSpace(D);
+  auto declCIRAS = builder.getAddrSpaceAttr(getGlobalVarAddressSpace(D));
   // TODO(cir): do we need to strip pointer casts for Entry?
 
   auto loc = getLoc(D->getSourceRange());
@@ -883,6 +892,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
   // mark it as such.
   auto GV = CIRGenModule::createGlobalOp(*this, loc, MangledName, Ty,
                                          /*isConstant=*/false,
+                                         /*addrSpace=*/declCIRAS,
                                          /*insertPoint=*/Entry.getOperation());
 
   // If we already created a global with the same mangled name (but different
@@ -992,8 +1002,7 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty,
 
   bool tlsAccess = D->getTLSKind() != VarDecl::TLS_None;
   auto g = buildGlobal(D, Ty, IsForDefinition);
-  auto ptrTy =
-      mlir::cir::PointerType::get(builder.getContext(), g.getSymType());
+  auto ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
   return builder.create<mlir::cir::GetGlobalOp>(
       getLoc(D->getSourceRange()), ptrTy, g.getSymName(), tlsAccess);
 }
@@ -1076,7 +1085,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
   QualType ASTTy = D->getType();
-  if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice)
+  if ((getLangOpts().OpenCL && ASTTy->isSamplerT()) ||
+      getLangOpts().OpenMPIsTargetDevice)
     llvm_unreachable("not implemented");
 
   // TODO(cir): LLVM's codegen uses a llvm::TrackingVH here. Is that
@@ -1409,7 +1419,7 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().OpenCL)
     return LangAS::opencl_private;
   if (getLangOpts().SYCLIsDevice || getLangOpts().CUDAIsDevice ||
-    (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
+      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
     llvm_unreachable("NYI");
   return LangAS::Default;
 }
@@ -3099,4 +3109,26 @@ mlir::cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() {
 
   // TODO(cir): support remaining source languages.
   llvm_unreachable("CIR does not yet support the given source language");
+}
+
+LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
+  if (langOpts.OpenCL) {
+    LangAS AS = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
+    assert(AS == LangAS::opencl_global || AS == LangAS::opencl_global_device ||
+           AS == LangAS::opencl_global_host || AS == LangAS::opencl_constant ||
+           AS == LangAS::opencl_local || AS >= LangAS::FirstTargetAddressSpace);
+    return AS;
+  }
+
+  if (langOpts.SYCLIsDevice &&
+      (!D || D->getType().getAddressSpace() == LangAS::Default))
+    llvm_unreachable("NYI");
+
+  if (langOpts.CUDA && langOpts.CUDAIsDevice)
+    llvm_unreachable("NYI");
+
+  if (langOpts.OpenMP)
+    llvm_unreachable("NYI");
+
+  return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, D);
 }

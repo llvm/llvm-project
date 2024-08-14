@@ -552,6 +552,15 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   return ABIArgInfo::getDirect(ResType);
 }
 
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(cir::CIRGenModule &CGM,
+                                           const clang::VarDecl *D) const {
+  assert(!CGM.getLangOpts().OpenCL &&
+         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return D ? D->getType().getAddressSpace() : LangAS::Default;
+}
+
 mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
     CIRGenFunction &CGF, mlir::Value Src, mlir::cir::AddressSpaceAttr SrcAddr,
     mlir::cir::AddressSpaceAttr DestAddr, mlir::Type DestTy,
