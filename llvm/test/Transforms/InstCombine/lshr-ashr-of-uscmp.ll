@@ -53,6 +53,18 @@ define i8 @scmp_to_sext(i32 %x, i32 %y) {
   ret i8 %2
 }
 
+define <4 x i8> @scmp_to_sext_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @scmp_to_sext_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
+;
+  %1 = call <4 x i8> @llvm.scmp(<4 x i32> %x, <4 x i32> %y)
+  %2 = ashr <4 x i8> %1, <i8 7, i8 7, i8 7, i8 7>
+  ret <4 x i8> %2
+}
+
 ; Negative test: incorrect shift amount
 define i8 @ucmp_to_zext_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_to_zext_neg1(
