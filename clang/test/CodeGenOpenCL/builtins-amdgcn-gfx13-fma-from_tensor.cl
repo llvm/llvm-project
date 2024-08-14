@@ -9,906 +9,905 @@ typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef __bf16 v2bf16 __attribute__((ext_vector_type(2)));
 typedef __bf16 v4bf16 __attribute__((ext_vector_type(4)));
 typedef __bf16 v8bf16 __attribute__((ext_vector_type(8)));
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i4.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i4.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i4_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_i4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_i4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u4.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u4.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u4_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_u4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_u4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.i8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i8_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_i8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_i8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.u8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u8_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_u8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_u8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.fp8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.fp8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_fp8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_fp8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf8.v4f32.v4f32(<4 x float> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_disable_4x2(global v4f* out, v4f acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_bf8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_bf8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v4f16.v4f16(<4 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_4x2(global v4h* out, v4h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_4x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v8f16.v8f16(<8 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_disable_8x4(global v8h* out, v8h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_4x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v8bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_disable_8x4(global v8bf16* out, v8bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_f16_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.f16.v4f32.v4f32(<4 x float> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.f16.v4f32.v4f32(<4 x float> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_f16_dequant_disable_4x2(global v4f* out, v4f acc, v2h resid_0, v2h resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_f16_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_f16_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_4x2(global v4h* out, v4h acc, v2h resid_0, v2h resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_4x4(global v4h* out, v4h acc, v2h resid_0, v2h resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.fma.from.tensor.f16.f16.v4f16.v4f16(<4 x half> [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_f16_dequant_disable_8x4(global v4h* out, v4h acc, v2h resid_0, v2h resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_f16_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf16.v4f32.v4f32(<4 x float> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.fma.from.tensor.f32.bf16.v4f32.v4f32(<4 x float> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_disable_4x2(global v4f* out, v4f acc, v2bf16 resid_0, v2bf16 resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_bf16_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_bf16_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 2, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_4x2(global v4bf16* out, v4bf16 acc, v2bf16 resid_0, v2bf16 resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 1, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_4x4(global v4bf16* out, v4bf16 acc, v2bf16 resid_0, v2bf16 resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf16.v4bf16.v4bf16(<4 x bfloat> [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 0, i1 true)
 // CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf16_dequant_disable_8x4(global v4bf16* out, v4bf16 acc, v2bf16 resid_0, v2bf16 resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_8x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf16_8x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.i4.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.i4.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i4_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_i4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_i4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i4_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i4_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i4_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.u4.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.u4.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u4_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_u4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_u4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u4.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u4_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u4_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u4.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u4_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.i8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.i8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_i8_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_i8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_i8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.i8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_i8_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_i8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.i8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_i8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.u8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.u8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_u8_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_u8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_u8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.u8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_u8_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_u8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.u8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_u8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.fp8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.fp8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.fp8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_fp8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.fp8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_fp8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.bf8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.bf8.f32.f32(float [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_enable_4x2(global float* out, float acc, int resid_0, int resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_enable_4x2(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.fma.from.tensor.f16.bf8.v2f16.v2f16(<2 x half> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x half> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_enable_4x4(global v2h* out, v2h acc, int resid_0, int resid_1, v2h scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f16_bf8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_enable_4x2(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_enable_4x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x bfloat> @llvm.amdgcn.fma.from.tensor.bf16.bf8.v2bf16.v2bf16(<2 x bfloat> [[ACC:%.*]], i32 [[RESID_0:%.*]], i32 [[RESID_1:%.*]], <2 x bfloat> [[SCALE:%.*]], i32 3, i1 true)
 // CHECK-GFX1300-NEXT:    store <2 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_enable_4x4(global v2bf16* out, v2bf16 acc, int resid_0, int resid_1, v2bf16 scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x4(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_bf16_bf8_dequant_4x4(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_f16_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.f16.f32.f32(float [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.f16.f32.f32(float [[ACC:%.*]], <2 x half> [[RESID_0:%.*]], <2 x half> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_f16_dequant_enable_4x2(global float* out, float acc, v2h resid_0, v2h resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_f16_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_f16_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_enable_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.bf16.f32.f32(float [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.fma.from.tensor.f32.bf16.f32.f32(float [[ACC:%.*]], <2 x bfloat> [[RESID_0:%.*]], <2 x bfloat> [[RESID_1:%.*]], float [[SCALE:%.*]], i32 4, i1 true)
 // CHECK-GFX1300-NEXT:    store float [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA7]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void test_amdgcn_builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_enable_4x2(global float* out, float acc, v2bf16 resid_0, v2bf16 resid_1, float scale)
 {
-   *out = __builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_4x2(acc, resid_0, resid_1, scale, 42, true);
+   *out = __builtin_amdgcn_fma_from_tensor_f32_bf16_dequant_4x2(acc, resid_0, resid_1, scale, 0, true);
 }
 
