@@ -548,6 +548,9 @@ def Tuples2Rsp   : RegisterTuples<[gsub_0, gsub_1],
 // Register class representing a pair of even-odd GPRs.
 def GPRPair : RegisterClass<"ARM", [untyped], 64, (add Tuples2Rnosp, Tuples2Rsp)> {
   let Size = 64; // 2 x 32 bits, we have no predefined type of that size.
+  // GPRPair must be allocated before GPR so that CMP_SWAP_64 can always be
+  // allocated when both the frame pointer and base pointer are reserved.
+  let AllocationPriority = 1;
 }
 
 // Register class representing a pair of even-odd GPRs, except (R12, SP).

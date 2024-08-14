@@ -9,21 +9,21 @@
 define i64 @test1(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test1:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB0_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    adds r6, r4, r1
-; CHECK-LE-NEXT:    adc r7, r5, r2
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    adds r4, r0, r9
+; CHECK-LE-NEXT:    adc r5, r1, r2
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB0_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test1:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -45,21 +45,21 @@ define i64 @test1(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test1:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB0_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    adds r7, r5, r2
-; CHECK-BE-NEXT:    adc r6, r4, r1
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    adds r5, r1, r2
+; CHECK-BE-NEXT:    adc r4, r0, r12
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB0_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test1:
 ; CHECK-THUMB-BE:       @ %bb.0:
@@ -113,21 +113,21 @@ define i64 @test1(ptr %ptr, i64 %val) {
 define i64 @test2(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test2:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB1_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    subs r6, r4, r1
-; CHECK-LE-NEXT:    sbc r7, r5, r2
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    subs r4, r0, r9
+; CHECK-LE-NEXT:    sbc r5, r1, r2
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB1_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test2:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -149,21 +149,21 @@ define i64 @test2(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test2:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB1_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    subs r7, r5, r2
-; CHECK-BE-NEXT:    sbc r6, r4, r1
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    subs r5, r1, r2
+; CHECK-BE-NEXT:    sbc r4, r0, r12
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB1_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test2:
 ; CHECK-THUMB-BE:       @ %bb.0:
@@ -217,21 +217,21 @@ define i64 @test2(ptr %ptr, i64 %val) {
 define i64 @test3(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test3:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB2_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    and r6, r4, r1
-; CHECK-LE-NEXT:    and r7, r5, r2
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    and r4, r0, r9
+; CHECK-LE-NEXT:    and r5, r1, r2
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB2_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LABEL: test3:
 ; CHECK-THUMB:       @ %bb.0:
@@ -253,21 +253,21 @@ define i64 @test3(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test3:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB2_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    and r6, r4, r1
-; CHECK-BE-NEXT:    and r7, r5, r2
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    and r4, r0, r12
+; CHECK-BE-NEXT:    and r5, r1, r2
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB2_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-7M-LABEL: test3:
 ; CHECK-7M:       @ %bb.0:
@@ -303,21 +303,21 @@ define i64 @test3(ptr %ptr, i64 %val) {
 define i64 @test4(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test4:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB3_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    orr r6, r4, r1
-; CHECK-LE-NEXT:    orr r7, r5, r2
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    orr r4, r0, r9
+; CHECK-LE-NEXT:    orr r5, r1, r2
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB3_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LABEL: test4:
 ; CHECK-THUMB:       @ %bb.0:
@@ -339,21 +339,21 @@ define i64 @test4(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test4:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB3_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    orr r6, r4, r1
-; CHECK-BE-NEXT:    orr r7, r5, r2
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    orr r4, r0, r12
+; CHECK-BE-NEXT:    orr r5, r1, r2
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB3_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-7M-LABEL: test4:
 ; CHECK-7M:       @ %bb.0:
@@ -389,21 +389,21 @@ define i64 @test4(ptr %ptr, i64 %val) {
 define i64 @test5(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test5:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB4_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    eor r6, r4, r1
-; CHECK-LE-NEXT:    eor r7, r5, r2
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    eor r4, r0, r9
+; CHECK-LE-NEXT:    eor r5, r1, r2
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB4_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LABEL: test5:
 ; CHECK-THUMB:       @ %bb.0:
@@ -425,21 +425,21 @@ define i64 @test5(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test5:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB4_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    eor r6, r4, r1
-; CHECK-BE-NEXT:    eor r7, r5, r2
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    eor r4, r0, r12
+; CHECK-BE-NEXT:    eor r5, r1, r2
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB4_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-7M-LABEL: test5:
 ; CHECK-7M:       @ %bb.0:
@@ -846,28 +846,28 @@ define void @test9(ptr %ptr, i64 %val) {
 define i64 @test10(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test10:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB9_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    mov r7, r2
-; CHECK-LE-NEXT:    subs r3, r1, r4
-; CHECK-LE-NEXT:    sbcs r3, r2, r5
-; CHECK-LE-NEXT:    mov r3, #0
-; CHECK-LE-NEXT:    movwge r3, #1
-; CHECK-LE-NEXT:    cmp r3, #0
-; CHECK-LE-NEXT:    movne r7, r5
-; CHECK-LE-NEXT:    mov r6, r1
-; CHECK-LE-NEXT:    movne r6, r4
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    subs r5, r9, r0
+; CHECK-LE-NEXT:    sbcs r5, r2, r1
+; CHECK-LE-NEXT:    mov r5, #0
+; CHECK-LE-NEXT:    movwge r5, #1
+; CHECK-LE-NEXT:    cmp r5, #0
+; CHECK-LE-NEXT:    mov r5, r2
+; CHECK-LE-NEXT:    movne r5, r1
+; CHECK-LE-NEXT:    mov r4, r9
+; CHECK-LE-NEXT:    movne r4, r0
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB9_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test10:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -898,28 +898,28 @@ define i64 @test10(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test10:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB9_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    mov r7, r2
-; CHECK-BE-NEXT:    subs r3, r2, r5
-; CHECK-BE-NEXT:    sbcs r3, r1, r4
-; CHECK-BE-NEXT:    mov r3, #0
-; CHECK-BE-NEXT:    movwge r3, #1
-; CHECK-BE-NEXT:    cmp r3, #0
-; CHECK-BE-NEXT:    movne r7, r5
-; CHECK-BE-NEXT:    mov r6, r1
-; CHECK-BE-NEXT:    movne r6, r4
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    subs r5, r2, r1
+; CHECK-BE-NEXT:    sbcs r5, r12, r0
+; CHECK-BE-NEXT:    mov r5, #0
+; CHECK-BE-NEXT:    movwge r5, #1
+; CHECK-BE-NEXT:    cmp r5, #0
+; CHECK-BE-NEXT:    mov r5, r2
+; CHECK-BE-NEXT:    movne r5, r1
+; CHECK-BE-NEXT:    mov r4, r12
+; CHECK-BE-NEXT:    movne r4, r0
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB9_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test10:
 ; CHECK-THUMB-BE:       @ %bb.0:
@@ -1033,28 +1033,28 @@ define i64 @test10(ptr %ptr, i64 %val) {
 define i64 @test11(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test11:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB10_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    mov r7, r2
-; CHECK-LE-NEXT:    subs r3, r1, r4
-; CHECK-LE-NEXT:    sbcs r3, r2, r5
-; CHECK-LE-NEXT:    mov r3, #0
-; CHECK-LE-NEXT:    movwhs r3, #1
-; CHECK-LE-NEXT:    cmp r3, #0
-; CHECK-LE-NEXT:    movne r7, r5
-; CHECK-LE-NEXT:    mov r6, r1
-; CHECK-LE-NEXT:    movne r6, r4
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    subs r5, r9, r0
+; CHECK-LE-NEXT:    sbcs r5, r2, r1
+; CHECK-LE-NEXT:    mov r5, #0
+; CHECK-LE-NEXT:    movwhs r5, #1
+; CHECK-LE-NEXT:    cmp r5, #0
+; CHECK-LE-NEXT:    mov r5, r2
+; CHECK-LE-NEXT:    movne r5, r1
+; CHECK-LE-NEXT:    mov r4, r9
+; CHECK-LE-NEXT:    movne r4, r0
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB10_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test11:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -1085,28 +1085,28 @@ define i64 @test11(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test11:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB10_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    mov r7, r2
-; CHECK-BE-NEXT:    subs r3, r2, r5
-; CHECK-BE-NEXT:    sbcs r3, r1, r4
-; CHECK-BE-NEXT:    mov r3, #0
-; CHECK-BE-NEXT:    movwhs r3, #1
-; CHECK-BE-NEXT:    cmp r3, #0
-; CHECK-BE-NEXT:    movne r7, r5
-; CHECK-BE-NEXT:    mov r6, r1
-; CHECK-BE-NEXT:    movne r6, r4
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    subs r5, r2, r1
+; CHECK-BE-NEXT:    sbcs r5, r12, r0
+; CHECK-BE-NEXT:    mov r5, #0
+; CHECK-BE-NEXT:    movwhs r5, #1
+; CHECK-BE-NEXT:    cmp r5, #0
+; CHECK-BE-NEXT:    mov r5, r2
+; CHECK-BE-NEXT:    movne r5, r1
+; CHECK-BE-NEXT:    mov r4, r12
+; CHECK-BE-NEXT:    movne r4, r0
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB10_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test11:
 ; CHECK-THUMB-BE:       @ %bb.0:
@@ -1220,28 +1220,28 @@ define i64 @test11(ptr %ptr, i64 %val) {
 define i64 @test12(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test12:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB11_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    mov r7, r2
-; CHECK-LE-NEXT:    subs r3, r1, r4
-; CHECK-LE-NEXT:    sbcs r3, r2, r5
-; CHECK-LE-NEXT:    mov r3, #0
-; CHECK-LE-NEXT:    movwlt r3, #1
-; CHECK-LE-NEXT:    cmp r3, #0
-; CHECK-LE-NEXT:    movne r7, r5
-; CHECK-LE-NEXT:    mov r6, r1
-; CHECK-LE-NEXT:    movne r6, r4
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    subs r5, r9, r0
+; CHECK-LE-NEXT:    sbcs r5, r2, r1
+; CHECK-LE-NEXT:    mov r5, #0
+; CHECK-LE-NEXT:    movwlt r5, #1
+; CHECK-LE-NEXT:    cmp r5, #0
+; CHECK-LE-NEXT:    mov r5, r2
+; CHECK-LE-NEXT:    movne r5, r1
+; CHECK-LE-NEXT:    mov r4, r9
+; CHECK-LE-NEXT:    movne r4, r0
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB11_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test12:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -1272,28 +1272,28 @@ define i64 @test12(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test12:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB11_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    mov r7, r2
-; CHECK-BE-NEXT:    subs r3, r2, r5
-; CHECK-BE-NEXT:    sbcs r3, r1, r4
-; CHECK-BE-NEXT:    mov r3, #0
-; CHECK-BE-NEXT:    movwlt r3, #1
-; CHECK-BE-NEXT:    cmp r3, #0
-; CHECK-BE-NEXT:    movne r7, r5
-; CHECK-BE-NEXT:    mov r6, r1
-; CHECK-BE-NEXT:    movne r6, r4
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    subs r5, r2, r1
+; CHECK-BE-NEXT:    sbcs r5, r12, r0
+; CHECK-BE-NEXT:    mov r5, #0
+; CHECK-BE-NEXT:    movwlt r5, #1
+; CHECK-BE-NEXT:    cmp r5, #0
+; CHECK-BE-NEXT:    mov r5, r2
+; CHECK-BE-NEXT:    movne r5, r1
+; CHECK-BE-NEXT:    mov r4, r12
+; CHECK-BE-NEXT:    movne r4, r0
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB11_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test12:
 ; CHECK-THUMB-BE:       @ %bb.0:
@@ -1407,28 +1407,28 @@ define i64 @test12(ptr %ptr, i64 %val) {
 define i64 @test13(ptr %ptr, i64 %val) {
 ; CHECK-LE-LABEL: test13:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, lr}
+; CHECK-LE-NEXT:    mov r9, r1
+; CHECK-LE-NEXT:    mov r12, r0
 ; CHECK-LE-NEXT:    dmb ish
 ; CHECK-LE-NEXT:  LBB12_1: @ %atomicrmw.start
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-LE-NEXT:    mov r7, r2
-; CHECK-LE-NEXT:    subs r3, r1, r4
-; CHECK-LE-NEXT:    sbcs r3, r2, r5
-; CHECK-LE-NEXT:    mov r3, #0
-; CHECK-LE-NEXT:    movwlo r3, #1
-; CHECK-LE-NEXT:    cmp r3, #0
-; CHECK-LE-NEXT:    movne r7, r5
-; CHECK-LE-NEXT:    mov r6, r1
-; CHECK-LE-NEXT:    movne r6, r4
-; CHECK-LE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-LE-NEXT:    ldrexd r0, r1, [r12]
+; CHECK-LE-NEXT:    subs r5, r9, r0
+; CHECK-LE-NEXT:    sbcs r5, r2, r1
+; CHECK-LE-NEXT:    mov r5, #0
+; CHECK-LE-NEXT:    movwlo r5, #1
+; CHECK-LE-NEXT:    cmp r5, #0
+; CHECK-LE-NEXT:    mov r5, r2
+; CHECK-LE-NEXT:    movne r5, r1
+; CHECK-LE-NEXT:    mov r4, r9
+; CHECK-LE-NEXT:    movne r4, r0
+; CHECK-LE-NEXT:    strexd r3, r4, r5, [r12]
 ; CHECK-LE-NEXT:    cmp r3, #0
 ; CHECK-LE-NEXT:    bne LBB12_1
 ; CHECK-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-LE-NEXT:    mov r0, r4
-; CHECK-LE-NEXT:    mov r1, r5
 ; CHECK-LE-NEXT:    dmb ish
-; CHECK-LE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test13:
 ; CHECK-THUMB-LE:       @ %bb.0:
@@ -1459,28 +1459,28 @@ define i64 @test13(ptr %ptr, i64 %val) {
 ;
 ; CHECK-BE-LABEL: test13:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, lr}
+; CHECK-BE-NEXT:    mov r12, r1
+; CHECK-BE-NEXT:    mov lr, r0
 ; CHECK-BE-NEXT:    dmb ish
 ; CHECK-BE-NEXT:  .LBB12_1: @ %atomicrmw.start
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-BE-NEXT:    mov r7, r2
-; CHECK-BE-NEXT:    subs r3, r2, r5
-; CHECK-BE-NEXT:    sbcs r3, r1, r4
-; CHECK-BE-NEXT:    mov r3, #0
-; CHECK-BE-NEXT:    movwlo r3, #1
-; CHECK-BE-NEXT:    cmp r3, #0
-; CHECK-BE-NEXT:    movne r7, r5
-; CHECK-BE-NEXT:    mov r6, r1
-; CHECK-BE-NEXT:    movne r6, r4
-; CHECK-BE-NEXT:    strexd r3, r6, r7, [r0]
+; CHECK-BE-NEXT:    ldrexd r0, r1, [lr]
+; CHECK-BE-NEXT:    subs r5, r2, r1
+; CHECK-BE-NEXT:    sbcs r5, r12, r0
+; CHECK-BE-NEXT:    mov r5, #0
+; CHECK-BE-NEXT:    movwlo r5, #1
+; CHECK-BE-NEXT:    cmp r5, #0
+; CHECK-BE-NEXT:    mov r5, r2
+; CHECK-BE-NEXT:    movne r5, r1
+; CHECK-BE-NEXT:    mov r4, r12
+; CHECK-BE-NEXT:    movne r4, r0
+; CHECK-BE-NEXT:    strexd r3, r4, r5, [lr]
 ; CHECK-BE-NEXT:    cmp r3, #0
 ; CHECK-BE-NEXT:    bne .LBB12_1
 ; CHECK-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-BE-NEXT:    mov r0, r4
-; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    dmb ish
-; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, pc}
 ;
 ; CHECK-THUMB-BE-LABEL: test13:
 ; CHECK-THUMB-BE:       @ %bb.0:

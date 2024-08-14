@@ -127,35 +127,35 @@ define void @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_add_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB3_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    adds r6, r4, r0
-; CHECK-ARM-LE-NEXT:    adc r7, r5, r1
-; CHECK-ARM-LE-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    adds r4, r6, r0
+; CHECK-ARM-LE-NEXT:    adc r5, r7, r1
+; CHECK-ARM-LE-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB3_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_add_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB3_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    adds r7, r5, r1
-; CHECK-ARM-BE-NEXT:    adc r6, r4, r0
-; CHECK-ARM-BE-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    adds r5, r7, r1
+; CHECK-ARM-BE-NEXT:    adc r4, r6, r0
+; CHECK-ARM-BE-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB3_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_add_i64:
@@ -318,35 +318,35 @@ define void @test_atomic_load_sub_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_sub_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB7_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    subs r6, r4, r0
-; CHECK-ARM-LE-NEXT:    sbc r7, r5, r1
-; CHECK-ARM-LE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    subs r4, r6, r0
+; CHECK-ARM-LE-NEXT:    sbc r5, r7, r1
+; CHECK-ARM-LE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB7_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_sub_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB7_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    subs r7, r5, r1
-; CHECK-ARM-BE-NEXT:    sbc r6, r4, r0
-; CHECK-ARM-BE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    subs r5, r7, r1
+; CHECK-ARM-BE-NEXT:    sbc r4, r6, r0
+; CHECK-ARM-BE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB7_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_sub_i64:
@@ -509,18 +509,18 @@ define void @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LABEL: test_atomic_load_and_i64:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-NEXT:  .LBB11_1: @ %atomicrmw.start
 ; CHECK-ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-NEXT:    and r7, r5, r1
-; CHECK-ARM-NEXT:    and r6, r4, r0
-; CHECK-ARM-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-NEXT:    cmp r3, #0
+; CHECK-ARM-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-NEXT:    and r5, r7, r1
+; CHECK-ARM-NEXT:    and r4, r6, r0
+; CHECK-ARM-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-NEXT:    cmp r2, #0
 ; CHECK-ARM-NEXT:    bne .LBB11_1
 ; CHECK-ARM-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LABEL: test_atomic_load_and_i64:
@@ -666,18 +666,18 @@ define void @test_atomic_load_or_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LABEL: test_atomic_load_or_i64:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-NEXT:  .LBB15_1: @ %atomicrmw.start
 ; CHECK-ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-NEXT:    orr r7, r5, r1
-; CHECK-ARM-NEXT:    orr r6, r4, r0
-; CHECK-ARM-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-NEXT:    cmp r3, #0
+; CHECK-ARM-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-NEXT:    orr r5, r7, r1
+; CHECK-ARM-NEXT:    orr r4, r6, r0
+; CHECK-ARM-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-NEXT:    cmp r2, #0
 ; CHECK-ARM-NEXT:    bne .LBB15_1
 ; CHECK-ARM-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LABEL: test_atomic_load_or_i64:
@@ -823,18 +823,18 @@ define void @test_atomic_load_xor_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LABEL: test_atomic_load_xor_i64:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-NEXT:  .LBB19_1: @ %atomicrmw.start
 ; CHECK-ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-NEXT:    eor r7, r5, r1
-; CHECK-ARM-NEXT:    eor r6, r4, r0
-; CHECK-ARM-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-NEXT:    cmp r3, #0
+; CHECK-ARM-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-NEXT:    eor r5, r7, r1
+; CHECK-ARM-NEXT:    eor r4, r6, r0
+; CHECK-ARM-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-NEXT:    cmp r2, #0
 ; CHECK-ARM-NEXT:    bne .LBB19_1
 ; CHECK-ARM-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LABEL: test_atomic_load_xor_i64:
@@ -932,18 +932,18 @@ define void @test_atomic_load_xchg_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LABEL: test_atomic_load_xchg_i64:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    push {r4, r5, r11, lr}
-; CHECK-ARM-NEXT:    movw r2, :lower16:var64
+; CHECK-ARM-NEXT:    movw r12, :lower16:var64
 ; CHECK-ARM-NEXT:    @ kill: def $r1 killed $r1 killed $r0_r1 def $r0_r1
-; CHECK-ARM-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-NEXT:    @ kill: def $r0 killed $r0 killed $r0_r1 def $r0_r1
 ; CHECK-ARM-NEXT:  .LBB23_1: @ %atomicrmw.start
 ; CHECK-ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-NEXT:    strexd r3, r0, r1, [r2]
-; CHECK-ARM-NEXT:    cmp r3, #0
+; CHECK-ARM-NEXT:    ldaexd r4, r5, [r12]
+; CHECK-ARM-NEXT:    strexd r2, r0, r1, [r12]
+; CHECK-ARM-NEXT:    cmp r2, #0
 ; CHECK-ARM-NEXT:    bne .LBB23_1
 ; CHECK-ARM-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-NEXT:    strd r4, r5, [r12]
 ; CHECK-ARM-NEXT:    pop {r4, r5, r11, pc}
 ;
 ; CHECK-THUMB-LABEL: test_atomic_load_xchg_i64:
@@ -1109,49 +1109,49 @@ define void @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_min_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB27_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    mov r7, r1
-; CHECK-ARM-LE-NEXT:    subs r3, r0, r4
-; CHECK-ARM-LE-NEXT:    sbcs r3, r1, r5
-; CHECK-ARM-LE-NEXT:    mov r3, #0
-; CHECK-ARM-LE-NEXT:    movwge r3, #1
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
-; CHECK-ARM-LE-NEXT:    movne r7, r5
-; CHECK-ARM-LE-NEXT:    mov r6, r0
-; CHECK-ARM-LE-NEXT:    movne r6, r4
-; CHECK-ARM-LE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    subs r5, r0, r6
+; CHECK-ARM-LE-NEXT:    sbcs r5, r1, r7
+; CHECK-ARM-LE-NEXT:    mov r5, #0
+; CHECK-ARM-LE-NEXT:    movwge r5, #1
+; CHECK-ARM-LE-NEXT:    cmp r5, #0
+; CHECK-ARM-LE-NEXT:    mov r5, r1
+; CHECK-ARM-LE-NEXT:    movne r5, r7
+; CHECK-ARM-LE-NEXT:    mov r4, r0
+; CHECK-ARM-LE-NEXT:    movne r4, r6
+; CHECK-ARM-LE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB27_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_min_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB27_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    mov r7, r1
-; CHECK-ARM-BE-NEXT:    subs r3, r1, r5
-; CHECK-ARM-BE-NEXT:    sbcs r3, r0, r4
-; CHECK-ARM-BE-NEXT:    mov r3, #0
-; CHECK-ARM-BE-NEXT:    movwge r3, #1
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
-; CHECK-ARM-BE-NEXT:    movne r7, r5
-; CHECK-ARM-BE-NEXT:    mov r6, r0
-; CHECK-ARM-BE-NEXT:    movne r6, r4
-; CHECK-ARM-BE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    subs r5, r1, r7
+; CHECK-ARM-BE-NEXT:    sbcs r5, r0, r6
+; CHECK-ARM-BE-NEXT:    mov r5, #0
+; CHECK-ARM-BE-NEXT:    movwge r5, #1
+; CHECK-ARM-BE-NEXT:    cmp r5, #0
+; CHECK-ARM-BE-NEXT:    mov r5, r1
+; CHECK-ARM-BE-NEXT:    movne r5, r7
+; CHECK-ARM-BE-NEXT:    mov r4, r0
+; CHECK-ARM-BE-NEXT:    movne r4, r6
+; CHECK-ARM-BE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB27_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_min_i64:
@@ -1354,49 +1354,49 @@ define void @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_max_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB31_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    mov r7, r1
-; CHECK-ARM-LE-NEXT:    subs r3, r0, r4
-; CHECK-ARM-LE-NEXT:    sbcs r3, r1, r5
-; CHECK-ARM-LE-NEXT:    mov r3, #0
-; CHECK-ARM-LE-NEXT:    movwlt r3, #1
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
-; CHECK-ARM-LE-NEXT:    movne r7, r5
-; CHECK-ARM-LE-NEXT:    mov r6, r0
-; CHECK-ARM-LE-NEXT:    movne r6, r4
-; CHECK-ARM-LE-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    subs r5, r0, r6
+; CHECK-ARM-LE-NEXT:    sbcs r5, r1, r7
+; CHECK-ARM-LE-NEXT:    mov r5, #0
+; CHECK-ARM-LE-NEXT:    movwlt r5, #1
+; CHECK-ARM-LE-NEXT:    cmp r5, #0
+; CHECK-ARM-LE-NEXT:    mov r5, r1
+; CHECK-ARM-LE-NEXT:    movne r5, r7
+; CHECK-ARM-LE-NEXT:    mov r4, r0
+; CHECK-ARM-LE-NEXT:    movne r4, r6
+; CHECK-ARM-LE-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB31_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_max_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB31_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldrexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    mov r7, r1
-; CHECK-ARM-BE-NEXT:    subs r3, r1, r5
-; CHECK-ARM-BE-NEXT:    sbcs r3, r0, r4
-; CHECK-ARM-BE-NEXT:    mov r3, #0
-; CHECK-ARM-BE-NEXT:    movwlt r3, #1
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
-; CHECK-ARM-BE-NEXT:    movne r7, r5
-; CHECK-ARM-BE-NEXT:    mov r6, r0
-; CHECK-ARM-BE-NEXT:    movne r6, r4
-; CHECK-ARM-BE-NEXT:    strexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldrexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    subs r5, r1, r7
+; CHECK-ARM-BE-NEXT:    sbcs r5, r0, r6
+; CHECK-ARM-BE-NEXT:    mov r5, #0
+; CHECK-ARM-BE-NEXT:    movwlt r5, #1
+; CHECK-ARM-BE-NEXT:    cmp r5, #0
+; CHECK-ARM-BE-NEXT:    mov r5, r1
+; CHECK-ARM-BE-NEXT:    movne r5, r7
+; CHECK-ARM-BE-NEXT:    mov r4, r0
+; CHECK-ARM-BE-NEXT:    movne r4, r6
+; CHECK-ARM-BE-NEXT:    strexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB31_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_max_i64:
@@ -1595,49 +1595,49 @@ define void @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_umin_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB35_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    mov r7, r1
-; CHECK-ARM-LE-NEXT:    subs r3, r0, r4
-; CHECK-ARM-LE-NEXT:    sbcs r3, r1, r5
-; CHECK-ARM-LE-NEXT:    mov r3, #0
-; CHECK-ARM-LE-NEXT:    movwhs r3, #1
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
-; CHECK-ARM-LE-NEXT:    movne r7, r5
-; CHECK-ARM-LE-NEXT:    mov r6, r0
-; CHECK-ARM-LE-NEXT:    movne r6, r4
-; CHECK-ARM-LE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    subs r5, r0, r6
+; CHECK-ARM-LE-NEXT:    sbcs r5, r1, r7
+; CHECK-ARM-LE-NEXT:    mov r5, #0
+; CHECK-ARM-LE-NEXT:    movwhs r5, #1
+; CHECK-ARM-LE-NEXT:    cmp r5, #0
+; CHECK-ARM-LE-NEXT:    mov r5, r1
+; CHECK-ARM-LE-NEXT:    movne r5, r7
+; CHECK-ARM-LE-NEXT:    mov r4, r0
+; CHECK-ARM-LE-NEXT:    movne r4, r6
+; CHECK-ARM-LE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB35_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_umin_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB35_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    mov r7, r1
-; CHECK-ARM-BE-NEXT:    subs r3, r1, r5
-; CHECK-ARM-BE-NEXT:    sbcs r3, r0, r4
-; CHECK-ARM-BE-NEXT:    mov r3, #0
-; CHECK-ARM-BE-NEXT:    movwhs r3, #1
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
-; CHECK-ARM-BE-NEXT:    movne r7, r5
-; CHECK-ARM-BE-NEXT:    mov r6, r0
-; CHECK-ARM-BE-NEXT:    movne r6, r4
-; CHECK-ARM-BE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    subs r5, r1, r7
+; CHECK-ARM-BE-NEXT:    sbcs r5, r0, r6
+; CHECK-ARM-BE-NEXT:    mov r5, #0
+; CHECK-ARM-BE-NEXT:    movwhs r5, #1
+; CHECK-ARM-BE-NEXT:    cmp r5, #0
+; CHECK-ARM-BE-NEXT:    mov r5, r1
+; CHECK-ARM-BE-NEXT:    movne r5, r7
+; CHECK-ARM-BE-NEXT:    mov r4, r0
+; CHECK-ARM-BE-NEXT:    movne r4, r6
+; CHECK-ARM-BE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB35_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_umin_i64:
@@ -1836,49 +1836,49 @@ define void @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE-LABEL: test_atomic_load_umax_i64:
 ; CHECK-ARM-LE:       @ %bb.0:
 ; CHECK-ARM-LE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-LE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-LE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-LE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-LE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-LE-NEXT:  .LBB39_1: @ %atomicrmw.start
 ; CHECK-ARM-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-LE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-LE-NEXT:    mov r7, r1
-; CHECK-ARM-LE-NEXT:    subs r3, r0, r4
-; CHECK-ARM-LE-NEXT:    sbcs r3, r1, r5
-; CHECK-ARM-LE-NEXT:    mov r3, #0
-; CHECK-ARM-LE-NEXT:    movwlo r3, #1
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
-; CHECK-ARM-LE-NEXT:    movne r7, r5
-; CHECK-ARM-LE-NEXT:    mov r6, r0
-; CHECK-ARM-LE-NEXT:    movne r6, r4
-; CHECK-ARM-LE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-LE-NEXT:    cmp r3, #0
+; CHECK-ARM-LE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-LE-NEXT:    subs r5, r0, r6
+; CHECK-ARM-LE-NEXT:    sbcs r5, r1, r7
+; CHECK-ARM-LE-NEXT:    mov r5, #0
+; CHECK-ARM-LE-NEXT:    movwlo r5, #1
+; CHECK-ARM-LE-NEXT:    cmp r5, #0
+; CHECK-ARM-LE-NEXT:    mov r5, r1
+; CHECK-ARM-LE-NEXT:    movne r5, r7
+; CHECK-ARM-LE-NEXT:    mov r4, r0
+; CHECK-ARM-LE-NEXT:    movne r4, r6
+; CHECK-ARM-LE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-LE-NEXT:    cmp r2, #0
 ; CHECK-ARM-LE-NEXT:    bne .LBB39_1
 ; CHECK-ARM-LE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-LE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-LE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-LE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-ARM-BE-LABEL: test_atomic_load_umax_i64:
 ; CHECK-ARM-BE:       @ %bb.0:
 ; CHECK-ARM-BE-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-ARM-BE-NEXT:    movw r2, :lower16:var64
-; CHECK-ARM-BE-NEXT:    movt r2, :upper16:var64
+; CHECK-ARM-BE-NEXT:    movw r12, :lower16:var64
+; CHECK-ARM-BE-NEXT:    movt r12, :upper16:var64
 ; CHECK-ARM-BE-NEXT:  .LBB39_1: @ %atomicrmw.start
 ; CHECK-ARM-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-ARM-BE-NEXT:    ldaexd r4, r5, [r2]
-; CHECK-ARM-BE-NEXT:    mov r7, r1
-; CHECK-ARM-BE-NEXT:    subs r3, r1, r5
-; CHECK-ARM-BE-NEXT:    sbcs r3, r0, r4
-; CHECK-ARM-BE-NEXT:    mov r3, #0
-; CHECK-ARM-BE-NEXT:    movwlo r3, #1
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
-; CHECK-ARM-BE-NEXT:    movne r7, r5
-; CHECK-ARM-BE-NEXT:    mov r6, r0
-; CHECK-ARM-BE-NEXT:    movne r6, r4
-; CHECK-ARM-BE-NEXT:    stlexd r3, r6, r7, [r2]
-; CHECK-ARM-BE-NEXT:    cmp r3, #0
+; CHECK-ARM-BE-NEXT:    ldaexd r6, r7, [r12]
+; CHECK-ARM-BE-NEXT:    subs r5, r1, r7
+; CHECK-ARM-BE-NEXT:    sbcs r5, r0, r6
+; CHECK-ARM-BE-NEXT:    mov r5, #0
+; CHECK-ARM-BE-NEXT:    movwlo r5, #1
+; CHECK-ARM-BE-NEXT:    cmp r5, #0
+; CHECK-ARM-BE-NEXT:    mov r5, r1
+; CHECK-ARM-BE-NEXT:    movne r5, r7
+; CHECK-ARM-BE-NEXT:    mov r4, r0
+; CHECK-ARM-BE-NEXT:    movne r4, r6
+; CHECK-ARM-BE-NEXT:    stlexd r2, r4, r5, [r12]
+; CHECK-ARM-BE-NEXT:    cmp r2, #0
 ; CHECK-ARM-BE-NEXT:    bne .LBB39_1
 ; CHECK-ARM-BE-NEXT:  @ %bb.2: @ %atomicrmw.end
-; CHECK-ARM-BE-NEXT:    strd r4, r5, [r2]
+; CHECK-ARM-BE-NEXT:    strd r6, r7, [r12]
 ; CHECK-ARM-BE-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; CHECK-THUMB-LE-LABEL: test_atomic_load_umax_i64:
