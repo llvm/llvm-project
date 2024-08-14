@@ -2216,7 +2216,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              lldb_private::Type *type,
-                                             CompilerType &clang_type) {
+                                             const CompilerType &clang_type) {
   if (TypeSystemClang::UseRedeclCompletion())
     if (!m_currently_parsed_record_dies.insert(die.GetDIE()).second)
       return true;
@@ -2356,7 +2356,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
 bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
                                            lldb_private::Type *type,
-                                           CompilerType &clang_type) {
+                                           const CompilerType &clang_type) {
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren()) {
       bool is_signed = false;
@@ -2369,9 +2369,9 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
   return (bool)clang_type;
 }
 
-bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
-                                                lldb_private::Type *type,
-                                                CompilerType &clang_type) {
+bool DWARFASTParserClang::CompleteTypeFromDWARF(
+    const DWARFDIE &die, lldb_private::Type *type,
+    const CompilerType &clang_type) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
   std::lock_guard<std::recursive_mutex> guard(
@@ -2449,7 +2449,7 @@ DWARFASTParserClang::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
 }
 
 size_t DWARFASTParserClang::ParseChildEnumerators(
-    lldb_private::CompilerType &clang_type, bool is_signed,
+    const lldb_private::CompilerType &clang_type, bool is_signed,
     uint32_t enumerator_byte_size, const DWARFDIE &parent_die) {
   if (!parent_die)
     return 0;
@@ -3241,7 +3241,7 @@ void DWARFASTParserClang::ParseSingleMember(
 }
 
 bool DWARFASTParserClang::ParseChildMembers(
-    const DWARFDIE &parent_die, CompilerType &class_clang_type,
+    const DWARFDIE &parent_die, const CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<DWARFDIE> &member_function_dies,
     std::vector<DWARFDIE> &contained_type_dies,
@@ -3980,7 +3980,8 @@ bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
 }
 
 void DWARFASTParserClang::ParseRustVariantPart(
-    DWARFDIE &die, const DWARFDIE &parent_die, CompilerType &class_clang_type,
+    DWARFDIE &die, const DWARFDIE &parent_die,
+    const CompilerType &class_clang_type,
     const lldb::AccessType default_accesibility,
     ClangASTImporter::LayoutInfo &layout_info) {
   assert(die.Tag() == llvm::dwarf::DW_TAG_variant_part);

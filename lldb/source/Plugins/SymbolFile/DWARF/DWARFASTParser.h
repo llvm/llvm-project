@@ -45,7 +45,7 @@ public:
                                            const AddressRange &range) = 0;
 
   virtual bool CompleteTypeFromDWARF(const DWARFDIE &die, Type *type,
-                                     CompilerType &compiler_type) = 0;
+                                     const CompilerType &compiler_type) = 0;
 
   virtual CompilerDecl GetDeclForUIDFromDWARF(const DWARFDIE &die) = 0;
 
