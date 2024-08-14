@@ -2096,6 +2096,7 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(int * _Null_unspecified));
   static_assert(__builtin_is_implicit_lifetime(int * _Nullable));
   static_assert(!__builtin_is_implicit_lifetime(_Atomic int));
+  // expected-error@-1 {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
   static_assert(__builtin_is_implicit_lifetime(int * __restrict));
 }
 

@@ -4948,6 +4948,20 @@ static bool DiagnoseVLAInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
   return true;
 }
 
+/// Checks that type T is not an atomic type (_Atomic).
+///
+/// @returns @c true if @p T is VLA and a diagnostic was emitted,
+/// @c false otherwise.
+static bool DiagnoseAtomicInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
+                                         clang::tok::TokenKind TypeTraitID) {
+  if (!T->getType()->isAtomicType())
+    return false;
+
+  S.Diag(T->getTypeLoc().getBeginLoc(), diag::err_atomic_unsupported)
+      << TypeTraitID;
+  return true;
+}
+
 /// Check the completeness of a type in a unary type trait.
 ///
 /// If the particular type trait requires a complete type, tries to complete
@@ -5641,6 +5655,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsImplicitLifetime: {
     DiagnoseVLAInCXXTypeTrait(Self, TInfo,
                               tok::kw___builtin_is_implicit_lifetime);
+    DiagnoseAtomicInCXXTypeTrait(Self, TInfo,
+                                 tok::kw___builtin_is_implicit_lifetime);
 
     // [basic.types.general] p9
     // Scalar types, implicit-lifetime class types ([class.prop]),
