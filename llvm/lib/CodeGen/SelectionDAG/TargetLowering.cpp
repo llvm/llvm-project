@@ -1958,6 +1958,22 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // If this is (srl (sra X, C1), ShAmt), see if we can combine this into a
+      // single sra. We can do this if the top bits are never demanded.
+      if (Op0.getOpcode() == ISD::SRA && Op0.hasOneUse()) {
+        if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
+          if (std::optional<uint64_t> InnerSA =
+                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
+            unsigned C1 = *InnerSA;
+            // Clamp the combined shift amount if it exceeds the bit width.
+            unsigned Combined = std::min(C1 + ShAmt, BitWidth - 1);
+            SDValue NewSA = TLO.DAG.getConstant(Combined, dl, ShiftVT);
+            return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRA, dl, VT,
+                                                     Op0.getOperand(0), NewSA));
+          }
+        }
+      }
+
       APInt InDemandedMask = (DemandedBits << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that
@@ -2958,9 +2974,8 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
     if (VT.isFloatingPoint())
       return TLO.CombineTo(
-          Op,
-          TLO.DAG.getConstantFP(
-              APFloat(TLO.DAG.EVTToAPFloatSemantics(VT), Known.One), dl, VT));
+          Op, TLO.DAG.getConstantFP(APFloat(VT.getFltSemantics(), Known.One),
+                                    dl, VT));
   }
 
   // A multi use 'all demanded elts' simplify failed to find any knownbits.
@@ -7236,7 +7251,7 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   // Testing it with denormal inputs to avoid wrong estimate.
   //
   // Test = fabs(X) < SmallestNormal
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
   APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
   SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
   SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
@@ -8273,7 +8288,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   // If the maximum float value is smaller then the signed integer range,
   // the destination signmask can't be represented by the float, so we can
   // just use FP_TO_SINT directly.
-  const fltSemantics &APFSem = DAG.EVTToAPFloatSemantics(SrcVT);
+  const fltSemantics &APFSem = SrcVT.getFltSemantics();
   APFloat APF(APFSem, APInt::getZero(SrcVT.getScalarSizeInBits()));
   APInt SignMask = APInt::getSignMask(DstVT.getScalarSizeInBits());
   if (APFloat::opOverflow &
@@ -8518,8 +8533,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // Propagate any NaN of both operands
   if (!N->getFlags().hasNoNaNs() &&
       (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
-    ConstantFP *FPNaN = ConstantFP::get(
-        *DAG.getContext(), APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT)));
+    ConstantFP *FPNaN = ConstantFP::get(*DAG.getContext(),
+                                        APFloat::getNaN(VT.getFltSemantics()));
     MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
                            DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
   }
@@ -11263,8 +11278,9 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
     SrcVT = Src.getValueType();
   }
 
-  APFloat MinFloat(DAG.EVTToAPFloatSemantics(SrcVT));
-  APFloat MaxFloat(DAG.EVTToAPFloatSemantics(SrcVT));
+  const fltSemantics &Sem = SrcVT.getFltSemantics();
+  APFloat MinFloat(Sem);
+  APFloat MaxFloat(Sem);
 
   APFloat::opStatus MinStatus =
       MinFloat.convertFromAPInt(MinInt, IsSigned, APFloat::rmTowardZero);

@@ -171,11 +171,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   if (ST.is64Bit()) {
     ExtActions.legalFor({{sXLen, s32}});
     getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({sXLen})
+        .customFor({s32, sXLen})
         .maxScalar(0, sXLen)
         .lower();
   } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG).maxScalar(0, sXLen).lower();
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .customFor({s32})
+        .maxScalar(0, sXLen)
+        .lower();
   }
   ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
@@ -285,7 +288,22 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                      {s32, p0, s16, 16},
                                      {s32, p0, s32, 32},
                                      {p0, p0, sXLen, XLen}});
-  if (ST.hasVInstructions())
+  auto &ExtLoadActions =
+      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  if (XLen == 64) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
+                                               {s64, p0, s16, 16},
+                                               {s64, p0, s32, 32},
+                                               {s64, p0, s64, 64}});
+    ExtLoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+  } else if (ST.hasStdExtD()) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+  }
+
+  // Vector loads/stores.
+  if (ST.hasVInstructions()) {
     LoadStoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
                                                {nxv4s8, p0, nxv4s8, 8},
                                                {nxv8s8, p0, nxv8s8, 8},
@@ -302,38 +320,28 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                                {nxv8s32, p0, nxv8s32, 32},
                                                {nxv16s32, p0, nxv16s32, 32}});
 
-  auto &ExtLoadActions =
-      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
-  if (XLen == 64) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
-                                               {s64, p0, s16, 16},
-                                               {s64, p0, s32, 32},
-                                               {s64, p0, s64, 64}});
-    ExtLoadActions.legalForTypesWithMemDesc(
-        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
-  } else if (ST.hasStdExtD()) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+    if (ST.getELen() == 64)
+      LoadStoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                                 {nxv1s16, p0, nxv1s16, 16},
+                                                 {nxv1s32, p0, nxv1s32, 32}});
+
+    if (ST.hasVInstructionsI64())
+      LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                                 {nxv2s64, p0, nxv2s64, 64},
+                                                 {nxv4s64, p0, nxv4s64, 64},
+                                                 {nxv8s64, p0, nxv8s64, 64}});
+
+    // we will take the custom lowering logic if we have scalable vector types
+    // with non-standard alignments
+    LoadStoreActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+
+    // Pointers require that XLen sized elements are legal.
+    if (XLen <= ST.getELen())
+      LoadStoreActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
   }
-  if (ST.hasVInstructions() && ST.getELen() == 64)
-    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
-                                               {nxv1s16, p0, nxv1s16, 16},
-                                               {nxv1s32, p0, nxv1s32, 32}});
-
-  if (ST.hasVInstructionsI64())
-    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
-
-                                               {nxv2s64, p0, nxv2s64, 64},
-                                               {nxv4s64, p0, nxv4s64, 64},
-                                               {nxv8s64, p0, nxv8s64, 64}});
 
   LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      // we will take the custom lowering logic if we have scalable vector types
-      // with non-standard alignments
-      .customIf(LegalityPredicate(
-          LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                                  typeIsLegalPtrVec(0, PtrVecTys, ST))))
       .clampScalar(0, s32, sXLen)
       .lower();
 
@@ -864,6 +872,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
   MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
@@ -888,9 +897,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_LSHR:
     return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
-    // Source size of 32 is sext.w.
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     int64_t SizeInBits = MI.getOperand(2).getImm();
-    if (SizeInBits == 32)
+    // Source size of 32 is sext.w.
+    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
+      return true;
+
+    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
       return true;
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
