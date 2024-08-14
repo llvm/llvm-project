@@ -213,21 +213,14 @@ public:
              bool ShowName) const;
 };
 
-template <typename ProbeType, typename DerivedProbeInlineTreeType>
+template <typename ProbesType, typename DerivedProbeInlineTreeType,
+          typename ChildrenType>
 class MCPseudoProbeInlineTreeBase {
-  struct InlineSiteHash {
-    uint64_t operator()(const InlineSite &Site) const {
-      return std::get<0>(Site) ^ std::get<1>(Site);
-    }
-  };
-
 protected:
   // Track children (e.g. inlinees) of current context
-  using InlinedProbeTreeMap = std::unordered_map<
-      InlineSite, std::unique_ptr<DerivedProbeInlineTreeType>, InlineSiteHash>;
-  InlinedProbeTreeMap Children;
+  ChildrenType Children;
   // Set of probes that come with the function.
-  std::vector<ProbeType> Probes;
+  ProbesType Probes;
   MCPseudoProbeInlineTreeBase() {
     static_assert(std::is_base_of<MCPseudoProbeInlineTreeBase,
                                   DerivedProbeInlineTreeType>::value,
@@ -240,14 +233,13 @@ public:
 
   // Root node has a GUID 0.
   bool isRoot() const { return Guid == 0; }
-  InlinedProbeTreeMap &getChildren() { return Children; }
-  const InlinedProbeTreeMap &getChildren() const { return Children; }
-  std::vector<ProbeType> &getProbes() { return Probes; }
-  const std::vector<ProbeType> &getProbes() const { return Probes; }
-  void addProbes(ProbeType Probe) { Probes.push_back(Probe); }
+  ChildrenType &getChildren() { return Children; }
+  const ChildrenType &getChildren() const { return Children; }
+  ProbesType &getProbes() { return Probes; }
+  const ProbesType &getProbes() const { return Probes; }
   // Caller node of the inline site
-  MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent =
-      nullptr;
+  MCPseudoProbeInlineTreeBase<ProbesType, DerivedProbeInlineTreeType,
+                              ChildrenType> *Parent = nullptr;
   DerivedProbeInlineTreeType *getOrAddNode(const InlineSite &Site) {
     auto Ret = Children.emplace(
         Site, std::make_unique<DerivedProbeInlineTreeType>(Site));
@@ -261,9 +253,17 @@ public:
 // instance is created as the root of a tree.
 // A real instance of this class is created for each function, either a
 // not inlined function that has code in .text section or an inlined function.
+struct InlineSiteHash {
+  uint64_t operator()(const InlineSite &Site) const {
+    return std::get<0>(Site) ^ std::get<1>(Site);
+  }
+};
 class MCPseudoProbeInlineTree
-    : public MCPseudoProbeInlineTreeBase<MCPseudoProbe,
-                                         MCPseudoProbeInlineTree> {
+    : public MCPseudoProbeInlineTreeBase<
+          std::vector<MCPseudoProbe>, MCPseudoProbeInlineTree,
+          std::unordered_map<InlineSite,
+                             std::unique_ptr<MCPseudoProbeInlineTree>,
+                             InlineSiteHash>> {
 public:
   MCPseudoProbeInlineTree() = default;
   MCPseudoProbeInlineTree(uint64_t Guid) { this->Guid = Guid; }
@@ -278,34 +278,30 @@ public:
 };
 
 // inline tree node for the decoded pseudo probe
-class MCDecodedPseudoProbeInlineTree {
-public:
-  uint64_t Guid = 0;
-
-  // Caller node of the inline site
-  MCDecodedPseudoProbeInlineTree *Parent = nullptr;
-
-  MCDecodedPseudoProbeInlineTree() = default;
-  MCDecodedPseudoProbeInlineTree(uint64_t Guid, uint32_t ProbeId,
-                                 MCDecodedPseudoProbeInlineTree *Parent)
-      : Guid(Guid), Parent(Parent), ProbeId(ProbeId) {}
-
-  // Track children (e.g. inlinees) of current context
-  MutableArrayRef<MCDecodedPseudoProbeInlineTree> Children;
-  // Set of probes that come with the function.
-  MCDecodedPseudoProbe *Probes = nullptr;
+class MCDecodedPseudoProbeInlineTree
+    : public MCPseudoProbeInlineTreeBase<
+          MCDecodedPseudoProbe *, MCDecodedPseudoProbeInlineTree,
+          MutableArrayRef<MCDecodedPseudoProbeInlineTree>> {
   uint32_t NumProbes = 0;
   uint32_t ProbeId = 0;
+public:
+  MCDecodedPseudoProbeInlineTree() = default;
+  MCDecodedPseudoProbeInlineTree(const InlineSite &Site,
+                                 MCDecodedPseudoProbeInlineTree *Parent)
+      : ProbeId(std::get<1>(Site)) {
+    this->Guid = std::get<0>(Site);
+    this->Parent = Parent;
+  }
 
-  // Root node has a GUID 0.
-  bool isRoot() const { return Guid == 0; }
   // Return false if it's a dummy inline site
   bool hasInlineSite() const { return !isRoot() && !Parent->isRoot(); }
   InlineSite getInlineSite() const { return InlineSite(Guid, ProbeId); }
-  auto getChildren() const { return Children; }
+  void setProbes(MutableArrayRef<MCDecodedPseudoProbe> ProbesRef) {
+    Probes = ProbesRef.data();
+    NumProbes = ProbesRef.size();
+  }
   auto getProbes() const {
-    return llvm::make_pointer_range(
-        MutableArrayRef<MCDecodedPseudoProbe>(Probes, NumProbes));
+    return MutableArrayRef<MCDecodedPseudoProbe>(Probes, NumProbes);
   }
 };
 
@@ -359,6 +355,11 @@ class MCPseudoProbeDecoder {
   // Decoded pseudo probes vector.
   std::vector<MCDecodedPseudoProbe> PseudoProbeVec;
   // Injected pseudo probes, identified by the containing inline tree node.
+  // Need to keep injected probes separately for two reasons:
+  // 1) Probes cannot be added to the PseudoProbeVec: appending may cause
+  //    reallocation so that pointers to its elements will become invalid.
+  // 2) Probes belonging to function record must be contiguous in PseudoProbeVec
+  //    as owning InlineTree references them with an ArrayRef to save space.
   std::unordered_map<const MCDecodedPseudoProbeInlineTree *,
                      std::vector<MCDecodedPseudoProbe>>
       InjectedProbeMap;
@@ -470,7 +471,7 @@ public:
   auto getInjectedProbes(MCDecodedPseudoProbeInlineTree *Parent) {
     auto It = InjectedProbeMap.find(Parent);
     assert(It != InjectedProbeMap.end());
-    return llvm::make_pointer_range(iterator_range(It->second));
+    return iterator_range(It->second);
   }
 
 private:

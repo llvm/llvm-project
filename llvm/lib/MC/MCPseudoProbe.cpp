@@ -291,8 +291,8 @@ void MCDecodedPseudoProbe::getInlineContext(
   // Note that it won't include the probe's belonging function(leaf location)
   while (Cur->hasInlineSite()) {
     StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, Cur->Parent->Guid);
-    ContextStack.emplace_back(
-        MCPseudoProbeFrameLocation(FuncName, Cur->ProbeId));
+    ContextStack.emplace_back(MCPseudoProbeFrameLocation(
+        FuncName, std::get<1>(Cur->getInlineSite())));
     Cur = static_cast<MCDecodedPseudoProbeInlineTree *>(Cur->Parent);
   }
   // Make the ContextStack in caller-callee order
@@ -446,9 +446,9 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   // If the incoming node is null, all its children nodes should be disgarded.
   if (Cur) {
     // Switch/add to a new tree node(inlinee)
-    Cur->Children[CurChildIndex] =
-        MCDecodedPseudoProbeInlineTree(Guid, Index, Cur);
-    Cur = &Cur->Children[CurChildIndex];
+    Cur->getChildren()[CurChildIndex] =
+        MCDecodedPseudoProbeInlineTree(InlineSite(Guid, Index), Cur);
+    Cur = &Cur->getChildren()[CurChildIndex];
     if (IsTopLevelFunc && !EncodingIsAddrBased) {
       if (auto V = FuncStartAddrs.lookup(Guid))
         LastAddr = V;
@@ -508,11 +508,11 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   }
 
   if (Cur) {
-    Cur->Probes =
-        MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount).begin();
-    Cur->NumProbes = CurrentProbeCount;
+    Cur->setProbes(
+        MutableArrayRef(PseudoProbeVec).take_back(CurrentProbeCount));
     InlineTreeVec.resize(InlineTreeVec.size() + ChildrenToProcess);
-    Cur->Children = MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
+    Cur->getChildren() =
+        MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
   }
   for (uint32_t I = 0; I < ChildrenToProcess; I++) {
     buildAddress2ProbeMap<false>(Cur, LastAddr, GuidFilter, FuncStartAddrs, I);
@@ -621,7 +621,7 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
 
   // Allocate top-level function records as children of DummyInlineRoot.
   InlineTreeVec.resize(TopLevelFuncs);
-  DummyInlineRoot.Children = MutableArrayRef(InlineTreeVec);
+  DummyInlineRoot.getChildren() = MutableArrayRef(InlineTreeVec);
 
   Data = Start;
   End = Data + Size;
