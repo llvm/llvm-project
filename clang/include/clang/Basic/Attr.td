@@ -4642,6 +4642,14 @@ def HLSLParamModifier : TypeAttr {
   let Args = [DefaultBoolArgument<"MergedSpelling", /*default*/0, /*fake*/1>];
 }
 
+def HLSLTextureDimension : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "texture_dimension">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL]; 
+  let Args = [IntArgument<"Dimension">];
+  let Documentation = [InternalOnly];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;
