@@ -425,15 +425,15 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
 llvm::json::Value SummaryStatistics::ToJSON() const {
   return json::Object{{
-      {"name", GetName().AsCString()},
-      {"type", GetImplType().AsCString()},
+      {"name", GetName()},
+      {"type", GetSummaryKindName()},
       {"invocationCount", GetSummaryCount()},
       {"totalTime", GetTotalTime()},
   }};
 }
 
 json::Value SummaryStatisticsCache::ToJSON() {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+  std::lock_guard<std::mutex> guard(m_map_mutex);
   json::Array json_summary_stats;
   for (const auto &summary_stat : m_summary_stats_map)
     json_summary_stats.emplace_back(summary_stat.second.ToJSON());

@@ -1224,7 +1224,7 @@ public:
 
   void ClearAllLoadedSections();
 
-  lldb_private::SummaryStatistics &
+  lldb_private::SummaryStatistics::SummaryInvocation
   GetSummaryStatisticsForProvider(lldb_private::TypeSummaryImpl &provider);
   lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 

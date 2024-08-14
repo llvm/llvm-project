@@ -181,12 +181,12 @@ private:
 /// A class that represents statistics about a TypeSummaryProviders invocations
 class SummaryStatistics {
 public:
-  explicit SummaryStatistics(lldb_private::ConstString name,
-                             lldb_private::ConstString impl_type)
+  explicit SummaryStatistics(std::string name,
+                             std::string impl_type)
       : m_total_time(), m_impl_type(impl_type), m_name(name),
         m_summary_count(0) {}
 
-  lldb_private::ConstString GetName() const { return m_name; };
+  std::string GetName() const { return m_name; };
   double GetTotalTime() const { return m_total_time.get().count(); }
 
   uint64_t GetSummaryCount() const {
@@ -195,7 +195,7 @@ public:
 
   StatsDuration &GetDurationReference() { return m_total_time; }
 
-  ConstString GetImplType() const { return m_impl_type; }
+  std::string GetSummaryKindName() const { return m_impl_type; }
 
   llvm::json::Value ToJSON() const;
 
@@ -227,8 +227,8 @@ private:
   }
 
   lldb_private::StatsDuration m_total_time;
-  lldb_private::ConstString m_impl_type;
-  lldb_private::ConstString m_name;
+  std::string m_impl_type;
+  std::string m_name;
   std::atomic<uint64_t> m_summary_count;
 };
 
@@ -237,23 +237,21 @@ class SummaryStatisticsCache {
 public:
   /// Get the SummaryStatistics object for a given provider name, or insert
   /// if statistics for that provider is not in the map.
-  lldb_private::SummaryStatistics &
+  SummaryStatistics::SummaryInvocation
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
-    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    m_summary_stats_map.try_emplace(provider.GetName(), provider.GetName(),
-                                    provider.GetImplType());
+    std::lock_guard<std::mutex> guard(m_map_mutex);
+    auto pair = m_summary_stats_map.try_emplace(provider.GetName(), provider.GetName(),
+                                    provider.GetSummaryKindName());
 
-    SummaryStatistics &summary_stats =
-        m_summary_stats_map.at(provider.GetName());
-    return summary_stats;
+    return pair.first->second.GetSummaryInvocation();
   }
 
   llvm::json::Value ToJSON();
 
 private:
-  std::map<lldb_private::ConstString, lldb_private::SummaryStatistics>
+  std::map<std::string, lldb_private::SummaryStatistics>
       m_summary_stats_map;
-  std::recursive_mutex m_map_mutex;
+  std::mutex m_map_mutex;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.

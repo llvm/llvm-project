@@ -602,7 +602,7 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
     actual_options.SetLanguage(GetPreferredDisplayLanguage());
 
   // this is a hot path in code and we prefer to avoid setting this string all
-  // too often also clearing out other information that we might care` to see in
+  // too often also clearing out other information that we might care to see in
   // a crash log. might be useful in very specific situations though.
   /*Host::SetCrashDescriptionWithFormat("Trying to fetch a summary for %s %s.
    Summary provider's description is %s",
@@ -618,11 +618,9 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
 
     TargetSP target = GetExecutionContextRef().GetTargetSP();
     if (target) {
-      SummaryStatistics &summary_stats =
-          target->GetSummaryStatisticsForProvider(*summary_ptr);
       /// Construct RAII types to time and collect data on summary creation.
       SummaryStatistics::SummaryInvocation summary_inv =
-          summary_stats.GetSummaryInvocation();
+          target->GetSummaryStatisticsForProvider(*summary_ptr);
       summary_ptr->FormatObject(this, destination, actual_options);
     } else
       summary_ptr->FormatObject(this, destination, actual_options);
