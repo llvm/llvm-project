@@ -1243,13 +1243,11 @@ public:
     StridedVectorize
   };
 
-  using ValueList = SmallVector<Value *, 8>;
-  using InstrList = SmallVector<Instruction *, 16>;
-  using ValueSet = SmallPtrSet<Value *, 16>;
-  using StoreList = SmallVector<StoreInst *, 8>;
+  using ValueList = SmallVector<Value *, 4>;
+  using ValueSet = SmallPtrSet<Value *, 8>;
   using ExtraValueToDebugLocsMap =
       MapVector<Value *, SmallVector<Instruction *, 2>>;
-  using OrdersType = SmallVector<unsigned, 4>;
+  using OrdersType = SmallVector<unsigned, 0>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
@@ -1471,7 +1469,7 @@ public:
   /// \param TryRecursiveCheck used to check if long masked gather can be
   /// represented as a serie of loads/insert subvector, if profitable.
   LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
-                               SmallVectorImpl<unsigned> &Order,
+                               OrdersType &Order,
                                SmallVectorImpl<Value *> &PointerOps,
                                bool TryRecursiveCheck = true) const;
 
@@ -2840,7 +2838,7 @@ private:
   /// \param ResizeAllowed indicates whether it is allowed to handle subvector
   /// extract order.
   bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                       SmallVectorImpl<unsigned> &CurrentOrder,
+                       OrdersType &CurrentOrder,
                        bool ResizeAllowed = false) const;
 
   /// Vectorize a single entry in the tree.
@@ -3084,10 +3082,10 @@ private:
     CombinedOpcode CombinedOp = NotCombinedOp;
 
     /// Does this sequence require some shuffling?
-    SmallVector<int, 4> ReuseShuffleIndices;
+    SmallVector<int, 0> ReuseShuffleIndices;
 
     /// Does this entry require reordering?
-    SmallVector<unsigned, 4> ReorderIndices;
+    OrdersType ReorderIndices;
 
     /// Points back to the VectorizableTree.
     ///
@@ -3108,7 +3106,7 @@ private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
     /// reordering of operands during buildTree_rec() and vectorizeTree().
-    SmallVector<ValueList, 2> Operands;
+    SmallVector<ValueList, 0> Operands;
 
     /// The main/alternate instruction.
     Instruction *MainOp = nullptr;
@@ -3716,13 +3714,13 @@ private:
 
     /// The dependent memory instructions.
     /// This list is derived on demand in calculateDependencies().
-    SmallVector<ScheduleData *, 4> MemoryDependencies;
+    SmallVector<ScheduleData *, 0> MemoryDependencies;
 
     /// List of instructions which this instruction could be control dependent
     /// on.  Allowing such nodes to be scheduled below this one could introduce
     /// a runtime fault which didn't exist in the original program.
     /// ex: this is a load or udiv following a readonly call which inf loops
-    SmallVector<ScheduleData *, 4> ControlDependencies;
+    SmallVector<ScheduleData *, 0> ControlDependencies;
 
     /// This ScheduleData is in the current scheduling region if this matches
     /// the current SchedulingRegionID of BlockScheduling.
@@ -4300,12 +4298,12 @@ static void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
 /// the original order of the scalars. Procedure transforms the provided order
 /// in accordance with the given \p Mask. If the resulting \p Order is just an
 /// identity order, \p Order is cleared.
-static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+static void reorderOrder(BoUpSLP::OrdersType &Order, ArrayRef<int> Mask,
                          bool BottomOrder = false) {
   assert(!Mask.empty() && "Expected non-empty mask.");
   unsigned Sz = Mask.size();
   if (BottomOrder) {
-    SmallVector<unsigned> PrevOrder;
+    BoUpSLP::OrdersType PrevOrder;
     if (Order.empty()) {
       PrevOrder.resize(Sz);
       std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
@@ -4695,7 +4693,7 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
 }
 
 BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
-    ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
+    ArrayRef<Value *> VL, const Value *VL0, OrdersType &Order,
     SmallVectorImpl<Value *> &PointerOps, bool TryRecursiveCheck) const {
   // Check that a vectorized load would load the same memory as a scalar
   // load. For example, we don't want to vectorize loads that are smaller
@@ -4823,7 +4821,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End;
              Cnt += VF, ++VectorizedCnt) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
-          SmallVector<unsigned> Order;
+          OrdersType Order;
           SmallVector<Value *> PointerOps;
           LoadsState LS =
               canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
@@ -5397,7 +5395,7 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   TE.ReorderIndices.clear();
   // Try to improve gathered nodes with clustered reuses, if possible.
   ArrayRef<int> Slice = ArrayRef(NewMask).slice(0, Sz);
-  SmallVector<unsigned> NewOrder(Slice);
+  OrdersType NewOrder(Slice);
   inversePermutation(NewOrder, NewMask);
   reorderScalars(TE.Scalars, NewMask);
   // Fill the reuses mask with the identity submasks.
@@ -7717,7 +7715,7 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                              SmallVectorImpl<unsigned> &CurrentOrder,
+                              OrdersType &CurrentOrder,
                               bool ResizeAllowed) const {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst, ExtractValueInst>);
   assert(It != VL.end() && "Expected at least one extract instruction.");
