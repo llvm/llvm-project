@@ -8,8 +8,21 @@
 # The bug was reported at https://github.com/llvm/llvm-project/pull/99454. 
 # It is caused by the corruption of live intervals in certain scenarios.
 #
+# We check the newly generated MBBs after successful scheduling here.
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+# CHECK: prolog:
+# CHECK: bb.5:
+# CHECK: New block
+# CHECK: bb.6:
+# CHECK: epilog:
+# CHECK: bb.7:
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+# CHECK: prolog:
+# CHECK: bb.8:
+# CHECK: New block
+# CHECK: bb.9:
+# CHECK: epilog:
+# CHECK: bb.10:
 
 --- |
   target triple = "hexagon"

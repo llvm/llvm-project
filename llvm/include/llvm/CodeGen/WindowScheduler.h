@@ -150,8 +150,6 @@ protected:
   /// Using the scheduling infrastructure to expand the results of window
   /// scheduling. It is usually necessary to add prologue and epilogue MBBs.
   virtual void expand();
-  /// Reanalyze the live intervals in some scenarios.
-  virtual void reanalyzeLiveIntervals();
   /// Update the live intervals for all registers used within MBB.
   virtual void updateLiveIntervals();
   /// Estimate a II value at which all MIs will be scheduled successfully.
