@@ -48,6 +48,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/type_traits.h"
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -4922,43 +4923,44 @@ public:
 /// A mutable set of FunctionEffect::Kind.
 class FunctionEffectKindSet {
   // For now this only needs to be a bitmap.
-  using KindBitsT = uint8_t;
   constexpr static size_t EndBitPos = 8;
+  using KindBitsT = std::bitset<EndBitPos>;
 
-  KindBitsT KindBits = 0;
-
-  static KindBitsT kindToBit(FunctionEffect::Kind K) {
-    return 1u << KindBitsT(K);
-  }
+  KindBitsT KindBits{};
 
   explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
+
+  constexpr static size_t kindToPos(FunctionEffect::Kind K) {
+    return size_t(K);
+  }
 
 public:
   FunctionEffectKindSet() = default;
   explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
 
+  // Iterates through the bits which are set.
   class iterator {
     const FunctionEffectKindSet *Outer = nullptr;
     size_t Idx = 0;
 
     // If Idx does not reference a set bit, advance it until it does,
     // or until it reaches EndBitPos.
-    void advanceIdx() {
-      while (Idx < EndBitPos && !(Outer->KindBits & (1u << Idx)))
+    void advanceToNextSetBit() {
+      while (Idx < EndBitPos && !Outer->KindBits.test(Idx))
         ++Idx;
     }
 
   public:
     iterator();
     iterator(const FunctionEffectKindSet &O, size_t I) : Outer(&O), Idx(I) {
-      advanceIdx();
+      advanceToNextSetBit();
     }
     bool operator==(const iterator &Other) const { return Idx == Other.Idx; }
     bool operator!=(const iterator &Other) const { return Idx != Other.Idx; }
 
     iterator operator++() {
       ++Idx;
-      advanceIdx();
+      advanceToNextSetBit();
       return *this;
     }
 
@@ -4971,7 +4973,7 @@ public:
   iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, EndBitPos); }
 
-  void insert(FunctionEffect Effect) { KindBits |= kindToBit(Effect.kind()); }
+  void insert(FunctionEffect Effect) { KindBits.set(kindToPos(Effect.kind())); }
   void insert(FunctionEffectsRef FX) {
     for (FunctionEffect Item : FX.effects())
       insert(Item);
@@ -4979,7 +4981,7 @@ public:
   void insert(FunctionEffectKindSet Set) { KindBits |= Set.KindBits; }
 
   bool contains(const FunctionEffect::Kind EK) const {
-    return (KindBits & kindToBit(EK)) != 0;
+    return KindBits.test(kindToPos(EK));
   }
   void dump(llvm::raw_ostream &OS) const;
 
