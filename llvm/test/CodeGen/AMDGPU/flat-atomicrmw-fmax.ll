@@ -1274,21 +1274,55 @@ define float @flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory(ptr %ptr, 
 ; GFX11-LABEL: flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_b32 v3, v[0:1]
+; GFX11-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:  .LBB8_1: ; %atomicrmw.start
+; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX11-NEXT:    v_max_f32_e32 v3, v3, v2
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    flat_atomic_max_f32 v0, v[0:1], v2 glc
+; GFX11-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
+; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    flat_load_dword v3, v[0:1]
+; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:  .LBB8_1: ; %atomicrmw.start
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v4, v3
+; GFX10-NEXT:    v_max_f32_e32 v3, v4, v4
+; GFX10-NEXT:    v_max_f32_e32 v3, v3, v2
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    flat_atomic_fmax v0, v[0:1], v2 glc
+; GFX10-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
+; GFX10-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX10-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GFX10-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory:
@@ -1366,9 +1400,25 @@ define float @flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory(ptr %ptr, 
 ; GFX7-LABEL: flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    flat_atomic_fmax v0, v[0:1], v2 glc
+; GFX7-NEXT:    flat_load_dword v3, v[0:1]
+; GFX7-NEXT:    s_mov_b64 s[4:5], 0
+; GFX7-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX7-NEXT:  .LBB8_1: ; %atomicrmw.start
+; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v4, v3
+; GFX7-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; GFX7-NEXT:    v_max_f32_e32 v3, v3, v2
+; GFX7-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
+; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw fmax ptr %ptr, float %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret float %result
@@ -3792,19 +3842,54 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX10-LABEL: flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; GFX10-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:  .LBB24_1: ; %atomicrmw.start
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v7, v5
+; GFX10-NEXT:    v_mov_b32_e32 v6, v4
+; GFX10-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
+; GFX10-NEXT:    v_max_f64 v[4:5], v[4:5], v[2:3]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    flat_atomic_fmax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX10-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[4:5], v[6:7]
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
+; GFX10-NEXT:    s_cbranch_execnz .LBB24_1
+; GFX10-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GFX10-NEXT:    v_mov_b32_e32 v0, v4
+; GFX10-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
+; GFX90A-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX90A-NEXT:  .LBB24_1: ; %atomicrmw.start
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
+; GFX90A-NEXT:    v_max_f64 v[4:5], v[4:5], v[2:3]
+; GFX90A-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1
+; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX90A-NEXT:    s_cbranch_execnz .LBB24_1
+; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:
@@ -3865,9 +3950,30 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX7-LABEL: flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    flat_atomic_fmax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v4, v[0:1]
+; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX7-NEXT:    s_mov_b64 s[4:5], 0
+; GFX7-NEXT:  .LBB24_1: ; %atomicrmw.start
+; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v7, v5
+; GFX7-NEXT:    v_mov_b32_e32 v6, v4
+; GFX7-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
+; GFX7-NEXT:    v_max_f64 v[4:5], v[4:5], v[2:3]
+; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
+; GFX7-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    s_cbranch_execnz .LBB24_1
+; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v0, v4
+; GFX7-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw fmax ptr %ptr, double %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret double %result
@@ -15061,7 +15167,7 @@ define void @flat_system_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fine
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{}
