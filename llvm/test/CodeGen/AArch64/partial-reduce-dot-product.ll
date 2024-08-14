@@ -61,6 +61,78 @@ entry:
   ret <vscale x 2 x i64> %partial.reduce
 }
 
+define <vscale x 4 x i64> @dotp_8to64(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: dotp_8to64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    udot z2.s, z0.b, z1.b
+; CHECK-NEXT:    uunpklo z0.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  %b.wide = zext <vscale x 16 x i8> %b to <vscale x 16 x i64>
+  %mult = mul nuw nsw <vscale x 16 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(
+  <vscale x 4 x i64> zeroinitializer, <vscale x 16 x i64> %mult)
+  ret <vscale x 4 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i64> @dotp_sext_8to64(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: dotp_sext_8to64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    sdot z2.s, z0.b, z1.b
+; CHECK-NEXT:    sunpklo z0.d, z2.s
+; CHECK-NEXT:    sunpkhi z1.d, z2.s
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  %b.wide = sext <vscale x 16 x i8> %b to <vscale x 16 x i64>
+  %mult = mul nuw nsw <vscale x 16 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(
+  <vscale x 4 x i64> zeroinitializer, <vscale x 16 x i64> %mult)
+  ret <vscale x 4 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i64> @dotp_8to64_accumulator(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 4 x i64> %acc) {
+; CHECK-LABEL: dotp_8to64_accumulator:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEXT:    udot z4.s, z0.b, z1.b
+; CHECK-NEXT:    uunpklo z0.d, z4.s
+; CHECK-NEXT:    uunpkhi z1.d, z4.s
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEXT:    add z1.d, z3.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  %b.wide = zext <vscale x 16 x i8> %b to <vscale x 16 x i64>
+  %mult = mul nuw nsw <vscale x 16 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(
+  <vscale x 4 x i64> %acc, <vscale x 16 x i64> %mult)
+  ret <vscale x 4 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i64> @dotp_sext_8to64_accumulator(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 4 x i64> %acc) {
+; CHECK-LABEL: dotp_sext_8to64_accumulator:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEXT:    sdot z4.s, z0.b, z1.b
+; CHECK-NEXT:    sunpklo z0.d, z4.s
+; CHECK-NEXT:    sunpkhi z1.d, z4.s
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEXT:    add z1.d, z3.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  %b.wide = sext <vscale x 16 x i8> %b to <vscale x 16 x i64>
+  %mult = mul nuw nsw <vscale x 16 x i64> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(
+  <vscale x 4 x i64> %acc, <vscale x 16 x i64> %mult)
+  ret <vscale x 4 x i64> %partial.reduce
+}
+
 define <vscale x 4 x i32> @not_dotp(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: not_dotp:
 ; CHECK:       // %bb.0: // %entry

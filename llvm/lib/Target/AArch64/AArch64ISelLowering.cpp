@@ -2007,11 +2007,15 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
       return true;
     ElementCount ExpectedCount8 = ElementCount::get(8, RetTy->isScalableTy());
     ElementCount ExpectedCount16 = ElementCount::get(16, RetTy->isScalableTy());
+    // Check that the input type is 4 times smaller than the output type. If the
+    // output type is 64 bit then we can accept 8 bit inputs if we do a 32 bit
+    // dot product and add a zext/sext.
     if ((RetTy->getScalarType()->isIntegerTy(64) &&
          InputAType->getElementType()->isIntegerTy(16) &&
          InputAType->getElementCount() == ExpectedCount8 &&
          InputAType == InputBType) ||
-        (RetTy->getScalarType()->isIntegerTy(32) &&
+        ((RetTy->getScalarType()->isIntegerTy(32) ||
+          RetTy->getScalarType()->isIntegerTy(64)) &&
          InputAType->getElementType()->isIntegerTy(8) &&
          InputAType->getElementCount() == ExpectedCount16 &&
          InputAType == InputBType)) {
@@ -21833,10 +21837,34 @@ static SDValue performIntrinsicCombine(SDNode *N,
     if (IsValidDotProduct) {
       auto A = ExtA->getOperand(0);
       auto B = ExtB->getOperand(0);
+      EVT Type = NarrowOp.getValueType();
+
+      // 8 bit input to 64 bit output can be done by doing a 32 bit dot product
+      // and extending the output
+      bool Extend = A->getValueType(0).getScalarSizeInBits() == 8 &&
+                    Type.getScalarSizeInBits() == 64;
+      SDValue Accumulator = NarrowOp;
+      if (Extend) {
+        Type = Type.changeVectorElementType(
+            EVT::getIntegerVT(*DAG.getContext(), 32));
+        // The accumulator is of the wider type so we insert a 0 accumulator and
+        // add the proper one after extending
+        Accumulator = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv4i32,
+                                  DAG.getConstant(0, DL, MVT::i32));
+      }
 
       auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NarrowOp.getValueType(),
-                         {IntrinsicId, NarrowOp, A, B});
+      auto DotProduct = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Type,
+                                    {IntrinsicId, Accumulator, A, B});
+      if (Extend) {
+        auto Extended =
+            DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND, DL,
+                        NarrowOp.getValueType(), {DotProduct});
+        auto AccAdd = DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
+                                  {NarrowOp, Extended});
+        DotProduct = AccAdd;
+      }
+      return DotProduct;
     } else {
       // If the node doesn't match a dot product, lower to a series of ADDs
       // instead.
