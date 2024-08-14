@@ -51,7 +51,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAtomicOptimizer.cpp
   AMDGPUAttributor.cpp
   AMDGPUCallLowering.cpp
-  AMDGPUCodeGenPassBuilder.cpp
   AMDGPUCodeGenPrepare.cpp
   AMDGPUCombinerHelper.cpp
   AMDGPUCtorDtorLowering.cpp
@@ -101,6 +100,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUSetWavePriority.cpp
   AMDGPUSplitModule.cpp
   AMDGPUSubtarget.cpp
+  AMDGPUTargetMachine.cpp
   AMDGPUTargetObjectFile.cpp
   AMDGPUTargetTransformInfo.cpp
   AMDGPUUnifyDivergentExitNodes.cpp

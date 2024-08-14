@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIProgramInfo.h"
 #include "Utils/AMDGPUPALMetadata.h"

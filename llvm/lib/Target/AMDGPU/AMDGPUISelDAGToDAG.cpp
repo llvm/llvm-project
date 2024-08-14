@@ -13,9 +13,9 @@
 
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"

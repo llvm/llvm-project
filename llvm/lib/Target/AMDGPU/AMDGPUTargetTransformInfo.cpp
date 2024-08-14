@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/InlineCost.h"

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"

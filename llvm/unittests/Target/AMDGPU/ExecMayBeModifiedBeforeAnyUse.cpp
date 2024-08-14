@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "AMDGPUUnitTests.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "gtest/gtest.h"

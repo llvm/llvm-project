@@ -16,7 +16,7 @@
 
 #include "R600TargetTransformInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "R600Subtarget.h"
 
 using namespace llvm;

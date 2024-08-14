@@ -62,8 +62,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"

@@ -13,10 +13,10 @@
 
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"

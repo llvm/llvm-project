@@ -14,9 +14,9 @@
 #include "AMDGPULegalizerInfo.h"
 
 #include "AMDGPU.h"
-#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"

@@ -1,4 +1,4 @@
-//===- lib/Target/AMDGPU/AMDGPUCodeGenPassBuilder.cpp ---------------------===//
+//===-- AMDGPUTargetMachine.cpp - TargetMachine for hw codegen targets-----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,11 @@
 /// This file contains both AMDGPU target machine and the CodeGen pass builder.
 /// The AMDGPU target machine contains all of the hardware specific information
 /// needed to emit code for SI+ GPUs in the legacy pass manager pipeline. The
-/// CodeGen pass builder design is its equivalent for the new pass manager.
+/// CodeGen pass builder handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUCodeGenPassBuilder.h"
+#include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUCtorDtorLowering.h"
@@ -582,10 +582,6 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return Reloc::PIC_;
 }
 
-//===----------------------------------------------------------------------===//
-// AMDGPU Target Machine (R600+) - Legacy Pass Manager interface.
-//===----------------------------------------------------------------------===//
-
 AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
@@ -874,7 +870,7 @@ bool AMDGPUTargetMachine::splitModule(
 }
 
 //===----------------------------------------------------------------------===//
-// GCN Target Machine (SI+) - Legacy Pass Manager interface.
+// GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
 
 GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
