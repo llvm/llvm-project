@@ -1611,12 +1611,9 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                 MaybeAlign Alignment, unsigned Granularity,
                                 TypeSize TypeStoreSize, bool IsWrite,
                                 Value *SizeArgument, bool UseCalls,
-                                uint32_t Exp, RuntimeCallInserter &RTCI,
-                                Value *DormantAsanFlag) {
+                                uint32_t Exp, RuntimeCallInserter &RTCI) {
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
-  Instruction *InsertPoint = InsertBefore;
-
   if (!TypeStoreSize.isScalable()) {
     const auto FixedSize = TypeStoreSize.getFixedValue();
     switch (FixedSize) {
@@ -1627,12 +1624,12 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
     case 128:
       if (!Alignment || *Alignment >= Granularity ||
           *Alignment >= FixedSize / 8)
-        return Pass->instrumentAddress(I, InsertPoint, Addr, Alignment,
+        return Pass->instrumentAddress(I, InsertBefore, Addr, Alignment,
                                        FixedSize, IsWrite, nullptr, UseCalls,
                                        Exp, RTCI);
     }
   }
-  Pass->instrumentUnusualSizeOrAlignment(I, InsertPoint, Addr, TypeStoreSize,
+  Pass->instrumentUnusualSizeOrAlignment(I, InsertBefore, Addr, TypeStoreSize,
                                          IsWrite, nullptr, UseCalls, Exp, RTCI);
 }
 
@@ -1698,7 +1695,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
     }
     doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress,
                         Alignment, Granularity, ElemTypeSize, IsWrite,
-                        SizeArgument, UseCalls, Exp, RTCI, DormantAsanFlag);
+                        SizeArgument, UseCalls, Exp, RTCI);
   });
 }
 
@@ -1751,11 +1748,11 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     InstrumentationIRBuilder IRB(InsertPoint);
     InsertPoint = SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
-<<<<<<< HEAD
-        InsertPoint, false);
-=======
         InsertPoint, false, MDBuilder(*C).createUnlikelyBranchWeights());
+  }
+
   unsigned Granularity = 1 << Mapping.Scale;
+  if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
                                 O.MaybeStride, InsertPoint, Addr, O.Alignment,
                                 Granularity, O.OpType, O.IsWrite, nullptr,
@@ -1763,7 +1760,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   } else {
     doInstrumentAddress(this, InsertPoint, InsertPoint, Addr, O.Alignment,
                         Granularity, O.TypeStoreSize, O.IsWrite, nullptr,
-                        UseCalls, Exp, RTCI, DormantAsanFlag);
+                        UseCalls, Exp, RTCI);
   }
 }
 

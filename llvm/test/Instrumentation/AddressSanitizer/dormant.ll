@@ -14,7 +14,7 @@ define dso_local i32 @test(ptr %a) sanitize_address {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr @__asan_is_dormant, align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], true
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB3:.*]], label %[[BB17:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB3:.*]], label %[[BB17:.*]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 3
@@ -22,7 +22,7 @@ define dso_local i32 @test(ptr %a) sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB16:.*]], !prof [[PROF7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB16:.*]], !prof [[PROF7]]
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP4]], 7
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 3
@@ -39,7 +39,7 @@ define dso_local i32 @test(ptr %a) sanitize_address {
 ; CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i1, ptr @__asan_is_dormant, align 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = xor i1 [[TMP19]], true
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[BB21:.*]], label %[[BB35:.*]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[BB21:.*]], label %[[BB35:.*]], !prof [[PROF7]]
 ; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; CHECK-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 3
