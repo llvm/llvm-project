@@ -30,7 +30,8 @@ set(LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_WIDE_CHARACTERS OFF CACHE BOOL "")
 set(LIBCXX_INCLUDE_BENCHMARKS OFF CACHE BOOL "")
 # Long tests are prohibitively slow when run via emulation.
-set(LIBCXX_TEST_PARAMS "long_tests=False" CACHE STRING "")
+# Large tests won't fit in the memory of the emulated machine.
+set(LIBCXX_TEST_PARAMS "long_tests=False;large_tests=False" CACHE STRING "")
 set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
 set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
 set(LIBUNWIND_ENABLE_STATIC ON CACHE BOOL "")
