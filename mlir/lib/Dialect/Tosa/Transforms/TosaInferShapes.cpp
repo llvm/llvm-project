@@ -102,7 +102,7 @@ public:
       tensor::CastOp castValue;
 
       // Traverse all uses
-      for (OpOperand* use : uses) {
+      for (OpOperand *use : uses) {
         if (canBeRefined(use->getOwner()))
           continue;
 
@@ -113,8 +113,8 @@ public:
           // they appear in the use list.
           OpBuilder builder{value.getContext()};
           builder.setInsertionPointAfter(value.getDefiningOp());
-          castValue = builder.create<tensor::CastOp>(
-              value.getLoc(), oldType, value);
+          castValue =
+              builder.create<tensor::CastOp>(value.getLoc(), oldType, value);
         }
 
         use->set(castValue);
