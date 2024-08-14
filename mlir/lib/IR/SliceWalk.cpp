@@ -78,9 +78,8 @@ getRegionPredecessorOperands(RegionBranchOpInterface regionOp,
   return predecessorOperands;
 }
 
-/// Returns the predecessor branch operands that match `blockArg`. Returns a
-/// nullopt when some of the predecessor terminators do not implement the
-/// BranchOpInterface.
+/// Returns the predecessor branch operands that match `blockArg`, or nullopt if
+/// some of the predecessor terminators do not implement the BranchOpInterface.
 static std::optional<SmallVector<Value>>
 getBlockPredecessorOperands(BlockArgument blockArg) {
   Block *block = blockArg.getOwner();
@@ -130,8 +129,8 @@ mlir::getControlFlowPredecessors(Value value) {
           regionBranchOp, region, blockArg.getArgNumber());
       return predecessorOperands;
     }
-    // Unclear how to deal with this operation, conservatively return a
-    // failure.
+    // If the interface is not implemented, there are no control flow
+    // predecessors to work with.
     return std::nullopt;
   }
 

@@ -253,8 +253,8 @@ getUnderlyingObjectSet(Value pointerValue) {
     }
 
     // If this place is reached, `val` is a block argument that is not
-    // understood. Therfore, we conservatively interrupt.
-    // Note: Dealing with the function arguments is not necessary, as the slice
+    // understood. Therefore, we conservatively interrupt.
+    // Note: Dealing with function arguments is not necessary, as the slice
     // would have to go through an SSACopyOp first.
     return WalkContinuation::interrupt();
   });

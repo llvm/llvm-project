@@ -45,8 +45,7 @@ public:
   }
 
   /// Creates a continuation that adds the user-specified `nextValues` to the
-  /// work list and advances the walk. Unlike advance, this function does not
-  /// add the control flow predecessor values to the work list.
+  /// work list and advances the walk.
   static WalkContinuation advanceTo(mlir::ValueRange nextValues) {
     return WalkContinuation(WalkAction::AdvanceTo, nextValues);
   }
@@ -90,8 +89,8 @@ WalkContinuation walkSlice(mlir::ValueRange rootValues,
 
 /// Computes a vector of all control predecessors of `value`. Relies on
 /// RegionBranchOpInterface and BranchOpInterface to determine predecessors.
-/// Returns nullopt if value has no predecessors or when the relevant operations
-/// are missing the interface implementations.
+/// Returns nullopt if `value` has no predecessors or when the relevant
+/// operations are missing the interface implementations.
 std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
 
 } // namespace mlir
