@@ -13,6 +13,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
@@ -85,7 +86,6 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
   if (lhs_cfa_on_stack && rhs_cfa_on_stack)
     return HeapCFAComparisonResult::NoOpinion;
 
-  // FIXME: rdar://76119439
   // If one of the frames has a CFA on the stack and the other doesn't, we are
   // at the boundary between an asynchronous and a synchronous function.
   // Synchronous functions cannot call asynchronous functions, therefore the
@@ -94,6 +94,35 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
     return HeapCFAComparisonResult::Younger;
   if (!lhs_cfa_on_stack && rhs_cfa_on_stack)
     return HeapCFAComparisonResult::Older;
+
+  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
+  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
+  // If the cfas are the same, fallback to the usual scope comparison.
+  if (lhs_cfa == rhs_cfa)
+    return HeapCFAComparisonResult::NoOpinion;
+
+  // Both CFAs are on the heap and they are distinct.
+  // LHS is younger if and only if its continuation async context is (directly
+  // or indirectly) RHS. Chase continuation pointers to check this case, until
+  // we hit the end of the chain (parent_ctx == 0) or a safety limit in case of
+  // an invalid continuation chain.
+  auto max_num_frames = 512;
+  for (lldb::addr_t parent_ctx = lhs_cfa; parent_ctx && max_num_frames;
+       max_num_frames--) {
+    Status error;
+    lldb::addr_t old_parent_ctx = parent_ctx;
+    // The continuation's context is the first field of an async context.
+    parent_ctx = process.ReadPointerFromMemory(old_parent_ctx, error);
+    if (error.Fail()) {
+      Log *log = GetLog(LLDBLog::Unwind);
+      LLDB_LOGF(log, "Failed to read parent async context of: 0x%8.8" PRIx64,
+                old_parent_ctx);
+      break;
+    }
+    if (parent_ctx == rhs_cfa)
+      return HeapCFAComparisonResult::Younger;
+  }
+
   return HeapCFAComparisonResult::NoOpinion;
 }
 // END SWIFT
