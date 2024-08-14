@@ -271,6 +271,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   EXPECT_TRUE(sd_match(FPToUI, m_FPToUI(m_Value())));
   EXPECT_TRUE(sd_match(FPToSI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
