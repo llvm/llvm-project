@@ -598,9 +598,10 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
 /// Returns whether an unsigned division by `divisor` is speculatable.
 static Speculation::Speculatability getDivUISpeculatability(Value divisor) {
   // X / 0 => UB
-  return matchPattern(divisor, m_IntRangeWithoutZeroU())
-             ? Speculation::Speculatable
-             : Speculation::NotSpeculatable;
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
@@ -634,15 +635,12 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
 /// function conservatively assumes that all signed division by -1 are not
 /// speculatable.
 static Speculation::Speculatability getDivSISpeculatability(Value divisor) {
-  // INT_MIN / -1 => UB
-  APInt constDivisor;
-  if (matchPattern(divisor, m_ConstantInt(&constDivisor)) &&
-      constDivisor.isAllOnes())
-    return Speculation::NotSpeculatable;
-
   // X / 0 => UB
-  if (matchPattern(divisor, m_IntRangeWithoutZeroS()))
+  // INT_MIN / -1 => UB
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
     return Speculation::Speculatable;
+
   return Speculation::NotSpeculatable;
 }
 

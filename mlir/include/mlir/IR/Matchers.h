@@ -460,6 +460,15 @@ inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroS() {
   }};
 }
 
+/// Matches a constant scalar / vector splat / tensor splat integer or a
+/// signed integer range that does not contain minus one. Note
+/// that this matcher interprets the target value as a signed integer.
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutNegOneS() {
+  return {[](const ConstantIntRanges &range) {
+    return range.smin().sgt(-1) || range.smax().slt(-1);
+  }};
+}
+
 /// Matches a constant scalar / vector splat / tensor splat integer one.
 inline detail::constant_int_predicate_matcher m_One() {
   return {[](const APInt &value) { return 1 == value; }};
