@@ -1079,6 +1079,9 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
     return true;
   }
 
+  if (CheckConceptUseInDefinition(CD, TypeConstr->TemplateNameLoc))
+    return true;
+
   bool WereArgsSpecified = TypeConstr->LAngleLoc.isValid();
 
   if (!WereArgsSpecified &&
@@ -8447,10 +8450,9 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
   return NewDecl;
 }
 
-Decl *Sema::ActOnConceptDefinition(
+ConceptDecl *Sema::ActOnStartConceptDefinition(
     Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr,
-    const ParsedAttributesView &Attrs) {
+    const IdentifierInfo *Name, SourceLocation NameLoc) {
   DeclContext *DC = CurContext;
 
   if (!DC->getRedeclContext()->isFileContext()) {
@@ -8486,11 +8488,8 @@ Decl *Sema::ActOnConceptDefinition(
     }
   }
 
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
-    return nullptr;
-
   ConceptDecl *NewDecl =
-      ConceptDecl::Create(Context, DC, NameLoc, Name, Params, ConstraintExpr);
+      ConceptDecl::Create(Context, DC, NameLoc, Name, Params);
 
   if (NewDecl->hasAssociatedConstraints()) {
     // C++2a [temp.concept]p4:
@@ -8499,23 +8498,63 @@ Decl *Sema::ActOnConceptDefinition(
     NewDecl->setInvalidDecl();
   }
 
-  // Check for conflicting previous declaration.
-  DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NameLoc);
+  DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NewDecl->getBeginLoc());
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                         forRedeclarationInCurContext());
   LookupName(Previous, S);
-  FilterLookupForScope(Previous, DC, S, /*ConsiderLinkage=*/false,
-                       /*AllowInlineNamespace*/false);
-  bool AddToScope = true;
-  CheckConceptRedefinition(NewDecl, Previous, AddToScope);
+  FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage=*/false,
+                       /*AllowInlineNamespace*/ false);
 
-  ActOnDocumentableDecl(NewDecl);
-  if (AddToScope)
-    PushOnScopeChains(NewDecl, S);
-
-  ProcessDeclAttributeList(S, NewDecl, Attrs);
+  // We cannot properly handle redeclarations until we parse the constraint
+  // expression, so only inject the name if we are sure we are not redeclaring a
+  // symbol
+  if (Previous.empty())
+    PushOnScopeChains(NewDecl, S, true);
 
   return NewDecl;
+}
+
+static bool RemoveLookupResult(LookupResult &R, NamedDecl *C) {
+  bool Found = false;
+  LookupResult::Filter F = R.makeFilter();
+  while (F.hasNext()) {
+    NamedDecl *D = F.next();
+    if (D == C) {
+      F.erase();
+      Found = true;
+      break;
+    }
+  }
+  F.done();
+  return Found;
+}
+
+ConceptDecl *
+Sema::ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
+                                   Expr *ConstraintExpr,
+                                   const ParsedAttributesView &Attrs) {
+  assert(!C->hasDefinition() && "Concept already defined");
+  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
+    return nullptr;
+  C->setDefinition(ConstraintExpr);
+  ProcessDeclAttributeList(S, C, Attrs);
+
+  // Check for conflicting previous declaration.
+  DeclarationNameInfo NameInfo(C->getDeclName(), C->getBeginLoc());
+  LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
+                        forRedeclarationInCurContext());
+  LookupName(Previous, S);
+  FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage=*/false,
+                       /*AllowInlineNamespace*/ false);
+  bool WasAlreadyAdded = RemoveLookupResult(Previous, C);
+  bool AddToScope = true;
+  CheckConceptRedefinition(C, Previous, AddToScope);
+
+  ActOnDocumentableDecl(C);
+  if (!WasAlreadyAdded && AddToScope)
+    PushOnScopeChains(C, S);
+
+  return C;
 }
 
 void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
@@ -8558,6 +8597,16 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
   }
   // We unwrap canonical decl late to check for module visibility.
   Context.setPrimaryMergedDecl(NewDecl, OldConcept->getCanonicalDecl());
+}
+
+bool Sema::CheckConceptUseInDefinition(ConceptDecl *Concept,
+                                       SourceLocation Loc) {
+  if (!Concept->isInvalidDecl() && !Concept->hasDefinition()) {
+    Diag(Loc, diag::err_recursive_concept) << Concept;
+    Diag(Concept->getLocation(), diag::note_declared_at);
+    return true;
+  }
+  return false;
 }
 
 /// \brief Strips various properties off an implicit instantiation
