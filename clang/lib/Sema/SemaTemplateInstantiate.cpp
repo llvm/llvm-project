@@ -509,15 +509,17 @@ struct TemplateInstantiationArgumentCollecter
     : DeclVisitor<TemplateInstantiationArgumentCollecter, Decl*> {
   Sema &S;
   MultiLevelTemplateArgumentList &Result;
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
   bool RelativeToPrimary;
   bool ForConstraintInstantiation;
 
   TemplateInstantiationArgumentCollecter(
       Sema &S,
       MultiLevelTemplateArgumentList &Result,
+      std::optional<ArrayRef<TemplateArgument>> Innermost,
       bool RelativeToPrimary,
       bool ForConstraintInstantiation) :
-          S(S), Result(Result), RelativeToPrimary(RelativeToPrimary),
+          S(S), Result(Result), Innermost(Innermost), RelativeToPrimary(RelativeToPrimary),
           ForConstraintInstantiation(ForConstraintInstantiation) {
   }
 
@@ -543,14 +545,34 @@ struct TemplateInstantiationArgumentCollecter
         Decl::castFromDeclContext(D->getDeclContext()));
   }
 
+  void AddInnermostTemplateArguments(const Decl *D) {
+    assert(Innermost);
+    Result.addOuterTemplateArguments(const_cast<Decl*>(D), *Innermost, /*Final=*/false);
+    Innermost.reset();
+  }
+
+  void AddOuterTemplateArguments(const Decl *D, ArrayRef<TemplateArgument> Args, bool Final) {
+    #if 0
+    if (Innermost) {
+      Args = *Innermost;
+      Innermost.reset();
+    }
+    #endif
+    Result.addOuterTemplateArguments(const_cast<Decl*>(D), Args, Final);
+  }
+
   Decl *VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTPD) {
     #if 0
     for (unsigned I = 0, N = TTPD->getDepth() + 1; I != N; ++I)
       Result.addOuterTemplateArguments(std::nullopt);
     return Done();
     #endif
+    if (Innermost)
+      AddInnermostTemplateArguments(TTPD);
+
+    // else if (ForConstraintInstantiation)
     if (ForConstraintInstantiation)
-      Result.addOuterTemplateArguments(std::nullopt);
+      AddOuterTemplateArguments(nullptr, std::nullopt, /*Final=*/false);
 
     return UseNextDecl(TTPD);
   }
@@ -559,8 +581,10 @@ struct TemplateInstantiationArgumentCollecter
     assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
           "outer template not instantiated?");
 
-    if (ForConstraintInstantiation)
-      Result.addOuterTemplateArguments(
+    if (Innermost)
+      AddInnermostTemplateArguments(FTD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(
           FTD, FTD->getInjectedTemplateArgs(), /*Final=*/false);
 
     if (FTD->isMemberSpecialization())
@@ -575,8 +599,10 @@ struct TemplateInstantiationArgumentCollecter
     assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
           "outer template not instantiated?");
 
-    if (ForConstraintInstantiation)
-      Result.addOuterTemplateArguments(
+    if (Innermost)
+      AddInnermostTemplateArguments(VTD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(
           VTD, VTD->getInjectedTemplateArgs(), /*Final=*/false);
 
     if (VTD->isMemberSpecialization())
@@ -589,8 +615,10 @@ struct TemplateInstantiationArgumentCollecter
     assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
           "outer template not instantiated?");
 
-    if (ForConstraintInstantiation)
-      Result.addOuterTemplateArguments(
+    if (Innermost)
+      AddInnermostTemplateArguments(CTD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(
           CTD, CTD->getInjectedTemplateArgs(), /*Final=*/false);
 
     if (CTD->isMemberSpecialization())
@@ -599,6 +627,27 @@ struct TemplateInstantiationArgumentCollecter
     if (CTD->getFriendObjectKind())
       return ChangeDecl(CTD->getLexicalDeclContext());
     return UseNextDecl(CTD);
+  }
+
+  Decl *VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *TATD) {
+    assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+          "outer template not instantiated?");
+    if (Innermost)
+      AddInnermostTemplateArguments(TATD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(
+          TATD, TATD->getInjectedTemplateArgs(), /*Final=*/false);
+
+    return UseNextDecl(TATD);
+  }
+
+  Decl *VisitConceptDecl(ConceptDecl *CD) {
+    assert((ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+          "outer template not instantiated?");
+    if (Innermost)
+      AddInnermostTemplateArguments(CD);
+
+    return UseNextDecl(CD);
   }
 
   #if 0
@@ -636,8 +685,11 @@ struct TemplateInstantiationArgumentCollecter
     if (const TemplateArgumentList *TemplateArgs =
                    FD->getTemplateSpecializationArgs()) {
       // Add the template arguments for this specialization.
-      Result.addOuterTemplateArguments(
-          FD, TemplateArgs->asArray(), /*Final=*/false);
+      if (Innermost)
+        AddInnermostTemplateArguments(FD);
+      else
+        AddOuterTemplateArguments(
+            FD, TemplateArgs->asArray(), /*Final=*/false);
 
       if ( // RelativeToPrimary &&
           (FD->getTemplateSpecializationKind() ==
@@ -698,7 +750,7 @@ struct TemplateInstantiationArgumentCollecter
       if (ClassTemplate->isMemberSpecialization())
         return Done();
       if (ForConstraintInstantiation)
-        Result.addOuterTemplateArguments(
+        AddOuterTemplateArguments(
             RD, ClassTemplate->getInjectedTemplateArgs(), /*Final=*/false);
     }
 
@@ -727,9 +779,9 @@ struct TemplateInstantiationArgumentCollecter
             getPrimaryTemplateOfGenericLambda(RD->getLambdaCallOperator());
         if (isLambdaEnclosedByTypeAliasDecl(PrimaryLambdaCallOperator,
                                             TypeAlias.PrimaryTypeAliasDecl)) {
-          Result.addOuterTemplateArguments(TypeAlias.Template,
-                                           TypeAlias.AssociatedTemplateArguments,
-                                           /*Final=*/false);
+          AddOuterTemplateArguments(TypeAlias.Template,
+                                    TypeAlias.AssociatedTemplateArguments,
+                                    /*Final=*/false);
           // Visit the parent of the current type alias declaration rather than
           // the lambda thereof.
           // E.g., in the following example:
@@ -781,7 +833,8 @@ struct TemplateInstantiationArgumentCollecter
     #else
     // For a class-scope explicit specialization, there are no template arguments
     // at this level, but there may be enclosing template arguments.
-    if (CTSD->isClassScopeExplicitSpecialization())
+    if (CTSD->isClassScopeExplicitSpecialization() &&
+        !isa<ClassTemplatePartialSpecializationDecl>(CTSD))
       return DontClearRelativeToPrimaryNextDecl(CTSD);
 
     // We're done when we hit an explicit specialization.
@@ -810,9 +863,12 @@ struct TemplateInstantiationArgumentCollecter
         return Done();
     }
     #else
-    Result.addOuterTemplateArguments(
-        CTSD, CTSD->getTemplateInstantiationArgs().asArray(),
-        /*Final=*/false);
+    if (Innermost)
+        AddInnermostTemplateArguments(CTSD);
+    else
+      AddOuterTemplateArguments(
+          CTSD, CTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
     if (auto *CTPSD = Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
       if (CTPSD->isMemberSpecialization())
         return Done();
@@ -830,7 +886,8 @@ struct TemplateInstantiationArgumentCollecter
   Decl *VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
     // For a class-scope explicit specialization, there are no template arguments
     // at this level, but there may be enclosing template arguments.
-    if (VTSD->isClassScopeExplicitSpecialization())
+    if (VTSD->isClassScopeExplicitSpecialization() &&
+        !isa<VarTemplatePartialSpecializationDecl>(VTSD))
       return DontClearRelativeToPrimaryNextDecl(VTSD);
 
     // We're done when we hit an explicit specialization.
@@ -844,16 +901,22 @@ struct TemplateInstantiationArgumentCollecter
     llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD = Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      Result.addOuterTemplateArguments(
-          VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
-          /*Final=*/false);
+      if (Innermost)
+        AddInnermostTemplateArguments(VTPSD);
+      else
+        AddOuterTemplateArguments(
+            VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
+            /*Final=*/false);
       if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      Result.addOuterTemplateArguments(
-          VTD, VTSD->getTemplateInstantiationArgs().asArray(),
-          /*Final=*/false);
+      if (Innermost)
+        AddInnermostTemplateArguments(VTD);
+      else
+        AddOuterTemplateArguments(
+            VTD, VTSD->getTemplateInstantiationArgs().asArray(),
+            /*Final=*/false);
       if (VTD->isMemberSpecialization())
         return Done();
     }
@@ -861,7 +924,7 @@ struct TemplateInstantiationArgumentCollecter
   }
 
   Decl *VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl *ICSD) {
-    Result.addOuterTemplateArguments(
+    AddOuterTemplateArguments(
         ICSD, ICSD->getTemplateArguments(),
         /*Final=*/false);
     return UseNextDecl(ICSD);
@@ -877,13 +940,13 @@ struct TemplateInstantiationArgumentCollecter
     return UseNextDecl(D);
   }
 
-  Decl *Visit(Decl *D) {
     #if 0
+  Decl *Visit(Decl *D) {
     if (TemplateDecl *TD = D->getDescribedTemplate())
       D = TD;
-    #endif
     return DeclVisitor::Visit(D);
   }
+    #endif
 };
 
 } // namespace
@@ -902,7 +965,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   if (!CurDecl)
     CurDecl = Decl::castFromDeclContext(DC);
 
-  #if 1
+  #if 0
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
                                      Final);
@@ -921,7 +984,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   #endif
 
   TemplateInstantiationArgumentCollecter Collecter(
-      *this, Result, RelativeToPrimary,
+      *this, Result, Innermost, RelativeToPrimary,
       ForConstraintInstantiation);
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
@@ -2125,25 +2188,42 @@ namespace {
 
     ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                  LambdaScopeInfo *LSI) {
+      #if 1
       CXXMethodDecl *MD = LSI->CallOperator;
-      for (ParmVarDecl *PVD : MD->parameters()) {
-        assert(PVD && "null in a parameter list");
-        if (!PVD->hasDefaultArg())
-          continue;
-        Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
-        // FIXME: Obtain the source location for the '=' token.
-        SourceLocation EqualLoc = UninstExpr->getBeginLoc();
-        if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
-          // If substitution fails, the default argument is set to a
-          // RecoveryExpr that wraps the uninstantiated default argument so
-          // that downstream diagnostics are omitted.
-          ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
-              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
-              { UninstExpr }, UninstExpr->getType());
-          if (ErrorResult.isUsable())
-            PVD->setDefaultArg(ErrorResult.get());
+      if (MD->getParentFunctionOrMethod()) {
+      #if 0
+        NamedDecl *Pattern = MD;
+          std::optional<ArrayRef<TemplateArgument>> Innermost;
+        if (FunctionTemplateDecl *FTD = MD->getDescribedFunctionTemplate()) {
+          Pattern = FTD;
+          Innermost = FTD->getInjectedTemplateArgs();
+        }
+        MultiLevelTemplateArgumentList MLTAL =
+            SemaRef.getTemplateInstantiationArgs(Pattern, Pattern->getLexicalDeclContext(),
+                                                 /*Final=*/false, Innermost,
+                                                 /*RelativeToPrimary=*/true);
+        #endif
+;
+        for (ParmVarDecl *PVD : MD->parameters()) {
+          assert(PVD && "null in a parameter list");
+          if (!PVD->hasDefaultArg())
+            continue;
+          Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
+          // FIXME: Obtain the source location for the '=' token.
+          SourceLocation EqualLoc = UninstExpr->getBeginLoc();
+          if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
+            // If substitution fails, the default argument is set to a
+            // RecoveryExpr that wraps the uninstantiated default argument so
+            // that downstream diagnostics are omitted.
+            ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
+                UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
+                { UninstExpr }, UninstExpr->getType());
+            if (ErrorResult.isUsable())
+              PVD->setDefaultArg(ErrorResult.get());
+          }
         }
       }
+      #endif
       return inherited::RebuildLambdaExpr(StartLoc, EndLoc, LSI);
     }
 

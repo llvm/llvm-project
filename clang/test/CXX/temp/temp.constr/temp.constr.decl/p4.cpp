@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
+// expected-no-diagnostics
 
 template<typename T>
 struct A {

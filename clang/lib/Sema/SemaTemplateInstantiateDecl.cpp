@@ -4686,6 +4686,21 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                       ParmVarDecl *Param) {
   assert(Param->hasUninstantiatedDefaultArg());
 
+  NamedDecl *Pattern = nullptr;
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  #if 1
+  if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
+    Pattern = FTD->isCXXClassMember() ? FTD->getFirstDecl() : FTD;
+    Innermost = FD->getTemplateSpecializationArgs()->asArray();
+  } else if (FD->isCXXClassMember()) {
+    Pattern = FD->getFirstDecl();
+  } else {
+    Pattern = FD;
+  }
+  #else
+  Pattern = FD;
+  #endif
+
   // Instantiate the expression.
   //
   // FIXME: Pass in a correct Pattern argument, otherwise
@@ -4703,12 +4718,10 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   //
   // template<typename T>
   // A<T> Foo(int a = A<T>::FooImpl());
-  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-      FD, FD->getLexicalDeclContext(),
-      /*Final=*/false, /*Innermost=*/std::nullopt,
-      /*RelativeToPrimary=*/true, /*Pattern=*/nullptr,
-      /*ForConstraintInstantiation=*/false, /*SkipForSpecialization=*/false,
-      /*ForDefaultArgumentSubstitution=*/true);
+  MultiLevelTemplateArgumentList TemplateArgs =
+      getTemplateInstantiationArgs(Pattern, Pattern->getLexicalDeclContext(),
+                                   /*Final=*/false, Innermost,
+                                   /*RelativeToPrimary=*/true);
 
   if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
