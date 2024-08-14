@@ -954,8 +954,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     bool IsSGPRSrc = AMDGPU::SReg_LO16RegClass.contains(SrcReg);
     bool IsAGPRDst = AMDGPU::AGPR_LO16RegClass.contains(DestReg);
     bool IsAGPRSrc = AMDGPU::AGPR_LO16RegClass.contains(SrcReg);
-    bool DstLow = !AMDGPU::isHi(DestReg, RI);
-    bool SrcLow = !AMDGPU::isHi(SrcReg, RI);
+    bool DstLow = !AMDGPU::isHi16Reg(DestReg, RI);
+    bool SrcLow = !AMDGPU::isHi16Reg(SrcReg, RI);
     MCRegister NewDestReg = RI.get32BitRegister(DestReg);
     MCRegister NewSrcReg = RI.get32BitRegister(SrcReg);
 

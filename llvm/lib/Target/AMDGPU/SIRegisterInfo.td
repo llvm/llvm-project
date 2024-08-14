@@ -123,7 +123,7 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 //  Declarations that describe the SI registers
 //===----------------------------------------------------------------------===//
 class SIReg <string n, bits<8> regIdx = 0, bit isVGPR = 0,
-             bit isAGPR = 0, bit isHi = 0> : Register<n> {
+             bit isAGPR = 0, bit isHi16 = 0> : Register<n> {
   let Namespace = "AMDGPU";
 
   // These are generic helper values we use to form actual register
@@ -132,7 +132,7 @@ class SIReg <string n, bits<8> regIdx = 0, bit isVGPR = 0,
   let HWEncoding{7-0} = regIdx;
   let HWEncoding{8} = isVGPR;
   let HWEncoding{9} = isAGPR;
-  let HWEncoding{10} = isHi;
+  let HWEncoding{10} = isHi16;
 
   int Index = !cast<int>(regIdx);
 }
@@ -161,7 +161,7 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
                         bit isVGPR = 0, bit isAGPR = 0> {
   def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
   def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
-                    /* isHi */ 1> {
+                    /* isHi16 */ 1> {
     let isArtificial = ArtificialHigh;
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
