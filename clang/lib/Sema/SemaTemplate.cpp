@@ -1079,7 +1079,7 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
     return true;
   }
 
-  if (CheckConceptUseIndefinition(CD, TypeConstr->TemplateNameLoc))
+  if (CheckConceptUseInDefinition(CD, TypeConstr->TemplateNameLoc))
     return true;
 
   bool WereArgsSpecified = TypeConstr->LAngleLoc.isValid();
@@ -8599,7 +8599,7 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
   Context.setPrimaryMergedDecl(NewDecl, OldConcept->getCanonicalDecl());
 }
 
-bool Sema::CheckConceptUseIndefinition(ConceptDecl *Concept,
+bool Sema::CheckConceptUseInDefinition(ConceptDecl *Concept,
                                        SourceLocation Loc) {
   if (!Concept->isInvalidDecl() && !Concept->hasDefinition()) {
     Diag(Loc, diag::err_recursive_concept) << Concept;

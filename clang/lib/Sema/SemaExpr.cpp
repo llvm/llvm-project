@@ -307,7 +307,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   }
 
   if (auto *Concept = dyn_cast<ConceptDecl>(D);
-      Concept && CheckConceptUseIndefinition(Concept, Loc))
+      Concept && CheckConceptUseInDefinition(Concept, Loc))
     return true;
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
