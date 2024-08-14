@@ -8968,6 +8968,8 @@ def err_atomic_op_has_invalid_synch_scope : Error<
 def warn_atomic_implicit_seq_cst : Warning<
   "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
+def err_atomic_unsupported : Error<
+  "atomic types are not supported in '%0'">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
