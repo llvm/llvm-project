@@ -1055,8 +1055,9 @@ static void genFlushClauses(lower::AbstractConverter &converter,
   if (!objects.empty())
     genObjectList(objects, converter, operandRange);
 
-  if (!clauses.empty())
-    TODO(converter.getCurrentLocation(), "Handle OmpMemoryOrderClause");
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processTODO<clause::AcqRel, clause::Acquire, clause::Release,
+                 clause::SeqCst>(loc, llvm::omp::OMPD_flush);
 }
 
 static void
@@ -1096,7 +1097,6 @@ static void genParallelClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processDefault();
   cp.processIf(llvm::omp::Directive::OMPD_parallel, clauseOps);
   cp.processNumThreads(stmtCtx, clauseOps);
   cp.processProcBind(clauseOps);
@@ -1129,7 +1129,7 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   cp.processSimdlen(clauseOps);
 
   // TODO Support delayed privatization.
-  cp.processTODO<clause::Allocate, clause::Linear, clause::Nontemporal>(
+  cp.processTODO<clause::Linear, clause::Nontemporal>(
       loc, llvm::omp::Directive::OMPD_simd);
 }
 
@@ -1167,15 +1167,15 @@ static void genTargetClauses(
   cp.processIsDevicePtr(clauseOps, devicePtrTypes, devicePtrLocs,
                         devicePtrSyms);
   cp.processMap(loc, stmtCtx, clauseOps, &mapSyms, &mapLocs, &mapTypes);
-  cp.processThreadLimit(stmtCtx, clauseOps);
 
   if (processHostOnlyClauses)
     cp.processNowait(clauseOps);
 
+  cp.processThreadLimit(stmtCtx, clauseOps);
+
   cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
-                 clause::InReduction, clause::Reduction,
-                 clause::UsesAllocators>(loc,
-                                         llvm::omp::Directive::OMPD_target);
+                 clause::InReduction, clause::UsesAllocators>(
+      loc, llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
   if (!enableDelayedPrivatizationStaging)
@@ -1223,7 +1223,6 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processDepend(clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
-  cp.processNowait(clauseOps);
 
   if (directive == llvm::omp::Directive::OMPD_target_update) {
     cp.processMotionClauses<clause::To>(stmtCtx, clauseOps);
@@ -1231,6 +1230,8 @@ static void genTargetEnterExitUpdateDataClauses(
   } else {
     cp.processMap(loc, stmtCtx, clauseOps);
   }
+
+  cp.processNowait(clauseOps);
 }
 
 static void genTaskClauses(lower::AbstractConverter &converter,
@@ -1240,7 +1241,6 @@ static void genTaskClauses(lower::AbstractConverter &converter,
                            mlir::omp::TaskOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processDefault();
   cp.processDepend(clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
@@ -1279,7 +1279,6 @@ static void genTeamsClauses(lower::AbstractConverter &converter,
                             mlir::omp::TeamsOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processDefault();
   cp.processIf(llvm::omp::Directive::OMPD_teams, clauseOps);
   cp.processNumTeams(stmtCtx, clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
