@@ -1,20 +1,26 @@
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC" -DFLAG_NAME=""
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V8 -DFLAG_VALUE=0x0
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x0
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC32PLUS" -DFLAG_NAME="EF_SPARC_32PLUS"
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V8PLUS-PLAIN -DFLAG_NAME=EF_SPARC_32PLUS -DFLAG_VALUE=0x100
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x100
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC32PLUS" -DFLAG_NAME="EF_SPARC_32PLUS, EF_SPARC_SUN_US1"
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V8PLUS-US1 -DFLAG0_NAME=EF_SPARC_32PLUS -DFLAG1_NAME=EF_SPARC_SUN_US1 -DFLAG_VALUE=0x300
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x300
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME=""
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V9-PLAIN -DFLAG_VALUE=0x0
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x0
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME="EF_SPARC_SUN_US1"
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V9-US1 -DFLAG_NAME=EF_SPARC_SUN_US1 -DFLAG_VALUE=0x200
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x200
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME="EF_SPARC_SUN_US1, EF_SPARCV9_RMO"
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=V9-US1-RMO -DFLAG0_NAME=EF_SPARCV9_RMO -DFLAG1_NAME=EF_SPARC_SUN_US1 -DFLAG_VALUE=0x202
+# RUN: llvm-readelf -a %t | FileCheck %s --check-prefix=READELF -DFLAG_VALUE=0x202
 
 --- !ELF
 FileHeader:
@@ -47,3 +53,5 @@ FileHeader:
 # V9-US1-RMO-NEXT:       [[FLAG0_NAME]]
 # V9-US1-RMO-NEXT:       [[FLAG1_NAME]]
 # V9-US1-RMO-NEXT:     ]
+
+# READELF: Flags: [[FLAG_VALUE]]
