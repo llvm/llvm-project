@@ -121,7 +121,6 @@ add_llvm_target(AMDGPUCodeGen
   GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp
-  R600CodeGenPassBuilder.cpp
   R600ControlFlowFinalizer.cpp
   R600EmitClauseMarkers.cpp
   R600ExpandSpecialInstrs.cpp
@@ -137,6 +136,7 @@ add_llvm_target(AMDGPUCodeGen
   R600Packetizer.cpp
   R600RegisterInfo.cpp
   R600Subtarget.cpp
+  R600TargetMachine.cpp
   R600TargetTransformInfo.cpp
   SIAnnotateControlFlow.cpp
   SIFixSGPRCopies.cpp
