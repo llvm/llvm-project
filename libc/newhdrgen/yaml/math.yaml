@@ -220,6 +220,14 @@ functions:
     return_type: double
     arguments:
       - type: long double
+  - name: dsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: erff
     standards:
       - stdc
@@ -1220,6 +1228,13 @@ functions:
     arguments:
       - type: double
       - type: double
+  - name: fsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: float
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fsubf128
     standards:
       - llvm_libc_ext
@@ -2362,6 +2377,14 @@ functions:
     arguments:
       - type: long double *
       - type: long double *
+  - name: totalordermagf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128 *
+      - type: float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalordermagf16
     standards:
       - stdc
