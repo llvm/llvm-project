@@ -2232,7 +2232,8 @@ static bool CheckBuiltinSyclKernelName(Sema &S, CallExpr *TheCall) {
   IdentifierTable &IdentTable = S.Context.Idents;
   auto Name = DeclarationName(&(IdentTable.get("type")));
   DeclContext::lookup_result Lookup = RD->lookup(Name);
-  if (Lookup.empty() || !Lookup.isSingleResult() || !isa<TypeAliasDecl>(Lookup.front()))
+  if (Lookup.empty() || !Lookup.isSingleResult() ||
+      !isa<TypedefNameDecl>(Lookup.front()))
     return true;
 
   return false;
@@ -3052,12 +3053,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_sycl_kernel_name: {
     // Builtin takes 1 argument
     if (TheCall->getNumArgs() != 1) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_argument_count);
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_argument_count)
+          << 1;
       return ExprError();
     }
 
     if (CheckBuiltinSyclKernelName(*this, TheCall)) {
-      Diag(TheCall->getArg(0)->getBeginLoc(), diag::err_builtin_invalid_argument);
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_sycl_kernel_name_invalid_arg);
       return ExprError();
     }
 

@@ -37,8 +37,8 @@ void test() {
   const char* test1 = __builtin_sycl_kernel_name(kernel_id_1<kernel_name_1>()); // Valid
   const char* test2 = __builtin_sycl_kernel_name(kernel_id_1<kernel_name_TD>()); // Valid
   const char* test3 = __builtin_sycl_kernel_name(kernel_id_2()); // Valid
-  const char* test4 = __builtin_sycl_kernel_name(kernel_id_3()); // expected-error {{invalid argument; argument must be a class or struct type with a member type alias named 'type'}}
-  const char* test5 = __builtin_sycl_kernel_name("str"); // expected-error {{invalid argument; argument must be a class or struct type with a member type alias named 'type'}}
-  const char* test6 = __builtin_sycl_kernel_name(kernel_id_2(), kernel_id_2()); // expected-error {{builtin requires exactly 1 argument}}
+  const char* test4 = __builtin_sycl_kernel_name(kernel_id_3()); // expected-error {{invalid argument; expected a class or structure with a member typedef or type alias alias named 'type'}}
+  const char* test5 = __builtin_sycl_kernel_name("str"); // expected-error {{invalid argument; expected a class or structure with a member typedef or type alias alias named 'type'}}
+  const char* test6 = __builtin_sycl_kernel_name(kernel_id_2(), kernel_id_2()); // expected-error {{builtin takes one argument}}
 }
 
