@@ -17,14 +17,14 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaInternal.h"
 
-#define DEBUG_TYPE "fxanalysis"
+#define DEBUG_TYPE "effectanalysis"
 
 using namespace clang;
 
 namespace {
 
 enum class ViolationID : uint8_t {
-  None = 0, // sentinel for an empty Violation
+  None = 0, // Sentinel for an empty Violation.
   Throws,
   Catches,
   CallsObjC,
@@ -32,7 +32,7 @@ enum class ViolationID : uint8_t {
   HasStaticLocal,
   AccessesThreadLocal,
 
-  // These only apply to callees, where the analysis stops at the Decl
+  // These only apply to callees, where the analysis stops at the Decl.
   DeclDisallowsInference,
 
   CallsDeclWithoutEffect,
@@ -47,10 +47,10 @@ enum class ViolationID : uint8_t {
 // be inferred as holding that effect.
 struct Violation {
   FunctionEffect Effect;
-  FunctionEffect CalleeEffectPreventingInference; // only for certain IDs
+  FunctionEffect CalleeEffectPreventingInference; // Only for certain IDs.
   ViolationID ID = ViolationID::None;
   SourceLocation Loc;
-  const Decl *Callee = nullptr; // only valid for Calls*
+  const Decl *Callee = nullptr; // Only valid for Calls*.
 
   Violation() = default;
 
@@ -65,7 +65,7 @@ struct Violation {
 
 enum class SpecialFuncType : uint8_t { None, OperatorNew, OperatorDelete };
 enum class CallableType : uint8_t {
-  // unknown: probably function pointer
+  // Unknown: probably function pointer
   Unknown,
   Function,
   Virtual,
@@ -152,12 +152,12 @@ struct CallableInfo {
   }
 
   /// Generate a name for logging and diagnostics.
-  std::string name(Sema &Sem) const {
+  std::string name(Sema &S) const {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl))
-      FD->getNameForDiagnostic(OS, Sem.getPrintingPolicy(),
+      FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),
                                /*Qualified=*/true);
     else if (auto *BD = dyn_cast<BlockDecl>(CDecl))
       OS << "(block " << BD->getBlockManglingNumber() << ")";
@@ -172,7 +172,7 @@ struct CallableInfo {
 // violations pertaining to an effect, per function.
 class EffectToViolationMap {
   // Since we currently only have a tiny number of effects (typically no more
-  // than 1), use a sorted SmallVector with an inline capacity of 1. Since it
+  // than 1), use a SmallVector with an inline capacity of 1. Since it
   // is often empty, use a unique_ptr to the SmallVector.
   // Note that Violation itself contains a FunctionEffect which is the key.
   using ImplVec = llvm::SmallVector<Violation, 1>;
@@ -183,35 +183,23 @@ public:
   void maybeInsert(const Violation &Viol) {
     if (Impl == nullptr)
       Impl = std::make_unique<ImplVec>();
-    auto *Iter = _find(Viol.Effect);
-    if (Iter != Impl->end() && Iter->Effect == Viol.Effect)
+    else if (lookup(Viol.Effect) != nullptr)
       return;
 
-    Impl->insert(Iter, Viol);
+    Impl->push_back(Viol);
   }
 
   const Violation *lookup(FunctionEffect Key) {
     if (Impl == nullptr)
       return nullptr;
 
-    auto *Iter = _find(Key);
-    if (Iter != Impl->end() && Iter->Effect == Key)
-      return &*Iter;
-
-    return nullptr;
+    auto *Iter =
+        std::find_if(Impl->begin(), Impl->end(),
+                     [&](const auto &Item) { return Item.Effect == Key; });
+    return Iter != Impl->end() ? &*Iter : nullptr;
   }
 
   size_t size() const { return Impl ? Impl->size() : 0; }
-
-private:
-  ImplVec::iterator _find(FunctionEffect key) {
-    // A linear search suffices for a tiny number of possible effects.
-    auto *End = Impl->end();
-    for (auto *Iter = Impl->begin(); Iter != End; ++Iter)
-      if (!(Iter->Effect < key))
-        return Iter;
-    return End;
-  }
 };
 
 // ----------
@@ -236,11 +224,11 @@ public:
   // 1. Effects declared explicitly by this function.
   // 2. All other inferrable effects needing verification.
   FunctionEffectKindSet DeclaredVerifiableEffects;
-  FunctionEffectKindSet FXToInfer;
+  FunctionEffectKindSet EffectsToInfer;
 
 private:
   // Violations pertaining to the function's explicit effects.
-  SmallVector<Violation, 0> ViolationsForExplicitFX;
+  SmallVector<Violation, 0> ViolationsForExplicitEffects;
 
   // Violations pertaining to other, non-explicit, inferrable effects.
   EffectToViolationMap InferrableEffectToFirstViolation;
@@ -250,17 +238,17 @@ private:
   SmallVector<DirectCall, 0> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(Sema &Sem, const CallableInfo &CInfo,
+  PendingFunctionAnalysis(Sema &S, const CallableInfo &CInfo,
                           FunctionEffectKindSet AllInferrableEffectsToVerify)
       : DeclaredVerifiableEffects(CInfo.Effects) {
     // Check for effects we are not allowed to infer
-    FunctionEffectKindSet InferrableFX;
+    FunctionEffectKindSet InferrableEffects;
 
     for (FunctionEffect effect : AllInferrableEffectsToVerify) {
       std::optional<FunctionEffect> ProblemCalleeEffect =
           effect.effectProhibitingInference(*CInfo.CDecl, CInfo.Effects);
       if (!ProblemCalleeEffect)
-        InferrableFX.insert(effect);
+        InferrableEffects.insert(effect);
       else {
         // Add a Violation for this effect if a caller were to
         // try to infer it.
@@ -269,17 +257,17 @@ public:
             CInfo.CDecl->getLocation(), nullptr, &*ProblemCalleeEffect));
       }
     }
-    // InferrableFX is now the set of inferrable effects which are not
+    // InferrableEffects is now the set of inferrable effects which are not
     // prohibited
-    FXToInfer = FunctionEffectKindSet::difference(InferrableFX,
-                                                  DeclaredVerifiableEffects);
+    EffectsToInfer = FunctionEffectKindSet::difference(
+        InferrableEffects, DeclaredVerifiableEffects);
   }
 
   // Hide the way that Violations for explicitly required effects vs. inferred
   // ones are handled differently.
   void checkAddViolation(bool Inferring, const Violation &NewViol) {
     if (!Inferring)
-      ViolationsForExplicitFX.push_back(NewViol);
+      ViolationsForExplicitEffects.push_back(NewViol);
     else
       InferrableEffectToFirstViolation.maybeInsert(NewViol);
   }
@@ -301,21 +289,22 @@ public:
     return UnverifiedDirectCalls;
   }
 
-  ArrayRef<Violation> getSortedViolationsForExplicitFX(SourceManager &SM) {
-    if (!ViolationsForExplicitFX.empty())
-      std::sort(ViolationsForExplicitFX.begin(), ViolationsForExplicitFX.end(),
+  ArrayRef<Violation> getSortedViolationsForExplicitEffects(SourceManager &SM) {
+    if (!ViolationsForExplicitEffects.empty())
+      std::sort(ViolationsForExplicitEffects.begin(),
+                ViolationsForExplicitEffects.end(),
                 [&SM](const Violation &LHS, const Violation &RHS) {
                   return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
                 });
-    return ViolationsForExplicitFX;
+    return ViolationsForExplicitEffects;
   }
 
   void dump(Sema &SemaRef, llvm::raw_ostream &OS) const {
     OS << "Pending: Declared ";
     DeclaredVerifiableEffects.dump(OS);
-    OS << ", " << ViolationsForExplicitFX.size() << " violations; ";
+    OS << ", " << ViolationsForExplicitEffects.size() << " violations; ";
     OS << " Infer ";
-    FXToInfer.dump(OS);
+    EffectsToInfer.dump(OS);
     OS << ", " << InferrableEffectToFirstViolation.size() << " violations";
     if (!UnverifiedDirectCalls.empty()) {
       OS << "; Calls: ";
@@ -368,18 +357,9 @@ public:
   }
 };
 
-const Decl *CanonicalFunctionDecl(const Decl *D) {
-  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    FD = FD->getCanonicalDecl();
-    assert(FD != nullptr);
-    return FD;
-  }
-  return D;
-}
-
 // ==========
 class Analyzer {
-  Sema &Sem;
+  Sema &S;
 
   // Subset of Sema.AllEffectsToVerify
   FunctionEffectKindSet AllInferrableEffectsToVerify;
@@ -400,11 +380,11 @@ class Analyzer {
     // that lookups and insertions are via the canonical Decls.
 
     FuncAnalysisPtr lookup(const Decl *Key) const {
-      return Base::lookup(CanonicalFunctionDecl(Key));
+      return Base::lookup(Key->getCanonicalDecl());
     }
 
     FuncAnalysisPtr &operator[](const Decl *Key) {
-      return Base::operator[](CanonicalFunctionDecl(Key));
+      return Base::operator[](Key->getCanonicalDecl());
     }
 
     /// Shortcut for the case where we only care about completed analysis.
@@ -440,12 +420,12 @@ class Analyzer {
   AnalysisMap DeclAnalysis;
 
 public:
-  Analyzer(Sema &S) : Sem(S) {}
+  Analyzer(Sema &S) : S(S) {}
 
   void run(const TranslationUnitDecl &TU) {
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
-    for (FunctionEffect Effect : Sem.AllEffectsToVerify) {
+    for (FunctionEffect Effect : S.AllEffectsToVerify) {
       const FunctionEffect::Flags Flags = Effect.flags();
       if (Flags & FunctionEffect::FE_InferrableOnCallees)
         AllInferrableEffectsToVerify.insert(Effect);
@@ -458,15 +438,16 @@ public:
     // depth-first traversal; there's no need for a second container. But first,
     // reverse it, so when working from the end, Decls are verified in the order
     // they are declared.
-    SmallVector<const Decl *> &VerificationQueue = Sem.DeclsWithEffectsToVerify;
+    SmallVector<const Decl *> &VerificationQueue = S.DeclsWithEffectsToVerify;
     std::reverse(VerificationQueue.begin(), VerificationQueue.end());
 
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        // All children have been traversed; finish analysis.
-        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>())
+        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>()) {
+          // All children have been traversed; finish analysis.
           finishPendingAnalysis(D, Pending);
+        }
         VerificationQueue.pop_back();
         continue;
       }
@@ -474,7 +455,7 @@ public:
       // Not previously visited; begin a new analysis for this Decl.
       PendingFunctionAnalysis *Pending = verifyDecl(D);
       if (Pending == nullptr) {
-        // completed now
+        // Completed now.
         VerificationQueue.pop_back();
         continue;
       }
@@ -505,15 +486,13 @@ private:
     CallableInfo CInfo(*D);
     bool isExternC = false;
 
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-      assert(FD->getBuiltinID() == 0);
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       isExternC = FD->getCanonicalDecl()->isExternCContext();
-    }
 
     // For C++, with non-extern "C" linkage only - if any of the Decl's declared
     // effects forbid throwing (e.g. nonblocking) then the function should also
     // be declared noexcept.
-    if (Sem.getLangOpts().CPlusPlus && !isExternC) {
+    if (S.getLangOpts().CPlusPlus && !isExternC) {
       for (FunctionEffect Effect : CInfo.Effects) {
         if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
           continue;
@@ -528,8 +507,7 @@ private:
           }
         }
         if (!IsNoexcept)
-          Sem.Diag(D->getBeginLoc(),
-                   diag::warn_perf_constraint_implies_noexcept)
+          S.Diag(D->getBeginLoc(), diag::warn_perf_constraint_implies_noexcept)
               << Effect.name();
         break;
       }
@@ -538,10 +516,10 @@ private:
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
     // complete, we'll have avoided a heap allocation; if it's incomplete, it's
     // a fairly trivial move to a heap-allocated object.
-    PendingFunctionAnalysis FAnalysis(Sem, CInfo, AllInferrableEffectsToVerify);
+    PendingFunctionAnalysis FAnalysis(S, CInfo, AllInferrableEffectsToVerify);
 
-    LLVM_DEBUG(llvm::dbgs() << "\nVerifying " << CInfo.name(Sem) << " ";
-               FAnalysis.dump(Sem, llvm::dbgs()););
+    LLVM_DEBUG(llvm::dbgs() << "\nVerifying " << CInfo.name(S) << " ";
+               FAnalysis.dump(S, llvm::dbgs()););
 
     FunctionBodyASTVisitor Visitor(*this, FAnalysis, CInfo);
 
@@ -555,7 +533,7 @@ private:
         new PendingFunctionAnalysis(std::move(FAnalysis));
     DeclAnalysis[D] = PendingPtr;
     LLVM_DEBUG(llvm::dbgs() << "inserted pending " << PendingPtr << "\n";
-               DeclAnalysis.dump(Sem, llvm::dbgs()););
+               DeclAnalysis.dump(S, llvm::dbgs()););
     return PendingPtr;
   }
 
@@ -564,16 +542,16 @@ private:
   void completeAnalysis(const CallableInfo &CInfo,
                         PendingFunctionAnalysis &Pending) {
     if (ArrayRef<Violation> Viols =
-            Pending.getSortedViolationsForExplicitFX(Sem.getSourceManager());
+            Pending.getSortedViolationsForExplicitEffects(S.getSourceManager());
         !Viols.empty())
-      emitDiagnostics(Viols, CInfo, Sem);
+      emitDiagnostics(Viols, CInfo, S);
 
-    CompleteFunctionAnalysis *CompletePtr = new CompleteFunctionAnalysis(
-        Sem.getASTContext(), Pending, CInfo.Effects,
-        AllInferrableEffectsToVerify);
+    CompleteFunctionAnalysis *CompletePtr =
+        new CompleteFunctionAnalysis(S.getASTContext(), Pending, CInfo.Effects,
+                                     AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     LLVM_DEBUG(llvm::dbgs() << "inserted complete " << CompletePtr << "\n";
-               DeclAnalysis.dump(Sem, llvm::dbgs()););
+               DeclAnalysis.dump(S, llvm::dbgs()););
   }
 
   // Called after all direct calls requiring inference have been found -- or
@@ -582,8 +560,8 @@ private:
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
     CallableInfo Caller(*D);
     LLVM_DEBUG(llvm::dbgs()
-                   << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
-               Pending->dump(Sem, llvm::dbgs()); llvm::dbgs() << "\n";);
+                   << "finishPendingAnalysis for " << Caller.name(S) << " : ";
+               Pending->dump(S, llvm::dbgs()); llvm::dbgs() << "\n";);
     for (const PendingFunctionAnalysis::DirectCall &Call :
          Pending->unverifiedCalls()) {
       if (Call.Recursed)
@@ -614,7 +592,7 @@ private:
               DeclAnalysis.completedAnalysisForDecl(Callee.CDecl)) {
         // Combine declared effects with those which may have been inferred.
         CalleeEffects.insert(CFA->VerifiedEffects);
-        IsInferencePossible = false; // we've already traversed it
+        IsInferencePossible = false; // We've already traversed it.
       }
 
     if (AssertNoFurtherInference) {
@@ -624,16 +602,13 @@ private:
     if (!Callee.isVerifiable())
       IsInferencePossible = false;
 
-    LLVM_DEBUG(llvm::dbgs() << "followCall from " << Caller.name(Sem) << " to "
-                            << Callee.name(Sem) << "; verifiable: "
+    LLVM_DEBUG(llvm::dbgs() << "followCall from " << Caller.name(S) << " to "
+                            << Callee.name(S) << "; verifiable: "
                             << Callee.isVerifiable() << "; callee ";
                CalleeEffects.dump(llvm::dbgs()); llvm::dbgs() << "\n";
-               llvm::dbgs()
-               << "  callee " << Callee.CDecl << " canonical "
-               << CanonicalFunctionDecl(Callee.CDecl) << " redecls";
-               for (Decl *D
-                    : Callee.CDecl->redecls()) llvm::dbgs()
-               << " " << D;
+               llvm::dbgs() << "  callee " << Callee.CDecl << " canonical "
+                            << Callee.CDecl->getCanonicalDecl() << " redecls";
+               for (Decl *D : Callee.CDecl->redecls()) llvm::dbgs() << " " << D;
 
                llvm::dbgs() << "\n";);
 
@@ -661,7 +636,7 @@ private:
     for (FunctionEffect Effect : PFA.DeclaredVerifiableEffects)
       Check1Effect(Effect, false);
 
-    for (FunctionEffect Effect : PFA.FXToInfer)
+    for (FunctionEffect Effect : PFA.EffectsToInfer)
       Check1Effect(Effect, true);
   }
 
@@ -687,8 +662,8 @@ private:
       StringRef effectName = Viol1.Effect.name();
       switch (Viol1.ID) {
       case ViolationID::None:
-      case ViolationID::DeclDisallowsInference: // shouldn't happen
-                                                // here
+      case ViolationID::DeclDisallowsInference: // Shouldn't happen
+                                                // here.
         llvm_unreachable("Unexpected violation kind");
         break;
       case ViolationID::AllocatesMemory:
@@ -867,7 +842,7 @@ private:
       }
       // For each inferred effect which forbids the construct, store a
       // violation, if we don't already have a violation for that effect.
-      for (FunctionEffect Effect : CurrentFunction.FXToInfer)
+      for (FunctionEffect Effect : CurrentFunction.EffectsToInfer)
         if (Effect.flags() & Flag)
           addViolation(/*inferring=*/true, Effect, VID, Loc, Callee);
     }
@@ -895,9 +870,9 @@ private:
     static bool isSafeBuiltinFunction(const FunctionDecl *FD) {
       unsigned BuiltinID = FD->getBuiltinID();
       switch (BuiltinID) {
-      case 0: // not builtin
+      case 0: // Not builtin.
         return false;
-      default: // not disallowed via cases below
+      default: // Not disallowed via cases below.
         return true;
 
       // Disallow list
@@ -917,14 +892,14 @@ private:
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
       auto *FPT =
-          CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
-      FunctionEffectKindSet CalleeFX;
+          CalleeType->getAs<FunctionProtoType>(); // Null if FunctionType.
+      FunctionEffectKindSet CalleeEffects;
       if (FPT)
-        CalleeFX.insert(FPT->getFunctionEffects());
+        CalleeEffects.insert(FPT->getFunctionEffects());
 
       auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
         if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
-                                  /*direct=*/false, CalleeFX))
+                                  /*direct=*/false, CalleeEffects))
           addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
                        Call->getBeginLoc());
       };
@@ -932,7 +907,7 @@ private:
       for (FunctionEffect Effect : CurrentFunction.DeclaredVerifiableEffects)
         Check1Effect(Effect, false);
 
-      for (FunctionEffect Effect : CurrentFunction.FXToInfer)
+      for (FunctionEffect Effect : CurrentFunction.EffectsToInfer)
         Check1Effect(Effect, true);
     }
 
@@ -1015,7 +990,7 @@ private:
     bool VisitCallExpr(CallExpr *Call) {
       LLVM_DEBUG(llvm::dbgs()
                      << "VisitCallExpr : "
-                     << Call->getBeginLoc().printToString(Outer.Sem.SourceMgr)
+                     << Call->getBeginLoc().printToString(Outer.S.SourceMgr)
                      << "\n";);
 
       Expr *CalleeExpr = Call->getCallee();
@@ -1025,9 +1000,10 @@ private:
         return true;
       }
 
-      if (isa<CXXPseudoDestructorExpr>(CalleeExpr))
-        // just destroying a scalar, fine.
+      if (isa<CXXPseudoDestructorExpr>(CalleeExpr)) {
+        // Just destroying a scalar, fine.
         return true;
+      }
 
       // No Decl, just an Expr. Just check based on its type.
       checkIndirectCall(Call, CalleeExpr->getType());
@@ -1038,7 +1014,7 @@ private:
     bool VisitVarDecl(VarDecl *Var) {
       LLVM_DEBUG(llvm::dbgs()
                      << "VisitVarDecl : "
-                     << Var->getBeginLoc().printToString(Outer.Sem.SourceMgr)
+                     << Var->getBeginLoc().printToString(Outer.S.SourceMgr)
                      << "\n";);
 
       if (Var->isStaticLocal())
@@ -1047,7 +1023,7 @@ private:
                                   Var->getLocation());
 
       const QualType::DestructionKind DK =
-          Var->needsDestruction(Outer.Sem.getASTContext());
+          Var->needsDestruction(Outer.S.getASTContext());
       if (DK == QualType::DK_cxx_destructor) {
         QualType QT = Var->getType();
         if (const auto *ClsType = QT.getTypePtr()->getAs<RecordType>()) {
@@ -1064,8 +1040,7 @@ private:
     }
 
     bool VisitCXXNewExpr(CXXNewExpr *New) {
-      // BUG? It seems incorrect that RecursiveASTVisitor does not
-      // visit the call to operator new.
+      // RecursiveASTVisitor does not visit the implicit call to operator new.
       if (FunctionDecl *FD = New->getOperatorNew()) {
         CallableInfo CI(*FD, SpecialFuncType::OperatorNew);
         followCall(CI, New->getBeginLoc());
@@ -1080,8 +1055,8 @@ private:
     }
 
     bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) {
-      // BUG? It seems incorrect that RecursiveASTVisitor does not
-      // visit the call to operator delete.
+      // RecursiveASTVisitor does not visit the implicit call to operator
+      // delete.
       if (FunctionDecl *FD = Delete->getOperatorDelete()) {
         CallableInfo CI(*FD, SpecialFuncType::OperatorDelete);
         followCall(CI, Delete->getBeginLoc());
@@ -1095,11 +1070,11 @@ private:
     bool VisitCXXConstructExpr(CXXConstructExpr *Construct) {
       LLVM_DEBUG(llvm::dbgs() << "VisitCXXConstructExpr : "
                               << Construct->getBeginLoc().printToString(
-                                     Outer.Sem.SourceMgr)
+                                     Outer.S.SourceMgr)
                               << "\n";);
 
-      // BUG? It seems incorrect that RecursiveASTVisitor does not
-      // visit the call to the constructor.
+      // RecursiveASTVisitor does not visit the implicit call to the
+      // constructor.
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
       CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
@@ -1172,7 +1147,6 @@ namespace clang {
 
 void performEffectAnalysis(Sema &S, TranslationUnitDecl *TU) {
   if (S.hasUncompilableErrorOccurred() || S.Diags.getIgnoreAllWarnings())
-    // exit if having uncompilable errors or ignoring all warnings:
     return;
   if (TU == nullptr)
     return;
