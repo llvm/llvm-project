@@ -4018,7 +4018,7 @@ public:
     return isShiftAssignOp(getOpcode());
   }
 
-  bool ignoreOverflowSanitizers() const {
+  bool hasExcludedOverflowPattern() const {
     return BinaryOperatorBits.ExcludedOverflowPattern;
   }
 
@@ -4046,6 +4046,10 @@ public:
   /// allocated in Trailing Storage
   void setHasStoredFPFeatures(bool B) { BinaryOperatorBits.HasFPFeatures = B; }
   bool hasStoredFPFeatures() const { return BinaryOperatorBits.HasFPFeatures; }
+
+  void setExcludedOverflowPattern(bool B) {
+    BinaryOperatorBits.ExcludedOverflowPattern = B;
+  }
 
   /// Get FPFeatures from trailing storage
   FPOptionsOverride getStoredFPFeatures() const {
