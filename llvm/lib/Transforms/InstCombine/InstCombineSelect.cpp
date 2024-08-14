@@ -3561,7 +3561,6 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
 // This function tries to fold the following operations:
 //   (x < y) ? -1 : zext(x != y)
 //   (x > y) ? 1 : sext(x != y)
-//   (x >= y) ? zext(x != y) : -1
 // Into ucmp/scmp(x, y), where signedness is determined by the signedness
 // of the comparison in the original sequence
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
@@ -3589,19 +3588,22 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
   Intrinsic::ID IID =
       ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
 
-  CallInst *Intrinsic = nullptr;
+  bool Replace = false;
   // (x < y) ? -1 : zext(x != y)
   if (ICmpInst::isLT(Pred) && match(TV, m_AllOnes()) &&
-      match(FV, m_ZExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS), m_Specific(RHS)))))
-    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
+      match(FV, m_ZExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS),
+                                        m_Specific(RHS)))))
+    Replace = true;
 
   // (x > y) ? 1 : sext(x != y)
   if (ICmpInst::isGT(Pred) && match(TV, m_One()) &&
-      match(FV, m_SExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS), m_Specific(RHS)))))
-    Intrinsic = Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS});
+      match(FV, m_SExt(m_c_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(LHS),
+                                        m_Specific(RHS)))))
+    Replace = true;
 
-  if (Intrinsic)
-    return replaceInstUsesWith(SI, Intrinsic);
+  if (Replace)
+    return replaceInstUsesWith(
+        SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));
   return nullptr;
 }
 
