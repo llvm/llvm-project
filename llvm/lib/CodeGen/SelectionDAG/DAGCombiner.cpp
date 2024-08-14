@@ -26993,7 +26993,6 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   // TODO: use DAG.isSplatValue instead?
   bool IsBothSplatVector = N0.getOpcode() == ISD::SPLAT_VECTOR &&
                            N1.getOpcode() == ISD::SPLAT_VECTOR;
-
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
