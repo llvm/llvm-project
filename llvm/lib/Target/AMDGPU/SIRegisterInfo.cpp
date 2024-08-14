@@ -332,7 +332,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
   RegPressureIgnoredUnits.resize(getNumRegUnits());
   RegPressureIgnoredUnits.set(*regunits(MCRegister::from(AMDGPU::M0)).begin());
   for (auto Reg : AMDGPU::VGPR_16RegClass) {
-    if (AMDGPU::isHi(Reg, *this))
+    if (AMDGPU::isHi16Reg(Reg, *this))
       RegPressureIgnoredUnits.set(*regunits(Reg).begin());
   }
 

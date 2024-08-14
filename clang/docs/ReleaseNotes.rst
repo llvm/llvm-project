@@ -95,6 +95,9 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Add ``__builtin_is_implicit_lifetime`` intrinsic, which supports
+  `P2647R1 A trait for implicit lifetime types <https://wg21.link/p2674r1>`_
+
 - Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
@@ -217,8 +220,10 @@ Bug Fixes to C++ Support
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
   (#GH99877).
 - Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
-- Fixed an assertion failure when selecting a function from an overload set that includes a 
+- Fixed an assertion failure when selecting a function from an overload set that includes a
   specialization of a conversion function template.
+- Correctly diagnose attempts to use a concept name in its own definition;
+  A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
