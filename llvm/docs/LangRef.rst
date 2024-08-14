@@ -15245,7 +15245,7 @@ address spaces. Not all targets support all bit widths however.
 ::
 
       declare void @llvm.memset.pattern.p0.i64.i128(ptr <dest>, i128 <val>,
-                                                    i64 <len>, i1 <isvolatile>)
+                                                    i64 <count>, i1 <isvolatile>)
 
 Overview:
 """""""""
@@ -15274,16 +15274,18 @@ depend on it.
 Semantics:
 """"""""""
 
-The '``llvm.memset.pattern*``' intrinsic fills "len" bytes of memory
-starting at the destination location. If the argument is known to be aligned
-to some boundary, this can be specified as an attribute on the argument.
+The '``llvm.memset.pattern*``' intrinsic fills memory starting at the
+destination location with the given pattern ``<count>`` times. If the argument
+is known to be aligned to some boundary, this can be specified as an attribute
+on the argument. The pattern fills will respect the endianness of the target:
+i.e. on little endian targets, the least significant byte of the pattern is
+first in memory, while the most significant byte is first in memory for big
+endian targets.
 
-If ``<len>`` is not an integer multiple of the pattern width in bytes, then any
-remainder bytes will be copied from ``<val>``.
-If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+If ``<count>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.
-If ``<len>`` is not a well-defined value, the behavior is undefined.
-If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
+If ``<count>`` is not a well-defined value, the behavior is undefined.
+If ``<count>`` is not zero, ``<dest>`` should be well-defined, otherwise the
 behavior is undefined.
 
 .. _int_sqrt:
