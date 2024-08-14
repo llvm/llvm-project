@@ -2494,7 +2494,12 @@ LogicalResult PrivateClauseOp::verify() {
              << "Did not expect any values to be yielded.";
     }
 
-    if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
+    if (yieldedTypes.size() != 1)
+      return mlir::emitError(terminator->getLoc())
+             << "Expected exactly 1 yielded value, but got "
+             << yieldedTypes.size();
+
+    if (yieldedTypes.front() == symType)
       return success();
 
     auto error = mlir::emitError(yieldOp.getLoc())

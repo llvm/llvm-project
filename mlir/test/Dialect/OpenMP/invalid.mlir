@@ -2219,7 +2219,7 @@ omp.private {type = private} @x.privatizer : i32 alloc {
 
 omp.private {type = private} @x.privatizer : i32 alloc {
 ^bb0(%arg0: i32):
-  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: None}}
+  // expected-error @below {{Expected exactly 1 yielded value, but got 0}}
   omp.yield
 }
 
