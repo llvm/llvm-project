@@ -64,7 +64,7 @@ struct Violation {
 };
 
 enum class SpecialFuncType : uint8_t { None, OperatorNew, OperatorDelete };
-enum class CallableType {
+enum class CallableType : uint8_t {
   // unknown: probably function pointer
   Unknown,
   Function,
@@ -296,12 +296,12 @@ public:
     return InferrableEffectToFirstViolation.lookup(effect);
   }
 
-  SmallVector<DirectCall, 0> &unverifiedCalls() {
+  ArrayRef<DirectCall> unverifiedCalls() {
     assert(!isComplete());
     return UnverifiedDirectCalls;
   }
 
-  SmallVector<Violation, 0> &getViolationsForExplicitFX() {
+  ArrayRef<Violation> getViolationsForExplicitFX() {
     return ViolationsForExplicitFX;
   }
 
@@ -386,7 +386,7 @@ class Analyzer {
   // Map all Decls analyzed to FuncAnalysisPtr. Pending state is larger
   // than complete state, so use different objects to represent them.
   // The state pointers are owned by the container.
-  class AnalysisMap : protected llvm::DenseMap<const Decl *, FuncAnalysisPtr> {
+  class AnalysisMap : llvm::DenseMap<const Decl *, FuncAnalysisPtr> {
     using Base = llvm::DenseMap<const Decl *, FuncAnalysisPtr>;
 
   public:
@@ -460,19 +460,11 @@ public:
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        if (isa<CompleteFunctionAnalysis *>(AP)) {
-          // already done
-          VerificationQueue.pop_back();
-          continue;
-        }
-        if (isa<PendingFunctionAnalysis *>(AP)) {
-          // All children have been traversed; finish analysis.
-          auto *Pending = AP.get<PendingFunctionAnalysis *>();
+        // All children have been traversed; finish analysis.
+        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>())
           finishPendingAnalysis(D, Pending);
-          VerificationQueue.pop_back();
-          continue;
-        }
-        llvm_unreachable("unexpected DeclAnalysis item");
+        VerificationQueue.pop_back();
+        continue;
       }
 
       // Not previously visited; begin a new analysis for this Decl.
@@ -492,14 +484,12 @@ public:
           VerificationQueue.push_back(Call.Callee);
           continue;
         }
-        if (isa<PendingFunctionAnalysis *>(AP)) {
-          // This indicates recursion (not necessarily direct). For the
-          // purposes of effect analysis, we can just ignore it since
-          // no effects forbid recursion.
-          Call.Recursed = true;
-          continue;
-        }
-        llvm_unreachable("unexpected DeclAnalysis item");
+
+        // This indicates recursion (not necessarily direct). For the
+        // purposes of effect analysis, we can just ignore it since
+        // no effects forbid recursion.        
+        assert(isa<PendingFunctionAnalysis *>(AP));
+        Call.Recursed = true;
       }
     }
   }
@@ -569,7 +559,7 @@ private:
   // inserted in the container.
   void completeAnalysis(const CallableInfo &CInfo,
                         PendingFunctionAnalysis &Pending) {
-    if (SmallVector<Violation, 0> &Viols = Pending.getViolationsForExplicitFX();
+    if (ArrayRef<Violation> Viols = Pending.getViolationsForExplicitFX();
         !Viols.empty())
       emitDiagnostics(Viols, CInfo, Sem);
 
@@ -642,7 +632,7 @@ private:
 
                llvm::dbgs() << "\n";);
 
-    auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+    auto Check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       if (!Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects))
         return;
 
@@ -672,7 +662,7 @@ private:
 
   // Should only be called when function's analysis is determined to be
   // complete.
-  void emitDiagnostics(SmallVector<Violation, 0> &Viols,
+  void emitDiagnostics(ArrayRef<Violation> Viols,
                        const CallableInfo &CInfo, Sema &S) {
     if (Viols.empty())
       return;
@@ -682,7 +672,7 @@ private:
                 return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
               });
 
-    auto checkAddTemplateNote = [&](const Decl *D) {
+    auto CheckAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
         while (FD != nullptr && FD->isTemplateInstantiation()) {
           S.Diag(FD->getPointOfInstantiation(),
@@ -837,13 +827,13 @@ private:
   //
   // Violations are always routed to a PendingFunctionAnalysis.
   struct FunctionBodyASTVisitor
-      : public RecursiveASTVisitor<FunctionBodyASTVisitor> {
+      : RecursiveASTVisitor<FunctionBodyASTVisitor> {
 
     Analyzer &Outer;
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
 
-    FunctionBodyASTVisitor(Analyzer &outer,
+    FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
                            CallableInfo &CurrentCaller)
         : Outer(outer), CurrentFunction(CurrentFunction),
@@ -869,7 +859,7 @@ private:
                                    ViolationID VID, SourceLocation Loc,
                                    const Decl *Callee = nullptr) {
       // If there are any declared verifiable effects which forbid the construct
-      // represented by the flag, store just one violation..
+      // represented by the flag, store just one violation.
       for (const FunctionEffect &Effect :
            CurrentFunction.DeclaredVerifiableEffects) {
         if (Effect.flags() & Flag) {
@@ -926,7 +916,6 @@ private:
       case Builtin::ID::BIfree:
         return false;
       }
-      llvm_unreachable("above switch is exhaustive");
     }
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
@@ -936,7 +925,7 @@ private:
       if (FPT)
         CalleeFX.insert(FPT->getFunctionEffects());
 
-      auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
+      auto Check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
         if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
                                   /*direct=*/false, CalleeFX))
           addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
@@ -1142,10 +1131,8 @@ private:
 
     bool VisitDeclRefExpr(const DeclRefExpr *E) {
       const ValueDecl *Val = E->getDecl();
-      if (isa<VarDecl>(Val)) {
-        const VarDecl *Var = cast<VarDecl>(Val);
-        VarDecl::TLSKind TLSK = Var->getTLSKind();
-        if (TLSK != VarDecl::TLS_None) {
+      if (const auto *Var = dyn_cast<VarDecl>(Val)) {
+        if (Var->getTLSKind() != VarDecl::TLS_None) {
           // At least on macOS, thread-local variables are initialized on
           // first access, including a heap allocation.
           diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThreadLocalVars,
