@@ -9,10 +9,14 @@
 #ifndef LLVM_ANALYSIS_DXILRESOURCE_H
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
+#include "llvm/ADT/MapVector.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
+class CallInst;
 class MDTuple;
 
 namespace dxil {
@@ -214,6 +218,55 @@ public:
 };
 
 } // namespace dxil
+
+using DXILResourceMap = MapVector<CallInst *, dxil::ResourceInfo>;
+
+class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceMap;
+
+  /// Gather resource info for the module \c M.
+  DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// Printer pass for the \c DXILResourceAnalysis results.
+class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+class DXILResourceWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceMap> ResourceMap;
+
+public:
+  static char ID; // Class identification, replacement for typeinfo
+
+  DXILResourceWrapperPass();
+  ~DXILResourceWrapperPass() override;
+
+  const DXILResourceMap &getResourceMap() const { return *ResourceMap; }
+  DXILResourceMap &getResourceMap() { return *ResourceMap; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnModule(Module &M) override;
+  void releaseMemory() override;
+
+  void print(raw_ostream &OS, const Module *M) const override;
+  void dump() const;
+};
+
+ModulePass *createDXILResourceWrapperPassPass();
+
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DXILRESOURCE_H
