@@ -236,11 +236,6 @@ public:
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
-  const Expr *Visit(const Expr *E) {
-    return ConstStmtVisitor<MemberExprVisitor, const Expr *>::Visit(E);
-  }
-  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
-
   const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
 
   const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {

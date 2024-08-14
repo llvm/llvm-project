@@ -6652,6 +6652,11 @@ def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
+def err_builtin_get_counted_by_has_side_effects : Error<
+  "__builtin_get_counted_by cannot have side-effects">;
+def err_builtin_get_counted_by_must_be_pointer : Error<
+  "__builtin_get_counted_by argument must be a pointer">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.

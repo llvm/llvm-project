@@ -2971,6 +2971,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_get_counted_by:
+    if (BuiltinGetCountedBy(TheCall))
+      return ExprError();
+    break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -5570,6 +5574,44 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   if (!Context.getTargetInfo().hasSjLjLowering())
     return Diag(TheCall->getBeginLoc(), diag::err_builtin_setjmp_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  return false;
+}
+
+bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
+  if (checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = UsualUnaryConversions(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  const Expr *Arg = ArgRes.get();
+  if (!isa<PointerType>(Arg->getType()))
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_get_counted_by_must_be_pointer)
+           << Arg->getSourceRange();
+
+  if (Arg->HasSideEffects(Context))
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_get_counted_by_has_side_effects)
+           << Arg->getSourceRange();
+
+  // Use 'void *' as the default return type. If the argument doesn't have the
+  // 'counted_by' attribute, it'll return a "nullptr."
+  TheCall->setType(Context.VoidPtrTy);
+
+  if (const MemberExpr *ME = Arg->getMemberExpr();
+      ME &&
+      ME->isFlexibleArrayMemberLike(Context,
+                                    getLangOpts().getStrictFlexArraysLevel()) &&
+      ME->getMemberDecl()->getType()->isCountAttributedType()) {
+    if (const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (const FieldDecl *CountFD = FAMDecl->FindCountedByField())
+        // The proper return type should be a pointer to the type of the
+        // counted_by's 'count' field.
+        TheCall->setType(Context.getPointerType(CountFD->getType()));
+  }
+
   return false;
 }
 
