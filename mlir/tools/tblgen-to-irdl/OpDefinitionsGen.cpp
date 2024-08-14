@@ -74,8 +74,14 @@ Value typeToConstraint(OpBuilder &builder, Type type) {
   return op.getOutput();
 }
 
-std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
+Value baseToConstraint(OpBuilder &builder, StringRef baseClass) {
+  MLIRContext *ctx = builder.getContext();
+  auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx),
+                                         StringAttr::get(ctx, baseClass));
+  return op.getOutput();
+}
 
+std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
   if (predRec.isSubClassOf("I")) {
     auto width = predRec.getValueAsInt("bitwidth");
     return IntegerType::get(ctx, width, IntegerType::Signless);
@@ -164,12 +170,12 @@ std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
   return std::nullopt;
 }
 
-Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
+Value createTypeConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   MLIRContext *ctx = builder.getContext();
   const Record &predRec = constraint.getDef();
 
   if (predRec.isSubClassOf("Variadic") || predRec.isSubClassOf("Optional"))
-    return createConstraint(builder, predRec.getValueAsDef("baseType"));
+    return createTypeConstraint(builder, predRec.getValueAsDef("baseType"));
 
   if (predRec.getName() == "AnyType") {
     auto op = builder.create<irdl::AnyOp>(UnknownLoc::get(ctx));
@@ -196,7 +202,7 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
     std::vector<Value> constraints;
     for (const Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
       constraints.push_back(
-          createConstraint(builder, tblgen::Constraint(child)));
+          createTypeConstraint(builder, tblgen::Constraint(child)));
     }
     auto op = builder.create<irdl::AnyOfOp>(UnknownLoc::get(ctx), constraints);
     return op.getOutput();
@@ -206,7 +212,7 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
     std::vector<Value> constraints;
     for (const Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
       constraints.push_back(
-          createConstraint(builder, tblgen::Constraint(child)));
+          createTypeConstraint(builder, tblgen::Constraint(child)));
     }
     auto op = builder.create<irdl::AllOfOp>(UnknownLoc::get(ctx), constraints);
     return op.getOutput();
@@ -241,12 +247,91 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   // Confined type
   if (predRec.isSubClassOf("ConfinedType")) {
     std::vector<Value> constraints;
-    constraints.push_back(createConstraint(
+    constraints.push_back(createTypeConstraint(
         builder, tblgen::Constraint(predRec.getValueAsDef("baseType"))));
     for (Record *child : predRec.getValueAsListOfDefs("predicateList")) {
       constraints.push_back(createPredicate(builder, tblgen::Pred(child)));
     }
     auto op = builder.create<irdl::AllOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  return createPredicate(builder, constraint.getPredicate());
+}
+
+Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
+  MLIRContext *ctx = builder.getContext();
+  const Record &predRec = constraint.getDef();
+
+  if (predRec.isSubClassOf("DefaultValuedAttr") ||
+      predRec.isSubClassOf("DefaultValuedOptionalAttr") ||
+      predRec.isSubClassOf("OptionalAttr")) {
+    return createAttrConstraint(builder, predRec.getValueAsDef("baseAttr"));
+  }
+
+  if (predRec.isSubClassOf("ConfinedAttr")) {
+    std::vector<Value> constraints;
+    constraints.push_back(createAttrConstraint(
+        builder, tblgen::Constraint(predRec.getValueAsDef("baseAttr"))));
+    for (Record *child : predRec.getValueAsListOfDefs("attrConstraints")) {
+      constraints.push_back(createPredicate(
+          builder, tblgen::Pred(child->getValueAsDef("predicate"))));
+    }
+    auto op = builder.create<irdl::AllOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("AnyAttrOf")) {
+    std::vector<Value> constraints;
+    for (Record *child : predRec.getValueAsListOfDefs("allowedAttributes")) {
+      constraints.push_back(
+          createAttrConstraint(builder, tblgen::Constraint(child)));
+    }
+    auto op = builder.create<irdl::AnyOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  if (predRec.getName() == "AnyAttr") {
+    auto op = builder.create<irdl::AnyOp>(UnknownLoc::get(ctx));
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("AnyIntegerAttrBase") ||
+      predRec.isSubClassOf("SignlessIntegerAttrBase") ||
+      predRec.isSubClassOf("SignedIntegerAttrBase") ||
+      predRec.isSubClassOf("UnsignedIntegerAttrBase") ||
+      predRec.isSubClassOf("BoolAttr")) {
+    return baseToConstraint(builder, "!builtin.integer");
+  }
+
+  if (predRec.isSubClassOf("FloatAttrBase")) {
+    return baseToConstraint(builder, "!builtin.float");
+  }
+
+  if (predRec.isSubClassOf("StringBasedAttr")) {
+    return baseToConstraint(builder, "!builtin.string");
+  }
+
+  if (predRec.getName() == "UnitAttr") {
+    auto op =
+        builder.create<irdl::IsOp>(UnknownLoc::get(ctx), UnitAttr::get(ctx));
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("AttrDef")) {
+    auto dialect = predRec.getValueAsDef("dialect")->getValueAsString("name");
+    if (dialect == selectedDialect) {
+      std::string combined = ("#" + predRec.getValueAsString("mnemonic")).str();
+      SmallVector<FlatSymbolRefAttr> nested = {SymbolRefAttr::get(ctx, combined)
+
+      };
+      auto typeSymbol = SymbolRefAttr::get(ctx, dialect, nested);
+      auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx), typeSymbol);
+      return op.getOutput();
+    }
+    std::string typeName = ("#" + predRec.getValueAsString("attrName")).str();
+    auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx),
+                                           StringAttr::get(ctx, typeName));
     return op.getOutput();
   }
 
@@ -261,6 +346,12 @@ static StringRef getOperatorName(tblgen::Operator &tblgenOp) {
 
 /// Returns the name of the type without the dialect prefix.
 static StringRef getTypeName(tblgen::TypeDef &tblgenType) {
+  StringRef opName = tblgenType.getDef()->getValueAsString("mnemonic");
+  return opName;
+}
+
+/// Returns the name of the attr without the dialect prefix.
+static StringRef getAttrName(tblgen::AttrDef &tblgenType) {
   StringRef opName = tblgenType.getDef()->getValueAsString("mnemonic");
   return opName;
 }
@@ -282,7 +373,7 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
     SmallVector<Value> operands;
     SmallVector<irdl::VariadicityAttr> variadicity;
     for (const NamedTypeConstraint &namedCons : namedCons) {
-      auto operand = createConstraint(consBuilder, namedCons.constraint);
+      auto operand = createTypeConstraint(consBuilder, namedCons.constraint);
       operands.push_back(operand);
 
       irdl::VariadicityAttr var;
@@ -304,6 +395,15 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   auto [operands, operandVariadicity] = getValues(tblgenOp.getOperands());
   auto [results, resultVariadicity] = getValues(tblgenOp.getResults());
 
+  SmallVector<Value> attributes;
+  SmallVector<Attribute> attrNames;
+  for (auto namedAttr : tblgenOp.getAttributes()) {
+    if (namedAttr.attr.isOptional())
+      continue;
+    attributes.push_back(createAttrConstraint(consBuilder, namedAttr.attr));
+    attrNames.push_back(StringAttr::get(ctx, namedAttr.name));
+  }
+
   // Create the operands and results operations.
   if (!operands.empty())
     consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands,
@@ -311,6 +411,9 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   if (!results.empty())
     consBuilder.create<irdl::ResultsOp>(UnknownLoc::get(ctx), results,
                                         resultVariadicity);
+  if (!attributes.empty())
+    consBuilder.create<irdl::AttributesOp>(UnknownLoc::get(ctx), attributes,
+                                           ArrayAttr::get(ctx, attrNames));
 
   return op;
 }
@@ -321,6 +424,20 @@ irdl::TypeOp createIRDLType(OpBuilder &builder, tblgen::TypeDef &tblgenType) {
   std::string combined = ("!" + typeName).str();
 
   irdl::TypeOp op = builder.create<irdl::TypeOp>(
+      UnknownLoc::get(ctx), StringAttr::get(ctx, combined));
+
+  op.getBody().emplaceBlock();
+
+  return op;
+}
+
+irdl::AttributeOp createIRDLAttr(OpBuilder &builder,
+                                 tblgen::AttrDef &tblgenAttr) {
+  MLIRContext *ctx = builder.getContext();
+  StringRef attrName = getAttrName(tblgenAttr);
+  std::string combined = ("#" + attrName).str();
+
+  irdl::AttributeOp op = builder.create<irdl::AttributeOp>(
       UnknownLoc::get(ctx), StringAttr::get(ctx, combined));
 
   op.getBody().emplaceBlock();
@@ -356,6 +473,14 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
     if (tblgenType.getDialect().getName() != selectedDialect)
       continue;
     createIRDLType(builder, tblgenType);
+  }
+
+  for (const Record *attr :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("AttrDef")) {
+    tblgen::AttrDef tblgenAttr(attr);
+    if (tblgenAttr.getDialect().getName() != selectedDialect)
+      continue;
+    createIRDLAttr(builder, tblgenAttr);
   }
 
   for (const Record *def :
