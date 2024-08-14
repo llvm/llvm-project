@@ -8,6 +8,7 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -349,35 +350,4 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         "instructions above which to release the context: " +
         F.getName());
   return true;
-}
-
-const char *AssignUniqueIDPass::GUIDMetadataName = "unique_id";
-
-PreservedAnalyses AssignUniqueIDPass::run(Module &M,
-                                          ModuleAnalysisManager &MAM) {
-  for (auto &F : M.functions()) {
-    if (F.isDeclaration())
-      continue;
-    const GlobalValue::GUID GUID = F.getGUID();
-    assert(!F.getMetadata(GUIDMetadataName) ||
-           GUID == AssignUniqueIDPass::getGUID(F));
-    F.setMetadata(GUIDMetadataName,
-                  MDNode::get(M.getContext(),
-                              {ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt64Ty(M.getContext()), GUID))}));
-  }
-  return PreservedAnalyses::none();
-}
-
-GlobalValue::GUID AssignUniqueIDPass::getGUID(const Function &F) {
-  if (F.isDeclaration()) {
-    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
-    return GlobalValue::getGUID(F.getGlobalIdentifier());
-  }
-  auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "unique_id not found for defined function");
-  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
-                               ->getValue()
-                               ->stripPointerCasts())
-      ->getZExtValue();
 }
