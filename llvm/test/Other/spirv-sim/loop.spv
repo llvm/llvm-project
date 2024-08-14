@@ -1,5 +1,5 @@
-; RUN: spirv-sim --function=simple --wave=4 --expects=0,2,2,4 -i %s
 ; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: spirv-sim --function=simple --wave=4 --expects=0,2,2,4 -i %s
                OpCapability Shader
                OpCapability GroupNonUniform
                OpMemoryModel Logical GLSL450
