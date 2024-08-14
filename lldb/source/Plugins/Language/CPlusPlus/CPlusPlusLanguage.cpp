@@ -384,9 +384,7 @@ bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
   case Mangled::eManglingSchemeNone:
   case Mangled::eManglingSchemeRustV0:
   case Mangled::eManglingSchemeD:
-#ifdef LLDB_ENABLE_SWIFT
   case Mangled::eManglingSchemeSwift:
-#endif
     return false;
   }
 }
