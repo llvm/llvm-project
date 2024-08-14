@@ -1595,7 +1595,7 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
   if (CLAsanDormant)
     IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)), I,
-        false));
+        false, MDBuilder(*C).createUnlikelyBranchWeights()));
 
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
@@ -1751,7 +1751,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     InstrumentationIRBuilder IRB(InsertPoint);
     InsertPoint = SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
-        InsertPoint, false);
+        InsertPoint, false, MDBuilder(*C).createUnlikelyBranchWeights());
   }
 
   unsigned Granularity = 1 << Mapping.Scale;
