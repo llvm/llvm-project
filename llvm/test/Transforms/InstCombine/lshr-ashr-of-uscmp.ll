@@ -8,8 +8,8 @@ declare void @use(i8 %val)
 define i8 @ucmp_to_zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_to_zext(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -20,8 +20,8 @@ define i8 @ucmp_to_zext(i32 %x, i32 %y) {
 define i8 @ucmp_to_sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_to_sext(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -32,8 +32,8 @@ define i8 @ucmp_to_sext(i32 %x, i32 %y) {
 define i8 @scmp_to_zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_to_zext(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
@@ -44,8 +44,8 @@ define i8 @scmp_to_zext(i32 %x, i32 %y) {
 define i8 @scmp_to_sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_to_sext(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
