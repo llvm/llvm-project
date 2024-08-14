@@ -342,13 +342,3 @@ def : ProcessorModel<"gfx120F", GFX12SpeedModel,
   FeatureISAVersion12.Features
 #endif /* LLPC_BUILD_GFX12 */
 >;
-
-// Internal only (A0)
-def : ProcessorModel<"gfx120E", GFX12SpeedModel,
-  FeatureISAVersion12.Features
->;
-
-// Internal only (A0)
-def : ProcessorModel<"gfx120F", GFX12SpeedModel,
-  FeatureISAVersion12.Features
->;
