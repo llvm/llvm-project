@@ -135,14 +135,6 @@ private:
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  // Default primitive type specifications.
-  static const LayoutAlignElem DefaultIntSpecs[];
-  static const LayoutAlignElem DefaultFloatSpecs[];
-  static const LayoutAlignElem DefaultVectorSpecs[];
-
-  // Default pointer type specifications.
-  static const PointerAlignElem DefaultPointerSpecs[];
-
   // Primitive type specifications. Sorted and uniqued by type bit width.
   SmallVector<LayoutAlignElem, 6> IntAlignments;
   SmallVector<LayoutAlignElem, 4> FloatAlignments;

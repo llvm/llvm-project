@@ -200,26 +200,26 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
 
 // Default primitive type specifications.
 // NOTE: These arrays must be sorted by type bit width.
-constexpr LayoutAlignElem DataLayout::DefaultIntSpecs[] = {
+constexpr LayoutAlignElem DefaultIntSpecs[] = {
     {1, Align::Constant<1>(), Align::Constant<1>()},  // i1:8:8
     {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
     {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
     {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
     {64, Align::Constant<4>(), Align::Constant<8>()}, // i64:32:64
 };
-constexpr LayoutAlignElem DataLayout::DefaultFloatSpecs[] = {
+constexpr LayoutAlignElem DefaultFloatSpecs[] = {
     {16, Align::Constant<2>(), Align::Constant<2>()},    // f16:16:16
     {32, Align::Constant<4>(), Align::Constant<4>()},    // f32:32:32
     {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
     {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
 };
-constexpr LayoutAlignElem DataLayout::DefaultVectorSpecs[] = {
+constexpr LayoutAlignElem DefaultVectorSpecs[] = {
     {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
     {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
 };
 
 // Default pointer type specifications.
-constexpr PointerAlignElem DataLayout::DefaultPointerSpecs[] = {
+constexpr PointerAlignElem DefaultPointerSpecs[] = {
     {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64} // p0:64:64:64:64
 };
 
