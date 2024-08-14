@@ -619,8 +619,8 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
     TargetSP target = GetExecutionContextRef().GetTargetSP();
     if (target) {
       /// Construct RAII types to time and collect data on summary creation.
-      SummaryStatistics::SummaryInvocation summary_inv =
-          target->GetSummaryStatisticsForProvider(*summary_ptr);
+      SummaryStatisticsCache::SummaryInvocation summary_inv =
+          target->GetSummaryStatisticsCache().GetSummaryStatisticsForProviderName(*summary_ptr);
       summary_ptr->FormatObject(this, destination, actual_options);
     } else
       summary_ptr->FormatObject(this, destination, actual_options);

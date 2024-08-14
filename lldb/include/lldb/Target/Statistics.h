@@ -193,39 +193,17 @@ public:
     return m_summary_count.load(std::memory_order_relaxed);
   }
 
-  StatsDuration &GetDurationReference() { return m_total_time; }
+  StatsDuration &GetDurationReference() { return m_total_time; };
 
   std::string GetSummaryKindName() const { return m_impl_type; }
 
   llvm::json::Value ToJSON() const;
 
-  // Basic RAII class to increment the summary count when the call is complete.
-  // In the future this can be extended to collect information about the
-  // elapsed time for a single request.
-  class SummaryInvocation {
-  public:
-    SummaryInvocation(SummaryStatistics &summary)
-        : m_summary(summary), m_elapsed_time(summary.GetDurationReference()) {}
-    ~SummaryInvocation() { m_summary.OnInvoked(); }
-
-    // Delete the copy constructor and assignment operator to prevent
-    // accidental double counting.
-    SummaryInvocation(const SummaryInvocation &) = delete;
-    SummaryInvocation &operator=(const SummaryInvocation &) = delete;
-
-  private:
-    SummaryStatistics &m_summary;
-    ElapsedTime m_elapsed_time;
-  };
-
-  SummaryInvocation GetSummaryInvocation() { return SummaryInvocation(*this); }
-
-private:
-  /// Called when Summary Invocation is destructed.
-  void OnInvoked() noexcept {
-    m_summary_count.fetch_add(1, std::memory_order_relaxed);
+  void IncrementSummaryCount() { 
+    m_summary_count.fetch_add(1, std::memory_order_relaxed); 
   }
 
+private:
   lldb_private::StatsDuration m_total_time;
   std::string m_impl_type;
   std::string m_name;
@@ -235,24 +213,51 @@ private:
 /// A class that wraps a std::map of SummaryStatistics objects behind a mutex.
 class SummaryStatisticsCache {
 public:
+  /// Basic RAII class to increment the summary count when the call is complete.
+  /// In the future this can be extended to collect information about the
+  /// elapsed time for a single request.
+  class SummaryInvocation {
+    public:
+      SummaryInvocation(SummaryStatistics &summary, SummaryStatisticsCache &cache)
+          : m_provider_key(summary.GetName()), m_cache(cache), m_elapsed_time(summary.GetDurationReference()) {}
+      ~SummaryInvocation() { m_cache.OnInvoked(m_provider_key); }
+
+      /// Delete the copy constructor and assignment operator to prevent
+      /// accidental double counting.
+      /// @{
+      SummaryInvocation(const SummaryInvocation &) = delete;
+      SummaryInvocation &operator=(const SummaryInvocation &) = delete;
+      /// @}
+
+    private:
+      std::string m_provider_key;
+      SummaryStatisticsCache &m_cache;
+      ElapsedTime m_elapsed_time;
+  };
+
   /// Get the SummaryStatistics object for a given provider name, or insert
   /// if statistics for that provider is not in the map.
-  SummaryStatistics::SummaryInvocation
+  SummaryStatisticsCache::SummaryInvocation
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
     auto pair = m_summary_stats_map.try_emplace(provider.GetName(), provider.GetName(),
                                     provider.GetSummaryKindName());
 
-    return pair.first->second.GetSummaryInvocation();
+    return SummaryInvocation(pair.first->second, *this);
   }
 
   llvm::json::Value ToJSON();
 
 private:
-  std::map<std::string, lldb_private::SummaryStatistics>
-      m_summary_stats_map;
+  /// Called when Summary Invocation is destructed.
+  void OnInvoked(std::string provider_name) noexcept {
+    // .at give us a const reference, and [provider_name] = will give us a copy
+    m_summary_stats_map.find(provider_name)->second.IncrementSummaryCount();
+  }
+  llvm::StringMap<lldb_private::SummaryStatistics> m_summary_stats_map;
   std::mutex m_map_mutex;
 };
+
 
 /// A class that represents statistics for a since lldb_private::Target.
 class TargetStats {

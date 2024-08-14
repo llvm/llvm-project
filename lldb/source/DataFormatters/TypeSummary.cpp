@@ -161,21 +161,17 @@ ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *python_script)
     : TypeSummaryImpl(Kind::eScript, flags), m_function_name(),
       m_python_script(), m_script_function_sp() {
-  std::string sstring;
-  // Take preference in the python script name over the function name.
+  // Take preference in the python script name over the function name.;
   if (function_name) {
-    sstring.assign(function_name);
     m_function_name.assign(function_name);
+    m_script_formatter_name = function_name;
   }
   if (python_script) {
-    sstring.assign(python_script);
     m_python_script.assign(python_script);
+    m_script_formatter_name = python_script;
   }
 
-  // Python scripts include their leading spacing, so we remove it so we don't
-  // save extra spaces in the const string forever.
-  sstring.erase(0, sstring.find_first_not_of(' '));
-  m_script_formatter_name = sstring;
+  m_script_formatter_name = m_script_formatter_name.erase(0, m_script_formatter_name.find_first_not_of(' '));
 }
 
 bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
