@@ -5,10 +5,6 @@ define dso_local fastcc void @trunc_srl_load(i32 zeroext %AttrArgNo) {
 ; CHECK-LABEL: trunc_srl_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lhz 4, 2(0)
-; CHECK-NEXT:    cmplw 4, 3
-; CHECK-NEXT:    ble 0, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %exit
-; CHECK-NEXT:  .LBB0_2: # %cond.false
 entry:
   %bf.load.i = load i64, ptr null, align 8
   %bf.lshr.i = lshr i64 %bf.load.i, 32

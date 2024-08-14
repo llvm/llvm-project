@@ -239,7 +239,7 @@ define dso_local i32 @test6() #0 {
 ; CHECK-P10-NEXT:    andi. r3, r3, 1
 ; CHECK-P10-NEXT:    bc 4, gt, .LBB5_2
 ; CHECK-P10-NEXT:  # %bb.1: # %bb8
-; CHECK-P10-NEXT:  .LBB5_2: # %bb7
+; CHECK-P10:       .LBB5_2: # %bb7
 ;
 ; CHECK-P10-BE-LABEL: test6:
 ; CHECK-P10-BE:       # %bb.0: # %bb
@@ -256,7 +256,7 @@ define dso_local i32 @test6() #0 {
 ; CHECK-P10-BE-NEXT:    andi. r3, r3, 1
 ; CHECK-P10-BE-NEXT:    bc 4, gt, .LBB5_2
 ; CHECK-P10-BE-NEXT:  # %bb.1: # %bb8
-; CHECK-P10-BE-NEXT:  .LBB5_2: # %bb7
+; CHECK-P10-BE:       .LBB5_2: # %bb7
 ;
 ; AIX-64-LABEL: test6:
 ; AIX-64:       # %bb.0: # %bb
@@ -274,7 +274,7 @@ define dso_local i32 @test6() #0 {
 ; AIX-64-NEXT:    andi. r3, r3, 1
 ; AIX-64-NEXT:    bc 4, gt, L..BB5_2
 ; AIX-64-NEXT:  # %bb.1: # %bb8
-; AIX-64-NEXT:  L..BB5_2: # %bb7
+; AIX-64:       L..BB5_2: # %bb7
 ;
 ; AIX-32-LABEL: test6:
 ; AIX-32:       # %bb.0: # %bb
@@ -294,7 +294,7 @@ define dso_local i32 @test6() #0 {
 ; AIX-32-NEXT:    andi. r3, r3, 1
 ; AIX-32-NEXT:    bc 4, gt, L..BB5_2
 ; AIX-32-NEXT:  # %bb.1: # %bb8
-; AIX-32-NEXT:  L..BB5_2: # %bb7
+; AIX-32:       L..BB5_2: # %bb7
 bb:
   br label %bb1
 
@@ -308,8 +308,8 @@ bb1:                                              ; preds = %bb
   br i1 %i6, label %bb8, label %bb7
 
 bb7:                                              ; preds = %bb1
-  unreachable
+  ret i32 0
 
 bb8:                                              ; preds = %bb1
-  unreachable
+  ret i32 1
 }

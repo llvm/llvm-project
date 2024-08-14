@@ -6,11 +6,12 @@ entry:
   unreachable
 }
 
-; An empty function is perfectly fine on ELF.
+
 ; LINUX-NO-FP: func:
 ; LINUX-NO-FP-NEXT: {{^}}.L[[BEGIN:.*]]:{{$}}
 ; LINUX-NO-FP-NEXT: .cfi_startproc
 ; LINUX-NO-FP-NEXT: {{^}}#
+; LINUX-NO-FP-NEXT: trap
 ; LINUX-NO-FP-NEXT: {{^}}.L[[END:.*]]:{{$}}
 ; LINUX-NO-FP-NEXT: .size   func, .L[[END]]-.L[[BEGIN]]
 ; LINUX-NO-FP-NEXT: .cfi_endproc
@@ -25,6 +26,8 @@ entry:
 ; LINUX-FP-NEXT:  .cfi_def_cfa_offset 16
 ; LINUX-FP-NEXT: .cfi_offset r31, -4
 ; LINUX-FP-NEXT: mr 31, 1
+; LINUX-FP-NEXT: .cfi_def_cfa_register r31
+; LINUX-FP-NEXT: trap
 ; LINUX-FP-NEXT: {{^}}.L[[END:.*]]:{{$}}
 ; LINUX-FP-NEXT: .size   func, .L[[END]]-.L[[BEGIN]]
 ; LINUX-FP-NEXT: .cfi_endproc

@@ -7,7 +7,7 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb3
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_6
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_5
 ; CHECK-NEXT:  # %bb.2: # %bb4
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -38,7 +38,7 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_5: # %bb2
-; CHECK-NEXT:  .LBB0_6: # %bb14
+; CHECK-NEXT:    trap
 bb:
   br i1 undef, label %bb3, label %bb2
 
