@@ -32,7 +32,7 @@ add_mlir_library(MLIRIR
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp
-  SliceSupport.cpp
+  SliceWalk.cpp
   SymbolTable.cpp
   TensorEncoding.cpp
   Types.cpp

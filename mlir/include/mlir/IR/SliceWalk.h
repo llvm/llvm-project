@@ -1,4 +1,4 @@
-//===- SliceSupport.h - Helpers for performing IR slicing -------*- C++ -*-===//
+//===- SliceWalk.h - Helpers for performing IR slice walks ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_SLICESUPPORT_H
-#define MLIR_IR_SLICESUPPORT_H
+#ifndef MLIR_IR_SLICEWALK_IR
+#define MLIR_IR_SLICEWALK_IR
 
 #include "mlir/IR/ValueRange.h"
 
@@ -96,4 +96,4 @@ std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
 
 } // namespace mlir
 
-#endif // MLIR_IR_SLICESUPPORT_H
+#endif // MLIR_IR_SLICEWALK_IR

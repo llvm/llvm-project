@@ -14,7 +14,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/SliceSupport.h"
+#include "mlir/IR/SliceWalk.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
