@@ -32,7 +32,6 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    br i1 [[ACTIVE_LANE_MASK2]], label [[PRED_LOAD_IF4:%.*]], label [[PRED_LOAD_CONTINUE5]]
 ; CHECK:       pred.load.if4:
@@ -42,7 +41,6 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE5]]
 ; CHECK:       pred.load.continue5:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], [[PRED_LOAD_IF4]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF4]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP8]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP14]], i32 [[VEC_PHI3]])
@@ -59,7 +57,7 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDUC:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDUC_NEXT:%.*]], [[LOOP]] ]

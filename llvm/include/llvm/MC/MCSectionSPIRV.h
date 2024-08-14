@@ -24,7 +24,8 @@ class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
   MCSectionSPIRV()
-      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*Begin=*/nullptr) {}
+      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*IsVirtual=*/false,
+                  /*Begin=*/nullptr) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
 
 public:
@@ -33,7 +34,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override {}
   bool useCodeAlign() const override { return false; }
-  bool isVirtualSection() const override { return false; }
 };
 
 } // end namespace llvm

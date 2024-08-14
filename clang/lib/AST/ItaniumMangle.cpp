@@ -99,11 +99,10 @@ public:
   }
 
   void mangleCXXName(GlobalDecl GD, raw_ostream &) override;
-  void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
+  void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk, bool,
                    raw_ostream &) override;
   void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
-                          const ThisAdjustment &ThisAdjustment,
-                          raw_ostream &) override;
+                          const ThunkInfo &Thunk, bool, raw_ostream &) override;
   void mangleReferenceTemporary(const VarDecl *D, unsigned ManglingNumber,
                                 raw_ostream &) override;
   void mangleCXXVTable(const CXXRecordDecl *RD, raw_ostream &) override;
@@ -468,6 +467,7 @@ public:
   void mangleNameOrStandardSubstitution(const NamedDecl *ND);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
+  void mangleVendorQualifier(StringRef Name);
 
 private:
 
@@ -559,7 +559,6 @@ private:
                                       StringRef Prefix = "");
   void mangleOperatorName(DeclarationName Name, unsigned Arity);
   void mangleOperatorName(OverloadedOperatorKind OO, unsigned Arity);
-  void mangleVendorQualifier(StringRef qualifier);
   void mangleQualifiers(Qualifiers Quals, const DependentAddressSpaceType *DAST = nullptr);
   void mangleRefQualifier(RefQualifierKind RefQualifier);
 
@@ -962,7 +961,7 @@ bool CXXNameMangler::isStd(const NamespaceDecl *NS) {
   if (!Context.getEffectiveParentContext(NS)->isTranslationUnit())
     return false;
 
-  const IdentifierInfo *II = NS->getOriginalNamespace()->getIdentifier();
+  const IdentifierInfo *II = NS->getFirstDecl()->getIdentifier();
   return II && II->isStr("std");
 }
 
@@ -2796,7 +2795,11 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         ASString = "ptr32_sptr";
         break;
       case LangAS::ptr32_uptr:
-        ASString = "ptr32_uptr";
+        // For z/OS, there are no special mangling rules applied to the ptr32
+        // qualifier. Ex: void foo(int * __ptr32 p) -> _Z3f2Pi. The mangling for
+        // "p" is treated the same as a regular integer pointer.
+        if (!getASTContext().getTargetInfo().getTriple().isOSzOS())
+          ASString = "ptr32_uptr";
         break;
       case LangAS::ptr64:
         ASString = "ptr64";
@@ -3429,6 +3432,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    type_name = #Name;                                                         \
+    Out << 'u' << type_name.size() << type_name;                               \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   }
 }
 
@@ -4006,7 +4015,10 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask) &&
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4057,7 +4069,21 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
 
-  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+  unsigned VecSizeInBits;
+  switch (T->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    VecSizeInBits = 1;
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    VecSizeInBits = 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    VecSizeInBits = 4;
+    break;
+  default:
+    VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+    break;
+  }
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
@@ -4113,7 +4139,10 @@ void CXXNameMangler::mangleType(const VectorType *T) {
     mangleAArch64FixedSveVectorType(T);
     return;
   } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -5178,6 +5207,14 @@ recurse:
           Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                 "cannot yet mangle __datasizeof expression");
       Diags.Report(DiagID);
+      return;
+    }
+    case UETT_PtrAuthTypeDiscriminator: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet mangle __builtin_ptrauth_type_discriminator expression");
+      Diags.Report(E->getExprLoc(), DiagID);
       return;
     }
     case UETT_VecStep: {
@@ -6477,7 +6514,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
 
   case APValue::LValue: {
     // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
-    assert((T->isPointerType() || T->isReferenceType()) &&
+    assert((T->isPointerOrReferenceType()) &&
            "unexpected type for LValue template arg");
 
     if (V.isNullPointer()) {
@@ -7044,8 +7081,78 @@ void ItaniumMangleContextImpl::mangleCXXDtorComdat(const CXXDestructorDecl *D,
   Mangler.mangle(GlobalDecl(D, Dtor_Comdat));
 }
 
+/// Mangles the pointer authentication override attribute for classes
+/// that have explicit overrides for the vtable authentication schema.
+///
+/// The override is mangled as a parameterized vendor extension as follows
+///
+///   <type> ::= U "__vtptrauth" I
+///                 <key>
+///                 <addressDiscriminated>
+///                 <extraDiscriminator>
+///              E
+///
+/// The extra discriminator encodes the explicit value derived from the
+/// override schema, e.g. if the override has specified type based
+/// discrimination the encoded value will be the discriminator derived from the
+/// type name.
+static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
+                                         ASTContext &Context,
+                                         const ThunkInfo &Thunk) {
+  auto &LangOpts = Context.getLangOpts();
+  const CXXRecordDecl *ThisRD = Thunk.ThisType->getPointeeCXXRecordDecl();
+  const CXXRecordDecl *PtrauthClassRD =
+      Context.baseForVTableAuthentication(ThisRD);
+  unsigned TypedDiscriminator =
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+  Mangler.mangleVendorQualifier("__vtptrauth");
+  auto &ManglerStream = Mangler.getStream();
+  ManglerStream << "I";
+  if (const auto *ExplicitAuth =
+          PtrauthClassRD->getAttr<VTablePointerAuthenticationAttr>()) {
+    ManglerStream << "Lj" << ExplicitAuth->getKey();
+
+    if (ExplicitAuth->getAddressDiscrimination() ==
+        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination)
+      ManglerStream << "Lb" << LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    else
+      ManglerStream << "Lb"
+                    << (ExplicitAuth->getAddressDiscrimination() ==
+                        VTablePointerAuthenticationAttr::AddressDiscrimination);
+
+    switch (ExplicitAuth->getExtraDiscrimination()) {
+    case VTablePointerAuthenticationAttr::DefaultExtraDiscrimination: {
+      if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+        ManglerStream << "Lj" << TypedDiscriminator;
+      else
+        ManglerStream << "Lj" << 0;
+      break;
+    }
+    case VTablePointerAuthenticationAttr::TypeDiscrimination:
+      ManglerStream << "Lj" << TypedDiscriminator;
+      break;
+    case VTablePointerAuthenticationAttr::CustomDiscrimination:
+      ManglerStream << "Lj" << ExplicitAuth->getCustomDiscriminationValue();
+      break;
+    case VTablePointerAuthenticationAttr::NoExtraDiscrimination:
+      ManglerStream << "Lj" << 0;
+      break;
+    }
+  } else {
+    ManglerStream << "Lj"
+                  << (unsigned)VTablePointerAuthenticationAttr::DefaultKey;
+    ManglerStream << "Lb" << LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+      ManglerStream << "Lj" << TypedDiscriminator;
+    else
+      ManglerStream << "Lj" << 0;
+  }
+  ManglerStream << "E";
+}
+
 void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                                            const ThunkInfo &Thunk,
+                                           bool ElideOverrideInfo,
                                            raw_ostream &Out) {
   //  <special-name> ::= T <call-offset> <base encoding>
   //                      # base is the nominal target function of thunk
@@ -7071,21 +7178,28 @@ void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                              Thunk.Return.Virtual.Itanium.VBaseOffsetOffset);
 
   Mangler.mangleFunctionEncoding(MD);
+  if (!ElideOverrideInfo)
+    mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
 }
 
-void ItaniumMangleContextImpl::mangleCXXDtorThunk(
-    const CXXDestructorDecl *DD, CXXDtorType Type,
-    const ThisAdjustment &ThisAdjustment, raw_ostream &Out) {
+void ItaniumMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
+                                                  CXXDtorType Type,
+                                                  const ThunkInfo &Thunk,
+                                                  bool ElideOverrideInfo,
+                                                  raw_ostream &Out) {
   //  <special-name> ::= T <call-offset> <base encoding>
   //                      # base is the nominal target function of thunk
   CXXNameMangler Mangler(*this, Out, DD, Type);
   Mangler.getStream() << "_ZT";
 
+  auto &ThisAdjustment = Thunk.This;
   // Mangle the 'this' pointer adjustment.
   Mangler.mangleCallOffset(ThisAdjustment.NonVirtual,
                            ThisAdjustment.Virtual.Itanium.VCallOffsetOffset);
 
   Mangler.mangleFunctionEncoding(GlobalDecl(DD, Type));
+  if (!ElideOverrideInfo)
+    mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
 }
 
 /// Returns the mangled name for a guard variable for the passed in VarDecl.

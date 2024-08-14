@@ -159,7 +159,7 @@ int llvm::TableGenMain(const char *argv0,
     // aren't any.
     if (auto ExistingOrErr =
             MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
-      if (std::move(ExistingOrErr.get())->getBuffer() == Out.str())
+      if (std::move(ExistingOrErr.get())->getBuffer() == OutString)
         WriteFile = false;
   }
   if (WriteFile) {
@@ -168,7 +168,7 @@ int llvm::TableGenMain(const char *argv0,
     if (EC)
       return reportError(argv0, "error opening " + OutputFilename + ": " +
                                     EC.message() + "\n");
-    OutFile.os() << Out.str();
+    OutFile.os() << OutString;
     if (ErrorsPrinted == 0)
       OutFile.keep();
   }

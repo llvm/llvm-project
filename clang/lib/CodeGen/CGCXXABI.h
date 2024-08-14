@@ -504,13 +504,15 @@ public:
   virtual void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                                GlobalDecl GD, bool ReturnAdjustment) = 0;
 
-  virtual llvm::Value *performThisAdjustment(CodeGenFunction &CGF,
-                                             Address This,
-                                             const ThisAdjustment &TA) = 0;
+  virtual llvm::Value *
+  performThisAdjustment(CodeGenFunction &CGF, Address This,
+                        const CXXRecordDecl *UnadjustedClass,
+                        const ThunkInfo &TI) = 0;
 
-  virtual llvm::Value *performReturnAdjustment(CodeGenFunction &CGF,
-                                               Address Ret,
-                                               const ReturnAdjustment &RA) = 0;
+  virtual llvm::Value *
+  performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                          const CXXRecordDecl *UnadjustedClass,
+                          const ReturnAdjustment &RA) = 0;
 
   virtual void EmitReturnFromThunk(CodeGenFunction &CGF,
                                    RValue RV, QualType ResultType);

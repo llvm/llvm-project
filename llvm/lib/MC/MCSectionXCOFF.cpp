@@ -124,7 +124,7 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (getKind().isMetadata() && isDwarfSect()) {
     OS << "\n\t.dwsect " << format("0x%" PRIx32, *getDwarfSubtypeFlags())
        << '\n';
-    OS << MAI.getPrivateLabelPrefix() << getName() << ':' << '\n';
+    OS << getName() << ':' << '\n';
     return;
   }
 
@@ -132,14 +132,3 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 }
 
 bool MCSectionXCOFF::useCodeAlign() const { return getKind().isText(); }
-
-bool MCSectionXCOFF::isVirtualSection() const {
-  // DWARF sections are always not virtual.
-  if (isDwarfSect())
-    return false;
-  assert(isCsect() &&
-         "Handling for isVirtualSection not implemented for this section!");
-  // XTY_CM sections are virtual except for toc-data symbols.
-  return (XCOFF::XTY_CM == CsectProp->Type) &&
-         (getMappingClass() != XCOFF::XMC_TD);
-}

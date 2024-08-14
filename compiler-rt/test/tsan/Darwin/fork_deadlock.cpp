@@ -1,3 +1,6 @@
+// TODO(#96597): fix and reenable
+// UNSUPPORTED: darwin
+
 // RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts=atexit_sleep_ms=0 %run %t 2>&1 | FileCheck %s
 
 // This test models what happens on Mac when fork

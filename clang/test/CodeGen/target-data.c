@@ -235,7 +235,7 @@
 // RUN: FileCheck %s -check-prefix=ZOS
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
-// ZOS: target datalayout = "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// ZOS: target datalayout = "E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple msp430-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MSP430
@@ -269,6 +269,6 @@
 // RUN: FileCheck %s -check-prefix=VE
 // VE: target datalayout = "e-m:e-i64:64-n32:64-S128-v64:64:64-v128:64:64-v256:64:64-v512:64:64-v1024:64:64-v2048:64:64-v4096:64:64-v8192:64:64-v16384:64:64"
 
-// RUN: %clang_cc1 -triple spirv64-amd -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=SPIR64
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
 // AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0"

@@ -100,15 +100,15 @@ ProgramHeaders:
 # BAD-STRING-LLVM-NEXT:   0x0000000000000005 STRTAB    0x1000
 # BAD-STRING-LLVM-NEXT:   0x000000000000000A STRSZ     1 (bytes)
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: it goes past the end of the table (0xb1)
-# BAD-STRING-LLVM-NEXT:   0x0000000000000001 NEEDED    Shared library: <?>
+# BAD-STRING-LLVM-NEXT:   0x0000000000000001 NEEDED    Shared library: [<?>]
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: it goes past the end of the table (0xb1)
-# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFF FILTER    Filter library: <?>
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFF FILTER    Filter library: [<?>]
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: it goes past the end of the table (0xb1)
-# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY Auxiliary library: <?>
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY Auxiliary library: [<?>]
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: it goes past the end of the table (0xb1)
-# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFE USED      Not needed object: <?>
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFE USED      Not needed object: [<?>]
 ## Note: there is no "string table at offset 0xb0..." warning here, because it was printed earlier.
-# BAD-STRING-LLVM-NEXT:   0x000000000000000E SONAME    Library soname: <?>
+# BAD-STRING-LLVM-NEXT:   0x000000000000000E SONAME    Library soname: [<?>]
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb7: it goes past the end of the table (0xb1)
 # BAD-STRING-LLVM-NEXT:   0x000000000000000F RPATH     Library rpath: [<?>]
 # BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb8: it goes past the end of the table (0xb1)
@@ -121,15 +121,15 @@ ProgramHeaders:
 # BAD-STRING-GNU-NEXT:   0x0000000000000005 (STRTAB)    0x1000
 # BAD-STRING-GNU-NEXT:   0x000000000000000a (STRSZ)     1 (bytes)
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT:   0x0000000000000001 (NEEDED)    Shared library: <?>
+# BAD-STRING-GNU-NEXT:   0x0000000000000001 (NEEDED)    Shared library: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT:   0x000000007fffffff (FILTER)    Filter library: <?>
+# BAD-STRING-GNU-NEXT:   0x000000007fffffff (FILTER)    Filter library: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT:   0x000000007ffffffd (AUXILIARY) Auxiliary library: <?>
+# BAD-STRING-GNU-NEXT:   0x000000007ffffffd (AUXILIARY) Auxiliary library: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT:   0x000000007ffffffe (USED)      Not needed object: <?>
+# BAD-STRING-GNU-NEXT:   0x000000007ffffffe (USED)      Not needed object: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT:   0x000000000000000e (SONAME)    Library soname: <?>
+# BAD-STRING-GNU-NEXT:   0x000000000000000e (SONAME)    Library soname: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb7: it goes past the end of the table (0xb1)
 # BAD-STRING-GNU-NEXT:   0x000000000000000f (RPATH)     Library rpath: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb8: it goes past the end of the table (0xb1)
@@ -199,8 +199,8 @@ ProgramHeaders:
 #      BAD-STRTAB-ERR2: warning: '[[FILE]]': unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
 #      BAD-STRTAB-LLVM: LoadName: <Not found>
 #           BAD-STRTAB: warning: '[[FILE]]': string table was not found
-# BAD-STRTAB-LLVM-NEXT: 0x0000000000000001  NEEDED   Shared library: <?>
-#  BAD-STRTAB-GNU-NEXT: 0x0000000000000001 (NEEDED)  Shared library: <?>
+# BAD-STRTAB-LLVM-NEXT: 0x0000000000000001  NEEDED   Shared library: [<?>]
+#  BAD-STRTAB-GNU-NEXT: 0x0000000000000001 (NEEDED)  Shared library: [<?>]
 #           BAD-STRTAB: NeededLibraries [
 #           BAD-STRTAB:   <?>
 #           BAD-STRTAB: ]
@@ -313,15 +313,15 @@ ProgramHeaders:
 
 # NOT-TERMINATED-LLVM: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
 # NOT-TERMINATED:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb0: the string table is not null-terminated
-# NOT-TERMINATED-NEXT: {{[(]?}}NEEDED{{[)]?}}    Shared library: <?>
+# NOT-TERMINATED-NEXT: {{[(]?}}NEEDED{{[)]?}}    Shared library: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb1: the string table is not null-terminated
-# NOT-TERMINATED-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: <?>
+# NOT-TERMINATED-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: the string table is not null-terminated
-# NOT-TERMINATED-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: <?>
+# NOT-TERMINATED-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: the string table is not null-terminated
-# NOT-TERMINATED-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: <?>
+# NOT-TERMINATED-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [<?>]
 # NOT-TERMINATED-GNU-NEXT:  warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
-# NOT-TERMINATED-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: <?>
+# NOT-TERMINATED-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: the string table is not null-terminated
 # NOT-TERMINATED-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
 # NOT-TERMINATED-GREQ-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: the string table is not null-terminated
@@ -390,11 +390,11 @@ ProgramHeaders:
 ## as normal. Since the file ends with a zero byte, strings are dumped, but if it didn't,
 ## we'd get <?> printed instead. The important bit is that we don't get the past the end warning.
 
-# BEFORE-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: test.soabc
-# BEFORE-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: est.soabc
-# BEFORE-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: st.soabc
-# BEFORE-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: t.soabc
-# BEFORE-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: .soabc
+# BEFORE-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: [test.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [est.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [st.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [t.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [.soabc]
 # BEFORE-THE-EOF-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [soabc]
 # BEFORE-THE-EOF-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [oabc]
 # BEFORE-THE-EOF-NEXT: {{[(]?}}NULL{{[)]?}}      0x0
@@ -406,11 +406,11 @@ ProgramHeaders:
 
 # PAST-THE-EOF:      warning: '[[FILE]]': the dynamic string table at 0xb0 goes past the end of the file (0x2c0) with DT_STRSZ = 0x211
 # PAST-THE-EOF:      warning: '[[FILE]]': string table was not found
-# PAST-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: <?>
-# PAST-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: <?>
-# PAST-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: <?>
-# PAST-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: <?>
-# PAST-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: <?>
+# PAST-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [<?>]
 # PAST-THE-EOF-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
 # PAST-THE-EOF-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [<?>]
 # PAST-THE-EOF-NEXT: {{[(]?}}NULL{{[)]?}}      0x0

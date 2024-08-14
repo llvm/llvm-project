@@ -4176,12 +4176,9 @@
 #CHECK: may	%f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: may	%f0, %f0, 4096
-#CHECK: error: invalid register pair
-#CHECK: may	%f2, %f0, 0
 
 	may	%f0, %f0, -1
 	may	%f0, %f0, 4096
-	may	%f2, %f0, 0
 
 #CHECK: error: invalid operand
 #CHECK: mayh	%f0, %f0, -1
@@ -4198,11 +4195,6 @@
 
 	mayl	%f0, %f0, -1
 	mayl	%f0, %f0, 4096
-
-#CHECK: error: invalid register pair
-#CHECK: mayr	%f2, %f0, %f0
-
-	mayr	%f2, %f0, %f0
 
 #CHECK: error: invalid operand
 #CHECK: mc	-1, 0

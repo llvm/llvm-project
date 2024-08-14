@@ -41,7 +41,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   struct NAME<_Tp, __void_t<typename _Tp::PROPERTY > > : true_type {}
 
 // __pointer
-_LIBCPP_ALLOCATOR_TRAITS_HAS_XXX(__has_pointer, pointer);
 template <class _Tp,
           class _Alloc,
           class _RawAlloc = __libcpp_remove_reference_t<_Alloc>,

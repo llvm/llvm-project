@@ -609,6 +609,26 @@ void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
   }
 }
 
+std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+
+  auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
+    LLDB_LOGV(log, "{}", err_msg);
+    return std::nullopt;
+  };
+
+  ModuleSP dyld_sp = GetDYLDModule();
+  if (!dyld_sp)
+    return log_err("Couldn't retrieve DYLD module. Cannot get `start` symbol.");
+
+  const Symbol *symbol =
+      dyld_sp->FindFirstSymbolWithNameAndType(ConstString("_dyld_start"));
+  if (!symbol)
+    return log_err("Cannot find `start` symbol in DYLD module.");
+
+  return symbol->GetAddress();
+}
+
 void DynamicLoaderDarwin::SetDYLDModule(lldb::ModuleSP &dyld_module_sp) {
   m_dyld_module_wp = dyld_module_sp;
 }

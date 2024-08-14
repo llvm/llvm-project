@@ -8,4 +8,17 @@ constexpr _Bool inf2 = (1.0/0.0 == __builtin_inf()); // both-error {{must be ini
                                                      // both-note {{division by zero}}
 constexpr _Bool inf3 = __builtin_inf() == __builtin_inf();
 
+/// Used to crash.
+struct S {
+  int x;
+  char c;
+  float f;
+};
 
+#define DECL_BUFFER(Ty, Name) alignas(Ty) unsigned char Name[sizeof(Ty)]
+
+char bar() {
+  DECL_BUFFER(struct S, buffer);
+  ((struct S *)buffer)->c = 'a';
+  return ((struct S *)buffer)->c;
+}

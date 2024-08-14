@@ -353,13 +353,14 @@ class TypeConverter {
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
   /// a signature conversion of a single block argument, to a single SSA value
-  /// of a legal type.
+  /// with the old argument type.
   template <typename FnT,
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
   /// converting a legal replacement value back to an illegal source type.
   /// This is used when some uses of the original, illegal value must persist
@@ -370,6 +371,7 @@ class TypeConverter {
     sourceMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
   /// converting an illegal (source) value to a legal (target) type.
   template <typename FnT,

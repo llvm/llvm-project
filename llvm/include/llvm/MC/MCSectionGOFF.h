@@ -30,8 +30,8 @@ private:
 
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, uint32_t Sub)
-      : MCSection(SV_GOFF, Name, K.isText(), nullptr), Parent(P),
-        Subsection(Sub) {}
+      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+        Parent(P), Subsection(Sub) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -41,8 +41,6 @@ public:
   }
 
   bool useCodeAlign() const override { return false; }
-
-  bool isVirtualSection() const override { return false; }
 
   MCSection *getParent() const { return Parent; }
   uint32_t getSubsection() const { return Subsection; }

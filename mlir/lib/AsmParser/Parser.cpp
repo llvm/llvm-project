@@ -34,7 +34,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
@@ -42,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Alignment.h"
@@ -295,6 +295,45 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   StringRef spelling = curTok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (spelling.getAsInteger(isHex ? 0 : 10, result))
+    return emitError(curTok.getLoc(), "integer value too large");
+
+  // Make sure we have a zero at the top so we return the right signedness.
+  if (result.isNegative())
+    result = result.zext(result.getBitWidth() + 1);
+
+  // Process the negative sign if present.
+  if (negative)
+    result.negate();
+
+  return success();
+}
+
+/// Parse an optional integer value only in decimal format from the stream.
+OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
+  Token curToken = getToken();
+  if (curToken.isNot(Token::integer, Token::minus)) {
+    return std::nullopt;
+  }
+
+  bool negative = consumeIf(Token::minus);
+  Token curTok = getToken();
+  if (parseToken(Token::integer, "expected integer value")) {
+    return failure();
+  }
+
+  StringRef spelling = curTok.getSpelling();
+  // If the integer is in hexadecimal return only the 0. The lexer has already
+  // moved past the entire hexidecimal encoded integer so we reset the lex
+  // pointer to just past the 0 we actualy want to consume.
+  if (spelling[0] == '0' && spelling.size() > 1 &&
+      llvm::toLower(spelling[1]) == 'x') {
+    result = 0;
+    state.lex.resetPointer(spelling.data() + 1);
+    consumeToken();
+    return success();
+  }
+
+  if (spelling.getAsInteger(10, result))
     return emitError(curTok.getLoc(), "integer value too large");
 
   // Make sure we have a zero at the top so we return the right signedness.

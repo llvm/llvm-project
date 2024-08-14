@@ -52,7 +52,9 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -288,7 +290,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
        State ? State->getActiveModuleMacros(*this, II) : std::nullopt)
     Active.insert(MM);
   llvm::DenseSet<ModuleMacro*> Visited;
-  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf.begin(), Leaf.end());
+  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
   while (!Worklist.empty()) {
     auto *MM = Worklist.pop_back_val();
     llvm::errs() << " ModuleMacro " << MM << " "
@@ -1602,6 +1604,16 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
   return false;
 }
 
+#if defined(__sun__) && defined(__svr4__)
+// GCC mangles std::tm as tm for binary compatibility on Solaris (Issue
+// #33114).  We need to match this to allow the std::put_time calls to link
+// (PR #99075).
+asm("_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPKSt2tmPKcSB_ = "
+    "_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
+    "RSt8ios_basecPK2tmPKcSB_");
+#endif
+
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1721,11 +1733,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-    const char *Result;
+    std::string Result;
+    std::stringstream TmpStream;
+    TmpStream.imbue(std::locale("C"));
     if (getPreprocessorOpts().SourceDateEpoch) {
       time_t TT = *getPreprocessorOpts().SourceDateEpoch;
       std::tm *TM = std::gmtime(&TT);
-      Result = asctime(TM);
+      TmpStream << std::put_time(TM, "%a %b %e %T %Y");
     } else {
       // Get the file that we are lexing out of.  If we're currently lexing from
       // a macro, dig into the include stack.
@@ -1735,13 +1749,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       if (CurFile) {
         time_t TT = CurFile->getModificationTime();
         struct tm *TM = localtime(&TT);
-        Result = asctime(TM);
-      } else {
-        Result = "??? ??? ?? ??:??:?? ????\n";
+        TmpStream << std::put_time(TM, "%a %b %e %T %Y");
       }
     }
-    // Surround the string with " and strip the trailing newline.
-    OS << '"' << StringRef(Result).drop_back() << '"';
+    Result = TmpStream.str();
+    if (Result.empty())
+      Result = "??? ??? ?? ??:??:?? ????";
+    OS << '"' << Result << '"';
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__FLT_EVAL_METHOD__) {
     // __FLT_EVAL_METHOD__ is set to the default value.

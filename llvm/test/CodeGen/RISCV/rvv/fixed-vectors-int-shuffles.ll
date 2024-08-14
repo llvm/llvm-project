@@ -663,11 +663,11 @@ define <8 x i8> @merge_start_into_start(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_slidedown(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_slidedown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 195
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    li a0, 60
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 8, i32 9, i32 3, i32 4, i32 5, i32 6, i32 14, i32 15>
   ret <8 x i8> %res

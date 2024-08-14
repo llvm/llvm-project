@@ -1535,6 +1535,7 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
 
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
@@ -1554,12 +1555,22 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     // Insert the spill to the stack frame.
     int FI = CS.getFrameIdx();
     if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector) {
-      unsigned CFIIndex = MF->addFrameInst(
-          createDefCFAOffset(*STI.getRegisterInfo(), CS.getReg(), -FixedSize,
-                             MFI.getObjectOffset(FI) / 8));
-      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
+      MCRegister BaseReg = TRI.getSubReg(CS.getReg(), RISCV::sub_vrm1_0);
+      // If it's not a grouped vector register, it doesn't have subregister, so
+      // the base register is just itself.
+      if (BaseReg == RISCV::NoRegister)
+        BaseReg = CS.getReg();
+      unsigned NumRegs = RISCV::VRRegClass.contains(CS.getReg())     ? 1
+                         : RISCV::VRM2RegClass.contains(CS.getReg()) ? 2
+                         : RISCV::VRM4RegClass.contains(CS.getReg()) ? 4
+                                                                     : 8;
+      for (unsigned i = 0; i < NumRegs; ++i) {
+        unsigned CFIIndex = MF->addFrameInst(createDefCFAOffset(
+            TRI, BaseReg + i, -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
     }
   }
 }

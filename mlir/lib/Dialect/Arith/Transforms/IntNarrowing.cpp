@@ -21,7 +21,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,8 +44,7 @@ struct NarrowingPattern : OpRewritePattern<SourceOp> {
   NarrowingPattern(MLIRContext *ctx, const ArithIntNarrowingOptions &options,
                    PatternBenefit benefit = 1)
       : OpRewritePattern<SourceOp>(ctx, benefit),
-        supportedBitwidths(options.bitwidthsSupported.begin(),
-                           options.bitwidthsSupported.end()) {
+        supportedBitwidths(options.bitwidthsSupported) {
     assert(!supportedBitwidths.empty() && "Invalid options");
     assert(!llvm::is_contained(supportedBitwidths, 0) && "Invalid bitwidth");
     llvm::sort(supportedBitwidths);

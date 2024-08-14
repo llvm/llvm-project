@@ -528,7 +528,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (UseStackSafety)
     SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   F = &Fn;
-  DL = &Fn.getParent()->getDataLayout();
+  DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 

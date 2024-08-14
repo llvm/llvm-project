@@ -71,7 +71,7 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
 
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -371,13 +371,17 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
   bool supportsScalableVectors() const {
     return ST->isSVEorStreamingSVEAvailable();
   }
 
-  bool enableScalableVectorization() const { return ST->isSVEAvailable(); }
+  bool enableScalableVectorization() const;
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;

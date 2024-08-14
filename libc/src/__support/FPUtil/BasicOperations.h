@@ -11,20 +11,108 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "dyadic_float.h"
 
-#include "FEnvImpl.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T abs(T x) {
   return FPBits<T>(x).abs().get_val();
 }
+
+namespace internal {
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> max(T x, T y) {
+  FPBits<T> x_bits(x);
+  FPBits<T> y_bits(y);
+
+  // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and y
+  // have different signs and both are not NaNs, we return the number with
+  // positive sign.
+  if (x_bits.sign() != y_bits.sign())
+    return x_bits.is_pos() ? x : y;
+  return x > y ? x : y;
+}
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+#if defined(__LIBC_USE_BUILTIN_FMAXF16_FMINF16)
+template <> LIBC_INLINE float16 max(float16 x, float16 y) {
+  return __builtin_fmaxf16(x, y);
+}
+#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64)
+template <> LIBC_INLINE float16 max(float16 x, float16 y) {
+  FPBits<float16> x_bits(x);
+  FPBits<float16> y_bits(y);
+
+  int16_t xi = static_cast<int16_t>(x_bits.uintval());
+  int16_t yi = static_cast<int16_t>(y_bits.uintval());
+  return ((xi > yi) != (xi < 0 && yi < 0)) ? x : y;
+}
+#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#if defined(__LIBC_USE_BUILTIN_FMAX_FMIN) && !defined(LIBC_TARGET_ARCH_IS_X86)
+template <> LIBC_INLINE float max(float x, float y) {
+  return __builtin_fmaxf(x, y);
+}
+
+template <> LIBC_INLINE double max(double x, double y) {
+  return __builtin_fmax(x, y);
+}
+#endif
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> min(T x, T y) {
+  FPBits<T> x_bits(x);
+  FPBits<T> y_bits(y);
+
+  // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and y have
+  // different signs and both are not NaNs, we return the number with negative
+  // sign.
+  if (x_bits.sign() != y_bits.sign())
+    return x_bits.is_neg() ? x : y;
+  return x < y ? x : y;
+}
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+#if defined(__LIBC_USE_BUILTIN_FMAXF16_FMINF16)
+template <> LIBC_INLINE float16 min(float16 x, float16 y) {
+  return __builtin_fminf16(x, y);
+}
+#elif !defined(LIBC_TARGET_ARCH_IS_AARCH64)
+template <> LIBC_INLINE float16 min(float16 x, float16 y) {
+  FPBits<float16> x_bits(x);
+  FPBits<float16> y_bits(y);
+
+  int16_t xi = static_cast<int16_t>(x_bits.uintval());
+  int16_t yi = static_cast<int16_t>(y_bits.uintval());
+  return ((xi < yi) != (xi < 0 && yi < 0)) ? x : y;
+}
+#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#if defined(__LIBC_USE_BUILTIN_FMAX_FMIN) && !defined(LIBC_TARGET_ARCH_IS_X86)
+template <> LIBC_INLINE float min(float x, float y) {
+  return __builtin_fminf(x, y);
+}
+
+template <> LIBC_INLINE double min(double x, double y) {
+  return __builtin_fmin(x, y);
+}
+#endif
+
+} // namespace internal
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmin(T x, T y) {
@@ -34,12 +122,7 @@ LIBC_INLINE T fmin(T x, T y) {
     return y;
   if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign())
-    // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
-    // y has different signs and both are not NaNs, we return the number
-    // with negative sign.
-    return bitx.is_neg() ? x : y;
-  return x < y ? x : y;
+  return internal::min(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -50,12 +133,7 @@ LIBC_INLINE T fmax(T x, T y) {
     return y;
   if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign())
-    // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
-    // y has different signs and both are not NaNs, we return the number
-    // with positive sign.
-    return bitx.is_neg() ? y : x;
-  return x > y ? x : y;
+  return internal::max(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -66,9 +144,7 @@ LIBC_INLINE T fmaximum(T x, T y) {
     return x;
   if (bity.is_nan())
     return y;
-  if (bitx.sign() != bity.sign())
-    return (bitx.is_neg() ? y : x);
-  return x > y ? x : y;
+  return internal::max(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -79,9 +155,7 @@ LIBC_INLINE T fminimum(T x, T y) {
     return x;
   if (bity.is_nan())
     return y;
-  if (bitx.sign() != bity.sign())
-    return (bitx.is_neg()) ? x : y;
-  return x < y ? x : y;
+  return internal::min(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -96,9 +170,7 @@ LIBC_INLINE T fmaximum_num(T x, T y) {
     return y;
   if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign())
-    return (bitx.is_neg() ? y : x);
-  return x > y ? x : y;
+  return internal::max(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -113,9 +185,7 @@ LIBC_INLINE T fminimum_num(T x, T y) {
     return y;
   if (bity.is_nan())
     return x;
-  if (bitx.sign() != bity.sign())
-    return (bitx.is_neg() ? x : y);
-  return x < y ? x : y;
+  return internal::min(x, y);
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -251,12 +321,8 @@ totalorder(T x, T y) {
   StorageType x_u = x_bits.uintval();
   StorageType y_u = y_bits.uintval();
 
-  using signed_t = cpp::make_signed_t<StorageType>;
-  signed_t x_signed = static_cast<signed_t>(x_u);
-  signed_t y_signed = static_cast<signed_t>(y_u);
-
-  bool both_neg = (x_u & y_u & FPBits::SIGN_MASK) != 0;
-  return x_signed == y_signed || ((x_signed <= y_signed) != both_neg);
+  bool has_neg = ((x_u | y_u) & FPBits::SIGN_MASK) != 0;
+  return x_u == y_u || ((x_u < y_u) != has_neg);
 }
 
 template <typename T>
@@ -268,12 +334,21 @@ totalordermag(T x, T y) {
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   using FPBits = FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
 
   if (!x_bits.is_nan())
     return T(-1.0);
 
-  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+  StorageType payload = x_bits.uintval() & (FPBits::FRACTION_MASK >> 1);
+
+  if constexpr (is_big_int_v<StorageType>) {
+    DyadicFloat<FPBits::STORAGE_LEN> payload_dfloat(Sign::POS, 0, payload);
+
+    return static_cast<T>(payload_dfloat);
+  } else {
+    return static_cast<T>(payload);
+  }
 }
 
 template <bool IsSignaling, typename T>
@@ -298,7 +373,8 @@ setpayload(T &res, T pl) {
   }
 
   using StorageType = typename FPBits::StorageType;
-  StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
+  StorageType v(pl_bits.get_explicit_mantissa() >>
+                (FPBits::FRACTION_LEN - pl_exp));
 
   if constexpr (IsSignaling)
     res = FPBits::signaling_nan(Sign::POS, v).get_val();
@@ -308,6 +384,6 @@ setpayload(T &res, T pl) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BASICOPERATIONS_H

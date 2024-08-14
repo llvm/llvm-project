@@ -1131,6 +1131,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .clampScalar(0, S16, S64)
+      .scalarize(0)
+      .lower();
+
   getActionDefinitionsBuilder(G_INTRINSIC_FPTRUNC_ROUND)
       .customFor({S16, S32})
       .scalarize(0)
@@ -1138,6 +1143,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // Lower G_FNEARBYINT and G_FRINT into G_INTRINSIC_ROUNDEVEN
   getActionDefinitionsBuilder({G_INTRINSIC_ROUND, G_FRINT, G_FNEARBYINT})
+      .scalarize(0)
+      .lower();
+
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
+      .clampScalar(0, S16, S64)
       .scalarize(0)
       .lower();
 
@@ -1637,6 +1647,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
@@ -1650,9 +1661,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
-    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
-
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
@@ -1664,12 +1672,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       });
   }
 
-  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
-    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
+      ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}, {V2F16, BufferFatPtr}});
   if (ST.hasAtomicGlobalPkAddBF16Inst())
     Atomic.legalFor({{V2BF16, GlobalPtr}});
   if (ST.hasAtomicFlatPkAdd16Insts())
     Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
+
+
+  // Most of the legalization work here is done by AtomicExpand. We could
+  // probably use a simpler legality rule that just assumes anything is OK.
+  auto &AtomicFMinFMax =
+    getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
+
+  if (ST.hasAtomicFMinFMaxF32GlobalInsts())
+    AtomicFMinFMax.legalFor({{F32, GlobalPtr},{F32, BufferFatPtr}});
+  if (ST.hasAtomicFMinFMaxF64GlobalInsts())
+    AtomicFMinFMax.legalFor({{F64, GlobalPtr}, {F64, BufferFatPtr}});
+  if (ST.hasAtomicFMinFMaxF32FlatInsts())
+    AtomicFMinFMax.legalFor({F32, FlatPtr});
+  if (ST.hasAtomicFMinFMaxF64FlatInsts())
+    AtomicFMinFMax.legalFor({F64, FlatPtr});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
@@ -5401,35 +5426,6 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   return true;
 }
 
-static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_ATOMICRMW_FMIN;
-  case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_ATOMICRMW_FMAX;
-  default:
-    llvm_unreachable("not a DS FP intrinsic");
-  }
-}
-
-bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
-                                                      MachineInstr &MI,
-                                                      Intrinsic::ID IID) const {
-  GISelChangeObserver &Observer = Helper.Observer;
-  Observer.changingInstr(MI);
-
-  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
-
-  // The remaining operands were used to set fields in the MemOperand on
-  // construction.
-  for (int I = 6; I > 3; --I)
-    MI.removeOperand(I);
-
-  MI.removeOperand(1); // Remove the intrinsic ID.
-  Observer.changedInstr(MI);
-  return true;
-}
-
 // TODO: Fix pointer type handling
 bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                                          MachineInstr &MI,
@@ -6348,8 +6344,13 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const LLT V2S16 = LLT::fixed_vector(2, 16);
 
   unsigned DMask = 0;
-  Register VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
-  LLT Ty = MRI->getType(VData);
+  Register VData;
+  LLT Ty;
+
+  if (!BaseOpcode->NoReturn || BaseOpcode->Store) {
+    VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
+    Ty = MRI->getType(VData);
+  }
 
   const bool IsAtomicPacked16Bit =
       (BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
@@ -6387,7 +6388,11 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
                                      : AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE;
   const unsigned LoadOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16
                                     : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
-  unsigned NewOpcode = NumDefs == 0 ? StoreOpcode : LoadOpcode;
+  unsigned NewOpcode = LoadOpcode;
+  if (BaseOpcode->Store)
+    NewOpcode = StoreOpcode;
+  else if (BaseOpcode->NoReturn)
+    NewOpcode = AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET;
 
   // Track that we legalized this
   MI.setDesc(B.getTII().get(NewOpcode));
@@ -6517,7 +6522,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     Flags |= 2;
   MI.addOperand(MachineOperand::CreateImm(Flags));
 
-  if (BaseOpcode->Store) { // No TFE for stores?
+  if (BaseOpcode->NoReturn) { // No TFE for stores?
     // TODO: Handle dmask trim
     if (!Ty.isVector() || !IsD16)
       return true;
@@ -7371,8 +7376,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeBufferStore(MI, MRI, B, true, true);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
+  case Intrinsic::amdgcn_struct_atomic_buffer_load:
+  case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
     return legalizeBufferLoad(MI, MRI, B, false, false);
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
@@ -7451,9 +7460,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
-    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:

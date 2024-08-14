@@ -13,12 +13,14 @@
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXUtilities.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include <cctype>
 using namespace llvm;
@@ -59,6 +61,9 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
     break;
   case 6:
     OS << "%fd";
+    break;
+  case 7:
+    OS << "%rq";
     break;
   }
 
@@ -224,9 +229,31 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
   if (Modifier) {
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
-    if (!strcmp(Modifier, "volatile")) {
-      if (Imm)
+    if (!strcmp(Modifier, "sem")) {
+      auto Ordering = NVPTX::Ordering(Imm);
+      switch (Ordering) {
+      case NVPTX::Ordering::NotAtomic:
+        break;
+      case NVPTX::Ordering::Volatile:
         O << ".volatile";
+        break;
+      case NVPTX::Ordering::Relaxed:
+        O << ".relaxed.sys";
+        break;
+      case NVPTX::Ordering::Acquire:
+        O << ".acquire.sys";
+        break;
+      case NVPTX::Ordering::Release:
+        O << ".release.sys";
+        break;
+      case NVPTX::Ordering::RelaxedMMIO:
+        O << ".mmio.relaxed.sys";
+        break;
+      default:
+        report_fatal_error(formatv(
+            "NVPTX LdStCode Printer does not support \"{}\" sem modifier.",
+            OrderingToCString(Ordering)));
+      }
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {
       case NVPTX::PTXLdStInstCode::GLOBAL:

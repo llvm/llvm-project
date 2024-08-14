@@ -37,10 +37,6 @@ static void RegisterSancovFlags(FlagParser *parser, SancovFlags *f) {
 #undef SANCOV_FLAG
 }
 
-static const char *MaybeCallSancovDefaultOptions() {
-  return (&__sancov_default_options) ? __sancov_default_options() : "";
-}
-
 void InitializeSancovFlags() {
   SancovFlags *f = sancov_flags();
   f->SetDefaults();
@@ -48,7 +44,7 @@ void InitializeSancovFlags() {
   FlagParser parser;
   RegisterSancovFlags(&parser, f);
 
-  parser.ParseString(MaybeCallSancovDefaultOptions());
+  parser.ParseString(__sancov_default_options());
   parser.ParseStringFromEnv("SANCOV_OPTIONS");
 
   ReportUnrecognizedFlags();

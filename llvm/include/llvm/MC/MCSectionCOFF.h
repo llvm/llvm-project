@@ -53,6 +53,7 @@ private:
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
                 MCSymbol *COMDATSymbol, int Selection, MCSymbol *Begin)
       : MCSection(SV_COFF, Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
+                  Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA,
                   Begin),
         Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
         Selection(Selection) {
@@ -75,7 +76,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {

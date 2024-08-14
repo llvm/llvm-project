@@ -210,8 +210,4 @@ bool MCSectionELF::useCodeAlign() const {
   return getFlags() & ELF::SHF_EXECINSTR;
 }
 
-bool MCSectionELF::isVirtualSection() const {
-  return getType() == ELF::SHT_NOBITS;
-}
-
 StringRef MCSectionELF::getVirtualSectionKind() const { return "SHT_NOBITS"; }

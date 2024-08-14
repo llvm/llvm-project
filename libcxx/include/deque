@@ -376,10 +376,10 @@ public:
     return __x.__ptr_ == __y.__ptr_;
   }
 
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI friend bool operator!=(const __deque_iterator& __x, const __deque_iterator& __y) {
     return !(__x == __y);
   }
-
   _LIBCPP_HIDE_FROM_ABI friend bool operator<(const __deque_iterator& __x, const __deque_iterator& __y) {
     return __x.__m_iter_ < __y.__m_iter_ || (__x.__m_iter_ == __y.__m_iter_ && __x.__ptr_ < __y.__ptr_);
   }
@@ -395,6 +395,30 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend bool operator>=(const __deque_iterator& __x, const __deque_iterator& __y) {
     return !(__x < __y);
   }
+
+#else
+
+  _LIBCPP_HIDE_FROM_ABI friend strong_ordering operator<=>(const __deque_iterator& __x, const __deque_iterator& __y) {
+    if (__x.__m_iter_ < __y.__m_iter_)
+      return strong_ordering::less;
+
+    if (__x.__m_iter_ == __y.__m_iter_) {
+      if constexpr (three_way_comparable<pointer, strong_ordering>) {
+        return __x.__ptr_ <=> __y.__ptr_;
+      } else {
+        if (__x.__ptr_ < __y.__ptr_)
+          return strong_ordering::less;
+
+        if (__x.__ptr_ == __y.__ptr_)
+          return strong_ordering::equal;
+
+        return strong_ordering::greater;
+      }
+    }
+
+    return strong_ordering::greater;
+  }
+#endif // _LIBCPP_STD_VER >= 20
 
 private:
   _LIBCPP_HIDE_FROM_ABI explicit __deque_iterator(__map_iterator __m, pointer __p) _NOEXCEPT
@@ -2530,8 +2554,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const deque<_Tp, _Allocator>& __x, 
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

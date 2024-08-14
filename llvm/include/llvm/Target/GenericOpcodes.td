@@ -110,6 +110,12 @@ def G_GLOBAL_VALUE : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_PTRAUTH_GLOBAL_VALUE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$addr, i32imm:$key, type1:$addrdisc, i64imm:$disc);
+  let hasSideEffects = 0;
+}
+
 def G_CONSTANT_POOL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src);
@@ -421,6 +427,20 @@ def G_ICMP : GenericInstruction {
 def G_FCMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$tst, type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic signed three-way comparison.
+def G_SCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic unsigned three-way comparison.
+def G_UCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
@@ -1539,6 +1559,13 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
+// Generic masked compress.
+def G_VECTOR_COMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;
 }
 

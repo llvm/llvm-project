@@ -19,7 +19,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -59,8 +58,7 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
   auto sizes = op.getStaticSizes();
   int64_t offset = op.getStaticOffset(0);
   // Only support static sizes and offsets.
-  if (llvm::any_of(sizes,
-                   [](int64_t size) { return size == ShapedType::kDynamic; }) ||
+  if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
       offset == ShapedType::kDynamic) {
     return rewriter.notifyMatchFailure(
         op, "dynamic size or offset is not supported");
@@ -437,8 +435,7 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     auto sizes = subViewOp.getStaticSizes();
     int64_t lastOffset = subViewOp.getStaticOffsets().back();
     // Only support static sizes and offsets.
-    if (llvm::any_of(
-            sizes, [](int64_t size) { return size == ShapedType::kDynamic; }) ||
+    if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
         lastOffset == ShapedType::kDynamic) {
       return rewriter.notifyMatchFailure(
           subViewOp->getLoc(), "dynamic size or offset is not supported");

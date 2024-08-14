@@ -91,7 +91,7 @@ lto::Config BitcodeCompiler::createConfig() {
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
 
   if (ctx.config.emit == EmitKind::LLVM) {
-    c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
+    c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
       if (std::unique_ptr<raw_fd_ostream> os =
               openLTOOutputFile(ctx.config.outputFile))
         WriteBitcodeToFile(m, *os, false);

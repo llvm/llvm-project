@@ -42,7 +42,7 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_intrinsic(ptr %ptr, double %da
   ret double %ret
 }
 
-define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %data) #0 {
+define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %data) {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_no_rtn_atomicrmw
   ; GFX90A_GFX940: bb.1 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -55,11 +55,11 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %d
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
   ; GFX90A_GFX940-NEXT:   FLAT_ATOMIC_ADD_F64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s64) on %ir.ptr)
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
-  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
-define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %data) #0 {
+define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %data) {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_rtn_atomicrmw
   ; GFX90A_GFX940: bb.1 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -78,10 +78,10 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %da
   ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; GFX90A_GFX940-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
-  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
   ret double %ret
 }
 
 declare double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr, double)
 
-attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }
+!0 = !{}

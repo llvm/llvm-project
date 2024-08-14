@@ -1,9 +1,0 @@
-add_entrypoint_object(
-  tan
-  SRCS
-    tan.cpp
-  HDRS
-    ../tan.h
-  COMPILE_OPTIONS
-    -O2
-)

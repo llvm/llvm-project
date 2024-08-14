@@ -187,7 +187,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hashing.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
@@ -323,8 +322,12 @@ if(LLVM_ENABLE_ZSTD)
   if(NOT zstd_library)
     get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
   endif()
-  get_library_name(${zstd_library} zstd_library)
-  set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  if (zstd_target STREQUAL zstd::libzstd_shared)
+    get_library_name(${zstd_library} zstd_library)
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  else()
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_STATIC_LIBRARY}")
+  endif()
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

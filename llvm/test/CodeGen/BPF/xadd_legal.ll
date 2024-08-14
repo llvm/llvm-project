@@ -19,8 +19,8 @@ define dso_local i32 @test(ptr nocapture %ptr, i64 %a) {
 entry:
   %conv = trunc i64 %a to i32
   %0 = atomicrmw add ptr %ptr, i32 %conv seq_cst
-; CHECK-64: lock *(u32 *)(r1 + 0) += r2
-; CHECK-32: lock *(u32 *)(r1 + 0) += w2
+; CHECK-64: r2 = atomic_fetch_add((u32 *)(r1 + 0), r2)
+; CHECK-32: w2 = atomic_fetch_add((u32 *)(r1 + 0), w2)
   %1 = load i32, ptr %ptr, align 4
   ret i32 %1
 }

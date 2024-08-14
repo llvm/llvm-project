@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
-Resource ResourceDescriptorHeap[5];
 typedef vector<float, 3> float3;
 
 RWBuffer<float3> Buffer;

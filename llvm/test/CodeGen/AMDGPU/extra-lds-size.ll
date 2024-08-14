@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10-MESA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-PAL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-PAL %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-MESA %s
 
 ; Check EXTRA_LDS_SIZE in SPI_SHADER_PGM_RSRC2_PS.
 
@@ -14,6 +16,11 @@
 
 ; GFX11-MESA: .long 45100
 ; GFX11-MESA-NEXT: .long 1024
+
+; GFX1200-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x400
+
+; GFX1200-MESA: .long 45100
+; GFX1200-MESA-NEXT: .long 1024
 
 @lds = internal addrspace(3) global [4096 x i8] undef
 

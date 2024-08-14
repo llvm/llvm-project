@@ -252,7 +252,7 @@ public:
     if (TypeName == "function") {
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       auto *Current =
-          cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+          cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
       if (Current->getGroup())
         WasmSym->setComdat(true);
     } else if (TypeName == "global")

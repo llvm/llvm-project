@@ -166,6 +166,9 @@ struct APFloatBase {
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E4M3.
+    S_Float8E4M3,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
     // Unlike IEEE-754 types, there are no infinity values, and NaN is
@@ -185,6 +188,9 @@ struct APFloatBase {
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E3M4.
+    S_Float8E3M4,
     // Floating point number that occupies 32 bits or less of storage, providing
     // improved range compared to half (16-bit) formats, at (potentially)
     // greater throughput than single precision (32-bit) formats.
@@ -217,9 +223,11 @@ struct APFloatBase {
   static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
   static const fltSemantics &Float8E5M2() LLVM_READNONE;
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E4M3() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E3M4() LLVM_READNONE;
   static const fltSemantics &FloatTF32() LLVM_READNONE;
   static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
   static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
@@ -370,7 +378,7 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
-#ifdef HAS_IEE754_FLOAT128
+#if defined(HAS_IEE754_FLOAT128)
   float128 convertToQuad() const;
 #endif
   float convertToFloat() const;
@@ -638,9 +646,11 @@ private:
   APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3APFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
@@ -656,9 +666,11 @@ private:
   void initFromPPCDoubleDoubleAPInt(const APInt &api);
   void initFromFloat8E5M2APInt(const APInt &api);
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3APInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
+  void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
@@ -1267,7 +1279,7 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEquad and
   /// shorter semantics, like IEEEdouble and others.
-#ifdef HAS_IEE754_FLOAT128
+#if defined(HAS_IEE754_FLOAT128)
   float128 convertToQuad() const;
 #endif
 

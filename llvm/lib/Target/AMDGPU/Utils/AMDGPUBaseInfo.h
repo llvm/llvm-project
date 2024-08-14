@@ -404,6 +404,7 @@ struct MIMGBaseOpcodeInfo {
   bool MSAA;
   bool BVH;
   bool A16;
+  bool NoReturn;
 };
 
 LLVM_READONLY

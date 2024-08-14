@@ -354,6 +354,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   UseLocSection = !TT.isNVPTX();
 
+  // Always emit .debug_aranges for SCE tuning.
+  UseARangesSection = GenerateARangeSection || tuneForSCE();
+
   HasAppleExtensionAttributes = tuneForLLDB();
 
   // Handle split DWARF.
@@ -1145,14 +1148,15 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
 void DwarfDebug::beginModule(Module *M) {
   DebugHandlerBase::beginModule(M);
 
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm)
     return;
 
   unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
                                        M->debug_compile_units_end());
+  if (NumDebugCUs == 0)
+    return;
+
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
-  assert(MMI->hasDebugInfo() &&
-         "DebugInfoAvailabilty unexpectedly not initialized");
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
@@ -1256,13 +1260,6 @@ void DwarfDebug::finalizeModuleInfo() {
 
   finishEntityDefinitions();
 
-  // Include the DWO file name in the hash if there's more than one CU.
-  // This handles ThinLTO's situation where imported CUs may very easily be
-  // duplicate with the same CU partially imported into another ThinLTO unit.
-  StringRef DWOName;
-  if (CUMap.size() > 1)
-    DWOName = Asm->TM.Options.MCOptions.SplitDwarfFile;
-
   bool HasEmittedSplitCU = false;
 
   // Handle anything that needs to be done on a per-unit basis after
@@ -1291,11 +1288,13 @@ void DwarfDebug::finalizeModuleInfo() {
                                          ? dwarf::DW_AT_dwo_name
                                          : dwarf::DW_AT_GNU_dwo_name;
       finishUnitAttributes(TheCU.getCUNode(), TheCU);
-      TheCU.addString(TheCU.getUnitDie(), attrDWOName,
-                      Asm->TM.Options.MCOptions.SplitDwarfFile);
-      SkCU->addString(SkCU->getUnitDie(), attrDWOName,
-                      Asm->TM.Options.MCOptions.SplitDwarfFile);
-      // Emit a unique identifier for this CU.
+      StringRef DWOName = Asm->TM.Options.MCOptions.SplitDwarfFile;
+      TheCU.addString(TheCU.getUnitDie(), attrDWOName, DWOName);
+      SkCU->addString(SkCU->getUnitDie(), attrDWOName, DWOName);
+      // Emit a unique identifier for this CU. Include the DWO file name in the
+      // hash to avoid the case where two (almost) empty compile units have the
+      // same contents. This can happen if link-time optimization removes nearly
+      // all (unused) code from a CU.
       uint64_t ID =
           DIEHash(Asm, &TheCU).computeCUSignature(DWOName, TheCU.getUnitDie());
       if (getDwarfVersion() >= 5) {
@@ -1430,7 +1429,7 @@ void DwarfDebug::endModule() {
 
   // If we aren't actually generating debug info (check beginModule -
   // conditionalized on the presence of the llvm.dbg.cu metadata node)
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm || !Asm->hasDebugInfo())
     return;
 
   // Finalize the debug info for the module.
@@ -1450,7 +1449,7 @@ void DwarfDebug::endModule() {
   emitDebugInfo();
 
   // Emit info into a debug aranges section.
-  if (GenerateARangeSection)
+  if (UseARangesSection)
     emitDebugARanges();
 
   // Emit info into a debug ranges section.
@@ -1713,7 +1712,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     const MCSymbol *EndLabel;
     if (std::next(EI) == Entries.end()) {
       const MachineBasicBlock &EndMBB = Asm->MF->back();
-      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionIDNum()].EndLabel;
+      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionID()].EndLabel;
       if (EI->isClobber())
         EndMI = EI->getInstr();
     }
@@ -2064,7 +2063,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   bool PrevInstInSameSection =
       (!PrevInstBB ||
-       PrevInstBB->getSectionIDNum() == MI->getParent()->getSectionIDNum());
+       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
   if (DL == PrevInstLoc && PrevInstInSameSection) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
@@ -2990,6 +2989,9 @@ struct ArangeSpan {
 // Emit a debug aranges section, containing a CU lookup for any
 // address we can tie back to a CU.
 void DwarfDebug::emitDebugARanges() {
+  if (ArangeLabels.empty())
+    return;
+
   // Provides a unique id per text section.
   MapVector<MCSection *, SmallVector<SymbolCU, 8>> SectionMap;
 
@@ -3012,8 +3014,7 @@ void DwarfDebug::emitDebugARanges() {
   for (auto &I : SectionMap) {
     MCSection *Section = I.first;
     SmallVector<SymbolCU, 8> &List = I.second;
-    if (List.size() < 1)
-      continue;
+    assert(!List.empty());
 
     // If we have no section (e.g. common), just write out
     // individual spans for each symbol.
@@ -3027,20 +3028,6 @@ void DwarfDebug::emitDebugARanges() {
       }
       continue;
     }
-
-    // Sort the symbols by offset within the section.
-    llvm::stable_sort(List, [&](const SymbolCU &A, const SymbolCU &B) {
-      unsigned IA = A.Sym ? Asm->OutStreamer->getSymbolOrder(A.Sym) : 0;
-      unsigned IB = B.Sym ? Asm->OutStreamer->getSymbolOrder(B.Sym) : 0;
-
-      // Symbols with no order assigned should be placed at the end.
-      // (e.g. section end labels)
-      if (IA == 0)
-        return false;
-      if (IB == 0)
-        return true;
-      return IA < IB;
-    });
 
     // Insert a final terminator.
     List.push_back(SymbolCU(nullptr, Asm->OutStreamer->endSection(Section)));
@@ -3681,4 +3668,22 @@ bool DwarfDebug::alwaysUseRanges(const DwarfCompileUnit &CU) const {
   if (useSplitDwarf())
     return true;
   return false;
+}
+
+void DwarfDebug::beginCodeAlignment(const MachineBasicBlock &MBB) {
+  if (MBB.getAlignment() == Align(1))
+    return;
+
+  auto *SP = MBB.getParent()->getFunction().getSubprogram();
+  bool NoDebug =
+      !SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug;
+
+  if (NoDebug)
+    return;
+
+  auto PrevLoc = Asm->OutStreamer->getContext().getCurrentDwarfLoc();
+  Asm->OutStreamer->emitDwarfLocDirective(
+      PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
+  MCDwarfLineEntry::make(Asm->OutStreamer.get(),
+                         Asm->OutStreamer->getCurrentSectionOnly());
 }

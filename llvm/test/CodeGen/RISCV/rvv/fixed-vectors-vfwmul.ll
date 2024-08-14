@@ -448,3 +448,18 @@ define <2 x double> @vfwmul_squared_v2f16_v2f64(ptr %x) {
   %c = fmul <2 x double> %b, %b
   ret <2 x double> %c
 }
+
+define <2 x float> @vfwmul_vf2_v2f32(<2 x half> %x, half %y) {
+; CHECK-LABEL: vfwmul_vf2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %a = fpext <2 x half> %x to <2 x float>
+  %b = fpext half %y to float
+  %c = insertelement <2 x float> poison, float %b, i32 0
+  %d = shufflevector <2 x float> %c, <2 x float> poison, <2 x i32> zeroinitializer
+  %e = fmul <2 x float> %a, %d
+  ret <2 x float> %e
+}

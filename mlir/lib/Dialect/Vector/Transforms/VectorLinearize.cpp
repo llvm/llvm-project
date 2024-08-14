@@ -18,7 +18,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
@@ -233,8 +232,7 @@ struct LinearizeVectorExtractStridedSlice final
     }
     // Perform a shuffle to extract the kD vector.
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstType, srcVector, srcVector,
-        rewriter.getI64ArrayAttr(indices));
+        extractOp, dstType, srcVector, srcVector, indices);
     return success();
   }
 
@@ -299,20 +297,17 @@ struct LinearizeVectorShuffle final
     // that needs to be shuffled to the destination vector. If shuffleSliceLen >
     // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
     // elements) instead of scalars.
-    ArrayAttr mask = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
     int64_t totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
     llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
-    for (auto [i, value] :
-         llvm::enumerate(mask.getAsValueRange<IntegerAttr>())) {
-
-      int64_t v = value.getZExtValue();
+    for (auto [i, value] : llvm::enumerate(mask)) {
       std::iota(indices.begin() + shuffleSliceLen * i,
                 indices.begin() + shuffleSliceLen * (i + 1),
-                shuffleSliceLen * v);
+                shuffleSliceLen * value);
     }
 
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        shuffleOp, dstType, vec1, vec2, rewriter.getI64ArrayAttr(indices));
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(shuffleOp, dstType, vec1,
+                                                   vec2, indices);
     return success();
   }
 
@@ -369,8 +364,7 @@ struct LinearizeVectorExtract final
     llvm::SmallVector<int64_t, 2> indices(size);
     std::iota(indices.begin(), indices.end(), linearizedOffset);
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(),
-        rewriter.getI64ArrayAttr(indices));
+        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(), indices);
 
     return success();
   }
@@ -453,8 +447,7 @@ struct LinearizeVectorInsert final
                                            // [offset+srcNumElements, end)
 
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(),
-        rewriter.getI64ArrayAttr(indices));
+        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(), indices);
 
     return success();
   }

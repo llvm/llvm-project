@@ -955,7 +955,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   return success();
 }
 
-mlir::LogicalResult tosa::ReshapeOp::verify() {
+llvm::LogicalResult tosa::ReshapeOp::verify() {
   TensorType inputType = getInput1().getType();
   RankedTensorType outputType = getType();
 
@@ -1116,6 +1116,12 @@ LogicalResult tosa::TransposeOp::verify() {
            "Unexpectedly found permutation tensor without rank");
     if (!isPermutationVector(constantPerms))
       return emitOpError() << "expected valid permutation tensor";
+
+    if (inputType.hasRank() && !llvm::all_of(constantPerms, [&](int64_t s) {
+          return s < inputType.getRank();
+        })) {
+      return emitOpError() << "permutation must be within input bounds";
+    }
   }
   return success();
 }

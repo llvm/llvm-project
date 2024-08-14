@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
@@ -57,7 +56,7 @@ struct UnrollVectorOptions {
 
   /// Set the native shape to use for unrolling.
   UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
-    SmallVector<int64_t> tsShape(shape.begin(), shape.end());
+    SmallVector<int64_t> tsShape(shape);
     nativeShape = [=](Operation *) -> std::optional<SmallVector<int64_t>> {
       return tsShape;
     };

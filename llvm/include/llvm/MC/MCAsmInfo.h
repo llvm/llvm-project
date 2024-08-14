@@ -580,12 +580,6 @@ public:
     return nullptr;
   }
 
-  /// True if the section is atomized using the symbols in it.
-  /// This is false if the section is not atomized at all (most ELF sections) or
-  /// if it is atomized based on its contents (MachO' __TEXT,__cstring for
-  /// example).
-  virtual bool isSectionAtomizableBySymbols(const MCSection &Section) const;
-
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;

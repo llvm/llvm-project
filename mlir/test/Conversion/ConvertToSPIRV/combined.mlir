@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv %s | FileCheck %s
+// RUN: mlir-opt -convert-to-spirv="run-signature-conversion=false run-vector-unrolling=false" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @combined
 // CHECK: %[[C0_F32:.*]] = spirv.Constant 0.000000e+00 : f32

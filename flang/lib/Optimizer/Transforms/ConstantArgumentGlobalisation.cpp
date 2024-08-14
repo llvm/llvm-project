@@ -37,7 +37,7 @@ public:
   CallOpRewriter(mlir::MLIRContext *ctx, const mlir::DominanceInfo &_di)
       : OpRewritePattern(ctx), di(_di) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::CallOp callOp,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "Processing call op: " << callOp << "\n");
@@ -98,9 +98,8 @@ public:
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
-      if (std::find_if(allocas.begin(), allocas.end(), [alloca](auto x) {
-            return x.first == alloca;
-          }) == allocas.end()) {
+      if (llvm::none_of(allocas,
+                        [alloca](auto x) { return x.first == alloca; })) {
         allocas.push_back(std::make_pair(alloca, store));
       }
 

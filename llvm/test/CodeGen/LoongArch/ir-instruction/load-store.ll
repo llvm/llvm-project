@@ -11,38 +11,34 @@
 define i32 @load_store_global() nounwind {
 ; LA32NOPIC-LABEL: load_store_global:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(G)
-; LA32NOPIC-NEXT:    addi.w $a1, $a0, %pc_lo12(G)
-; LA32NOPIC-NEXT:    ld.w $a0, $a1, 0
+; LA32NOPIC-NEXT:    pcalau12i $a1, %pc_hi20(G)
+; LA32NOPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(G)
 ; LA32NOPIC-NEXT:    addi.w $a0, $a0, 1
-; LA32NOPIC-NEXT:    st.w $a0, $a1, 0
+; LA32NOPIC-NEXT:    st.w $a0, $a1, %pc_lo12(G)
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: load_store_global:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    pcalau12i $a0, %pc_hi20(.LG$local)
-; LA32PIC-NEXT:    addi.w $a1, $a0, %pc_lo12(.LG$local)
-; LA32PIC-NEXT:    ld.w $a0, $a1, 0
+; LA32PIC-NEXT:    pcalau12i $a1, %pc_hi20(.LG$local)
+; LA32PIC-NEXT:    ld.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, 1
-; LA32PIC-NEXT:    st.w $a0, $a1, 0
+; LA32PIC-NEXT:    st.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: load_store_global:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(G)
-; LA64NOPIC-NEXT:    addi.d $a1, $a0, %pc_lo12(G)
-; LA64NOPIC-NEXT:    ld.w $a0, $a1, 0
+; LA64NOPIC-NEXT:    pcalau12i $a1, %pc_hi20(G)
+; LA64NOPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(G)
 ; LA64NOPIC-NEXT:    addi.w $a0, $a0, 1
-; LA64NOPIC-NEXT:    st.w $a0, $a1, 0
+; LA64NOPIC-NEXT:    st.w $a0, $a1, %pc_lo12(G)
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: load_store_global:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    pcalau12i $a0, %pc_hi20(.LG$local)
-; LA64PIC-NEXT:    addi.d $a1, $a0, %pc_lo12(.LG$local)
-; LA64PIC-NEXT:    ld.w $a0, $a1, 0
+; LA64PIC-NEXT:    pcalau12i $a1, %pc_hi20(.LG$local)
+; LA64PIC-NEXT:    ld.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA64PIC-NEXT:    addi.w $a0, $a0, 1
-; LA64PIC-NEXT:    st.w $a0, $a1, 0
+; LA64PIC-NEXT:    st.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA64PIC-NEXT:    ret
   %v = load i32, ptr @G
   %sum = add i32 %v, 1

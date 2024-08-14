@@ -47,8 +47,7 @@ static cl::opt<bool> VerifyHSAMetadata(
     "amdgpu-verify-hsa-metadata",
     cl::desc("Verify AMDGPU HSA Metadata"));
 
-namespace AMDGPU {
-namespace HSAMD {
+namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
 // HSAMetadataStreamerV4
@@ -312,7 +311,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   if (Node && ArgNo < Node->getNumOperands())
     TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  const DataLayout &DL = Func->getParent()->getDataLayout();
+  const DataLayout &DL = Func->getDataLayout();
 
   MaybeAlign PointeeAlign;
   Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
@@ -707,6 +706,5 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
-} // end namespace HSAMD
-} // end namespace AMDGPU
+} // end namespace AMDGPU::HSAMD
 } // end namespace llvm

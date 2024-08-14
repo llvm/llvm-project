@@ -14,6 +14,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
@@ -29,7 +30,7 @@ static cl::list<std::string> ContextRoots(
         "root of an interesting graph, which will be profiled independently "
         "from other similar graphs."));
 
-bool PGOCtxProfLoweringPass::isContextualIRPGOEnabled() {
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
   return !ContextRoots.empty();
 }
 

@@ -22,6 +22,10 @@ math_test(
 )
 
 math_test(
+    name = "cospif",
+)
+
+math_test(
     name = "floorf128",
     hdrs = ["FloorTest.h"],
 )

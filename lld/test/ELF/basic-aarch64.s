@@ -119,7 +119,7 @@ _start:
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
 # CHECK-NEXT:     Offset: 0x1AA
-# CHECK-NEXT:     Size: 13
+# CHECK-NEXT:     Size: 11
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 1
@@ -189,7 +189,7 @@ _start:
 # CHECK-NEXT:     Section: Undefined (0x0)
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: $x.0
+# CHECK-NEXT:     Name: $x
 # CHECK-NEXT:     Value: 0x210120
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local (0x0)

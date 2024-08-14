@@ -66,7 +66,7 @@ static_library("Utility") {
     "RegisterContextWindows_i386.cpp",
     "RegisterContextWindows_x86_64.cpp",
     "RegisterContext_x86.cpp",
-    "RegisterFlagsLinux_arm64.cpp",
+    "RegisterFlagsDetector_arm64.cpp",
     "RegisterInfoPOSIX_arm.cpp",
     "RegisterInfoPOSIX_arm64.cpp",
     "RegisterInfoPOSIX_loongarch64.cpp",
