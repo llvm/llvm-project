@@ -78,3 +78,10 @@ int baz() { return y + x; }
 // RUN:   --lto-debug-pass-manager --lto-newpm-passes=forceattrs \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=PASSES
 // PASSES: Running pass: ForceFunctionAttrsPass
+
+//
+// Check that '-plugin` is ingored like in `ld.lld`
+//
+// RUN: clang-nvlink-wrapper --dry-run %t.o -plugin -arch sm_52 -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=PLUGIN
+// PLUGIN-NOT: -plugin

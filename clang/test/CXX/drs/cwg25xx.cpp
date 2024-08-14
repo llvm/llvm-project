@@ -201,7 +201,9 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
 
   template<typename T>
   concept ErrorRequires = requires (ErrorRequires auto x) {
-  // since-cxx20-error@-1 {{unknown type name 'ErrorRequires'}}
+  // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
+  // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}} \
+  // since-cxx20-note@-1 {{declared here}}
     x;
   };
   static_assert(ErrorRequires<int>);
@@ -209,9 +211,11 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
-  concept NestedErrorInRequires = requires (T x) {
+  concept NestedErrorInRequires = requires (T x) { //
+    // since-cxx20-note@-1 {{declared here}}
     requires requires (NestedErrorInRequires auto y) {
-    // since-cxx20-error@-1 {{unknown type name 'NestedErrorInRequires'}}
+    // since-cxx20-error@-1 {{a concept definition cannot refer to itself}} \
+    // since-cxx20-error@-1 {{'auto' not allowed in requires expression parameter}}
       y;
     };
   };
