@@ -6665,8 +6665,8 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     if (Add->hasNoUnsignedWrap())
       WrapType |= OBO::NoUnsignedWrap;
     for (const SCEV *Op : drop_begin(Add->operands()))
-      X = X.addWithNoWrap(getRangeRef(Op, SignHint, Depth + 1),
-                          WrapType, RangeType);
+      X = X.addWithNoWrap(getRangeRef(Op, SignHint, Depth + 1), WrapType,
+                          RangeType);
     return setRange(Add, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
