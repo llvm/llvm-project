@@ -232,9 +232,9 @@ define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A]], i64 [[M_EXT]]
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[M_EXT]], -8
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[M_EXT]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
