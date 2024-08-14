@@ -1643,6 +1643,110 @@ define void @foo(i32 %arg, float %farg) {
   EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
 }
 
+TEST_F(SandboxIRTest, CatchSwitchInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  bb0:
+    %cs0 = catchswitch within none [label %handler0, label %handler1] unwind to caller
+  bb1:
+    %cs1 = catchswitch within %cs0 [label %handler0, label %handler1] unwind label %cleanup
+  handler0:
+    ret void
+  handler1:
+    ret void
+  cleanup:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB0 = getBasicBlockByName(LLVMF, "bb0");
+  auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
+  auto *LLVMHandler0 = getBasicBlockByName(LLVMF, "handler0");
+  auto *LLVMHandler1 = getBasicBlockByName(LLVMF, "handler1");
+  auto *LLVMCleanup = getBasicBlockByName(LLVMF, "cleanup");
+  auto *LLVMCS0 = cast<llvm::CatchSwitchInst>(&*LLVMBB0->begin());
+  auto *LLVMCS1 = cast<llvm::CatchSwitchInst>(&*LLVMBB1->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB0));
+  auto *BB1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB1));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler0));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler1));
+  auto *Cleanup = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCleanup));
+  auto *CS0 = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+  auto *CS1 = cast<sandboxir::CatchSwitchInst>(&*BB1->begin());
+
+  // Check getParentPad().
+  EXPECT_EQ(CS0->getParentPad(), Ctx.getValue(LLVMCS0->getParentPad()));
+  EXPECT_EQ(CS1->getParentPad(), Ctx.getValue(LLVMCS1->getParentPad()));
+  // Check setParentPad().
+  auto *OrigPad = CS0->getParentPad();
+  auto *NewPad = CS1;
+  EXPECT_NE(NewPad, OrigPad);
+  CS0->setParentPad(NewPad);
+  EXPECT_EQ(CS0->getParentPad(), NewPad);
+  CS0->setParentPad(OrigPad);
+  EXPECT_EQ(CS0->getParentPad(), OrigPad);
+  // Check hasUnwindDest().
+  EXPECT_EQ(CS0->hasUnwindDest(), LLVMCS0->hasUnwindDest());
+  EXPECT_EQ(CS1->hasUnwindDest(), LLVMCS1->hasUnwindDest());
+  // Check unwindsToCaller().
+  EXPECT_EQ(CS0->unwindsToCaller(), LLVMCS0->unwindsToCaller());
+  EXPECT_EQ(CS1->unwindsToCaller(), LLVMCS1->unwindsToCaller());
+  // Check getUnwindDest().
+  EXPECT_EQ(CS0->getUnwindDest(), Ctx.getValue(LLVMCS0->getUnwindDest()));
+  EXPECT_EQ(CS1->getUnwindDest(), Ctx.getValue(LLVMCS1->getUnwindDest()));
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CS1->getUnwindDest();
+  auto *NewUnwindDest = BB0;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  CS1->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CS1->getUnwindDest(), NewUnwindDest);
+  CS1->setUnwindDest(OrigUnwindDest);
+  EXPECT_EQ(CS1->getUnwindDest(), OrigUnwindDest);
+  // Check getNumHandlers().
+  EXPECT_EQ(CS0->getNumHandlers(), LLVMCS0->getNumHandlers());
+  EXPECT_EQ(CS1->getNumHandlers(), LLVMCS1->getNumHandlers());
+  // Check handler_begin(), handler_end().
+  auto It = CS0->handler_begin();
+  EXPECT_EQ(*It++, Handler0);
+  EXPECT_EQ(*It++, Handler1);
+  EXPECT_EQ(It, CS0->handler_end());
+  // Check handlers().
+  SmallVector<sandboxir::BasicBlock *, 2> Handlers;
+  for (sandboxir::BasicBlock *Handler : CS0->handlers())
+    Handlers.push_back(Handler);
+  EXPECT_EQ(Handlers.size(), 2u);
+  EXPECT_EQ(Handlers[0], Handler0);
+  EXPECT_EQ(Handlers[1], Handler1);
+  // Check addHandler().
+  CS0->addHandler(BB0);
+  EXPECT_EQ(CS0->getNumHandlers(), 3u);
+  EXPECT_EQ(*std::next(CS0->handler_begin(), 2), BB0);
+  // Check getNumSuccessors().
+  EXPECT_EQ(CS0->getNumSuccessors(), LLVMCS0->getNumSuccessors());
+  EXPECT_EQ(CS1->getNumSuccessors(), LLVMCS1->getNumSuccessors());
+  // Check getSuccessor().
+  for (auto SuccIdx : seq<unsigned>(0, CS0->getNumSuccessors()))
+    EXPECT_EQ(CS0->getSuccessor(SuccIdx),
+              Ctx.getValue(LLVMCS0->getSuccessor(SuccIdx)));
+  // Check setSuccessor().
+  auto *OrigSuccessor = CS0->getSuccessor(0);
+  auto *NewSuccessor = BB0;
+  EXPECT_NE(NewSuccessor, OrigSuccessor);
+  CS0->setSuccessor(0, NewSuccessor);
+  EXPECT_EQ(CS0->getSuccessor(0), NewSuccessor);
+  CS0->setSuccessor(0, OrigSuccessor);
+  EXPECT_EQ(CS0->getSuccessor(0), OrigSuccessor);
+  // Check create().
+  CS1->eraseFromParent();
+  auto *NewCSI = sandboxir::CatchSwitchInst::create(
+      CS0, Cleanup, 2, BB1->begin(), BB1, Ctx, "NewCSI");
+  EXPECT_TRUE(isa<sandboxir::CatchSwitchInst>(NewCSI));
+  EXPECT_EQ(NewCSI->getParentPad(), CS0);
+}
+
 TEST_F(SandboxIRTest, SwitchInst) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
