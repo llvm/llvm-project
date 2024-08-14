@@ -246,6 +246,97 @@ struct PackOpTiling
       return failure();
     return tilingResult.value();
   }
+
+  /// Method to return the position of iteration domain tile computed by the
+  /// tiled operation. In current `tensor.pack` context, the `resultOffsets` and
+  /// `resultSizes` only cover outer dimensions.
+  LogicalResult getIterationDomainTileFromOperandTile(
+      Operation *op, OpBuilder &b, unsigned operandNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      SmallVectorImpl<OpFoldResult> &resultOffsets,
+      SmallVectorImpl<OpFoldResult> &resultSizes) const {
+    auto packOp = cast<PackOp>(op);
+    Location loc = packOp.getLoc();
+
+    SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
+    DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+        packOp.getDimAndTileMapping();
+    for (auto dim : packOp.getOuterDimsPerm()) {
+      if (dimAndTileMapping.count(dim)) {
+        FailureOr<int64_t> cstSize =
+            ValueBoundsConstraintSet::computeConstantBound(
+                presburger::BoundType::UB, sizes[dim],
+                /*stopCondition=*/nullptr, /*closedUB=*/true);
+        std::optional<int64_t> cstInnerSize =
+            getConstantIntValue(dimAndTileMapping[dim]);
+        // Currently only expect perfect tiling cases.
+        if (failed(cstSize) || !cstInnerSize || *cstSize % *cstInnerSize != 0) {
+          return failure();
+        }
+
+        using AV = affine::AffineValueExpr;
+        affine::AffineBuilder ab(b, loc);
+        AffineExpr dim0, sym;
+        bindDims(b.getContext(), dim0);
+        bindSymbols(b.getContext(), sym);
+        auto avOffset = AV(dim0).bind(offsets[dim]);
+        auto avSize = AV(dim0).bind(sizes[dim]);
+        auto avTileSize = AV(sym).bind(dimAndTileMapping[dim]);
+        outerDimOffsets.push_back(ab.floor(avOffset, avTileSize));
+        outerDimSizes.push_back(ab.ceil(avSize, avTileSize));
+      } else {
+        outerDimOffsets.push_back(offsets[dim]);
+        outerDimSizes.push_back(sizes[dim]);
+      }
+    }
+
+    resultOffsets = outerDimOffsets;
+    resultSizes = outerDimSizes;
+    return success();
+  }
+
+  /// Method to return the tiled implementation of tensor.pack as a consumer.
+  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
+      Operation *op, OpBuilder &b, unsigned operandNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+    auto packOp = cast<PackOp>(op);
+    Location loc = packOp.getLoc();
+
+    int64_t inputRank = packOp.getSourceRank();
+    auto oneAttr = b.getI64IntegerAttr(1);
+    SmallVector<OpFoldResult> strides(inputRank, oneAttr);
+
+    SmallVector<Value> tiledOperands;
+    tiledOperands.push_back(b.create<ExtractSliceOp>(loc, packOp.getSource(),
+                                                     offsets, sizes, strides));
+
+    SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
+    if (failed(getIterationDomainTileFromOperandTile(
+            op, b, /*operandNumber=*/0, offsets, sizes, outerDimOffsets,
+            outerDimSizes)))
+      return failure();
+
+    SmallVector<OpFoldResult> outputOffsets, outputSizes;
+    if (failed(getResultTilePosition(op, b, 0, outerDimOffsets, outerDimSizes,
+                                     outputOffsets, outputSizes)))
+      return failure();
+
+    strides.append(packOp.getDestRank() - inputRank, oneAttr);
+    auto extractSlice = b.create<ExtractSliceOp>(
+        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    tiledOperands.push_back(extractSlice);
+
+    if (auto val = packOp.getPaddingValue())
+      tiledOperands.push_back(val);
+    for (auto tile : packOp.getInnerTiles())
+      tiledOperands.push_back(tile);
+
+    Operation *tiledPackOp = b.create<PackOp>(
+        loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
+
+    return TilingResult{{tiledPackOp},
+                        SmallVector<Value>(tiledPackOp->getResults())};
+  }
 };
 
 struct UnpackTileDimInfo {
