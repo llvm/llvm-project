@@ -2988,3 +2988,26 @@ entry:
   %2 = and i64 %1, 34359738360
   ret i64 %2
 }
+
+define ptr @srai_srli_sh3add(ptr %0, i64 %1) nounwind {
+; RV64I-LABEL: srai_srli_sh3add:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srai a1, a1, 35
+; RV64I-NEXT:    li a2, -57
+; RV64I-NEXT:    srli a2, a2, 3
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srai_srli_sh3add:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    srai a1, a1, 32
+; RV64ZBA-NEXT:    srli a1, a1, 6
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %2 = ashr i64 %1, 32
+  %3 = lshr i64 %2, 6
+  %4 = getelementptr i64, ptr %0, i64 %3
+  ret ptr %4
+}

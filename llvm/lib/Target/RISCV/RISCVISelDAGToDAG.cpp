@@ -3019,6 +3019,33 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
           return true;
         }
       }
+    } else if (N0.getOpcode() == ISD::SRA && N0.hasOneUse() &&
+               isa<ConstantSDNode>(N.getOperand(1))) {
+      uint64_t Mask = N.getConstantOperandVal(1);
+      unsigned C2 = N0.getConstantOperandVal(1);
+
+      // Look for (and (sra y, c2), c1) where c1 is a shifted mask with c3
+      // leading zeros and c4 trailing zeros. If c2 is greater than c3, we can
+      // use (srli (srai y, c2 - c3), c3 + c4) followed by a SHXADD with c4 as
+      // the X ammount.
+      if (isShiftedMask_64(Mask)) {
+        unsigned XLen = Subtarget->getXLen();
+        unsigned Leading = XLen - llvm::bit_width(Mask);
+        unsigned Trailing = llvm::countr_zero(Mask);
+        if (C2 > Leading && Trailing == ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SRAI, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(C2 - Leading, DL, VT)),
+                        0);
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SRLI, DL, VT, Val,
+                            CurDAG->getTargetConstant(Leading + ShAmt, DL, VT)),
+                        0);
+          return true;
+        }
+      }
     }
   } else if (bool LeftShift = N.getOpcode() == ISD::SHL;
              (LeftShift || N.getOpcode() == ISD::SRL) &&
