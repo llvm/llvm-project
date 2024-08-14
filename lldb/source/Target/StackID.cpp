@@ -73,16 +73,41 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return lhs_scope != rhs_scope;
 }
 
-bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
-                        Process &process) {
+// BEGIN SWIFT
+enum class HeapCFAComparisonResult { Younger, Older, NoOpinion };
+/// If at least one of the stack IDs (lhs, rhs) is a heap CFA, perform the
+/// swift-specific async frame comparison. Otherwise, returns NoOpinion.
+static HeapCFAComparisonResult
+IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
+  const bool lhs_cfa_on_stack = lhs.IsCFAOnStack(process);
+  const bool rhs_cfa_on_stack = rhs.IsCFAOnStack(process);
+  if (lhs_cfa_on_stack && rhs_cfa_on_stack)
+    return HeapCFAComparisonResult::NoOpinion;
+
   // FIXME: rdar://76119439
   // At the boundary between an async parent frame calling a regular child
   // frame, the CFA of the parent async function is a heap addresses, and the
   // CFA of concrete child function is a stack address. Therefore, if lhs is
   // on stack, and rhs is not, lhs is considered less than rhs, independent of
   // address values.
-  if (lhs.IsCFAOnStack(process) && !rhs.IsCFAOnStack(process))
+  if (lhs_cfa_on_stack && !rhs_cfa_on_stack)
+    return HeapCFAComparisonResult::Younger;
+  return HeapCFAComparisonResult::NoOpinion;
+}
+// END SWIFT
+
+bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
+                        Process &process) {
+  // BEGIN SWIFT
+  switch (IsYoungerHeapCFAs(lhs, rhs, process)) {
+  case HeapCFAComparisonResult::Younger:
     return true;
+  case HeapCFAComparisonResult::Older:
+    return false;
+  case HeapCFAComparisonResult::NoOpinion:
+    break;
+  }
+  // END SWIFT
 
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
