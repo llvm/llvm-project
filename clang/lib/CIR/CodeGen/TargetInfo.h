@@ -62,6 +62,13 @@ public:
                            std::vector<LValue> &ResultRegDests,
                            std::string &AsmString, unsigned NumOutputs) const {}
 
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p D is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual clang::LangAS getGlobalVarAddressSpace(CIRGenModule &CGM,
+                                                 const clang::VarDecl *D) const;
+
   /// Get the CIR address space for alloca.
   virtual mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
     // Return the null attribute, which means the target does not care about the

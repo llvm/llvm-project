@@ -226,6 +226,7 @@ public:
   static mlir::cir::GlobalOp
   createGlobalOp(CIRGenModule &CGM, mlir::Location loc, StringRef name,
                  mlir::Type t, bool isCst = false,
+                 mlir::cir::AddressSpaceAttr addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
   // FIXME: Hardcoding priority here is gross.
@@ -327,6 +328,16 @@ public:
   std::string createGlobalCompoundLiteralName() {
     return (Twine(".compoundLiteral.") + Twine(CompoundLitaralCnt++)).str();
   }
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *D);
 
   /// Return the AST address space of constant literal, which is used to emit
   /// the constant literal as global variable in LLVM IR.

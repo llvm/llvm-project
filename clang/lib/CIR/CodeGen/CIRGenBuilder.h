@@ -674,9 +674,10 @@ public:
 
   mlir::Value createGetGlobal(mlir::cir::GlobalOp global,
                               bool threadLocal = false) {
-    return create<mlir::cir::GetGlobalOp>(global.getLoc(),
-                                          getPointerTo(global.getSymType()),
-                                          global.getName(), threadLocal);
+    return create<mlir::cir::GetGlobalOp>(
+        global.getLoc(),
+        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        global.getName(), threadLocal);
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
