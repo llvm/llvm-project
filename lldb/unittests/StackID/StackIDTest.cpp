@@ -86,8 +86,5 @@ TEST_F(StackIDTest, StackHeapCFAComparison) {
   MockStackID cfa_on_heap(/*cfa*/ 10, OnStack::No);
 
   EXPECT_TRUE(StackID::IsYounger(cfa_on_stack, cfa_on_heap, process));
-
-  // FIXME: if the above returned true, swapping the arguments **must** return
-  // false. And yet it doesn't.
-  // EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, process));
+  EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, process));
 }
