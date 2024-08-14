@@ -1122,6 +1122,104 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   }
 }
 
+void AtomicCmpXchgInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSyncScopeID,
+                                       &AtomicCmpXchgInst::setSyncScopeID>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSyncScopeID(SSID);
+}
+
+Value *AtomicCmpXchgInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getPointerOperand());
+}
+
+Value *AtomicCmpXchgInst::getCompareOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getCompareOperand());
+}
+
+Value *AtomicCmpXchgInst::getNewValOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getNewValOperand());
+}
+
+AtomicCmpXchgInst *
+AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+                          AtomicOrdering SuccessOrdering,
+                          AtomicOrdering FailureOrdering, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx, SyncScope::ID SSID,
+                          const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *LLVMAtomicCmpXchg =
+      Builder.CreateAtomicCmpXchg(Ptr->Val, Cmp->Val, New->Val, Align,
+                                  SuccessOrdering, FailureOrdering, SSID);
+  LLVMAtomicCmpXchg->setName(Name);
+  return Ctx.createAtomicCmpXchgInst(LLVMAtomicCmpXchg);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             Instruction *InsertBefore,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                SSID, Name);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             BasicBlock *InsertAtEnd,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertAtEnd->end(), InsertAtEnd, Ctx, SSID, Name);
+}
+
+void AtomicCmpXchgInst::setAlignment(Align Align) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getAlign,
+                                       &AtomicCmpXchgInst::setAlignment>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setAlignment(Align);
+}
+
+void AtomicCmpXchgInst::setVolatile(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isVolatile,
+                                       &AtomicCmpXchgInst::setVolatile>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setVolatile(V);
+}
+
+void AtomicCmpXchgInst::setWeak(bool IsWeak) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isWeak,
+                                       &AtomicCmpXchgInst::setWeak>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setWeak(IsWeak);
+}
+
+void AtomicCmpXchgInst::setSuccessOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSuccessOrdering,
+                                       &AtomicCmpXchgInst::setSuccessOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSuccessOrdering(Ordering);
+}
+
+void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getFailureOrdering,
+                                       &AtomicCmpXchgInst::setFailureOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
+}
+
 AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
                                Value *ArraySize, const Twine &Name) {
@@ -1433,6 +1531,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::AtomicCmpXchg: {
+    auto *LLVMAtomicCmpXchg = cast<llvm::AtomicCmpXchgInst>(LLVMV);
+    It->second = std::unique_ptr<AtomicCmpXchgInst>(
+        new AtomicCmpXchgInst(LLVMAtomicCmpXchg, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Alloca: {
     auto *LLVMAlloca = cast<llvm::AllocaInst>(LLVMV);
     It->second = std::unique_ptr<AllocaInst>(new AllocaInst(LLVMAlloca, *this));
@@ -1549,6 +1653,12 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+AtomicCmpXchgInst *
+Context::createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I) {
+  auto NewPtr =
+      std::unique_ptr<AtomicCmpXchgInst>(new AtomicCmpXchgInst(I, *this));
+  return cast<AtomicCmpXchgInst>(registerValue(std::move(NewPtr)));
 }
 AllocaInst *Context::createAllocaInst(llvm::AllocaInst *I) {
   auto NewPtr = std::unique_ptr<AllocaInst>(new AllocaInst(I, *this));
