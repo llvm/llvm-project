@@ -15,7 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H
 
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Casting.h"
 

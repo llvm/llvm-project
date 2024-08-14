@@ -14,7 +14,7 @@
 
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"

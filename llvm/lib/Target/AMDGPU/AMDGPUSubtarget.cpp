@@ -13,10 +13,10 @@
 
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUCallLowering.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"

@@ -177,7 +177,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"

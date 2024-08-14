@@ -194,7 +194,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/SetOperations.h"

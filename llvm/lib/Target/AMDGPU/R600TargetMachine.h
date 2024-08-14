@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600TARGETMACHINE_H
 #define LLVM_LIB_TARGET_AMDGPU_R600TARGETMACHINE_H
 
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "R600Subtarget.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>

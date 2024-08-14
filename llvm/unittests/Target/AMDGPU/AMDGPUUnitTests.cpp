@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUUnitTests.h"
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPUCodeGenPassBuilder.h"
 #include "GCNSubtarget.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
