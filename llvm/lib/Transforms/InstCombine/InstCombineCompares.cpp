@@ -3077,10 +3077,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
   }
 
-  ConstantRange LHS_CR = computeConstantRange(X, true).add(*C2);
   if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
-      C.isNonNegative() && LHS_CR.isAllNonNegative() &&
-      (C - *C2).isNonNegative())
+      C.isNonNegative() && (C - *C2).isNonNegative() &&
+      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
     return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
                         ConstantInt::get(Ty, C - *C2));
 
