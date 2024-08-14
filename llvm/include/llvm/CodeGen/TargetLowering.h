@@ -5613,11 +5613,6 @@ private:
                                                DAGCombinerInfo &DCI,
                                                const SDLoc &DL) const;
 
-  // (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
-  SDValue optimizeSetCCByHoistingAndByConstFromLogicalShift(
-      EVT SCCVT, SDValue N0, SDValue N1C, ISD::CondCode Cond,
-      DAGCombinerInfo &DCI, const SDLoc &DL) const;
-
   SDValue prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
                             SDValue CompTargetNode, ISD::CondCode Cond,
                             DAGCombinerInfo &DCI, const SDLoc &DL,

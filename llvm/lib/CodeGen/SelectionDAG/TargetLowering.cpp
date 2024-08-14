@@ -4175,9 +4175,9 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
 }
 
 // (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
-SDValue TargetLowering::optimizeSetCCByHoistingAndByConstFromLogicalShift(
+static SDValue optimizeSetCCByHoistingAndByConstFromLogicalShift(
     EVT SCCVT, SDValue N0, SDValue N1C, ISD::CondCode Cond,
-    DAGCombinerInfo &DCI, const SDLoc &DL) const {
+    SelectionDAG &DAG, const SDLoc &DL) {
   assert(isConstOrConstSplat(N1C) && isConstOrConstSplat(N1C)->isZero() &&
          "Should be a comparison with 0.");
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
@@ -4186,7 +4186,6 @@ SDValue TargetLowering::optimizeSetCCByHoistingAndByConstFromLogicalShift(
   unsigned NewShiftOpcode;
   SDValue X, C, Y;
 
-  SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Look for '(C l>>/<< Y)'.
@@ -5024,7 +5023,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
       if (C1.isZero())
         if (SDValue CC = optimizeSetCCByHoistingAndByConstFromLogicalShift(
-                VT, N0, N1, Cond, DCI, dl))
+                VT, N0, N1, Cond, DAG, dl))
           return CC;
 
       // For all/any comparisons, replace or(x,shl(y,bw/2)) with and/or(x,y).
