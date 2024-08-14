@@ -412,6 +412,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTTZ           , MVT::i32  , Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Legal);
     if (Subtarget.is64Bit()) {
+      setOperationPromotedToType(ISD::CTTZ , MVT::i32, MVT::i64);
       setOperationAction(ISD::CTTZ         , MVT::i64  , Custom);
       setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Legal);
     }
@@ -3237,9 +3238,10 @@ bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
 }
 
 bool X86TargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  // Speculate cttz only if we can directly use TZCNT or can promote to i32.
+  // Speculate cttz only if we can directly use TZCNT or can promote to i32/i64.
   return Subtarget.hasBMI() ||
-         (!Ty->isVectorTy() && Ty->getScalarSizeInBits() < 32);
+         (!Ty->isVectorTy() &&
+          Ty->getScalarSizeInBits() < (Subtarget.is64Bit() ? 64u : 32u));
 }
 
 bool X86TargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
