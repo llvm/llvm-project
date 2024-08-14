@@ -115,27 +115,26 @@ private:
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  // Primitive type specifier.
-  enum class PrimitiveSpecifier {
+  /// Type specifier used by some internal functions.
+  enum class TypeSpecifier {
     Integer = 'i',
     Float = 'f',
     Vector = 'v',
-    // TODO: Aggregates are not primitives. This should be separated.
     Aggregate = 'a'
   };
 
-  // Primitive type specifications. Sorted and uniqued by type bit width.
+  /// Primitive type specifications. Sorted and uniqued by type bit width.
   SmallVector<PrimitiveSpec, 6> IntSpecs;
   SmallVector<PrimitiveSpec, 4> FloatSpecs;
   SmallVector<PrimitiveSpec, 10> VectorSpecs;
 
-  // Pointer type specifications. Sorted and uniqued by address space number.
+  /// Pointer type specifications. Sorted and uniqued by address space number.
   SmallVector<PointerSpec, 8> PointerSpecs;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
 
-  // Struct type ABI and preferred alignments. The default spec is "a:8:64".
+  /// Struct type ABI and preferred alignments. The default spec is "a:8:64".
   Align StructABIAlignment = Align::Constant<1>();
   Align StructPrefAlignment = Align::Constant<8>();
 
@@ -146,17 +145,17 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  // Attempts to set the specification for the given type.
-  // Returns an error description on failure.
-  Error setPrimitiveSpec(PrimitiveSpecifier Specifier, uint32_t BitWidth,
+  /// Attempts to set the specification for the given type.
+  /// Returns an error description on failure.
+  Error setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
                          Align ABIAlign, Align PrefAlign);
 
-  // Searches for a pointer specification that matches the given address space.
-  // Returns the default address space specification if not found.
-  const PointerSpec &getPointerSpec(uint32_t Spec) const;
+  /// Searches for a pointer specification that matches the given address space.
+  /// Returns the default address space specification if not found.
+  const PointerSpec &getPointerSpec(uint32_t AddrSpace) const;
 
-  // Attempts to set the specification for pointer in the given address space.
-  // Returns an error description on failure.
+  /// Attempts to set the specification for pointer in the given address space.
+  /// Returns an error description on failure.
   Error setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                        Align PrefAlign, uint32_t IndexBitWidth);
 

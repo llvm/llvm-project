@@ -326,10 +326,10 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       continue;
     }
 
-    char Specifier = Tok.front();
+    char SpecifierChar = Tok.front();
     Tok = Tok.substr(1);
 
-    switch (Specifier) {
+    switch (SpecifierChar) {
     case 's':
       // Deprecated, but ignoring here to preserve loading older textual llvm
       // ASM file
@@ -408,21 +408,21 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
     case 'v':
     case 'f':
     case 'a': {
-      PrimitiveSpecifier PrimSpecifier;
-      switch (Specifier) {
+      TypeSpecifier Specifier;
+      switch (SpecifierChar) {
       default:
         llvm_unreachable("Unexpected specifier!");
       case 'i':
-        PrimSpecifier = PrimitiveSpecifier::Integer;
+        Specifier = TypeSpecifier::Integer;
         break;
       case 'v':
-        PrimSpecifier = PrimitiveSpecifier::Vector;
+        Specifier = TypeSpecifier::Vector;
         break;
       case 'f':
-        PrimSpecifier = PrimitiveSpecifier::Float;
+        Specifier = TypeSpecifier::Float;
         break;
       case 'a':
-        PrimSpecifier = PrimitiveSpecifier::Aggregate;
+        Specifier = TypeSpecifier::Aggregate;
         break;
       }
 
@@ -432,7 +432,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         if (Error Err = getInt(Tok, Size))
           return Err;
 
-      if (PrimSpecifier == PrimitiveSpecifier::Aggregate && Size != 0)
+      if (Specifier == TypeSpecifier::Aggregate && Size != 0)
         return reportError(
             "Sized aggregate specification in datalayout string");
 
@@ -445,7 +445,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       unsigned ABIAlign;
       if (Error Err = getIntInBytes(Tok, ABIAlign))
         return Err;
-      if (PrimSpecifier != PrimitiveSpecifier::Aggregate && !ABIAlign)
+      if (Specifier != TypeSpecifier::Aggregate && !ABIAlign)
         return reportError(
             "ABI alignment specification must be >0 for non-aggregate types");
 
@@ -453,8 +453,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return reportError("Invalid ABI alignment, must be a 16bit integer");
       if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
         return reportError("Invalid ABI alignment, must be a power of 2");
-      if (PrimSpecifier == PrimitiveSpecifier::Integer && Size == 8 &&
-          ABIAlign != 1)
+      if (Specifier == TypeSpecifier::Integer && Size == 8 && ABIAlign != 1)
         return reportError(
             "Invalid ABI alignment, i8 must be naturally aligned");
 
@@ -473,9 +472,8 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       if (PrefAlign != 0 && !isPowerOf2_64(PrefAlign))
         return reportError("Invalid preferred alignment, must be a power of 2");
 
-      if (Error Err =
-              setPrimitiveSpec(PrimSpecifier, Size, assumeAligned(ABIAlign),
-                               assumeAligned(PrefAlign)))
+      if (Error Err = setPrimitiveSpec(Specifier, Size, assumeAligned(ABIAlign),
+                                       assumeAligned(PrefAlign)))
         return Err;
 
       break;
@@ -592,9 +590,8 @@ findPrimitiveSpecLowerBound(
   });
 }
 
-Error DataLayout::setPrimitiveSpec(PrimitiveSpecifier Specifier,
-                                   uint32_t BitWidth, Align ABIAlign,
-                                   Align PrefAlign) {
+Error DataLayout::setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
+                                   Align ABIAlign, Align PrefAlign) {
   // AlignmentsTy::ABIAlign and AlignmentsTy::PrefAlign were once stored as
   // uint16_t, it is unclear if there are requirements for alignment to be less
   // than 2^16 other than storage. In the meantime we leave the restriction as
@@ -608,17 +605,17 @@ Error DataLayout::setPrimitiveSpec(PrimitiveSpecifier Specifier,
 
   SmallVectorImpl<PrimitiveSpec> *Specs;
   switch (Specifier) {
-  case PrimitiveSpecifier::Aggregate:
+  case TypeSpecifier::Aggregate:
     StructABIAlignment = ABIAlign;
     StructPrefAlignment = PrefAlign;
     return Error::success();
-  case PrimitiveSpecifier::Integer:
+  case TypeSpecifier::Integer:
     Specs = &IntSpecs;
     break;
-  case PrimitiveSpecifier::Float:
+  case TypeSpecifier::Float:
     Specs = &FloatSpecs;
     break;
-  case PrimitiveSpecifier::Vector:
+  case TypeSpecifier::Vector:
     Specs = &VectorSpecs;
     break;
   }
