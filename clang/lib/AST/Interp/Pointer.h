@@ -613,7 +613,11 @@ public:
   bool isElementPastEnd() const { return Offset == PastEndMark; }
 
   /// Checks if the pointer is pointing to a zero-size array.
-  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
+  bool isZeroSizeArray() const {
+    if (const auto *Desc = getFieldDesc())
+      return Desc->isZeroSizeArray();
+    return false;
+  }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
