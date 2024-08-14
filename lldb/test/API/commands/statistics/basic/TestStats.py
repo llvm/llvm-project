@@ -250,7 +250,7 @@ class TestCase(TestBase):
             "launchOrAttachTime",
             "moduleIdentifiers",
             "targetCreateTime",
-            "summaryProviderStatistics"
+            "summaryProviderStatistics",
         ]
         self.verify_keys(stats, '"stats"', keys_exist, None)
         self.assertGreater(stats["firstStopTime"], 0.0)
@@ -448,7 +448,7 @@ class TestCase(TestBase):
             "targetCreateTime",
             "moduleIdentifiers",
             "totalBreakpointResolveTime",
-            "summaryProviderStatistics"
+            "summaryProviderStatistics",
         ]
         self.verify_keys(target_stats, '"stats"', keys_exist, None)
         self.assertGreater(target_stats["totalBreakpointResolveTime"], 0.0)
@@ -920,10 +920,10 @@ class TestCase(TestBase):
                 debug_stats_1,
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
-    
+
     def test_summary_statistics_providers(self):
         """
-        Test summary timing statistics is included in statistics dump when 
+        Test summary timing statistics is included in statistics dump when
         a type with a summary provider exists, and is evaluated.
         """
 
@@ -941,3 +941,40 @@ class TestCase(TestBase):
         summary_provider_str = str(summary_providers)
         self.assertIn("string", summary_provider_str)
         self.assertIn("'invocationCount': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type': 'c++'", summary_provider_str)
+
+        self.runCmd("continue")
+        self.runCmd("command script import BoxFormatter.py")
+        self.expect("frame var", substrs=["box = [27]"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertRegex("'name': 'BoxFormatter.summary'", summary_provider_str)
+        self.assertIn("'invocationCount': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type': 'python'", summary_provider_str)
+
+    def test_summary_statistics_providers_vec(self):
+        """
+        Test summary timing statistics is included in statistics dump when
+        a type with a summary provider exists, and is evaluated. This variation
+        tests that vector recurses into it's child type.
+        """
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop vector", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect(
+            "frame var", substrs=["int_vec", "double_vec", "[0] = 1", "[7] = 8"]
+        )
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertIn("std::vector", summary_provider_str)
+        self.assertIn("'invocationCount': 2", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type': 'c++'", summary_provider_str)

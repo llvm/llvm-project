@@ -261,7 +261,6 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
-
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
@@ -1225,8 +1224,9 @@ public:
 
   void ClearAllLoadedSections();
 
-  lldb_private::SummaryStatistics& GetSummaryStatisticsForProvider(lldb_private::ConstString summary_provider_name);
-  lldb_private::SummaryStatisticsCache& GetSummaryStatisticsCache();
+  lldb_private::SummaryStatistics &
+  GetSummaryStatisticsForProvider(lldb_private::TypeSummaryImpl &provider);
+  lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.

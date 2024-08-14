@@ -116,6 +116,9 @@ std::string StringSummaryFormat::GetDescription() {
   return std::string(sstr.GetString());
 }
 
+ConstString StringSummaryFormat::GetName() { return ConstString(m_format_str); }
+ConstString StringSummaryFormat::GetImplType() { return ConstString("string"); }
+
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
     const TypeSummaryImpl::Flags &flags, Callback impl, const char *description)
     : TypeSummaryImpl(Kind::eCallback, flags), m_impl(impl),
@@ -145,15 +148,34 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
   return std::string(sstr.GetString());
 }
 
+ConstString CXXFunctionSummaryFormat::GetName() {
+  return ConstString(m_description);
+}
+
+ConstString CXXFunctionSummaryFormat::GetImplType() {
+  return ConstString("c++");
+}
+
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
                                          const char *python_script)
     : TypeSummaryImpl(Kind::eScript, flags), m_function_name(),
       m_python_script(), m_script_function_sp() {
-  if (function_name)
+  std::string sstring;
+  // Take preference in the python script name over the function name.
+  if (function_name) {
+    sstring.assign(function_name);
     m_function_name.assign(function_name);
-  if (python_script)
+  }
+  if (python_script) {
+    sstring.assign(python_script);
     m_python_script.assign(python_script);
+  }
+
+  // Python scripts include their leading spacing, so we remove it so we don't
+  // save extra spaces in the const string forever.
+  sstring.erase(0, sstring.find_first_not_of('0'));
+  m_script_formatter_name = ConstString(sstring);
 }
 
 bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
@@ -200,4 +222,13 @@ std::string ScriptSummaryFormat::GetDescription() {
     sstr.PutCString(m_python_script);
   }
   return std::string(sstr.GetString());
+}
+
+ConstString ScriptSummaryFormat::GetName() { return m_script_formatter_name; }
+
+ConstString ScriptSummaryFormat::GetImplType() {
+  if (!m_python_script.empty())
+    return ConstString("python");
+
+  return ConstString("script");
 }
