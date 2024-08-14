@@ -354,6 +354,9 @@ struct CastedValue {
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
+    if (V->getType() != Other.V->getType())
+      return false;
+
     if (ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
         TruncBits == Other.TruncBits)
       return true;
