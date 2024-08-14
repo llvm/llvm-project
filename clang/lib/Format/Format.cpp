@@ -520,6 +520,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ReflowCommentsStyle> {
     IO.enumCase(Value, "Never", FormatStyle::RCS_Never);
     IO.enumCase(Value, "IndentOnly", FormatStyle::RCS_IndentOnly);
     IO.enumCase(Value, "Always", FormatStyle::RCS_Always);
+    // For backward compatibility:
     IO.enumCase(Value, "false", FormatStyle::RCS_Never);
     IO.enumCase(Value, "true", FormatStyle::RCS_Always);
   }

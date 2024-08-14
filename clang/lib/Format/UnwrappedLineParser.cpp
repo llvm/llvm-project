@@ -4605,11 +4605,11 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
 
 // Checks if \p FormatTok is a line comment that continues the line comment
 // section on \p Line.
-static bool continuesLineCommentSection(
-    const FormatToken &FormatTok, const UnwrappedLine &Line,
-    const FormatStyle::ReflowCommentsStyle ReflowCommentsStyle,
-    const llvm::Regex &CommentPragmasRegex) {
-  if (Line.Tokens.empty() || ReflowCommentsStyle != FormatStyle::RCS_Always)
+static bool
+continuesLineCommentSection(const FormatToken &FormatTok,
+                            const UnwrappedLine &Line, const FormatStyle &Style,
+                            const llvm::Regex &CommentPragmasRegex) {
+  if (Line.Tokens.empty() || Style.ReflowComments != FormatStyle::RCS_Always)
     return false;
 
   StringRef IndentContent = FormatTok.TokenText;
@@ -4721,8 +4721,8 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
     //
     // FIXME: Consider putting separate line comment sections as children to the
     // unwrapped line instead.
-    Tok->ContinuesLineCommentSection = continuesLineCommentSection(
-        *Tok, *Line, Style.ReflowComments, CommentPragmasRegex);
+    Tok->ContinuesLineCommentSection =
+        continuesLineCommentSection(*Tok, *Line, Style, CommentPragmasRegex);
     if (isOnNewLine(*Tok) && JustComments && !Tok->ContinuesLineCommentSection)
       addUnwrappedLine();
     pushToken(Tok);
@@ -4796,7 +4796,7 @@ void UnwrappedLineParser::distributeComments(
       FormatTok->ContinuesLineCommentSection = false;
     } else {
       FormatTok->ContinuesLineCommentSection = continuesLineCommentSection(
-          *FormatTok, *Line, Style.ReflowComments, CommentPragmasRegex);
+          *FormatTok, *Line, Style, CommentPragmasRegex);
     }
     if (!FormatTok->ContinuesLineCommentSection &&
         (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {

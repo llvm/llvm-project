@@ -3814,7 +3814,7 @@ struct FormatStyle {
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// \brief Types of comment re-flow style.
+  /// \brief Types of comment reflow style.
   enum ReflowCommentsStyle : int8_t {
     /// Leave comments untouched.
     /// \code
@@ -3833,7 +3833,7 @@ struct FormatStyle {
     ///     * and a misaligned second line */
     /// \endcode
     RCS_IndentOnly,
-    /// Apply indentation rules and re-flow long comments into new lines, trying
+    /// Apply indentation rules and reflow long comments into new lines, trying
     /// to obey the ``ColumnLimit``.
     /// \code
     ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
