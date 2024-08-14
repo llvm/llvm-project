@@ -208,6 +208,18 @@ def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
     int64_t getOutputOperandRank() {
       return getOutputOperandType().getRank();
     }
+    int64_t getFilterFDim() {
+      return 0;
+    }
+    int64_t getFilterHDim() {
+      return 1;
+    }
+    int64_t getFilterWDim() {
+      return 2;
+    }
+    int64_t getFilterCDim() {
+      return 3;
+    }
   }];
   let hasVerifier = 1;
 }
@@ -266,6 +278,30 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
     int64_t getOutputOperandRank() {
       return getOutputOperandType().getRank();
     }
+    int64_t getInputNDim() {
+      return 0;
+    }
+    int64_t getInputHDim() {
+      return 1;
+    }
+    int64_t getInputWDim() {
+      return 2;
+    }
+    int64_t getInputCDim() {
+      return 3;
+    }
+    int64_t getOutputTileHDim() {
+      return 2;
+    }
+    int64_t getOutputTileWDim() {
+      return 3;
+    }
+    int64_t getOutputNDim() {
+      return 4;
+    }
+    int64_t getOutputCDim() {
+      return 5;
+    }
   }];
   let hasVerifier = 1;
 }
@@ -323,6 +359,24 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
     }
     int64_t getOutputOperandRank() {
       return getOutputOperandType().getRank();
+    }
+    int64_t getValueAlphaHDim() {
+      return 0;
+    }
+    int64_t getValueAlphaWDim() {
+      return 1;
+    }
+    int64_t getValueTileHDim() {
+      return 2;
+    }
+    int64_t getValueTileWDim() {
+      return 3;
+    }
+    int64_t getValueNDim() {
+      return 4;
+    }
+    int64_t getValueFDim() {
+      return 5;
     }
   }];
   let hasVerifier = 1;
