@@ -10342,12 +10342,21 @@ class sve_fp8_dot_indexed<bit bf, ZPRRegOp dst_ty, Operand iop_ty, string mnemon
 }
 
 // FP8 Widening Dot-Product - Indexed Group
-multiclass sve2_fp8_dot_indexed<bit bf, ZPRRegOp dest_ty, Operand iop_ty, int is_fp16,string asm>{
-  def NAME : sve_fp8_dot_indexed<bf, dest_ty, iop_ty, asm> {
+multiclass sve2_fp8_dot_indexed_h<string asm>{
+  def NAME : sve_fp8_dot_indexed<0b0, ZPR16, VectorIndexH, asm> {
     bits<3> iop;
 
-    let Inst{20-19} = !if(is_fp16, iop{2-1}, iop{1-0});
-    let Inst{11}    = !if(is_fp16, iop{0}, 0b0);
+    let Inst{20-19} = iop{2-1};
+    let Inst{11}    = iop{0};
+  }
+}
+
+multiclass sve2_fp8_dot_indexed_s<string asm>{
+  def NAME : sve_fp8_dot_indexed<0b1, ZPR32, VectorIndexS32b, asm> {
+    bits<3> iop;
+
+    let Inst{20-19} = iop{1-0};
+    let Inst{11}    = 0b0;
   }
 }
 

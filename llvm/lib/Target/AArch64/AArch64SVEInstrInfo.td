@@ -4244,7 +4244,7 @@ def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed<0b0, ZPR16, VectorIndexH, true, "fdot">;
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot">;
 // FP8 Widening Dot-Product - Group
 // TODO: Replace nxv16i8 by nxv16f8
 defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
@@ -4253,7 +4253,7 @@ defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
 // TODO: Replace nxv16i8 by nxv16f8
 let Predicates = [HasSSVE_FP8DOT4] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed<0b1, ZPR32, VectorIndexS32b, false, "fdot">;
+defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot">;
 // FP8 Widening Dot-Product - Group
 defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot">;
 }
