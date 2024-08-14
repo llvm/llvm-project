@@ -107,7 +107,7 @@ struct VPlanTransforms {
   /// \returns true if the transformation succeeds, or false if it doesn't.
   static bool tryAddExplicitVectorLength(VPlan &Plan);
 
-  static void interleave(VPlan &Plan, unsigned IC, LLVMContext &Ctx);
+  static void interleaveByUF(VPlan &Plan, unsigned IC, LLVMContext &Ctx);
 };
 
 } // namespace llvm

@@ -572,14 +572,21 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   return SplitBlock;
 }
 
-VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
-  VPRegionBlock *P = getParent();
+template <typename T> static T *getEnclosingLoopRegionImpl(T *P) {
   if (P && P->isReplicator()) {
     P = P->getParent();
     assert(!cast<VPRegionBlock>(P)->isReplicator() &&
            "unexpected nested replicate regions");
   }
   return P;
+}
+
+const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
+  return getEnclosingLoopRegionImpl(getParent());
+}
+
+VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
+  return getEnclosingLoopRegionImpl(getParent());
 }
 
 static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
@@ -933,7 +940,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
   if (VF.getNumUsers() > 0) {
     VF.setUnderlyingValue(
-        createStepForVF(Builder, TripCountV->getType(), State.VF, 1));
+        getRuntimeVF(Builder, TripCountV->getType(), State.VF));
   }
 
   // When vectorizing the epilogue loop, the canonical induction start value
@@ -1053,10 +1060,12 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+      // When the VPlan has been unrolled, chain together the steps of the
+      // unrolled parts together.
       if (isa<VPWidenIntOrFpInductionRecipe>(&R) && R.getNumOperands() == 4)
         Inc->setOperand(0, State->get(R.getOperand(3), 0));
-
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
       continue;
     }
 
@@ -1427,7 +1436,8 @@ void VPlanIngredient::print(raw_ostream &O) const {
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 bool VPValue::isDefinedOutsideVectorRegions() const {
-  return !hasDefiningRecipe() || !getDefiningRecipe()->getParent()->getParent();
+  return !hasDefiningRecipe() ||
+         !getDefiningRecipe()->getParent()->getEnclosingLoopRegion();
 }
 
 void VPValue::replaceAllUsesWith(VPValue *New) {

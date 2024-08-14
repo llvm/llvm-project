@@ -535,6 +535,7 @@ public:
   VPBlocksTy &getSuccessors() { return Successors; }
 
   iterator_range<VPBlockBase **> successors() { return Successors; }
+  iterator_range<VPBlockBase **> predecessors() { return Predecessors; }
 
   const VPBlocksTy &getPredecessors() const { return Predecessors; }
   VPBlocksTy &getPredecessors() { return Predecessors; }
@@ -1400,7 +1401,7 @@ public:
   /// result is also a single scalar.
   bool isSingleScalar() const;
 
-  /// Return the interleave count from the VPInstruction's last argument.
+  /// Return the interleave count from VPInstruction's last operand.
   unsigned getInterleaveCount() const;
 };
 
@@ -1690,7 +1691,7 @@ public:
                                      isInBounds(), getDebugLoc());
   }
 
-  /// Return the current part for this vector pointer.
+  /// Return the part associated with this vector pointer.
   unsigned getPartForRecipe() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2034,7 +2035,7 @@ public:
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
 
-  /// Return the current part for this scalar step.
+  /// Return the part associated with this reduction phi.
   unsigned getPartForRecipe() const;
 };
 
@@ -2746,9 +2747,6 @@ public:
   /// Generate the canonical scalar induction phi of the vector loop.
   void execute(VPTransformState &State) override;
 
-  /// Return the current part for this scalar step.
-  unsigned getPartForRecipe() const;
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2873,7 +2871,7 @@ public:
   /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
 
-  /// Return the current part for this scalar step.
+  /// Return the part associated with this widened IV.
   unsigned getPartForRecipe() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2989,7 +2987,7 @@ public:
     return true;
   }
 
-  /// Return the current part for this scalar step.
+  /// Return the part associated with this scalar step
   unsigned getPartForRecipe() const;
 };
 
@@ -3093,6 +3091,7 @@ public:
   VPBasicBlock *splitAt(iterator SplitAt);
 
   VPRegionBlock *getEnclosingLoopRegion();
+  const VPRegionBlock *getEnclosingLoopRegion() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p
@@ -3315,6 +3314,7 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
+  /// Represents the loop-invariant VF of the vector loop region.
   VPValue VF;
 
   /// Holds a mapping between Values and their corresponding VPValue inside
@@ -3620,6 +3620,19 @@ public:
     connectBlocks(BlockPtr, NewBlock);
   }
 
+  static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
+    assert(NewBlock->getSuccessors().empty() &&
+           NewBlock->getPredecessors().empty() &&
+           "Can't insert new block with predecessors or successors.");
+    NewBlock->setParent(BlockPtr->getParent());
+    SmallVector<VPBlockBase *> Preds(BlockPtr->predecessors());
+    for (VPBlockBase *Pred : Preds) {
+      disconnectBlocks(Pred, BlockPtr);
+      connectBlocks(Pred, NewBlock);
+    }
+    connectBlocks(NewBlock, BlockPtr);
+  }
+
   /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
   /// BlockPtr. Add \p IfTrue and \p IfFalse as succesors of \p BlockPtr and \p
   /// BlockPtr as predecessor of \p IfTrue and \p IfFalse. Propagate \p BlockPtr
@@ -3850,25 +3863,36 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
 
-/// Checks if \p C is uniform across all VFs and UFs. It is considered as such
-/// if it is either defined outside the vector region or its operand is known to
-/// be uniform across all VFs and UFs (e.g. VPDerivedIV or VPCanonicalIVPHI).
+/// Checks if \p C is uniform across all VF lanes and UF parts. It is considered
+/// as such if it is either loop invariant (defined outside the vector region)
+/// or its operand is known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or VPCanonicalIVPHI).
 inline bool isUniformAcrossVFsAndUFs(VPValue *V) {
-  if (V->isLiveIn())
+  // Loop invariants are uniform:
+  if (V->isDefinedOutsideVectorRegions())
     return true;
-  if (isa<VPCanonicalIVPHIRecipe, VPDerivedIVRecipe, VPExpandSCEVRecipe>(V))
+
+  auto *R = V->getDefiningRecipe();
+  // Canonical IV chain is uniform:
+  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
+  if (R == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;
-  auto *R = cast<VPSingleDefRecipe>(V->getDefiningRecipe());
-  if (R == R->getParent()->getPlan()->getCanonicalIV()->getBackedgeValue())
+
+  // DerivedIV is uniform:
+  if (isa<VPDerivedIVRecipe>(R))
     return true;
+
+  // Loads and stores that are uniform across VF lanes are handled by
+  // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if all
+  // their operands are invariant:
   if (isa<VPReplicateRecipe>(V) && cast<VPReplicateRecipe>(V)->isUniform() &&
       (isa<LoadInst, StoreInst>(V->getUnderlyingValue())) &&
-      all_of(V->getDefiningRecipe()->operands(),
+      all_of(R->operands(),
              [](VPValue *Op) { return Op->isDefinedOutsideVectorRegions(); }))
     return true;
 
   return isa<VPScalarCastRecipe, VPWidenCastRecipe>(R) &&
-         (R->isDefinedOutsideVectorRegions() || R->getOperand(0)->isLiveIn() ||
+         (R->getOperand(0)->isLiveIn() ||
           isa<VPDerivedIVRecipe>(R->getOperand(0)) ||
           isa<VPCanonicalIVPHIRecipe>(R->getOperand(0)));
 }

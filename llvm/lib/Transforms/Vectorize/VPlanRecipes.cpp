@@ -544,8 +544,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return CondBr;
   }
   case VPInstruction::ComputeReductionResult: {
-    unsigned NumParts = getNumOperands() - 1;
-
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
@@ -556,8 +554,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     RecurKind RK = RdxDesc.getRecurrenceKind();
 
     Type *PhiTy = OrigPhi->getType();
+    // The recipe's operands are the reduction phi, followed by one operand for
+    // each part of the reduction.
+    unsigned NumParts = getNumOperands() - 1;
     VectorParts RdxParts(NumParts);
-    for (unsigned Part = 0; Part != NumParts; ++Part)
+    for (unsigned Part = 0; Part < NumParts; ++Part)
       RdxParts[Part] = State.get(getOperand(1 + Part), 0, PhiR->isInLoop());
 
     // If the vector reduction can be performed in a smaller type, we truncate
@@ -688,6 +689,9 @@ bool VPInstruction::isSingleScalar() const {
 }
 
 unsigned VPInstruction::getInterleaveCount() const {
+  assert((getOpcode() == VPInstruction::CalculateTripCountMinusVF ||
+          getOpcode() == VPInstruction::CanonicalIVIncrementForPart) &&
+         "used with unexpected opcode");
   return getNumOperands() == 1
              ? 1
              : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
@@ -1313,7 +1317,6 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   Value *SplatVF;
   if (getNumOperands() == 4) {
-    // Need to create stuff in PH.
     SplatVF = State.get(getOperand(2), 0);
   } else {
     // Multiply the vectorization factor by the step using integer or

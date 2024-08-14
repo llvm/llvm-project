@@ -166,8 +166,8 @@ public:
                             std::initializer_list<VPValue *> Operands,
                             DebugLoc DL = {}, const Twine &Name = "",
                             FastMathFlags FMFs = {}) {
-    auto *Op = new VPInstruction(Opcode, Operands, FMFs, DL, Name);
-    return tryInsertInstruction(Op);
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, FMFs, DL, Name));
   }
 
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},

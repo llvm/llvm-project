@@ -1629,16 +1629,19 @@ class InterleaveState {
 
 public:
   VPValue *getInterleavedValue(VPValue *V, unsigned IC) {
-    if (IC == 0)
+    if (IC == 0 || V->isLiveIn())
       return V;
-    if (V->isLiveIn())
-      return V;
+    assert(
+        (InterleavedValues.contains(V) && InterleavedValues[V].size() >= IC) &&
+        "accessed value does not exist");
     return InterleavedValues[V][IC - 1];
   }
 
-  void addInterleavedValues(VPRecipeBase *OrigR, VPRecipeBase *CopyR) {
+  void addInterleavedValues(VPRecipeBase *OrigR, VPRecipeBase *CopyR,
+                            unsigned I) {
     for (const auto &[Idx, VPV] : enumerate(OrigR->definedValues())) {
       auto Ins = InterleavedValues.insert({VPV, {}});
+      assert(Ins.first->second.size() == I - 1 && "earlier parts not set");
       Ins.first->second.push_back(CopyR->getVPValue(Idx));
     }
   }
@@ -1655,9 +1658,14 @@ public:
     return InterleavedValues;
   }
 
-  void remapOperands(VPRecipeBase *R, unsigned I) {
-    for (const auto &[Idx, Op] : enumerate(R->operands()))
-      R->setOperand(Idx, getInterleavedValue(Op, I));
+  void remapOperand(VPRecipeBase *R, unsigned OpIdx, unsigned Part) {
+    auto *Op = R->getOperand(OpIdx);
+    R->setOperand(OpIdx, getInterleavedValue(Op, Part));
+  }
+
+  void remapOperands(VPRecipeBase *R, unsigned Part) {
+    for (const auto &[OpIdx, Op] : enumerate(R->operands()))
+      R->setOperand(OpIdx, getInterleavedValue(Op, Part));
   }
 };
 } // namespace
@@ -1666,30 +1674,104 @@ static void interleaveReplicateRegion(VPRegionBlock *VPR, VPlan &Plan,
                                       unsigned IC,
                                       InterleaveState &InterleavedValues) {
   Type *CanIVIntTy = Plan.getCanonicalIV()->getScalarType();
-  VPBlockBase *InsertPt = VPR;
+  VPBlockBase *InsertPt = VPR->getSingleSuccessor();
   for (unsigned I = 1; I != IC; ++I) {
     auto *Copy = VPR->clone();
-    VPBlockUtils::insertBlockAfter(Copy, InsertPt);
-    InsertPt = Copy;
+    VPBlockUtils::insertBlockBefore(Copy, InsertPt);
 
-    ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-        RPOT(Copy->getEntry());
-    ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-        RPOT2(VPR->getEntry());
-    for (const auto &[New, Old] :
-         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT),
-             VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT2))) {
-      for (const auto &[CopyR, OrigR] : zip(*New, *Old)) {
-        InterleavedValues.remapOperands(&CopyR, I);
-        if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&CopyR)) {
+    auto PartI = vp_depth_first_shallow(Copy->getEntry());
+    auto Part0 = vp_depth_first_shallow(VPR->getEntry());
+    for (const auto &[PartIVPBB, Part0VPBB] :
+         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(PartI),
+             VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
+      for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
+        InterleavedValues.remapOperands(&PartIR, I);
+        if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR)) {
           ScalarIVSteps->addOperand(
               Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, I)));
         }
 
-        InterleavedValues.addInterleavedValues(&OrigR, &CopyR);
+        InterleavedValues.addInterleavedValues(&Part0R, &PartIR, I);
       }
     }
   }
+}
+
+static void interleaveWidenInduction(VPWidenIntOrFpInductionRecipe *IV,
+                                     VPlan &Plan, unsigned IC,
+                                     VPBasicBlock::iterator &InsertPtForPhi,
+                                     InterleaveState &InterleavedValues,
+                                     VPTypeAnalysis &TypeInfo,
+                                     SmallPtrSet<VPRecipeBase *, 8> &ToSkip) {
+  VPBasicBlock *PH = cast<VPBasicBlock>(
+      IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
+  VPValue *Step = &Plan.getVF();
+  Type *IVTy = TypeInfo.inferScalarType(IV);
+  auto &ID = IV->getInductionDescriptor();
+  FastMathFlags FMFs;
+  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+
+  if (TypeInfo.inferScalarType(Step) != IVTy) {
+    Instruction::CastOps CastOp =
+        IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;
+    Step = new VPWidenCastRecipe(CastOp, Step, IV->getScalarType());
+    PH->appendRecipe(Step->getDefiningRecipe());
+    ToSkip.insert(Step->getDefiningRecipe());
+  }
+
+  auto *ConstScale =
+      IV->getOperand(1)->isLiveIn()
+          ? dyn_cast<ConstantInt>(IV->getOperand(1)->getLiveInIRValue())
+          : nullptr;
+  if (!ConstScale || ConstScale->getZExtValue() != 1) {
+    VPValue *Scale = IV->getOperand(1);
+    if (TypeInfo.inferScalarType(Scale) != IVTy) {
+      Scale =
+          new VPWidenCastRecipe(Instruction::Trunc, Scale, IV->getScalarType());
+      PH->appendRecipe(Scale->getDefiningRecipe());
+      ToSkip.insert(Scale->getDefiningRecipe());
+    }
+
+    VPBuilder Builder(PH);
+    VPInstruction *Mul;
+    if (IVTy->isFloatingPointTy())
+      Mul = Builder.createFPOp(Instruction::FMul, {Step, Scale},
+                               IV->getDebugLoc(), "", FMFs);
+    else
+      Mul = Builder.createNaryOp(Instruction::Mul, {Step, Scale},
+                                 IV->getDebugLoc());
+    Step = Mul;
+    ToSkip.insert(Mul);
+  }
+  IV->addOperand(Step);
+
+  for (unsigned I = 1; I != IC; ++I) {
+    VPBuilder Builder;
+    Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
+    VPValue *Prev = InterleavedValues.getInterleavedValue(IV, I - 1);
+    VPInstruction *Add;
+    std::string Name = I > 1 ? "step.add." + std::to_string(I) : "step.add";
+
+    if (IVTy->isFloatingPointTy())
+      Add = Builder.createFPOp(ID.getInductionOpcode(),
+                               {
+                                   Prev,
+                                   Step,
+                               },
+                               IV->getDebugLoc(), Name, FMFs);
+    else
+      Add = Builder.createNaryOp(Instruction::Add,
+                                 {
+                                     Prev,
+                                     Step,
+                                 },
+                                 IV->getDebugLoc(), Name);
+    ToSkip.insert(Add);
+    InterleavedValues.addInterleavedValues(IV, Add, I);
+    InsertPtForPhi = std::next(Add->getIterator());
+  }
+  IV->addOperand(InterleavedValues.getInterleavedValue(IV, IC - 1));
 }
 
 static void interleaveHeaderPHI(VPRecipeBase &R, VPlan &Plan, unsigned IC,
@@ -1697,83 +1779,15 @@ static void interleaveHeaderPHI(VPRecipeBase &R, VPlan &Plan, unsigned IC,
                                 InterleaveState &InterleavedValues,
                                 VPTypeAnalysis &TypeInfo,
                                 SmallPtrSet<VPRecipeBase *, 8> &ToSkip) {
+  // First-order recurrences pass a single vector or scalar through their header
+  // phis, irrespective of interleaving.
   if (isa<VPFirstOrderRecurrencePHIRecipe>(&R))
     return;
 
   // Generate step vectors for each unrolled part.
   if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-    VPBasicBlock *PH =
-        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
-    VPValue *Step = &Plan.getVF();
-    Type *IVTy = TypeInfo.inferScalarType(IV);
-    auto &ID = IV->getInductionDescriptor();
-    FastMathFlags FMFs;
-    if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
-      FMFs = ID.getInductionBinOp()->getFastMathFlags();
-
-    if (TypeInfo.inferScalarType(Step) != IVTy) {
-      Instruction::CastOps CastOp;
-      if (IVTy->isFloatingPointTy())
-        CastOp = Instruction::UIToFP;
-      else
-        CastOp = Instruction::Trunc;
-      Step = new VPWidenCastRecipe(CastOp, Step, IV->getScalarType());
-      PH->appendRecipe(Step->getDefiningRecipe());
-      ToSkip.insert(Step->getDefiningRecipe());
-    }
-
-    auto *ConstScale =
-        IV->getOperand(1)->isLiveIn()
-            ? dyn_cast<ConstantInt>(IV->getOperand(1)->getLiveInIRValue())
-            : nullptr;
-    if (!ConstScale || ConstScale->getZExtValue() != 1) {
-      VPValue *Scale = IV->getOperand(1);
-      if (TypeInfo.inferScalarType(Scale) != IVTy) {
-        Scale = new VPWidenCastRecipe(Instruction::Trunc, Scale,
-                                      IV->getScalarType());
-        PH->appendRecipe(Scale->getDefiningRecipe());
-        ToSkip.insert(Scale->getDefiningRecipe());
-      }
-
-      VPBuilder Builder(PH);
-      VPInstruction *Mul;
-      if (IVTy->isFloatingPointTy())
-        Mul = Builder.createFPOp(Instruction::FMul, {Step, Scale},
-                                 R.getDebugLoc(), "", FMFs);
-      else
-        Mul = Builder.createNaryOp(Instruction::Mul, {Step, Scale},
-                                   R.getDebugLoc());
-      Step = Mul;
-      ToSkip.insert(Mul);
-    }
-    R.addOperand(Step);
-
-    for (unsigned I = 1; I != IC; ++I) {
-      VPBuilder Builder;
-      Builder.setInsertPoint(R.getParent(), InsertPtForPhi);
-      VPValue *Prev = InterleavedValues.getInterleavedValue(IV, I - 1);
-      VPInstruction *Add;
-      std::string Name = I > 1 ? "step.add." + std::to_string(I) : "step.add";
-
-      if (IVTy->isFloatingPointTy())
-        Add = Builder.createFPOp(ID.getInductionOpcode(),
-                                 {
-                                     Prev,
-                                     Step,
-                                 },
-                                 R.getDebugLoc(), Name, FMFs);
-      else
-        Add = Builder.createNaryOp(Instruction::Add,
-                                   {
-                                       Prev,
-                                       Step,
-                                   },
-                                   R.getDebugLoc(), Name);
-      ToSkip.insert(Add);
-      InterleavedValues.addInterleavedValues(IV, Add);
-      InsertPtForPhi = std::next(Add->getIterator());
-    }
-    R.addOperand(InterleavedValues.getInterleavedValue(IV, IC - 1));
+    interleaveWidenInduction(IV, Plan, IC, InsertPtForPhi, InterleavedValues,
+                             TypeInfo, ToSkip);
     return;
   }
 
@@ -1783,7 +1797,7 @@ static void interleaveHeaderPHI(VPRecipeBase &R, VPlan &Plan, unsigned IC,
     VPRecipeBase *Copy = R.clone();
     Copy->insertAfter(InsertPt);
     InsertPt = Copy;
-    InterleavedValues.addInterleavedValues(&R, Copy);
+    InterleavedValues.addInterleavedValues(&R, Copy, I);
     if (isa<VPWidenPointerInductionRecipe>(&R)) {
       if (I == 1)
         R.addOperand(Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, IC)));
@@ -1803,6 +1817,7 @@ static void interleaveHeaderPHI(VPRecipeBase &R, VPlan &Plan, unsigned IC,
   }
 }
 
+/// Handle non-uniform, non-header-phi recipes.
 static void interleaveRecipe(VPRecipeBase &R, VPlan &Plan, unsigned IC,
                              InterleaveState &InterleavedValues,
                              VPTypeAnalysis &TypeInfo) {
@@ -1811,23 +1826,19 @@ static void interleaveRecipe(VPRecipeBase &R, VPlan &Plan, unsigned IC,
       match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
     return;
 
-  VPValue *Op1;
-  if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
-                    m_VPValue(), m_VPValue(Op1)))) {
-    InterleavedValues.addUniform(cast<VPInstruction>(&R), IC);
-    for (unsigned I = 1; I != IC; ++I)
-      R.addOperand(InterleavedValues.getInterleavedValue(Op1, I));
-    return;
-  }
   VPValue *Op0;
   if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(m_VPValue(Op0),
                                                                m_VPValue()))) {
     InterleavedValues.addUniform(cast<VPInstruction>(&R), IC);
-    bool ScalarVFOnly = Plan.hasScalarVFOnly();
-    if (!ScalarVFOnly) {
+    if (Plan.hasScalarVFOnly()) {
+      unsigned Offset = cast<ConstantInt>(R.getOperand(1)->getLiveInIRValue())
+                            ->getZExtValue();
+      R.getVPSingleValue()->replaceAllUsesWith(
+          InterleavedValues.getInterleavedValue(Op0, IC - Offset));
+    } else {
       InterleavedValues.remapOperands(&R, IC - 1);
-      return;
     }
+    return;
   }
 
   Type *CanIVIntTy = Plan.getCanonicalIV()->getScalarType();
@@ -1863,7 +1874,7 @@ static void interleaveRecipe(VPRecipeBase &R, VPlan &Plan, unsigned IC,
     VPRecipeBase *Copy = R.clone();
     Copy->insertAfter(InsertPt);
     InsertPt = Copy;
-    InterleavedValues.addInterleavedValues(&R, Copy);
+    InterleavedValues.addInterleavedValues(&R, Copy, I);
 
     if (match(&R, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                       m_VPValue())))
@@ -1900,20 +1911,21 @@ static void interleaveRecipe(VPRecipeBase &R, VPlan &Plan, unsigned IC,
   }
 }
 
+using namespace llvm::VPlanPatternMatch;
 static void interleaveBlock(VPBlockBase *VPB, VPlan &Plan, unsigned IC,
                             InterleaveState &InterleavedValues,
                             VPTypeAnalysis &TypeInfo,
                             SmallPtrSet<VPRecipeBase *, 8> &ToSkip) {
   auto *VPR = dyn_cast<VPRegionBlock>(VPB);
   if (VPR) {
-    if (VPR->isReplicator())
+    if (VPR->isReplicator()) {
       interleaveReplicateRegion(VPR, Plan, IC, InterleavedValues);
-    else {
-      ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-          RPOT(VPR->getEntry());
-      for (VPBlockBase *VPB : RPOT) {
-        interleaveBlock(VPB, Plan, IC, InterleavedValues, TypeInfo, ToSkip);
-      }
+      return;
+    }
+    ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
+        RPOT(VPR->getEntry());
+    for (VPBlockBase *VPB : RPOT) {
+      interleaveBlock(VPB, Plan, IC, InterleavedValues, TypeInfo, ToSkip);
     }
     return;
   }
@@ -1924,6 +1936,17 @@ static void interleaveBlock(VPBlockBase *VPB, VPlan &Plan, unsigned IC,
     if (ToSkip.contains(&R))
       continue;
 
+    // Add all VPValues for all parts to ComputeReductionResult which combines
+    // the parts to compute the final reduction value.
+    VPValue *Op1;
+    if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
+                      m_VPValue(), m_VPValue(Op1)))) {
+      InterleavedValues.addUniform(cast<VPInstruction>(&R), IC);
+      for (unsigned I = 1; I != IC; ++I)
+        R.addOperand(InterleavedValues.getInterleavedValue(Op1, I));
+      continue;
+    }
+
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
       InterleavedValues.addUniform(SingleDef, IC);
@@ -1933,68 +1956,64 @@ static void interleaveBlock(VPBlockBase *VPB, VPlan &Plan, unsigned IC,
     if (auto *H = dyn_cast<VPHeaderPHIRecipe>(&R)) {
       interleaveHeaderPHI(R, Plan, IC, InsertPtForPhi, InterleavedValues,
                           TypeInfo, ToSkip);
-      continue;
+    } else {
+      interleaveRecipe(R, Plan, IC, InterleavedValues, TypeInfo);
     }
-
-    interleaveRecipe(R, Plan, IC, InterleavedValues, TypeInfo);
   }
 }
 
-void VPlanTransforms::interleave(VPlan &Plan, unsigned IC, LLVMContext &Ctx) {
-  assert(IC > 0);
+void VPlanTransforms::interleaveByUF(VPlan &Plan, unsigned IC,
+                                     LLVMContext &Ctx) {
+  assert(IC > 0 && "Interleave count must be positive");
   if (IC == 1)
     return;
+
+  // Associate with each VPValue of part 0 its unrolled instances of parts 1,
+  // ..., UF-1.
   InterleaveState InterleavedValues;
 
+  /// Interleaving may create recipes that should not be interleaved themselves.
+  /// Those are tracked in ToSkip.
   SmallPtrSet<VPRecipeBase *, 8> ToSkip;
   Type *CanIVIntTy = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanIVIntTy, Ctx);
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getEntry());
   interleaveBlock(Plan.getPreheader(), Plan, IC, InterleavedValues, TypeInfo,
                   ToSkip);
 
-  for (VPBlockBase *VPB : RPOT) {
+  // Iterate over all blocks in the plan starting from Entry, and interleave
+  // recipes inside them. This includes the vector preheader and middle blocks,
+  // which may set up or post-process per-part values.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBlockBase *VPB : RPOT)
     interleaveBlock(VPB, Plan, IC, InterleavedValues, TypeInfo, ToSkip);
-  }
 
-  unsigned I = 1;
+  unsigned Part = 1;
+  // Remap operands of cloned header phis to update backedge values. The header
+  // phis cloned during interleaving are just after the header phi for part 0.
+  // Reset Part to 1 when reaching the first (part 0) recipe of a block.
   for (VPRecipeBase &H :
        Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    // The second operand of Fixed Order Recurrence phi's, feeding the spliced
+    // value across the backedge, needs to remap to the last part of the spliced
+    // value.
     if (isa<VPFirstOrderRecurrencePHIRecipe>(&H)) {
-      H.setOperand(
-          1, InterleavedValues.getInterleavedValue(H.getOperand(1), IC - 1));
+      InterleavedValues.remapOperand(&H, 1, IC - 1);
       continue;
     }
     if (InterleavedValues.contains(H.getVPSingleValue()) ||
         isa<VPWidenPointerInductionRecipe>(&H)) {
-      I = 1;
+      Part = 1;
       continue;
     }
-    InterleavedValues.remapOperands(&H, I);
-    I++;
+    InterleavedValues.remapOperands(&H, Part);
+    Part++;
   }
 
-  using namespace llvm::VPlanPatternMatch;
-  bool ScalarVFOnly = Plan.hasScalarVFOnly();
+  // Remap the operand of live-outs to the last part.
   for (const auto &[_, LO] : Plan.getLiveOuts()) {
-    VPValue *In = nullptr;
-    VPValue *Op0;
-    if (ScalarVFOnly &&
-        match(LO->getOperand(0), m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                                     m_VPValue(Op0), m_VPValue()))) {
-      VPInstruction *Extract =
-          cast<VPInstruction>(LO->getOperand(0)->getDefiningRecipe());
-      unsigned Offset =
-          cast<ConstantInt>(Extract->getOperand(1)->getLiveInIRValue())
-              ->getZExtValue();
-      In = InterleavedValues.getInterleavedValue(Op0, IC - Offset);
-      LO->setOperand(0, In);
-      Extract->getDefiningRecipe()->eraseFromParent();
-      continue;
-    } else
-      In = InterleavedValues.getInterleavedValue(LO->getOperand(0), IC - 1);
-
+    VPValue *In =
+        InterleavedValues.getInterleavedValue(LO->getOperand(0), IC - 1);
     LO->setOperand(0, In);
   }
 }
