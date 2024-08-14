@@ -73,67 +73,84 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
-static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
-  IRBuilder<> B(M.getContext());
-  DXILOpBuilder OpBuilder(M, B);
-  for (User *U : make_early_inc_range(F.users())) {
-    CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI)
-      continue;
+namespace {
+class OpLowerer {
+  Module &M;
+  DXILOpBuilder OpBuilder;
 
-    SmallVector<Value *> Args;
-    B.SetInsertPoint(CI);
-    if (isVectorArgExpansion(F)) {
-      SmallVector<Value *> NewArgs = argVectorFlatten(CI, B);
-      Args.append(NewArgs.begin(), NewArgs.end());
-    } else
-      Args.append(CI->arg_begin(), CI->arg_end());
+public:
+  OpLowerer(Module &M) : M(M), OpBuilder(M) {}
 
-    Expected<CallInst *> OpCallOrErr = OpBuilder.tryCreateOp(DXILOp, Args,
-                                                             F.getReturnType());
-    if (Error E = OpCallOrErr.takeError()) {
-      std::string Message(toString(std::move(E)));
-      DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
-                                     CI->getDebugLoc());
-      M.getContext().diagnose(Diag);
-      continue;
+  void replaceFunction(Function &F,
+                       llvm::function_ref<Error(CallInst *CI)> ReplaceCall) {
+    for (User *U : make_early_inc_range(F.users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
+
+      if (Error E = ReplaceCall(CI)) {
+        std::string Message(toString(std::move(E)));
+        DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
+                                       CI->getDebugLoc());
+        M.getContext().diagnose(Diag);
+        continue;
+      }
     }
-    CallInst *OpCall = *OpCallOrErr;
-
-    CI->replaceAllUsesWith(OpCall);
-    CI->eraseFromParent();
+    if (F.user_empty())
+      F.eraseFromParent();
   }
-  if (F.user_empty())
-    F.eraseFromParent();
-}
 
-static bool lowerIntrinsics(Module &M) {
-  bool Updated = false;
+  void replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+    bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    replaceFunction(F, [&](CallInst *CI) -> Error {
+      SmallVector<Value *> Args;
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      if (IsVectorArgExpansion) {
+        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+        Args.append(NewArgs.begin(), NewArgs.end());
+      } else
+        Args.append(CI->arg_begin(), CI->arg_end());
 
-  for (Function &F : make_early_inc_range(M.functions())) {
-    if (!F.isDeclaration())
-      continue;
-    Intrinsic::ID ID = F.getIntrinsicID();
-    switch (ID) {
-    default:
-      continue;
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(DXILOp, Args, F.getReturnType());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  bool lowerIntrinsics() {
+    bool Updated = false;
+
+    for (Function &F : make_early_inc_range(M.functions())) {
+      if (!F.isDeclaration())
+        continue;
+      Intrinsic::ID ID = F.getIntrinsicID();
+      switch (ID) {
+      default:
+        continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
   case Intrin:                                                                 \
-    lowerIntrinsic(OpCode, F, M);                                              \
+    replaceFunctionWithOp(F, OpCode);                                          \
     break;
 #include "DXILOperation.inc"
+      }
+      Updated = true;
     }
-    Updated = true;
+    return Updated;
   }
-  return Updated;
-}
+};
+} // namespace
 
 namespace {
 /// A pass that transforms external global definitions into declarations.
 class DXILOpLowering : public PassInfoMixin<DXILOpLowering> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    if (lowerIntrinsics(M))
+    if (OpLowerer(M).lowerIntrinsics())
       return PreservedAnalyses::none();
     return PreservedAnalyses::all();
   }
@@ -143,7 +160,9 @@ public:
 namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
-  bool runOnModule(Module &M) override { return lowerIntrinsics(M); }
+  bool runOnModule(Module &M) override {
+    return OpLowerer(M).lowerIntrinsics();
+  }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
