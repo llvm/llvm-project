@@ -427,8 +427,10 @@ void RISCVPassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
   }
+  insertPass(&LoopStrengthReduceID, &LoopTermFoldID);
 
   TargetPassConfig::addIRPasses();
+
 }
 
 bool RISCVPassConfig::addPreISel() {
