@@ -6901,6 +6901,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLROV:
+    handleSimpleAttribute<HLSLROVAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_HLSLResourceClass:
     S.HLSL().handleResourceClassAttr(D, AL);
     break;

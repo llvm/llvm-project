@@ -682,6 +682,98 @@ public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From);
 
+  /// Determine whether the no signed wrap flag is set.
+  bool hasNoUnsignedWrap() const {
+    return cast<llvm::Instruction>(Val)->hasNoUnsignedWrap();
+  }
+  /// Set or clear the nuw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoUnsignedWrap(bool B = true);
+  /// Determine whether the no signed wrap flag is set.
+  bool hasNoSignedWrap() const {
+    return cast<llvm::Instruction>(Val)->hasNoSignedWrap();
+  }
+  /// Set or clear the nsw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoSignedWrap(bool B = true);
+  /// Determine whether all fast-math-flags are set.
+  bool isFast() const { return cast<llvm::Instruction>(Val)->isFast(); }
+  /// Set or clear all fast-math-flags on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setFast(bool B);
+  /// Determine whether the allow-reassociation flag is set.
+  bool hasAllowReassoc() const {
+    return cast<llvm::Instruction>(Val)->hasAllowReassoc();
+  }
+  /// Set or clear the reassociation flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowReassoc(bool B);
+  /// Determine whether the exact flag is set.
+  bool isExact() const { return cast<llvm::Instruction>(Val)->isExact(); }
+  /// Set or clear the exact flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setIsExact(bool B = true);
+  /// Determine whether the no-NaNs flag is set.
+  bool hasNoNaNs() const { return cast<llvm::Instruction>(Val)->hasNoNaNs(); }
+  /// Set or clear the no-nans flag on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoNaNs(bool B);
+  /// Determine whether the no-infs flag is set.
+  bool hasNoInfs() const { return cast<llvm::Instruction>(Val)->hasNoInfs(); }
+  /// Set or clear the no-infs flag on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoInfs(bool B);
+  /// Determine whether the no-signed-zeros flag is set.
+  bool hasNoSignedZeros() const {
+    return cast<llvm::Instruction>(Val)->hasNoSignedZeros();
+  }
+  /// Set or clear the no-signed-zeros flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoSignedZeros(bool B);
+  /// Determine whether the allow-reciprocal flag is set.
+  bool hasAllowReciprocal() const {
+    return cast<llvm::Instruction>(Val)->hasAllowReciprocal();
+  }
+  /// Set or clear the allow-reciprocal flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowReciprocal(bool B);
+  /// Determine whether the allow-contract flag is set.
+  bool hasAllowContract() const {
+    return cast<llvm::Instruction>(Val)->hasAllowContract();
+  }
+  /// Set or clear the allow-contract flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowContract(bool B);
+  /// Determine whether the approximate-math-functions flag is set.
+  bool hasApproxFunc() const {
+    return cast<llvm::Instruction>(Val)->hasApproxFunc();
+  }
+  /// Set or clear the approximate-math-functions flag on this instruction,
+  /// which must be an operator which supports this flag. See LangRef.html for
+  /// the meaning of this flag.
+  void setHasApproxFunc(bool B);
+  /// Convenience function for getting all the fast-math flags, which must be an
+  /// operator which supports these flags. See LangRef.html for the meaning of
+  /// these flags.
+  FastMathFlags getFastMathFlags() const {
+    return cast<llvm::Instruction>(Val)->getFastMathFlags();
+  }
+  /// Convenience function for setting multiple fast-math flags on this
+  /// instruction, which must be an operator which supports these flags. See
+  /// LangRef.html for the meaning of these flags.
+  void setFastMathFlags(FastMathFlags FMF);
+  /// Convenience function for transferring all fast-math flag values to this
+  /// instruction, which must be an operator which supports these flags. See
+  /// LangRef.html for the meaning of these flags.
+  void copyFastMathFlags(FastMathFlags FMF);
+
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
 #endif
