@@ -32,7 +32,6 @@ struct SimplifyCFGOptions {
   bool SimplifyCondBranch = true;
   bool SpeculateBlocks = true;
   bool SpeculateUnpredictables = false;
-  bool RunInCodeGen = false;
 
   AssumptionCache *AC = nullptr;
 
@@ -84,10 +83,6 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &speculateUnpredictables(bool B) {
     SpeculateUnpredictables = B;
-    return *this;
-  }
-  SimplifyCFGOptions &runInCodeGen(bool B) {
-    RunInCodeGen = B;
     return *this;
   }
 };

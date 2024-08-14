@@ -277,23 +277,6 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
                                     const SimplifyCFGOptions &Options) {
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
-  // In codegen, we use unreachableblockelim to remove dead blocks b/c it
-  // doesn't really have any well defined semantics for unreachable code
-  // (see UnreachableBlockElim.cpp and LLVM::CodeGen/X86/GC/ocaml-gc-assert.ll
-  // for details).
-  //
-  // The first character is not capitalized to reduce the code diff FTTB.
-  auto removeUnreachableBlocks = [&](Function &F, DomTreeUpdater *DTU = nullptr,
-                                     MemorySSAUpdater *MSSAU = nullptr) {
-    return !Options.RunInCodeGen &&
-           llvm::removeUnreachableBlocks(F, DTU, MSSAU);
-  };
-
-  // Only run simplifycfg in codegen if we'd like to hoist loads/stores.
-  if (Options.RunInCodeGen && (!Options.HoistLoadsStoresWithCondFaulting ||
-                               !TTI.hasConditionalLoadStoreForType()))
-    return false;
-
   bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   EverChanged |=
       tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
