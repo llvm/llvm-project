@@ -489,10 +489,6 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC));
-  if (Opts.DarwinTargetVariantTriple)
-    MOFI->setDarwinTargetVariantTriple(*Opts.DarwinTargetVariantTriple);
-  if (!Opts.DarwinTargetVariantSDKVersion.empty())
-    MOFI->setDarwinTargetVariantSDKVersion(Opts.DarwinTargetVariantSDKVersion);
   Ctx.setObjectFileInfo(MOFI.get());
 
   if (Opts.GenDwarfForAssembly)
@@ -574,6 +570,13 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Str.reset(TheTarget->createMCObjectStreamer(
         T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
     Str.get()->initSections(Opts.NoExecStack, *STI);
+    if (T.isOSBinFormatMachO() && T.isOSDarwin()) {
+      Triple *TVT = Opts.DarwinTargetVariantTriple
+                        ? &*Opts.DarwinTargetVariantTriple
+                        : nullptr;
+      Str->emitVersionForTarget(T, VersionTuple(), TVT,
+                                Opts.DarwinTargetVariantSDKVersion);
+    }
   }
 
   // When -fembed-bitcode is passed to clang_as, a 1-byte marker
