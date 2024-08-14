@@ -14,13 +14,13 @@ add_flang_library(CufRuntime
 )
 
 if (BUILD_SHARED_LIBS)
-  set(CUF_LIBRARY ${CUDA_LIBRARIES})
+  set(CUDA_RT_TARGET CUDA::cudart)
 else()
-  set(CUF_LIBRARY ${CUDA_cudart_static_LIBRARY})
+  set(CUDA_RT_TARGET CUDA::cudart_static)
 endif()
 
 target_link_libraries(CufRuntime
   PRIVATE
   FortranRuntime
-  ${CUF_LIBRARY}
+  ${CUDA_RT_TARGET}
 )
