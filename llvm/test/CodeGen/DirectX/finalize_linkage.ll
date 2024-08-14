@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-finalize-linkage -mtriple=dxil-unknown-shadermodel6.5-compute %s | FileCheck %s
+; RUN: llc %s --filetype=asm -o - | FileCheck %s --check-prefixes=CHECK-LLC
 
 target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 
@@ -58,3 +59,6 @@ attributes #0 = { convergent noinline nounwind optnone}
 attributes #1 = { convergent noinline nounwind optnone "hlsl.export"}
 attributes #2 = { convergent "hlsl.numthreads"="4,1,1" "hlsl.shader"="compute"}
 attributes #3 = { convergent }
+
+; Make sure "hlsl.export" attribute is stripped by llc
+; CHECK-LLC-NOT: "hlsl.export"
