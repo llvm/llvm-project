@@ -8595,8 +8595,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // If MinMax is NaN, let's quiet it.
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
       !DAG.isKnownNeverNaN(RHS)) {
-    // Only use FADD to quiet it if it is NaN, because -0.0+0.0->+0.0.
-    SDValue MinMaxQuiet = DAG.getNode(ISD::FADD, DL, VT, MinMax, MinMax, Flags);
+    SDValue MinMaxQuiet =
+        DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
     MinMax =
         DAG.getSelectCC(DL, MinMax, MinMax, MinMaxQuiet, MinMax, ISD::SETUO);
   }
@@ -8606,29 +8606,16 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)) {
     return MinMax;
   }
-  SDValue LRound = LHS;
-  SDValue RRound = RHS;
-  EVT RCCVT = CCVT;
-  // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for
-  // this case.
-  if (!isOperationLegal(ISD::BITCAST, VT.changeTypeToInteger())) {
-    LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
-                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-    RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
-                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-    RCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
-  }
   SDValue TestZero =
       DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
   SDValue LCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, LRound, TestZero), LHS,
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
       MinMax, Flags);
   SDValue RCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, RRound, TestZero), RHS,
-      LCmp, Flags);
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS, LCmp,
+      Flags);
   return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
 }
 
