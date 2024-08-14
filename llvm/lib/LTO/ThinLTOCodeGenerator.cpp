@@ -1781,7 +1781,7 @@ void ThinLTOCodeGenerator::run() {
     };
     struct ModuleInfo {
       std::unique_ptr<AsyncModuleCacheEntry> Entry;
-      std::atomic<unsigned> State = MS_Empty;
+      std::atomic<unsigned> State = ModuleState::MS_Empty;
       std::unique_ptr<MemoryBuffer> ComputedBuffer;
       std::unique_ptr<MemoryBuffer> CachedBuffer;
     };
