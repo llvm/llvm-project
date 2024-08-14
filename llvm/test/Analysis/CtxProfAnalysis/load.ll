@@ -89,7 +89,7 @@ Current Profile:
 ;--- example.ll
 declare void @bar()
 
-define private void @foo(i32 %a, ptr %fct) #0 !unique_id !0 {
+define private void @foo(i32 %a, ptr %fct) #0 !guid !0 {
   %t = icmp eq i32 %a, 0
   br i1 %t, label %yes, label %no
 yes:

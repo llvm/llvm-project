@@ -66,10 +66,9 @@ Value toJSON(const PGOCtxProfContext::CallTargetMapTy &P) {
 } // namespace json
 } // namespace llvm
 
-const char *AssignUniqueIDPass::GUIDMetadataName = "unique_id";
+const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
-PreservedAnalyses AssignUniqueIDPass::run(Module &M,
-                                          ModuleAnalysisManager &MAM) {
+PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
   for (auto &F : M.functions()) {
     if (F.isDeclaration())
       continue;
@@ -84,13 +83,13 @@ PreservedAnalyses AssignUniqueIDPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-GlobalValue::GUID AssignUniqueIDPass::getGUID(const Function &F) {
+GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
   if (F.isDeclaration()) {
     assert(GlobalValue::isExternalLinkage(F.getLinkage()));
     return GlobalValue::getGUID(F.getGlobalIdentifier());
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "unique_id not found for defined function");
+  assert(MD && "guid not found for defined function");
   return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
                                ->getValue()
                                ->stripPointerCasts())
@@ -119,7 +118,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   for (const auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto GUID = AssignUniqueIDPass::getGUID(F);
+    auto GUID = AssignGUIDPass::getGUID(F);
     assert(GUID && "guid not found for defined function");
     const auto &Entry = F.begin();
     uint32_t MaxCounters = 0; // we expect at least a counter.
@@ -159,8 +158,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
 
 GlobalValue::GUID
 PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
-  if (auto It = FuncInfo.find(AssignUniqueIDPass::getGUID(F));
-      It != FuncInfo.end())
+  if (auto It = FuncInfo.find(AssignGUIDPass::getGUID(F)); It != FuncInfo.end())
     return It->first;
   return 0;
 }

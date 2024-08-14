@@ -46,7 +46,7 @@ define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-NEXT:    ret void
 ;
 ; LOWERING-LABEL: define void @foo(
-; LOWERING-SAME: i32 [[A:%.*]], ptr [[FCT:%.*]]) !unique_id [[META0:![0-9]+]] {
+; LOWERING-SAME: i32 [[A:%.*]], ptr [[FCT:%.*]]) !guid [[META0:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @foo, i64 6699318081062747564, i32 2, i32 2)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1
@@ -104,7 +104,7 @@ define void @an_entrypoint(i32 %a) {
 ; INSTRUMENT-NEXT:    ret void
 ;
 ; LOWERING-LABEL: define void @an_entrypoint(
-; LOWERING-SAME: i32 [[A:%.*]]) !unique_id [[META1:![0-9]+]] {
+; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META1:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @an_entrypoint_ctx_root, i64 4909520559318251808, i32 2, i32 1)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1
@@ -154,7 +154,7 @@ define void @another_entrypoint_no_callees(i32 %a) {
 ; INSTRUMENT-NEXT:    ret void
 ;
 ; LOWERING-LABEL: define void @another_entrypoint_no_callees(
-; LOWERING-SAME: i32 [[A:%.*]]) !unique_id [[META2:![0-9]+]] {
+; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META2:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @another_entrypoint_no_callees_ctx_root, i64 -6371873725078000974, i32 2, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
@@ -188,7 +188,7 @@ define void @simple(i32 %a) {
 ; INSTRUMENT-NEXT:    ret void
 ;
 ; LOWERING-LABEL: define void @simple(
-; LOWERING-SAME: i32 [[A:%.*]]) !unique_id [[META3:![0-9]+]] {
+; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META3:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @simple, i64 -3006003237940970099, i32 1, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
@@ -212,7 +212,7 @@ define i32 @no_callsites(i32 %a) {
 ; INSTRUMENT-NEXT:    ret i32 0
 ;
 ; LOWERING-LABEL: define i32 @no_callsites(
-; LOWERING-SAME: i32 [[A:%.*]]) !unique_id [[META4:![0-9]+]] {
+; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META4:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @no_callsites, i64 5679753335911435902, i32 2, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
@@ -244,7 +244,7 @@ define void @no_counters() {
 ; INSTRUMENT-NEXT:    ret void
 ;
 ; LOWERING-LABEL: define void @no_counters(
-; LOWERING-SAME: ) !unique_id [[META5:![0-9]+]] {
+; LOWERING-SAME: ) !guid [[META5:![0-9]+]] {
 ; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @no_counters, i64 5458232184388660970, i32 1, i32 1)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1

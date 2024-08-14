@@ -27,7 +27,9 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define private void @f2() #0 !unique_id !0 {
+source_filename = "random_path/m1.cc"
+
+define private void @f2() #0 !guid !0 {
   ret void
 }
 
@@ -37,11 +39,13 @@ define void @f1() #0 {
 }
 
 attributes #0 = { noinline }
-!0 = !{ i64 5967942613276634709 }
+!0 = !{ i64 3087265239403591524 }
 
 ;--- m2.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
+
+source_filename = "random_path/m2.cc"
 
 declare void @f1()
 
@@ -61,7 +65,7 @@ define void @entrypoint() {
                 "Counters": [
                   10
                 ],
-                "Guid": 5967942613276634709
+                "Guid": 3087265239403591524
               }
             ]
           ],
@@ -80,8 +84,8 @@ define void @entrypoint() {
 ]
 ;--- expected.txt
 Function Info:
-5967942613276634709 : f2.llvm.0. MaxCounterID: 1. MaxCallsiteID: 0
 10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 1
+3087265239403591524 : f2.llvm.0. MaxCounterID: 1. MaxCallsiteID: 0
 2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
 
 Current Profile:
@@ -96,7 +100,7 @@ Current Profile:
                 "Counters": [
                   10
                 ],
-                "Guid": 5967942613276634709
+                "Guid": 3087265239403591524
               }
             ]
           ],

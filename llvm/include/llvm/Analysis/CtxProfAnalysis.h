@@ -106,9 +106,12 @@ public:
 // the pass pipeline, associate it with any Global Value, and then use it for
 // PGO and ThinLTO.
 // At that point, this should be moved elsewhere.
-class AssignUniqueIDPass : public PassInfoMixin<AssignUniqueIDPass> {
+class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
 public:
-  explicit AssignUniqueIDPass() = default;
+  explicit AssignGUIDPass() = default;
+
+  /// Assign a GUID *if* one is not already assign, as a function metadata named
+  /// `GUIDMetadataName`.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static const char *GUIDMetadataName;
   // This should become GlobalValue::getGUID
