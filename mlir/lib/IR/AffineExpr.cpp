@@ -1019,8 +1019,7 @@ AffineExpr AffineExpr::operator%(AffineExpr other) const {
 }
 
 AffineExpr AffineExpr::compose(AffineMap map) const {
-  SmallVector<AffineExpr, 8> dimReplacements(map.getResults().begin(),
-                                             map.getResults().end());
+  SmallVector<AffineExpr, 8> dimReplacements(map.getResults());
   return replaceDimsAndSymbols(dimReplacements, {});
 }
 raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr expr) {
