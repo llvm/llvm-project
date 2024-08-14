@@ -1493,12 +1493,9 @@ void DAGTypeLegalizer::ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo,
          "Do not know how to expand this float constant!");
   APInt C = cast<ConstantFPSDNode>(N)->getValueAPF().bitcastToAPInt();
   SDLoc dl(N);
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(64, C.getRawData()[1])),
-                         dl, NVT);
-  Hi = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(64, C.getRawData()[0])),
-                         dl, NVT);
+  const fltSemantics &Sem = NVT.getFltSemantics();
+  Lo = DAG.getConstantFP(APFloat(Sem, C.extractBits(64, 64)), dl, NVT);
+  Hi = DAG.getConstantFP(APFloat(Sem, C.extractBits(64, 0)), dl, NVT);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_Unary(SDNode *N, RTLIB::Libcall LC,
@@ -1777,8 +1774,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
     Hi = DAG.getNode(ISD::FP_EXTEND, dl, NVT, N->getOperand(0));
   }
 
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1934,8 +1930,7 @@ void DAGTypeLegalizer::ExpandFloatRes_LOAD(SDNode *N, SDValue &Lo,
   Chain = Hi.getValue(1);
 
   // The low part is zero.
-  Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   // Modified the chain - switch anything that used the old chain to use the
   // new one.
@@ -1964,8 +1959,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   // though.
   if (SrcVT.bitsLE(MVT::i32)) {
     // The integer can be represented exactly in an f64.
-    Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                   APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+    Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
     if (Strict) {
       Hi = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
                        {Chain, Src}, Flags);
@@ -3577,7 +3571,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N,
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =
@@ -3592,7 +3586,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_PATCHPOINT(SDNode *N,
                                                        unsigned OpNo) {
   assert(OpNo >= 7);
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =

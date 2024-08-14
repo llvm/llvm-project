@@ -406,6 +406,9 @@ template <> struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
 } // namespace llvm
 
 namespace {
+struct Tag;
+typedef std::vector<Tag> TagsSeq;
+
 struct Tag {
   StringRef Name;
   AvailabilityItem Availability;
@@ -416,14 +419,17 @@ struct Tag {
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftConformance;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
   FunctionsSeq Methods;
-};
 
-typedef std::vector<Tag> TagsSeq;
+  /// Tags that are declared within the current tag. Only the tags that have
+  /// corresponding API Notes will be listed.
+  TagsSeq Tags;
+};
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
@@ -451,11 +457,13 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
     IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
     IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
+    IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
     IO.mapOptional("Methods", T.Methods);
+    IO.mapOptional("Tags", T.Tags);
   }
 };
 } // namespace yaml
@@ -914,6 +922,8 @@ public:
       TI.SwiftRetainOp = T.SwiftRetainOp;
     if (T.SwiftReleaseOp)
       TI.SwiftReleaseOp = T.SwiftReleaseOp;
+    if (T.SwiftConformance)
+      TI.SwiftConformance = T.SwiftConformance;
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);
@@ -958,12 +968,17 @@ public:
     ContextInfo CI;
     auto TagCtxID = Writer.addContext(ParentContextID, T.Name, ContextKind::Tag,
                                       CI, SwiftVersion);
+    Context TagCtx(TagCtxID, ContextKind::Tag);
 
     for (const auto &CXXMethod : T.Methods) {
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
       Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
+
+    // Convert nested tags.
+    for (const auto &Tag : T.Tags)
+      convertTagContext(TagCtx, Tag, SwiftVersion);
   }
 
   void convertTopLevelItems(std::optional<Context> Ctx,

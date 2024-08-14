@@ -155,6 +155,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
         break;
       }
       [[fallthrough]];
+    case Triple::DriverKit:
     case Triple::TvOS:
     case Triple::WatchOS:
     case Triple::XROS:
@@ -164,6 +165,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     default:
       break;
     }
+  } else if (TT.getOS() == Triple::BridgeOS) {
+    // TODO: BridgeOS should be included in isOSDarwin.
+    setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+    setLibcallName(RTLIB::EXP10_F64, "__exp10");
   } else {
     setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
     setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");

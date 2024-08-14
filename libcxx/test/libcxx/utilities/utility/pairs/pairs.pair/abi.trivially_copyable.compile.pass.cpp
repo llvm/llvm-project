@@ -47,20 +47,11 @@ static_assert(!std::is_trivially_copyable<std::pair<int&, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<int, int&> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<int&, int&> >::value, "");
 
-#ifdef _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
-static_assert(std::is_trivially_copyable<std::pair<int, int> >::value, "");
-static_assert(std::is_trivially_copyable<std::pair<int, char> >::value, "");
-static_assert(std::is_trivially_copyable<std::pair<char, int> >::value, "");
-static_assert(std::is_trivially_copyable<std::pair<std::pair<char, char>, int> >::value, "");
-static_assert(std::is_trivially_copyable<std::pair<trivially_copyable, int> >::value, "");
-#else
 static_assert(!std::is_trivially_copyable<std::pair<int, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<int, char> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<char, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<std::pair<char, char>, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable, int> >::value, "");
-#endif // _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
-
 #if TEST_STD_VER == 03 // Known ABI difference
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
@@ -68,21 +59,10 @@ static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_move_a
 static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
 static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
 #endif
-
-#ifdef _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
-static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_construction, int> >::value, "");
-#else
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_construction, int> >::value, "");
-#endif
 
 static_assert(std::is_trivially_copy_constructible<std::pair<int, int> >::value, "");
 static_assert(std::is_trivially_move_constructible<std::pair<int, int> >::value, "");
-static_assert(std::is_trivially_destructible<std::pair<int, int> >::value, "");
-
-#ifdef _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
-static_assert(std::is_trivially_copy_assignable<std::pair<int, int> >::value, "");
-static_assert(std::is_trivially_move_assignable<std::pair<int, int> >::value, "");
-#else
 static_assert(!std::is_trivially_copy_assignable<std::pair<int, int> >::value, "");
 static_assert(!std::is_trivially_move_assignable<std::pair<int, int> >::value, "");
-#endif // _LIBCPP_ABI_TRIVIALLY_COPYABLE_PAIR
+static_assert(std::is_trivially_destructible<std::pair<int, int> >::value, "");

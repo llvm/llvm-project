@@ -4,6 +4,8 @@
 // RUN: printf "\0" > %t/null_byte.bin
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
 // RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
+// RUN: %clang_cc1 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;
 
@@ -115,6 +117,14 @@ void f1() {
   };
 }
 #endif
+
+static_assert(_Generic(
+#embed __FILE__ limit(1)
+  , int : 1, default : 0));
+
+static_assert(alignof(typeof(
+#embed __FILE__ limit(1)
+)) == alignof(int));
 
 struct HasChar {
   signed char ch;

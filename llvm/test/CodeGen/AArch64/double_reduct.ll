@@ -145,10 +145,11 @@ define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uaddlp v1.8h, v1.16b
-; CHECK-NEXT:    uadalp v1.8h, v0.16b
-; CHECK-NEXT:    uadalp v1.8h, v2.16b
-; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    uaddl2 v3.8h, v0.16b, v1.16b
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    add v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    uadalp v0.8h, v2.16b
+; CHECK-NEXT:    addv h0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %ae = zext <32 x i8> %a to <32 x i16>

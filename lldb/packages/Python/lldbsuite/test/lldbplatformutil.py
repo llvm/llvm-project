@@ -9,6 +9,7 @@ import subprocess
 import sys
 import os
 from packaging import version
+from urllib.parse import urlparse
 
 # LLDB modules
 import lldb
@@ -265,17 +266,13 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerBinary():
-    """Returns the compiler binary the test suite is running with."""
-    return getCompiler().split()[0]
-
-
 def getCompilerVersion():
     """Returns a string that represents the compiler version.
     Supports: llvm, clang.
     """
-    compiler = getCompilerBinary()
-    version_output = subprocess.check_output([compiler, "--version"], errors="replace")
+    version_output = subprocess.check_output(
+        [getCompiler(), "--version"], errors="replace"
+    )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)

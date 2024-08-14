@@ -46,6 +46,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAnnotateKernelFeatures.cpp
   AMDGPUAnnotateUniformValues.cpp
   AMDGPUArgumentUsageInfo.cpp
+  AMDGPUAsanInstrumentation.cpp
   AMDGPUAsmPrinter.cpp
   AMDGPUAtomicOptimizer.cpp
   AMDGPUAttributor.cpp

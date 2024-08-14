@@ -615,6 +615,10 @@ private:
 
   ModuleDeclSeq ModuleDeclState;
 
+  /// Whether the module import expects an identifier next. Otherwise,
+  /// it expects a '.' or ';'.
+  bool ModuleImportExpectsIdentifier = false;
+
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
   std::pair<IdentifierInfo *, SourceLocation> PragmaARCCFCodeAuditedInfo;
@@ -1155,6 +1159,11 @@ private:
   /// indicate where CachedLexPos should be set when the BackTrack() method is
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
+
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
+  std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
+      UnannotatedBacktrackTokens;
 
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
@@ -1718,8 +1727,16 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
-  void EnableBacktrackAtThisPos();
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
+  void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1731,6 +1748,12 @@ public:
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
 
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
+  bool isUnannotatedBacktrackEnabled() const {
+    return !UnannotatedBacktrackTokens.empty();
+  }
+
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
 
@@ -1740,14 +1763,11 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
-  /// Lex a module name or a partition name.
-  bool LexModuleName(Token &Result, bool IsImport);
-
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
+
   bool LexAfterModuleImport(Token &Result);
-  bool LexAfterModuleDecl(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
@@ -1840,8 +1860,9 @@ public:
   void RevertCachedTokens(unsigned N) {
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
-    assert(signed(CachedLexPos) - signed(N) >= signed(BacktrackPositions.back())
-         && "Should revert tokens up to the last backtrack position, not more");
+    assert(signed(CachedLexPos) - signed(N) >=
+               signed(LastBacktrackPos().first) &&
+           "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
     CachedLexPos -= N;
@@ -2118,8 +2139,8 @@ public:
   }
 
   /// Given a Token \p Tok that is a numeric constant with length 1,
-  /// return the character.
-  char
+  /// return the value of constant as an unsigned 8-bit integer.
+  uint8_t
   getSpellingOfSingleCharacterNumericConstant(const Token &Tok,
                                               bool *Invalid = nullptr) const {
     assert((Tok.is(tok::numeric_constant) || Tok.is(tok::binary_data)) &&
@@ -3038,9 +3059,6 @@ private:
   static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
     return P.LexAfterModuleImport(Result);
   }
-  static bool CLK_LexAfterModuleDecl(Preprocessor &P, Token &Result) {
-    return P.LexAfterModuleDecl(Result);
-  }
 };
 
 /// Abstract base class that describes a handler that will receive
@@ -3072,77 +3090,6 @@ struct EmbedAnnotationData {
 
 /// Registry of pragma handlers added by plugins
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
-
-/// Represents module or partition name token sequance.
-///
-///     module-name:
-///           module-name-qualifier[opt] identifier
-///
-///     partition-name: [C++20]
-///           : module-name-qualifier[opt] identifier
-///
-///     module-name-qualifier
-///           module-name-qualifier[opt] identifier .
-///
-/// This class can only be created by the preprocessor and guarantees that the
-/// two source array being contiguous in memory and only contains 3 kind of
-/// tokens (identifier, '.' and ':'). And only available when the preprocessor
-/// returns annot_module_name token.
-///
-/// For exmaple:
-///
-/// export module m.n:c.d
-///
-/// The module name array has 3 tokens ['m', '.', 'n'].
-/// The partition name array has 4 tokens [':', 'c', '.', 'd'].
-///
-/// When import a partition in a named module fragment (Eg. import :part1;),
-/// the module name array will be empty, and the partition name array has 2
-/// tokens.
-///
-/// When we meet a private-module-fragment (Eg. module :private;), preprocessor
-/// will not return a annot_module_name token, but will return 2 separate tokens
-/// [':', 'kw_private'].
-
-class ModuleNameInfo {
-  friend class Preprocessor;
-  ArrayRef<Token> ModuleName;
-  ArrayRef<Token> PartitionName;
-
-  ModuleNameInfo(ArrayRef<Token> AnnotToks, std::optional<unsigned> ColonIndex);
-
-public:
-  /// Return the contiguous token array.
-  ArrayRef<Token> getTokens() const {
-    if (ModuleName.empty())
-      return PartitionName;
-    if (PartitionName.empty())
-      return ModuleName;
-    return ArrayRef(ModuleName.begin(), PartitionName.end());
-  }
-  bool hasModuleName() const { return !ModuleName.empty(); }
-  bool hasPartitionName() const { return !PartitionName.empty(); }
-  ArrayRef<Token> getModuleName() const { return ModuleName; }
-  ArrayRef<Token> getPartitionName() const { return PartitionName; }
-  Token getColonToken() const {
-    assert(hasPartitionName() && "Do not have a partition name");
-    return getPartitionName().front();
-  }
-
-  /// Under the standard C++ Modules, the dot is just part of the module name,
-  /// and not a real hierarchy separator. Flatten such module names now.
-  std::string getFlatName() const;
-
-  /// Build a module id path from the contiguous token array, both include
-  /// module name and partition name.
-  void getModuleIdPath(
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
-
-  /// Build a module id path from \param ModuleName.
-  static void getModuleIdPath(
-      ArrayRef<Token> ModuleName,
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path);
-};
 
 } // namespace clang
 

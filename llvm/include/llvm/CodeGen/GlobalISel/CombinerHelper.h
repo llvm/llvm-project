@@ -129,6 +129,12 @@ public:
 
   const TargetLowering &getTargetLowering() const;
 
+  const MachineFunction &getMachineFunction() const;
+
+  const DataLayout &getDataLayout() const;
+
+  LLVMContext &getContext() const;
+
   /// \returns true if the combiner is running pre-legalization.
   bool isPreLegalize() const;
 
@@ -389,12 +395,6 @@ public:
                             std::tuple<Register, unsigned> &MatchInfo);
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
-
-  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
-  bool matchCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
-  void applyCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
 
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
@@ -886,6 +886,23 @@ public:
 
   bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
+                          BuildFnTy &MatchInfo);
+
+  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
+                         BuildFnTy &MatchInfo);
+  bool matchFoldAPlusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC2MinusAPlusC1(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldAMinusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC1Minus2MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // fold ((A-C1)+C2) -> (A+(C2-C1))
+  bool matchFoldAMinusC1PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -998,6 +1015,8 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
 };
 } // namespace llvm
 

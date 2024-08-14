@@ -94,6 +94,8 @@ define i64 @read_flags_reg_pressure() nounwind {
 ; WIN64-NEXT:    pushq %rbx
 ; WIN64-NEXT:    subq $16, %rsp
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; WIN64-NEXT:    pushq %rbp
+; WIN64-NEXT:    pushq %rax
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP
 ; WIN64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -103,6 +105,8 @@ define i64 @read_flags_reg_pressure() nounwind {
 ; WIN64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP
+; WIN64-NEXT:    addq $8, %rsp
+; WIN64-NEXT:    popq %rbp
 ; WIN64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rbx
@@ -177,6 +181,8 @@ define void @write_flags_reg_pressure(i64 noundef %0) nounwind {
 ; WIN64-NEXT:    subq $16, %rsp
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
 ; WIN64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; WIN64-NEXT:    pushq %rbp
+; WIN64-NEXT:    pushq %rax
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP
 ; WIN64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -186,6 +192,8 @@ define void @write_flags_reg_pressure(i64 noundef %0) nounwind {
 ; WIN64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP
+; WIN64-NEXT:    popq %rax
+; WIN64-NEXT:    popq %rbp
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rbx
 ; WIN64-NEXT:    popq %rdi

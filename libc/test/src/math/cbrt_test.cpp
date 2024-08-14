@@ -21,8 +21,8 @@ using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
   constexpr uint64_t COUNT = 123'451;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(1.0).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(8.0).uintval();
+  uint64_t START = FPBits(1.0).uintval();
+  uint64_t STOP = FPBits(8.0).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -38,12 +38,12 @@ TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(x).is_inf_or_nan())
         continue;
 
       double result = LIBC_NAMESPACE::cbrt(x);
       ++total;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_inf_or_nan())
         continue;
 
       ++tested;

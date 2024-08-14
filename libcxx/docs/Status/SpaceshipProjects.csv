@@ -83,7 +83,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[string.view.synop] <https://wg21.link/string.view.synop>`_
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_",| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 - `5.7 Clause 22: Containers library <https://wg21.link/p1614r2#clause-22-containers-library>`_,,,,
-| `[container.requirements.general] <https://wg21.link/container.requirements.general>`_,|,None,Unassigned,|Not Started|
+| `[container.requirements.general] <https://wg21.link/container.requirements.general>`_,|,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],"| Adrian Vogelsgesang
 | Hristo Hristov",|Complete|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `deque <https://reviews.llvm.org/D144821>`_,[expos.only.func],Hristo Hristov,|Complete|

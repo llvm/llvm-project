@@ -287,7 +287,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
       }
     }
 
-    if (!MO.isUse())
+    if (!MO.readsReg())
       continue;
 
     assert(MRI->getVRegDef(Reg) &&

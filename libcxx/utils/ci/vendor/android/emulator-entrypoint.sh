@@ -45,5 +45,5 @@ fi
 
 # Use exec so that the emulator is PID 1, so that `docker stop` kills the
 # emulator.
-exec emulator @emulator -no-audio -no-window \
+exec emulator @emulator -no-audio -no-window -no-metrics \
     -partition-size "${EMU_PARTITION_SIZE}"

@@ -49,6 +49,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
@@ -1080,42 +1081,55 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool isRequested = arg != nullptr;
+  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (!config->isPic) {
+    if (requested)
+      error("-fixup_chains is incompatible with -no_pie");
 
-  // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
-        {PLATFORM_IOS, VersionTuple(13, 4)},
-        {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end() &&
-      it->second > config->platformInfo.target.MinDeployment) {
-    if (!isRequested)
-      return false;
-
-    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
-         it->second.getAsString() + ", which is newer than target minimum of " +
-         config->platformInfo.target.MinDeployment.getAsString());
+    return false;
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (isRequested)
+    if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
+
     return false;
   }
 
-  if (!config->isPic) {
-    if (isRequested)
-      error("-fixup_chains is incompatible with -no_pie");
+  if (args.hasArg(OPT_preload)) {
+    if (requested)
+      error("-fixup_chains is incompatible with -preload");
+
     return false;
   }
 
-  // TODO: Enable by default once stable.
-  return isRequested;
+  if (requested)
+    return true;
+
+  static const std::array<std::pair<PlatformType, VersionTuple>, 9> minVersion =
+      {{
+          {PLATFORM_IOS, VersionTuple(13, 4)},
+          {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+          {PLATFORM_MACOS, VersionTuple(13, 0)},
+          {PLATFORM_TVOS, VersionTuple(14, 0)},
+          {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+          {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+          {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+          {PLATFORM_XROS, VersionTuple(1, 0)},
+          {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
+      }};
+  PlatformType platform = config->platformInfo.target.Platform;
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
+
+  // We don't know the versions for other platforms, so default to disabled.
+  if (it == minVersion.end())
+    return false;
+
+  if (it->second > config->platformInfo.target.MinDeployment)
+    return false;
+
+  return true;
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -1735,6 +1749,34 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfileSortProfilePath = arg->getValue();
+    IncompatWithCGSort(arg->getSpelling());
+  }
+  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->functionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->functionOrderForCompression = true;
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(

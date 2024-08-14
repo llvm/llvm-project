@@ -246,6 +246,27 @@ static void EmitPrefix(llvm::raw_ostream &o, llvm::raw_ostream::Colors color,
   }
 }
 
+std::optional<ProvenanceRange> AllSources::GetInclusionInfo(
+    const std::optional<ProvenanceRange> &range) const {
+  if (!range)
+    return std::nullopt;
+  const Origin &origin{MapToOrigin(range->start())};
+
+  return common::visit(
+      common::visitors{
+          [&](const Inclusion &inc) -> std::optional<ProvenanceRange> {
+            if (IsValid(origin.replaces) &&
+                range_.Contains(origin.replaces.start()))
+              return origin.replaces;
+            return std::nullopt;
+          },
+          [&](const auto &) -> std::optional<ProvenanceRange> {
+            return std::nullopt;
+          },
+      },
+      origin.u);
+}
+
 void AllSources::EmitMessage(llvm::raw_ostream &o,
     const std::optional<ProvenanceRange> &range, const std::string &message,
     const std::string &prefix, llvm::raw_ostream::Colors color,

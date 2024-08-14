@@ -814,8 +814,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
                                                 VTableClass);
-      if (auto Authentication =
-              CGM.getVTablePointerAuthentication(VTableClass)) {
+      if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
         VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
             VTableAddressPoint, *Authentication);
         if (!VTableAddressPoint)

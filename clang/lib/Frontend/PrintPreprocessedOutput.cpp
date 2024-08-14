@@ -758,10 +758,9 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   // These tokens are not expanded to anything and don't need whitespace before
   // them.
   if (Tok.is(tok::eof) ||
-      (Tok.isAnnotation() && Tok.isNot(tok::annot_header_unit) &&
-       Tok.isNot(tok::annot_module_begin) && Tok.isNot(tok::annot_module_end) &&
-       Tok.isNot(tok::annot_module_name) &&
-       Tok.isNot(tok::annot_repl_input_end) && Tok.isNot(tok::annot_embed)))
+      (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
+       !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
+       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -952,11 +951,6 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       IsStartOfLine = true;
       continue;
-    } else if (Tok.is(tok::annot_module_name)) {
-      auto *Info = static_cast<ModuleNameInfo *>(Tok.getAnnotationValue());
-      *Callbacks->OS << Info->getFlatName();
-      PP.Lex(Tok);
-      continue;
     } else if (Tok.is(tok::annot_header_unit)) {
       // This is a header-name that has been (effectively) converted into a
       // module-name.
@@ -986,7 +980,6 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
         *Callbacks->OS << static_cast<unsigned>(*Iter);
         PrintComma = true;
       }
-      IsStartOfLine = true;
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.

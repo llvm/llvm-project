@@ -60,6 +60,7 @@ void MachObjectWriter::reset() {
   VersionInfo.SDKVersion = VersionTuple();
   TargetVariantVersionInfo.Major = 0;
   TargetVariantVersionInfo.SDKVersion = VersionTuple();
+  LinkerOptions.clear();
   MCObjectWriter::reset();
 }
 
@@ -743,7 +744,7 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     if (!hasReliableSymbolDifference) {
       if (!SA.isInSection() || &SecA != &SecB ||
           (!SA.isTemporary() && FB.getAtom() != SA.getFragment()->getAtom() &&
-           Asm.getSubsectionsViaSymbols()))
+           SubsectionsViaSymbols))
         return false;
       return true;
     }
@@ -791,13 +792,13 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
 
-  if (!Asm.CGProfile.empty()) {
+  if (!CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
     Frag.getContents().clear();
     raw_svector_ostream OS(Frag.getContents());
-    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
+    for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
       support::endian::write(OS, FromIndex, W.Endian);
@@ -857,7 +858,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Add the linker option load commands sizes.
-  for (const auto &Option : Asm.getLinkerOptions()) {
+  for (const auto &Option : LinkerOptions) {
     ++NumLoadCommands;
     LoadCommandsSize += ComputeLinkerOptionsLoadCommandSize(Option, is64Bit());
   }
@@ -893,7 +894,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
 
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              Asm.getSubsectionsViaSymbols());
+              SubsectionsViaSymbols);
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,
@@ -1016,7 +1017,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   // Write the linker options load commands.
-  for (const auto &Option : Asm.getLinkerOptions())
+  for (const auto &Option : LinkerOptions)
     writeLinkerOptionsLoadCommand(Option);
 
   // Write the actual section data.
@@ -1106,11 +1107,4 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
   }
 
   return NumBytesWritten();
-}
-
-std::unique_ptr<MCObjectWriter>
-llvm::createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
-                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return std::make_unique<MachObjectWriter>(std::move(MOTW), OS,
-                                             IsLittleEndian);
 }

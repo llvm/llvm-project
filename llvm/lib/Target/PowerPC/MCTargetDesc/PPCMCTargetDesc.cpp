@@ -25,11 +25,11 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -298,15 +298,14 @@ public:
   }
 
   void emitAbiVersion(int AbiVersion) override {
-    MCAssembler &MCA = getStreamer().getAssembler();
-    unsigned Flags = MCA.getELFHeaderEFlags();
+    ELFObjectWriter &W = getStreamer().getWriter();
+    unsigned Flags = W.getELFHeaderEFlags();
     Flags &= ~ELF::EF_PPC64_ABI;
     Flags |= (AbiVersion & ELF::EF_PPC64_ABI);
-    MCA.setELFHeaderEFlags(Flags);
+    W.setELFHeaderEFlags(Flags);
   }
 
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
-    MCAssembler &MCA = getStreamer().getAssembler();
 
     // encodePPC64LocalEntryOffset will report an error if it cannot
     // encode LocalOffset.
@@ -319,9 +318,10 @@ public:
 
     // For GAS compatibility, unless we already saw a .abiversion directive,
     // set e_flags to indicate ELFv2 ABI.
-    unsigned Flags = MCA.getELFHeaderEFlags();
+    ELFObjectWriter &W = getStreamer().getWriter();
+    unsigned Flags = W.getELFHeaderEFlags();
     if ((Flags & ELF::EF_PPC64_ABI) == 0)
-      MCA.setELFHeaderEFlags(Flags | 2);
+      W.setELFHeaderEFlags(Flags | 2);
   }
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {

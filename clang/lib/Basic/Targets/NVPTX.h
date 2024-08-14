@@ -119,7 +119,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::VoidPtrBuiltinVaList;
+    return TargetInfo::CharPtrBuiltinVaList;
   }
 
   bool isValidCPUName(StringRef Name) const override {

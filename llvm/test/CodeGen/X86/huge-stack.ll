@@ -7,7 +7,7 @@ define void @foo() unnamed_addr #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $8589934462, %rax # imm = 0x1FFFFFF7E
 ; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset -122
+; CHECK-NEXT:    .cfi_def_cfa_offset 8589934470
 ; CHECK-NEXT:    movb $42, -129(%rsp)
 ; CHECK-NEXT:    movb $43, -128(%rsp)
 ; CHECK-NEXT:    movabsq $8589934462, %rax # imm = 0x1FFFFFF7E

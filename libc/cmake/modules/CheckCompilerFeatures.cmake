@@ -5,6 +5,8 @@
 set(
   ALL_COMPILER_FEATURES
     "builtin_ceil_floor_rint_trunc"
+    "builtin_fmax_fmin"
+    "builtin_fmaxf16_fminf16"
     "builtin_round"
     "builtin_roundeven"
     "float16"
@@ -14,6 +16,12 @@ set(
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
 list(SORT ALL_COMPILER_FEATURES)
+
+# Compiler features that are unavailable on GPU targets with the in-tree Clang.
+set(
+  CPU_ONLY_COMPILER_FEATURES
+    "float128"
+)
 
 # Function to check whether the compiler supports the provided set of features.
 # Usage:
@@ -65,13 +73,26 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
   endif()
 
-  try_compile(
-    has_feature
-    ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
-    SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
-    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
-    LINK_OPTIONS ${link_options}
-  )
+  if(LIBC_TARGET_OS_IS_GPU)
+    # CUDA shouldn't be required to build the libc, only to test it, so we can't
+    # try to build CUDA binaries here. Since GPU builds are always compiled with
+    # the in-tree Clang, we just hardcode which compiler features are available
+    # when targeting GPUs.
+    if(feature IN_LIST CPU_ONLY_COMPILER_FEATURES)
+      set(has_feature FALSE)
+    else()
+      set(has_feature TRUE)
+    endif()
+  else()
+    try_compile(
+      has_feature
+      ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
+      SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
+      COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
+      LINK_OPTIONS ${link_options}
+    )
+  endif()
+
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
     if(${feature} STREQUAL "float16")
@@ -82,6 +103,10 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
     elseif(${feature} STREQUAL "builtin_ceil_floor_rint_trunc")
       set(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC TRUE)
+    elseif(${feature} STREQUAL "builtin_fmax_fmin")
+      set(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN TRUE)
+    elseif(${feature} STREQUAL "builtin_fmaxf16_fminf16")
+      set(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16 TRUE)
     elseif(${feature} STREQUAL "builtin_round")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUND TRUE)
     elseif(${feature} STREQUAL "builtin_roundeven")
