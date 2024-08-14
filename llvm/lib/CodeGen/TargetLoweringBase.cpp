@@ -753,6 +753,11 @@ void TargetLoweringBase::initActions() {
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
 
+    // Saturated trunc
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
+
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
                        Expand);

@@ -1410,6 +1410,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
+  for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Legal);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Legal);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Legal);
+  }
+
   if (Subtarget->hasSME()) {
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   }
@@ -29226,6 +29232,18 @@ bool AArch64TargetLowering::hasInlineStackProbe(
     const MachineFunction &MF) const {
   return !Subtarget->isTargetWindows() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
+}
+
+bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
+  switch (Opc) {
+  case ISD::TRUNCATE_SSAT_S:
+  case ISD::TRUNCATE_SSAT_U:
+  case ISD::TRUNCATE_USAT_U:
+    if (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)
+      return true;
+  }
+
+  return TargetLowering::isTypeDesirableForOp(Opc, VT);
 }
 
 #ifndef NDEBUG
