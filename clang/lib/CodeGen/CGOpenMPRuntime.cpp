@@ -9534,28 +9534,7 @@ static void genMapInfoForCaptures(
     uint32_t &CapturedCount,
     MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
 
-// static void emitTargetCallKernelLaunch(
-//     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
-//     const OMPExecutableDirective &D,
-//     llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
-//     const CapturedStmt &CS, bool OffloadingMandatory,
-//     llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
-//     llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
-//     llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
-//     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
-//                                      const OMPLoopDirective &D)>
-//         SizeEmitter,
-//     CodeGenFunction &CGF, CodeGenModule &CGM) {
-//   llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
-
-//   // Fill up the arrays with all the captured variables.
-//   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
-
-//   // Get mappable expression information.
-//   MappableExprsHandler MEHandler(D, CGF);
   llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
-  // llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
-
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
   CapturedCount = 0;
