@@ -754,6 +754,17 @@ def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvbc),
                         "'Zvbc' (Vector Carryless Multiplication)">;
 
+def FeatureStdExtZvbc32e
+    : RISCVExperimentalExtension<"zvbc32e", 0, 7,
+                                 "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)">;
+def HasStdExtZvbc32e : Predicate<"Subtarget->hasStdExtZvbc32e()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvbc32e),
+                        "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)">;
+
+def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
+                             AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
+                             "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;
+
 def FeatureStdExtZvkg
     : RISCVExtension<"zvkg", 1, 0,
                      "'Zvkg' (Vector GCM instructions for Cryptography)">,
@@ -761,6 +772,14 @@ def FeatureStdExtZvkg
 def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkg),
                         "'Zvkg' (Vector GCM instructions for Cryptography)">;
+
+def FeatureStdExtZvkgs
+    : RISCVExperimentalExtension<"zvkgs", 0, 7,
+                                 "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)",
+                                 [FeatureStdExtZvkg]>;
+def HasStdExtZvkgs : Predicate<"Subtarget->hasStdExtZvkgs()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvkgs),
+                        "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)">;
 
 def FeatureStdExtZvkned
     : RISCVExtension<"zvkned", 1, 0,

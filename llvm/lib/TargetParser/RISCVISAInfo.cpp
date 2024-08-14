@@ -750,8 +750,13 @@ Error RISCVISAInfo::checkDependency() {
     return getError(
         "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
 
-  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
-       Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
+  if (Exts.count("zvbc32e") && !Exts.count("zve32x"))
+    return getError(
+        "'zvbc32e' requires 'v' or 'zve32*' extension to also be specified");
+
+  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkgs") ||
+       Exts.count("zvkned") || Exts.count("zvknha") || Exts.count("zvksed") ||
+       Exts.count("zvksh")) &&
       !HasVector)
     return getError(
         "'zvk*' requires 'v' or 'zve*' extension to also be specified");
