@@ -65,9 +65,6 @@ enum AlignTypeEnum {
 /// Layout alignment element.
 ///
 /// Stores the alignment data associated with a given type bit width.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
 struct LayoutAlignElem {
   uint32_t TypeBitWidth;
   Align ABIAlign;
@@ -82,14 +79,11 @@ struct LayoutAlignElem {
 /// Layout pointer alignment element.
 ///
 /// Stores the alignment data associated with a given pointer and address space.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
 struct PointerAlignElem {
+  uint32_t AddressSpace;
+  uint32_t TypeBitWidth;
   Align ABIAlign;
   Align PrefAlign;
-  uint32_t TypeBitWidth;
-  uint32_t AddressSpace;
   uint32_t IndexBitWidth;
 
   /// Initializer
@@ -115,16 +109,16 @@ public:
     MultipleOfFunctionAlign,
   };
 private:
-  /// Defaults to false.
-  bool BigEndian;
+  bool BigEndian = false;
 
-  unsigned AllocaAddrSpace;
-  unsigned ProgramAddrSpace;
-  unsigned DefaultGlobalsAddrSpace;
+  unsigned AllocaAddrSpace = 0;
+  unsigned ProgramAddrSpace = 0;
+  unsigned DefaultGlobalsAddrSpace = 0;
 
   MaybeAlign StackNaturalAlign;
   MaybeAlign FunctionPtrAlign;
-  FunctionPtrAlignType TheFunctionPtrAlignType;
+  FunctionPtrAlignType TheFunctionPtrAlignType =
+      FunctionPtrAlignType::Independent;
 
   enum ManglingModeT {
     MM_None,
@@ -136,23 +130,21 @@ private:
     MM_Mips,
     MM_XCOFF
   };
-  ManglingModeT ManglingMode;
+  ManglingModeT ManglingMode = MM_None;
 
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// Primitive type alignment data. This is sorted by type and bit
-  /// width during construction.
-  using AlignmentsTy = SmallVector<LayoutAlignElem, 4>;
-  AlignmentsTy IntAlignments;
-  AlignmentsTy FloatAlignments;
-  AlignmentsTy VectorAlignments;
+  // Primitive type specifications. Sorted and uniqued by type bit width.
+  SmallVector<LayoutAlignElem, 6> IntAlignments;
+  SmallVector<LayoutAlignElem, 4> FloatAlignments;
+  SmallVector<LayoutAlignElem, 10> VectorAlignments;
+
+  // Pointer type specifications. Sorted and uniqued by address space number.
+  SmallVector<PointerAlignElem, 8> Pointers;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
-
-  using PointersTy = SmallVector<PointerAlignElem, 8>;
-  PointersTy Pointers;
 
   const PointerAlignElem &getPointerAlignElem(uint32_t AddressSpace) const;
 
@@ -189,6 +181,9 @@ private:
   Error parseSpecifier(StringRef Desc);
 
 public:
+  /// Constructs a DataLayout with default values.
+  DataLayout();
+
   /// Constructs a DataLayout from a specification string.
   /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
   explicit DataLayout(StringRef LayoutString);
