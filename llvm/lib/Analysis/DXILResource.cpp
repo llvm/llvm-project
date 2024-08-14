@@ -8,15 +8,145 @@
 
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "dxil-resource"
 
 using namespace llvm;
 using namespace dxil;
+
+static constexpr StringRef getResourceClassName(ResourceClass RC) {
+  switch (RC) {
+  case ResourceClass::SRV:
+    return "SRV";
+  case ResourceClass::UAV:
+    return "UAV";
+  case ResourceClass::CBuffer:
+    return "CBuffer";
+  case ResourceClass::Sampler:
+    return "Sampler";
+  }
+  llvm_unreachable("Unhandled ResourceClass");
+}
+
+static constexpr StringRef getResourceKindName(ResourceKind RK) {
+  switch (RK) {
+  case ResourceKind::Texture1D:
+    return "Texture1D";
+  case ResourceKind::Texture2D:
+    return "Texture2D";
+  case ResourceKind::Texture2DMS:
+    return "Texture2DMS";
+  case ResourceKind::Texture3D:
+    return "Texture3D";
+  case ResourceKind::TextureCube:
+    return "TextureCube";
+  case ResourceKind::Texture1DArray:
+    return "Texture1DArray";
+  case ResourceKind::Texture2DArray:
+    return "Texture2DArray";
+  case ResourceKind::Texture2DMSArray:
+    return "Texture2DMSArray";
+  case ResourceKind::TextureCubeArray:
+    return "TextureCubeArray";
+  case ResourceKind::TypedBuffer:
+    return "TypedBuffer";
+  case ResourceKind::RawBuffer:
+    return "RawBuffer";
+  case ResourceKind::StructuredBuffer:
+    return "StructuredBuffer";
+  case ResourceKind::CBuffer:
+    return "CBuffer";
+  case ResourceKind::Sampler:
+    return "Sampler";
+  case ResourceKind::TBuffer:
+    return "TBuffer";
+  case ResourceKind::RTAccelerationStructure:
+    return "RTAccelerationStructure";
+  case ResourceKind::FeedbackTexture2D:
+    return "FeedbackTexture2D";
+  case ResourceKind::FeedbackTexture2DArray:
+    return "FeedbackTexture2DArray";
+  case ResourceKind::NumEntries:
+  case ResourceKind::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ResourceKind");
+}
+
+static constexpr StringRef getElementTypeName(ElementType ET) {
+  switch (ET) {
+  case ElementType::I1:
+    return "i1";
+  case ElementType::I16:
+    return "i16";
+  case ElementType::U16:
+    return "u16";
+  case ElementType::I32:
+    return "i32";
+  case ElementType::U32:
+    return "u32";
+  case ElementType::I64:
+    return "i64";
+  case ElementType::U64:
+    return "u64";
+  case ElementType::F16:
+    return "f16";
+  case ElementType::F32:
+    return "f32";
+  case ElementType::F64:
+    return "f64";
+  case ElementType::SNormF16:
+    return "snorm_f16";
+  case ElementType::UNormF16:
+    return "unorm_f16";
+  case ElementType::SNormF32:
+    return "snorm_f32";
+  case ElementType::UNormF32:
+    return "unorm_f32";
+  case ElementType::SNormF64:
+    return "snorm_f64";
+  case ElementType::UNormF64:
+    return "unorm_f64";
+  case ElementType::PackedS8x32:
+    return "p32i8";
+  case ElementType::PackedU8x32:
+    return "p32u8";
+  case ElementType::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ElementType");
+}
+
+static constexpr StringRef getSamplerTypeName(SamplerType ST) {
+  switch (ST) {
+  case SamplerType::Default:
+    return "Default";
+  case SamplerType::Comparison:
+    return "Comparison";
+  case SamplerType::Mono:
+    return "Mono";
+  }
+  llvm_unreachable("Unhandled SamplerType");
+}
+
+static constexpr StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
+  switch (SFT) {
+  case SamplerFeedbackType::MinMip:
+    return "MinMip";
+  case SamplerFeedbackType::MipRegionUsed:
+    return "MipRegionUsed";
+  }
+  llvm_unreachable("Unhandled SamplerFeedbackType");
+}
 
 bool ResourceInfo::isUAV() const { return RC == ResourceClass::UAV; }
 
@@ -240,7 +370,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(Binding.UniqueID));
+  MDVals.push_back(getIntMD(Binding.RecordID));
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
@@ -330,6 +460,248 @@ std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   return {Word0, Word1};
 }
 
+void ResourceInfo::print(raw_ostream &OS) const {
+  OS << "  Symbol: ";
+  Symbol->printAsOperand(OS);
+  OS << "\n";
+
+  OS << "  Name: \"" << Name << "\"\n"
+     << "  Binding:\n"
+     << "    Record ID: " << Binding.RecordID << "\n"
+     << "    Space: " << Binding.Space << "\n"
+     << "    Lower Bound: " << Binding.LowerBound << "\n"
+     << "    Size: " << Binding.Size << "\n"
+     << "  Class: " << getResourceClassName(RC) << "\n"
+     << "  Kind: " << getResourceKindName(Kind) << "\n";
+
+  if (isCBuffer()) {
+    OS << "  CBuffer size: " << CBufferSize << "\n";
+  } else if (isSampler()) {
+    OS << "  Sampler Type: " << getSamplerTypeName(SamplerTy) << "\n";
+  } else {
+    if (isUAV()) {
+      OS << "  Globally Coherent: " << UAVFlags.GloballyCoherent << "\n"
+         << "  HasCounter: " << UAVFlags.HasCounter << "\n"
+         << "  IsROV: " << UAVFlags.IsROV << "\n";
+    }
+    if (isMultiSample())
+      OS << "  Sample Count: " << MultiSample.Count << "\n";
+
+    if (isStruct()) {
+      OS << "  Buffer Stride: " << Struct.Stride << "\n";
+      OS << "  Alignment: " << Struct.AlignLog2 << "\n";
+    } else if (isTyped()) {
+      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy) << "\n"
+         << "  Element Count: " << Typed.ElementCount << "\n";
+    } else if (isFeedback())
+      OS << "  Feedback Type: " << getSamplerFeedbackTypeName(Feedback.Type)
+         << "\n";
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// ResourceMapper
+
+static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
+  // TODO: Handle unorm, snorm, and packed.
+  Ty = Ty->getScalarType();
+
+  if (Ty->isIntegerTy()) {
+    switch (Ty->getIntegerBitWidth()) {
+    case 16:
+      return IsSigned ? ElementType::I16 : ElementType::U16;
+    case 32:
+      return IsSigned ? ElementType::I32 : ElementType::U32;
+    case 64:
+      return IsSigned ? ElementType::I64 : ElementType::U64;
+    case 1:
+    default:
+      return ElementType::Invalid;
+    }
+  } else if (Ty->isFloatTy()) {
+    return ElementType::F32;
+  } else if (Ty->isDoubleTy()) {
+    return ElementType::F64;
+  } else if (Ty->isHalfTy()) {
+    return ElementType::F16;
+  }
+
+  return ElementType::Invalid;
+}
+
+namespace {
+
+class ResourceMapper {
+  Module &M;
+  LLVMContext &Context;
+  DXILResourceMap &Resources;
+
+  // In DXC, Record ID is unique per resource type. Match that.
+  uint32_t NextUAV = 0;
+  uint32_t NextSRV = 0;
+  uint32_t NextCBuf = 0;
+  uint32_t NextSmp = 0;
+
+public:
+  ResourceMapper(Module &M,
+                 MapVector<CallInst *, dxil::ResourceInfo> &Resources)
+      : M(M), Context(M.getContext()), Resources(Resources) {}
+
+  void diagnoseHandle(CallInst *CI, const Twine &Msg,
+                      DiagnosticSeverity Severity = DS_Error) {
+    std::string S;
+    raw_string_ostream SS(S);
+    CI->printAsOperand(SS);
+    DiagnosticInfoUnsupported Diag(*CI->getFunction(), Msg + ": " + SS.str(),
+                                   CI->getDebugLoc(), Severity);
+    Context.diagnose(Diag);
+  }
+
+  ResourceInfo *mapBufferType(CallInst *CI, TargetExtType *HandleTy,
+                              bool IsTyped) {
+    if (HandleTy->getNumTypeParameters() != 1 ||
+        HandleTy->getNumIntParameters() != (IsTyped ? 3 : 2)) {
+      diagnoseHandle(CI, Twine("Invalid buffer target type"));
+      return nullptr;
+    }
+
+    Type *ElTy = HandleTy->getTypeParameter(0);
+    unsigned IsWriteable = HandleTy->getIntParameter(0);
+    unsigned IsROV = HandleTy->getIntParameter(1);
+    bool IsSigned = IsTyped && HandleTy->getIntParameter(2);
+
+    ResourceClass RC = IsWriteable ? ResourceClass::UAV : ResourceClass::SRV;
+    ResourceKind Kind;
+    if (IsTyped)
+      Kind = ResourceKind::TypedBuffer;
+    else if (ElTy->isIntegerTy(8))
+      Kind = ResourceKind::RawBuffer;
+    else
+      Kind = ResourceKind::StructuredBuffer;
+
+    // TODO: We need to lower to a typed pointer, can we smuggle the type
+    // through?
+    Value *Symbol = UndefValue::get(PointerType::getUnqual(Context));
+    // TODO: We don't actually keep track of the name right now...
+    StringRef Name = "";
+
+    auto [It, Success] = Resources.try_emplace(CI, RC, Kind, Symbol, Name);
+    assert(Success && "Mapping the same CallInst again?");
+    (void)Success;
+    // We grab a pointer into the map's storage, which isn't generally safe.
+    // Since we're just using this to fill in the info the map won't mutate and
+    // the pointer stays valid for as long as we need it to.
+    ResourceInfo *RI = &(It->second);
+
+    if (RI->isUAV())
+      // TODO: We need analysis for GloballyCoherent and HasCounter
+      RI->setUAV(false, false, IsROV);
+
+    if (RI->isTyped()) {
+      dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+      uint32_t Count = 1;
+      if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
+        Count = VTy->getNumElements();
+      RI->setTyped(ET, Count);
+    } else if (RI->isStruct()) {
+      const DataLayout &DL = M.getDataLayout();
+
+      // This mimics what DXC does. Notably, we only ever set the alignment if
+      // the type is actually a struct type.
+      uint32_t Stride = DL.getTypeAllocSize(ElTy);
+      MaybeAlign Alignment;
+      if (auto *STy = dyn_cast<StructType>(ElTy))
+        Alignment = DL.getStructLayout(STy)->getAlignment();
+      RI->setStruct(Stride, Alignment);
+    }
+
+    return RI;
+  }
+
+  ResourceInfo *mapHandleIntrin(CallInst *CI) {
+    FunctionType *FTy = CI->getFunctionType();
+    Type *RetTy = FTy->getReturnType();
+    auto *HandleTy = dyn_cast<TargetExtType>(RetTy);
+    if (!HandleTy) {
+      diagnoseHandle(CI, "dx.handle.fromBinding requires target type");
+      return nullptr;
+    }
+
+    StringRef TypeName = HandleTy->getName();
+    if (TypeName == "dx.TypedBuffer") {
+      return mapBufferType(CI, HandleTy, /*IsTyped=*/true);
+    } else if (TypeName == "dx.RawBuffer") {
+      return mapBufferType(CI, HandleTy, /*IsTyped=*/false);
+    } else if (TypeName == "dx.CBuffer") {
+      // TODO: implement
+      diagnoseHandle(CI, "dx.CBuffer handles are not implemented yet");
+      return nullptr;
+    } else if (TypeName == "dx.Sampler") {
+      // TODO: implement
+      diagnoseHandle(CI, "dx.Sampler handles are not implemented yet");
+      return nullptr;
+    } else if (TypeName == "dx.Texture") {
+      // TODO: implement
+      diagnoseHandle(CI, "dx.Texture handles are not implemented yet");
+      return nullptr;
+    }
+
+    diagnoseHandle(CI, "Invalid target(dx) type");
+    return nullptr;
+  }
+
+  ResourceInfo *mapHandleFromBinding(CallInst *CI) {
+    assert(CI->getIntrinsicID() == Intrinsic::dx_handle_fromBinding &&
+           "Must be dx.handle.fromBinding intrinsic");
+
+    ResourceInfo *RI = mapHandleIntrin(CI);
+    if (!RI)
+      return nullptr;
+
+    uint32_t NextID;
+    if (RI->isCBuffer())
+      NextID = NextCBuf++;
+    else if (RI->isSampler())
+      NextID = NextSmp++;
+    else if (RI->isUAV())
+      NextID = NextUAV++;
+    else
+      NextID = NextSRV++;
+
+    uint32_t Space = cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+    uint32_t LowerBound =
+        cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    uint32_t Size = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+
+    RI->bind(NextID, Space, LowerBound, Size);
+
+    return RI;
+  }
+
+  void mapResources() {
+    for (Function &F : M.functions()) {
+      if (!F.isDeclaration())
+        continue;
+      LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
+      Intrinsic::ID ID = F.getIntrinsicID();
+      switch (ID) {
+      default:
+        // TODO: handle `dx.op` functions.
+        continue;
+      case Intrinsic::dx_handle_fromBinding:
+        for (User *U : F.users()) {
+          LLVM_DEBUG(dbgs() << "  Visiting: " << *U << "\n");
+          if (CallInst *CI = dyn_cast<CallInst>(U))
+            mapHandleFromBinding(CI);
+        }
+        break;
+      }
+    }
+  }
+};
+
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // DXILResourceAnalysis and DXILResourcePrinterPass
 
@@ -339,6 +711,7 @@ AnalysisKey DXILResourceAnalysis::Key;
 DXILResourceMap DXILResourceAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   DXILResourceMap Data;
+  ResourceMapper(M, Data).mapResources();
   return Data;
 }
 
@@ -351,7 +724,7 @@ PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
     OS << "Binding for ";
     Handle->print(OS);
     OS << "\n";
-    // TODO: Info.print(OS);
+    Info.print(OS);
     OS << "\n";
   }
 
@@ -373,6 +746,7 @@ void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool DXILResourceWrapperPass::runOnModule(Module &M) {
   ResourceMap.reset(new DXILResourceMap());
+  ResourceMapper(M, *ResourceMap).mapResources();
   return false;
 }
 
@@ -387,7 +761,7 @@ void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *) const {
     OS << "Binding for ";
     Handle->print(OS);
     OS << "\n";
-    // TODO: Info.print(OS);
+    Info.print(OS);
     OS << "\n";
   }
 }
