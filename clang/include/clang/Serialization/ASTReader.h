@@ -378,6 +378,7 @@ class ASTReader
 {
 public:
   /// Types of AST files.
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTIdentifierIterator;
   friend class ASTRecordReader;
@@ -1558,6 +1559,9 @@ private:
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
   translateTypeIDToIndex(serialization::TypeID ID) const;
+
+  /// Get a predefined Decl from ASTContext.
+  Decl *getPredefinedDecl(PredefinedDeclIDs ID);
 
 public:
   /// Load the AST file and validate its contents against the given

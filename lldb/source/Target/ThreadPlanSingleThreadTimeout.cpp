@@ -63,6 +63,7 @@ std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
   case State::Done:
     return "Done";
   }
+  llvm_unreachable("Uncovered state value!");
 }
 
 void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,

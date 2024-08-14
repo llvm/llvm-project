@@ -45,7 +45,6 @@ namespace llvm {
 
 class GlobalVariable;
 class LLVMContext;
-class Module;
 class StructLayout;
 class Triple;
 class Value;
@@ -66,9 +65,6 @@ enum AlignTypeEnum {
 /// Layout alignment element.
 ///
 /// Stores the alignment data associated with a given type bit width.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
 struct LayoutAlignElem {
   uint32_t TypeBitWidth;
   Align ABIAlign;
@@ -83,14 +79,11 @@ struct LayoutAlignElem {
 /// Layout pointer alignment element.
 ///
 /// Stores the alignment data associated with a given pointer and address space.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
 struct PointerAlignElem {
+  uint32_t AddressSpace;
+  uint32_t TypeBitWidth;
   Align ABIAlign;
   Align PrefAlign;
-  uint32_t TypeBitWidth;
-  uint32_t AddressSpace;
   uint32_t IndexBitWidth;
 
   /// Initializer
@@ -116,16 +109,16 @@ public:
     MultipleOfFunctionAlign,
   };
 private:
-  /// Defaults to false.
-  bool BigEndian;
+  bool BigEndian = false;
 
-  unsigned AllocaAddrSpace;
+  unsigned AllocaAddrSpace = 0;
+  unsigned ProgramAddrSpace = 0;
+  unsigned DefaultGlobalsAddrSpace = 0;
+
   MaybeAlign StackNaturalAlign;
-  unsigned ProgramAddrSpace;
-  unsigned DefaultGlobalsAddrSpace;
-
   MaybeAlign FunctionPtrAlign;
-  FunctionPtrAlignType TheFunctionPtrAlignType;
+  FunctionPtrAlignType TheFunctionPtrAlignType =
+      FunctionPtrAlignType::Independent;
 
   enum ManglingModeT {
     MM_None,
@@ -137,25 +130,27 @@ private:
     MM_Mips,
     MM_XCOFF
   };
-  ManglingModeT ManglingMode;
+  ManglingModeT ManglingMode = MM_None;
 
+  // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// Primitive type alignment data. This is sorted by type and bit
-  /// width during construction.
-  using AlignmentsTy = SmallVector<LayoutAlignElem, 4>;
-  AlignmentsTy IntAlignments;
-  AlignmentsTy FloatAlignments;
-  AlignmentsTy VectorAlignments;
-  LayoutAlignElem StructAlignment;
+  // Primitive type specifications. Sorted and uniqued by type bit width.
+  SmallVector<LayoutAlignElem, 6> IntAlignments;
+  SmallVector<LayoutAlignElem, 4> FloatAlignments;
+  SmallVector<LayoutAlignElem, 10> VectorAlignments;
+
+  // Pointer type specifications. Sorted and uniqued by address space number.
+  SmallVector<PointerAlignElem, 8> Pointers;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
 
-  using PointersTy = SmallVector<PointerAlignElem, 8>;
-  PointersTy Pointers;
-
   const PointerAlignElem &getPointerAlignElem(uint32_t AddressSpace) const;
+
+  // Struct type ABI and preferred alignments. The default spec is "a:8:64".
+  Align StructABIAlignment = Align::Constant<1>();
+  Align StructPrefAlignment = Align::Constant<8>();
 
   // The StructType -> StructLayout map.
   mutable void *LayoutMap = nullptr;
@@ -185,50 +180,22 @@ private:
   /// if the string is malformed.
   Error parseSpecifier(StringRef Desc);
 
-  // Free all internal data structures.
-  void clear();
-
 public:
-  /// Constructs a DataLayout from a specification string. See reset().
-  explicit DataLayout(StringRef LayoutDescription) {
-    reset(LayoutDescription);
-  }
+  /// Constructs a DataLayout with default values.
+  DataLayout();
 
-  /// Initialize target data from properties stored in the module.
-  explicit DataLayout(const Module *M);
+  /// Constructs a DataLayout from a specification string.
+  /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
+  explicit DataLayout(StringRef LayoutString);
 
   DataLayout(const DataLayout &DL) { *this = DL; }
 
   ~DataLayout(); // Not virtual, do not subclass this class
 
-  DataLayout &operator=(const DataLayout &DL) {
-    clear();
-    StringRepresentation = DL.StringRepresentation;
-    BigEndian = DL.isBigEndian();
-    AllocaAddrSpace = DL.AllocaAddrSpace;
-    StackNaturalAlign = DL.StackNaturalAlign;
-    FunctionPtrAlign = DL.FunctionPtrAlign;
-    TheFunctionPtrAlignType = DL.TheFunctionPtrAlignType;
-    ProgramAddrSpace = DL.ProgramAddrSpace;
-    DefaultGlobalsAddrSpace = DL.DefaultGlobalsAddrSpace;
-    ManglingMode = DL.ManglingMode;
-    LegalIntWidths = DL.LegalIntWidths;
-    IntAlignments = DL.IntAlignments;
-    FloatAlignments = DL.FloatAlignments;
-    VectorAlignments = DL.VectorAlignments;
-    StructAlignment = DL.StructAlignment;
-    Pointers = DL.Pointers;
-    NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
-    return *this;
-  }
+  DataLayout &operator=(const DataLayout &Other);
 
   bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
-
-  void init(const Module *M);
-
-  /// Parse a data layout string (with fallback to default values).
-  void reset(StringRef LayoutDescription);
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.

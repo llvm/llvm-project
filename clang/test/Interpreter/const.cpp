@@ -2,6 +2,9 @@
 // see https://github.com/llvm/llvm-project/issues/68092
 // XFAIL: host={{.*}}-windows-msvc
 
+// The test is flaky with asan https://github.com/llvm/llvm-project/issues/102858.
+// UNSUPPORTED: asan
+
 // RUN: cat %s | clang-repl | FileCheck %s
 // RUN: cat %s | clang-repl -Xcc -O2 | FileCheck %s
 

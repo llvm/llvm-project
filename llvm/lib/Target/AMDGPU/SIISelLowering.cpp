@@ -10872,8 +10872,8 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget->hasFractBug()) {
     SDValue Fabs = DAG.getNode(ISD::FABS, dl, VT, Val);
-    SDValue Inf = DAG.getConstantFP(
-        APFloat::getInf(SelectionDAG::EVTToAPFloatSemantics(VT)), dl, VT);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
 
     SDValue IsFinite = DAG.getSetCC(dl, MVT::i1, Fabs, Inf, ISD::SETOLT);
     SDValue Zero = DAG.getConstant(0, dl, InstrExpVT);
@@ -11383,7 +11383,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
                                           N->getMemoryVT(), DCI);
     if (NewPtr) {
-      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 8> NewOps(N->ops());
 
       NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -12578,9 +12578,8 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   SDValue N0 = N->getOperand(0);
 
   if (N0.isUndef()) {
-    return DCI.DAG.getConstantFP(
-        APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT)), SDLoc(N),
-        VT);
+    return DCI.DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()),
+                                 SDLoc(N), VT);
   }
 
   if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
@@ -12964,7 +12963,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   // fcanonicalize undef -> qnan
   if (N0.isUndef()) {
-    APFloat QNaN = APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT));
+    APFloat QNaN = APFloat::getQNaN(VT.getFltSemantics());
     return DAG.getConstantFP(QNaN, SDLoc(N), VT);
   }
 
@@ -15103,7 +15102,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    SmallVector<SDValue, 9> Ops(Node->ops());
     Ops[1] = Src0;
     Ops[3] = Src1;
     Ops[5] = Src2;
@@ -16165,14 +16164,7 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
-  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
-    return true;
-
-  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
-  // checking it.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+  return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
 }
 
 /// \return Action to perform on AtomicRMWInsts for integer operations.
@@ -16647,6 +16639,9 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  // If the return value isn't used, do not introduce a false use in the phi.
+  bool ReturnValueIsUsed = !AI->use_empty();
+
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
@@ -16662,6 +16657,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Value *Val = AI->getValOperand();
   Type *ValTy = Val->getType();
   Value *Addr = AI->getPointerOperand();
+  Align Alignment = AI->getAlign();
 
   auto CreateNewAtomicRMW = [AI](IRBuilder<> &Builder, Value *Addr,
                                  Value *Val) -> Value * {
@@ -16695,12 +16691,12 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.SetInsertPoint(PrivateBB);
   Value *CastToPrivate = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::PRIVATE_ADDRESS));
-  Value *LoadedPrivate =
-      Builder.CreateLoad(ValTy, CastToPrivate, "loaded.private");
+  Value *LoadedPrivate = Builder.CreateAlignedLoad(ValTy, CastToPrivate,
+                                                   Alignment, "loaded.private");
 
   Value *NewVal = buildAtomicRMWValue(Op, Builder, LoadedPrivate, Val);
 
-  Builder.CreateStore(NewVal, CastToPrivate);
+  Builder.CreateAlignedStore(NewVal, CastToPrivate, Alignment);
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(GlobalBB);
@@ -16710,14 +16706,18 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
-  Loaded->addIncoming(LoadedShared, SharedBB);
-  Loaded->addIncoming(LoadedPrivate, PrivateBB);
-  Loaded->addIncoming(LoadedGlobal, GlobalBB);
+
+  if (ReturnValueIsUsed) {
+    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    Loaded->addIncoming(LoadedShared, SharedBB);
+    Loaded->addIncoming(LoadedPrivate, PrivateBB);
+    Loaded->addIncoming(LoadedGlobal, GlobalBB);
+    Loaded->takeName(AI);
+    AI->replaceAllUsesWith(Loaded);
+  }
+
   Builder.CreateBr(ExitBB);
 
-  Loaded->takeName(AI);
-  AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
 

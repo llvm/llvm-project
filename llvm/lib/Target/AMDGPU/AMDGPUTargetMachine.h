@@ -52,12 +52,6 @@ public:
     return TLOF.get();
   }
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
-                             CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
-
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
@@ -102,6 +96,12 @@ public:
   bool useIPRA() const override {
     return true;
   }
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 

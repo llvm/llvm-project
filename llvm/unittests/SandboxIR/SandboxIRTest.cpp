@@ -9,6 +9,7 @@
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -101,12 +102,12 @@ define void @foo(i32 %v1) {
 #ifndef NDEBUG
   std::string Buff;
   raw_string_ostream BS(Buff);
-  F->dump(BS);
-  Arg0->dump(BS);
-  BB->dump(BS);
-  AddI->dump(BS);
-  Const0->dump(BS);
-  OpaqueI->dump(BS);
+  F->dumpOS(BS);
+  Arg0->dumpOS(BS);
+  BB->dumpOS(BS);
+  AddI->dumpOS(BS);
+  Const0->dumpOS(BS);
+  OpaqueI->dumpOS(BS);
 #endif
 }
 
@@ -175,11 +176,11 @@ define i32 @foo(i32 %v0, i32 %v1) {
   EXPECT_EQ(Ret->getOperand(0), I0);
 
 #ifndef NDEBUG
-  // Check Use.dump()
+  // Check Use.dump(()
   std::string Buff;
   raw_string_ostream BS(Buff);
   BS << "\n";
-  I0->getOperandUse(0).dump(BS);
+  I0->getOperandUse(0).dumpOS(BS);
   EXPECT_EQ(Buff, R"IR(
 Def:  i32 %v0 ; SB2. (Argument)
 User:   %add0 = add i32 %v0, %v1 ; SB5. (Opaque)
@@ -395,7 +396,7 @@ bb1:
     std::string Buff;
     raw_string_ostream BS(Buff);
     BS << "\n";
-    F->dump(BS);
+    F->dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
 void @foo(i32 %arg0, i32 %arg1) {
 bb0:
@@ -464,7 +465,7 @@ bb1:
     std::string Buff;
     raw_string_ostream BS(Buff);
     BS << "\n";
-    BB0.dump(BS);
+    BB0.dumpOS(BS);
     EXPECT_EQ(Buff, R"IR(
 bb0:
   br label %bb1 ; SB3. (Br)
@@ -628,6 +629,99 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
     EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
     EXPECT_EQ(NewSel, FortyTwo);
   }
+}
+
+TEST_F(SandboxIRTest, ExtractElementInst) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %vec, i32 %idx) {
+  %ins0 = extractelement <2 x i8> %vec, i32 %idx
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgVec = F.getArg(0);
+  auto *ArgIdx = F.getArg(1);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *EI = cast<sandboxir::ExtractElementInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(EI->getOpcode(), sandboxir::Instruction::Opcode::ExtractElement);
+  EXPECT_EQ(EI->getOperand(0), ArgVec);
+  EXPECT_EQ(EI->getOperand(1), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperand(), ArgVec);
+  EXPECT_EQ(EI->getIndexOperand(), ArgIdx);
+  EXPECT_EQ(EI->getVectorOperandType(), ArgVec->getType());
+
+  auto *NewI1 =
+      cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
+          ArgVec, ArgIdx, Ret, Ctx, "NewExtrBeforeRet"));
+  EXPECT_EQ(NewI1->getOperand(0), ArgVec);
+  EXPECT_EQ(NewI1->getOperand(1), ArgIdx);
+  EXPECT_EQ(NewI1->getNextNode(), Ret);
+
+  auto *NewI2 =
+      cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
+          ArgVec, ArgIdx, BB, Ctx, "NewExtrAtEndOfBB"));
+  EXPECT_EQ(NewI2->getPrevNode(), Ret);
+
+  auto *LLVMArgVec = LLVMF.getArg(0);
+  auto *LLVMArgIdx = LLVMF.getArg(1);
+  EXPECT_EQ(sandboxir::ExtractElementInst::isValidOperands(ArgVec, ArgIdx),
+            llvm::ExtractElementInst::isValidOperands(LLVMArgVec, LLVMArgIdx));
+  EXPECT_EQ(sandboxir::ExtractElementInst::isValidOperands(ArgIdx, ArgVec),
+            llvm::ExtractElementInst::isValidOperands(LLVMArgIdx, LLVMArgVec));
+}
+
+TEST_F(SandboxIRTest, InsertElementInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
+  %ins0 = insertelement <2 x i8> poison, i8 %v0, i32 0
+  %ins1 = insertelement <2 x i8> %ins0, i8 %v1, i32 1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  auto *ArgVec = F.getArg(2);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ins0 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Ins1 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(Ins0->getOpcode(), sandboxir::Instruction::Opcode::InsertElement);
+  EXPECT_EQ(Ins0->getOperand(1), Arg0);
+  EXPECT_EQ(Ins1->getOperand(1), Arg1);
+  EXPECT_EQ(Ins1->getOperand(0), Ins0);
+  auto *Poison = Ins0->getOperand(0);
+  auto *Idx = Ins0->getOperand(2);
+  auto *NewI1 =
+      cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
+          Poison, Arg0, Idx, Ret, Ctx, "NewIns1"));
+  EXPECT_EQ(NewI1->getOperand(0), Poison);
+  EXPECT_EQ(NewI1->getNextNode(), Ret);
+
+  auto *NewI2 =
+      cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
+          Poison, Arg0, Idx, BB, Ctx, "NewIns2"));
+  EXPECT_EQ(NewI2->getPrevNode(), Ret);
+
+  auto *LLVMArg0 = LLVMF.getArg(0);
+  auto *LLVMArgVec = LLVMF.getArg(2);
+  auto *Zero = sandboxir::Constant::createInt(Type::getInt8Ty(C), 0, Ctx);
+  auto *LLVMZero = llvm::ConstantInt::get(Type::getInt8Ty(C), 0);
+  EXPECT_EQ(
+      sandboxir::InsertElementInst::isValidOperands(ArgVec, Arg0, Zero),
+      llvm::InsertElementInst::isValidOperands(LLVMArgVec, LLVMArg0, LLVMZero));
+  EXPECT_EQ(
+      sandboxir::InsertElementInst::isValidOperands(Arg0, ArgVec, Zero),
+      llvm::InsertElementInst::isValidOperands(LLVMArg0, LLVMArgVec, LLVMZero));
 }
 
 TEST_F(SandboxIRTest, BranchInst) {
@@ -1403,7 +1497,7 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
     // Check hasNoUnsignedWrap().
     EXPECT_EQ(GEP->hasNoUnsignedWrap(), LLVMGEP->hasNoUnsignedWrap());
     // Check accumulateConstantOffset().
-    DataLayout DL(M.get());
+    const DataLayout &DL = M->getDataLayout();
     APInt Offset1 =
         APInt::getZero(DL.getIndexSizeInBits(GEP->getPointerAddressSpace()));
     APInt Offset2 =
@@ -1475,6 +1569,198 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
 }
 
+TEST_F(SandboxIRTest, AtomicCmpXchgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
+  %cmpxchg = cmpxchg ptr %ptr, i8 %cmp, i8 %new monotonic monotonic, align 128
+  ret void
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCmpXchg = cast<llvm::AtomicCmpXchgInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *Ptr = F->getArg(0);
+  auto *Cmp = F->getArg(1);
+  auto *New = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *CmpXchg = cast<sandboxir::AtomicCmpXchgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getAlign(), setAlignment().
+  EXPECT_EQ(CmpXchg->getAlign(), LLVMCmpXchg->getAlign());
+  auto OrigAlign = CmpXchg->getAlign();
+  Align NewAlign(256);
+  EXPECT_NE(NewAlign, OrigAlign);
+  CmpXchg->setAlignment(NewAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), NewAlign);
+  CmpXchg->setAlignment(OrigAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), OrigAlign);
+  // Check isVolatile(), setVolatile().
+  EXPECT_EQ(CmpXchg->isVolatile(), LLVMCmpXchg->isVolatile());
+  bool OrigV = CmpXchg->isVolatile();
+  bool NewV = true;
+  EXPECT_NE(NewV, OrigV);
+  CmpXchg->setVolatile(NewV);
+  EXPECT_EQ(CmpXchg->isVolatile(), NewV);
+  CmpXchg->setVolatile(OrigV);
+  EXPECT_EQ(CmpXchg->isVolatile(), OrigV);
+  // Check isWeak(), setWeak().
+  EXPECT_EQ(CmpXchg->isWeak(), LLVMCmpXchg->isWeak());
+  bool OrigWeak = CmpXchg->isWeak();
+  bool NewWeak = true;
+  EXPECT_NE(NewWeak, OrigWeak);
+  CmpXchg->setWeak(NewWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), NewWeak);
+  CmpXchg->setWeak(OrigWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), OrigWeak);
+  // Check isValidSuccessOrdering(), isValidFailureOrdering().
+  SmallVector<AtomicOrdering> AllOrderings(
+      {AtomicOrdering::NotAtomic, AtomicOrdering::Unordered,
+       AtomicOrdering::Monotonic, AtomicOrdering::Acquire,
+       AtomicOrdering::Release, AtomicOrdering::AcquireRelease,
+       AtomicOrdering::SequentiallyConsistent});
+  for (auto Ordering : AllOrderings) {
+    EXPECT_EQ(sandboxir::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering),
+              llvm::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering));
+    EXPECT_EQ(sandboxir::AtomicCmpXchgInst::isValidFailureOrdering(Ordering),
+              llvm::AtomicCmpXchgInst::isValidFailureOrdering(Ordering));
+  }
+  // Check getSuccessOrdering(), setSuccessOrdering().
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), LLVMCmpXchg->getSuccessOrdering());
+  auto OldSuccOrdering = CmpXchg->getSuccessOrdering();
+  auto NewSuccOrdering = AtomicOrdering::Acquire;
+  EXPECT_NE(NewSuccOrdering, OldSuccOrdering);
+  CmpXchg->setSuccessOrdering(NewSuccOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), NewSuccOrdering);
+  CmpXchg->setSuccessOrdering(OldSuccOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), OldSuccOrdering);
+  // Check getFailureOrdering(), setFailureOrdering().
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), LLVMCmpXchg->getFailureOrdering());
+  auto OldFailOrdering = CmpXchg->getFailureOrdering();
+  auto NewFailOrdering = AtomicOrdering::Acquire;
+  EXPECT_NE(NewFailOrdering, OldFailOrdering);
+  CmpXchg->setFailureOrdering(NewFailOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), NewFailOrdering);
+  CmpXchg->setFailureOrdering(OldFailOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), OldFailOrdering);
+  // Check getMergedOrdering().
+  EXPECT_EQ(CmpXchg->getMergedOrdering(), LLVMCmpXchg->getMergedOrdering());
+  // Check getSyncScopeID(), setSyncScopeID().
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), LLVMCmpXchg->getSyncScopeID());
+  auto OrigSSID = CmpXchg->getSyncScopeID();
+  SyncScope::ID NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  CmpXchg->setSyncScopeID(NewSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), NewSSID);
+  CmpXchg->setSyncScopeID(OrigSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), OrigSSID);
+  // Check getPointerOperand().
+  EXPECT_EQ(CmpXchg->getPointerOperand(),
+            Ctx.getValue(LLVMCmpXchg->getPointerOperand()));
+  // Check getCompareOperand().
+  EXPECT_EQ(CmpXchg->getCompareOperand(),
+            Ctx.getValue(LLVMCmpXchg->getCompareOperand()));
+  // Check getNewValOperand().
+  EXPECT_EQ(CmpXchg->getNewValOperand(),
+            Ctx.getValue(LLVMCmpXchg->getNewValOperand()));
+  // Check getPointerAddressSpace().
+  EXPECT_EQ(CmpXchg->getPointerAddressSpace(),
+            LLVMCmpXchg->getPointerAddressSpace());
+
+  Align Align(1024);
+  auto SuccOrdering = AtomicOrdering::Acquire;
+  auto FailOrdering = AtomicOrdering::Monotonic;
+  auto SSID = SyncScope::System;
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*WhereIt=*/Ret->getIterator(),
+            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicCmpXchg1"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg1");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicCmpXchg2"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg2");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicCmpXchg3"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg3");
+#endif // NDEBUG
+  }
+}
+
 TEST_F(SandboxIRTest, AllocaInst) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -1483,7 +1769,7 @@ define void @foo() {
   ret void
 }
 )IR");
-  DataLayout DL(M.get());
+  const DataLayout &DL = M->getDataLayout();
   llvm::Function &LLVMF = *M->getFunction("foo");
   llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
   auto LLVMIt = LLVMBB->begin();
