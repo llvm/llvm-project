@@ -2,7 +2,7 @@
 
 template <class T> struct A {
   static T cond;
-  
+
   template <class U> struct B {
     static T twice(U value) {
       return (cond ? value + value : value);
@@ -53,7 +53,7 @@ namespace OutOfLine {
     static int x<U*, V>;
 
     template<typename U, B V>
-    static constexpr int x<U&, V> = 0; // expected-note {{previous definition is here}}
+    static inline int x<U&, V> = 0; // expected-note {{previous definition is here}}
 
     template<typename U, B V>
     struct C;
@@ -83,7 +83,7 @@ namespace OutOfLine {
 
   template<typename T>
   template<typename U, typename A<T>::B V>
-  constexpr int A<T>::x<U&, V> = 0; // expected-error {{redefinition of 'x<U &, V>'}}
+  int A<T>::x<U&, V> = 0; // expected-error {{redefinition of 'x<U &, V>'}}
 
   template<typename T>
   template<typename U, typename A<T>::B V>
@@ -120,12 +120,11 @@ namespace OutOfLine {
 
   template<>
   template<typename U, A<int>::B V>
-  constexpr int A<int>::x<U&, V> = 0;
+  int A<int>::x<U&, V> = 0; // expected-note {{previous definition is here}}
 
-  // FIXME: We should diagnose this redefinition!
   template<>
   template<typename U, A<int>::B V>
-  constexpr int A<int>::x<U&, V> = 0;
+  int A<int>::x<U&, V> = 0; // expected-error {{redefinition of 'x<U &, V>'}}
 
   template<>
   template<typename U, A<int>::B V>
