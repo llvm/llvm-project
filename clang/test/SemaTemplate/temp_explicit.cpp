@@ -128,10 +128,12 @@ struct Foo<int> // expected-note{{header not required for explicitly-specialized
     {};
 };
 
-template <> // expected-warning{{extraneous template parameter list}}
+template <> // expected-error{{extraneous template parameter list}}
 template <>
 struct Foo<int>::Bar<void>
 {};
+
+template<> void f(auto); // expected-error{{extraneous template parameter list}}
 
 namespace N1 {
 
