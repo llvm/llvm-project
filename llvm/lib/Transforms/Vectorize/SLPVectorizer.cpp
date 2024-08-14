@@ -13096,12 +13096,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   } else {
     // Gather all constants.
-    SmallVector<int> Mask(E->Scalars.size(), PoisonMaskElem);
-    for (auto [I, V] : enumerate(E->Scalars)) {
+    SmallVector<int> Mask(GatheredScalars.size(), PoisonMaskElem);
+    for (auto [I, V] : enumerate(GatheredScalars)) {
       if (!isa<PoisonValue>(V))
         Mask[I] = I;
     }
-    Value *BV = ShuffleBuilder.gather(E->Scalars);
+    Value *BV = ShuffleBuilder.gather(GatheredScalars);
     ShuffleBuilder.add(BV, Mask);
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   }
