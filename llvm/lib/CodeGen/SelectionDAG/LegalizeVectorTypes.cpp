@@ -765,6 +765,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::CONCAT_VECTORS:
     Res = ScalarizeVecOp_CONCAT_VECTORS(N);
     break;
+  case ISD::INSERT_SUBVECTOR:
+    Res = ScalarizeVecOp_INSERT_SUBVECTOR(N, OpNo);
+    break;
   case ISD::EXTRACT_VECTOR_ELT:
     Res = ScalarizeVecOp_EXTRACT_VECTOR_ELT(N);
     break;
@@ -880,6 +883,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
   for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i)
     Ops[i] = GetScalarizedVector(N->getOperand(i));
   return DAG.getBuildVector(N->getValueType(0), SDLoc(N), Ops);
+}
+
+/// The vectors to concatenate have length one - use a BUILD_VECTOR instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
+                                                          unsigned OpNo) {
+  auto Elt = GetScalarizedVector(N->getOperand(OpNo));
+  auto VecOp = N->getOperand(1 - OpNo);
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), VecOp.getValueType(),
+                     VecOp, Elt, N->getOperand(2));
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>,
