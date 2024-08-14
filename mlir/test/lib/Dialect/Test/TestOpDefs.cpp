@@ -142,6 +142,37 @@ void AffineScopeOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// CustomAttrParseAndPrintInAttrDict
+//===----------------------------------------------------------------------===//
+
+ParseResult CustomAttrParseAndPrintInAttrDict::parse(OpAsmParser &parser,
+                                                     OperationState &result) {
+  return parser.parseOptionalAttrDict(
+      result.attributes, [&](StringRef name) -> FailureOr<Attribute> {
+        // Override the parsing for the "dense_array" attribute in the
+        // attr-dict. Rather than parsing it as array<i64: 0, 1, 2, ...>, parse
+        // it as [0, 1, 2, ...] (i.e. using the standard array syntax).
+        if (name != getCustomDenseArrayAttrName(result.name))
+          return failure();
+        return DenseI64ArrayAttr::parse(parser, {});
+      });
+}
+
+void CustomAttrParseAndPrintInAttrDict::print(OpAsmPrinter &p) {
+  p.printOptionalAttrDict((*this)->getAttrs(), {},
+                          [&](NamedAttribute attr) -> LogicalResult {
+                            // Override the printing for the "dense_array"
+                            // attribute. Rather than printing it as array<i64:
+                            // 0, 1, 2, ...>, print it as [0, 1, 2 ...] (i.e.
+                            // using standard array syntax).
+                            if (attr.getName() != getCustomDenseArrayAttrName())
+                              return failure();
+                            cast<DenseI64ArrayAttr>(attr.getValue()).print(p);
+                            return success();
+                          });
+}
+
+//===----------------------------------------------------------------------===//
 // TestRemoveOpWithInnerOps
 //===----------------------------------------------------------------------===//
 
