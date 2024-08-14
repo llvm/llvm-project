@@ -66,7 +66,6 @@ add_clang_library(clangAST
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/Compiler.cpp
-  Interp/CompilerComplex.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
   Interp/Disasm.cpp
