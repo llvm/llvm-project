@@ -51,7 +51,7 @@ static bool isIntrinsicExpansion(Function &F) {
   return false;
 }
 
-static bool expandAbs(CallInst *Orig) {
+static Value *expandAbs(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
@@ -66,13 +66,11 @@ static bool expandAbs(CallInst *Orig) {
   auto *V = Builder.CreateSub(Zero, X);
   auto *MaxCall =
       Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr, "dx.max");
-  Orig->replaceAllUsesWith(MaxCall);
-  Orig->eraseFromParent();
-  return true;
+  return MaxCall;
 }
 
 // Create DXIL dot intrinsics for floating point dot operations
-static bool expandFloatDotIntrinsic(CallInst *Orig) {
+static Value *expandFloatDotIntrinsic(CallInst *Orig) {
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
 
@@ -100,15 +98,13 @@ static bool expandFloatDotIntrinsic(CallInst *Orig) {
   default:
     llvm_unreachable("dot product with vector outside 2-4 range");
   }
-  Value *Result = Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
-				   ArrayRef<Value *>{A, B}, nullptr, "dot");
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
+  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
+                                 ArrayRef<Value *>{A, B}, nullptr, "dot");
 }
 
 // Expand integer dot product to multiply and add ops
-static bool expandIntegerDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
+static Value *expandIntegerDotIntrinsic(CallInst *Orig,
+                                        Intrinsic::ID DotIntrinsic) {
   assert(DotIntrinsic == Intrinsic::sdot || DotIntrinsic == Intrinsic::udot);
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
@@ -124,9 +120,8 @@ static bool expandIntegerDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic
   assert(ATy->getScalarType()->isIntegerTy());
 
   Value *Result;
-  Intrinsic::ID MadIntrinsic = DotIntrinsic == Intrinsic::sdot
-    ? Intrinsic::dx_imad
-    : Intrinsic::dx_umad;
+  Intrinsic::ID MadIntrinsic =
+      DotIntrinsic == Intrinsic::sdot ? Intrinsic::dx_imad : Intrinsic::dx_umad;
   Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
   Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
   Result = Builder.CreateMul(Elt0, Elt1);
@@ -134,16 +129,13 @@ static bool expandIntegerDotIntrinsic(CallInst *Orig, Intrinsic::ID DotIntrinsic
     Elt0 = Builder.CreateExtractElement(A, i);
     Elt1 = Builder.CreateExtractElement(B, i);
     Result = Builder.CreateIntrinsic(Result->getType(), MadIntrinsic,
-				     ArrayRef<Value *>{Elt0, Elt1, Result},
-				     nullptr, "dx.mad");
+                                     ArrayRef<Value *>{Elt0, Elt1, Result},
+                                     nullptr, "dx.mad");
   }
-
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
+  return Result;
 }
 
-static bool expandExpIntrinsic(CallInst *Orig) {
+static Value *expandExpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
@@ -160,23 +152,21 @@ static bool expandExpIntrinsic(CallInst *Orig) {
       Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
-  Orig->replaceAllUsesWith(Exp2Call);
-  Orig->eraseFromParent();
-  return true;
+  return Exp2Call;
 }
 
-static bool expandAnyIntrinsic(CallInst *Orig) {
+static Value *expandAnyIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
 
+  Value *Result = nullptr;
   if (!Ty->isVectorTy()) {
-    Value *Cond = EltTy->isFloatingPointTy()
-                      ? Builder.CreateFCmpUNE(X, ConstantFP::get(EltTy, 0))
-                      : Builder.CreateICmpNE(X, ConstantInt::get(EltTy, 0));
-    Orig->replaceAllUsesWith(Cond);
+    Result = EltTy->isFloatingPointTy()
+                 ? Builder.CreateFCmpUNE(X, ConstantFP::get(EltTy, 0))
+                 : Builder.CreateICmpNE(X, ConstantInt::get(EltTy, 0));
   } else {
     auto *XVec = dyn_cast<FixedVectorType>(Ty);
     Value *Cond =
@@ -189,18 +179,16 @@ static bool expandAnyIntrinsic(CallInst *Orig) {
                   X, ConstantVector::getSplat(
                          ElementCount::getFixed(XVec->getNumElements()),
                          ConstantInt::get(EltTy, 0)));
-    Value *Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
+    Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
     for (unsigned I = 1; I < XVec->getNumElements(); I++) {
       Value *Elt = Builder.CreateExtractElement(Cond, I);
       Result = Builder.CreateOr(Result, Elt);
     }
-    Orig->replaceAllUsesWith(Result);
   }
-  Orig->eraseFromParent();
-  return true;
+  return Result;
 }
 
-static bool expandLengthIntrinsic(CallInst *Orig) {
+static Value *expandLengthIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
@@ -223,15 +211,11 @@ static bool expandLengthIntrinsic(CallInst *Orig) {
     Value *Mul = Builder.CreateFMul(Elt, Elt);
     Sum = Builder.CreateFAdd(Sum, Mul);
   }
-  Value *Result = Builder.CreateIntrinsic(
-      EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
-
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
+  return Builder.CreateIntrinsic(EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum},
+                                 nullptr, "elt.sqrt");
 }
 
-static bool expandLerpIntrinsic(CallInst *Orig) {
+static Value *expandLerpIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Value *S = Orig->getOperand(2);
@@ -239,14 +223,11 @@ static bool expandLerpIntrinsic(CallInst *Orig) {
   Builder.SetInsertPoint(Orig);
   auto *V = Builder.CreateFSub(Y, X);
   V = Builder.CreateFMul(S, V);
-  auto *Result = Builder.CreateFAdd(X, V, "dx.lerp");
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
+  return Builder.CreateFAdd(X, V, "dx.lerp");
 }
 
-static bool expandLogIntrinsic(CallInst *Orig,
-                               float LogConstVal = numbers::ln2f) {
+static Value *expandLogIntrinsic(CallInst *Orig,
+                                 float LogConstVal = numbers::ln2f) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
@@ -262,16 +243,13 @@ static bool expandLogIntrinsic(CallInst *Orig,
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   Log2Call->setTailCall(Orig->isTailCall());
   Log2Call->setAttributes(Orig->getAttributes());
-  auto *Result = Builder.CreateFMul(Ln2Const, Log2Call);
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
+  return Builder.CreateFMul(Ln2Const, Log2Call);
 }
-static bool expandLog10Intrinsic(CallInst *Orig) {
+static Value *expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
 }
 
-static bool expandPowIntrinsic(CallInst *Orig) {
+static Value *expandPowIntrinsic(CallInst *Orig) {
 
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
@@ -286,9 +264,7 @@ static bool expandPowIntrinsic(CallInst *Orig) {
       Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
-  Orig->replaceAllUsesWith(Exp2Call);
-  Orig->eraseFromParent();
-  return true;
+  return Exp2Call;
 }
 
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
@@ -317,7 +293,8 @@ static Intrinsic::ID getMinForClamp(Type *ElemTy,
   return Intrinsic::minnum;
 }
 
-static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
+static Value *expandClampIntrinsic(CallInst *Orig,
+                                   Intrinsic::ID ClampIntrinsic) {
   Value *X = Orig->getOperand(0);
   Value *Min = Orig->getOperand(1);
   Value *Max = Orig->getOperand(2);
@@ -326,43 +303,55 @@ static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
   Builder.SetInsertPoint(Orig);
   auto *MaxCall = Builder.CreateIntrinsic(
       Ty, getMaxForClamp(Ty, ClampIntrinsic), {X, Min}, nullptr, "dx.max");
-  auto *MinCall =
-      Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
-                              {MaxCall, Max}, nullptr, "dx.min");
-
-  Orig->replaceAllUsesWith(MinCall);
-  Orig->eraseFromParent();
-  return true;
+  return Builder.CreateIntrinsic(Ty, getMinForClamp(Ty, ClampIntrinsic),
+                                 {MaxCall, Max}, nullptr, "dx.min");
 }
 
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
+  Value *Result = nullptr;
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
-    return expandAbs(Orig);
+    Result = expandAbs(Orig);
+    break;
   case Intrinsic::exp:
-    return expandExpIntrinsic(Orig);
+    Result = expandExpIntrinsic(Orig);
+    break;
   case Intrinsic::log:
-    return expandLogIntrinsic(Orig);
+    Result = expandLogIntrinsic(Orig);
+    break;
   case Intrinsic::log10:
-    return expandLog10Intrinsic(Orig);
+    Result = expandLog10Intrinsic(Orig);
+    break;
   case Intrinsic::pow:
-    return expandPowIntrinsic(Orig);
+    Result = expandPowIntrinsic(Orig);
+    break;
   case Intrinsic::dx_any:
-    return expandAnyIntrinsic(Orig);
+    Result = expandAnyIntrinsic(Orig);
+    break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_clamp:
-    return expandClampIntrinsic(Orig, F.getIntrinsicID());
+    Result = expandClampIntrinsic(Orig, F.getIntrinsicID());
+    break;
   case Intrinsic::dx_lerp:
-    return expandLerpIntrinsic(Orig);
+    Result = expandLerpIntrinsic(Orig);
+    break;
   case Intrinsic::dx_length:
-    return expandLengthIntrinsic(Orig);
+    Result = expandLengthIntrinsic(Orig);
+    break;
   case Intrinsic::fdot:
-    return expandFloatDotIntrinsic(Orig);
+    Result = expandFloatDotIntrinsic(Orig);
+    break;
   case Intrinsic::sdot:
   case Intrinsic::udot:
-    return expandIntegerDotIntrinsic(Orig, F.getIntrinsicID());
+    Result = expandIntegerDotIntrinsic(Orig, F.getIntrinsicID());
+    break;
   }
-  return false;
+
+  if (Result) {
+    Orig->replaceAllUsesWith(Result);
+    Orig->eraseFromParent();
+  }
+  return !!Result;
 }
 
 static bool expansionIntrinsics(Module &M) {
