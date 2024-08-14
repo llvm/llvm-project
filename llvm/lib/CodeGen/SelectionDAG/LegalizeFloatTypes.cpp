@@ -1774,8 +1774,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
     Hi = DAG.getNode(ISD::FP_EXTEND, dl, NVT, N->getOperand(0));
   }
 
-  Lo = DAG.getConstantFP(
-      APFloat(NVT.getFltSemantics(), APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1931,8 +1930,7 @@ void DAGTypeLegalizer::ExpandFloatRes_LOAD(SDNode *N, SDValue &Lo,
   Chain = Hi.getValue(1);
 
   // The low part is zero.
-  Lo = DAG.getConstantFP(
-      APFloat(NVT.getFltSemantics(), APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+  Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
 
   // Modified the chain - switch anything that used the old chain to use the
   // new one.
@@ -1961,8 +1959,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   // though.
   if (SrcVT.bitsLE(MVT::i32)) {
     // The integer can be represented exactly in an f64.
-    Lo = DAG.getConstantFP(
-        APFloat(NVT.getFltSemantics(), APInt(NVT.getSizeInBits(), 0)), dl, NVT);
+    Lo = DAG.getConstantFP(APFloat::getZero(NVT.getFltSemantics()), dl, NVT);
     if (Strict) {
       Hi = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
                        {Chain, Src}, Flags);
