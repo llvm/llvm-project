@@ -37,11 +37,33 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+
+- The type trait builtin ``__is_nullptr`` has been removed, since it has very
+  few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
+  which GCC supports as well.
+
+- Clang will now correctly diagnose as ill-formed a constant expression where an
+  enum without a fixed underlying type is set to a value outside the range of
+  the enumeration's values.
+
+  .. code-block:: c++
+
+    enum E { Zero, One, Two, Three, Four };
+    constexpr E Val1 = (E)3;  // Ok
+    constexpr E Val2 = (E)7;  // Ok
+    constexpr E Val3 = (E)8;  // Now ill-formed, out of the range [0, 7]
+    constexpr E Val4 = (E)-1; // Now ill-formed, out of the range [0, 7]
+
+  Since Clang 16, it has been possible to suppress the diagnostic via
+  `-Wno-enum-constexpr-conversion`, to allow for a transition period for users.
+  Now, in Clang 20, **it is no longer possible to suppress the diagnostic**.
 
 ABI Changes in This Version
 ---------------------------
@@ -55,9 +77,9 @@ Clang Frontend Potentially Breaking Changes
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 - Parts of the interface returning string results will now return
-  the empty string `""` when no result is available, instead of `None`.
-- Calling a property on the `CompletionChunk` or `CompletionString` class
-  statically now leads to an error, instead of returning a `CachedProperty` object
+  the empty string ``""`` when no result is available, instead of ``None``.
+- Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
+  statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
 
 What's New in Clang |release|?
@@ -69,6 +91,9 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Allow single element access of GCC vector/ext_vector_type object to be
+  constant expression. Supports the `V.xyzw` syntax and other tidbits
+  as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -86,11 +111,29 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Add ``__builtin_is_implicit_lifetime`` intrinsic, which supports
+  `P2647R1 A trait for implicit lifetime types <https://wg21.link/p2674r1>`_
+
 - Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Allow calling initializer list constructors from initializer lists with
+  a single element of the same type instead of always copying.
+  (`CWG2137: List-initialization from object of same type <https://cplusplus.github.io/CWG/issues/2137.html>`)
+
+- Speculative resolution for CWG2311 implemented so that the implementation of CWG2137 doesn't remove
+  previous cases where guaranteed copy elision was done. Given a prvalue ``e`` of class type
+  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful.
+  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
+  (`CWG2311: Missed case for guaranteed copy elision <https://cplusplus.github.io/CWG/issues/2311.html>`)
+
+- Casts from a bit-field to an integral type is now not considered narrowing if the
+  width of the bit-field means that all potential values are in the range
+  of the target type, even if the type of the bit-field is larger.
+  (`CWG2627: Bit-fields and narrowing conversions <https://cplusplus.github.io/CWG/issues/2627.html>`_)
 
 C Language Changes
 ------------------
@@ -100,6 +143,9 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+Non-comprehensive list of changes in this release
+-------------------------------------------------
 
 New Compiler Flags
 ------------------
@@ -112,6 +158,11 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+
+- The compiler flag `-Wenum-constexpr-conversion` (and the `Wno-`, `Wno-error-`
+  derivatives) is now removed, since it's no longer possible to suppress the
+  diagnostic (see above). Users can expect an `unknown warning` diagnostic if
+  it's still in use.
 
 Attribute Changes in Clang
 --------------------------
@@ -130,7 +181,7 @@ Improvements to Clang's diagnostics
 - Some template related diagnostics have been improved.
 
   .. code-block:: c++
-    
+
      void foo() { template <typename> int i; } // error: templates can only be declared in namespace or class scope
 
      struct S {
@@ -144,6 +195,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
+- Clang now always preserves the template arguments as written used
+  to specialize template type aliases.
+
+- Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -156,6 +211,10 @@ Bug Fixes in This Version
 
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
+- Fixed a failed assertion when checking required literal types in C context. (#GH101304).
+- Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
+- Fixed a crash when diagnosing format strings and encountering an empty
+  delimited escape sequence (e.g., ``"\o{}"``). #GH102218
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -167,9 +226,25 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed incorrect pack expansion of init-capture references in requires expresssions.
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
+- Fix a crash when checking the initialzier of an object that was initialized
+  with a string literal. (#GH82167)
+- Fix a crash when matching template template parameters with templates which have
+  parameters of different class type. (#GH101394)
+- Clang now correctly recognizes the correct context for parameter
+  substitutions in concepts, so it doesn't incorrectly complain of missing
+  module imports in those situations. (#GH60336)
+- Fix init-capture packs having a size of one before being instantiated. (#GH63677)
+- Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
+  (#GH99877).
+- Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
+- Fixed an assertion failure when selecting a function from an overload set that includes a
+  specialization of a conversion function template.
+- Correctly diagnose attempts to use a concept name in its own definition;
+  A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,6 +257,9 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in C due to incorrect lookup that members in nested anonymous struct/union
   can be found as ordinary identifiers in struct/union definition. (#GH31295)
+
+- Fixed a crash caused by long chains of ``sizeof`` and other similar operators
+  that can be followed by a non-parenthesized expression. (#GH45061)
 
 OpenACC Specific Changes
 ------------------------
@@ -210,6 +288,10 @@ X86 Support
   removed. Any uses of these removed functions should migrate to the
   functions defined by the ``*mmintrin.h`` headers. A mapping can be
   found in the file ``clang/www/builtins.py``.
+
+- Support ISA of ``AVX10.2``.
+  * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
+  ``*_(mask(z)))_minmax_s[s|d|h]``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -262,6 +344,8 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBinaryOperations`` option.
+
 libclang
 --------
 
@@ -289,6 +373,11 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- The checker ``alpha.security.MallocOverflow`` was deleted because it was
+  badly implemented and its agressive logic produced too many false positives.
+  To detect too large arguments passed to malloc, consider using the checker
+  ``alpha.taint.TaintedAlloc``.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
@@ -296,9 +385,19 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
 
 OpenMP Support
 --------------
+- Added support for 'omp assume' directive.
+
+Improvements
+^^^^^^^^^^^^
+- Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
+
+- `num_teams` and `thead_limit` now accept multiple expressions when it is used
+  along in ``target teams ompx_bare`` construct. This allows the target region
+  to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

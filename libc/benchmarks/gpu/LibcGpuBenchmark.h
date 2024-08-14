@@ -21,7 +21,7 @@ namespace benchmarks {
 
 struct BenchmarkOptions {
   uint32_t initial_iterations = 1;
-  uint32_t min_iterations = 50;
+  uint32_t min_iterations = 1;
   uint32_t max_iterations = 10000000;
   uint32_t min_samples = 4;
   uint32_t max_samples = 1000;
@@ -111,9 +111,15 @@ private:
 };
 
 // We want our random values to be approximately
-// |real value| <= 2^(max_exponent) * (1 + (random 52 bits) * 2^-52) <
-// 2^(max_exponent + 1)
-template <typename T> static T get_rand_input() {
+// Output: a random number with the exponent field between min_exp and max_exp,
+// i.e. 2^min_exp <= |real_value| < 2^(max_exp + 1),
+// Caveats:
+//   -EXP_BIAS corresponding to denormal values,
+//   EXP_BIAS + 1 corresponding to inf or nan.
+template <typename T>
+static T
+get_rand_input(int max_exp = LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS,
+               int min_exp = -LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
   // Required to correctly instantiate FPBits for floats and doubles.
@@ -125,10 +131,11 @@ template <typename T> static T get_rand_input() {
            static_cast<uint64_t>(LIBC_NAMESPACE::rand());
   else
     bits = LIBC_NAMESPACE::rand();
-  double scale = 0.5 + LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN / 2048.0;
+  double scale =
+      static_cast<double>(max_exp - min_exp + 1) / (2 * FPBits::EXP_BIAS + 1);
   FPBits fp(bits);
   fp.set_biased_exponent(
-      static_cast<uint32_t>(fp.get_biased_exponent() * scale));
+      static_cast<uint32_t>(fp.get_biased_exponent() * scale + min_exp));
   return fp.get_val();
 }
 
@@ -141,19 +148,15 @@ template <typename T> class MathPerf {
 public:
   typedef T Func(T);
 
-  static uint64_t run_perf_in_range(Func f, StorageType starting_bit,
-                                    StorageType ending_bit, StorageType step) {
-    uint64_t total_time = 0;
-    if (step <= 0)
-      step = 1;
-    volatile T result;
-    for (StorageType bits = starting_bit; bits < ending_bit; bits += step) {
-      T x = FPBits(bits).get_val();
-      total_time += LIBC_NAMESPACE::latency(f, x);
-    }
-    StorageType num_runs = (ending_bit - starting_bit) / step + 1;
+  template <size_t N = 1>
+  static uint64_t run_throughput_in_range(Func f, int min_exp, int max_exp) {
+    cpp::array<T, N> inputs;
+    for (size_t i = 0; i < N; ++i)
+      inputs[i] = get_rand_input<T>(min_exp, max_exp);
 
-    return total_time / num_runs;
+    uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs);
+
+    return total_time / N;
   }
 };
 
@@ -176,5 +179,4 @@ public:
 #define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
   BENCHMARK_N_THREADS(SuiteName, TestName, Func,                               \
                       LIBC_NAMESPACE::gpu::get_lane_size())
-
 #endif

@@ -584,6 +584,20 @@ void OMPClauseProfiler::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseProfiler::VisitOMPFailClause(const OMPFailClause *) {}
 
+void OMPClauseProfiler::VisitOMPAbsentClause(const OMPAbsentClause *) {}
+
+void OMPClauseProfiler::VisitOMPHoldsClause(const OMPHoldsClause *) {}
+
+void OMPClauseProfiler::VisitOMPContainsClause(const OMPContainsClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoOpenMPRoutinesClause(
+    const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoParallelismClause(
+    const OMPNoParallelismClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
@@ -843,15 +857,13 @@ void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  VisitOMPClauseList(C);
   VistOMPClauseWithPreInit(C);
-  if (C->getNumTeams())
-    Profiler->VisitStmt(C->getNumTeams());
 }
 void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  VisitOMPClauseList(C);
   VistOMPClauseWithPreInit(C);
-  if (C->getThreadLimit())
-    Profiler->VisitStmt(C->getThreadLimit());
 }
 void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
   VistOMPClauseWithPreInit(C);
@@ -1065,6 +1077,10 @@ void StmtProfiler::VisitOMPBarrierDirective(const OMPBarrierDirective *S) {
 }
 
 void StmtProfiler::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPAssumeDirective(const OMPAssumeDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 

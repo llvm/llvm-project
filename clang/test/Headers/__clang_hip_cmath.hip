@@ -87,3 +87,22 @@ extern "C" __device__ float test_sin_f32(float x) {
 extern "C" __device__ float test_cos_f32(float x) {
   return cos(x);
 }
+
+// Check user defined type which can be converted to float and double but not
+// specializes __numeric_type will not cause ambiguity diagnostics.
+struct user_bfloat16 {
+  __host__ __device__ user_bfloat16(float);
+  operator float();
+  operator double();
+};
+
+namespace user_namespace {
+  __device__ user_bfloat16 fma(const user_bfloat16 a, const user_bfloat16 b, const user_bfloat16 c) {
+    return a;
+  }
+
+  __global__ void test_fma() {
+    user_bfloat16 a = 1.0f, b = 2.0f;
+    fma(a, b, b);
+  }
+}

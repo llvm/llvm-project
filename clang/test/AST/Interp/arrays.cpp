@@ -114,7 +114,7 @@ static_assert(*(&arr[0]) == 1, "");
 static_assert(*(&arr[1]) == 2, "");
 
 constexpr const int *OOB = (arr + 3) - 3; // both-error {{must be initialized by a constant expression}} \
-                                          // both-note {{cannot refer to element 3 of array of 2}}
+                                          // both-note {{cannot refer to element 3 of array of 2 elements}}
 
 template<typename T>
 constexpr T getElementOf(T* array, int i) {
@@ -632,3 +632,16 @@ constexpr int fail(const int &p) {
 }
 static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
                                                                                     // both-note {{in call to}}
+
+namespace ZeroSizeTypes {
+  constexpr int (*p1)[0] = 0, (*p2)[0] = 0;
+  constexpr int k = p2 - p1; // both-error {{constexpr variable 'k' must be initialized by a constant expression}} \
+                             // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                             // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
+  int arr[5][0];
+  constexpr int f() { // both-error {{never produces a constant expression}}
+    return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+  }
+}

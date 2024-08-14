@@ -1191,3 +1191,78 @@ func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -
   }
   return %r1 : index
 }
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op contains duplicated cases.}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  return %ret : index
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op types mismatch between 0th yield value and defined value on 0th region}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    %i = arith.constant 1 : i32
+    sparse_tensor.yield %i : i32
+  }
+  return %ret : index
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op required out-of-bound coordinates}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord1, %coord2) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    %i = arith.constant 1 : i32
+    sparse_tensor.yield %i : i32
+  }
+  return %ret : index
+}
