@@ -972,3 +972,22 @@ struct R {
 	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
   }
 };
+
+namespace GH102025 {
+struct Foo {
+  template <class T>
+  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+      -> decltype(_evaluate(self, i...)) {
+    return self._evaluate(i...);
+  }
+
+private:
+  template <class T>
+  constexpr auto _evaluate(this T &&self, auto... i) -> decltype((i + ...));
+};
+
+int main() {
+  Foo foo;
+  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
+}
+}
