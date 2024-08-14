@@ -156,6 +156,7 @@ private:
 };
 
 Executor *Executor::getDefaultExecutor() {
+#ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
   // stops the thread pool and waits for any worker thread creation to complete
@@ -179,6 +180,14 @@ Executor *Executor::getDefaultExecutor() {
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
   return Exec.get();
+#else
+  // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
+  // by llvm_shutdown(), worker threads will clean up and invoke TLS
+  // destructors. This can lead to race conditions if other threads attempt to
+  // access TLS objects that have already been destroyed.
+  static ThreadPoolExecutor Exec(strategy);
+  return &Exec;
+#endif
 }
 } // namespace
 } // namespace detail
