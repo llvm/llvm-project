@@ -1,5 +1,6 @@
 ; REQUIRES: x86_64-linux
-
+;
+; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
 ; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
@@ -88,7 +89,7 @@ Current Profile:
 ;--- example.ll
 declare void @bar()
 
-define private void @foo(i32 %a, ptr %fct) #0 {
+define private void @foo(i32 %a, ptr %fct) #0 !unique_id !0 {
   %t = icmp eq i32 %a, 0
   br i1 %t, label %yes, label %no
 yes:
@@ -123,3 +124,4 @@ no:
 }
 
 attributes #0 = { noinline }
+!0 = !{ i64 11872291593386833696 }

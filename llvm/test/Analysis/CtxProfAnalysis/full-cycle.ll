@@ -1,5 +1,6 @@
 ; REQUIRES: x86_64-linux
-
+;
+; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ;
 ; Test that the GUID metadata survives through thinlink.
@@ -26,7 +27,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define private void @f2() #0 {
+define private void @f2() #0 !unique_id !0 {
   ret void
 }
 
@@ -36,6 +37,7 @@ define void @f1() #0 {
 }
 
 attributes #0 = { noinline }
+!0 = !{ i64 5967942613276634709 }
 
 ;--- m2.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

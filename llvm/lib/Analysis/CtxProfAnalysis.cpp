@@ -73,9 +73,9 @@ PreservedAnalyses AssignUniqueIDPass::run(Module &M,
   for (auto &F : M.functions()) {
     if (F.isDeclaration())
       continue;
+    if (F.getMetadata(GUIDMetadataName))
+      continue;
     const GlobalValue::GUID GUID = F.getGUID();
-    assert(!F.getMetadata(GUIDMetadataName) ||
-           GUID == AssignUniqueIDPass::getGUID(F));
     F.setMetadata(GUIDMetadataName,
                   MDNode::get(M.getContext(),
                               {ConstantAsMetadata::get(ConstantInt::get(
