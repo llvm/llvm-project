@@ -56382,8 +56382,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             break;
           for (int M : SubMask) {
             if (0 <= M) {
+              int Src = M < NumSrcElts ? 0 : 2;
               M += M < NumSrcElts ? 0 : NumSrcElts;
-              M += i * NumSrcElts;
+
+              // Reference the lowest sub if they upper sub is the same.
+              if (Ops[0].getOperand(Src) != Ops[i].getOperand(Src))
+                M += i * NumSrcElts;
             }
             ConcatMask.push_back(M);
           }
