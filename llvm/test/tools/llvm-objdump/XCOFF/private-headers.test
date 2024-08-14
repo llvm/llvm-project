@@ -37,7 +37,6 @@ Sections:
 # CHECK64-NEXT:OptionalHeaderSize: 0x0
 # CHECK64-NEXT:Flags:              0x0
 
-
 ## Test if the creation time of XCOFF is zero and the number of symbols is negative.
 # RUN: yaml2obj -DMAGIC=0x1DF --docnum=2 %s -o %t_xcoff_timestamp.o
 # RUN: llvm-objdump --private-headers %t_xcoff_timestamp.o | \
@@ -46,6 +45,7 @@ Sections:
 --- !XCOFF
 FileHeader:
   MagicNumber:          0x1DF
+  CreationTime:         0
   EntriesInSymbolTable: -1
 
 # CHECK: Timestamp:          None (0)

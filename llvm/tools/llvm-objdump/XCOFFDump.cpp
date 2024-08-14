@@ -73,24 +73,24 @@ void XCOFFDumper::printFileHeader() {
   printHex("Magic:", Obj.getMagic());
   printNumber("NumberOfSections:", Obj.getNumberOfSections());
 
-  int32_t TimeStamp = Obj.getTimeStamp();
-  if (TimeStamp > 0) {
+  int32_t Timestamp = Obj.getTimeStamp();
+  if (Timestamp > 0) {
     // This handling of the timestamp assumes that the host system's time_t is
     // compatible with AIX time_t. If a platform is not compatible, the lit
     // tests will let us know.
-    time_t TimeDate = TimeStamp;
+    time_t TimeDate = Timestamp;
 
-    char FormattedTime[80] = {};
+    char FormattedTime[20] = {};
 
     size_t BytesFormatted = std::strftime(FormattedTime, sizeof(FormattedTime),
-                                          "%F %T", gmtime(&TimeDate));
+                                          "%F %T", std::gmtime(&TimeDate));
     assert(BytesFormatted && "The size of the buffer FormattedTime is less "
                              "than the size of the date/time string.");
-    printStrHex("Timestamp:", FormattedTime, TimeStamp);
+    printStrHex("Timestamp:", FormattedTime, Timestamp);
   } else {
     // Negative timestamp values are reserved for future use.
-    printStrHex("Timestamp:", TimeStamp == 0 ? "None" : "Reserved Value",
-                TimeStamp);
+    printStrHex("Timestamp:", Timestamp == 0 ? "None" : "Reserved Value",
+                Timestamp);
   }
 
   // The number of symbol table entries is an unsigned value in 64-bit objects
