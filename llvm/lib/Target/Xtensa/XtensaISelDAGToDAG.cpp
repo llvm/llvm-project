@@ -140,7 +140,7 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
     auto *C = dyn_cast<ConstantSDNode>(N1);
     // If C is constant in range [1..31] then we can generate SLLI
     // instruction using pattern matching, otherwise generate SLL
-    if (!C || !(isUInt<5>(C->getZExtValue()) && !C->isZero())) {
+    if (!C || C->isZero()) {
       SDNode *SSL = CurDAG->getMachineNode(Xtensa::SSL, DL, MVT::Glue, N1);
       SDNode *SLL =
           CurDAG->getMachineNode(Xtensa::SLL, DL, VT, N0, SDValue(SSL, 0));
