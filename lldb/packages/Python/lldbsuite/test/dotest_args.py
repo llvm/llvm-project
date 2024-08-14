@@ -321,6 +321,12 @@ def create_parser():
         action="append",
         help="Specify an environment variable to set to the given value for the inferior.",
     )
+    # See https://docs.python.org/3.8/whatsnew/3.8.html#bpo-36085-whatsnew.
+    group.add_argument(
+        "--dll-directory",
+        action="append",
+        help="Specify a directory to include when searching for .dll files. This can be passed multiple times.",
+    )
     X(
         "-v",
         "Do verbose mode of unittest framework (print out each test case invocation)",
