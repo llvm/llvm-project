@@ -227,6 +227,18 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    Feature(
+        name="long-double-is-double",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(long double) == sizeof(double));
+              return 0;
+            }
+          """,
+        ),
+    ),
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
