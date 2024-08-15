@@ -10321,8 +10321,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
 
   // If this is SEW=8 and VLMAX is potentially more than 256, we need
   // to use vrgatherei16.vv.
-  // TODO: It's also possible to use vrgatherei16.vv for other types to
-  // decrease register width for the index calculation.
   if (MaxVLMAX > 256 && EltSize == 8) {
     // If this is LMUL=8, we have to split before can use vrgatherei16.vv.
     // Reverse each half, then reassemble them in reverse order.
@@ -10346,6 +10344,14 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     // Just promote the int type to i16 which will double the LMUL.
     IntVT = MVT::getVectorVT(MVT::i16, VecVT.getVectorElementCount());
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+  }
+
+  // At LMUL > 1, do the index computation in 16 bits to reduce register
+  // pressure.
+  if (IntVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(MaxVLMAX - 1) &&
+      IntVT.bitsGT(getLMUL1VT(IntVT))) {
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IntVT = IntVT.changeVectorElementType(MVT::i16);
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
