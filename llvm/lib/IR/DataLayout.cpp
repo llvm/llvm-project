@@ -567,6 +567,9 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       switch(Rest[0]) {
       default:
         return reportError("Unknown mangling in datalayout string");
+      case 'b':
+        ManglingMode = MM_BPF;
+        break;
       case 'e':
         ManglingMode = MM_ELF;
         break;

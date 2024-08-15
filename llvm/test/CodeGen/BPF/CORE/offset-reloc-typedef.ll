@@ -35,7 +35,7 @@ entry:
 }
 
 ; CHECK:         .cfi_startproc
-; CHECK: [[RELOC:.Ltmp[0-9]+]]:
+; CHECK: [[RELOC:Ltmp[0-9]+]]:
 ; CHECK:         r2 = 12
 ; CHECK:         r1 += r2
 ; CHECK:         call get_value
@@ -48,7 +48,7 @@ entry:
 ; CHECK:         .long   16                      # FieldReloc
 ; CHECK-NEXT:    .long   [[SEC_STR:[0-9]+]]      # Field reloc section string offset=[[SEC_STR:[0-9]+]]
 ; CHECK-NEXT:    .long   1
-; CHECK-NEXT:    .long   [[RELOC:.Ltmp[0-9]+]]
+; CHECK-NEXT:    .long   [[RELOC:Ltmp[0-9]+]]
 ; CHECK-NEXT:    .long   [[TYPE_ID:[0-9]+]]
 ; CHECK-NEXT:    .long   [[ACCESS_STR:[0-9]+]]
 ; CHECK-NEXT:    .long   0

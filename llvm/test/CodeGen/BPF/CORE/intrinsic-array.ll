@@ -24,7 +24,7 @@ entry:
   ret i32 %call, !dbg !21
 }
 ; CHECK-LABEL: test
-; CHECK:       [[RELOC:.Ltmp[0-9]+]]
+; CHECK:       [[RELOC:Ltmp[0-9]+]]
 ; CHECK:       r2 = 20
 ; CHECK:       r1 += r2
 ; CHECK:       call get_value

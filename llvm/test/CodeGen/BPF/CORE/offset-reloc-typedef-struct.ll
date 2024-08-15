@@ -29,7 +29,7 @@ entry:
 }
 
 ; CHECK:        .cfi_startproc
-; CHECK:        [[RELOC:.Ltmp[0-9]+]]:
+; CHECK:        [[RELOC:Ltmp[0-9]+]]:
 ; CHECK:        r2 = 4
 ; CHECK:        r1 += r2
 ; CHECK:        call get_value

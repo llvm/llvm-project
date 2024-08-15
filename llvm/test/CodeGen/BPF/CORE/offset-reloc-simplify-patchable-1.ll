@@ -56,23 +56,23 @@ entry:
 
 ; CHECK: foo:
 ; CHECK:      prologue_end
-; CHECK-NEXT: .Ltmp[[LABEL_UB:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UB:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:            *(u8 *)(r1 + 0) = r2
 ; V4-NEXT:            *(u8 *)(r1 + 0) = w2
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UH:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UH:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:            *(u16 *)(r1 + 2) = r2
 ; V4-NEXT:            *(u16 *)(r1 + 2) = w2
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UW:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UW:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:            *(u32 *)(r1 + 4) = r2
 ; V4-NEXT:            *(u32 *)(r1 + 4) = w2
 ; CHECK-NEXT:         .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UD:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UD:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:         *(u64 *)(r1 + 8) = r2
 
 ; CHECK: .section .BTF
@@ -85,19 +85,19 @@ entry:
 ; CHECK: .ascii  "0:3"   # string offset=[[STR_UD:.*]]
 
 ; CHECK:     # FieldReloc
-; CHECK:      .long .Ltmp[[LABEL_UB]]
+; CHECK:      .long Ltmp[[LABEL_UB]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UB]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UH]]
+; CHECK:      .long Ltmp[[LABEL_UH]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UH]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UW]]
+; CHECK:      .long Ltmp[[LABEL_UW]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UW]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UD]]
+; CHECK:      .long Ltmp[[LABEL_UD]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UD]]
 ; CHECK-NEXT: .long 0

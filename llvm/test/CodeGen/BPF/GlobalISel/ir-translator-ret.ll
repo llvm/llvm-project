@@ -7,6 +7,6 @@ define void @f() {
 ; ISEL-LABEL: f:
 ; ISEL:       # %bb.0:
 ; ISEL-NEXT:  exit
-; ISEL-NEXT: .Lfunc_end0:
+; ISEL-NEXT: Lfunc_end0:
   ret void
 }

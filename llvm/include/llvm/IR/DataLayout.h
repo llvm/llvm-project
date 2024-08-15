@@ -102,6 +102,7 @@ private:
 
   enum ManglingModeT {
     MM_None,
+    MM_BPF,
     MM_ELF,
     MM_MachO,
     MM_WinCOFF,
@@ -272,6 +273,7 @@ public:
   char getGlobalPrefix() const {
     switch (ManglingMode) {
     case MM_None:
+    case MM_BPF:
     case MM_ELF:
     case MM_GOFF:
     case MM_Mips:
@@ -296,6 +298,7 @@ public:
       return "L#";
     case MM_Mips:
       return "$";
+    case MM_BPF:
     case MM_MachO:
     case MM_WinCOFFX86:
       return "L";

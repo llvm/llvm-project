@@ -61,38 +61,38 @@ entry:
 
 ; CHECK: bar:
 ; CHECK:      prologue_end
-; CHECK-NEXT: .Ltmp[[LABEL_UB:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UB:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:        r1 = *(u8 *)(r6 + 0)
 ; V4-NEXT:        w1 = *(u8 *)(r6 + 0)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cu
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UH:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UH:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:        r1 = *(u16 *)(r6 + 2)
 ; V4-NEXT:        w1 = *(u16 *)(r6 + 2)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cu
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UW:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UW:.*]]:
+; CHECK-NEXT: Ltmp
 ; V2-NEXT:        r1 = *(u32 *)(r6 + 4)
 ; V4-NEXT:        w1 = *(u32 *)(r6 + 4)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cu
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp[[LABEL_UD:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_UD:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     r1 = *(u64 *)(r6 + 8)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cu
 
 ; CHECK: .section .BTF
@@ -105,19 +105,19 @@ entry:
 ; CHECK: .ascii  "0:3"   # string offset=[[STR_UD:.*]]
 
 ; CHECK:     # FieldReloc
-; CHECK:      .long .Ltmp[[LABEL_UB]]
+; CHECK:      .long Ltmp[[LABEL_UB]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UB]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UH]]
+; CHECK:      .long Ltmp[[LABEL_UH]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UH]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UW]]
+; CHECK:      .long Ltmp[[LABEL_UW]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UW]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_UD]]
+; CHECK:      .long Ltmp[[LABEL_UD]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_UD]]
 ; CHECK-NEXT: .long 0
