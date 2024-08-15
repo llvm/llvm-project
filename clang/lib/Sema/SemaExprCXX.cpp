@@ -6200,9 +6200,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
         return true;
 
     DiagnoseVLAInCXXTypeTrait(Self, Lhs,
-                              tok::kw___is_scalarized_layout_compatible);
+                              tok::kw___builtin_is_scalarized_layout_compatible);
     DiagnoseVLAInCXXTypeTrait(Self, Rhs,
-                              tok::kw___is_scalarized_layout_compatible);
+                              tok::kw___builtin_is_scalarized_layout_compatible);
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
