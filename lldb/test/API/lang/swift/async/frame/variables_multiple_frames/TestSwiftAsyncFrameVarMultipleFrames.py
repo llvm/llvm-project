@@ -69,6 +69,15 @@ class TestCase(lldbtest.TestBase):
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["111", "222", "333", "444", "555"])
 
+        # Now stop at the Q funclet right after the await to ASYNC___1
+        target.DeleteAllBreakpoints()
+        target.BreakpointCreateByName("$s1a12ASYNC___2___SiyYaFTQ0_")
+        process.Continue()
+        async_frames = process.GetSelectedThread().frames
+        self.check_cfas(async_frames, process)
+        self.check_pcs(async_frames, process, target)
+        self.check_variables(async_frames, ["222", "333", "444", "555"])
+
         target.DeleteAllBreakpoints()
         target.BreakpointCreateBySourceRegex("breakpoint3", source_file)
         process.Continue()
