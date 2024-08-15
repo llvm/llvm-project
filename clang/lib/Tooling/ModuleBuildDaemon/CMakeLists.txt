@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangModuleBuildDaemon
-  Client.cpp
+  Frontend.cpp
   SocketSupport.cpp
   Utils.cpp
   )

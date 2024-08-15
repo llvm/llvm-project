@@ -6,127 +6,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/ModuleBuildDaemon/SocketSupport.h"
-#include "clang/Basic/Version.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/ModuleBuildDaemon/Client.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_socket_stream.h"
 
-// TODO: Make portable
-#if LLVM_ON_UNIX
-
-#include <cerrno>
-#include <filesystem>
-#include <fstream>
-#include <signal.h>
-#include <spawn.h>
+#include <memory>
 #include <string>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
 
-llvm::Expected<int> cc1modbuildd::createSocket() {
-  int FD;
-  if ((FD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    std::string Msg = "socket create error: " + std::string(strerror(errno));
-    return llvm::createStringError(llvm::inconvertibleErrorCode(), Msg);
-  }
-  return FD;
-}
+namespace clang::tooling::cc1modbuildd {
 
-llvm::Expected<int> cc1modbuildd::connectToSocket(llvm::StringRef SocketPath) {
+llvm::Expected<std::string>
+readBufferFromSocket(llvm::raw_socket_stream &Socket) {
+  constexpr unsigned short MAX_BUFFER = 4096;
+  constexpr std::chrono::milliseconds TIMEOUT(5000);
+  char Buffer[MAX_BUFFER];
+  std::string ReturnBuffer;
 
-  llvm::Expected<int> MaybeFD = cc1modbuildd::createSocket();
-  if (!MaybeFD)
-    return std::move(MaybeFD.takeError());
-
-  int FD = std::move(*MaybeFD);
-
-  struct sockaddr_un Addr;
-  memset(&Addr, 0, sizeof(Addr));
-  Addr.sun_family = AF_UNIX;
-  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-
-  if (connect(FD, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
-    close(FD);
-    std::string msg = "socket connect error: " + std::string(strerror(errno));
-    return llvm::createStringError(llvm::inconvertibleErrorCode(), msg);
-  }
-  return FD;
-}
-
-llvm::Expected<int>
-cc1modbuildd::connectAndWriteToSocket(std::string Buffer,
-                                      llvm::StringRef SocketPath) {
-
-  llvm::Expected<int> MaybeConnectedFD = connectToSocket(SocketPath);
-  if (!MaybeConnectedFD)
-    return std::move(MaybeConnectedFD.takeError());
-
-  int ConnectedFD = std::move(*MaybeConnectedFD);
-  llvm::Error Err = writeToSocket(Buffer, ConnectedFD);
-  if (Err)
-    return std::move(Err);
-
-  return ConnectedFD;
-}
-
-llvm::Expected<std::string> cc1modbuildd::readFromSocket(int FD) {
-
-  const size_t BUFFER_SIZE = 4096;
-  std::vector<char> Buffer(BUFFER_SIZE);
-  size_t TotalBytesRead = 0;
-
-  ssize_t n;
-  while ((n = read(FD, Buffer.data() + TotalBytesRead,
-                   Buffer.size() - TotalBytesRead)) > 0) {
-
-    TotalBytesRead += n;
-    // Read until ...\n encountered (last line of YAML document)
-    if (std::string(&Buffer[TotalBytesRead - 4], 4) == "...\n")
+  ssize_t n = 0;
+  while ((n = Socket.read(Buffer, MAX_BUFFER, TIMEOUT)) > 0) {
+    ReturnBuffer.append(Buffer, n);
+    // Read until \n... encountered which is the last line of a YAML document
+    if (ReturnBuffer.find("\n...") != std::string::npos)
       break;
-    if (Buffer.size() - TotalBytesRead < BUFFER_SIZE)
-      Buffer.resize(Buffer.size() + BUFFER_SIZE);
   }
 
-  if (n < 0) {
-    std::string Msg = "socket read error: " + std::string(strerror(errno));
-    return llvm::make_error<llvm::StringError>(Msg,
-                                               llvm::inconvertibleErrorCode());
+  if (Socket.has_error()) {
+    std::error_code EC = Socket.error();
+    Socket.clear_error();
+    return llvm::make_error<llvm::StringError>("Failed socket read", EC);
   }
-  if (n == 0)
-    return llvm::make_error<llvm::StringError>("EOF",
-                                               llvm::inconvertibleErrorCode());
-  return std::string(Buffer.begin(), Buffer.end());
+  return ReturnBuffer;
 }
 
-llvm::Error cc1modbuildd::writeToSocket(std::string Buffer, int WriteFD) {
-
-  ssize_t BytesToWrite = static_cast<ssize_t>(Buffer.size());
-  const char *Bytes = Buffer.c_str();
-
-  while (BytesToWrite) {
-    ssize_t BytesWritten = write(WriteFD, Bytes, BytesToWrite);
-    if (BytesWritten == -1) {
-      std::string Msg = "socket write error: " + std::string(strerror(errno));
-      return llvm::make_error<llvm::StringError>(
-          Msg, llvm::inconvertibleErrorCode());
-    }
-
-    if (!BytesWritten || BytesWritten > BytesToWrite)
-      return llvm::errorCodeToError(
-          std::error_code(EIO, std::generic_category()));
-
-    BytesToWrite -= BytesWritten;
-    Bytes += BytesWritten;
+llvm::Error writeBufferToSocket(llvm::raw_socket_stream &Socket,
+                                llvm::StringRef Buffer) {
+  Socket << Buffer;
+  if (Socket.has_error()) {
+    std::error_code EC = Socket.error();
+    Socket.clear_error();
+    return llvm::make_error<llvm::StringError>("Failed socket write", EC);
   }
+
+  Socket.flush();
   return llvm::Error::success();
 }
 
-#endif // LLVM_ON_UNIX
+} // namespace clang::tooling::cc1modbuildd

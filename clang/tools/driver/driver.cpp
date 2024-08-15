@@ -84,9 +84,7 @@ extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
                                   const char *Argv0, void *MainAddr,
                                   const llvm::ToolContext &);
-#if LLVM_ON_UNIX
 extern int cc1modbuildd_main(ArrayRef<const char *> Argv);
-#endif
 
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,

@@ -26,7 +26,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
-#include "clang/Tooling/ModuleBuildDaemon/Client.h"
+#include "clang/Tooling/ModuleBuildDaemon/Frontend.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -255,7 +255,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   std::vector<std::string> UpdatedArgv;
   std::vector<const char *> CharUpdatedArgv;
 
-#if LLVM_ON_UNIX
   // Handle module build daemon functionality if enabled
   if (Invocation->getFrontendOpts().ModuleBuildDaemon) {
 
@@ -271,8 +270,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     }
 
     Expected<std::vector<std::string>> MaybeUpdatedArgv =
-        cc1modbuildd::updateCC1WithModuleBuildDaemon(*Invocation, Argv, Argv0,
-                                                     *MaybeCWD);
+        clang::tooling::cc1modbuildd::updateCC1WithModuleBuildDaemon(
+            *Invocation, Argv, Argv0, *MaybeCWD, Diags);
     if (!MaybeUpdatedArgv) {
       llvm::errs() << toString(std::move(MaybeUpdatedArgv.takeError())) << '\n';
       return 1;
@@ -285,7 +284,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       CharUpdatedArgv.push_back(Arg.c_str());
     }
   }
-#endif
 
   llvm::outs() << "translation unit command line" << '\n';
   for (const auto &Arg : Argv)
