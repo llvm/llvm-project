@@ -12,7 +12,7 @@ declare void @bar()
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: i32 [[A:%.*]], ptr [[FCT:%.*]]) local_unnamed_addr {
+; CHECK-SAME: i32 [[A:%.*]], ptr [[FCT:%.*]]) local_unnamed_addr !guid [[META0:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.instrprof.increment(ptr @__profn_foo, i64 728453322856651412, i32 2, i32 0)
 ; CHECK-NEXT:    [[T:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[T]], label %[[YES:.*]], label %[[NO:.*]]
@@ -41,4 +41,6 @@ exit:
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+;.
+; CHECK: [[META0]] = !{i64 6699318081062747564}
 ;.
