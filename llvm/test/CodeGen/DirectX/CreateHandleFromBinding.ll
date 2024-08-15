@@ -18,10 +18,12 @@ define void @test_bindings() {
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF1]], %dx.types.ResourceProperties { i32 4106, i32 260 })
 
   ; Buffer<uint4> Buf[24] : register(t3, space5)
+  ; Buffer<uint4> typed2 = Buf[4]
+  ; Note that the index below is 3 + 4 = 7
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0_0t(
-          i32 2, i32 7, i32 24, i32 8, i1 false)
-  ; CHECK: [[BUF2:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 7, i32 30, i32 2, i8 0 }, i32 8, i1 false)
+          i32 5, i32 3, i32 24, i32 7, i1 false)
+  ; CHECK: [[BUF2:%[0-9]*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 218, %dx.types.ResBind { i32 3, i32 26, i32 5, i8 0 }, i32 7, i1 false)
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BUF2]], %dx.types.ResourceProperties { i32 10, i32 1029 })
 
   ; struct S { float4 a; uint4 b; };

@@ -164,20 +164,20 @@ rarely have to include this file directly).
   efficient to use the ``InstVisitor`` class to dispatch over the instruction
   type directly.
 
-``isa_and_nonnull<>``:
-  The ``isa_and_nonnull<>`` operator works just like the ``isa<>`` operator,
+``isa_and_present<>``:
+  The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   returns false).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``cast_or_null<>``:
-  The ``cast_or_null<>`` operator works just like the ``cast<>`` operator,
+``cast_if_present<>``:
+  The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   propagates).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``dyn_cast_or_null<>``:
-  The ``dyn_cast_or_null<>`` operator works just like the ``dyn_cast<>``
+``dyn_cast_if_present<>``:
+  The ``dyn_cast_if_present<>`` operator works just like the ``dyn_cast<>``
   operator, except that it allows for a null pointer as an argument (which it
   then propagates).  This can sometimes be useful, allowing you to combine
   several null checks into one.

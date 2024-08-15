@@ -17,10 +17,12 @@ define void @test_buffers() {
   ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 6, i1 false)
 
   ; Buffer<uint4> Buf[24] : register(t3, space5)
+  ; Buffer<uint4> typed2 = Buf[5]
+  ; Note that the index below is 3 + 4 = 7
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0_0t(
-          i32 2, i32 7, i32 24, i32 8, i1 false)
-  ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 8, i1 false)
+          i32 5, i32 3, i32 24, i32 7, i1 false)
+  ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 7, i1 false)
 
   ; struct S { float4 a; uint4 b; };
   ; StructuredBuffer<S> Buf : register(t2, space4)

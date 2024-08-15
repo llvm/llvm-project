@@ -9363,46 +9363,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   State.set(this, Res, 0);
 }
 
-void VPWidenStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
-
-  VPValue *StoredVPValue = getStoredValue();
-  bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Instruction *NewSI = nullptr;
-    Value *Mask = nullptr;
-    if (auto *VPMask = getMask()) {
-      // Mask reversal is only needed for non-all-one (null) masks, as reverse
-      // of a null all-one mask is a null mask.
-      Mask = State.get(VPMask, Part);
-      if (isReverse())
-        Mask = Builder.CreateVectorReverse(Mask, "reverse");
-    }
-
-    Value *StoredVal = State.get(StoredVPValue, Part);
-    if (isReverse()) {
-      // If we store to reverse consecutive memory locations, then we need
-      // to reverse the order of elements in the stored value.
-      StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-      // We don't want to update the value in the map as it might be used in
-      // another expression. So don't call resetVectorValue(StoredVal).
-    }
-    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
-    if (CreateScatter)
-      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
-    else if (Mask)
-      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
-    else
-      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-    State.addMetadata(NewSI, SI);
-  }
-}
-
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
