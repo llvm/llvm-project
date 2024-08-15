@@ -12,8 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILIntrinsicExpansion.h"
+#include "DXILOpLowering.h"
+#include "DXILPrettyPrinter.h"
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
+#include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
@@ -45,7 +49,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
-  initializeDXILTranslateMetadataPass(*PR);
+  initializeDXILTranslateMetadataLegacyPass(*PR);
   initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
 }
@@ -79,7 +83,7 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILTranslateMetadataPass());
+    addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };
@@ -116,7 +120,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
 
   switch (FileType) {
   case CodeGenFileType::AssemblyFile:
-    PM.add(createDXILPrettyPrinterPass(Out));
+    PM.add(createDXILPrettyPrinterLegacyPass(Out));
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:
