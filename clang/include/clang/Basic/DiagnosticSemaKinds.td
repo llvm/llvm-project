@@ -6654,8 +6654,9 @@ def warn_counted_by_attr_elt_type_unknown_size :
 
 def err_builtin_get_counted_by_has_side_effects : Error<
   "__builtin_get_counted_by cannot have side-effects">;
-def err_builtin_get_counted_by_must_be_pointer : Error<
-  "__builtin_get_counted_by argument must be a pointer">;
+def err_builtin_get_counted_by_must_be_flex_array_member : Error<
+  "__builtin_get_counted_by argument must be a pointer "
+  "to a flexible array member">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

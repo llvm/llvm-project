@@ -3696,7 +3696,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Result = llvm::ConstantPointerNull::get(
         cast<llvm::PointerType>(ConvertType(E->getType())));
 
-    if (const MemberExpr *ME = E->getArg(0)->getMemberExpr()) {
+    const Expr *Arg = E->getArg(0)->IgnoreParenImpCasts();
+
+    if (auto *UO = dyn_cast<UnaryOperator>(Arg);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      Arg = UO->getSubExpr()->IgnoreParenImpCasts();
+
+      if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Arg))
+        Arg = ASE->getBase()->IgnoreParenImpCasts();
+    }
+
+    if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
       bool IsFlexibleArrayMember = ME->isFlexibleArrayMemberLike(
           getContext(), getLangOpts().getStrictFlexArraysLevel());
 

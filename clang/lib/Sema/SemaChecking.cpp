@@ -5585,10 +5585,10 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
   if (ArgRes.isInvalid())
     return true;
 
-  const Expr *Arg = ArgRes.get();
-  if (!isa<PointerType>(Arg->getType()))
+  const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
+  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_get_counted_by_must_be_pointer)
+                diag::err_builtin_get_counted_by_must_be_flex_array_member)
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
@@ -5596,11 +5596,20 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
                 diag::err_builtin_get_counted_by_has_side_effects)
            << Arg->getSourceRange();
 
+  // See if we have something like '&ptr->fam[0]`.
+  if (auto *UO = dyn_cast<UnaryOperator>(Arg);
+      UO && UO->getOpcode() == UO_AddrOf) {
+    Arg = UO->getSubExpr()->IgnoreParenImpCasts();
+
+    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Arg))
+      Arg = ASE->getBase()->IgnoreParenImpCasts();
+  }
+
   // Use 'size_t *' as the default return type. If the argument doesn't have
   // the 'counted_by' attribute, it'll return a "nullptr."
   TheCall->setType(Context.getPointerType(Context.getSizeType()));
 
-  if (const MemberExpr *ME = Arg->getMemberExpr();
+  if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg);
       ME &&
       ME->isFlexibleArrayMemberLike(Context,
                                     getLangOpts().getStrictFlexArraysLevel()) &&

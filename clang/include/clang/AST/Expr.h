@@ -546,12 +546,6 @@ public:
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
-  /// getMemberExpr - Find the first MemberExpr of the Expr. This method
-  /// intentionally looks through all casts, array subscripts, and unary
-  /// operators to find an underlying MemberExpr. If one doesn't exist, it
-  /// returns a nullptr.
-  const MemberExpr *getMemberExpr() const;
-
   /// isIntegerConstantExpr - Return the value if this expression is a valid
   /// integer constant expression.  If not a valid i-c-e, return std::nullopt
   /// and fill in Loc (if specified) with the location of the invalid
