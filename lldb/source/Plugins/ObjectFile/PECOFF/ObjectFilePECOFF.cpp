@@ -355,7 +355,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
-                                const lldb_private::SaveCoreOptions &options,
+                                lldb_private::SaveCoreOptions &options,
                                 lldb_private::Status &error) {
   // Outfile and process_sp are validated by PluginManager::SaveCore
   assert(options.GetOutputFile().has_value());
