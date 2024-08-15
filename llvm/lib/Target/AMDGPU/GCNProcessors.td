@@ -304,13 +304,16 @@ def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
 >;
 
+
 #ifdef LLPC_BUILD_GFX12
+
 // Internal only (A0)
 def : ProcessorModel<"gfx115F", GFX11SpeedModel,
   FeatureISAVersion11_5_0.Features
 >;
 
 #endif /* LLPC_BUILD_GFX12 */
+
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
