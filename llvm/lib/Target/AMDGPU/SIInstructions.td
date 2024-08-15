@@ -1174,7 +1174,7 @@ let SubtargetPredicate = NotHasTrue16BitInsts in
 defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
 
 let SubtargetPredicate = HasTrue16BitInsts in
-defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64>;
+defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
