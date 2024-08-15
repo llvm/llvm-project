@@ -1341,8 +1341,9 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
       emitc.call_opaque "func2" (%3) : (f32) -> ()
     }
-
-    // Output:
+    ```
+    ```c++
+    // Code emitted for the operations above.
     switch (v1) {
     case 2: {
       int32_t v2 = func_b();

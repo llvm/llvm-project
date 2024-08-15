@@ -95,7 +95,7 @@ static void lowerYield(SmallVector<Value> &resultVariables,
 }
 
 // Lower the contents of an scf::if/scf::index_switch regions to an
-// emitc::if/emitc::switch regions. The contents of the lowering region is
+// emitc::if/emitc::switch region. The contents of the lowering region is
 // moved into the respective lowered region, but the scf::yield is replaced not
 // only with an emitc::yield, but also with a sequence of emitc::assign ops that
 // set the yielded values into the result variables.
