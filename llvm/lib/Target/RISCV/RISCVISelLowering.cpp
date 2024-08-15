@@ -20202,12 +20202,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // split it and then direct call can be matched by PseudoCALL.
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      Callee =
-          getLargeGlobalAddress(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
+      Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
     } else if (ExternalSymbolSDNode *S =
                    dyn_cast<ExternalSymbolSDNode>(Callee)) {
-      Callee =
-          getLargeExternalSymbol(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
+      Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
     }
   } else {
     if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
