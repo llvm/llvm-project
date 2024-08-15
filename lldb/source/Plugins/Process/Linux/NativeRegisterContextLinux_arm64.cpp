@@ -23,7 +23,7 @@
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
-#include "Plugins/Process/Utility/RegisterFlagsLinux_arm64.h"
+#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // System includes - They have to be included after framework includes because
@@ -72,8 +72,8 @@ using namespace lldb_private::process_linux;
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the
 // fields all over again.
-static std::mutex g_register_flags_mutex;
-static LinuxArm64RegisterFlags g_register_flags;
+static std::mutex g_register_flags_detector_mutex;
+static Arm64RegisterFlagsDetector g_register_flags_detector;
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
@@ -144,10 +144,10 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
 
-    std::lock_guard<std::mutex> lock(g_register_flags_mutex);
-    if (!g_register_flags.HasDetected())
-      g_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
-                                    auxv_at_hwcap2.value_or(0));
+    std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
+    if (!g_register_flags_detector.HasDetected())
+      g_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
+                                             auxv_at_hwcap2.value_or(0));
 
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
@@ -171,7 +171,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
       NativeRegisterContextLinux(native_thread) {
-  g_register_flags.UpdateRegisterInfo(
+  g_register_flags_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
 

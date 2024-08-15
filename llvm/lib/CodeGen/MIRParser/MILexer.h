@@ -100,6 +100,7 @@ struct MIToken {
     kw_intrinsic,
     kw_target_index,
     kw_half,
+    kw_bfloat,
     kw_float,
     kw_double,
     kw_x86_fp80,

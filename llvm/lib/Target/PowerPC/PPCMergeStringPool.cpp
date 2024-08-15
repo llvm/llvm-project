@@ -244,7 +244,7 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
     return false;
 
   // Sort the global constants to make access more efficient.
-  llvm::sort(MergeableStrings, CompareConstants);
+  std::sort(MergeableStrings.begin(), MergeableStrings.end(), CompareConstants);
 
   SmallVector<Constant *> ConstantsInStruct;
   for (GlobalVariable *GV : MergeableStrings)

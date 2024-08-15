@@ -26,7 +26,7 @@
 #error LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace x86 {
 
@@ -222,6 +222,6 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H

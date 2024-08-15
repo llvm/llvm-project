@@ -348,12 +348,12 @@
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWPRFCHW %s
 
-// 3DNOWPRFCHW: #define __3dNOW__ 1
+// 3DNOWPRFCHW-NOT: #define __3dNOW__ 1
 // 3DNOWPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mno-prfchw -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWNOPRFCHW %s
 
-// 3DNOWNOPRFCHW: #define __3dNOW__ 1
+// 3DNOWNOPRFCHW-NOT: #define __3dNOW__ 1
 // 3DNOWNOPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mprfchw -mno-3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NO3DNOWPRFCHW %s
@@ -512,11 +512,11 @@
 
 // NOHRESET-NOT: #define __HRESET__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -muintr -x c -E -dM -o - %s | FileCheck -check-prefix=UINTR %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -muintr -x c -E -dM -o - %s | FileCheck -check-prefix=UINTR %s
 
 // UINTR: #define __UINTR__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-uintr -x c -E -dM -o - %s | FileCheck -check-prefix=NOUINTR %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-uintr -x c -E -dM -o - %s | FileCheck -check-prefix=NOUINTR %s
 
 // NOUINTR-NOT: #define __UINTR__ 1
 
@@ -712,7 +712,12 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-256 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
+// AVX10_1_256-NOT: __AVX10_1_512__
 // AVX10_1_256: #define __AVX10_1__ 1
+// AVX10_2_256-NOT: __AVX10_2_512__
+// AVX10_2_256: #define __AVX10_2__ 1
 // AVX10_1_256: #define __AVX512F__ 1
 // AVX10_1_256: #define __EVEX256__ 1
 // AVX10_1_256-NOT: __EVEX512__
@@ -720,7 +725,11 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-evex512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-512 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_512,AVX10_2_512 %s
+// AVX10_1_512: #define __AVX10_1_512__ 1
 // AVX10_1_512: #define __AVX10_1__ 1
+// AVX10_2_512: #define __AVX10_2_512__ 1
+// AVX10_2_512: #define __AVX10_2__ 1
 // AVX10_1_512: #define __AVX512F__ 1
 // AVX10_1_512: #define __EVEX256__ 1
 // AVX10_1_512: #define __EVEX512__ 1
@@ -755,7 +764,7 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=nf -x c -E -dM -o - %s | FileCheck --check-prefix=NF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=zu -x c -E -dM -o - %s | FileCheck --check-prefix=ZU %s
-// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,CF,APXF %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,CF,ZU,APXF %s
 // APXF: #define __APX_F__ 1
 // CCMP: #define __CCMP__ 1
 // CF: #define __CF__ 1

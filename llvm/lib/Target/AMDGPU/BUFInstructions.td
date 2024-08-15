@@ -139,6 +139,7 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -355,6 +356,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let LGKM_CNT             = ps.LGKM_CNT;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -1241,7 +1243,9 @@ let SubtargetPredicate = isGFX12Plus in {
 defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_cond_sub_u32", VGPR_32, i32
 >;
+}
 
+let SubtargetPredicate = HasAtomicBufferPkAddBF16Inst in {
 let FPAtomic = 1 in
 defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_pk_add_bf16", VGPR_32, v2bf16
@@ -1310,14 +1314,16 @@ let SubtargetPredicate = isGFX90APlus in {
   }
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64>;
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
+let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   // Note the names can be buffer_atomic_fmin_x2/buffer_atomic_fmax_x2
   // depending on some subtargets.
   defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64>;
   defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+}
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let SubtargetPredicate = isGFX940Plus;
@@ -1747,8 +1753,11 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
 let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
+let SubtargetPredicate = HasAtomicBufferPkAddBF16Inst in {
+  defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16">;
+}
+
 let SubtargetPredicate = isGFX12Plus in {
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
 }
 
@@ -1831,9 +1840,9 @@ let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16", ["ret"]>;
 } // End SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
 let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f64, "BUFFER_ATOMIC_MIN_F64">;
@@ -2428,6 +2437,7 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let MTBUF              = ps.MTBUF;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<24> offset;
   bits<8>  vaddr;

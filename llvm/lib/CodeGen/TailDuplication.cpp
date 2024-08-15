@@ -40,7 +40,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBranchProbabilityInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -84,7 +84,7 @@ bool TailDuplicateBase::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  auto MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
                &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :

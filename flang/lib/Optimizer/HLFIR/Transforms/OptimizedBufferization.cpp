@@ -89,7 +89,7 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
                   mlir::PatternRewriter &rewriter) const override;
 };
@@ -465,7 +465,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   return match;
 }
 
-mlir::LogicalResult ElementalAssignBufferization::matchAndRewrite(
+llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
     hlfir::ElementalOp elemental, mlir::PatternRewriter &rewriter) const {
   std::optional<MatchInfo> match = findMatch(elemental);
   if (!match)
@@ -519,12 +519,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
+llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
   // in a conforming Fortran program, and LHS cannot be reallocated
@@ -587,12 +587,12 @@ private:
 public:
   using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
+llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   if (assign.isAllocatableAssignment())
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
@@ -716,7 +716,7 @@ class ReductionElementalConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     hlfir::ElementalOp elemental =
@@ -817,7 +817,7 @@ class MinMaxlocElementalConversion : public mlir::OpRewritePattern<Op> {
 public:
   using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op mloc, mlir::PatternRewriter &rewriter) const override {
     if (!mloc.getMask() || mloc.getDim() || mloc.getBack())
       return rewriter.notifyMatchFailure(mloc,

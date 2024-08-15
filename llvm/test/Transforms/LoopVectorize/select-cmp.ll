@@ -11,7 +11,6 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_ICMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 7, i32 3
@@ -34,7 +33,6 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL3:%.*]] = or <4 x i1> [[VEC_PHI3]], [[NOT3]]
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL4:%.*]] = or <4 x i1> [[VEC_PHI4]], [[NOT4]]
 ; CHECK-VF4IC4:      middle.block:
-; CHECK-VF4IC4-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL5:%.*]] = or <4 x i1>  [[VEC_SEL2]], [[VEC_SEL1]]
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL6:%.*]] = or <4 x i1> [[VEC_SEL3]], [[VEC_SEL5]]
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL7:%.*]] = or <4 x i1> [[VEC_SEL4]], [[VEC_SEL6]]
@@ -65,7 +63,6 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF1IC4-NEXT:   [[VEC_SEL3:%.*]] = or i1 [[VEC_PHI3]], [[NOT3]]
 ; CHECK-VF1IC4-NEXT:   [[VEC_SEL4:%.*]] = or i1 [[VEC_PHI4]], [[NOT4]]
 ; CHECK-VF1IC4:      middle.block:
-; CHECK-VF1IC4-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF1IC4-NEXT:   [[VEC_SEL5:%.*]] = or i1 [[VEC_SEL2]], [[VEC_SEL1]]
 ; CHECK-VF1IC4-NEXT:   [[VEC_SEL6:%.*]] = or i1 [[VEC_SEL3]], [[VEC_SEL5]]
 ; CHECK-VF1IC4-NEXT:   [[OR_RDX:%.*]] = or i1  [[VEC_SEL4]], [[VEC_SEL6]]
@@ -99,7 +96,6 @@ define i32 @select_const_i32_from_icmp2(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <4 x i32> [[VEC_LOAD]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 7, i32 3
@@ -135,7 +131,6 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_ICMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 %b, i32 %a
@@ -167,7 +162,6 @@ define i32 @select_const_i32_from_fcmp_fast(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_FCMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 1, i32 2
@@ -199,7 +193,6 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_FCMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 1, i32 2
@@ -234,7 +227,6 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%.*]] = xor <4 x i1> [[VEC_ICMP]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR_OR_RDX:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR_OR_RDX]], i32 %b, i32 %a
@@ -277,33 +269,6 @@ for.body:                                      ; preds = %entry, %for.body
 
 exit:                                     ; preds = %for.body
   ret float %5
-}
-
-
-; We don't support select/cmp reduction patterns where there is more than one
-; use of the icmp/fcmp.
-define i32 @select_const_i32_from_icmp_mul_use(ptr nocapture readonly %v1, ptr %v2, i64 %n) {
-; CHECK-LABEL: @select_const_i32_from_icmp_mul_use
-; CHECK-NOT: vector.body
-entry:
-  br label %for.body
-
-for.body:                                      ; preds = %entry, %for.body
-  %0 = phi i64 [ 0, %entry ], [ %8, %for.body ]
-  %1 = phi i32 [ 3, %entry ], [ %6, %for.body ]
-  %2 = phi i32 [ 0, %entry ], [ %7, %for.body ]
-  %3 = getelementptr inbounds i32, ptr %v1, i64 %0
-  %4 = load i32, ptr %3, align 4
-  %5 = icmp eq i32 %4, 3
-  %6 = select i1 %5, i32 %1, i32 7
-  %7 = zext i1 %5 to i32
-  %8 = add nuw nsw i64 %0, 1
-  %9 = icmp eq i64 %8, %n
-  br i1 %9, label %exit, label %for.body
-
-exit:                                     ; preds = %for.body
-  store i32 %7, ptr %v2, align 4
-  ret i32 %6
 }
 
 

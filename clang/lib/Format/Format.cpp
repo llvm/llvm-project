@@ -245,6 +245,16 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBinaryOperationsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::BBO_Never);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BBO_OnePerLine);
+    IO.enumCase(Value, "RespectPrecedence", FormatStyle::BBO_RespectPrecedence);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::BreakConstructorInitializersStyle &Value) {
@@ -729,6 +739,7 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
 
 template <> struct MappingTraits<FormatStyle::SpacesInParensCustom> {
   static void mapping(IO &IO, FormatStyle::SpacesInParensCustom &Spaces) {
+    IO.mapOptional("ExceptDoubleParentheses", Spaces.ExceptDoubleParentheses);
     IO.mapOptional("InCStyleCasts", Spaces.InCStyleCasts);
     IO.mapOptional("InConditionalStatements", Spaces.InConditionalStatements);
     IO.mapOptional("InEmptyParentheses", Spaces.InEmptyParentheses);
@@ -967,6 +978,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeInlineASMColon);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
+    IO.mapOptional("BreakBinaryOperations", Style.BreakBinaryOperations);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakFunctionDefinitionParameters",
@@ -1184,8 +1196,8 @@ template <> struct MappingTraits<FormatStyle> {
         (SpacesInParentheses || SpaceInEmptyParentheses ||
          SpacesInConditionalStatement || SpacesInCStyleCastParentheses)) {
       if (SpacesInParentheses) {
-        // set all options except InCStyleCasts and InEmptyParentheses
-        // to true for backward compatibility.
+        // For backward compatibility.
+        Style.SpacesInParensOptions.ExceptDoubleParentheses = false;
         Style.SpacesInParensOptions.InConditionalStatements = true;
         Style.SpacesInParensOptions.InCStyleCasts =
             SpacesInCStyleCastParentheses;
@@ -1479,6 +1491,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
+  LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -3221,10 +3234,16 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     if (Trimmed.contains(RawStringTermination))
       FormattingOff = false;
 
-    if (isClangFormatOff(Trimmed))
+    bool IsBlockComment = false;
+
+    if (isClangFormatOff(Trimmed)) {
       FormattingOff = true;
-    else if (isClangFormatOn(Trimmed))
+    } else if (isClangFormatOn(Trimmed)) {
       FormattingOff = false;
+    } else if (Trimmed.starts_with("/*")) {
+      IsBlockComment = true;
+      Pos = Code.find("*/", SearchFrom + 2);
+    }
 
     const bool EmptyLineSkipped =
         Trimmed.empty() &&
@@ -3234,9 +3253,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
 
     bool MergeWithNextLine = Trimmed.ends_with("\\");
     if (!FormattingOff && !MergeWithNextLine) {
-      if (tooling::HeaderIncludes::IncludeRegex.match(Line, &Matches)) {
+      if (!IsBlockComment &&
+          tooling::HeaderIncludes::IncludeRegex.match(Trimmed, &Matches)) {
         StringRef IncludeName = Matches[2];
-        if (Line.contains("/*") && !Line.contains("*/")) {
+        if (Trimmed.contains("/*") && !Trimmed.contains("*/")) {
           // #include with a start of a block comment, but without the end.
           // Need to keep all the lines until the end of the comment together.
           // FIXME: This is somehow simplified check that probably does not work

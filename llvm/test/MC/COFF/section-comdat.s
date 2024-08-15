@@ -4,12 +4,12 @@
 .section assocSec, "dr", discard, "assocSym"
 .global assocSym
 assocSym:
-.long 1
+.long assocSec
 
 .section secName, "dr", discard, "Symbol1"
 .globl Symbol1
 Symbol1:
-.long 1
+.long assocSym
 
 .section secName, "dr", one_only, "Symbol2"
 .globl Symbol2
@@ -68,10 +68,10 @@ Symbol8:
 # CHECK-NEXT: [ 4](sec  3)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .bss
 # CHECK-NEXT: AUX scnlen 0x0 nreloc 0 nlnno 0 checksum 0x0 assoc 3 comdat 0
 # CHECK-NEXT: [ 6](sec  4)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
-# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 2
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 4 comdat 2
 # CHECK-NEXT: [ 8](sec  4)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 assocSym
 # CHECK-NEXT: [ 9](sec  5)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
-# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 5 comdat 2
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 5 comdat 2
 # CHECK-NEXT: [11](sec  5)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol1
 # CHECK-NEXT: [12](sec  6)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 6 comdat 1

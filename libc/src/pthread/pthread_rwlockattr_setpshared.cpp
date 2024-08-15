@@ -9,11 +9,12 @@
 #include "pthread_rwlockattr_setpshared.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // EINVAL
 #include <pthread.h> // pthread_rwlockattr_t, PTHREAD_PROCESS_SHARED, PTHREAD_PROCESS_PRIVATE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_setpshared,
                    (pthread_rwlockattr_t * attr, int pshared)) {
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_setpshared,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

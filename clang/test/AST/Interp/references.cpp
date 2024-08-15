@@ -130,3 +130,8 @@ const char (&nonextended_string_ref)[3] = {"hi"};
 static_assert(nonextended_string_ref[0] == 'h', "");
 static_assert(nonextended_string_ref[1] == 'i', "");
 static_assert(nonextended_string_ref[2] == '\0', "");
+
+/// This isa non-constant context. Reading A is not allowed,
+/// but taking its address is.
+int &&A = 12;
+int arr[!&A];

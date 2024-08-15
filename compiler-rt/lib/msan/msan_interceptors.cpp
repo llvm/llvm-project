@@ -1226,7 +1226,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
 }
 #endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 
@@ -1255,7 +1255,7 @@ struct InterceptorContext {
   }
 };
 
-static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }

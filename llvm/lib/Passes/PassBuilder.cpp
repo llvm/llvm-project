@@ -28,9 +28,12 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallPrinter.h"
 #include "llvm/Analysis/CostModel.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -90,22 +93,32 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -183,10 +196,12 @@
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/PoisonChecking.h"
+#include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
@@ -319,6 +334,8 @@ cl::opt<bool> PrintPipelinePasses(
              "(best-effort only)."));
 } // namespace llvm
 
+extern cl::opt<std::string> UseCtxProfile;
+
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;
@@ -326,15 +343,25 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
-// A pass for testing -print-on-crash.
+// Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
     return PreservedAnalyses::all();
   }
-  static StringRef name() { return "TriggerCrashPass"; }
+  static StringRef name() { return "TriggerCrashModulePass"; }
+};
+
+class TriggerCrashFunctionPass
+    : public PassInfoMixin<TriggerCrashFunctionPass> {
+public:
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 // A pass for testing message reporting of -verify-each failures.
@@ -824,6 +851,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.hoistCommonInsts(Enable);
     } else if (ParamName == "sink-common-insts") {
       Result.sinkCommonInsts(Enable);
+    } else if (ParamName == "speculate-unpredictables") {
+      Result.speculateUnpredictables(Enable);
     } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
       APInt BonusInstThreshold;
       if (ParamName.getAsInteger(0, BonusInstThreshold))
@@ -1058,6 +1087,11 @@ Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
                                             "SeparateConstOffsetFromGEP");
 }
 
+Expected<bool> parseStructurizeCFGPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "skip-uniform-regions",
+                                            "StructurizeCFG");
+}
+
 Expected<OptimizationLevel>
 parseFunctionSimplificationPipelineOptions(StringRef Params) {
   std::optional<OptimizationLevel> L = parseOptLevel(Params);
@@ -1159,7 +1193,7 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      std::optional<RegClassFilterFunc> Filter =
+      std::optional<RegAllocFilterFunc> Filter =
           PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
@@ -1182,6 +1216,11 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
         inconvertibleErrorCode());
   }
   return Opts;
+}
+
+Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
+  RealtimeSanitizerOptions Result;
+  return Result;
 }
 
 } // namespace
@@ -1910,6 +1949,18 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     MFPM.addPass(CREATE_PASS(Params.get()));                                   \
     return Error::success();                                                   \
   }
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  if (Name == "require<" NAME ">") {                                           \
+    MFPM.addPass(                                                              \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            MachineFunction>());                               \
+    return Error::success();                                                   \
+  }                                                                            \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    MFPM.addPass(InvalidateAnalysisPass<                                       \
+                 std::remove_reference_t<decltype(CREATE_PASS)>>());           \
+    return Error::success();                                                   \
+  }
 #include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachineFunctionPipelineParsingCallbacks)
@@ -2157,7 +2208,7 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-std::optional<RegClassFilterFunc>
+std::optional<RegAllocFilterFunc>
 PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
     return nullptr;

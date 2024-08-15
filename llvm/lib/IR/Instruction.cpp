@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -68,6 +69,10 @@ const Module *Instruction::getModule() const {
 
 const Function *Instruction::getFunction() const {
   return getParent()->getParent();
+}
+
+const DataLayout &Instruction::getDataLayout() const {
+  return getModule()->getDataLayout();
 }
 
 void Instruction::removeFromParent() {

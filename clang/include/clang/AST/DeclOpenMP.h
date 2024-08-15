@@ -143,10 +143,10 @@ public:
   unsigned varlist_size() const { return Data->getNumChildren(); }
   bool varlist_empty() const { return Data->getChildren().empty(); }
 
-  varlist_range varlists() {
+  varlist_range varlist() {
     return varlist_range(varlist_begin(), varlist_end());
   }
-  varlist_const_range varlists() const {
+  varlist_const_range varlist() const {
     return varlist_const_range(varlist_begin(), varlist_end());
   }
   varlist_iterator varlist_begin() { return getVars().begin(); }
@@ -513,10 +513,10 @@ public:
   unsigned clauselist_size() const { return Data->getNumClauses(); }
   bool clauselist_empty() const { return Data->getClauses().empty(); }
 
-  varlist_range varlists() {
+  varlist_range varlist() {
     return varlist_range(varlist_begin(), varlist_end());
   }
-  varlist_const_range varlists() const {
+  varlist_const_range varlist() const {
     return varlist_const_range(varlist_begin(), varlist_end());
   }
   varlist_iterator varlist_begin() { return getVars().begin(); }

@@ -620,7 +620,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       if (!CmpLHSConst || !llvm::is_contained(successors(BB), B))
         continue;
       // First collapse InstChain
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       for (Instruction *I : llvm::reverse(InstChain)) {
         CmpLHSConst = ConstantFoldBinaryOpOperands(
             I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL);

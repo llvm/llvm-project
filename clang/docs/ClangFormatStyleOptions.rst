@@ -1484,7 +1484,7 @@ the configuration (without a prefix: ``Auto``).
   * ``OAS_AlignAfterOperator`` (in configuration: ``AlignAfterOperator``)
     Horizontally align operands of binary and ternary expressions.
 
-    This is similar to ``AO_Align``, except when
+    This is similar to ``OAS_Align``, except when
     ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
     that the wrapped operand is aligned with the operand on the first line.
 
@@ -3299,6 +3299,46 @@ the configuration (without a prefix: ``Auto``).
      veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
+
+.. _BreakBinaryOperations:
+
+**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+  The break constructor initializers style to use.
+
+  Possible values:
+
+  * ``BBO_Never`` (in configuration: ``Never``)
+    Don't break binary operations
+
+    .. code-block:: c++
+
+       aaa + bbbb * ccccc - ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+    Binary operations will either be all on the same line, or each operation
+    will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb *
+       ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+    Binary operations of a particular precedence that exceed the column
+    limit will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb * ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+
 
 .. _BreakConstructorInitializers:
 
@@ -6242,6 +6282,7 @@ the configuration (without a prefix: ``Auto``).
     # Example of usage:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       InEmptyParentheses: true
 
@@ -6254,8 +6295,21 @@ the configuration (without a prefix: ``Auto``).
     # Should be declared this way:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       Other: true
+
+  * ``bool ExceptDoubleParentheses`` Override any of the following options to prevent addition of space
+    when both opening and closing parentheses use multiple parentheses.
+
+    .. code-block:: c++
+
+      true:
+      __attribute__(( noreturn ))
+      __decltype__(( x ))
+      if (( a = b ))
+     false:
+       Uses the applicable option.
 
   * ``bool InConditionalStatements`` Put a space in parentheses only inside conditional statements
     (``for/if/while/switch...``).
@@ -6270,8 +6324,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       x = ( int32 )y                 vs.     x = (int32)y
+      true:                                  false:
+      x = ( int32 )y                  vs.    x = (int32)y
+      y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
 
   * ``bool InEmptyParentheses`` Insert a space in empty parentheses, i.e. ``()``.
 
@@ -6289,8 +6344,8 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+      true:                                 false:
+      t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
 
 
 .. _SpacesInParentheses:

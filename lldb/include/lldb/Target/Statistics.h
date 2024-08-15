@@ -144,9 +144,8 @@ public:
   bool GetIncludeTargets() const {
     if (m_include_targets.has_value())
       return m_include_targets.value();
-    // `m_include_targets` has no value set, so return a value based on
-    // `m_summary_only`.
-    return !GetSummaryOnly();
+    // Default to true in both default mode and summary mode.
+    return true;
   }
 
   void SetIncludeModules(bool value) { m_include_modules = value; }

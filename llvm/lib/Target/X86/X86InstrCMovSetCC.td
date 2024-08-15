@@ -113,6 +113,27 @@ let Predicates = [HasCMOV, HasCF] in {
             (CFCMOV32rr GR32:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov GR64:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV64rr GR64:$src1, (inv_cond_XFORM timm:$cond))>;
+
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV16rm addr:$src1, timm:$cond)>;
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV32rm addr:$src1, timm:$cond)>;
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV64rm addr:$src1, timm:$cond)>;
+
+  def : Pat<(X86cload addr:$src2, GR16:$src1, timm:$cond, EFLAGS),
+            (CFCMOV16rm_ND GR16:$src1, addr:$src2, timm:$cond)>;
+  def : Pat<(X86cload addr:$src2, GR32:$src1, timm:$cond, EFLAGS),
+            (CFCMOV32rm_ND GR32:$src1, addr:$src2, timm:$cond)>;
+  def : Pat<(X86cload addr:$src2, GR64:$src1, timm:$cond, EFLAGS),
+            (CFCMOV64rm_ND GR64:$src1, addr:$src2, timm:$cond)>;
+
+  def : Pat<(X86cstore GR16:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV16mr addr:$src1, GR16:$src2, timm:$cond)>;
+  def : Pat<(X86cstore GR32:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV32mr addr:$src1, GR32:$src2, timm:$cond)>;
+  def : Pat<(X86cstore GR64:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV64mr addr:$src1, GR64:$src2, timm:$cond)>;
 }
 
 // SetCC instructions.

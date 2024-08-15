@@ -216,7 +216,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   // ((1 << MaskShAmt) - 1)
   auto MaskA = m_Add(m_Shl(m_One(), m_Value(MaskShAmt)), m_AllOnes());
   // (~(-1 << maskNbits))
-  auto MaskB = m_Xor(m_Shl(m_AllOnes(), m_Value(MaskShAmt)), m_AllOnes());
+  auto MaskB = m_Not(m_Shl(m_AllOnes(), m_Value(MaskShAmt)));
   // (-1 l>> MaskShAmt)
   auto MaskC = m_LShr(m_AllOnes(), m_Value(MaskShAmt));
   // ((-1 << MaskShAmt) l>> MaskShAmt)

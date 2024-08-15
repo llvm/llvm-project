@@ -4381,8 +4381,7 @@ bool TGParser::CheckTemplateArgValues(
     SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    auto *Value = Values[I];
+  for (llvm::ArgumentInit *&Value : Values) {
     Init *ArgName = nullptr;
     if (Value->isPositional())
       ArgName = TArgs[Value->getIndex()];
@@ -4398,7 +4397,7 @@ bool TGParser::CheckTemplateArgValues(
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = Value->cloneWithValue(CastValue);
+        Value = Value->cloneWithValue(CastValue);
       } else {
         PrintFatalError(Loc, "Value specified for template argument '" +
                                  Arg->getNameInitAsString() + "' is of type " +

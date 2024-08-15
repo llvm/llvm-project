@@ -15,7 +15,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 
 using namespace mlir;

@@ -29,6 +29,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -210,23 +211,21 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
   // care about the nature of the Edge (call or ref). `FunctionLevels`-wise, we
   // record them at the same level as the original node (this is a choice, may
   // need revisiting).
-  NodeCount -= static_cast<int64_t>(NodesInLastSCC.size());
+  // - nodes are only deleted at the end of a call graph walk where they are
+  // batch deleted, so we shouldn't see any dead nodes here.
   while (!NodesInLastSCC.empty()) {
     const auto *N = *NodesInLastSCC.begin();
+    assert(!N->isDead());
     NodesInLastSCC.erase(N);
-    // The Function wrapped by N could have been deleted since we last saw it.
-    if (N->isDead()) {
-      assert(!N->getFunction().isDeclaration());
-      continue;
-    }
-    ++NodeCount;
     EdgeCount += getLocalCalls(N->getFunction());
     const auto NLevel = FunctionLevels.at(N);
     for (const auto &E : *(*N)) {
       const auto *AdjNode = &E.getNode();
       assert(!AdjNode->isDead() && !AdjNode->getFunction().isDeclaration());
       auto I = AllNodes.insert(AdjNode);
+      // We've discovered a new function.
       if (I.second) {
+        ++NodeCount;
         NodesInLastSCC.insert(AdjNode);
         FunctionLevels[AdjNode] = NLevel;
       }
@@ -255,11 +254,9 @@ void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *CurSCC) {
   EdgesOfLastSeenNodes = 0;
 
   // Check on nodes that were in SCC onPassEntry
-  for (auto I = NodesInLastSCC.begin(); I != NodesInLastSCC.end();) {
-    if ((*I)->isDead())
-      NodesInLastSCC.erase(*I++);
-    else
-      EdgesOfLastSeenNodes += getLocalCalls((*I++)->getFunction());
+  for (const LazyCallGraph::Node *N : NodesInLastSCC) {
+    assert(!N->isDead());
+    EdgesOfLastSeenNodes += getLocalCalls(N->getFunction());
   }
 
   // Check on nodes that may have got added to SCC
@@ -310,11 +307,17 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   int64_t NewCallerAndCalleeEdges =
       getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
 
-  if (CalleeWasDeleted)
+  // A dead function's node is not actually removed from the call graph until
+  // the end of the call graph walk, but the node no longer belongs to any valid
+  // SCC.
+  if (CalleeWasDeleted) {
     --NodeCount;
-  else
+    NodesInLastSCC.erase(CG.lookup(*Callee));
+    DeadFunctions.insert(Callee);
+  } else {
     NewCallerAndCalleeEdges +=
         getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
+  }
   EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
@@ -427,6 +430,10 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
       CalleeBefore.Uses;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_callee_avail_external) =
+      Callee.hasAvailableExternallyLinkage();
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
+      Caller.hasAvailableExternallyLinkage();
 
   // Add the cost features
   for (size_t I = 0;
@@ -488,7 +495,9 @@ void MLInlineAdvisor::print(raw_ostream &OS) const {
   OS << "\n";
   OS << "[MLInlineAdvisor] FuncLevels:\n";
   for (auto I : FunctionLevels)
-    OS << (I.first->isDead() ? "<deleted>" : I.first->getFunction().getName())
+    OS << (DeadFunctions.contains(&I.first->getFunction())
+               ? "<deleted>"
+               : I.first->getFunction().getName())
        << " : " << I.second << "\n";
 
   OS << "\n";

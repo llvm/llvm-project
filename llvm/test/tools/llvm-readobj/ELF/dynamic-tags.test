@@ -11,7 +11,7 @@
 # RUN: llvm-readelf --dynamic-table --pretty-print --elf-output-style=JSON %t1 \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=JSON64
 
-#      LLVM64:DynamicSection [ (61 entries)
+#      LLVM64:DynamicSection [ (62 entries)
 # LLVM64-NEXT:  Tag                Type                 Name/Value
 # LLVM64-NEXT:  0x0000000000000001 NEEDED               Shared library: [D]
 # LLVM64-NEXT:  0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -49,6 +49,7 @@
 # LLVM64-NEXT:  0x0000000000000023 RELRSZ               16 (bytes)
 # LLVM64-NEXT:  0x0000000000000024 RELR                 0x1000
 # LLVM64-NEXT:  0x0000000000000025 RELRENT              17185 (bytes)
+# LLVM64-NEXT:  0x0000000040000026 CREL                 0x40
 # LLVM64-NEXT:  0x000000006000000F ANDROID_REL          0x1000
 # LLVM64-NEXT:  0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # LLVM64-NEXT:  0x0000000060000011 ANDROID_RELA         0x1000
@@ -76,7 +77,7 @@
 # LLVM64-NEXT:  0x0000000000000000 NULL                 0x0
 # LLVM64-NEXT:]
 
-#      GNU64:Dynamic section at offset {{.*}} contains 61 entries:
+#      GNU64:Dynamic section at offset {{.*}} contains 62 entries:
 # GNU64-NEXT:  Tag                Type                   Name/Value
 # GNU64-NEXT:  0x0000000000000001 (NEEDED)               Shared library: [D]
 # GNU64-NEXT:  0x0000000000000002 (PLTRELSZ)             16 (bytes)
@@ -114,6 +115,7 @@
 # GNU64-NEXT:  0x0000000000000023 (RELRSZ)               16 (bytes)
 # GNU64-NEXT:  0x0000000000000024 (RELR)                 0x1000
 # GNU64-NEXT:  0x0000000000000025 (RELRENT)              17185 (bytes)
+# GNU64-NEXT:  0x0000000040000026 (CREL)                 0x40
 # GNU64-NEXT:  0x000000006000000f (ANDROID_REL)          0x1000
 # GNU64-NEXT:  0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU64-NEXT:  0x0000000060000011 (ANDROID_RELA)         0x1000
@@ -335,6 +337,11 @@
 # JSON64-NEXT:      "Tag": 37,
 # JSON64-NEXT:      "Type": "RELRENT",
 # JSON64-NEXT:      "Value": 17185
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1073741862,
+# JSON64-NEXT:      "Type": "CREL",
+# JSON64-NEXT:      "Value": 64
 # JSON64-NEXT:  },
 # JSON64-NEXT:  {
 # JSON64-NEXT:      "Tag": 1610612751,
@@ -583,6 +590,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_RELRENT
         Value: 0x4321
+      - Tag:   DT_CREL
+        Value: 0x40
       - Tag:   DT_ANDROID_REL
         Value: 0x1000
       - Tag:   DT_ANDROID_RELSZ
@@ -657,7 +666,7 @@ ProgramHeaders:
 # RUN:   | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 # RUN: llvm-readelf -d %t2 | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 
-#      LLVM32:DynamicSection [ (61 entries)
+#      LLVM32:DynamicSection [ (62 entries)
 # LLVM32-NEXT:  Tag        Type                 Name/Value
 # LLVM32-NEXT:  0x00000001 NEEDED               Shared library: [D]
 # LLVM32-NEXT:  0x00000002 PLTRELSZ             16 (bytes)
@@ -695,6 +704,7 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x00000023 RELRSZ               16 (bytes)
 # LLVM32-NEXT:  0x00000024 RELR                 0x1000
 # LLVM32-NEXT:  0x00000025 RELRENT              17185 (bytes)
+# LLVM32-NEXT:  0x40000026 CREL                 0x40
 # LLVM32-NEXT:  0x6000000F ANDROID_REL          0x1000
 # LLVM32-NEXT:  0x60000010 ANDROID_RELSZ        16 (bytes)
 # LLVM32-NEXT:  0x60000011 ANDROID_RELA         0x1000
@@ -722,7 +732,7 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x00000000 NULL                 0x0
 # LLVM32-NEXT:]
 
-#      GNU32:Dynamic section at offset 0x84 contains 61 entries:
+#      GNU32:Dynamic section at offset 0x84 contains 62 entries:
 # GNU32-NEXT:  Tag        Type                   Name/Value
 # GNU32-NEXT:  0x00000001 (NEEDED)               Shared library: [D]
 # GNU32-NEXT:  0x00000002 (PLTRELSZ)             16 (bytes)
@@ -760,6 +770,7 @@ ProgramHeaders:
 # GNU32-NEXT:  0x00000023 (RELRSZ)               16 (bytes)
 # GNU32-NEXT:  0x00000024 (RELR)                 0x1000
 # GNU32-NEXT:  0x00000025 (RELRENT)              17185 (bytes)
+# GNU32-NEXT:  0x40000026 (CREL)                 0x40
 # GNU32-NEXT:  0x6000000f (ANDROID_REL)          0x1000
 # GNU32-NEXT:  0x60000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU32-NEXT:  0x60000011 (ANDROID_RELA)         0x1000
@@ -846,13 +857,14 @@ Sections:
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB_SHNDX: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_CREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
 
 # PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
 # PHENTSIZE-LLVM-NEXT: LoadName: <?>
 
-# PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
+# PHENTSIZE-LLVM:      DynamicSection [ (62 entries)
 # PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
@@ -890,6 +902,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000023 RELRSZ               16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000024 RELR                 0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000025 RELRENT              17185 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000040000026 CREL                 0x40
 # PHENTSIZE-LLVM-NEXT:   0x000000006000000F ANDROID_REL          0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
@@ -917,7 +930,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
 # PHENTSIZE-LLVM-NEXT: ]
 
-# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
+# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 62 entries:
 # PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
 # PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
 # PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
@@ -956,6 +969,7 @@ Sections:
 # PHENTSIZE-GNU-NEXT:   0x0000000000000023 (RELRSZ)               16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000024 (RELR)                 0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000000000025 (RELRENT)              17185 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000040000026 (CREL)                 0x40
 # PHENTSIZE-GNU-NEXT:   0x000000006000000f (ANDROID_REL)          0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000060000011 (ANDROID_RELA)         0x1000

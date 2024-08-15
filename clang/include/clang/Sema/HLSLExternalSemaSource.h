@@ -23,7 +23,6 @@ class Sema;
 class HLSLExternalSemaSource : public ExternalSemaSource {
   Sema *SemaPtr = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
-  CXXRecordDecl *ResourceDecl = nullptr;
 
   using CompletionFunction = std::function<void(CXXRecordDecl *)>;
   llvm::DenseMap<CXXRecordDecl *, CompletionFunction> Completions;

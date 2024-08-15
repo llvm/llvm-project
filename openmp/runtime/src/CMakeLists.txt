@@ -161,7 +161,9 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
-add_definitions(-U_GLIBCXX_ASSERTIONS)
+if(NOT WIN32)
+  add_definitions(-U_GLIBCXX_ASSERTIONS)
+endif()
 
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)

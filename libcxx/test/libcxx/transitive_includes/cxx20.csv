@@ -40,7 +40,9 @@ array algorithm
 array compare
 array concepts
 array cstddef
+array cstdint
 array cstdlib
+array cwchar
 array initializer_list
 array iterator
 array limits
@@ -135,6 +137,9 @@ chrono type_traits
 chrono vector
 chrono version
 cinttypes cstdint
+cmath cstddef
+cmath cstdint
+cmath initializer_list
 cmath limits
 cmath type_traits
 cmath version
@@ -303,6 +308,7 @@ forward_list cstddef
 forward_list cstdint
 forward_list cstdlib
 forward_list cstring
+forward_list cwchar
 forward_list functional
 forward_list initializer_list
 forward_list iosfwd
@@ -462,6 +468,7 @@ list cstddef
 list cstdint
 list cstdlib
 list cstring
+list cwchar
 list functional
 list initializer_list
 list iosfwd
@@ -503,7 +510,9 @@ locale version
 map compare
 map concepts
 map cstddef
+map cstdint
 map cstdlib
+map cwchar
 map functional
 map initializer_list
 map iterator
@@ -682,6 +691,7 @@ ranges optional
 ranges span
 ranges tuple
 ranges type_traits
+ranges variant
 ranges version
 ratio climits
 ratio cstdint
@@ -740,7 +750,9 @@ semaphore version
 set compare
 set concepts
 set cstddef
+set cstdint
 set cstdlib
+set cwchar
 set functional
 set initializer_list
 set iterator
@@ -873,7 +885,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -978,6 +989,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

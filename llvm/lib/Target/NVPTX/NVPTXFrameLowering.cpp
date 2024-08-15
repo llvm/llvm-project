@@ -93,5 +93,8 @@ MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
 
 TargetFrameLowering::DwarfFrameBase
 NVPTXFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
-  return {DwarfFrameBase::CFA, {0}};
+  DwarfFrameBase FrameBase;
+  FrameBase.Kind = DwarfFrameBase::CFA;
+  FrameBase.Location.Offset = 0;
+  return FrameBase;
 }

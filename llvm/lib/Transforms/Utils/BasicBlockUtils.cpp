@@ -1734,7 +1734,7 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
 
   auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
+  auto &DL = SplitBefore->getDataLayout();
   const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
 
   IRBuilder<> Builder(LoopBody->getTerminator());
@@ -1909,22 +1909,29 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
                         Phi->getName() + ".moved", FirstGuardBlock->begin());
+    bool AllUndef = true;
     for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
         V = NewPhi;
       } else if (Phi->getBasicBlockIndex(In) != -1) {
         V = Phi->removeIncomingValue(In, false);
+        AllUndef &= isa<UndefValue>(V);
       }
       NewPhi->addIncoming(V, In);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
+    Value *NewV = NewPhi;
+    if (AllUndef) {
+      NewPhi->eraseFromParent();
+      NewV = UndefValue::get(Phi->getType());
+    }
     if (Phi->getNumOperands() == 0) {
-      Phi->replaceAllUsesWith(NewPhi);
+      Phi->replaceAllUsesWith(NewV);
       I = Phi->eraseFromParent();
       continue;
     }
-    Phi->addIncoming(NewPhi, GuardBlock);
+    Phi->addIncoming(NewV, GuardBlock);
     ++I;
   }
 }

@@ -15,6 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
@@ -24,7 +25,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace multiword {
 
@@ -387,7 +388,8 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = Signed && (v < 0);
@@ -440,7 +442,7 @@ public:
     constexpr size_t MAX_COUNT =
         T_SIZE > Bits ? WORD_COUNT : T_SIZE / WORD_SIZE;
     for (size_t i = 1; i < MAX_COUNT; ++i)
-      lo += static_cast<T>(val[i]) << (WORD_SIZE * i);
+      lo += static_cast<T>(static_cast<T>(val[i]) << (WORD_SIZE * i));
     if constexpr (Signed && (T_SIZE > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);
@@ -728,6 +730,11 @@ public:
   LIBC_INLINE constexpr BigInt operator%(const BigInt &other) const {
     BigInt result(*this);
     return *result.div(other);
+  }
+
+  LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
+    *this = *this % other;
+    return *this;
   }
 
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
@@ -1287,6 +1294,6 @@ first_trailing_one(T value) {
                                                 : cpp::countr_zero(value) + 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

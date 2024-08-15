@@ -30,22 +30,6 @@ class LetDummies {
   string DecoderNamespace;
 }
 
-//===----------------------------------------------------------------------===//
-// VOP Subtarget info
-//===----------------------------------------------------------------------===//
-
-class GFXGen<Predicate pred, string dn, string suffix, int sub> {
-  Predicate AssemblerPredicate = pred;
-  string DecoderNamespace = dn;
-  string Suffix = suffix;
-  int Subtarget = sub;
-}
-
-def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-
-//===----------------------------------------------------------------------===//
-
 class VOP <string opName> {
   string OpName = opName;
 }
@@ -210,6 +194,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -669,6 +654,7 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 }
 
 class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -705,6 +691,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -905,6 +892,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOP_DPP_Base <string OpName, VOPProfile P,

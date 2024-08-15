@@ -17,7 +17,7 @@
 #ifndef LLVM_SUPPORT_DXILABI_H
 #define LLVM_SUPPORT_DXILABI_H
 
-#include "llvm/ADT/StringSwitch.h"
+#include <cstdint>
 
 namespace llvm {
 namespace dxil {
@@ -92,6 +92,25 @@ enum class ElementType : uint32_t {
   UNormF64,
   PackedS8x32,
   PackedU8x32,
+};
+
+/// Metadata tags for extra resource properties.
+enum class ExtPropTags : uint32_t {
+  ElementType = 0,
+  StructuredBufferStride = 1,
+  SamplerFeedbackKind = 2,
+  Atomic64Use = 3,
+};
+
+enum class SamplerType : uint32_t {
+  Default = 0,
+  Comparison = 1,
+  Mono = 2, // Note: Seems to be unused.
+};
+
+enum class SamplerFeedbackType : uint32_t {
+  MinMip = 0,
+  MipRegionUsed = 1,
 };
 
 } // namespace dxil

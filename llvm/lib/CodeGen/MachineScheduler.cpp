@@ -267,9 +267,9 @@ INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(MachineScheduler, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
@@ -280,13 +280,13 @@ MachineScheduler::MachineScheduler() : MachineSchedulerBase(ID) {
 void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<SlotIndexes>();
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -297,7 +297,7 @@ char &llvm::PostMachineSchedulerID = PostMachineScheduler::ID;
 INITIALIZE_PASS_BEGIN(PostMachineScheduler, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(PostMachineScheduler, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
@@ -309,7 +309,7 @@ PostMachineScheduler::PostMachineScheduler() : MachineSchedulerBase(ID) {
 void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -444,12 +444,12 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 
   // Initialize the context of the pass.
   MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PassConfig = &getAnalysis<TargetPassConfig>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
@@ -491,7 +491,7 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 
   // Initialize the context of the pass.
   MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   PassConfig = &getAnalysis<TargetPassConfig>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -1742,8 +1742,8 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
               int64_t Offset, bool OffsetIsScalable, LocationSize Width)
-        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
-          Width(Width), OffsetIsScalable(OffsetIsScalable) {}
+        : SU(SU), BaseOps(BaseOps), Offset(Offset), Width(Width),
+          OffsetIsScalable(OffsetIsScalable) {}
 
     static bool Compare(const MachineOperand *const &A,
                         const MachineOperand *const &B) {
@@ -4413,7 +4413,7 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
     SS << "SU:" << SU->NodeNum;
     if (DFS)
       SS << " I:" << DFS->getNumInstrs(SU);
-    return SS.str();
+    return Str;
   }
 
   static std::string getNodeDescription(const SUnit *SU, const ScheduleDAG *G) {

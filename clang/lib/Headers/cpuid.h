@@ -339,4 +339,13 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
     return 1;
 }
 
+// In some configurations, __cpuidex is defined as a builtin (primarily
+// -fms-extensions) which will conflict with the __cpuidex definition below.
+#if !(__has_builtin(__cpuidex))
+static __inline void __cpuidex(int __cpu_info[4], int __leaf, int __subleaf) {
+  __cpuid_count(__leaf, __subleaf, __cpu_info[0], __cpu_info[1], __cpu_info[2],
+                __cpu_info[3]);
+}
+#endif
+
 #endif /* __CPUID_H */

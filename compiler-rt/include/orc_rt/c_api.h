@@ -72,9 +72,6 @@ typedef struct {
   size_t Size;
 } orc_rt_CWrapperFunctionResult;
 
-typedef struct orc_rt_CSharedOpaqueJITProcessControl
-    *orc_rt_SharedJITProcessControlRef;
-
 /**
  * Zero-initialize an orc_rt_CWrapperFunctionResult.
  */

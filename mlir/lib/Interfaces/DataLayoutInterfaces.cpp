@@ -293,13 +293,12 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
-std::optional<int64_t>
-mlir::detail::getDevicePropertyValueAsInt(DataLayoutEntryInterface entry) {
+std::optional<Attribute>
+mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return std::nullopt;
 
-  auto value = cast<IntegerAttr>(entry.getValue());
-  return value.getValue().getZExtValue();
+  return entry.getValue();
 }
 
 DataLayoutEntryList
@@ -661,7 +660,7 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
-std::optional<int64_t> mlir::DataLayout::getDevicePropertyValueAsInt(
+std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
     TargetSystemSpecInterface::DeviceID deviceID,
     StringAttr propertyName) const {
   checkValid();
@@ -676,9 +675,9 @@ std::optional<int64_t> mlir::DataLayout::getDevicePropertyValueAsInt(
   // missing, we return std::nullopt so that the users can resort to
   // the default value however they want.
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    return iface.getDevicePropertyValueAsInt(entry);
+    return iface.getDevicePropertyValue(entry);
   else
-    return detail::getDevicePropertyValueAsInt(entry);
+    return detail::getDevicePropertyValue(entry);
 }
 
 //===----------------------------------------------------------------------===//

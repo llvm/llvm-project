@@ -31,7 +31,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -45,6 +45,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -400,14 +401,10 @@ public:
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
 
   /// Returns the type for the shift amount of a shift opcode. For vectors,
-  /// returns the input type. For scalars, behavior depends on \p LegalTypes. If
-  /// \p LegalTypes is true, calls getScalarShiftAmountTy, otherwise uses
-  /// pointer type. If getScalarShiftAmountTy or pointer type cannot represent
-  /// all possible shift amounts, returns MVT::i32. In general, \p LegalTypes
-  /// should be set to true for calls during type legalization and after type
-  /// legalization has been completed.
-  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                       bool LegalTypes = true) const;
+  /// returns the input type. For scalars, calls getScalarShiftAmountTy.
+  /// If getScalarShiftAmountTy type cannot represent all possible shift
+  /// amounts, returns MVT::i32.
+  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL) const;
 
   /// Return the preferred type to use for a shift opcode, given the shifted
   /// amount type is \p ShiftValueTy.
@@ -1643,7 +1640,8 @@ public:
     MVT NVT = VT;
     do {
       NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
-      assert(NVT.isInteger() == VT.isInteger() && NVT != MVT::isVoid &&
+      assert(NVT.isInteger() == VT.isInteger() &&
+             NVT.isFloatingPoint() == VT.isFloatingPoint() &&
              "Didn't find type to promote to!");
     } while (VTBits >= NVT.getScalarSizeInBits() || !isTypeLegal(NVT) ||
              getOperationAction(Op, NVT) == Promote);
@@ -2910,6 +2908,8 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
+    case ISD::FMINIMUMNUM:
+    case ISD::FMAXIMUMNUM:
     case ISD::AVGFLOORS:
     case ISD::AVGFLOORU:
     case ISD::AVGCEILS:
@@ -3158,8 +3158,11 @@ public:
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
-  virtual bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                LoadInst *LI) const {
+  /// \p DeadInsts is a reference to a vector that keeps track of dead
+  /// instruction during transformations.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
@@ -3169,8 +3172,11 @@ public:
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
-  virtual bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                               StoreInst *SI) const {
+  /// \p DeadInsts is a reference to a vector that keeps track of dead
+  /// instruction during transformations.
+  virtual bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const {
     return false;
   }
 
@@ -3394,6 +3400,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
+  /// Should we expand [US]CMP nodes using two selects and two compares, or by
+  /// doing arithmetic on boolean types
+  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
 
@@ -3414,44 +3424,44 @@ public:
     return nullptr;
   }
 
-  //===--------------------------------------------------------------------===//
-  // Runtime Library hooks
-  //
-
   /// Rename the default libcall routine name for the specified libcall.
   void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    LibcallRoutineNames[Call] = Name;
+    Libcalls.setLibcallName(Call, Name);
   }
+
   void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    for (auto Call : Calls)
-      setLibcallName(Call, Name);
+    Libcalls.setLibcallName(Calls, Name);
   }
 
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return LibcallRoutineNames[Call];
+    return Libcalls.getLibcallName(Call);
   }
 
   /// Override the default CondCode to be used to test the result of the
   /// comparison libcall against zero.
+  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
   void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
     CmpLibcallCCs[Call] = CC;
   }
 
+
   /// Get the CondCode that's to be used to test the result of the comparison
   /// libcall against zero.
+  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
   ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
     return CmpLibcallCCs[Call];
   }
 
+
   /// Set the CallingConv that should be used for the specified libcall.
   void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    LibcallCallingConvs[Call] = CC;
+    Libcalls.setLibcallCallingConv(Call, CC);
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return LibcallCallingConvs[Call];
+    return Libcalls.getLibcallCallingConv(Call);
   }
 
   /// Execute target specific actions to finalize target lowering.
@@ -3630,18 +3640,12 @@ private:
   std::map<std::pair<unsigned, MVT::SimpleValueType>, MVT::SimpleValueType>
     PromoteToType;
 
-  /// Stores the name each libcall.
-  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1];
+  /// The list of libcalls that the target will use.
+  RTLIB::RuntimeLibcallsInfo Libcalls;
 
   /// The ISD::CondCode that should be used to test the result of each of the
   /// comparison libcall against zero.
   ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
-
-  /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL];
-
-  /// Set default libcall names and calling conventions.
-  void InitLibcalls(const Triple &TT);
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
@@ -3847,6 +3851,10 @@ public:
   /// returned value is a member of the MachineJumpTableInfo::JTEntryKind enum.
   virtual unsigned getJumpTableEncoding() const;
 
+  virtual MVT getJumpTableRegTy(const DataLayout &DL) const {
+    return getPointerTy(DL);
+  }
+
   virtual const MCExpr *
   LowerCustomJumpTableEntry(const MachineJumpTableInfo * /*MJTI*/,
                             const MachineBasicBlock * /*MBB*/, unsigned /*uid*/,
@@ -3894,6 +3902,20 @@ public:
                            const SDLoc &DL, const SDValue OldLHS,
                            const SDValue OldRHS, SDValue &Chain,
                            bool IsSignaling = false) const;
+
+  virtual SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL,
+                                  SDValue Chain, MachineMemOperand *MMO,
+                                  SDValue &NewLoad, SDValue Ptr,
+                                  SDValue PassThru, SDValue Mask) const {
+    llvm_unreachable("Not Implemented");
+  }
+
+  virtual SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Chain, MachineMemOperand *MMO,
+                                   SDValue Ptr, SDValue Val,
+                                   SDValue Mask) const {
+    llvm_unreachable("Not Implemented");
+  }
 
   /// Returns a pair of (return value, chain).
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
@@ -5068,8 +5090,10 @@ public:
   //
 
   SDValue BuildSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                    bool IsAfterLegalTypes,
                     SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                    bool IsAfterLegalTypes,
                     SmallVectorImpl<SDNode *> &Created) const;
   // Build sdiv by power-of-2 with conditional move instructions
   SDValue buildSDIVPow2WithCMov(SDNode *N, const APInt &Divisor,
@@ -5260,6 +5284,9 @@ public:
 
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
+  SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
@@ -5494,6 +5521,10 @@ public:
   /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
+  /// temporarily, advance store position, before re-loading the final vector.
+  SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask

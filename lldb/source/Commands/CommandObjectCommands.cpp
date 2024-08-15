@@ -322,7 +322,13 @@ rather than using a positional placeholder:"
 
 (lldb) command alias bl3 breakpoint set -f %1 -l 3
 
-    Always sets a breakpoint on line 3 of whatever file is indicated.)");
+    Always sets a breakpoint on line 3 of whatever file is indicated.
+
+)"
+
+        "If the alias abbreviation or the full alias command collides with another \
+existing command, the command resolver will prefer to use the alias over any \
+other command as far as there is only one alias command match.");
 
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
@@ -1142,6 +1148,15 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return std::nullopt;
+
+    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+  }
+
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectRaw::GetHelp();
@@ -1588,7 +1603,9 @@ private:
       options.ForEach(add_element);
       return error;
     }
-    
+
+    size_t GetNumOptions() { return m_num_options; }
+
   private:
     struct EnumValueStorage {
       EnumValueStorage() {
@@ -1827,6 +1844,15 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return std::nullopt;
+
+    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+  }
+
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectParsed::GetHelp();
@@ -1857,9 +1883,14 @@ public:
       SetHelpLong(docstring);
     return CommandObjectParsed::GetHelpLong();
   }
-  
-  Options *GetOptions() override { return &m_options; }
 
+  Options *GetOptions() override {
+    // CommandObjectParsed requires that a command with no options return
+    // nullptr.
+    if (m_options.GetNumOptions() == 0)
+      return nullptr;
+    return &m_options;
+  }
 
 protected:
   void DoExecute(Args &args,

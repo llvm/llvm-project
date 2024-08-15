@@ -8,6 +8,7 @@
 #include "startup/linux/do_start.h"
 #include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
@@ -37,7 +38,7 @@ extern uintptr_t __fini_array_end[];
   gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);
@@ -69,8 +70,8 @@ static ThreadAttributes main_thread_attrib;
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
-  ArgVEntryType *env_ptr = app.args->argv + app.args->argc + 1;
-  ArgVEntryType *env_end_marker = env_ptr;
+  uintptr_t *env_ptr = app.args->argv + app.args->argc + 1;
+  uintptr_t *env_end_marker = env_ptr;
   app.env_ptr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
@@ -132,7 +133,7 @@ static ThreadAttributes main_thread_attrib;
   // We register the cleanup_tls function to be the last atexit callback to be
   // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
   // as the stack protector canary).
-  atexit([]() { cleanup_tls(tls.tp, tls.size); });
+  atexit([]() { cleanup_tls(tls.addr, tls.size); });
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
@@ -150,4 +151,4 @@ static ThreadAttributes main_thread_attrib;
   exit(retval);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -16,7 +16,6 @@
 ; CHECK: OpFunction
 
 @var = addrspace(1) global <2 x i8> zeroinitializer
-;@var = addrspace(1) global <2 x i8> <i8 1, i8 1>
 
 define spir_kernel void @foo() {
 entry:

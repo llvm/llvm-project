@@ -576,15 +576,8 @@ struct Allocator {
     }
 
     AsanThread *t = GetCurrentThread();
-    void *allocated;
-    if (t) {
-      AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
-    } else {
-      SpinMutexLock l(&fallback_mutex);
-      AllocatorCache *cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
-    }
+    void *allocated = allocator.Allocate(
+        GetAllocatorCache(&t->malloc_storage()), needed_size, 8);
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
       if (AllocatorMayReturnNull())
@@ -717,7 +710,15 @@ struct Allocator {
       return;
     }
 
-    RunFreeHooks(ptr);
+    if (RunFreeHooks(ptr)) {
+      // Someone used __sanitizer_ignore_free_hook() and decided that they
+      // didn't want the memory to __sanitizer_ignore_free_hook freed right now.
+      // When they call free() on this pointer again at a later time, we should
+      // ignore the alloc-type mismatch and allow them to deallocate the pointer
+      // through free(), rather than the initial alloc type.
+      m->alloc_type = FROM_MALLOC;
+      return;
+    }
 
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.

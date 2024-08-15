@@ -174,6 +174,7 @@ func.func @loop_nest_block_arg(%val : i32, %ub : i32, %i : index) {
     ^bb3:
       omp.yield
     }
+    omp.terminator
   }
   return
 }
@@ -252,7 +253,7 @@ llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(64 : i32) : i32
 // CHECK:           %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
 // CHECK:           %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = ""}
-// CHECK:           omp.target   thread_limit(%[[VAL_0]] : i32) map_entries(%[[MAP1]] -> %[[BB_ARG0:.*]], %[[MAP2]] -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
+// CHECK:           omp.target map_entries(%[[MAP1]] -> %[[BB_ARG0:.*]], %[[MAP2]] -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) thread_limit(%[[VAL_0]] : i32) {
 // CHECK:           ^bb0(%[[BB_ARG0]]: !llvm.ptr, %[[BB_ARG1]]: !llvm.ptr):
 // CHECK:             %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             llvm.store %[[VAL_1]], %[[BB_ARG1]] : i32, !llvm.ptr

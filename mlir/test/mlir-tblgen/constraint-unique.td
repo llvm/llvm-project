@@ -54,7 +54,7 @@ def OpC : NS_Op<"op_c"> {
 }
 
 /// Test that a type contraint was generated.
-// CHECK:    static ::mlir::LogicalResult [[$A_TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$A_TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:      if (!((typePred(type, *op)))) {
 // CHECK-NEXT:   return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:       << " must be a type, but got " << type;
@@ -63,13 +63,13 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NOT:        << " must be a type, but got " << type;
 
 /// Test that a type constraint with a different description was generated.
-// CHECK:    static ::mlir::LogicalResult [[$O_TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$O_TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:      if (!((typePred(type, *op)))) {
 // CHECK-NEXT:   return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:       << " must be another type, but got " << type;
 
 /// Test that an attribute contraint was generated.
-// CHECK:    static ::mlir::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
@@ -78,14 +78,14 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NOT:        << "' failed to satisfy constraint: an attribute";
 
 /// Test that a attribute constraint with a different description was generated.
-// CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: another attribute";
 
 /// Test that a successor contraint was generated.
-// CHECK:    static ::mlir::LogicalResult [[$A_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$A_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
 // CHECK:      if (!((successorPred(successor, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("successor #") << successorIndex << " ('"
 // CHECK-NEXT:       << successorName << ")' failed to verify constraint: a successor";
@@ -94,13 +94,13 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NOT:        << successorName << ")' failed to verify constraint: a successor";
 
 /// Test that a successor constraint with a different description was generated.
-// CHECK:    static ::mlir::LogicalResult [[$O_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$O_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
 // CHECK:      if (!((successorPred(successor, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("successor #") << successorIndex << " ('"
 // CHECK-NEXT:       << successorName << ")' failed to verify constraint: another successor";
 
 /// Test that a region contraint was generated.
-// CHECK:    static ::mlir::LogicalResult [[$A_REGION_CONSTRAINT:__mlir_ods_local_region_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$A_REGION_CONSTRAINT:__mlir_ods_local_region_constraint.*]](
 // CHECK:      if (!((regionPred(region, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("region #") << regionIndex
 // CHECK-NEXT:       << (regionName.empty() ? " " : " ('" + regionName + "') ")
@@ -110,7 +110,7 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NOT:        << "failed to verify constraint: a region";
 
 /// Test that a region constraint with a different description was generated.
-// CHECK:    static ::mlir::LogicalResult [[$O_REGION_CONSTRAINT:__mlir_ods_local_region_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult [[$O_REGION_CONSTRAINT:__mlir_ods_local_region_constraint.*]](
 // CHECK:      if (!((regionPred(region, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("region #") << regionIndex
 // CHECK-NEXT:       << (regionName.empty() ? " " : " ('" + regionName + "') ")

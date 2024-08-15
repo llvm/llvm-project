@@ -851,6 +851,9 @@ main:
     # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
     f16x8.extract_lane 1
 
+    # CHECK: f16x8.replace_lane 1 # encoding: [0xfd,0xa2,0x02,0x01]
+    f16x8.replace_lane 1
+
     # CHECK: f16x8.add # encoding: [0xfd,0xb4,0x02]
     f16x8.add
 
@@ -919,5 +922,17 @@ main:
 
     # CHECK: f16x8.relaxed_nmadd # encoding: [0xfd,0xc7,0x02]
     f16x8.relaxed_nmadd
+
+    # CHECK: i16x8.trunc_sat_f16x8_s # encoding: [0xfd,0xc8,0x02]
+    i16x8.trunc_sat_f16x8_s
+
+    # CHECK: i16x8.trunc_sat_f16x8_u # encoding: [0xfd,0xc9,0x02]
+    i16x8.trunc_sat_f16x8_u
+
+    # CHECK: f16x8.convert_i16x8_s # encoding: [0xfd,0xca,0x02]
+    f16x8.convert_i16x8_s
+
+    # CHECK: f16x8.convert_i16x8_u # encoding: [0xfd,0xcb,0x02]
+    f16x8.convert_i16x8_u
 
     end_function

@@ -572,11 +572,11 @@ option(LLVM_ENABLE_Z3_SOLVER
 )
 
 if (LLVM_ENABLE_Z3_SOLVER)
-  find_package(Z3 4.7.1)
+  find_package(Z3 4.8.9)
 
   if (LLVM_Z3_INSTALL_DIR)
     if (NOT Z3_FOUND)
-      message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
+      message(FATAL_ERROR "Z3 >= 4.8.9 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
     endif()
   endif()
 
@@ -795,10 +795,6 @@ option(LLVM_BUILD_RUNTIME
 option(LLVM_BUILD_EXAMPLES
   "Build the LLVM example programs. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" ON)
-
-if(LLVM_BUILD_EXAMPLES)
-  add_compile_definitions(BUILD_EXAMPLES)
-endif(LLVM_BUILD_EXAMPLES)
 
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
@@ -1135,25 +1131,6 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
 
-# Add target for generating source rpm package.
-set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
-    CACHE FILEPATH ".spec file to use for srpm generation")
-set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
-set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
-
-get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
-string(LENGTH "${revision}" revision_length)
-set(LLVM_RPM_SPEC_REVISION "${revision}")
-
-configure_file(
-  ${LLVM_SRPM_USER_BINARY_SPECFILE}
-  ${LLVM_SRPM_BINARY_SPECFILE} @ONLY)
-
-add_custom_target(srpm
-  COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
-  COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
-set_target_properties(srpm PROPERTIES FOLDER "LLVM/Misc")
-
 if(APPLE AND DARWIN_LTO_LIBRARY)
   set(CMAKE_EXE_LINKER_FLAGS
     "${CMAKE_EXE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
@@ -1216,7 +1193,7 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 
 # Make sure we don't get -rdynamic in every binary. For those that need it,
-# use export_executable_symbols(target).
+# use EXPORT_SYMBOLS argument.
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
 include(AddLLVM)
@@ -1257,7 +1234,7 @@ if( LLVM_INCLUDE_UTILS )
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE) 
+    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
@@ -1441,4 +1418,17 @@ endif()
 
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
+endif()
+
+if (XCODE)
+  # For additional targets that you would like to add schemes, specify e.g:
+  #
+  #   -DLLVM_XCODE_EXTRA_TARGET_SCHEMES="TargetParserTests;SupportTests"
+  #
+  # at CMake configure time.
+  set(LLVM_XCODE_EXTRA_TARGET_SCHEMES "" CACHE STRING "Specifies an extra list of targets to turn into schemes")
+
+  foreach(target ${LLVM_XCODE_EXTRA_TARGET_SCHEMES})
+    set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
+  endforeach()
 endif()

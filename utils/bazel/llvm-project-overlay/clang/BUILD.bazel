@@ -4,10 +4,10 @@
 
 load(
     "//:vars.bzl",
-    "LLVM_VERSION",
     "LLVM_VERSION_MAJOR",
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
+    "PACKAGE_VERSION",
 )
 load("//:workspace_root.bzl", "workspace_root")
 load("//llvm:binary_alias.bzl", "binary_alias")
@@ -553,12 +553,12 @@ genrule(
         "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"{vers}git\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
     ).format(
         major = LLVM_VERSION_MAJOR,
         minor = LLVM_VERSION_MINOR,
         patch = LLVM_VERSION_PATCH,
-        vers = LLVM_VERSION,
+        vers = PACKAGE_VERSION,
     ),
 )
 
@@ -1869,11 +1869,19 @@ cc_library(
 
 cc_library(
     name = "interpreter",
-    srcs = glob([
-        "lib/Interpreter/*.cpp",
-        "lib/Interpreter/*.h",
-    ]),
-    hdrs = glob(["include/clang/Interpreter/*.h"]),
+    srcs = glob(
+        [
+            "lib/Interpreter/*.cpp",
+            "lib/Interpreter/*.h",
+        ],
+        exclude = ["lib/Interpreter/Wasm.cpp"],
+    ),
+    hdrs = glob(
+        [
+            "include/clang/Interpreter/*.h",
+        ],
+        exclude = ["lib/Interpreter/Wasm.cpp"],
+    ),
     includes = ["include"],
     deps = [
         ":analysis",
@@ -2087,6 +2095,7 @@ cc_library(
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:FrontendOpenMP",
+        "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -2206,7 +2215,6 @@ filegroup(
     name = "python-sources",
     srcs = [
         "bindings/python/clang/cindex.py",
-        "bindings/python/clang/enumerations.py",
     ],
 )
 
@@ -2517,6 +2525,7 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -2629,9 +2638,9 @@ cc_library(
         "lib/ExtractAPI/**/*.cpp",
     ]),
     hdrs = glob([
-       "include/clang/ExtractAPI/**/*.h",
+        "include/clang/ExtractAPI/**/*.h",
     ]) + [
-       "include/clang/ExtractAPI/APIRecords.inc",
+        "include/clang/ExtractAPI/APIRecords.inc",
     ],
     includes = ["include"],
     deps = [

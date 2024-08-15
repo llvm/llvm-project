@@ -170,7 +170,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 
@@ -988,7 +988,7 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
-/// \p AllowConcatenation is \c true).
+/// \p AllowMacroExpansion is \c true).
 ///
 /// \param FilenameTok Filled in with the next token. On success, this will
 ///        be either a header_name token. On failure, it will be whatever other

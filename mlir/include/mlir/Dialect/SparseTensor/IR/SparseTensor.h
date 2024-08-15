@@ -61,37 +61,62 @@ struct COOSegment {
 /// A simple wrapper to encode a bitset of (at most 64) levels, currently used
 /// by `sparse_tensor.iterate` operation for the set of levels on which the
 /// coordinates should be loaded.
-class LevelSet {
-  uint64_t bits = 0;
+class I64BitSet {
+  uint64_t storage = 0;
 
 public:
-  LevelSet() = default;
-  explicit LevelSet(uint64_t bits) : bits(bits) {}
-  operator uint64_t() const { return bits; }
+  using const_set_bits_iterator = llvm::const_set_bits_iterator_impl<I64BitSet>;
+  const_set_bits_iterator begin() const {
+    return const_set_bits_iterator(*this);
+  }
+  const_set_bits_iterator end() const {
+    return const_set_bits_iterator(*this, -1);
+  }
+  iterator_range<const_set_bits_iterator> bits() const {
+    return make_range(begin(), end());
+  }
 
-  LevelSet &set(unsigned i) {
+  I64BitSet() = default;
+  explicit I64BitSet(uint64_t bits) : storage(bits) {}
+  operator uint64_t() const { return storage; }
+
+  I64BitSet &set(unsigned i) {
     assert(i < 64);
-    bits |= static_cast<uint64_t>(0x01u) << i;
+    storage |= static_cast<uint64_t>(0x01u) << i;
     return *this;
   }
 
-  LevelSet &operator|=(LevelSet lhs) {
-    bits |= static_cast<uint64_t>(lhs);
+  I64BitSet &operator|=(I64BitSet lhs) {
+    storage |= static_cast<uint64_t>(lhs);
     return *this;
   }
 
-  LevelSet &lshift(unsigned offset) {
-    bits = bits << offset;
+  I64BitSet &lshift(unsigned offset) {
+    storage = storage << offset;
     return *this;
+  }
+
+  // Needed by `llvm::const_set_bits_iterator_impl`.
+  int find_first() const { return min(); }
+  int find_next(unsigned prev) const {
+    if (prev >= max())
+      return -1;
+
+    uint64_t b = storage >> (prev + 1);
+    if (b == 0)
+      return -1;
+
+    return llvm::countr_zero(b) + prev + 1;
   }
 
   bool operator[](unsigned i) const {
     assert(i < 64);
-    return (bits & (1 << i)) != 0;
+    return (storage & (1 << i)) != 0;
   }
-  unsigned max() const { return 64 - llvm::countl_zero(bits); }
-  unsigned count() const { return llvm::popcount(bits); }
-  bool empty() const { return bits == 0; }
+  unsigned min() const { return llvm::countr_zero(storage); }
+  unsigned max() const { return 64 - llvm::countl_zero(storage); }
+  unsigned count() const { return llvm::popcount(storage); }
+  bool empty() const { return storage == 0; }
 };
 
 } // namespace sparse_tensor

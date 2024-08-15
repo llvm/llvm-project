@@ -332,6 +332,13 @@ public:
     if (Callbacks)
       Callbacks->BeforeNonSkippedPassCallbacks.pop_back();
   }
+
+  /// Get the pass name for a given pass class name.
+  StringRef getPassNameForClassName(StringRef ClassName) const {
+    if (Callbacks)
+      return Callbacks->getPassNameForClassName(ClassName);
+    return {};
+  }
 };
 
 bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);

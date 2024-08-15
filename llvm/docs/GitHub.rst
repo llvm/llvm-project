@@ -376,10 +376,10 @@ Releases
 
 Backporting Fixes to the Release Branches
 -----------------------------------------
-You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing the following
-command on any issue that has been added to one of the "X.Y.Z Release"
-milestones.
+You can use special comments on issues or pull requests to make backport
+requests for the release branches.  This is done by making a comment containing
+the following command on any issue or pull request that has been added to one
+of the "X.Y.Z Release" milestones.
 
 ::
 
@@ -388,8 +388,8 @@ milestones.
 This command takes one or more git commit hashes as arguments and will attempt
 to cherry-pick the commit(s) to the release branch.  If the commit(s) fail to
 apply cleanly, then a comment with a link to the failing job will be added to
-the issue.  If the commit(s) do apply cleanly, then a pull request will
-be created with the specified commits.
+the issue/pull request.  If the commit(s) do apply cleanly, then a pull request
+will be created with the specified commits.
 
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release

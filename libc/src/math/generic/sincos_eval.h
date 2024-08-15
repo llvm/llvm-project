@@ -9,12 +9,19 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_SINCOS_EVAL_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_SINCOS_EVAL_H
 
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+namespace generic {
 
 using fputil::DoubleDouble;
+using Float128 = fputil::DyadicFloat<128>;
 
 LIBC_INLINE void sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
                              DoubleDouble &cos_u) {
@@ -76,6 +83,43 @@ LIBC_INLINE void sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   cos_u = fputil::exact_add(v_hi, cos_lo);
 }
 
-} // namespace LIBC_NAMESPACE
+LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
+                             Float128 &cos_u) {
+  Float128 u_sq = fputil::quick_mul(u, u);
+
+  // sin(u) ~ x - x^3/3! + x^5/5! - x^7/7! + x^9/9! - x^11/11! + x^13/13!
+  constexpr Float128 SIN_COEFFS[] = {
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1
+      {Sign::NEG, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // -1/3!
+      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/5!
+      {Sign::NEG, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // -1/7!
+      {Sign::POS, -146, 0xb8ef1d2a'b6399c7d'560e4472'800b8ef2_u128}, // 1/9!
+      {Sign::NEG, -153, 0xd7322b3f'aa271c7f'3a3f25c1'bee38f10_u128}, // -1/11!
+      {Sign::POS, -160, 0xb092309d'43684be5'1c198e91'd7b4269e_u128}, // 1/13!
+  };
+
+  // cos(u) ~ 1 - x^2/2 + x^4/4! - x^6/6! + x^8/8! - x^10/10! + x^12/12!
+  constexpr Float128 COS_COEFFS[] = {
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128}, // 1/2
+      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/4!
+      {Sign::NEG, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/6!
+      {Sign::POS, -143, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/8!
+      {Sign::NEG, -149, 0x93f27dbb'c4fae397'780b69f5'333c725b_u128}, // 1/10!
+      {Sign::POS, -156, 0x8f76c77f'c6c4bdaa'26d4c3d6'7f425f60_u128}, // 1/12!
+  };
+
+  sin_u = fputil::quick_mul(u, fputil::polyeval(u_sq, SIN_COEFFS[0],
+                                                SIN_COEFFS[1], SIN_COEFFS[2],
+                                                SIN_COEFFS[3], SIN_COEFFS[4],
+                                                SIN_COEFFS[5], SIN_COEFFS[6]));
+  cos_u = fputil::polyeval(u_sq, COS_COEFFS[0], COS_COEFFS[1], COS_COEFFS[2],
+                           COS_COEFFS[3], COS_COEFFS[4], COS_COEFFS[5],
+                           COS_COEFFS[6]);
+}
+
+} // namespace generic
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_EVAL_H

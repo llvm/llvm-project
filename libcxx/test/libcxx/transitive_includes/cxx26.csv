@@ -23,6 +23,7 @@ any version
 array compare
 array cstddef
 array cstdint
+array cwchar
 array initializer_list
 array limits
 array new
@@ -83,6 +84,9 @@ chrono string_view
 chrono vector
 chrono version
 cinttypes cstdint
+cmath cstddef
+cmath cstdint
+cmath initializer_list
 cmath limits
 cmath version
 codecvt cctype
@@ -199,6 +203,8 @@ format typeinfo
 format version
 forward_list compare
 forward_list cstddef
+forward_list cstdint
+forward_list cwchar
 forward_list initializer_list
 forward_list limits
 forward_list new
@@ -312,6 +318,7 @@ list compare
 list cstddef
 list cstdint
 list cstring
+list cwchar
 list initializer_list
 list limits
 list new
@@ -340,6 +347,7 @@ locale version
 map compare
 map cstddef
 map cstdint
+map cwchar
 map initializer_list
 map limits
 map new
@@ -456,7 +464,6 @@ ranges cwchar
 ranges initializer_list
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
@@ -499,6 +506,7 @@ semaphore version
 set compare
 set cstddef
 set cstdint
+set cwchar
 set initializer_list
 set limits
 set new
@@ -599,7 +607,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -651,7 +658,6 @@ typeindex typeinfo
 typeindex version
 typeinfo cstddef
 typeinfo cstdint
-unordered_map cmath
 unordered_map compare
 unordered_map cstddef
 unordered_map cstdint
@@ -663,7 +669,6 @@ unordered_map optional
 unordered_map stdexcept
 unordered_map tuple
 unordered_map version
-unordered_set cmath
 unordered_set compare
 unordered_set cstddef
 unordered_set cstdint

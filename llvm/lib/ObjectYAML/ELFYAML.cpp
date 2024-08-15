@@ -135,6 +135,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
+  ECase(NT_ARM_FPMR);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);
@@ -688,6 +689,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_GROUP);
   ECase(SHT_SYMTAB_SHNDX);
   ECase(SHT_RELR);
+  ECase(SHT_CREL);
   ECase(SHT_ANDROID_REL);
   ECase(SHT_ANDROID_RELA);
   ECase(SHT_ANDROID_RELR);
@@ -1622,6 +1624,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     break;
   case ELF::SHT_REL:
   case ELF::SHT_RELA:
+  case ELF::SHT_CREL:
     if (!IO.outputting())
       Section.reset(new ELFYAML::RelocationSection());
     sectionMapping(IO, *cast<ELFYAML::RelocationSection>(Section.get()));

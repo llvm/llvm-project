@@ -2070,7 +2070,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
         Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-      if (GEP->isInBounds() && isKnownNonNegative(Offset, SQ))
+      if (GEP->hasNoUnsignedWrap() ||
+          (GEP->hasNoUnsignedSignedWrap() &&
+           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
         NewOp->setHasNoUnsignedWrap(true);
       return NewOp;
     }
@@ -2664,6 +2666,27 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
   return RetVal;
 }
 
+/// Fold (bitcast (or (and (bitcast X to int), signmask), nneg Y) to fp) to
+/// copysign((bitcast Y to fp), X)
+static Value *foldCopySignIdioms(BitCastInst &CI,
+                                 InstCombiner::BuilderTy &Builder,
+                                 const SimplifyQuery &SQ) {
+  Value *X, *Y;
+  Type *FTy = CI.getType();
+  if (!FTy->isFPOrFPVectorTy())
+    return nullptr;
+  if (!match(&CI, m_ElementWiseBitCast(m_c_Or(
+                      m_And(m_ElementWiseBitCast(m_Value(X)), m_SignMask()),
+                      m_Value(Y)))))
+    return nullptr;
+  if (X->getType() != FTy)
+    return nullptr;
+  if (!isKnownNonNegative(Y, SQ))
+    return nullptr;
+
+  return Builder.CreateCopySign(Builder.CreateBitCast(Y, FTy), X);
+}
+
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -2676,14 +2699,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
 
-  if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
-    // Beware: messing with this target-specific oddity may cause trouble.
-    if (DestVTy->getNumElements() == 1 && SrcTy->isX86_MMXTy()) {
-      Value *Elem = Builder.CreateBitCast(Src, DestVTy->getElementType());
-      return InsertElementInst::Create(PoisonValue::get(DestTy), Elem,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
-    }
-
+  if (isa<FixedVectorType>(DestTy)) {
     if (isa<IntegerType>(SrcTy)) {
       // If this is a cast from an integer to vector, check to see if the input
       // is a trunc or zext of a bitcast from vector.  If so, we can replace all
@@ -2811,6 +2827,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
 
   if (Instruction *I = foldBitCastSelect(CI, Builder))
     return I;
+
+  if (Value *V = foldCopySignIdioms(CI, Builder, SQ.getWithInstruction(&CI)))
+    return replaceInstUsesWith(CI, V);
 
   return commonCastTransforms(CI);
 }

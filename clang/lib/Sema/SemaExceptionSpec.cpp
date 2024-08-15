@@ -112,12 +112,6 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
   return Converted;
 }
 
-/// CheckSpecifiedExceptionType - Check if the given type is valid in an
-/// exception specification. Incomplete types, or pointers to incomplete types
-/// other than void are not allowed.
-///
-/// \param[in,out] T  The exception type. This will be decayed to a pointer type
-///                   when the input is an array or a function type.
 bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
   // C++11 [except.spec]p2:
   //   A type cv T, "array of T", or "function returning T" denoted
@@ -189,9 +183,6 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
   return false;
 }
 
-/// CheckDistantExceptionSpec - Check if the given type is a pointer or pointer
-/// to member to a function with an exception specification. This means that
-/// it is invalid to add another level of indirection.
 bool Sema::CheckDistantExceptionSpec(QualType T) {
   // C++17 removes this rule in favor of putting exception specifications into
   // the type system.
@@ -491,10 +482,6 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
   return ReturnValueOnError;
 }
 
-/// CheckEquivalentExceptionSpec - Check if the two types have equivalent
-/// exception specifications. Exception specifications are equivalent if
-/// they allow exactly the same set of exception types. It does not matter how
-/// that is achieved. See C++ [except.spec]p2.
 bool Sema::CheckEquivalentExceptionSpec(
     const FunctionProtoType *Old, SourceLocation OldLoc,
     const FunctionProtoType *New, SourceLocation NewLoc) {
@@ -767,9 +754,6 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
   llvm_unreachable("unexpected access check result");
 }
 
-/// CheckExceptionSpecSubset - Check whether the second function type's
-/// exception specification is a subset (or equivalent) of the first function
-/// type. This is used by override and pointer assignment checks.
 bool Sema::CheckExceptionSpecSubset(
     const PartialDiagnostic &DiagID, const PartialDiagnostic &NestedDiagID,
     const PartialDiagnostic &NoteID, const PartialDiagnostic &NoThrowDiagID,
@@ -890,11 +874,6 @@ CheckSpecForTypesEquivalent(Sema &S, const PartialDiagnostic &DiagID,
                                         SFunc, SourceLoc);
 }
 
-/// CheckParamExceptionSpec - Check if the parameter and return types of the
-/// two functions have equivalent exception specs. This is part of the
-/// assignment and override compatibility check. We do not check the parameters
-/// of parameter function pointers recursively, as no sane programmer would
-/// even be able to write such a function type.
 bool Sema::CheckParamExceptionSpec(
     const PartialDiagnostic &DiagID, const PartialDiagnostic &NoteID,
     const FunctionProtoType *Target, bool SkipTargetFirstParameter,
@@ -1452,6 +1431,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPBarrierDirectiveClass:
   case Stmt::OMPCancelDirectiveClass:
   case Stmt::OMPCancellationPointDirectiveClass:
@@ -1487,6 +1467,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPSimdDirectiveClass:
   case Stmt::OMPTileDirectiveClass:
   case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPReverseDirectiveClass:
+  case Stmt::OMPInterchangeDirectiveClass:
   case Stmt::OMPSingleDirectiveClass:
   case Stmt::OMPTargetDataDirectiveClass:
   case Stmt::OMPTargetDirectiveClass:
