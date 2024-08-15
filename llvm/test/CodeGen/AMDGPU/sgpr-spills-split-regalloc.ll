@@ -1301,35 +1301,32 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_writelane_b32 v5, s35, 1
 ; GCN-NEXT:    v_writelane_b32 v5, s36, 2
 ; GCN-NEXT:    v_writelane_b32 v5, s37, 3
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
+; GCN-NEXT:    v_mov_b32_e32 v4, v1
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-NEXT:    v_mov_b32_e32 v2, v4
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
 ; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GCN-NEXT:    v_mov_b32_e32 v3, v4
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GCN-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
+; GCN-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_store_dwordx4 v[0:1], v[6:9]
+; GCN-NEXT:    flat_store_dwordx4 v[6:7], v[0:3]
 ; GCN-NEXT:    v_readlane_b32 s37, v5, 3
 ; GCN-NEXT:    v_readlane_b32 s36, v5, 2
 ; GCN-NEXT:    v_readlane_b32 s35, v5, 1

@@ -530,15 +530,15 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX6-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX6-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; GFX6-NEXT:    s_mov_b32 s5, 2
-; GFX6-NEXT:    v_lshlrev_b32_e64 v1, s5, v0
+; GFX6-NEXT:    v_lshlrev_b32_e64 v0, s5, v0
 ; GFX6-NEXT:    s_mov_b32 s5, 0
 ; GFX6-NEXT:    ; implicit-def: $sgpr5
-; GFX6-NEXT:    v_mov_b32_e32 v0, 0
-; GFX6-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX6-NEXT:    v_mov_b32_e32 v2, v0
+; GFX6-NEXT:    v_mov_b32_e32 v2, 0
+; GFX6-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX6-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
+; GFX6-NEXT:    v_mov_b32_e32 v2, s4
+; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -616,15 +616,15 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; SKIP-CACHE-INV-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 2
-; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v1, s5, v0
+; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v0, s5, v0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 0
 ; SKIP-CACHE-INV-NEXT:    ; implicit-def: $sgpr5
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
-; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, v0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, 0
+; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, v2
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
-; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s4
+; SKIP-CACHE-INV-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
