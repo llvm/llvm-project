@@ -775,11 +775,11 @@ public:
     } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
                          std::is_same_v<Op, hlfir::MinvalOp>) {
       source = op.getArray();
-      valid = !op.getDim() && !op.getDim();
+      valid = !op.getDim() && !op.getMask();
     } else if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
                          std::is_same_v<Op, hlfir::MinlocOp>) {
       source = op.getArray();
-      valid = !op.getDim() && !op.getDim() && !op.getBack();
+      valid = !op.getDim() && !op.getMask() && !op.getBack();
     }
     if (!valid)
       return rewriter.notifyMatchFailure(
