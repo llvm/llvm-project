@@ -2180,7 +2180,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
-    return legalizeFPTruncRound(MI, B);
+    return legalizeFPTruncRound(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
     return legalizeStackSave(MI, B);
   case TargetOpcode::G_GET_FPENV:
@@ -7089,23 +7089,29 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
+                                               MachineRegisterInfo &MRI,
                                                MachineIRBuilder &B) const {
-  unsigned Opc;
-  int RoundMode = MI.getOperand(2).getImm();
-
-  if (RoundMode == (int)RoundingMode::TowardPositive)
-    Opc = AMDGPU::G_FPTRUNC_ROUND_UPWARD;
-  else if (RoundMode == (int)RoundingMode::TowardNegative)
-    Opc = AMDGPU::G_FPTRUNC_ROUND_DOWNWARD;
-  else
+  Register Src = MI.getOperand(1).getReg();
+  if (MRI.getType(Src) != LLT::scalar(32))
     return false;
 
-  B.buildInstr(Opc)
+  // Only support towardzero, tonearest, upward and downward.
+  int RoundMode = MI.getOperand(2).getImm();
+  if (RoundMode < (int)RoundingMode::TowardZero ||
+      RoundMode > (int)RoundingMode::TowardNegative)
+    return false;
+
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  unsigned HW_Mode = (RoundMode + 3) % 4;
+  B.buildInstr(AMDGPU::G_FPTRUNC_ROUND)
       .addDef(MI.getOperand(0).getReg())
-      .addUse(MI.getOperand(1).getReg());
+      .addUse(Src)
+      .addImm(HW_Mode);
 
   MI.eraseFromParent();
-
   return true;
 }
 

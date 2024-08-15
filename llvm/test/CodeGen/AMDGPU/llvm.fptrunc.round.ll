@@ -3,6 +3,15 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 
+define amdgpu_gs half @v_fptrunc_round_f32_to_f16_tonearest(float %a) {
+; CHECK-LABEL: v_fptrunc_round_f32_to_f16_tonearest:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.tonearest")
+  ret half %res
+}
+
 define amdgpu_gs half @v_fptrunc_round_f32_to_f16_upward(float %a) {
 ; CHECK-LABEL: v_fptrunc_round_f32_to_f16_upward:
 ; CHECK:       ; %bb.0:
@@ -20,6 +29,16 @@ define amdgpu_gs half @v_fptrunc_round_f32_to_f16_downward(float %a) {
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.downward")
+  ret half %res
+}
+
+define amdgpu_gs half @v_fptrunc_round_f32_to_f16_towardzero(float %a) {
+; CHECK-LABEL: v_fptrunc_round_f32_to_f16_towardzero:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.towardzero")
   ret half %res
 }
 
