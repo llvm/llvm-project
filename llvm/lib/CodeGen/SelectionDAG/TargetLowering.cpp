@@ -1958,6 +1958,22 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // If this is (srl (sra X, C1), ShAmt), see if we can combine this into a
+      // single sra. We can do this if the top bits are never demanded.
+      if (Op0.getOpcode() == ISD::SRA && Op0.hasOneUse()) {
+        if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
+          if (std::optional<uint64_t> InnerSA =
+                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
+            unsigned C1 = *InnerSA;
+            // Clamp the combined shift amount if it exceeds the bit width.
+            unsigned Combined = std::min(C1 + ShAmt, BitWidth - 1);
+            SDValue NewSA = TLO.DAG.getConstant(Combined, dl, ShiftVT);
+            return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRA, dl, VT,
+                                                     Op0.getOperand(0), NewSA));
+          }
+        }
+      }
+
       APInt InDemandedMask = (DemandedBits << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that
@@ -4901,7 +4917,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
         N0.getOpcode() == ISD::SRA && isa<ConstantSDNode>(N0.getOperand(1)) &&
         N0.getConstantOperandAPInt(1) == OpVT.getScalarSizeInBits() - 1 &&
-        N1C && N1C->isAllOnes()) {
+        N1C->isAllOnes()) {
       return DAG.getSetCC(dl, VT, N0.getOperand(0),
                           DAG.getConstant(0, dl, OpVT),
                           Cond == ISD::SETEQ ? ISD::SETLT : ISD::SETGE);
