@@ -4322,12 +4322,12 @@ void request_readMemory(const llvm::json::Object &request) {
   addr += GetSigned(arguments, "offset", 0);
   const uint64_t requested_count = GetUnsigned(arguments, "count", 0);
   lldb::SBMemoryRegionInfo region_info;
-  lldb::SBError memRegError = process.GetMemoryRegionInfo(addr, region_info);
-  if (memRegError.Fail()) {
+  lldb::SBError memreg_error = process.GetMemoryRegionInfo(addr, region_info);
+  if (memreg_error.Fail()) {
     response["success"] = false;
     EmplaceSafeString(response, "message",
                       "Unable to find memory region: " +
-                          std::string(memRegError.GetCString()));
+                          std::string(memreg_error.GetCString()));
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
@@ -4344,14 +4344,14 @@ void request_readMemory(const llvm::json::Object &request) {
   std::vector<uint8_t> buf;
   buf.resize(available_count);
   if (available_count > 0) {
-    lldb::SBError memReadError;
+    lldb::SBError memread_error;
     uint64_t bytes_read =
-        process.ReadMemory(addr, buf.data(), available_count, memReadError);
-    if (memReadError.Fail()) {
+        process.ReadMemory(addr, buf.data(), available_count, memread_error);
+    if (memread_error.Fail()) {
       response["success"] = false;
       EmplaceSafeString(response, "message",
                         "Unable to read memory: " +
-                            std::string(memReadError.GetCString()));
+                            std::string(memread_error.GetCString()));
       g_dap.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
