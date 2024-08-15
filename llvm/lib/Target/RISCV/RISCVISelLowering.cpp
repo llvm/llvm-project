@@ -784,9 +784,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
-      setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
-                          ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
-                         VT, Custom);
+      setOperationAction(
+          {ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_USAT_U}, VT,
+          Custom);
 
       // Custom-lower insert/extract operations to simplify patterns.
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
@@ -1101,9 +1101,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SELECT, VT, Custom);
 
-        setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
-                            ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
-                           VT, Custom);
+        setOperationAction(
+            {ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_USAT_U}, VT,
+            Custom);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
@@ -6230,7 +6230,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::TRUNCATE:
   case ISD::TRUNCATE_SSAT_S:
-  case ISD::TRUNCATE_SSAT_U:
   case ISD::TRUNCATE_USAT_U:
     // Only custom-lower vector truncates
     if (!Op.getSimpleValueType().isVector())
@@ -8117,7 +8116,7 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
   unsigned NewOpc;
   if (Opc == ISD::TRUNCATE_SSAT_S)
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
-  else if (Opc == ISD::TRUNCATE_SSAT_U || Opc == ISD::TRUNCATE_USAT_U)
+  else if (Opc == ISD::TRUNCATE_USAT_U)
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
   else
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL;
