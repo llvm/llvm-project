@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="sparse-emit-strategy=sparse-iterator" --cse | FileCheck %s --check-prefix="ITER"
 
-// TODO: temporially disabled since there is no lowering rules from `coiterate` to `scf`.
+// TODO: temporarilly disabled since there is no lowering rules from `coiterate` to `scf`.
 // R_U_N: mlir-opt %s --sparse-reinterpret-map -sparsification="sparse-emit-strategy=sparse-iterator" --cse --sparse-space-collapse --lower-sparse-iteration-to-scf --loop-invariant-code-motion | FileCheck %s
 
 

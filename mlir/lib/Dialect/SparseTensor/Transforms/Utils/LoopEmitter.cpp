@@ -615,10 +615,11 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
   return true;
 }
 
-Region *LoopEmitter::enterCurCoIterationCase(OpBuilder &builder, Location loc,
-                                             I64BitSet caseBit,
-                                             unsigned caseIdx,
-                                             MutableArrayRef<Value> reduc) {
+Region *LoopEmitter::enterCurrentCoIterationCase(OpBuilder &builder,
+                                                 Location loc,
+                                                 I64BitSet caseBit,
+                                                 unsigned caseIdx,
+                                                 MutableArrayRef<Value> reduc) {
   auto coIterOp = cast<CoIterateOp>(loopStack.back().loop);
   SmallVector<Attribute> cases(coIterOp.getCases().getAsRange<Attribute>());
   cases[caseIdx] = builder.getI64IntegerAttr(caseBit);
@@ -628,11 +629,12 @@ Region *LoopEmitter::enterCurCoIterationCase(OpBuilder &builder, Location loc,
   assert(caseRegion.getBlocks().empty() &&
          "re-initialize the same coiteration case region.");
 
-  // Each block starts with a list of used coordinates of index type.
+  // Each block starts with by a list of user-provided iteration arguments.
+  TypeRange iterArgsTps = coIterOp.getInitArgs().getTypes();
+  // Followed by a list of used coordinates of index type.
   SmallVector<Type> blockArgTps(coIterOp.getCrdUsedLvls().count(),
                                 builder.getIndexType());
-  // Follows by a list of user-provided iteration arguments.
-  TypeRange iterArgsTps = coIterOp.getInitArgs().getTypes();
+
   blockArgTps.append(iterArgsTps.begin(), iterArgsTps.end());
   // Ends with a set of iterators that defines the actually iteration space.
   for (auto i : caseBit.bits()) {

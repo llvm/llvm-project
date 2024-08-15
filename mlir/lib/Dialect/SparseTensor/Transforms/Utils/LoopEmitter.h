@@ -148,9 +148,9 @@ public:
       unsigned numCases, MutableArrayRef<Value> reduc = {},
       bool isParallel = false, bool needsUniv = false);
 
-  Region *enterCurCoIterationCase(OpBuilder &builder, Location loc,
-                                  I64BitSet caseBit, unsigned caseIdx,
-                                  MutableArrayRef<Value> reduc);
+  Region *enterCurrentCoIterationCase(OpBuilder &builder, Location loc,
+                                      I64BitSet caseBit, unsigned caseIdx,
+                                      MutableArrayRef<Value> reduc);
 
   /// Generates code to exit the current loop (e.g., generates yields, forwards
   /// loop induction variables, etc).

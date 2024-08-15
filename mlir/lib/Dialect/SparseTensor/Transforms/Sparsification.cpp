@@ -904,7 +904,7 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder,
   // basic block where scf::Yield should be inserted.
 }
 
-/// Generate a case region in the coiterate operation.
+/// Generates a case region in the coiterate operation.
 static void genCoIterationCase(CodegenEnv &env, OpBuilder &builder,
                                unsigned caseIdx, LatPointId allCase,
                                LatPointId curCase,
@@ -920,8 +920,8 @@ static void genCoIterationCase(CodegenEnv &env, OpBuilder &builder,
     if (curCaseBits.test(set))
       caseBit.set(idx);
 
-  env.emitter().enterCurCoIterationCase(builder, env.op().getLoc(), caseBit,
-                                        caseIdx, reduc);
+  env.emitter().enterCurrentCoIterationCase(builder, env.op().getLoc(), caseBit,
+                                            caseIdx, reduc);
 }
 
 /// Generates a single if-statement within a while-loop.

@@ -1769,18 +1769,18 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       });
     }
 
-    // The block arguments starts with referenced coordinates, follows by
-    // user-provided iteration arguments and ends with iterators.
+    // The block arguments starts with user-provided iteration arguments,
+    // follows by referenced coordinates and ends with iterators.
     Block::BlockArgListType getCrds(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .take_front(getCrdUsedLvls().count());
+          .slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
-    unsigned getNumRegionIterArgs(unsigned regionIdx) {
+    unsigned getNumRegionIterArgs() {
       return getInitArgs().size();
     }
     Block::BlockArgListType getRegionIterArgs(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .slice(getCrdUsedLvls().count(), getNumRegionIterArgs(regionIdx));
+          .take_front(getNumRegionIterArgs());
     }
     Block::BlockArgListType getRegionIterators(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
