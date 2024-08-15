@@ -124,6 +124,16 @@ TEST(DataLayoutTest, ParseErrors) {
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
 }
 
+TEST(DataLayout, LayoutStringFormat) {
+  for (StringRef Str : {"", "e", "m:e", "m:e-e"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"-", "e-", "-m:e", "m:e--e"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("empty specification is not allowed"));
+}
+
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
   DataLayout DL1 = cantFail(DataLayout::parse("p:32:32"));
   DataLayout DL2 = cantFail(DataLayout::parse("p:64:64"));
