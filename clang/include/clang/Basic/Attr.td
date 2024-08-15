@@ -2191,7 +2191,7 @@ def BTFTypeTag : TypeAttr {
 
 def BPFFastCall : InheritableAttr,
                   TargetSpecificAttr<TargetBPF> {
-  let Spellings = [GCC<"bpf_fastcall">];
+  let Spellings = [Clang<"bpf_fastcall">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [BPFFastCallDocs];
   let SimpleHandler = 1;
