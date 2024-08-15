@@ -6652,11 +6652,10 @@ def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
-def err_builtin_get_counted_by_has_side_effects : Error<
-  "__builtin_get_counted_by cannot have side-effects">;
 def err_builtin_get_counted_by_must_be_flex_array_member : Error<
-  "__builtin_get_counted_by argument must be a pointer "
-  "to a flexible array member">;
+  "'__builtin_get_counted_by' argument must reference a flexible array member">;
+def warn_builtin_get_counted_by_has_side_effects : Warning<
+  "'__builtin_get_counted_by' argument has side-effects that will be discarded">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

@@ -5592,9 +5592,8 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
-    return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_get_counted_by_has_side_effects)
-           << Arg->getSourceRange();
+    Diag(Arg->getBeginLoc(), diag::warn_builtin_get_counted_by_has_side_effects)
+        << Arg->getSourceRange();
 
   // See if we have something like '&ptr->fam[0]`.
   if (auto *UO = dyn_cast<UnaryOperator>(Arg);
@@ -5609,16 +5608,19 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
   // the 'counted_by' attribute, it'll return a "nullptr."
   TheCall->setType(Context.getPointerType(Context.getSizeType()));
 
-  if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg);
-      ME &&
-      ME->isFlexibleArrayMemberLike(Context,
-                                    getLangOpts().getStrictFlexArraysLevel()) &&
-      ME->getMemberDecl()->getType()->isCountAttributedType()) {
-    if (const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl()))
-      if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
-        // The proper return type should be a pointer to the type of the
-        // counted_by's 'count' field.
-        TheCall->setType(Context.getPointerType(CountFD->getType()));
+  if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
+    if (!ME->isFlexibleArrayMemberLike(
+            Context, getLangOpts().getStrictFlexArraysLevel()))
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_get_counted_by_must_be_flex_array_member)
+             << Arg->getSourceRange();
+
+    if (ME->getMemberDecl()->getType()->isCountAttributedType())
+      if (const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
+          // The proper return type should be a pointer to the type of the
+          // counted_by's 'count' field.
+          TheCall->setType(Context.getPointerType(CountFD->getType()));
   }
 
   return false;
