@@ -1,9 +1,8 @@
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -S -emit-llvm -o - | FileCheck %s --check-prefix=ADD
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -S -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
-// RUN: %clang %s -O2 -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -S -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
-
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test %s -emit-llvm -o - | FileCheck %s --check-prefix=ADD
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const %s -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while %s -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
 // Ensure some common overflow-dependent or overflow-prone code patterns don't
 // trigger the overflow sanitizers. In many cases, overflow warnings caused by
 // these patterns are seen as "noise" and result in users turning off
@@ -24,20 +23,15 @@
 
 // CHECK-NOT: handle{{.*}}overflow
 
-// ADD: usub.with.overflow
-// ADD: negate_overflow
-// ADD-NOT: handler.add_overflow
-
-// NEGATE: handler.add_overflow
-// NEGATE: usub.with.overflow
-// NEGATE-NOT: negate_overflow
-
-// WHILE: handler.add_overflow
-// WHILE: negate_overflow
-// WHILE-NOT: usub.with.overflow
 extern unsigned a, b, c;
 extern unsigned some(void);
 
+// ADD-LABEL: @basic_commutativity
+// WHILE-LABEL: @basic_commutativity
+// NEGATE-LABEL: @basic_commutativity
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void basic_commutativity(void) {
   if (a + b < a)
     c = 9;
@@ -57,6 +51,12 @@ void basic_commutativity(void) {
     c = 9;
 }
 
+// ADD-LABEL: @arguments_and_commutativity
+// WHILE-LABEL: @arguments_and_commutativity
+// NEGATE-LABEL: @arguments_and_commutativity
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void arguments_and_commutativity(unsigned V1, unsigned V2) {
   if (V1 + V2 < V1)
     c = 9;
@@ -76,6 +76,12 @@ void arguments_and_commutativity(unsigned V1, unsigned V2) {
     c = 9;
 }
 
+// ADD-LABEL: @pointers
+// WHILE-LABEL: @pointers
+// NEGATE-LABEL: @pointers
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void pointers(unsigned *P1, unsigned *P2, unsigned V1) {
   if (*P1 + *P2 < *P1)
     c = 9;
@@ -96,16 +102,34 @@ struct MyStruct {
 
 extern struct MyStruct ms;
 
+// ADD-LABEL: @structs
+// WHILE-LABEL: @structs
+// NEGATE-LABEL: @structs
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void structs(void) {
   if (ms.base + ms.offset < ms.base)
     c = 9;
 }
 
+// ADD-LABEL: @nestedstructs
+// WHILE-LABEL: @nestedstructs
+// NEGATE-LABEL: @nestedstructs
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void nestedstructs(void) {
   if (ms.os.foo + ms.os.bar < ms.os.foo)
     c = 9;
 }
 
+// ADD-LABEL: @constants
+// WHILE-LABEL: @constants
+// NEGATE-LABEL: @constants
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 // Normally, this would be folded into a simple call to the overflow handler
 // and a store. Excluding this pattern results in just a store.
 void constants(void) {
@@ -114,7 +138,12 @@ void constants(void) {
   if (base + offset < base)
     c = 9;
 }
-
+// ADD-LABEL: @common_while
+// NEGATE-LABEL: @common_while
+// WHILE-LABEL: @common_while
+// ADD: usub.with.overflow
+// NEGATE: usub.with.overflow
+// WHILE:  %dec = add i32 %0, -1
 void common_while(unsigned i) {
   // This post-decrement usually causes overflow sanitizers to trip on the very
   // last operation.
@@ -123,6 +152,12 @@ void common_while(unsigned i) {
   }
 }
 
+// ADD-LABEL: @negation
+// NEGATE-LABEL: @negation
+// WHILE-LABEL @negation
+// ADD: negate_overflow
+// NEGATE-NOT: negate_overflow
+// WHILE: negate_overflow
 // Normally, these assignments would trip the unsigned overflow sanitizer.
 void negation(void) {
 #define SOME -1UL
@@ -133,6 +168,13 @@ void negation(void) {
   (void)A;(void)B;(void)C;(void)D;
 }
 
+
+// ADD-LABEL: @key_alloc
+// WHILE-LABEL: @key_alloc
+// NEGATE-LABEL: @key_alloc
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 // cvise'd kernel code that caused problems during development due to sign
 // extension
 typedef unsigned long _size_t;
@@ -145,6 +187,12 @@ int *key_alloc(void) {
   return key_alloc_key + 3;;
 }
 
+// ADD-LABEL: @function_call
+// WHILE-LABEL: @function_call
+// NEGATE-LABEL: @function_call
+// WHILE: handler.add_overflow
+// NEGATE: handler.add_overflow
+// ADD-NOT: handler.add_overflow
 void function_call(void) {
   if (b + some() < b)
     c = 9;
