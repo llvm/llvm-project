@@ -38,6 +38,7 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   HLSLBufferDecl *Result = HLSLBufferDecl::Create(
       getASTContext(), LexicalParent, CBuffer, KwLoc, Ident, IdentLoc, LBrace);
 
+  // if CBuffer is false, then it's a TBuffer
   auto RC = CBuffer ? llvm::hlsl::ResourceClass::CBuffer
                     : llvm::hlsl::ResourceClass::SRV;
   auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
@@ -482,7 +483,7 @@ struct RegisterBindingFlags {
   bool DefaultGlobals = false;
 };
 
-bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
+static bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
   if (!TheDecl)
     return false;
 
@@ -495,7 +496,7 @@ bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
   return false;
 }
 
-const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
+static const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   const Type *Ty = VD->getType()->getPointeeOrArrayElementType();
   assert(Ty && "Resource class must have an element type.");
 
@@ -512,37 +513,26 @@ const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   return TheRecordDecl;
 }
 
-const HLSLResourceClassAttr *
-getHLSLResourceClassAttrFromEitherDecl(VarDecl *VD,
-                                       HLSLBufferDecl *CBufferOrTBuffer) {
-
-  if (VD) {
-    const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
-    if (!TheRecordDecl)
-      return nullptr;
-
-    // the resource class attr could be on the record decl itself or on one of
-    // its fields (the resource handle, most commonly)
-    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
-    if (!Attr) {
-      for (auto *FD : TheRecordDecl->fields()) {
-        Attr = FD->getAttr<HLSLResourceClassAttr>();
-        if (Attr)
-          break;
-      }
-    }
-    return Attr;
-  } else if (CBufferOrTBuffer) {
-    const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
-    return Attr;
+static void setResourceClassFlagsFromDeclResourceClass(
+    RegisterBindingFlags &Flags, llvm::hlsl::ResourceClass DeclResourceClass) {
+  switch (DeclResourceClass) {
+  case llvm::hlsl::ResourceClass::SRV:
+    Flags.SRV = true;
+    break;
+  case llvm::hlsl::ResourceClass::UAV:
+    Flags.UAV = true;
+    break;
+  case llvm::hlsl::ResourceClass::CBuffer:
+    Flags.CBV = true;
+    break;
+  case llvm::hlsl::ResourceClass::Sampler:
+    Flags.Sampler = true;
+    break;
   }
-  llvm_unreachable("one of the two conditions should be true.");
-  return nullptr;
 }
 
-const HLSLResourceAttr *
-getHLSLResourceAttrFromEitherDecl(VarDecl *VD,
-                                  HLSLBufferDecl *CBufferOrTBuffer) {
+template <typename T>
+static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
 
   if (VD) {
     const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
@@ -551,24 +541,21 @@ getHLSLResourceAttrFromEitherDecl(VarDecl *VD,
 
     // the resource attr could be on the record decl itself or on one of
     // its fields (the resource handle, most commonly)
-    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
+    const auto *Attr = TheRecordDecl->getAttr<T>();
     if (!Attr) {
       for (auto *FD : TheRecordDecl->fields()) {
-        Attr = FD->getAttr<HLSLResourceAttr>();
+        Attr = FD->getAttr<T>();
         if (Attr)
           break;
       }
     }
     return Attr;
-  } else if (CBufferOrTBuffer) {
-    const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
-    return Attr;
   }
-  llvm_unreachable("one of the two conditions should be true.");
+  llvm_unreachable("VD should not be null");
   return nullptr;
 }
 
-void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
+static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
   // if the member's type is a numeric type, set the ContainsNumeric flag
   if (TheQualTy->isIntegralOrEnumerationType() || TheQualTy->isFloatingType()) {
     Flags.ContainsNumeric = true;
@@ -600,63 +587,38 @@ void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
       }
     }
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
-    switch (DeclResourceClass) {
-    case llvm::hlsl::ResourceClass::SRV:
-      Flags.SRV = true;
-      break;
-    case llvm::hlsl::ResourceClass::UAV:
-      Flags.UAV = true;
-      break;
-    case llvm::hlsl::ResourceClass::CBuffer:
-      Flags.CBV = true;
-      break;
-    case llvm::hlsl::ResourceClass::Sampler:
-      Flags.Sampler = true;
-      break;
-    }
+    setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     resClassSet = true;
   }
   // otherwise, check if the member has a resource class attr
   else if (auto *Attr = SubRecordDecl->getAttr<HLSLResourceClassAttr>()) {
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
-    switch (DeclResourceClass) {
-    case llvm::hlsl::ResourceClass::SRV:
-      Flags.SRV = true;
-      break;
-    case llvm::hlsl::ResourceClass::UAV:
-      Flags.UAV = true;
-      break;
-    case llvm::hlsl::ResourceClass::CBuffer:
-      Flags.CBV = true;
-      break;
-    case llvm::hlsl::ResourceClass::Sampler:
-      Flags.Sampler = true;
-      break;
-    }
+    setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     resClassSet = true;
   }
 
   if (!resClassSet) {
     for (auto Field : SubRecordDecl->fields()) {
-      traverseType(Field->getType(), Flags);
+      setFlagsFromType(Field->getType(), Flags);
     }
   }
 }
 
-void setResourceClassFlagsFromRecordDecl(RegisterBindingFlags &Flags,
-                                         const RecordDecl *RD) {
+static void setResourceClassFlagsFromRecordDecl(RegisterBindingFlags &Flags,
+                                                const RecordDecl *RD) {
   if (!RD)
     return;
 
   if (RD->isCompleteDefinition()) {
     for (auto Field : RD->fields()) {
       QualType T = Field->getType();
-      traverseType(T, Flags);
+      setFlagsFromType(T, Flags);
     }
   }
 }
 
-RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
+static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
+                                                         Decl *TheDecl) {
 
   // Cbuffers and Tbuffers are HLSLBufferDecl types
   HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
@@ -665,7 +627,7 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
 
   assert(((TheVarDecl && !CBufferOrTBuffer) ||
           (!TheVarDecl && CBufferOrTBuffer)) &&
-         "either VD or CBufferOrTBuffer should be set");
+         "either TheVarDecl or CBufferOrTBuffer should be set");
 
   RegisterBindingFlags Flags;
 
@@ -698,7 +660,7 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
       Flags.SRV = true;
   } else if (TheVarDecl) {
     const HLSLResourceClassAttr *resClassAttr =
-        getHLSLResourceClassAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
+        getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
     const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
     while (TheBaseType->isArrayType())
       TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
@@ -707,20 +669,7 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
       llvm::hlsl::ResourceClass DeclResourceClass =
           resClassAttr->getResourceClass();
       Flags.Resource = true;
-      switch (DeclResourceClass) {
-      case llvm::hlsl::ResourceClass::SRV:
-        Flags.SRV = true;
-        break;
-      case llvm::hlsl::ResourceClass::UAV:
-        Flags.UAV = true;
-        break;
-      case llvm::hlsl::ResourceClass::CBuffer:
-        Flags.CBV = true;
-        break;
-      case llvm::hlsl::ResourceClass::Sampler:
-        Flags.Sampler = true;
-        break;
-      }
+      setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     } else {
       if (TheBaseType->isArithmeticType())
         Flags.Basic = true;
@@ -740,7 +689,7 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
 
 enum RegisterType { SRV, UAV, CBuffer, Sampler, C, I };
 
-int getRegisterTypeIndex(StringRef Slot) {
+static RegisterType getRegisterTypeIndex(StringRef Slot) {
   switch (Slot[0]) {
   case 't':
   case 'T':
@@ -757,38 +706,46 @@ int getRegisterTypeIndex(StringRef Slot) {
   case 'c':
   case 'C':
     return RegisterType::C;
-  case 'i':
-  case 'I':
-    return RegisterType::I;
+  // we don't need to check for 'i' here, because
+  // any attribute that has the 'i' register type
+  // will be immediately caught by handleResourceBindingAttr
+  // so it's impossible for the decl to already have an 'i' register type
   default:
     llvm_unreachable("invalid register type");
   }
 }
 
 static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
-                                                StringRef &Slot) {
-  // make sure that there are no tworegister annotations
+                                                RegisterType regType) {
+  // make sure that there are no two register annotations
   // applied to the decl with the same register type
-  bool RegisterTypesDetected[6] = {false};
-  RegisterTypesDetected[getRegisterTypeIndex(Slot)] = true;
+  bool RegisterTypesDetected[5] = {false};
+  RegisterTypesDetected[regType] = true;
+
+  // we need a static map to keep track of previous conflicts
+  // so that we don't emit the same error multiple times
+  static std::map<Decl *, std::set<RegisterType>> PreviousConflicts;
 
   for (auto it = TheDecl->attr_begin(); it != TheDecl->attr_end(); ++it) {
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
 
-      int registerTypeIndex = getRegisterTypeIndex(attr->getSlot());
-      if (RegisterTypesDetected[registerTypeIndex]) {
+      RegisterType regType = getRegisterTypeIndex(attr->getSlot());
+      if (RegisterTypesDetected[regType]) {
+        if (PreviousConflicts[TheDecl].count(regType))
+          continue;
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_duplicate_register_annotation)
-            << registerTypeIndex;
+            << regType;
+        PreviousConflicts[TheDecl].insert(regType);
       } else {
-        RegisterTypesDetected[registerTypeIndex] = true;
+        RegisterTypesDetected[regType] = true;
       }
     }
   }
 }
 
-std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
+static std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
   VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
   HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
 
@@ -802,7 +759,7 @@ std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
-                                          Decl *TheDecl, StringRef &Slot) {
+                                          Decl *TheDecl, RegisterType regType) {
 
   // Samplers, UAVs, and SRVs are VarDecl types
   VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
@@ -820,61 +777,52 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
              1 &&
          "only one resource analysis result should be expected");
 
-  int regType = getRegisterTypeIndex(Slot);
-
   // first, if "other" is set, emit an error
   if (Flags.Other) {
-    if (regType == RegisterType::I) {
-      S.Diag(TheDecl->getLocation(),
-             diag::warn_hlsl_deprecated_register_type_i);
-      return;
-    }
     S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
     return;
   }
 
   // next, if multiple register annotations exist, check that none conflict.
-  ValidateMultipleRegisterAnnotations(S, TheDecl, Slot);
+  ValidateMultipleRegisterAnnotations(S, TheDecl, regType);
 
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
-    if (regType == RegisterType::I) {
-      S.Diag(TheDecl->getLocation(),
-             diag::warn_hlsl_deprecated_register_type_i);
-      return;
+    const HLSLResourceAttr *resAttr = nullptr;
+    const HLSLResourceClassAttr *resClassAttr = nullptr;
+    if (CBufferOrTBuffer) {
+      resAttr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
+      resClassAttr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
+    } else if (TheVarDecl) {
+      resAttr = getSpecifiedHLSLAttrFromVarDecl<HLSLResourceAttr>(TheVarDecl);
+      resClassAttr =
+          getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
     }
-    const HLSLResourceAttr *resAttr =
-        getHLSLResourceAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
-    const HLSLResourceClassAttr *resClassAttr =
-        getHLSLResourceClassAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
+
     assert(resAttr && resClassAttr &&
            "any decl that set the resource flag on analysis should "
            "have a resource attribute and resource class attribute attached.");
     const llvm::hlsl::ResourceClass DeclResourceClass =
         resClassAttr->getResourceClass();
 
-    switch (DeclResourceClass) {
-    case llvm::hlsl::ResourceClass::SRV:
-      if (regType != RegisterType::SRV)
-        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-            << regType;
-      break;
-    case llvm::hlsl::ResourceClass::UAV:
-      if (regType != RegisterType::UAV)
-        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-            << regType;
-      break;
-    case llvm::hlsl::ResourceClass::CBuffer:
-      if (regType != RegisterType::CBuffer)
-        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-            << regType;
-      break;
-    case llvm::hlsl::ResourceClass::Sampler:
-      if (regType != RegisterType::Sampler)
-        S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-            << regType;
-      break;
+    // confirm that the register type is bound to its expected resource class
+    static llvm::SmallVector<RegisterType>
+        ExpectedRegisterTypesForResourceClass = {
+            RegisterType::SRV,
+            RegisterType::UAV,
+            RegisterType::CBuffer,
+            RegisterType::Sampler,
+        };
+    assert((int)DeclResourceClass <
+               ExpectedRegisterTypesForResourceClass.size() &&
+           "DeclResourceClass has unexpected value");
+
+    RegisterType ExpectedRegisterType =
+        ExpectedRegisterTypesForResourceClass[(int)DeclResourceClass];
+    if (regType != ExpectedRegisterType) {
+      S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
+          << regType;
     }
     return;
   }
@@ -885,8 +833,6 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
     if (Flags.DefaultGlobals) {
       if (regType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
-      else if (regType == RegisterType::I)
-        S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
       else if (regType != RegisterType::C)
         S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
       return;
@@ -894,8 +840,6 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 
     if (regType == RegisterType::C)
       S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
-    else if (regType == RegisterType::I)
-      S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
     else
       S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
 
@@ -904,58 +848,16 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 
   // finally, we handle the udt case
   if (Flags.UDT) {
-    if (regType == RegisterType::I) {
+    const SmallVector<bool> ExpectedRegisterTypesForUDT = {
+        Flags.SRV, Flags.UAV, Flags.CBV, Flags.Sampler, Flags.ContainsNumeric};
+    assert((int)regType < ExpectedRegisterTypesForUDT.size() &&
+           "regType has unexpected value");
+
+    if (!ExpectedRegisterTypesForUDT[(int)regType])
       S.Diag(TheDecl->getLocation(),
-             diag::warn_hlsl_deprecated_register_type_i);
-      return;
-    }
-    switch (getRegisterTypeIndex(Slot)) {
-    case RegisterType::SRV: {
-      if (!Flags.SRV) {
-        S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_user_defined_type_missing_member)
-            << regType;
-      }
-      break;
-    }
-    case RegisterType::UAV: {
-      if (!Flags.UAV) {
-        S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_user_defined_type_missing_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << regType;
-      }
-      break;
-    }
-    case RegisterType::CBuffer: {
-      if (!Flags.CBV) {
-        S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_user_defined_type_missing_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << regType;
-      }
-      break;
-    }
-    case RegisterType::Sampler: {
-      if (!Flags.Sampler) {
-        S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_user_defined_type_missing_member)
-            << getHLSLResourceTypeStr(S, TheDecl) << regType;
-      }
-      break;
-    }
-    case RegisterType::C: {
-      if (!Flags.ContainsNumeric)
-        S.Diag(TheDecl->getLocation(),
-               diag::warn_hlsl_user_defined_type_missing_member)
-            << regType;
-      break;
-    }
-    case RegisterType::I: {
-      S.Diag(TheDecl->getLocation(),
-             diag::warn_hlsl_deprecated_register_type_i);
-    }
-    default:
-      llvm_unreachable("invalid register type");
-    }
+             diag::warn_hlsl_user_defined_type_missing_member)
+          << regType;
+
     return;
   }
 }
@@ -996,22 +898,35 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     Slot = Str;
   }
 
+  RegisterType regType;
+
   // Validate.
   if (!Slot.empty()) {
     switch (Slot[0]) {
     case 't':
     case 'T':
+      regType = RegisterType::SRV;
+      break;
     case 'u':
     case 'U':
+      regType = RegisterType::UAV;
+      break;
     case 'b':
-    case 'B':
+    case 'B ':
+      regType = RegisterType::CBuffer;
+      break;
     case 's':
     case 'S':
+      regType = RegisterType::Sampler;
+      break;
     case 'c':
     case 'C':
+      regType = RegisterType::C;
+      break;
     case 'i':
     case 'I':
-      break;
+      Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
+      return;
     default:
       Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
       return;
@@ -1036,7 +951,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     return;
   }
 
-  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, Slot);
+  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType);
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);
