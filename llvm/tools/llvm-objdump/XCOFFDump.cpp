@@ -86,6 +86,7 @@ void XCOFFDumper::printFileHeader() {
                                           "%F %T", std::gmtime(&TimeDate));
     assert(BytesFormatted && "The size of the buffer FormattedTime is less "
                              "than the size of the date/time string.");
+    (void)BytesFormatted;
     printStrHex("Timestamp:", FormattedTime, Timestamp);
   } else {
     // Negative timestamp values are reserved for future use.
