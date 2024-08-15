@@ -2263,7 +2263,6 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /* TO_UPSTREAM(BoundsSafety) ON*/
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
   ///
@@ -2285,28 +2284,6 @@ public:
       SourceLocation Loc, const ValueDecl *Assignee,
       bool ShowFullyQualifiedAssigneeName);
 
-  /// Perform Checks for assigning to a `__counted_by` or
-  /// `__counted_by_or_null` pointer type \param LHSTy where the pointee type
-  /// is incomplete which is invalid.
-  ///
-  /// \param LHSTy The type being assigned to. Checks will only be performed if
-  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
-  /// \param RHSExpr The expression being assigned from.
-  /// \param Action The type assignment being performed
-  /// \param Loc The SourceLocation to use for error diagnostics
-  /// \param Assignee The ValueDecl being assigned. This is used to compute
-  ///        the name of the assignee. If the assignee isn't known this can
-  ///        be set to nullptr.
-  /// \param ShowFullyQualifiedAssigneeName If set to true when using \p
-  ///        Assignee to compute the name of the assignee use the fully
-  ///        qualified name, otherwise use the unqualified name.
-  ///
-  /// \returns True iff no diagnostic where emitted, false otherwise.
-  bool BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
-      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
-      SourceLocation Loc, const ValueDecl *Assignee,
-      bool ShowFullyQualifiedAssigneeName);
-
   /// Perform Bounds Safety Semantic checks for initializing a Bounds Safety
   /// pointer.
   ///
@@ -2323,6 +2300,15 @@ public:
                                        AssignmentAction Action,
                                        QualType LHSType, Expr *RHSExpr);
 
+  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
+  /// or counted_by_or_null pointers in \param E.
+  ///
+  /// \param E the expression to check
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
   /// Perform Bounds Safety semantic checks on function parameters on a function
   /// definition. This only performs checks that can be made by looking at
   /// \param PVD in isolation (i.e. not looking at other parameters in the
@@ -2350,14 +2336,6 @@ public:
   ///
   ///  \returns True iff no diagnostic where emitted, false otherwise.
   bool BoundsSafetyCheckReturnTyForFunctionDef(FunctionDecl *FD);
-
-  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
-  /// or counted_by_or_null pointers in \param E.
-  ///
-  /// \param E the expression to check
-  ///
-  /// \returns True iff no diagnostic where emitted, false otherwise.
-  bool BoundsSafetyCheckUseOfCountAttrPtr(Expr *E);
 
   /// Perform Bounds Safety semantic checks on variable declaration \param VD.
   ///

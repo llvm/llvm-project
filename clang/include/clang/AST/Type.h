@@ -2480,6 +2480,7 @@ public:
   bool isIncompleteOrSizelessType() const {
     return isIncompleteType() || isSizelessType() || isFunctionType();
   }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// \returns True if the type is incomplete and it is also a type that
   /// cannot be completed by a later type definition.
@@ -2496,11 +2497,10 @@ public:
   /// // This decl has type 'char[]' which is incomplete and cannot be later
   /// // completed by another by another type declaration.
   /// extern char foo[];
-  /// // This decl how has complete type 'char[5]'.
+  /// // This decl now has complete type 'char[5]'.
   /// char foo[5]; // foo has a complete type
   /// \endcode
-  bool isIncompletableIncompleteType() const;
-  /* TO_UPSTREAM(BoundsSafety) OFF*/
+  bool isAlwaysIncompleteType() const;
 
   /// Determine whether this type is an object type.
   bool isObjectType() const {
@@ -3705,9 +3705,7 @@ public:
     return T->getTypeClass() == CountAttributed;
   }
 
-  /* TO_UPSTREAM(BoundsSafety) ON*/
-  StringRef GetAttributeName(bool WithMacroPrefix) const;
-  /* TO_UPSTREAM(BoundsSafety) OFF*/
+  StringRef getAttributeName(bool WithMacroPrefix) const;
 };
 
 /* TO_UPSTREAM(BoundsSafety) ON */

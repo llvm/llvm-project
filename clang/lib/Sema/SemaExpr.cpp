@@ -1086,6 +1086,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E,
       if (!Count.get())
         return ExprError();
 
+      // FIXME: Hoist this out of if-else blocks
       if (!BoundsSafetyCheckUseOfCountAttrPtr(Res.get()))
         return ExprError();
 
@@ -1140,6 +1141,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E,
       Res = MaterializeSequenceExpr::Create(Context, Res.get(), OpaqueValues, true);
     }
     return Res;
+  } else {
+    if (!BoundsSafetyCheckUseOfCountAttrPtr(Res.get()))
+      return ExprError();
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
@@ -16880,7 +16884,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
                                              CompoundType;
 
-/* TO_UPSTREAM(BoundsSafety) ON*/
+  /* TO_UPSTREAM(BoundsSafety) ON*/
   if (getLangOpts().BoundsSafety) {
     auto *RecordTy = RHSType->getAs<RecordType>();
     if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
@@ -16892,8 +16896,9 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       // recovery by continuing as if this worked
     }
   }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
-  if (getLangOpts().hasBoundsSafety() && RHS.isUsable()) {
+  if (RHS.isUsable()) {
     // Even if this check fails don't return early to allow the best
     // possible error recovery and to allow any subsequent diagnostics to
     // work.
@@ -16907,11 +16912,10 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       ShowFullyQualifiedAssigneeName = true;
     }
 
-    (void)BoundsSafetyCheckAssignmentToCountAttrPtr(
+    BoundsSafetyCheckAssignmentToCountAttrPtr(
         LHSType, RHS.get(), AssignmentAction::Assigning, Loc, Assignee,
         ShowFullyQualifiedAssigneeName);
   }
-/* TO_UPSTREAM(BoundsSafety) OFF */
 
   // OpenCL v1.2 s6.1.1.1 p2:
   // The half data type can only be used to declare a pointer to a buffer that

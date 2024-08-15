@@ -2599,6 +2599,22 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
   }
 }
 
+bool Type::isAlwaysIncompleteType() const {
+  if (!isIncompleteType())
+    return false;
+
+  // Forward declarations of structs, classes, enums, and unions could be later
+  // completed in a compilation unit by providing a type definition.
+  if (getAsTagDecl())
+    return false;
+
+  // Other types are incompletable.
+  //
+  // E.g. `char[]` and `void`. The type is incomplete and no future
+  // type declarations can make the type complete.
+  return true;
+}
+
 bool Type::isSizelessBuiltinType() const {
   if (isSizelessVectorType())
     return true;
@@ -2715,22 +2731,6 @@ bool Type::isSizeMeaningless() const {
     if (RT->getDecl()->hasFlexibleArrayMember())
       return true;
   return false;
-}
-
-bool Type::isIncompletableIncompleteType() const {
-  if (!isIncompleteType())
-    return false;
-
-  // Forward declarations of structs, classes, enums, and unions could be later
-  // completed in a compilation unit by providing a definition.
-  if (isStructureOrClassType() || isEnumeralType() || isUnionType())
-    return false;
-
-  // Other types are incompletable.
-  //
-  // E.g. `char[]` and `void`. The type is incomplete and no future
-  // type declarations can make the type complete.
-  return true;
 }
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
@@ -4080,8 +4080,11 @@ CountAttributedType::CountAttributedType(
     DeclSlot[i] = CoupledDecls[i];
 }
 
-/* TO_UPSTREAM(BoundsSafety) ON*/
-StringRef CountAttributedType::GetAttributeName(bool WithMacroPrefix) const {
+StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
+// TODO: This method isn't really ideal because it doesn't return the spelling
+// of the attribute that was used in the user's code. This method is used for
+// diagnostics so the fact it doesn't use the spelling of the attribute in
+// the user's code could be confusing (#113585).
 #define ENUMERATE_ATTRS(PREFIX)                                                \
   do {                                                                         \
     if (isCountInBytes()) {                                                    \
@@ -4102,6 +4105,7 @@ StringRef CountAttributedType::GetAttributeName(bool WithMacroPrefix) const {
 #undef ENUMERATE_ATTRS
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
 DynamicRangePointerType::DynamicRangePointerType(
     QualType PointerTy, QualType CanPointerTy, Expr *StartPtr, Expr *EndPtr,
     ArrayRef<TypeCoupledDeclRefInfo> StartPtrDecls,

@@ -8610,17 +8610,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
-        /* TO_UPSTREAM(BoundsSafety) ON*/
-        // Note the return value isn't used to return early
-        // to preserve the AST as best as possible even though an error
-        // might have occurred. For struct initialization it also allows
-        // all field assignments to be checked rather than bailing on the
-        // first error.
+        // Note the return value isn't used to return a ExprError() when
+        // initialization fails . For struct initialization allows all field
+        // assignments to be checked rather than bailing on the first error.
         S.BoundsSafetyCheckInitialization(Entity, Kind,
                                           AssignmentAction::Initializing,
-                                          /*LHSType=*/Step->Type,
-                                          /*RHSExpr=*/CurInit.get());
-        /* TO_UPSTREAM(BoundsSafety) OFF*/
+                                          Step->Type, CurInit.get());
       }
       break;
     }
@@ -8721,6 +8716,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
         }
       }
 
+      // Note the return value isn't used to return a ExprError() when
+      // initialization fails. For struct initialization this allows all field
+      // assignments to be checked rather than bailing on the first error.
+      S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                        getAssignmentAction(Entity, true),
+                                        Step->Type, InitialCurInit.get());
+
       bool Complained;
       ValueDecl *Assignee = nullptr;
       /* TO_UPSTREAM(BoundsSafety) ON*/
@@ -8730,18 +8732,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Assignee = Entity.getDecl();
       }
 
-      // Note the return value isn't used to return early so that additional
-      // diagnostics can be emitted and to preserve the AST as best as possible
-      // even though an error might have occurred. For struct initialization it
-      // also allows all field assignments to be checked rather than bailing on
-      // the first error.
-      (void)S.BoundsSafetyCheckInitialization(
-          Entity, Kind, /*Action=*/getAssignmentAction(Entity, true),
-          /*LHSType=*/Step->Type, /*RHSExpr=*/InitialCurInit.get());
-
-      /* TO_UPSTREAM(BoundsSafety) OFF*/
-
-      /* TO_UPSTREAM(BoundsSafety) ON*/
       // Upstream doesn't have `Assignee`.
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,

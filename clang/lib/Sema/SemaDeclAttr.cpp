@@ -6154,8 +6154,8 @@ public:
       // see `HasCountedByAttrOnIncompletePointee()`. This allows the counted_by
       // attribute to be used on code that prefers to keep its pointees
       // incomplete until they need to be used.
-      if (PointeeTy->isIncompletableIncompleteType() ||
-          PointeeTy->isFunctionType() || PointeeTy->isSizelessType() ||
+      if (PointeeTy->isAlwaysIncompleteType() || PointeeTy->isFunctionType() ||
+          PointeeTy->isSizelessType() ||
           PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
         // Use unspecified pointer attributes for diagnostic purposes.
         QualType Unsp = S.Context.getBoundsSafetyPointerType(
