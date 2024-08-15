@@ -8,11 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 
-// LWG 2056 changed the values of future_errc, so if we're using new headers
-// with an old library we'll get incorrect messages.
-//
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // VC Runtime's std::exception::what() method is not marked as noexcept, so
 // this fails.
 // UNSUPPORTED: target=x86_64-pc-windows-msvc
@@ -38,24 +33,24 @@ int main(int, char**) {
 #if TEST_STD_VER >= 17
   {
     std::future_error const f(std::future_errc::broken_promise);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The associated promise has been destructed prior "
                                            "to the associated state becoming ready."});
   }
   {
     std::future_error f(std::future_errc::future_already_retrieved);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The future has already been retrieved from "
                                            "the promise or packaged_task."});
   }
   {
     std::future_error f(std::future_errc::promise_already_satisfied);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The state of the promise has already been set."});
   }
   {
     std::future_error f(std::future_errc::no_state);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"Operation not permitted on an object without "
                                            "an associated state."});
   }

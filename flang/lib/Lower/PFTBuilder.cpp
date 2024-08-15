@@ -103,13 +103,13 @@ public:
             stmt.unwrapped, pftParentStack.back(), stmt.position, stmt.label});
         return false;
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
-        return std::visit(
+        return Fortran::common::visit(
             common::visitors{
                 [&](const common::Indirection<parser::CallStmt> &x) {
                   addEvaluation(lower::pft::Evaluation{
                       removeIndirection(x), pftParentStack.back(),
                       stmt.position, stmt.label});
-                  checkForRoundingModeCall(x.value());
+                  checkForFPEnvironmentCalls(x.value());
                   return true;
                 },
                 [&](const common::Indirection<parser::IfStmt> &x) {
@@ -129,22 +129,43 @@ public:
     return true;
   }
 
-  /// Check for a call statement that could modify the fp rounding mode.
-  void checkForRoundingModeCall(const parser::CallStmt &callStmt) {
-    const auto &pd = std::get<parser::ProcedureDesignator>(callStmt.call.t);
-    const auto *callName = std::get_if<parser::Name>(&pd.u);
+  /// Check for calls that could modify the floating point environment.
+  /// See F18 Clauses
+  ///  - 17.1p3 (Overview of IEEE arithmetic support)
+  ///  - 17.3p3 (The exceptions)
+  ///  - 17.4p5 (The rounding modes)
+  ///  - 17.6p1 (Halting)
+  void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto *callName = std::get_if<parser::Name>(
+        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
     if (!callName)
       return;
     const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
-    llvm::StringRef procName = toStringRef(procSym.name());
-    if (!procName.startswith("ieee_set_"))
+    if (!procSym.owner().IsModule())
       return;
-    if (procName == "ieee_set_rounding_mode_0" ||
-        procName == "ieee_set_modes_0" || procName == "ieee_set_status_0")
-      evaluationListStack.back()
-          ->back()
-          .getOwningProcedure()
-          ->mayModifyRoundingMode = true;
+    const Fortran::semantics::Symbol &modSym = *procSym.owner().symbol();
+    if (!modSym.attrs().test(Fortran::semantics::Attr::INTRINSIC))
+      return;
+    // Modules IEEE_FEATURES, IEEE_EXCEPTIONS, and IEEE_ARITHMETIC get common
+    // declarations from several __fortran_... support module files.
+    llvm::StringRef modName = toStringRef(modSym.name());
+    if (!modName.starts_with("ieee_") && !modName.starts_with("__fortran_"))
+      return;
+    llvm::StringRef procName = toStringRef(procSym.name());
+    if (!procName.starts_with("ieee_"))
+      return;
+    lower::pft::FunctionLikeUnit *proc =
+        evaluationListStack.back()->back().getOwningProcedure();
+    proc->hasIeeeAccess = true;
+    if (!procName.starts_with("ieee_set_"))
+      return;
+    if (procName.starts_with("ieee_set_modes_") ||
+        procName.starts_with("ieee_set_status_"))
+      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
+    else if (procName.starts_with("ieee_set_halting_mode_"))
+      proc->mayModifyHaltingMode = true;
+    else if (procName.starts_with("ieee_set_rounding_mode_"))
+      proc->mayModifyRoundingMode = true;
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
@@ -188,6 +209,20 @@ public:
     }
   }
 
+  bool Pre(const parser::SpecificationPart &) {
+    ++specificationPartLevel;
+    return true;
+  }
+  void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::ContainsStmt &) {
+    if (!specificationPartLevel) {
+      assert(containsStmtStack.size() && "empty contains stack");
+      containsStmtStack.back() = true;
+    }
+    return false;
+  }
+
   // Module like
   bool Pre(const parser::Module &node) { return enterModule(node); }
   bool Pre(const parser::Submodule &node) { return enterModule(node); }
@@ -204,7 +239,7 @@ public:
 
   // Get rid of production wrapper
   bool Pre(const parser::Statement<parser::ForallAssignmentStmt> &statement) {
-    addEvaluation(std::visit(
+    addEvaluation(Fortran::common::visit(
         [&](const auto &x) {
           return lower::pft::Evaluation{x, pftParentStack.back(),
                                         statement.source, statement.label};
@@ -213,7 +248,7 @@ public:
     return false;
   }
   bool Pre(const parser::WhereBodyConstruct &whereBody) {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [&](const parser::Statement<parser::AssignmentStmt> &stmt) {
               // Not caught as other AssignmentStmt because it is not
@@ -228,14 +263,31 @@ public:
         whereBody.u);
   }
 
-  // CompilerDirective have special handling in case they are top level
-  // directives (i.e. they do not belong to a ProgramUnit).
+  // A CompilerDirective may appear outside any program unit, after a module
+  // or function contains statement, or inside a module or function.
   bool Pre(const parser::CompilerDirective &directive) {
+    assert(pftParentStack.size() > 0 && "no program");
+    lower::pft::PftNode &node = pftParentStack.back();
+    if (node.isA<lower::pft::Program>()) {
+      addUnit(lower::pft::CompilerDirectiveUnit(directive, node));
+      return false;
+    } else if ((node.isA<lower::pft::ModuleLikeUnit>() ||
+                node.isA<lower::pft::FunctionLikeUnit>())) {
+      assert(containsStmtStack.size() && "empty contains stack");
+      if (containsStmtStack.back()) {
+        addContainedUnit(lower::pft::CompilerDirectiveUnit{directive, node});
+        return false;
+      }
+    }
+    return enterConstructOrDirective(directive);
+  }
+
+  bool Pre(const parser::OpenACCRoutineConstruct &directive) {
     assert(pftParentStack.size() > 0 &&
            "At least the Program must be a parent");
     if (pftParentStack.back().isA<lower::pft::Program>()) {
       addUnit(
-          lower::pft::CompilerDirectiveUnit(directive, pftParentStack.back()));
+          lower::pft::OpenACCDirectiveUnit(directive, pftParentStack.back()));
       return false;
     }
     return enterConstructOrDirective(directive);
@@ -245,9 +297,10 @@ private:
   /// Initialize a new module-like unit and make it the builder's focus.
   template <typename A>
   bool enterModule(const A &mod) {
-    Fortran::lower::pft::ModuleLikeUnit &unit =
+    lower::pft::ModuleLikeUnit &unit =
         addUnit(lower::pft::ModuleLikeUnit{mod, pftParentStack.back()});
-    functionList = &unit.nestedFunctions;
+    containsStmtStack.push_back(false);
+    containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     LLVM_DEBUG(dumpScope(&unit.getScope()));
@@ -255,6 +308,7 @@ private:
   }
 
   void exitModule() {
+    containsStmtStack.pop_back();
     if (!evaluationListStack.empty())
       popEvaluationList();
     pftParentStack.pop_back();
@@ -312,12 +366,13 @@ private:
                      const semantics::SemanticsContext &semanticsContext) {
     cleanModuleEvaluationList();
     endFunctionBody(); // enclosing host subprogram body, if any
-    Fortran::lower::pft::FunctionLikeUnit &unit =
-        addFunction(lower::pft::FunctionLikeUnit{func, pftParentStack.back(),
-                                                 semanticsContext});
+    lower::pft::FunctionLikeUnit &unit =
+        addContainedUnit(lower::pft::FunctionLikeUnit{
+            func, pftParentStack.back(), semanticsContext});
     labelEvaluationMap = &unit.labelEvaluationMap;
     assignSymbolLabelMap = &unit.assignSymbolLabelMap;
-    functionList = &unit.nestedFunctions;
+    containsStmtStack.push_back(false);
+    containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     LLVM_DEBUG(dumpScope(&unit.getScope()));
@@ -329,6 +384,7 @@ private:
     endFunctionBody();
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
     processEntryPoints();
+    containsStmtStack.pop_back();
     popEvaluationList();
     labelEvaluationMap = nullptr;
     assignSymbolLabelMap = nullptr;
@@ -339,7 +395,7 @@ private:
   /// Initialize a new construct or directive and make it the builder's focus.
   template <typename A>
   bool enterConstructOrDirective(const A &constructOrDirective) {
-    Fortran::lower::pft::Evaluation &eval = addEvaluation(
+    lower::pft::Evaluation &eval = addEvaluation(
         lower::pft::Evaluation{constructOrDirective, pftParentStack.back()});
     eval.evaluationList.reset(new lower::pft::EvaluationList);
     pushEvaluationList(eval.evaluationList.get());
@@ -349,7 +405,7 @@ private:
   }
 
   void exitConstructOrDirective() {
-    auto isOpenMPLoopConstruct = [](Fortran::lower::pft::Evaluation *eval) {
+    auto isOpenMPLoopConstruct = [](lower::pft::Evaluation *eval) {
       if (const auto *ompConstruct = eval->getIf<parser::OpenMPConstruct>())
         if (std::holds_alternative<parser::OpenMPLoopConstruct>(
                 ompConstruct->u))
@@ -364,8 +420,7 @@ private:
       // construct region must have an exit target inside the region.
       // This is not applicable to the OpenMP loop construct since the
       // end of the loop is an available target inside the region.
-      Fortran::lower::pft::EvaluationList &evaluationList =
-          *eval->evaluationList;
+      lower::pft::EvaluationList &evaluationList = *eval->evaluationList;
       if (!evaluationList.empty() && evaluationList.back().isConstruct()) {
         static const parser::ContinueStmt exitTarget{};
         addEvaluation(
@@ -381,15 +436,15 @@ private:
   void resetFunctionState() {
     if (!pftParentStack.empty()) {
       pftParentStack.back().visit(common::visitors{
+          [&](lower::pft::ModuleLikeUnit &p) {
+            containedUnitList = &p.containedUnitList;
+          },
           [&](lower::pft::FunctionLikeUnit &p) {
-            functionList = &p.nestedFunctions;
+            containedUnitList = &p.containedUnitList;
             labelEvaluationMap = &p.labelEvaluationMap;
             assignSymbolLabelMap = &p.assignSymbolLabelMap;
           },
-          [&](lower::pft::ModuleLikeUnit &p) {
-            functionList = &p.nestedFunctions;
-          },
-          [&](auto &) { functionList = nullptr; },
+          [&](auto &) { containedUnitList = nullptr; },
       });
     }
   }
@@ -401,12 +456,11 @@ private:
   }
 
   template <typename A>
-  A &addFunction(A &&func) {
-    if (functionList) {
-      functionList->emplace_back(std::move(func));
-      return functionList->back();
-    }
-    return addUnit(std::move(func));
+  A &addContainedUnit(A &&unit) {
+    if (!containedUnitList)
+      return addUnit(std::move(unit));
+    containedUnitList->emplace_back(std::move(unit));
+    return std::get<A>(containedUnitList->back());
   }
 
   // ActionStmt has a couple of non-conforming cases, explicitly handled here.
@@ -415,7 +469,7 @@ private:
   makeEvaluationAction(const parser::ActionStmt &statement,
                        parser::CharBlock position,
                        std::optional<parser::Label> label) {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [&](const auto &x) {
               return lower::pft::Evaluation{
@@ -427,7 +481,6 @@ private:
 
   /// Append an Evaluation to the end of the current list.
   lower::pft::Evaluation &addEvaluation(lower::pft::Evaluation &&eval) {
-    assert(functionList && "not in a function");
     assert(!evaluationListStack.empty() && "empty evaluation list stack");
     if (!constructAndDirectiveStack.empty())
       eval.parentConstruct = constructAndDirectiveStack.back();
@@ -467,15 +520,15 @@ private:
 
   /// push a new list on the stack of Evaluation lists
   void pushEvaluationList(lower::pft::EvaluationList *evaluationList) {
-    assert(functionList && "not in a function");
     assert(evaluationList && evaluationList->empty() &&
-           "evaluation list isn't correct");
+           "invalid evaluation list");
     evaluationListStack.emplace_back(evaluationList);
   }
 
   /// pop the current list and return to the last Evaluation list
   void popEvaluationList() {
-    assert(functionList && "not in a function");
+    assert(!evaluationListStack.empty() &&
+           "trying to pop an empty evaluationListStack");
     evaluationListStack.pop_back();
   }
 
@@ -509,15 +562,15 @@ private:
   /// The transformation is only valid for forward branch targets at the same
   /// construct nesting level as the IfConstruct. The result must not violate
   /// construct nesting requirements or contain an EntryStmt. The result
-  /// is subject to normal un/structured code classification analysis. The
-  /// result is allowed to violate the F18 Clause 11.1.2.1 prohibition on
-  /// transfer of control into the interior of a construct block, as that does
-  /// not compromise correct code generation. When two transformation
-  /// candidates overlap, at least one must be disallowed. In such cases,
-  /// the current heuristic favors simple code generation, which happens to
-  /// favor later candidates over earlier candidates. That choice is probably
-  /// not significant, but could be changed.
-  ///
+  /// is subject to normal un/structured code classification analysis. Except
+  /// for a branch to the EndIfStmt, the result is allowed to violate the F18
+  /// Clause 11.1.2.1 prohibition on transfer of control into the interior of
+  /// a construct block, as that does not compromise correct code generation.
+  /// When two transformation candidates overlap, at least one must be
+  /// disallowed. In such cases, the current heuristic favors simple code
+  /// generation, which happens to favor later candidates over earlier
+  /// candidates. That choice is probably not significant, but could be
+  /// changed.
   void rewriteIfGotos() {
     auto &evaluationList = *evaluationListStack.back();
     if (!evaluationList.size())
@@ -584,7 +637,8 @@ private:
       if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
         const auto bodyEval = std::next(eval.evaluationList->begin());
         if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
-          ifCandidateStack.push_back({it, gotoStmt->v});
+          if (!bodyEval->lexicalSuccessor->label)
+            ifCandidateStack.push_back({it, gotoStmt->v});
         } else if (doStmt) {
           if (const auto *cycleStmt = bodyEval->getIf<parser::CycleStmt>()) {
             std::string cycleName = getConstructName(*cycleStmt);
@@ -610,7 +664,7 @@ private:
     };
     auto analyzeSpecs{[&](const auto &specList) {
       for (const auto &spec : specList) {
-        std::visit(
+        Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::parser::Format &format) {
                   analyzeFormatSpec(format);
@@ -1056,9 +1110,8 @@ private:
   std::vector<lower::pft::PftNode> pftParentStack;
   const semantics::SemanticsContext &semanticsContext;
 
-  /// functionList points to the internal or module procedure function list
-  /// of a FunctionLikeUnit or a ModuleLikeUnit. It may be null.
-  std::list<lower::pft::FunctionLikeUnit> *functionList{};
+  llvm::SmallVector<bool> containsStmtStack{};
+  lower::pft::ContainedUnitList *containedUnitList{};
   std::vector<lower::pft::Evaluation *> constructAndDirectiveStack{};
   std::vector<lower::pft::Evaluation *> doConstructStack{};
   /// evaluationListStack is the current nested construct evaluationList state.
@@ -1066,6 +1119,7 @@ private:
   llvm::DenseMap<parser::Label, lower::pft::Evaluation *> *labelEvaluationMap{};
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
+  int specificationPartLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
 };
 
@@ -1118,23 +1172,27 @@ public:
   void dumpPFT(llvm::raw_ostream &outputStream,
                const lower::pft::Program &pft) {
     for (auto &unit : pft.getUnits()) {
-      std::visit(common::visitors{
-                     [&](const lower::pft::BlockDataUnit &unit) {
-                       outputStream << getNodeIndex(unit) << " ";
-                       outputStream << "BlockData: ";
-                       outputStream << "\nEnd BlockData\n\n";
-                     },
-                     [&](const lower::pft::FunctionLikeUnit &func) {
-                       dumpFunctionLikeUnit(outputStream, func);
-                     },
-                     [&](const lower::pft::ModuleLikeUnit &unit) {
-                       dumpModuleLikeUnit(outputStream, unit);
-                     },
-                     [&](const lower::pft::CompilerDirectiveUnit &unit) {
-                       dumpCompilerDirectiveUnit(outputStream, unit);
-                     },
-                 },
-                 unit);
+      Fortran::common::visit(
+          common::visitors{
+              [&](const lower::pft::BlockDataUnit &unit) {
+                outputStream << getNodeIndex(unit) << " ";
+                outputStream << "BlockData: ";
+                outputStream << "\nEnd BlockData\n\n";
+              },
+              [&](const lower::pft::FunctionLikeUnit &func) {
+                dumpFunctionLikeUnit(outputStream, func);
+              },
+              [&](const lower::pft::ModuleLikeUnit &unit) {
+                dumpModuleLikeUnit(outputStream, unit);
+              },
+              [&](const lower::pft::CompilerDirectiveUnit &unit) {
+                dumpCompilerDirectiveUnit(outputStream, unit);
+              },
+              [&](const lower::pft::OpenACCDirectiveUnit &unit) {
+                dumpOpenACCDirectiveUnit(outputStream, unit);
+              },
+          },
+          unit);
     }
   }
 
@@ -1165,11 +1223,15 @@ public:
       outputStream << " -> " << eval.controlSuccessor->printIndex;
     else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();
-    else if (auto *dir = eval.getIf<Fortran::parser::CompilerDirective>())
+    else if (auto *dir = eval.getIf<parser::CompilerDirective>()) {
+      extraNewline = dir->source.ToString().back() == '\n';
       outputStream << ": !" << dir->source.ToString();
-    outputStream << '\n';
+    }
+    if (!extraNewline)
+      outputStream << '\n';
     if (eval.hasNestedEvaluations()) {
       dumpEvaluationList(outputStream, *eval.evaluationList, indent + 1);
       outputStream << indentString << "<<End " << name << bang << ">>\n";
@@ -1229,13 +1291,7 @@ public:
       outputStream << ": " << header;
     outputStream << '\n';
     dumpEvaluationList(outputStream, functionLikeUnit.evaluationList);
-    if (!functionLikeUnit.nestedFunctions.empty()) {
-      outputStream << "\nContains\n";
-      for (const lower::pft::FunctionLikeUnit &func :
-           functionLikeUnit.nestedFunctions)
-        dumpFunctionLikeUnit(outputStream, func);
-      outputStream << "End Contains\n";
-    }
+    dumpContainedUnitList(outputStream, functionLikeUnit.containedUnitList);
     outputStream << "End " << unitKind << ' ' << name << "\n\n";
   }
 
@@ -1262,11 +1318,8 @@ public:
     });
     outputStream << unitKind << ' ' << name << ": " << header << '\n';
     dumpEvaluationList(outputStream, moduleLikeUnit.evaluationList);
-    outputStream << "Contains\n";
-    for (const lower::pft::FunctionLikeUnit &func :
-         moduleLikeUnit.nestedFunctions)
-      dumpFunctionLikeUnit(outputStream, func);
-    outputStream << "End Contains\nEnd " << unitKind << ' ' << name << "\n\n";
+    dumpContainedUnitList(outputStream, moduleLikeUnit.containedUnitList);
+    outputStream << "End " << unitKind << ' ' << name << "\n\n";
   }
 
   // Top level directives
@@ -1275,9 +1328,44 @@ public:
       const lower::pft::CompilerDirectiveUnit &directive) {
     outputStream << getNodeIndex(directive) << " ";
     outputStream << "CompilerDirective: !";
-    outputStream << directive.get<Fortran::parser::CompilerDirective>()
-                        .source.ToString();
-    outputStream << "\nEnd CompilerDirective\n\n";
+    bool extraNewline =
+        directive.get<parser::CompilerDirective>().source.ToString().back() ==
+        '\n';
+    outputStream
+        << directive.get<parser::CompilerDirective>().source.ToString();
+    if (!extraNewline)
+      outputStream << "\n";
+    outputStream << "\n";
+  }
+
+  void dumpContainedUnitList(
+      llvm::raw_ostream &outputStream,
+      const lower::pft::ContainedUnitList &containedUnitList) {
+    if (containedUnitList.empty())
+      return;
+    outputStream << "\nContains\n";
+    for (const lower::pft::ContainedUnit &unit : containedUnitList)
+      if (const auto *func = std::get_if<lower::pft::FunctionLikeUnit>(&unit)) {
+        dumpFunctionLikeUnit(outputStream, *func);
+      } else if (const auto *dir =
+                     std::get_if<lower::pft::CompilerDirectiveUnit>(&unit)) {
+        outputStream << getNodeIndex(*dir) << " ";
+        dumpEvaluation(outputStream,
+                       lower::pft::Evaluation{
+                           dir->get<parser::CompilerDirective>(), dir->parent});
+        outputStream << "\n";
+      }
+    outputStream << "End Contains\n";
+  }
+
+  void
+  dumpOpenACCDirectiveUnit(llvm::raw_ostream &outputStream,
+                           const lower::pft::OpenACCDirectiveUnit &directive) {
+    outputStream << getNodeIndex(directive) << " ";
+    outputStream << "OpenACCDirective: !$acc ";
+    outputStream
+        << directive.get<parser::OpenACCRoutineConstruct>().source.ToString();
+    outputStream << "\nEnd OpenACCDirective\n\n";
   }
 
   template <typename T>
@@ -1489,7 +1577,7 @@ private:
     // Derived type component symbols may be collected by "CollectSymbols"
     // below when processing something like "real :: x(derived%component)". The
     // symbol "component" has "ObjectEntityDetails", but it should not be
-    // instantiated: it is is part of "derived" that should be the only one to
+    // instantiated: it is part of "derived" that should be the only one to
     // be instantiated.
     if (sym.owner().IsDerivedType())
       return 0;
@@ -1545,8 +1633,14 @@ private:
       // Handle any symbols in initialization expressions.
       if (auto e = details->init())
         for (const auto &s : evaluate::CollectSymbols(*e))
-          depth = std::max(analyze(s) + 1, depth);
+          if (!s->has<semantics::DerivedTypeDetails>())
+            depth = std::max(analyze(s) + 1, depth);
     }
+
+    // Make sure cray pointer is instantiated even if it is not visible.
+    if (ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee))
+      depth = std::max(
+          analyze(Fortran::semantics::GetCrayPointer(ultimate)) + 1, depth);
     adjustSize(depth + 1);
     bool global = lower::symbolIsGlobal(sym);
     layeredVarList[depth].emplace_back(sym, global, depth);
@@ -1642,9 +1736,8 @@ private:
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::MainProgram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &semanticsContext)
-    : ProgramUnit{func, parent}, endStmt{
-                                     getFunctionStmt<parser::EndProgramStmt>(
-                                         func)} {
+    : ProgramUnit{func, parent},
+      endStmt{getFunctionStmt<parser::EndProgramStmt>(func)} {
   const auto &programStmt =
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
@@ -1728,8 +1821,8 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     const parser::Submodule &m, const lower::pft::PftNode &parent)
-    : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::SubmoduleStmt>(
-                                  m)},
+    : ProgramUnit{m, parent},
+      beginStmt{getModuleStmt<parser::SubmoduleStmt>(m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {}
 
 parser::CharBlock
@@ -1755,6 +1848,27 @@ Fortran::lower::pft::BlockDataUnit::BlockDataUnit(
       symTab{semanticsContext.FindScope(
           std::get<parser::Statement<parser::EndBlockDataStmt>>(bd.t).source)} {
 }
+
+//===----------------------------------------------------------------------===//
+// Variable implementation
+//===----------------------------------------------------------------------===//
+
+bool Fortran::lower::pft::Variable::isRuntimeTypeInfoData() const {
+  // So far, use flags to detect if this symbol were generated during
+  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
+  // symbols are injected in the user scopes defining the described derived
+  // types. A robustness improvement for this test could be to get hands on the
+  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
+  // belongs to this structure.
+  using Flags = Fortran::semantics::Symbol::Flag;
+  const auto *nominal = std::get_if<Nominal>(&var);
+  return nominal && nominal->symbol->test(Flags::CompilerCreated) &&
+         nominal->symbol->test(Flags::ReadOnly);
+}
+
+//===----------------------------------------------------------------------===//
+// API implementation
+//===----------------------------------------------------------------------===//
 
 std::unique_ptr<lower::pft::Program>
 Fortran::lower::createPFT(const parser::Program &root,
@@ -1935,6 +2049,10 @@ struct SymbolVisitor {
         }
       }
     }
+    // - CrayPointer needs to be available whenever a CrayPointee is used.
+    if (symbol.GetUltimate().test(
+            Fortran::semantics::Symbol::Flag::CrayPointee))
+      visitSymbol(Fortran::semantics::GetCrayPointer(symbol));
   }
 
   template <typename A>

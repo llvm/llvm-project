@@ -94,6 +94,20 @@ func.func @erf_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @erf_scalable_vector(
+// CHECK-SAME:                     %[[arg0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<[8]xf32>
+// CHECK-NOT:       erf
+// CHECK-NOT:       vector<8xf32>
+// CHECK-COUNT-20:  select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[res:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[res]] : vector<[8]xf32>
+// CHECK:         }
+func.func @erf_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.erf %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
 // CHECK-LABEL:   func @exp_scalar(
 // CHECK-SAME:                     %[[VAL_0:.*]]: f32) -> f32 {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 5.000000e-01 : f32
@@ -149,6 +163,17 @@ func.func @exp_scalar(%arg0: f32) -> f32 {
 func.func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.exp %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @exp_scalable_vector
+// CHECK-NOT:      math.exp
+// CHECK-NOT:      vector<8xf32>
+// CHECK-COUNT-46: vector<[8]x{{(i32)|(f32)}}>
+// CHECK-NOT:      vector<8xf32>
+// CHECK-NOT:      math.exp
+func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.exp %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // CHECK-LABEL:   func @expm1_scalar(
@@ -277,30 +302,46 @@ func.func @expm1_vector(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
   return %0 : vector<8x8xf32>
 }
 
+// CHECK-LABEL:   func @expm1_scalable_vector(
+// CHECK-SAME:                       %{{.*}}: vector<8x[8]xf32>) -> vector<8x[8]xf32> {
+// CHECK-NOT:       vector<8x8xf32>
+// CHECK-NOT:       exp
+// CHECK-NOT:       log
+// CHECK-NOT:       expm1
+// CHECK-COUNT-127: vector<8x[8]x{{(i32)|(f32)|(i1)}}>
+// CHECK-NOT:       vector<8x8xf32>
+// CHECK-NOT:       exp
+// CHECK-NOT:       log
+// CHECK-NOT:       expm1
+func.func @expm1_scalable_vector(%arg0: vector<8x[8]xf32>) -> vector<8x[8]xf32> {
+  %0 = math.expm1 %arg0 : vector<8x[8]xf32>
+  return %0 : vector<8x[8]xf32>
+}
+
 // CHECK-LABEL:   func @log_scalar(
 // CHECK-SAME:                             %[[X:.*]]: f32) -> f32 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK:           %[[VAL_3:.*]] = arith.constant -5.000000e-01 : f32
-// CHECK:           %[[VAL_4:.*]] = arith.constant 1.17549435E-38 : f32
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0xFF800000 : f32
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0x7F800000 : f32
-// CHECK:           %[[VAL_7:.*]] = arith.constant 0x7FC00000 : f32
-// CHECK:           %[[VAL_8:.*]] = arith.constant 0.707106769 : f32
-// CHECK:           %[[VAL_9:.*]] = arith.constant 0.0703768358 : f32
-// CHECK:           %[[VAL_10:.*]] = arith.constant -0.115146101 : f32
-// CHECK:           %[[VAL_11:.*]] = arith.constant 0.116769984 : f32
-// CHECK:           %[[VAL_12:.*]] = arith.constant -0.12420141 : f32
-// CHECK:           %[[VAL_13:.*]] = arith.constant 0.142493233 : f32
-// CHECK:           %[[VAL_14:.*]] = arith.constant -0.166680574 : f32
-// CHECK:           %[[VAL_15:.*]] = arith.constant 0.200007141 : f32
-// CHECK:           %[[VAL_16:.*]] = arith.constant -0.24999994 : f32
-// CHECK:           %[[VAL_17:.*]] = arith.constant 0.333333313 : f32
-// CHECK:           %[[VAL_18:.*]] = arith.constant 1.260000e+02 : f32
-// CHECK:           %[[VAL_19:.*]] = arith.constant -2139095041 : i32
-// CHECK:           %[[VAL_20:.*]] = arith.constant 1056964608 : i32
-// CHECK:           %[[VAL_21:.*]] = arith.constant 23 : i32
-// CHECK:           %[[VAL_22:.*]] = arith.constant 0.693147182 : f32
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant -5.000000e-01 : f32
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1.17549435E-38 : f32
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0xFF800000 : f32
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 0.707106769 : f32
+// CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 0.0703768358 : f32
+// CHECK-DAG:       %[[VAL_10:.*]] = arith.constant -0.115146101 : f32
+// CHECK-DAG:       %[[VAL_11:.*]] = arith.constant 0.116769984 : f32
+// CHECK-DAG:       %[[VAL_12:.*]] = arith.constant -0.12420141 : f32
+// CHECK-DAG:       %[[VAL_13:.*]] = arith.constant 0.142493233 : f32
+// CHECK-DAG:       %[[VAL_14:.*]] = arith.constant -0.166680574 : f32
+// CHECK-DAG:       %[[VAL_15:.*]] = arith.constant 0.200007141 : f32
+// CHECK-DAG:       %[[VAL_16:.*]] = arith.constant -0.24999994 : f32
+// CHECK-DAG:       %[[VAL_17:.*]] = arith.constant 0.333333313 : f32
+// CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 1.260000e+02 : f32
+// CHECK-DAG:       %[[VAL_19:.*]] = arith.constant -2139095041 : i32
+// CHECK-DAG:       %[[VAL_20:.*]] = arith.constant 1056964608 : i32
+// CHECK-DAG:       %[[VAL_21:.*]] = arith.constant 23 : i32
+// CHECK-DAG:       %[[VAL_22:.*]] = arith.constant 0.693147182 : f32
 // CHECK:           %[[VAL_23:.*]] = arith.cmpf ugt, %[[X]], %[[VAL_4]] : f32
 // CHECK:           %[[VAL_24:.*]] = arith.select %[[VAL_23]], %[[X]], %[[VAL_4]] : f32
 // CHECK-NOT:       frexp
@@ -357,6 +398,18 @@ func.func @log_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @log_scalable_vector(
+// CHECK-SAME:                     %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_LN2:.*]] = arith.constant dense<0.693147182> : vector<[8]xf32>
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_71]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
 // CHECK-LABEL:   func @log2_scalar(
 // CHECK-SAME:                      %[[VAL_0:.*]]: f32) -> f32 {
 // CHECK:           %[[CST_LOG2E:.*]] = arith.constant 1.44269502 : f32
@@ -379,6 +432,18 @@ func.func @log2_scalar(%arg0: f32) -> f32 {
 func.func @log2_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.log2 %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @log2_scalable_vector(
+// CHECK-SAME:                      %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_LOG2E:.*]] = arith.constant dense<1.44269502> : vector<[8]xf32>
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_71]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log2_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log2 %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // CHECK-LABEL:   func @log1p_scalar(
@@ -414,23 +479,34 @@ func.func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @log1p_scalable_vector(
+// CHECK-SAME:                       %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_ONE:.*]] = arith.constant dense<1.000000e+00> : vector<[8]xf32>
+// CHECK-COUNT-6:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_79:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_79]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log1p_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log1p %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
 
 // CHECK-LABEL:   func @tanh_scalar(
 // CHECK-SAME:                      %[[VAL_0:.*]]: f32) -> f32 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant -7.99881172 : f32
-// CHECK:           %[[VAL_2:.*]] = arith.constant 7.99881172 : f32
-// CHECK:           %[[VAL_3:.*]] = arith.constant 4.000000e-04 : f32
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0.00489352457 : f32
-// CHECK:           %[[VAL_5:.*]] = arith.constant 6.37261954E-4 : f32
-// CHECK:           %[[VAL_6:.*]] = arith.constant 1.48572235E-5 : f32
-// CHECK:           %[[VAL_7:.*]] = arith.constant 5.12229725E-8 : f32
-// CHECK:           %[[VAL_8:.*]] = arith.constant -8.60467184E-11 : f32
-// CHECK:           %[[VAL_9:.*]] = arith.constant 2.00018794E-13 : f32
-// CHECK:           %[[VAL_10:.*]] = arith.constant -2.76076837E-16 : f32
-// CHECK:           %[[VAL_11:.*]] = arith.constant 0.00489352504 : f32
-// CHECK:           %[[VAL_12:.*]] = arith.constant 0.00226843474 : f32
-// CHECK:           %[[VAL_13:.*]] = arith.constant 1.18534706E-4 : f32
-// CHECK:           %[[VAL_14:.*]] = arith.constant 1.19825836E-6 : f32
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant -7.99881172 : f32
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 7.99881172 : f32
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 4.000000e-04 : f32
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0.00489352457 : f32
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 6.37261954E-4 : f32
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1.48572235E-5 : f32
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 5.12229725E-8 : f32
+// CHECK-DAG:       %[[VAL_8:.*]] = arith.constant -8.60467184E-11 : f32
+// CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 2.00018794E-13 : f32
+// CHECK-DAG:       %[[VAL_10:.*]] = arith.constant -2.76076837E-16 : f32
+// CHECK-DAG:       %[[VAL_11:.*]] = arith.constant 0.00489352504 : f32
+// CHECK-DAG:       %[[VAL_12:.*]] = arith.constant 0.00226843474 : f32
+// CHECK-DAG:       %[[VAL_13:.*]] = arith.constant 1.18534706E-4 : f32
+// CHECK-DAG:       %[[VAL_14:.*]] = arith.constant 1.19825836E-6 : f32
 // CHECK:           %[[VAL_15:.*]] = arith.cmpf ult, %[[VAL_0]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_0]], %[[VAL_2]] : f32
 // CHECK:           %[[VAL_17:.*]] = arith.cmpf ugt, %[[VAL_16]], %[[VAL_1]] : f32
@@ -468,6 +544,19 @@ func.func @tanh_scalar(%arg0: f32) -> f32 {
 func.func @tanh_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.tanh %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @tanh_scalable_vector(
+// CHECK-SAME:                      %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-7.99881172> : vector<[8]xf32>
+// CHECK-NOT:       tanh
+// CHECK-COUNT-2:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_33:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_33]] : vector<[8]xf32>
+// CHECK:         }
+func.func @tanh_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.tanh %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // We only approximate rsqrt for vectors and when the AVX2 option is enabled.

@@ -212,7 +212,7 @@ private:
     struct C Capture;
   };
 
-  InitializedEntity() {};
+  InitializedEntity() {}
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
@@ -603,7 +603,7 @@ private:
     /// Normal context
     IC_Normal,
 
-    /// Normal context, but allows explicit conversion functionss
+    /// Normal context, but allows explicit conversion functions
     IC_ExplicitConvs,
 
     /// Implicit context (value initialization)

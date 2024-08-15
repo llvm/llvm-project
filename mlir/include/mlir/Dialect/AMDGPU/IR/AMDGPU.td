@@ -126,11 +126,7 @@ def AMDGPU_RawBufferLoadOp :
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
                    Optional<I32>:$sgprOffset)>,
-    Results<(outs AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value)> {
+    Results<(outs AnyType:$value)> {
 
   let summary = "Raw Buffer load, exposing GCN features";
   let description = [{
@@ -176,11 +172,7 @@ def AMDGPU_RawBufferLoadOp :
 def AMDGPU_RawBufferStoreOp :
     AMDGPU_Op<"raw_buffer_store", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value,
+    Arguments<(ins AnyType:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -424,8 +416,53 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
+    "The possible options for scheduling barriers",
+    [
+      I32BitEnumAttrCaseNone<"none">,
+      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
+      I32BitEnumAttrCaseBit<"valu", 1>,
+      I32BitEnumAttrCaseBit<"salu", 2>,
+      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
+      I32BitEnumAttrCaseBit<"all_vmem",  4>,
+      I32BitEnumAttrCaseBit<"vmem_read",  5>,
+      I32BitEnumAttrCaseBit<"vmem_write", 6>,
+      I32BitEnumAttrCaseBit<"all_ds", 7>,
+      I32BitEnumAttrCaseBit<"ds_read", 8>,
+      I32BitEnumAttrCaseBit<"ds_write", 9>,
+      I32BitEnumAttrCaseBit<"transcendental", 10>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
+  "sched_barrier_opt">{
+   let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_SchedBarrierOp :
+  AMDGPU_Op<"sched_barrier">,
+  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  {
+  let summary = "Barrier that limits the backend scheduler of instruction movement";
+  let description = [{
+    `amdgpu.sched_barrier` serves as a barrier that could be
+    configured to restrict movements of instructions through it as
+    defined by sched_barrier_opts.
+  }];
+  let assemblyFormat = [{
+    `allow` `=` $opts attr-dict
+  }];
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",

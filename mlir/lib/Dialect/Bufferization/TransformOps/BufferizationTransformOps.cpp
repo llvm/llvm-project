@@ -36,7 +36,7 @@ DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
 
 void transform::BufferLoopHoistingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -110,24 +110,17 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::EliminateEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
 DiagnosedSilenceableFailure transform::EliminateEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
-  OneShotBufferizationOptions options;
-  options.allowReturnAllocsFromLoops = true;
-
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    OneShotAnalysisState state(target, options);
-    if (failed(analyzeOp(target, state)))
+    if (failed(bufferization::eliminateEmptyTensors(rewriter, target)))
       return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to analyze op";
-    if (failed(bufferization::eliminateEmptyTensors(rewriter, target, state)))
-      return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to eliminate insert_slice anchored tensor.empty ops";
+             << "empty tensor elimination failed";
   }
   return DiagnosedSilenceableFailure::success();
 }
@@ -157,6 +150,9 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      BufferizationTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

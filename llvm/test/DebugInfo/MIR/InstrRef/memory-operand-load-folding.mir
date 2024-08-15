@@ -16,35 +16,35 @@
   source_filename = "reduced.ll"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define i32 @foo(i32 %i, float %f) local_unnamed_addr {
   if.then:
     %call = tail call i32 (i32, ...) undef(i32 %i)
     %cond = icmp eq i32 %call, 1
     br i1 %cond, label %sw.bb, label %sw.epilog
-  
+
   sw.bb:                                            ; preds = %if.then
     %conv = fptosi float %f to i8
     call void @llvm.dbg.value(metadata i8 %conv, metadata !6, metadata !DIExpression()), !dbg !17
     %tobool.not = icmp eq i8 %conv, 0
     br i1 %tobool.not, label %if.end, label %sw.epilog
-  
+
   if.end:                                           ; preds = %sw.bb
     tail call void (...) undef()
     br label %sw.epilog
-  
+
   sw.epilog:                                        ; preds = %if.then, %if.end, %sw.bb
     ret i32 undef
   }
-  
+
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-  
+
   attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2, !3, !4, !5}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "/tmp/test.c", directory: ".")
   !2 = !{i32 7, !"Dwarf Version", i32 4}
@@ -87,12 +87,13 @@ liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$xmm0', virtual-reg: '%1' }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0.if.then:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
     liveins: $edi, $xmm0
-  
+
     %1:fr32 = COPY killed $xmm0
     %0:gr32 = COPY killed $edi
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -106,27 +107,27 @@ body:             |
     CMP32ri8 killed %5, 1, implicit-def $eflags
     JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.1
-  
+
   bb.1.sw.bb:
     successors: %bb.2(0x30000000), %bb.3(0x50000000)
-  
+
     %7:gr32 = nofpexcept CVTTSS2SIrr killed %1, implicit $mxcsr, debug-instr-number 1
     %8:gr8 = COPY killed %7.sub_8bit
     DBG_INSTR_REF !6, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !17
     TEST8rr killed %8, %8, implicit-def $eflags
     JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.2
-  
+
   bb.2.if.end:
     successors: %bb.3(0x80000000)
-  
+
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %9:gr32 = MOV32r0 implicit-def dead $eflags
     %10:gr8 = COPY killed %9.sub_8bit
     $al = COPY killed %10
     CALL64r undef %11:gr64, csr_64, implicit $rsp, implicit $ssp, implicit killed $al, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  
+
   bb.3.sw.epilog:
     RET 0, undef $eax
 

@@ -18,6 +18,7 @@
 #include "ResourceScriptToken.h"
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <system_error>
@@ -175,6 +176,7 @@ private:
   ParseOptionType parseExStyleStmt();
   ParseOptionType parseFontStmt(OptStmtType DialogType);
   ParseOptionType parseStyleStmt();
+  ParseOptionType parseMenuStmt();
 
   // Raises an error. If IsAlreadyRead = false (default), this complains about
   // the token that couldn't be parsed. If the flag is on, this complains about
@@ -185,6 +187,9 @@ private:
   std::vector<RCToken> Tokens;
   LocIter CurLoc;
   const LocIter End;
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
 };
 
 } // namespace rc

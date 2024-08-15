@@ -173,7 +173,8 @@ static void emitRegistrations(llvm::ArrayRef<Pass> passes, raw_ostream &os) {
 /// {0}: The def name of the pass record.
 /// {1}: The base class for the pass.
 /// {2): The command line argument for the pass.
-/// {3}: The dependent dialects registration.
+/// {3}: The summary for the pass.
+/// {4}: The dependent dialects registration.
 const char *const baseClassBegin = R"(
 template <typename DerivedT>
 class {0}Base : public {1} {
@@ -182,6 +183,10 @@ public:
 
   {0}Base() : {1}(::mlir::TypeID::get<DerivedT>()) {{}
   {0}Base(const {0}Base &other) : {1}(other) {{}
+  {0}Base& operator=(const {0}Base &) = delete;
+  {0}Base({0}Base &&) = delete;
+  {0}Base& operator=({0}Base &&) = delete;
+  ~{0}Base() = default;
 
   /// Returns the command-line argument attached to this pass.
   static constexpr ::llvm::StringLiteral getArgumentName() {
@@ -221,9 +226,7 @@ public:
 
 /// Registration for a single dependent dialect, to be inserted for each
 /// dependent dialect in the `getDependentDialects` above.
-const char *const dialectRegistrationTemplate = R"(
-  registry.insert<{0}>();
-)";
+const char *const dialectRegistrationTemplate = "registry.insert<{0}>();";
 
 const char *const friendDefaultConstructorDeclTemplate = R"(
 namespace impl {{
@@ -307,9 +310,13 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
   std::string dependentDialectRegistrations;
   {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
-    for (StringRef dependentDialect : pass.getDependentDialects())
-      dialectsOs << llvm::formatv(dialectRegistrationTemplate,
-                                  dependentDialect);
+    llvm::interleave(
+        pass.getDependentDialects(), dialectsOs,
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
+        },
+        "\n    ");
   }
 
   os << "namespace impl {\n";
@@ -377,6 +384,10 @@ public:
 
   {0}Base() : {1}(::mlir::TypeID::get<DerivedT>()) {{}
   {0}Base(const {0}Base &other) : {1}(other) {{}
+  {0}Base& operator=(const {0}Base &) = delete;
+  {0}Base({0}Base &&) = delete;
+  {0}Base& operator=({0}Base &&) = delete;
+  ~{0}Base() = default;
 
   /// Returns the command-line argument attached to this pass.
   static constexpr ::llvm::StringLiteral getArgumentName() {
@@ -402,7 +413,7 @@ public:
     return std::make_unique<DerivedT>(*static_cast<const DerivedT *>(this));
   }
 
-  /// Return the dialect that must be loaded in the context before this pass.
+  /// Register the dialects that must be loaded in the context before this pass.
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     {4}
   }
@@ -422,9 +433,13 @@ static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
   std::string dependentDialectRegistrations;
   {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
-    for (StringRef dependentDialect : pass.getDependentDialects())
-      dialectsOs << llvm::formatv(dialectRegistrationTemplate,
-                                  dependentDialect);
+    llvm::interleave(
+        pass.getDependentDialects(), dialectsOs,
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
+        },
+        "\n    ");
   }
   os << llvm::formatv(oldPassDeclBegin, defName, pass.getBaseClass(),
                       pass.getArgument(), pass.getSummary(),

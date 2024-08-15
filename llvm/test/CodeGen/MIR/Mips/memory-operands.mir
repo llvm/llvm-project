@@ -13,7 +13,7 @@
 
   define float @test2() #0 {
   entry:
-    %call = tail call float bitcast (float (...)* @g to float ()*)()
+    %call = tail call float @g()
     call void @__mips16_ret_sf(float %call)
     ret float %call
   }

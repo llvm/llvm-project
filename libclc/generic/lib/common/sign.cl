@@ -26,3 +26,12 @@ SIGN(double, )
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, sign, double)
 
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+SIGN(half,)
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, sign, half)
+
+#endif

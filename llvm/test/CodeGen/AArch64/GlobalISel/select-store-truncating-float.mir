@@ -5,7 +5,7 @@
     %alloca = alloca i32, align 4
     %bitcast = bitcast double %x to i64
     %trunc = trunc i64 %bitcast to i32
-    store i32 %trunc, i32* %alloca, align 4
+    store i32 %trunc, ptr %alloca, align 4
     ret void
   }
 
@@ -13,7 +13,7 @@
     %alloca = alloca i16, align 2
     %bitcast = bitcast double %x to i64
     %trunc = trunc i64 %bitcast to i16
-    store i16 %trunc, i16* %alloca, align 2
+    store i16 %trunc, ptr %alloca, align 2
     ret void
   }
 
@@ -21,7 +21,7 @@
     %alloca = alloca i8, align 1
     %bitcast = bitcast double %x to i64
     %trunc = trunc i64 %bitcast to i8
-    store i8 %trunc, i8* %alloca, align 1
+    store i8 %trunc, ptr %alloca, align 1
     ret void
   }
 

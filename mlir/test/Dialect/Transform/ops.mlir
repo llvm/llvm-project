@@ -68,11 +68,25 @@ transform.sequence failures(propagate) {
 }
 
 // CHECK: transform.sequence
-// CHECK: foreach
 transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  transform.foreach %arg0 : !transform.any_op {
-  ^bb1(%arg1: !transform.any_op):
+^bb0(%op0: !transform.any_op, %val0: !transform.any_value, %par0: !transform.any_param):
+  // CHECK: foreach %{{.*}} : !transform.any_op
+  transform.foreach %op0 : !transform.any_op {
+  ^bb1(%op1: !transform.any_op):
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_op
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_op {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+    transform.yield %op1 : !transform.any_op
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_param, !transform.any_value
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_param, !transform.any_value {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+    transform.yield %par1, %val1 : !transform.any_param, !transform.any_value
   }
 }
 
@@ -86,32 +100,34 @@ transform.sequence failures(propagate) {
 }
 
 // CHECK: transform.sequence
-// CHECK: print
-// CHECK: print
-// CHECK: print
-// CHECK: print
+// CHECK-COUNT-9: print
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   transform.print %arg0 : !transform.any_op
   transform.print
   transform.print %arg0 {name = "test"} : !transform.any_op
   transform.print {name = "test"}
+  transform.print {name = "test", assume_verified}
+  transform.print %arg0 {assume_verified} : !transform.any_op
+  transform.print %arg0 {use_local_scope} : !transform.any_op
+  transform.print %arg0 {skip_regions} : !transform.any_op
+  transform.print %arg0 {assume_verified, use_local_scope, skip_regions} : !transform.any_op
 }
 
 // CHECK: transform.sequence
-// CHECK: transform.structured.tile_using_for %0[4, 4, [4]]
+// CHECK: transform.structured.tile_using_for %0 tile_sizes [4, 4, [4]]
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.tile_using_for %0 [4, 4, [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  transform.structured.tile_using_for %0 tile_sizes [4, 4, [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK: transform.sequence
-// CHECK: transform.structured.tile_using_for %0{{\[}}[2], 4, 8]
+// CHECK: transform.structured.tile_using_for %0 tile_sizes {{\[}}[2], 4, 8]
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.tile_using_for %0 [[2], 4, 8] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  transform.structured.tile_using_for %0 tile_sizes [[2], 4, 8] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK: transform.sequence

@@ -1,0 +1,29 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-types-dup-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-types-dup-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-dwp -e main.exe -o main.exe.dwp
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-MAIN %s
+; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-HELPER %s
+
+;; Tests that BOLT correctly handles DWARF5 DWP file as input. Output has correct CU, and all the type units are written out.
+
+; BOLT-DWO-DWO-MAIN: debug_info.dwo
+; BOLT-DWO-DWO-MAIN-NEXT: type_signature = 0x49dc260088be7e56
+; BOLT-DWO-DWO-MAIN: type_signature = 0x104ec427d2ebea6f
+; BOLT-DWO-DWO-MAIN: type_signature = 0xca1e65a66d92b970
+; BOLT-DWO-DWO-MAIN: Compile Unit
+; BOLT-DWO-DWO-MAIN-SAME: DWO_id = 0x52bda211bf6d26b7
+; BOLT-DWO-DWO-MAIN-NOT: Compile Unit
+; BOLT-DWO-DWO-HELPER: debug_info.dwo
+; BOLT-DWO-DWO-HELPER-NEXT: type_signature = 0x49dc260088be7e56
+; BOLT-DWO-DWO-HELPER: type_signature = 0x104ec427d2ebea6f
+; BOLT-DWO-DWO-HELPER: type_signature = 0xca1e65a66d92b970
+; BOLT-DWO-DWO-HELPER: Compile Unit
+; BOLT-DWO-DWO-HELPER-SAME: DWO_id = 0x1dbb67285a49634c
+; BOLT-DWO-DWO-HELPER-NOT: Compile Unit

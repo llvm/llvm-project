@@ -12,40 +12,15 @@
 #include <cstring>
 #include <string>
 
-namespace lldb_private {
+namespace lldb_private::plugin {
+namespace dwarf {
 
-const char *DW_TAG_value_to_name(uint32_t val) {
-  static char invalid[100];
+llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag) {
+  static constexpr llvm::StringLiteral s_unknown_tag_name("<unknown DW_TAG>");
+  if (llvm::StringRef tag_name = llvm::dwarf::TagString(tag); !tag_name.empty())
+    return tag_name;
 
-  if (val == 0)
-    return "NULL";
-
-  llvm::StringRef llvmstr = llvm::dwarf::TagString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_TAG constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_AT_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::AttributeString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_AT constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_FORM_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::FormEncodingString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_FORM constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
+  return s_unknown_tag_name;
 }
 
 const char *DW_OP_value_to_name(uint32_t val) {
@@ -58,34 +33,5 @@ const char *DW_OP_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-const char *DW_ATE_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::AttributeEncodingString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_ATE constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_LANG_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::LanguageString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_LANG constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-const char *DW_LNS_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::LNStandardString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_LNS constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin

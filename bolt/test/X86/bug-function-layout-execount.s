@@ -1,4 +1,4 @@
-# Verifies that llvm-bolt correctly sorts functions by their execution counts.
+## Verifies that llvm-bolt correctly sorts functions by their execution counts.
 
 # REQUIRES: x86_64-linux, asserts
 
@@ -6,7 +6,7 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe --data %t.fdata --lite --reorder-functions=exec-count \
-# RUN:   -v=2 --debug-only=hfsort -o /dev/null 2>&1 | FileCheck %s
+# RUN:   -v=2 --debug-only=hfsort -o %t.null 2>&1 | FileCheck %s
 
 # CHECK: Starting pass: reorder-functions
 # CHECK-NEXT: hot func func2 (1500)

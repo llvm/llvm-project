@@ -28,6 +28,7 @@ namespace llvm {
 
 namespace gsym {
 class FileWriter;
+class OutputAggregator;
 
 /// GsymCreator is used to emit GSYM data to a stand alone file or section
 /// within a file.
@@ -278,8 +279,7 @@ class GsymCreator {
   /// \param Path The path prefix to use when saving the GSYM files.
   /// \param ByteOrder The endianness to use when saving the file.
   /// \param SegmentSize The size in bytes to segment the GSYM file into.
-  llvm::Error saveSegments(StringRef Path,
-                           llvm::support::endianness ByteOrder,
+  llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
                            uint64_t SegmentSize) const;
 
   /// Let this creator know that this is a segment of another GsymCreator.
@@ -308,7 +308,7 @@ public:
   ///                    a single GSYM file that contains all function
   ///                    information will be created.
   /// \returns An error object that indicates success or failure of the save.
-  llvm::Error save(StringRef Path, llvm::support::endianness ByteOrder,
+  llvm::Error save(StringRef Path, llvm::endianness ByteOrder,
                    std::optional<uint64_t> SegmentSize = std::nullopt) const;
 
   /// Encode a GSYM into the file writer stream at the current position.
@@ -352,6 +352,15 @@ public:
   /// \param   FI The function info object to emplace into our functions list.
   void addFunctionInfo(FunctionInfo &&FI);
 
+  /// Organize merged FunctionInfo's
+  ///
+  /// This method processes the list of function infos (Funcs) to identify and
+  /// group functions with overlapping address ranges.
+  ///
+  /// \param  Out Output stream to report information about how merged
+  /// FunctionInfo's were handeled.
+  void prepareMergedFunctions(OutputAggregator &Out);
+
   /// Finalize the data in the GSYM creator prior to saving the data out.
   ///
   /// Finalize must be called after all FunctionInfo objects have been added
@@ -361,7 +370,7 @@ public:
   ///         function infos, and function infos that were merged or removed.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  llvm::Error finalize(llvm::raw_ostream &OS);
+  llvm::Error finalize(OutputAggregator &OS);
 
   /// Set the UUID value.
   ///

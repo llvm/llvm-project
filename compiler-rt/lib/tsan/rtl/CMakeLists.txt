@@ -167,7 +167,7 @@ if(APPLE)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../go
     COMMENT "Checking TSan Go runtime..."
     VERBATIM)
-  set_target_properties(GotsanRuntimeCheck PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(GotsanRuntimeCheck PROPERTIES FOLDER "Compiler-RT/Misc")
 else()
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     if(arch STREQUAL "x86_64")
@@ -219,6 +219,10 @@ else()
     elseif(arch MATCHES "mips64|mips64le")
       set(TSAN_ASM_SOURCES
         tsan_rtl_mips64.S
+        )
+    elseif(arch MATCHES "riscv64")
+      set(TSAN_ASM_SOURCES
+        tsan_rtl_riscv64.S
         )
     elseif(arch MATCHES "s390x")
       set(TSAN_ASM_SOURCES

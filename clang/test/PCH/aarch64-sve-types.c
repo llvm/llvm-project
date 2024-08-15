@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -include-pch %t \
 // RUN:   -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple aarch64-linux-gnu \
+// RUN:   -x hip-cpp-output -emit-pch -o %t %s
 
 // expected-no-diagnostics
 
@@ -18,6 +20,6 @@ __SVFloat16_t *f16;
 __SVFloat32_t *f32;
 __SVFloat64_t *f64;
 
-__SVBFloat16_t *bf16;
+__SVBfloat16_t *bf16;
 
 __SVBool_t *b8;

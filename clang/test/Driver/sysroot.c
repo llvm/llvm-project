@@ -1,14 +1,13 @@
-// REQUIRES: x86-registered-target
-//
 // Check that --sysroot= also applies to header search paths.
 // RUN: %clang -target i386-unk-unk --sysroot=/FOO -### -E %s 2> %t1
 // RUN: FileCheck --check-prefix=CHECK-SYSROOTEQ < %t1 %s
 // CHECK-SYSROOTEQ: "-cc1"{{.*}} "-isysroot" "{{[^"]*}}/FOO"
 
 // Apple Darwin uses -isysroot as the syslib root, too.
+// We pass --sysroot="" to defeat any -DDEFAULT_SYSROOT parameter.
 // RUN: touch %t2.o
 // RUN: %clang -target i386-apple-darwin10 \
-// RUN:   -isysroot /FOO -### %t2.o 2> %t2
+// RUN:   -isysroot /FOO --sysroot="" -### %t2.o 2> %t2
 // RUN: FileCheck --check-prefix=CHECK-APPLE-ISYSROOT < %t2 %s
 // CHECK-APPLE-ISYSROOT: "-arch" "i386"{{.*}} "-syslibroot" "{{[^"]*}}/FOO"
 

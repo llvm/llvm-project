@@ -22,7 +22,9 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -45,6 +47,8 @@ class AsyncTokenType
 public:
   // Used for generic hooks in TypeBase.
   using Base::Base;
+
+  static constexpr StringLiteral name = "gpu.async_token";
 };
 
 /// MMAMatrixType storage and uniquing. Array is uniqued based on its shape
@@ -128,6 +132,8 @@ class MMAMatrixType
 public:
   using Base::Base;
 
+  static constexpr StringLiteral name = "gpu.mma_matrix";
+
   /// Get MMAMatrixType and verify construction Invariants.
   static MMAMatrixType get(ArrayRef<int64_t> shape, Type elementType,
                            StringRef operand);
@@ -143,9 +149,10 @@ public:
 
   /// Verify that shape and elementType are actually allowed for the
   /// MMAMatrixType.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<int64_t> shape, Type elementType,
-                              StringRef operand);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   ArrayRef<int64_t> shape, Type elementType,
+                   StringRef operand);
 
   /// Get number of dims.
   unsigned getNumDims() const;
@@ -168,18 +175,35 @@ void addAsyncDependency(Operation *op, Value token);
 // Handle types for sparse.
 enum class SparseHandleKind { SpMat, DnTensor, SpGEMMOp };
 
-template <SparseHandleKind K>
-class SparseHandleType
-    : public Type::TypeBase<SparseHandleType<K>, Type, TypeStorage> {
+class SparseDnTensorHandleType
+    : public Type::TypeBase<SparseDnTensorHandleType, Type, TypeStorage> {
 public:
-  using Base =
-      typename Type::TypeBase<SparseHandleType<K>, Type, TypeStorage>::Base;
+  using Base = typename Type::TypeBase<SparseDnTensorHandleType, Type,
+                                       TypeStorage>::Base;
   using Base::Base;
+
+  static constexpr StringLiteral name = "gpu.sparse.dntensor_handle";
 };
 
-using SparseDnTensorHandleType = SparseHandleType<SparseHandleKind::DnTensor>;
-using SparseSpMatHandleType = SparseHandleType<SparseHandleKind::SpMat>;
-using SparseSpGEMMOpHandleType = SparseHandleType<SparseHandleKind::SpGEMMOp>;
+class SparseSpMatHandleType
+    : public Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage> {
+public:
+  using Base =
+      typename Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage>::Base;
+  using Base::Base;
+
+  static constexpr StringLiteral name = "gpu.sparse.spmat_handle";
+};
+
+class SparseSpGEMMOpHandleType
+    : public Type::TypeBase<SparseSpGEMMOpHandleType, Type, TypeStorage> {
+public:
+  using Base = typename Type::TypeBase<SparseSpGEMMOpHandleType, Type,
+                                       TypeStorage>::Base;
+  using Base::Base;
+
+  static constexpr StringLiteral name = "gpu.sparse.spgemmop_handle";
+};
 
 } // namespace gpu
 } // namespace mlir

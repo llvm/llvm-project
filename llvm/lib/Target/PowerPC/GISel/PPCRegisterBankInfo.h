@@ -37,9 +37,9 @@ protected:
     PMI_Min = PMI_GPR32,
   };
 
-  static RegisterBankInfo::PartialMapping PartMappings[];
-  static RegisterBankInfo::ValueMapping ValMappings[];
-  static PartialMappingIdx BankIDToCopyMapIdx[];
+  static const RegisterBankInfo::PartialMapping PartMappings[];
+  static const RegisterBankInfo::ValueMapping ValMappings[];
+  static const PartialMappingIdx BankIDToCopyMapIdx[];
 
   /// Get the pointer to the ValueMapping representing the RegisterBank
   /// at \p RBIdx.
@@ -67,6 +67,7 @@ public:
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT Ty) const override;
+
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 

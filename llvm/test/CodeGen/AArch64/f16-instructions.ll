@@ -759,6 +759,13 @@ declare half @llvm.sqrt.f16(half %a) #0
 declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
+declare half @llvm.tan.f16(half %a) #0
+declare half @llvm.asin.f16(half %a) #0
+declare half @llvm.acos.f16(half %a) #0
+declare half @llvm.atan.f16(half %a) #0
+declare half @llvm.sinh.f16(half %a) #0
+declare half @llvm.cosh.f16(half %a) #0
+declare half @llvm.tanh.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
 declare half @llvm.exp.f16(half %a) #0
 declare half @llvm.exp2.f16(half %a) #0
@@ -867,6 +874,181 @@ define half @test_sin(half %a) #0 {
 ; GISEL-NEXT: ret
 define half @test_cos(half %a) #0 {
   %r = call half @llvm.cos.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_tan
+; FALLBACK-FP16-NOT: remark:{{.*}}test_tan
+
+; CHECK-COMMON-LABEL: test_tan:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}tanf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_tan:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}tanf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_tan(half %a) #0 {
+  %r = call half @llvm.tan.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_acos
+; FALLBACK-FP16-NOT: remark:{{.*}}test_acos
+
+; CHECK-COMMON-LABEL: test_acos:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}acosf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_acos:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}acosf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_acos(half %a) #0 {
+  %r = call half @llvm.acos.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_asin
+; FALLBACK-FP16-NOT: remark:{{.*}}test_asin
+
+; CHECK-COMMON-LABEL: test_asin:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}asinf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_asin:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}asinf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_asin(half %a) #0 {
+  %r = call half @llvm.asin.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_atan
+; FALLBACK-FP16-NOT: remark:{{.*}}test_atan
+
+; CHECK-COMMON-LABEL: test_atan:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}atanf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_atan:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}atanf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_atan(half %a) #0 {
+  %r = call half @llvm.atan.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_cosh
+; FALLBACK-FP16-NOT: remark:{{.*}}test_cosh
+
+; CHECK-COMMON-LABEL: test_cosh:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}coshf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_cosh:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}coshf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_cosh(half %a) #0 {
+  %r = call half @llvm.cosh.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_sinh
+; FALLBACK-FP16-NOT: remark:{{.*}}test_sinh
+
+; CHECK-COMMON-LABEL: test_sinh:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}sinhf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_sinh:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}sinhf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_sinh(half %a) #0 {
+  %r = call half @llvm.sinh.f16(half %a)
+  ret half %r
+}
+
+; FALLBACK-NOT: remark:{{.*}}test_tanh
+; FALLBACK-FP16-NOT: remark:{{.*}}test_tanh
+
+; CHECK-COMMON-LABEL: test_tanh:
+; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
+; CHECK-COMMON-NEXT: mov  x29, sp
+; CHECK-COMMON-NEXT: fcvt s0, h0
+; CHECK-COMMON-NEXT: bl {{_?}}tanhf
+; CHECK-COMMON-NEXT: fcvt h0, s0
+; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
+; CHECK-COMMON-NEXT: ret
+
+; GISEL-LABEL: test_tanh:
+; GISEL-NEXT: stp x29, x30, [sp, #-16]!
+; GISEL-NEXT: mov  x29, sp
+; GISEL-NEXT: fcvt s0, h0
+; GISEL-NEXT: bl {{_?}}tanhf
+; GISEL-NEXT: fcvt h0, s0
+; GISEL-NEXT: ldp x29, x30, [sp], #16
+; GISEL-NEXT: ret
+define half @test_tanh(half %a) #0 {
+  %r = call half @llvm.tanh.f16(half %a)
   ret half %r
 }
 
@@ -1027,9 +1209,9 @@ define half @test_fma(half %a, half %b, half %c) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_fabs:
-; CHECK-CVT-NEXT: fcvt s0, h0
-; CHECK-CVT-NEXT: fabs s0, s0
-; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: fmov w8, s0
+; CHECK-CVT-NEXT: and w8, w8, #0x7fff
+; CHECK-CVT-NEXT: fmov s0, w8
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_fabs:
@@ -1338,3 +1520,12 @@ define half @test_fmuladd(half %a, half %b, half %c) #0 {
 }
 
 attributes #0 = { nounwind }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-COMMON: {{.*}}
+; CHECK-CVT: {{.*}}
+; CHECK-FP16: {{.*}}
+; FALLBACK: {{.*}}
+; FALLBACK-FP16: {{.*}}
+; GISEL: {{.*}}
+; GISEL-CVT: {{.*}}
+; GISEL-FP16: {{.*}}

@@ -136,7 +136,9 @@ namespace PR24816 {
 
 namespace no_crash {
 class Foo; // expected-note {{forward declaration}}
-void test(int size) {
-  Foo array[size] = {0}; // expected-error {{variable has incomplete type}}
+void test(int size) { // expected-note {{declared here}}
+  Foo array[size] = {0}; // expected-error {{variable has incomplete type}} \
+                            expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                            expected-note {{function parameter 'size' with unknown value cannot be used in a constant expression}}
 }
 }

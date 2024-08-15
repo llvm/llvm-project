@@ -65,8 +65,9 @@ static bool getFullyQualifiedTemplateName(const ASTContext &Ctx,
   assert(ArgTDecl != nullptr);
   QualifiedTemplateName *QTName = TName.getAsQualifiedTemplateName();
 
-  if (QTName && !QTName->hasTemplateKeyword()) {
-    NNS = QTName->getQualifier();
+  if (QTName &&
+      !QTName->hasTemplateKeyword() &&
+      (NNS = QTName->getQualifier())) {
     NestedNameSpecifier *QNNS = getFullyQualifiedNestedNameSpecifier(
         Ctx, NNS, WithGlobalNsPrefix);
     if (QNNS != NNS) {
@@ -269,8 +270,8 @@ static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
   assert(Decl);
 
   const DeclContext *DC = Decl->getDeclContext()->getRedeclContext();
-  const auto *Outer = dyn_cast_or_null<NamedDecl>(DC);
-  const auto *OuterNS = dyn_cast_or_null<NamespaceDecl>(DC);
+  const auto *Outer = dyn_cast<NamedDecl>(DC);
+  const auto *OuterNS = dyn_cast<NamespaceDecl>(DC);
   if (Outer && !(OuterNS && OuterNS->isAnonymousNamespace())) {
     if (const auto *CxxDecl = dyn_cast<CXXRecordDecl>(DC)) {
       if (ClassTemplateDecl *ClassTempl =
@@ -440,7 +441,7 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
   // elaborated type.
   Qualifiers PrefixQualifiers = QT.getLocalQualifiers();
   QT = QualType(QT.getTypePtr(), 0);
-  ElaboratedTypeKeyword Keyword = ETK_None;
+  ElaboratedTypeKeyword Keyword = ElaboratedTypeKeyword::None;
   if (const auto *ETypeInput = dyn_cast<ElaboratedType>(QT.getTypePtr())) {
     QT = ETypeInput->getNamedType();
     assert(!QT.hasLocalQualifiers());
@@ -471,7 +472,7 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
         Ctx, QT.getTypePtr(), WithGlobalNsPrefix);
     QT = QualType(TypePtr, 0);
   }
-  if (Prefix || Keyword != ETK_None) {
+  if (Prefix || Keyword != ElaboratedTypeKeyword::None) {
     QT = Ctx.getElaboratedType(Keyword, Prefix, QT);
   }
   QT = Ctx.getQualifiedType(QT, PrefixQualifiers);

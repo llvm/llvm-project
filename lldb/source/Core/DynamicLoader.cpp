@@ -13,8 +13,8 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
@@ -196,20 +196,37 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   Target &target = process->GetTarget();
   Status error;
 
+  StreamString prog_str;
+  if (!name.empty()) {
+    prog_str << name.str() << " ";
+  }
+  if (uuid.IsValid())
+    prog_str << uuid.GetAsString();
+  if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
+    prog_str << "at 0x";
+    prog_str.PutHex64(value);
+  }
+
   if (!uuid.IsValid() && !value_is_offset) {
     memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
 
-    if (memory_module_sp)
+    if (memory_module_sp) {
       uuid = memory_module_sp->GetUUID();
+      if (uuid.IsValid()) {
+        prog_str << " ";
+        prog_str << uuid.GetAsString();
+      }
+    }
   }
   ModuleSpec module_spec;
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
-  if (FileSystem::Instance().Exists(name_filespec))
-    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
+    Progress progress("Locating binary", prog_str.GetString().str());
+
     // Has lldb already seen a module with this UUID?
+    // Or have external lookup enabled in DebugSymbols on macOS.
     if (!module_sp)
       error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
                                           nullptr, nullptr);
@@ -219,9 +236,9 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
       module_spec.GetSymbolFileSpec() =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       ModuleSpec objfile_module_spec =
-          Symbols::LocateExecutableObjectFile(module_spec);
+          PluginManager::LocateExecutableObjectFile(module_spec);
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
@@ -232,8 +249,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // If we haven't found a binary, or we don't have a SymbolFile, see
     // if there is an external search tool that can find it.
     if (!module_sp || !module_sp->GetSymbolFileFileSpec()) {
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error,
-                                           force_symbol_search);
+      PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                 force_symbol_search);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&

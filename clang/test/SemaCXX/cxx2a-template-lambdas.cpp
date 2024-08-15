@@ -1,10 +1,14 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++03 -verify -Dstatic_assert=_Static_assert -Wno-c++11-extensions -Wno-c++14-extensions -Wno-c++17-extensions -Wno-c++20-extensions %s
+// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx11,cxx11-cxx14 -Wno-c++20-extensions -Wno-c++17-extensions -Wno-c++14-extensions  %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx11-cxx14,cxx14 -Wno-c++20-extensions -Wno-c++17-extensions %s
+// RUN: %clang_cc1 -std=c++17 -verify -Wno-c++20-extensions %s
+// RUN: %clang_cc1 -std=c++20 -verify %s
 
 template<typename, typename>
-constexpr bool is_same = false;
+inline const bool is_same = false;
 
 template<typename T>
-constexpr bool is_same<T, T> = true;
+inline const bool is_same<T, T> = true;
 
 template<typename T>
 struct DummyTemplate { };
@@ -23,7 +27,7 @@ void func() {
   L1.operator()<6>(); // expected-note {{in instantiation}}
 
   auto L2 = []<template<typename> class T, class U>(T<U> &&arg) {
-    static_assert(is_same<T<U>, DummyTemplate<float>>); // // expected-error {{static assertion failed}}
+    static_assert(is_same<T<U>, DummyTemplate<float> >); // // expected-error {{static assertion failed}}
   };
   L2(DummyTemplate<float>());
   L2(DummyTemplate<double>()); // expected-note {{in instantiation}}
@@ -36,15 +40,20 @@ struct ShadowMe {
   }
 };
 
+#if __cplusplus >= 201102L
 template<typename T>
 constexpr T outer() {
-  return []<T x>() { return x; }.template operator()<123>(); // expected-error {{no matching member function}} \
-                                                                expected-note {{candidate template ignored}}
+  // FIXME: The C++11 error seems wrong
+  return []<T x>() { return x; }.template operator()<123>(); // expected-error {{no matching member function}}  \
+                                                                expected-note {{candidate template ignored}}    \
+        cxx11-note {{non-literal type '<dependent type>' cannot be used in a constant expression}} \
+        cxx14-note {{non-literal type}}
 }
-static_assert(outer<int>() == 123);
+static_assert(outer<int>() == 123); // cxx11-cxx14-error {{not an integral constant expression}} cxx11-cxx14-note {{in call}}
 template int *outer<int *>(); // expected-note {{in instantiation}}
+#endif
 
-
+#if __cplusplus >= 202002L
 namespace GH62611 {
 template <auto A = [](auto x){}>
 struct C {
@@ -87,3 +96,4 @@ void foo() {
 }
 
 }
+#endif

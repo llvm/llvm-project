@@ -14,7 +14,7 @@
 ;         DW_AT_decl_file DW_FORM_implicit_const  1
 ;         DW_AT_decl_line DW_FORM_data1
 
-; Attributes with DW_FORM_implicit_const being ignored by the ELFReader,
+; Attributes with DW_FORM_implicit_const being ignored by the DWARFReader,
 ; causing {Parameter} and {TypeAlias} to omit line numbers.
 
 ; test.cpp

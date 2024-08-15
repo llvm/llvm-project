@@ -44,10 +44,15 @@ static ThreadRegistry *asan_thread_registry;
 static ThreadArgRetval *thread_data;
 
 static Mutex mu_for_thread_context;
+// TODO(leonardchan@): It should be possible to make LowLevelAllocator
+// threadsafe and consolidate this one into the GlobalLoweLevelAllocator.
+// We should be able to do something similar to what's in
+// sanitizer_stack_store.cpp.
+static LowLevelAllocator allocator_for_thread_context;
 
 static ThreadContextBase *GetAsanThreadContext(u32 tid) {
   Lock lock(&mu_for_thread_context);
-  return new (GetGlobalLowLevelAllocator()) AsanThreadContext(tid);
+  return new (allocator_for_thread_context) AsanThreadContext(tid);
 }
 
 static void InitThreads() {
@@ -62,10 +67,10 @@ static void InitThreads() {
   // thread before all TSD destructors will be called for it.
 
   // MIPS requires aligned address
-  static ALIGNED(alignof(
-      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
-  static ALIGNED(alignof(
-      ThreadArgRetval)) char thread_data_placeholder[sizeof(ThreadArgRetval)];
+  alignas(alignof(ThreadRegistry)) static char
+      thread_registry_placeholder[sizeof(ThreadRegistry)];
+  alignas(alignof(ThreadArgRetval)) static char
+      thread_data_placeholder[sizeof(ThreadArgRetval)];
 
   asan_thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);

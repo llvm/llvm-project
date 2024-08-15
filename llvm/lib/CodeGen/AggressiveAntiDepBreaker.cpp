@@ -23,11 +23,11 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -124,13 +124,13 @@ AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
       TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI) {
   /* Collect a bitset of all registers that are only broken if they
      are on the critical path. */
-  for (unsigned i = 0, e = CriticalPathRCs.size(); i < e; ++i) {
-    BitVector CPSet = TRI->getAllocatableSet(MF, CriticalPathRCs[i]);
+  for (const TargetRegisterClass *RC : CriticalPathRCs) {
+    BitVector CPSet = TRI->getAllocatableSet(MF, RC);
     if (CriticalPathSet.none())
       CriticalPathSet = CPSet;
     else
       CriticalPathSet |= CPSet;
-   }
+  }
 
    LLVM_DEBUG(dbgs() << "AntiDep Critical-Path Registers:");
    LLVM_DEBUG(for (unsigned r
@@ -231,9 +231,9 @@ bool AggressiveAntiDepBreaker::IsImplicitDefUse(MachineInstr &MI,
 
   MachineOperand *Op = nullptr;
   if (MO.isDef())
-    Op = MI.findRegisterUseOperand(Reg, true);
+    Op = MI.findRegisterUseOperand(Reg, /*TRI=*/nullptr, true);
   else
-    Op = MI.findRegisterDefOperand(Reg);
+    Op = MI.findRegisterDefOperand(Reg, /*TRI=*/nullptr);
 
   return(Op && Op->isImplicit());
 }
@@ -679,7 +679,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
       // defines 'NewReg' via an early-clobber operand.
       for (const auto &Q : make_range(RegRefs.equal_range(Reg))) {
         MachineInstr *UseMI = Q.second.Operand->getParent();
-        int Idx = UseMI->findRegisterDefOperandIdx(NewReg, false, true, TRI);
+        int Idx = UseMI->findRegisterDefOperandIdx(NewReg, TRI, false, true);
         if (Idx == -1)
           continue;
 
@@ -846,7 +846,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
           continue;
         } else {
           // No anti-dep breaking for implicit deps
-          MachineOperand *AntiDepOp = MI.findRegisterDefOperand(AntiDepReg);
+          MachineOperand *AntiDepOp =
+              MI.findRegisterDefOperand(AntiDepReg, /*TRI=*/nullptr);
           assert(AntiDepOp && "Can't find index for defined register operand");
           if (!AntiDepOp || AntiDepOp->isImplicit()) {
             LLVM_DEBUG(dbgs() << " (implicit)\n");

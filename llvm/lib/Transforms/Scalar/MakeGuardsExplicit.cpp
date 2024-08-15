@@ -36,22 +36,12 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
-
-namespace {
-struct MakeGuardsExplicitLegacyPass : public FunctionPass {
-  static char ID;
-  MakeGuardsExplicitLegacyPass() : FunctionPass(ID) {
-    initializeMakeGuardsExplicitLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
   // Replace the guard with an explicit branch (just like in GuardWidening).
@@ -88,15 +78,6 @@ static bool explicifyGuards(Function &F) {
 
   return true;
 }
-
-bool MakeGuardsExplicitLegacyPass::runOnFunction(Function &F) {
-  return explicifyGuards(F);
-}
-
-char MakeGuardsExplicitLegacyPass::ID = 0;
-INITIALIZE_PASS(MakeGuardsExplicitLegacyPass, "make-guards-explicit",
-                "Lower the guard intrinsic to explicit control flow form",
-                false, false)
 
 PreservedAnalyses MakeGuardsExplicitPass::run(Function &F,
                                            FunctionAnalysisManager &) {

@@ -90,7 +90,7 @@ public:
       size_t PosEnd = PrunedSource->find('\n', Pos);
       StringRef String = PrunedSource->substr(
           Pos, (PosEnd == StringRef::npos) ? StringRef::npos : (PosEnd - Pos));
-      if (String.endswith("\r"))
+      if (String.ends_with("\r"))
         String = String.drop_back(1);
       OS << format_decimal(L, MaxLineNumberWidth);
       if (L == Line)
@@ -131,7 +131,10 @@ void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
 
 void LLVMPrinter::printSimpleLocation(StringRef Filename,
                                       const DILineInfo &Info) {
-  OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
+  OS << Filename << ':' << Info.Line << ':' << Info.Column;
+  if (Info.IsApproximateLine)
+    OS << " " << Info.ApproxString;
+  OS << "\n";
   printContext(
       SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
@@ -139,6 +142,8 @@ void LLVMPrinter::printSimpleLocation(StringRef Filename,
 void GNUPrinter::printSimpleLocation(StringRef Filename,
                                      const DILineInfo &Info) {
   OS << Filename << ':' << Info.Line;
+  if (Info.IsApproximateLine)
+    OS << " " << Info.ApproxString;
   if (Info.Discriminator)
     OS << " (discriminator " << Info.Discriminator << ')';
   OS << '\n';
@@ -158,6 +163,8 @@ void PlainPrinterBase::printVerbose(StringRef Filename,
   OS << "  Column: " << Info.Column << '\n';
   if (Info.Discriminator)
     OS << "  Discriminator: " << Info.Discriminator << '\n';
+  if (Info.IsApproximateLine)
+    OS << "  Approximate: true" << '\n';
 }
 
 void LLVMPrinter::printStartAddress(const DILineInfo &Info) {
@@ -260,6 +267,17 @@ void PlainPrinterBase::print(const Request &Request,
   printFooter();
 }
 
+void PlainPrinterBase::print(const Request &Request,
+                             const std::vector<DILineInfo> &Locations) {
+  if (Locations.empty()) {
+    print(Request, DILineInfo());
+  } else {
+    for (const DILineInfo &L : Locations)
+      print(L, false);
+    printFooter();
+  }
+}
+
 bool PlainPrinterBase::printError(const Request &Request,
                                   const ErrorInfoBase &ErrorInfo) {
   ErrHandler(ErrorInfo, Request.ModuleName);
@@ -273,6 +291,8 @@ static std::string toHex(uint64_t V) {
 
 static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
   json::Object Json({{"ModuleName", Request.ModuleName.str()}});
+  if (!Request.Symbol.empty())
+    Json["SymName"] = Request.Symbol.str();
   if (Request.Address)
     Json["Address"] = toHex(*Request.Address);
   if (!ErrorMsg.empty())
@@ -281,7 +301,7 @@ static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
 }
 
 static json::Object toJSON(const DILineInfo &LineInfo) {
-  return json::Object(
+  json::Object Obj = json::Object(
       {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
                             ? LineInfo.FunctionName
                             : ""},
@@ -296,6 +316,9 @@ static json::Object toJSON(const DILineInfo &LineInfo) {
        {"Line", LineInfo.Line},
        {"Column", LineInfo.Column},
        {"Discriminator", LineInfo.Discriminator}});
+  if (LineInfo.IsApproximateLine)
+    Obj.insert({"Approximate", LineInfo.IsApproximateLine});
+  return Obj;
 }
 
 void JSONPrinter::print(const Request &Request, const DILineInfo &Info) {
@@ -356,6 +379,19 @@ void JSONPrinter::print(const Request &Request,
   }
   json::Object Json = toJSON(Request);
   Json["Frame"] = std::move(Frame);
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
+  else
+    printJSON(std::move(Json));
+}
+
+void JSONPrinter::print(const Request &Request,
+                        const std::vector<DILineInfo> &Locations) {
+  json::Array Definitions;
+  for (const DILineInfo &L : Locations)
+    Definitions.push_back(toJSON(L));
+  json::Object Json = toJSON(Request);
+  Json["Loc"] = std::move(Definitions);
   if (ObjectList)
     ObjectList->push_back(std::move(Json));
   else

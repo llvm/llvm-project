@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -89,7 +88,8 @@ static void maybeRewriteCallWithDifferentBundles(
             });
 
   // Finally actually replace the bundles on the call.
-  CallBase *NewCall = CallBase::Create(OrigCall, NewBundles, OrigCall);
+  CallBase *NewCall =
+      CallBase::Create(OrigCall, NewBundles, OrigCall->getIterator());
   OrigCall->replaceAllUsesWith(NewCall);
   OrigCall->eraseFromParent();
 }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjCopy/ObjCopy.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/yaml2obj.h"

@@ -105,6 +105,13 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
       hint = "; references '" + lld::toString(*rel.sym) + '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
       hint = ("; references section '" + d->section->name + "'").str();
+
+    if (config->emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
+        rel.sym->getOutputSection() &&
+        (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
+      hint += "; R_X86_64_PC32 should not reference a section marked "
+              "SHF_X86_64_LARGE";
+    }
   }
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
@@ -196,8 +203,9 @@ static bool isAbsoluteValue(const Symbol &sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr expr) {
-  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTPLT, R_LOONGARCH_PLT_PAGE_PC,
-               R_PPC32_PLTREL, R_PPC64_CALL_PLT>(expr);
+  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL,
+               R_GOTPLT_PC, R_LOONGARCH_PLT_PAGE_PC, R_PPC32_PLTREL,
+               R_PPC64_CALL_PLT>(expr);
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
@@ -210,10 +218,10 @@ bool lld::elf::needsGot(RelExpr expr) {
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr expr) {
-  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_MIPS_GOTREL, R_PPC64_CALL,
-               R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC,
-               R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC, R_LOONGARCH_PAGE_PC>(
-      expr);
+  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_ARM_PCA, R_MIPS_GOTREL,
+               R_PPC64_CALL, R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC,
+               R_RELAX_GOT_PC, R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC,
+               R_LOONGARCH_PAGE_PC>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -226,6 +234,8 @@ static RelExpr toPlt(RelExpr expr) {
     return R_PLT_PC;
   case R_ABS:
     return R_PLT;
+  case R_GOTREL:
+    return R_PLT_GOTREL;
   default:
     return expr;
   }
@@ -246,6 +256,8 @@ static RelExpr fromPlt(RelExpr expr) {
     return R_ABS;
   case R_PLT_GOTPLT:
     return R_GOTPLTREL;
+  case R_PLT_GOTREL:
+    return R_GOTREL;
   default:
     return expr;
   }
@@ -309,7 +321,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
           size, &sec)
       .overwrite(sym);
 
-  sym.verdefIndex = old.verdefIndex;
+  sym.versionId = old.versionId;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
@@ -447,7 +459,8 @@ private:
 // InputSectionBase.
 class RelocationScanner {
 public:
-  template <class ELFT> void scanSection(InputSectionBase &s);
+  template <class ELFT>
+  void scanSection(InputSectionBase &s, bool isEH = false);
 
 private:
   InputSectionBase *sec;
@@ -463,8 +476,9 @@ private:
                                 uint64_t relOff) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
-  template <class ELFT, class RelTy> void scanOne(RelTy *&i);
-  template <class ELFT, class RelTy> void scan(ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void scanOne(typename Relocs<RelTy>::const_iterator &i);
+  template <class ELFT, class RelTy> void scan(Relocs<RelTy> rels);
 };
 } // namespace
 
@@ -480,7 +494,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela)
+  // This generalises to relocation types with implicit addends.
+  if (RelTy::HasAddend)
     return 0;
 
   RelType type = rel.getType(config->isMips64EL);
@@ -507,8 +522,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 template <class ELFT>
 static std::string maybeReportDiscarded(Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
-  if (!file || !sym.discardedSecIdx ||
-      file->getSections()[sym.discardedSecIdx] != &InputSection::discarded)
+  if (!file || !sym.discardedSecIdx)
     return "";
   ArrayRef<typename ELFT::Shdr> objSections =
       file->template getELFShdrs<ELFT>();
@@ -740,7 +754,10 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     uint64_t offset = l.offset;
 
     msg += "\n>>> referenced by ";
-    std::string src = sec.getSrcMsg(sym, offset);
+    // In the absence of line number information, utilize DW_TAG_variable (if
+    // present) for the enclosing symbol (e.g. var in `int *a[] = {&undef};`).
+    Symbol *enclosing = sec.getEnclosingSymbol(offset);
+    std::string src = sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
     if (!src.empty())
       msg += src + "\n>>>               ";
     msg += sec.getObjMsg(offset);
@@ -884,9 +901,9 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, offsetInSec});
+          {&isec, isec.relocs().size() - 1});
     else
-      part.relrDyn->relocs.push_back({&isec, offsetInSec});
+      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(target->relativeRel, isec, offsetInSec,
@@ -926,7 +943,7 @@ void elf::addGotEntry(Symbol &sym) {
 static void addTpOffsetGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
-  if (!sym.isPreemptible && !config->isPic) {
+  if (!sym.isPreemptible && !config->shared) {
     in.got->addConstant({R_TPREL, target->symbolicRel, off, 0, &sym});
     return;
   }
@@ -970,10 +987,10 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, R_MIPS_GOT_LOCAL_PAGE,
             R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
-            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE,
-            R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT, R_LOONGARCH_GOT_PAGE_PC>(
-          e))
+            R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL, R_GOTPLT_PC,
+            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
+            R_AARCH64_GOT_PAGE, R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT,
+            R_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -981,13 +998,14 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
-  if (sym.isPreemptible)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (sym.isPreemptible || e == R_AARCH64_AUTH)
     return false;
   if (!config->isPic)
     return true;
 
-  // The size of a non preemptible symbol is a constant.
-  if (e == R_SIZE)
+  // Constant when referencing a non-preemptible symbol.
+  if (e == R_SIZE || e == R_RISCV_LEB128)
     return true;
 
   // For the target and the relocation, we want to know if they are
@@ -1127,12 +1145,32 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         (rel == target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       return;
-    } else if (rel != 0) {
+    }
+    if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
-                                                  addend, type);
+      Partition &part = sec->getPartition();
+      if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
+        // For a preemptible symbol, we can't use a relative relocation. For an
+        // undefined symbol, we can't compute offset at link-time and use a
+        // relative relocation. Use a symbolic relocation instead.
+        if (sym.isPreemptible) {
+          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+          // When symbol values are determined in
+          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
+          // may be moved to .rela.dyn.
+          sec->addReloc({expr, type, offset, addend, &sym});
+          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
+        } else {
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
+                                  addend, R_ABS});
+        }
+        return;
+      }
+      part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
@@ -1156,8 +1194,11 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // When producing an executable, we can perform copy relocations (for
-  // STT_OBJECT) and canonical PLT (for STT_FUNC).
-  if (!config->shared) {
+  // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  // Copy relocations/canonical PLT entries are unsupported for
+  // R_AARCH64_AUTH_ABS64.
+  if (!config->shared && sym.isShared() &&
+      !(config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));
@@ -1266,9 +1307,11 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
 
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSDESC_GOTPLT>(expr) &&
-      config->shared) {
+  // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
+  // generate TLSDESC dynamic relocation for the dynamic linker to handle.
+  if (config->emachine == EM_LOONGARCH &&
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
+            R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
       c.addReloc({expr, type, offset, addend, &sym});
@@ -1276,18 +1319,34 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     return 1;
   }
 
+  bool isRISCV = config->emachine == EM_RISCV;
+
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+            R_TLSDESC_GOTPLT>(expr) &&
+      config->shared) {
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
+    // set NEEDS_TLSDESC on the label.
+    if (expr != R_TLSDESC_CALL) {
+      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+        sym.setFlags(NEEDS_TLSDESC);
+      c.addReloc({expr, type, offset, addend, &sym});
+    }
+    return 1;
+  }
+
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
-  // relaxation.
+  // optimizations.
+  // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
-  // relaxation as well.
-  bool toExecRelax = !config->shared && config->emachine != EM_ARM &&
-                     config->emachine != EM_HEXAGON &&
-                     config->emachine != EM_LOONGARCH &&
-                     config->emachine != EM_RISCV &&
-                     !c.file->ppc64DisableTLSRelax;
+  // optimization as well.
+  bool execOptimize =
+      !config->shared && config->emachine != EM_ARM &&
+      config->emachine != EM_HEXAGON && config->emachine != EM_LOONGARCH &&
+      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
+      !c.file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be relaxed to use Local-Exec.
+  // must be defined and the code sequence can be optimized to use Local-Exec.
   //
   // ARM and RISC-V do not support any relaxations for TLS relocations, however,
   // we can omit the DTPMOD dynamic relocations and resolve them at link time
@@ -1300,8 +1359,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   // module index, with a special value of 0 for the current module. GOT[e1] is
   // unused. There only needs to be one module index entry.
   if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(expr)) {
-    // Local-Dynamic relocs can be relaxed to Local-Exec.
-    if (toExecRelax) {
+    // Local-Dynamic relocs can be optimized to Local-Exec.
+    if (execOptimize) {
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE), type,
                   offset, addend, &sym});
       return target->getTlsGdRelaxSkip(type);
@@ -1313,16 +1372,17 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     return 1;
   }
 
-  // Local-Dynamic relocs can be relaxed to Local-Exec.
+  // Local-Dynamic relocs can be optimized to Local-Exec.
   if (expr == R_DTPREL) {
-    if (toExecRelax)
+    if (execOptimize)
       expr = target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
-  // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
+  // thread pointer is stored in the got. This cannot be optimized to
+  // Local-Exec.
   if (expr == R_TLSLD_GOT_OFF) {
     sym.setFlags(NEEDS_GOT_DTPREL);
     c.addReloc({expr, type, offset, addend, &sym});
@@ -1332,14 +1392,18 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
             R_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
-    if (!toExecRelax) {
+    if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       c.addReloc({expr, type, offset, addend, &sym});
       return 1;
     }
 
-    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+    // Global-Dynamic/TLSDESC can be optimized to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
+    //
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
+    // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
+    // the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
@@ -1354,9 +1418,9 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC,
             R_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     ctx.hasTlsIe.store(true, std::memory_order_relaxed);
-    // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
-    // defined.
-    if (toExecRelax && isLocalInExecutable) {
+    // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
+    // locally defined.  This is not supported on SystemZ.
+    if (execOptimize && isLocalInExecutable && config->emachine != EM_S390) {
       c.addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
@@ -1372,16 +1436,23 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   return 0;
 }
 
-template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
+template <class ELFT, class RelTy>
+void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
   RelType type;
-  if (config->mipsN32Abi) {
-    type = getMipsN32RelType(i);
-  } else {
+  if constexpr (ELFT::Is64Bits || RelTy::IsCrel) {
     type = rel.getType(config->isMips64EL);
     ++i;
+  } else {
+    // CREL is unsupported for MIPS N32.
+    if (config->mipsN32Abi) {
+      type = getMipsN32RelType(i);
+    } else {
+      type = rel.getType(config->isMips64EL);
+      ++i;
+    }
   }
   // Get an offset in an output section this relocation is applied to.
   uint64_t offset = getter.get(rel.r_offset);
@@ -1389,7 +1460,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
-  int64_t addend = RelTy::IsRela
+  int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);
@@ -1428,15 +1499,18 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
     if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
         (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
-      if (i == end) {
-        errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
-                    "relocation" +
-                    getLocation(*sec, sym, offset));
-        return;
+      // Skip the error check for CREL, which does not set `end`.
+      if constexpr (!RelTy::IsCrel) {
+        if (i == end) {
+          errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
+                      "relocation" +
+                      getLocation(*sec, sym, offset));
+          return;
+        }
       }
 
-      // Offset the 4-byte aligned R_PPC64_TLSGD by one byte in the NOTOC case,
-      // so we can discern it later from the toc-case.
+      // Offset the 4-byte aligned R_PPC64_TLSGD by one byte in the NOTOC
+      // case, so we can discern it later from the toc-case.
       if (i->getType(/*isMips64EL=*/false) == R_PPC64_REL24_NOTOC)
         ++offset;
     }
@@ -1454,9 +1528,12 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
   }
 
-  // Process TLS relocations, including relaxing TLS relocations. Note that
+  // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (sym.isTls()) {
+  //
+  // Some RISCV TLSDESC relocations reference a local NOTYPE symbol,
+  // but we need to process them in handleTlsRelocation.
+  if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
     if (unsigned processed =
             handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
       i += processed - 1;
@@ -1473,7 +1550,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 // instructions are generated by very old IBM XL compilers. Work around the
 // issue by disabling GD/LD to IE/LE relaxation.
 template <class RelTy>
-static void checkPPC64TLSRelax(InputSectionBase &sec, ArrayRef<RelTy> rels) {
+static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
   // Skip if sec is synthetic (sec.file is null) or if sec has been marked.
   if (!sec.file || sec.file->ppc64DisableTLSRelax)
     return;
@@ -1505,7 +1582,7 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT, class RelTy>
-void RelocationScanner::scan(ArrayRef<RelTy> rels) {
+void RelocationScanner::scan(Relocs<RelTy> rels) {
   // Not all relocations end up in Sec->Relocations, but a lot do.
   sec->relocations.reserve(rels.size());
 
@@ -1515,13 +1592,21 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
   // For EhInputSection, OffsetGetter expects the relocations to be sorted by
   // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
   // script), the relocations may be unordered.
+  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
+  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
   SmallVector<RelTy, 0> storage;
-  if (isa<EhInputSection>(sec))
+  if (isa<EhInputSection>(sec) || config->emachine == EM_S390)
     rels = sortRels(rels, storage);
 
-  end = static_cast<const void *>(rels.end());
-  for (auto i = rels.begin(); i != end;)
-    scanOne<ELFT>(i);
+  if constexpr (RelTy::IsCrel) {
+    for (auto i = rels.begin(); i != rels.end();)
+      scanOne<ELFT, RelTy>(i);
+  } else {
+    // The non-CREL code path has additional check for PPC64 TLS.
+    end = static_cast<const void *>(rels.end());
+    for (auto i = rels.begin(); i != end;)
+      scanOne<ELFT, RelTy>(i);
+  }
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
@@ -1533,11 +1618,14 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
                       });
 }
 
-template <class ELFT> void RelocationScanner::scanSection(InputSectionBase &s) {
+template <class ELFT>
+void RelocationScanner::scanSection(InputSectionBase &s, bool isEH) {
   sec = &s;
   getter = OffsetGetter(s);
-  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
+  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>(!isEH);
+  if (rels.areRelocsCrel())
+    scan<ELFT>(rels.crels);
+  else if (rels.areRelocsRel())
     scan<ELFT>(rels.rels);
   else
     scan<ELFT>(rels.relas);
@@ -1572,10 +1660,11 @@ template <class ELFT> void elf::scanRelocations() {
     RelocationScanner scanner;
     for (Partition &part : partitions) {
       for (EhInputSection *sec : part.ehFrame->sections)
-        scanner.template scanSection<ELFT>(*sec);
+        scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
       if (part.armExidx && part.armExidx->isLive())
         for (InputSection *sec : part.armExidx->exidxSections)
-          scanner.template scanSection<ELFT>(*sec);
+          if (sec->isLive())
+            scanner.template scanSection<ELFT>(*sec);
     }
   });
 }
@@ -1590,12 +1679,8 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   //   relatively straightforward. We create a PLT entry in Iplt, which is
   //   usually at the end of .plt, which makes an indirect call using a
   //   matching GOT entry in igotPlt, which is usually at the end of .got.plt.
-  //   The GOT entry is relocated using an IRELATIVE relocation in relaIplt,
-  //   which is usually at the end of .rela.plt. Unlike most relocations in
-  //   .rela.plt, which may be evaluated lazily without -z now, dynamic
-  //   loaders evaluate IRELATIVE relocs eagerly, which means that for
-  //   IRELATIVE relocs only, GOT-generating relocations can point directly to
-  //   .got.plt without requiring a separate GOT entry.
+  //   The GOT entry is relocated using an IRELATIVE relocation in relaDyn,
+  //   which is usually at the end of .rela.dyn.
   //
   // - Despite the fact that an ifunc does not have a fixed value, compilers
   //   that are not passed -fPIC will assume that they do, and will emit
@@ -1633,12 +1718,19 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
+  //
+  // Prior to Android V, there was a bug that caused RELR relocations to be
+  // applied after packed relocations. This meant that resolvers referenced by
+  // IRELATIVE relocations in the packed relocation section would read
+  // unrelocated globals with RELR relocations when
+  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
+  // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux();
-  addPltEntry(*in.iplt, *in.igotPlt, *in.relaIplt, target->iRelativeRel,
-              *directSym);
+  auto &dyn = config->androidPackDynRelocs ? *in.relaPlt : *mainPart->relaDyn;
+  addPltEntry(*in.iplt, *in.igotPlt, dyn, target->iRelativeRel, *directSym);
   sym.allocateAux();
-  symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;
+  ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
@@ -1666,7 +1758,7 @@ void elf::postScanRelocations() {
       return;
 
     if (sym.isTagged() && sym.isDefined())
-      mainPart->memtagDescriptors->addSymbol(sym);
+      mainPart->memtagGlobalDescriptors->addSymbol(sym);
 
     if (!sym.needsDynReloc())
       return;
@@ -1747,7 +1839,7 @@ void elf::postScanRelocations() {
 
   GotSection *got = in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (config->shared)
       mainPart->relaDyn->addReloc(
           {target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
@@ -1756,7 +1848,7 @@ void elf::postScanRelocations() {
           {R_ADDEND, target->symbolicRel, got->getTlsIndexOff(), 1, &dummy});
   }
 
-  assert(symAux.size() == 1);
+  assert(ctx.symAux.size() == 1);
   for (Symbol *sym : symtab.getSymbols())
     fn(*sym);
 
@@ -2292,7 +2384,61 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
+static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {
+  if (cmd.toFirst)
+    return cmd.outputSections[0] == osec;
+  return llvm::is_contained(cmd.outputSections, osec);
+}
+
+template <class ELFT, class Rels>
+static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
+                          InputSection *sec, Rels rels) {
+  for (const auto &r : rels) {
+    Symbol &sym = sec->file->getSymbol(r.getSymbol(config->isMips64EL));
+    // A legal cross-reference is when the destination output section is
+    // nullptr, osec for a self-reference, or a section that is described by the
+    // NOCROSSREFS/NOCROSSREFS_TO command.
+    auto *dstOsec = sym.getOutputSection();
+    if (!dstOsec || dstOsec == osec || !matchesRefTo(cmd, dstOsec->name))
+      continue;
+
+    std::string toSymName;
+    if (!sym.isSection())
+      toSymName = toString(sym);
+    else if (auto *d = dyn_cast<Defined>(&sym))
+      toSymName = d->section->name;
+    errorOrWarn(sec->getLocation(r.r_offset) +
+                ": prohibited cross reference from '" + osec->name + "' to '" +
+                toSymName + "' in '" + dstOsec->name + "'");
+  }
+}
+
+// For each output section described by at least one NOCROSSREFS(_TO) command,
+// scan relocations from its input sections for prohibited cross references.
+template <class ELFT> void elf::checkNoCrossRefs() {
+  for (OutputSection *osec : ctx.outputSections) {
+    for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
+      if (!llvm::is_contained(noxref.outputSections, osec->name) ||
+          (noxref.toFirst && noxref.outputSections[0] == osec->name))
+        continue;
+      for (SectionCommand *cmd : osec->commands) {
+        auto *isd = dyn_cast<InputSectionDescription>(cmd);
+        if (!isd)
+          continue;
+        parallelForEach(isd->sections, [&](InputSection *sec) {
+          invokeOnRelocs(*sec, scanCrossRefs<ELFT>, noxref, osec, sec);
+        });
+      }
+    }
+  }
+}
+
 template void elf::scanRelocations<ELF32LE>();
 template void elf::scanRelocations<ELF32BE>();
 template void elf::scanRelocations<ELF64LE>();
 template void elf::scanRelocations<ELF64BE>();
+
+template void elf::checkNoCrossRefs<ELF32LE>();
+template void elf::checkNoCrossRefs<ELF32BE>();
+template void elf::checkNoCrossRefs<ELF64LE>();
+template void elf::checkNoCrossRefs<ELF64BE>();

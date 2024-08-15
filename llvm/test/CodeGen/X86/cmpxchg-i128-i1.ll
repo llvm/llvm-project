@@ -110,11 +110,9 @@ define i128 @cmpxchg_use_eflags_and_val(ptr %addr, i128 %offset) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -380,3 +380,38 @@ global_extern_const_definition_but_nonconst_import:
 global_extern_untagged_definition_but_tagged_import:
 	.word	0
 	.size	global_extern_untagged_definition_but_tagged_import, 4
+
+#--- input_3.s
+## Generated with:
+##
+##  - clang <input_file.c> -fsanitize=memtag-globals -O2 -S -o - \
+##          --target=aarch64-linux-android31 -fno-asynchronous-unwind-tables
+##
+## <input_file.c> contents:
+##
+##     int global_extern_outside_this_dso;
+##
+##     int main() {
+##       return 0;
+##     }
+
+	.text
+	.file	"main.c"
+	.globl	main                            // -- Begin function main
+	.p2align	2
+	.type	main,@function
+main:                                   // @main
+// %bb.0:                               // %entry
+	mov	w0, wzr
+	ret
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
+                                        // -- End function
+	.memtag	global_extern_outside_this_dso  // @global_extern_outside_this_dso
+	.type	global_extern_outside_this_dso,@object
+	.bss
+	.globl	global_extern_outside_this_dso
+	.p2align	4, 0x0
+global_extern_outside_this_dso:
+	.zero	16
+	.size	global_extern_outside_this_dso, 16

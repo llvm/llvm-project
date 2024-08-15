@@ -423,7 +423,7 @@ TEST(ValueMapperTest, mapValuePoisonWithTypeRemap) {
 
 TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
   LLVMContext C;
-  auto *OldTy = TargetExtType::get(C, "spirv.Image");
+  auto *OldTy = TargetExtType::get(C, "spirv.Event");
   Type *NewTy = OldTy->getLayoutType();
 
   TestTypeRemapper TM(NewTy);

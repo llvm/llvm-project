@@ -5,12 +5,12 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -61,8 +61,6 @@
 }
 
 module {
-  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
-
   // Scales a sparse matrix into a new sparse matrix.
   func.func @matrix_scale(%arga: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %s = arith.constant 2.0 : f64
@@ -129,16 +127,8 @@ module {
     return %0 : tensor<?x?xf64, #DCSR>
   }
 
-  // Dump a sparse matrix.
-  func.func @dump(%arg0: tensor<?x?xf64, #DCSR>) {
-    %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
-    %u = tensor.cast %dm : tensor<?x?xf64> to tensor<*xf64>
-    call @printMemrefF64(%u) : (tensor<*xf64>) -> ()
-    return
-  }
-
   // Driver method to call and verify matrix kernels.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant 1.1 : f64
 
@@ -169,37 +159,88 @@ module {
     //
     // Verify the results.
     //
-    // CHECK:      {{\[}}[1,   2,   0,   0,   0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   3],
-    // CHECK-NEXT: [0,   0,   4,   0,   5,   0,   0,   6],
-    // CHECK-NEXT: [7,   0,   8,   9,   0,   0,   0,   0]]
-    // CHECK:      {{\[}}[6,   0,   0,   0,   0,   0,   0,   5],
-    // CHECK-NEXT: [4,   0,   0,   0,   0,   0,   3,   0],
-    // CHECK-NEXT: [0,   2,   0,   0,   0,   0,   0,   1],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0]]
-    // CHECK:      {{\[}}[2,   4,   0,   0,   0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   6],
-    // CHECK-NEXT: [0,   0,   8,   0,   10,   0,   0,   12],
-    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
-    // CHECK:      {{\[}}[2,   4,   0,   0,   0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   6],
-    // CHECK-NEXT: [0,   0,   8,   0,   10,   0,   0,   12],
-    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
-    // CHECK:      {{\[}}[8,   4,   0,   0,   0,   0,   0,   5],
-    // CHECK-NEXT: [4,   0,   0,   0,   0,   0,   3,   6],
-    // CHECK-NEXT: [0,   2,   8,   0,   10,   0,   0,   13],
-    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
-    // CHECK:      {{\[}}[12,   0,   0,   0,   0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   12],
-    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0]]
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9 )
+    // CHECK-NEXT: ----
     //
-    call @dump(%sm1) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump(%sm2) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump(%0) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump(%1) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump(%2) : (tensor<?x?xf64, #DCSR>) -> ()
-    call @dump(%3) : (tensor<?x?xf64, #DCSR>) -> ()
+    sparse_tensor.print %sm1 : tensor<?x?xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 7, 0, 6, 1, 7 )
+    // CHECK-NEXT: values : ( 6, 5, 4, 3, 2, 1 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %sm2 : tensor<?x?xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %0 : tensor<?x?xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %1 : tensor<?x?xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 13
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 6, 10, 13 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 0, 6, 7, 1, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 8, 4, 5, 4, 3, 6, 2, 8, 10, 13, 14, 16, 18 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %2 : tensor<?x?xf64, #DCSR>
+
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 0, 7 )
+    // CHECK-NEXT: values : ( 12, 12 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %3 : tensor<?x?xf64, #DCSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #DCSR>

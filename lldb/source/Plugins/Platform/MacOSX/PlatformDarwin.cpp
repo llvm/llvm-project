@@ -29,7 +29,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -321,8 +320,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
@@ -433,7 +432,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;
@@ -797,6 +796,9 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   case XcodeSDK::Type::AppleTVSimulator:
     sdks_spec.AppendPathComponent("AppleTVSimulator.platform");
     break;
+  case XcodeSDK::Type::XRSimulator:
+    sdks_spec.AppendPathComponent("XRSimulator.platform");
+    break;
   default:
     llvm_unreachable("unsupported sdk");
   }
@@ -855,20 +857,37 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
 
 llvm::Expected<StructuredData::DictionarySP>
 PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
-  StructuredData::DictionarySP extended_crash_info =
-      std::make_shared<StructuredData::Dictionary>();
+  static constexpr llvm::StringLiteral crash_info_key("Crash-Info Annotations");
+  static constexpr llvm::StringLiteral asi_info_key(
+      "Application Specific Information");
 
-  StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(process);
-  if (annotations && annotations->GetSize())
-    extended_crash_info->AddItem("Crash-Info Annotations", annotations);
+  // We cache the information we find in the process extended info dict:
+  StructuredData::DictionarySP process_dict_sp =
+      process.GetExtendedCrashInfoDict();
+  StructuredData::Array *annotations = nullptr;
+  StructuredData::ArraySP new_annotations_sp;
+  if (!process_dict_sp->GetValueForKeyAsArray(crash_info_key, annotations)) {
+    new_annotations_sp = ExtractCrashInfoAnnotations(process);
+    if (new_annotations_sp && new_annotations_sp->GetSize()) {
+      process_dict_sp->AddItem(crash_info_key, new_annotations_sp);
+      annotations = new_annotations_sp.get();
+    }
+  }
 
-  StructuredData::DictionarySP app_specific_info =
-      ExtractAppSpecificInfo(process);
-  if (app_specific_info && app_specific_info->GetSize())
-    extended_crash_info->AddItem("Application Specific Information",
-                                 app_specific_info);
+  StructuredData::Dictionary *app_specific_info;
+  StructuredData::DictionarySP new_app_specific_info_sp;
+  if (!process_dict_sp->GetValueForKeyAsDictionary(asi_info_key,
+                                                   app_specific_info)) {
+    new_app_specific_info_sp = ExtractAppSpecificInfo(process);
+    if (new_app_specific_info_sp && new_app_specific_info_sp->GetSize()) {
+      process_dict_sp->AddItem(asi_info_key, new_app_specific_info_sp);
+      app_specific_info = new_app_specific_info_sp.get();
+    }
+  }
 
-  return extended_crash_info->GetSize() ? extended_crash_info : nullptr;
+  // Now get anything else that was in the process info dict, and add it to the
+  // return here:
+  return process_dict_sp->GetSize() ? process_dict_sp : nullptr;
 }
 
 StructuredData::ArraySP
@@ -1033,6 +1052,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   case XcodeSDK::Type::watchOS:
     use_current_os_version = get_host_os() == llvm::Triple::WatchOS;
     break;
+  case XcodeSDK::Type::XROS:
+    use_current_os_version = get_host_os() == llvm::Triple::XROS;
+    break;
   default:
     break;
   }
@@ -1050,8 +1072,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         version = object_file->GetMinimumOSVersion();
     }
   }
-  // Only add the version-min options if we got a version from somewhere
-  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
+  // Only add the version-min options if we got a version from somewhere.
+  // clang has no version-min clang flag for XROS.
+  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
+      sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX, NAME, VAR, ...)                                         \
   llvm::StringRef opt_##VAR = NAME;                                            \
   (void)opt_##VAR;
@@ -1080,6 +1104,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::watchOS:
       minimum_version_option << opt_mwatchos_version_min_EQ;
       break;
+    case XcodeSDK::Type::XRSimulator:
+    case XcodeSDK::Type::XROS:
+      // FIXME: Pass the right argument once it exists.
     case XcodeSDK::Type::bridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
@@ -1344,6 +1371,8 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
   return llvm::Triple::TvOS;
 #elif TARGET_OS_BRIDGE
   return llvm::Triple::BridgeOS;
+#elif TARGET_OS_XR
+  return llvm::Triple::XROS;
 #else
 #error "LLDB being compiled for an unrecognized Darwin OS"
 #endif

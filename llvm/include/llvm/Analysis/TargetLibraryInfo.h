@@ -9,12 +9,12 @@
 #ifndef LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <optional>
 
 namespace llvm {
@@ -129,7 +129,8 @@ public:
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
     SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
-    ArmPL        // Arm Performance Libraries.
+    ArmPL,       // Arm Performance Libraries.
+    AMDLIBM      // AMD Math Vector library.
   };
 
   TargetLibraryInfoImpl();
@@ -155,6 +156,10 @@ public:
   ///
   /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -282,12 +287,12 @@ class TargetLibraryInfo {
 
   /// Support for -fno-builtin* options as function attributes, overrides
   /// information in global TargetLibraryInfoImpl.
-  BitVector OverrideAsUnavailable;
+  std::bitset<NumLibFuncs> OverrideAsUnavailable;
 
 public:
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
                              std::optional<const Function *> F = std::nullopt)
-      : Impl(&Impl), OverrideAsUnavailable(NumLibFuncs) {
+      : Impl(&Impl) {
     if (!F)
       return;
     if ((*F)->hasFnAttribute("no-builtins"))
@@ -310,14 +315,9 @@ public:
 
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo(TargetLibraryInfo &&TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+  TargetLibraryInfo(TargetLibraryInfo &&TLI) = default;
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
-    Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
-    return *this;
-  }
+  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) = default;
 
   /// Determine whether a callee with the given TLI can be inlined into
   /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
@@ -327,11 +327,9 @@ public:
                            bool AllowCallerSuperset) const {
     if (!AllowCallerSuperset)
       return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
-    BitVector B = OverrideAsUnavailable;
-    B |= CalleeTLI.OverrideAsUnavailable;
-    // We can inline if the union of the caller and callee's nobuiltin
-    // attributes is no stricter than the caller's nobuiltin attributes.
-    return B == OverrideAsUnavailable;
+    // We can inline if the callee's nobuiltin attributes are no stricter than
+    // the caller's.
+    return (CalleeTLI.OverrideAsUnavailable & ~OverrideAsUnavailable).none();
   }
 
   /// Return true if the function type FTy is valid for the library function
@@ -360,6 +358,12 @@ public:
            getLibFunc(*(CB.getCalledFunction()), F);
   }
 
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
+    return Impl->getLibFunc(Opcode, Ty, F);
+  }
+
   /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
@@ -369,10 +373,12 @@ public:
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) LLVM_ATTRIBUTE_UNUSED {
+    assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     OverrideAsUnavailable.set(F);
   }
 
   TargetLibraryInfoImpl::AvailabilityState getState(LibFunc F) const {
+    assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     if (OverrideAsUnavailable[F])
       return TargetLibraryInfoImpl::Unavailable;
     return Impl->getState(F);
@@ -404,10 +410,12 @@ public:
       return false;
     switch (F) {
     default: break;
+      // clang-format off
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
@@ -426,6 +434,7 @@ public:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
+      // clang-format on
       return true;
     }
     return false;
@@ -621,6 +630,10 @@ public:
   TargetLibraryInfoWrapperPass();
   explicit TargetLibraryInfoWrapperPass(const Triple &T);
   explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfoImpl &TLI);
+
+  // FIXME: This should be removed when PlaceSafepoints is fixed to not create a
+  // PassManager inside a pass.
+  explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfo &TLI);
 
   TargetLibraryInfo &getTLI(const Function &F) {
     FunctionAnalysisManager DummyFAM;

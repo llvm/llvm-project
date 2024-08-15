@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify we do hoist the invariant access to I with a execution context
 ; as the address computation might wrap in the original but not in our

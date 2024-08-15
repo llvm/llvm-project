@@ -27,7 +27,7 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [&](int64_t staticVal) {
+      llvm::count_if(staticVals, [](int64_t staticVal) {
         return ShapedType::isDynamic(staticVal);
       });
   if (values.size() != expectedNumDynamicEntries)
@@ -66,6 +66,17 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   if (failed(verifyListOfOperandsOrIntegers(
           op, "stride", maxRanks[2], op.getStaticStrides(), op.getStrides())))
     return failure();
+
+  for (int64_t offset : op.getStaticOffsets()) {
+    if (offset < 0 && !ShapedType::isDynamic(offset))
+      return op->emitError("expected offsets to be non-negative, but got ")
+             << offset;
+  }
+  for (int64_t size : op.getStaticSizes()) {
+    if (size < 0 && !ShapedType::isDynamic(size))
+      return op->emitError("expected sizes to be non-negative, but got ")
+             << size;
+  }
   return success();
 }
 
@@ -102,7 +113,7 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 TypeRange valueTypes, ArrayRef<bool> scalables,
+                                 ArrayRef<bool> scalables, TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);

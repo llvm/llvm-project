@@ -7,9 +7,9 @@
   ; CHECK:       // %bb.0: // %entry
   ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
   ; CHECK-NEXT:    mov x29, sp
+  ; CHECK-NEXT:    sub sp, sp, #2064
   ; CHECK-NEXT:    addvl sp, sp, #-32
   ; CHECK-NEXT:    addvl sp, sp, #-28
-  ; CHECK-NEXT:    sub sp, sp, #2064
   ; CHECK-NEXT:    ldr x8, [sp, #2048]
   ; CHECK-NEXT:    addvl sp, sp, #31
   ; CHECK-NEXT:    addvl sp, sp, #29

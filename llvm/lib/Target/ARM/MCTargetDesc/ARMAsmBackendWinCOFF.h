@@ -6,23 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_ARM_ARMASMBACKENDWINCOFF_H
-#define LLVM_LIB_TARGET_ARM_ARMASMBACKENDWINCOFF_H
+#ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMASMBACKENDWINCOFF_H
+#define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMASMBACKENDWINCOFF_H
 
 #include "ARMAsmBackend.h"
 #include "llvm/MC/MCObjectWriter.h"
-using namespace llvm;
 
-namespace {
+namespace llvm {
 class ARMAsmBackendWinCOFF : public ARMAsmBackend {
 public:
   ARMAsmBackendWinCOFF(const Target &T, bool isThumb)
-      : ARMAsmBackend(T, isThumb, support::little) {}
+      : ARMAsmBackend(T, isThumb, llvm::endianness::little) {}
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
     return createARMWinCOFFObjectWriter();
   }
 };
-}
+} // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMASMBACKENDWINCOFF_H

@@ -1,0 +1,39 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: mkdir -p %t/objects/o1
+; RUN: mkdir -p %t/objects/o2
+; RUN: mkdir %t/dwo
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-output-dir-same-name-main.s \
+; RUN: -split-dwarf-file=objects/o1/split.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-output-dir-same-name-helper.s \
+; RUN: -split-dwarf-file=objects/o2/split.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --dwarf-output-path=%t/dwo --debug-thread-count=4 --cu-processing-batch-size=4
+; RUN: ls -l %t/dwo > log
+; RUN: llvm-dwarfdump --debug-info main.exe.bolt >> log
+; RUN: cat log | FileCheck -check-prefix=BOLT %s
+
+;; Tests that BOLT handles correctly writing out .dwo files to the same directory when input has input where part of path
+;; is in DW_AT_dwo_name and the .dwo file names are the same.
+
+; BOLT: split.dwo0.dwo
+; BOLT: split.dwo1.dwo
+; BOLT: DW_AT_dwo_name  ("split.dwo0.dwo")
+; BOLT: DW_AT_dwo_name  ("split.dwo1.dwo")
+
+;; Tests that when --dwarf-output-path is specified, but path do not exist BOLT creates it.
+
+; RUN: rm -rf dwo
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --dwarf-output-path=%t/dwo
+; RUN: ls -l %t/dwo > log
+; RUN: llvm-dwarfdump --debug-info main.exe.bolt >> log
+; RUN: cat log | FileCheck -check-prefix=BOLT1 %s
+
+;; Tests that BOLT handles correctly writing out .dwo files to the same directory when input has input where part of path
+;; is in DW_AT_dwo_name and the .dwo file names are the same.
+
+; BOLT1: split.dwo0.dwo
+; BOLT1: split.dwo1.dwo
+; BOLT1: DW_AT_dwo_name  ("split.dwo0.dwo")
+; BOLT1: DW_AT_dwo_name  ("split.dwo1.dwo")

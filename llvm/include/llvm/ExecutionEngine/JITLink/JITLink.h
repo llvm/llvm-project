@@ -15,10 +15,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
@@ -566,7 +568,7 @@ public:
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
   void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    assert(NewOffset <= getBlock().getSize() && "Offset out of range");
     Offset = NewOffset;
   }
 
@@ -846,7 +848,7 @@ private:
 
 class LinkGraph {
 private:
-  using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
+  using SectionMap = MapVector<StringRef, std::unique_ptr<Section>>;
   using ExternalSymbolMap = StringMap<Symbol *>;
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
@@ -995,17 +997,27 @@ public:
   using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
 
   LinkGraph(std::string Name, const Triple &TT, SubtargetFeatures Features,
-            unsigned PointerSize, support::endianness Endianness,
+            unsigned PointerSize, llvm::endianness Endianness,
             GetEdgeKindNameFunction GetEdgeKindName)
       : Name(std::move(Name)), TT(TT), Features(std::move(Features)),
         PointerSize(PointerSize), Endianness(Endianness),
         GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   LinkGraph(std::string Name, const Triple &TT, unsigned PointerSize,
-            support::endianness Endianness,
+            llvm::endianness Endianness,
             GetEdgeKindNameFunction GetEdgeKindName)
       : LinkGraph(std::move(Name), TT, SubtargetFeatures(), PointerSize,
                   Endianness, GetEdgeKindName) {}
+
+  LinkGraph(std::string Name, const Triple &TT,
+            GetEdgeKindNameFunction GetEdgeKindName)
+      : LinkGraph(std::move(Name), TT, SubtargetFeatures(),
+                  Triple::getArchPointerBitWidth(TT.getArch()) / 8,
+                  TT.isLittleEndian() ? endianness::little : endianness::big,
+                  GetEdgeKindName) {
+    assert(!(Triple::getArchPointerBitWidth(TT.getArch()) % 8) &&
+           "Arch bitwidth is not a multiple of 8");
+  }
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;
@@ -1026,7 +1038,7 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
 
   /// Returns the endianness of content in this graph.
-  support::endianness getEndianness() const { return Endianness; }
+  llvm::endianness getEndianness() const { return Endianness; }
 
   const char *getEdgeKindName(Edge::Kind K) const { return GetEdgeKindName(K); }
 
@@ -1530,9 +1542,9 @@ private:
   Triple TT;
   SubtargetFeatures Features;
   unsigned PointerSize;
-  support::endianness Endianness;
+  llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
-  DenseMap<StringRef, std::unique_ptr<Section>> Sections;
+  MapVector<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;
@@ -1862,7 +1874,7 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                          const Edge &E);
 
 /// Creates a new pointer block in the given section and returns an
-/// Anonymous symobl pointing to it.
+/// Anonymous symbol pointing to it.
 ///
 /// The pointer block will have the following default values:
 ///   alignment: PointerSize
@@ -1922,6 +1934,10 @@ void visitExistingEdges(LinkGraph &G, VisitorTs &&...Vs) {
 /// outlives the graph.
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromObject(MemoryBufferRef ObjectBuffer);
+
+/// Create a \c LinkGraph defining the given absolute symbols.
+std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
+                                                    orc::SymbolMap Symbols);
 
 /// Link the given graph.
 void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx);

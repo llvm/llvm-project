@@ -16,15 +16,15 @@ subroutine s1
   external :: w
   !ERROR: 'z' is not an object of derived type; it is implicitly typed
   i = z%i
-  !ERROR: 's1' is an invalid base for a component reference
+  !ERROR: 's1' is not an object and may not be used as the base of a component reference or type parameter inquiry
   i = s1%i
   !ERROR: 'j' is not an object of derived type
   i = j%i
   !ERROR: Component 'j' not found in derived type 't'
   i = x%j
-  !ERROR: 'v' is an invalid base for a component reference
+  !ERROR: 'v' is not an object and may not be used as the base of a component reference or type parameter inquiry
   i = v%i
-  !ERROR: 'w' is an invalid base for a component reference
+  !ERROR: 'w' is not an object and may not be used as the base of a component reference or type parameter inquiry
   i = w%i
   i = x%i  !OK
 end subroutine

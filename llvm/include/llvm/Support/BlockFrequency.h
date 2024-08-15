@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class raw_ostream;
 class BranchProbability;
 
 // This class represents Block Frequency as a 64-bit value.
@@ -118,6 +119,9 @@ public:
     return Frequency != RHS.Frequency;
   }
 };
+
+void printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
+                            BlockFrequency Freq);
 
 } // namespace llvm
 

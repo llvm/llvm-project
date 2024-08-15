@@ -111,6 +111,15 @@ static cl::opt<bool> EnablePPCGenScalarMASSEntries(
              "(scalar) entries"),
     cl::Hidden);
 
+static cl::opt<bool>
+    EnableGlobalMerge("ppc-global-merge", cl::Hidden, cl::init(false),
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<unsigned>
+    GlobalMergeMaxOffset("ppc-global-merge-max-offset", cl::Hidden,
+                         cl::init(0x7fff),
+                         cl::desc("Maximum global merge offset"));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
@@ -141,7 +150,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
-  initializePPCDAGToDAGISelPass(PR);
+  initializePPCDAGToDAGISelLegacyPass(PR);
   initializePPCMergeStringPoolPass(PR);
 }
 
@@ -242,9 +251,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
 static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
                                                  const TargetOptions &Options) {
-  if (Options.MCOptions.getABIName().startswith("elfv1"))
+  if (Options.MCOptions.getABIName().starts_with("elfv1"))
     return PPCTargetMachine::PPC_ABI_ELFv1;
-  else if (Options.MCOptions.getABIName().startswith("elfv2"))
+  else if (Options.MCOptions.getABIName().starts_with("elfv2"))
     return PPCTargetMachine::PPC_ABI_ELFv2;
 
   assert(Options.MCOptions.getABIName().empty() &&
@@ -265,8 +274,9 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
-  assert((!TT.isOSAIX() || !RM || *RM == Reloc::PIC_) &&
-         "Invalid relocation model for AIX.");
+  if (TT.isOSAIX() && RM && *RM != Reloc::PIC_)
+    report_fatal_error("invalid relocation model, AIX only supports PIC",
+                       false);
 
   if (RM)
     return *RM;
@@ -456,7 +466,7 @@ TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
 void PPCPassConfig::addIRPasses() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCBoolRetToIntPass());
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Lower generic MASSV routines to PowerPC subtarget-specific entries.
   addPass(createPPCLowerMASSVEntriesPass());
@@ -490,6 +500,10 @@ void PPCPassConfig::addIRPasses() {
 }
 
 bool PPCPassConfig::addPreISel() {
+  if (EnableGlobalMerge)
+    addPass(
+        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
+
   if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCMergeStringPoolPass());
 

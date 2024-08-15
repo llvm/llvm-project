@@ -45,7 +45,6 @@ public:
   bool isKImmOperand(const MachineOperand &Src) const;
   bool isKUImmOperand(const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
-  bool isReverseInlineImm(const MachineOperand &Src, int32_t &ReverseImm) const;
   void copyExtraImplicitOps(MachineInstr &NewMI, MachineInstr &MI) const;
   void shrinkScalarCompare(MachineInstr &MI) const;
   void shrinkMIMG(MachineInstr &MI) const;
@@ -104,8 +103,7 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
         bool ConstantFolded = false;
 
         if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm() &&
-              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
+          if (MovSrc.isImm()) {
             Src0.ChangeToImmediate(MovSrc.getImm());
             ConstantFolded = true;
           } else if (MovSrc.isFI()) {
@@ -154,13 +152,17 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
       if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
           !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
         return false;
+
+      if (AMDGPU::VGPR_16RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_16_Lo128RegClass.contains(Reg))
+        return false;
     }
   }
   return true;
 }
 
 bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
-  return isInt<16>(Src.getImm()) &&
+  return isInt<16>(SignExtend64(Src.getImm(), 32)) &&
          !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
 }
 
@@ -171,7 +173,7 @@ bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
                                                 bool &IsUnsigned) const {
-  if (isInt<16>(Src.getImm())) {
+  if (isInt<16>(SignExtend64(Src.getImm(), 32))) {
     IsUnsigned = false;
     return !TII->isInlineConstant(Src);
   }
@@ -184,15 +186,36 @@ bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
   return false;
 }
 
-/// \returns true if the constant in \p Src should be replaced with a bitreverse
-/// of an inline immediate.
-bool SIShrinkInstructions::isReverseInlineImm(const MachineOperand &Src,
-                                              int32_t &ReverseImm) const {
-  if (!isInt<32>(Src.getImm()) || TII->isInlineConstant(Src))
-    return false;
+/// \returns the opcode of an instruction a move immediate of the constant \p
+/// Src can be replaced with if the constant is replaced with \p ModifiedImm.
+/// i.e.
+///
+/// If the bitreverse of a constant is an inline immediate, reverse the
+/// immediate and return the bitreverse opcode.
+///
+/// If the bitwise negation of a constant is an inline immediate, reverse the
+/// immediate and return the bitwise not opcode.
+static unsigned canModifyToInlineImmOp32(const SIInstrInfo *TII,
+                                         const MachineOperand &Src,
+                                         int32_t &ModifiedImm, bool Scalar) {
+  if (TII->isInlineConstant(Src))
+    return 0;
+  int32_t SrcImm = static_cast<int32_t>(Src.getImm());
 
-  ReverseImm = reverseBits<int32_t>(static_cast<int32_t>(Src.getImm()));
-  return ReverseImm >= -16 && ReverseImm <= 64;
+  if (!Scalar) {
+    // We could handle the scalar case with here, but we would need to check
+    // that SCC is not live as S_NOT_B32 clobbers it. It's probably not worth
+    // it, as the reasonable values are already covered by s_movk_i32.
+    ModifiedImm = ~SrcImm;
+    if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+      return AMDGPU::V_NOT_B32_e32;
+  }
+
+  ModifiedImm = reverseBits<int32_t>(SrcImm);
+  if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+    return Scalar ? AMDGPU::S_BREV_B32 : AMDGPU::V_BFREV_B32_e32;
+
+  return 0;
 }
 
 /// Copy implicit register operands from specified instruction to this
@@ -212,6 +235,9 @@ void SIShrinkInstructions::copyExtraImplicitOps(MachineInstr &NewMI,
 }
 
 void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
+  if (!ST->hasSCmpK())
+    return;
+
   // cmpk instructions do scc = dst <cc op> imm16, so commute the instruction to
   // get constants on the RHS.
   if (!MI.getOperand(0).isReg())
@@ -222,7 +248,7 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
   if (!Src0.isReg())
     return;
 
-  const MachineOperand &Src1 = MI.getOperand(1);
+  MachineOperand &Src1 = MI.getOperand(1);
   if (!Src1.isImm())
     return;
 
@@ -238,6 +264,7 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
       if (!HasUImm) {
         SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ?
           AMDGPU::S_CMPK_EQ_I32 : AMDGPU::S_CMPK_LG_I32;
+        Src1.setImm(SignExtend32(Src1.getImm(), 32));
       }
 
       MI.setDesc(TII->get(SOPKOpc));
@@ -248,8 +275,10 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((TII->sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!TII->sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+    if (!SIInstrInfo::sopkIsZext(SOPKOpc))
+      Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
   }
 }
@@ -632,6 +661,7 @@ void SIShrinkInstructions::dropInstructionKeepingImpDefs(
 // although requirements match the pass placement and it reduces code size too.
 MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+         MovT.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
          MovT.getOpcode() == AMDGPU::COPY);
 
   Register T = MovT.getOperand(0).getReg();
@@ -643,7 +673,12 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
 
-  unsigned Size = TII->getOpSize(MovT, 0) / 4;
+  unsigned Size = TII->getOpSize(MovT, 0);
+
+  // We can't match v_swap_b16 pre-RA, because VGPR_16_Lo128 registers
+  // are not allocatble.
+  if (Size == 2 && X.isVirtual())
+    return nullptr;
 
   if (!TRI->isVGPR(*MRI, X))
     return nullptr;
@@ -659,9 +694,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     KilledT = MovY->killsRegister(T, TRI);
 
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
          MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg()        ||
-        MovY->getOperand(1).getReg() != T   ||
+        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
         MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
@@ -689,6 +724,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       }
       if (MovX ||
           (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
            I->getOpcode() != AMDGPU::COPY) ||
           I->getOperand(0).getReg() != X ||
           I->getOperand(0).getSubReg() != Xsub) {
@@ -696,7 +732,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         break;
       }
 
-      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
+      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
         continue;
 
       MovX = &*I;
@@ -705,23 +741,40 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     if (!MovX)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << *MovY);
+    LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
-    for (unsigned I = 0; I < Size; ++I) {
-      TargetInstrInfo::RegSubRegPair X1, Y1;
-      X1 = getSubRegForIndex(X, Xsub, I);
-      Y1 = getSubRegForIndex(Y, Ysub, I);
-      MachineBasicBlock &MBB = *MovT.getParent();
+    MachineBasicBlock &MBB = *MovT.getParent();
+    SmallVector<MachineInstr *, 4> Swaps;
+    if (Size == 2) {
       auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                         TII->get(AMDGPU::V_SWAP_B32))
-        .addDef(X1.Reg, 0, X1.SubReg)
-        .addDef(Y1.Reg, 0, Y1.SubReg)
-        .addReg(Y1.Reg, 0, Y1.SubReg)
-        .addReg(X1.Reg, 0, X1.SubReg).getInstr();
-      if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
-        // Drop implicit EXEC.
-        MIB->removeOperand(MIB->getNumExplicitOperands());
-        MIB->copyImplicitOps(*MBB.getParent(), *MovX);
+                         TII->get(AMDGPU::V_SWAP_B16))
+                     .addDef(X)
+                     .addDef(Y)
+                     .addReg(Y)
+                     .addReg(X)
+                     .getInstr();
+      Swaps.push_back(MIB);
+    } else {
+      assert(Size > 0 && Size % 4 == 0);
+      for (unsigned I = 0; I < Size / 4; ++I) {
+        TargetInstrInfo::RegSubRegPair X1, Y1;
+        X1 = getSubRegForIndex(X, Xsub, I);
+        Y1 = getSubRegForIndex(Y, Ysub, I);
+        auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                           TII->get(AMDGPU::V_SWAP_B32))
+                       .addDef(X1.Reg, 0, X1.SubReg)
+                       .addDef(Y1.Reg, 0, Y1.SubReg)
+                       .addReg(Y1.Reg, 0, Y1.SubReg)
+                       .addReg(X1.Reg, 0, X1.SubReg)
+                       .getInstr();
+        Swaps.push_back(MIB);
+      }
+    }
+    // Drop implicit EXEC.
+    if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
+      for (MachineInstr *Swap : Swaps) {
+        Swap->removeOperand(Swap->getNumExplicitOperands());
+        Swap->copyImplicitOps(*MBB.getParent(), *MovX);
       }
     }
     MovX->eraseFromParent();
@@ -796,16 +849,19 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         // XXX - not exactly a check for post-regalloc run.
         MachineOperand &Src = MI.getOperand(1);
         if (Src.isImm() && MI.getOperand(0).getReg().isPhysical()) {
-          int32_t ReverseImm;
-          if (isReverseInlineImm(Src, ReverseImm)) {
-            MI.setDesc(TII->get(AMDGPU::V_BFREV_B32_e32));
-            Src.setImm(ReverseImm);
+          int32_t ModImm;
+          unsigned ModOpcode =
+              canModifyToInlineImmOp32(TII, Src, ModImm, /*Scalar=*/false);
+          if (ModOpcode != 0) {
+            MI.setDesc(TII->get(ModOpcode));
+            Src.setImm(static_cast<int64_t>(ModImm));
             continue;
           }
         }
       }
 
       if (ST->hasSwap() && (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+                            MI.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
                             MI.getOpcode() == AMDGPU::COPY)) {
         if (auto *NextMI = matchSwap(MI)) {
           Next = NextMI->getIterator();
@@ -839,6 +895,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
               AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
 
+            Src1->setImm(SignExtend64(Src1->getImm(), 32));
             MI.setDesc(TII->get(Opc));
             MI.tieOperands(0, 1);
           }
@@ -857,12 +914,15 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         MachineOperand &Src = MI.getOperand(1);
 
         if (Src.isImm() && Dst.getReg().isPhysical()) {
-          int32_t ReverseImm;
-          if (isKImmOperand(Src))
+          unsigned ModOpc;
+          int32_t ModImm;
+          if (isKImmOperand(Src)) {
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
-          else if (isReverseInlineImm(Src, ReverseImm)) {
-            MI.setDesc(TII->get(AMDGPU::S_BREV_B32));
-            Src.setImm(ReverseImm);
+            Src.setImm(SignExtend64(Src.getImm(), 32));
+          } else if ((ModOpc = canModifyToInlineImmOp32(TII, Src, ModImm,
+                                                        /*Scalar=*/true))) {
+            MI.setDesc(TII->get(ModOpc));
+            Src.setImm(static_cast<int64_t>(ModImm));
           }
         }
 
@@ -1007,7 +1067,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
       // Copy deadness from the old explicit vcc def to the new implicit def.
       if (SDst && SDst->isDead())
-        Inst32->findRegisterDefOperand(VCCReg)->setIsDead();
+        Inst32->findRegisterDefOperand(VCCReg, /*TRI=*/nullptr)->setIsDead();
 
       MI.eraseFromParent();
       foldImmediates(*Inst32);

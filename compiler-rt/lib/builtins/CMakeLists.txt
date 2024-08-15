@@ -38,6 +38,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(UseLibtool)
   endif()
   include(AddCompilerRT)
+
+  if(MINGW)
+    # Simplified version of what's set in cmake/config-ix.cmake; not including
+    # builtins, which are linked separately.
+    set(MINGW_LIBRARIES mingw32 moldname mingwex msvcrt advapi32 shell32
+                        user32 kernel32 mingw32 moldname mingwex msvcrt)
+   endif()
 endif()
 
 if (COMPILER_RT_STANDALONE_BUILD)
@@ -183,12 +190,11 @@ set(GENERIC_SOURCES
 
 # We only build BF16 files when "__bf16" is available.
 set(BF16_SOURCES
+    extendbfsf2.c
     truncdfbf2.c
     truncsfbf2.c
 )
 
-# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
-# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -222,13 +228,21 @@ option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
 
-if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD)
+if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     emutls.c
     enable_execute_stack.c
     eprintf.c
   )
+endif()
+
+option(COMPILER_RT_LIBATOMIC_USE_PTHREAD
+  "Whether libatomic should use pthreads if available."
+  Off)
+
+if(COMPILER_RT_LIBATOMIC_USE_PTHREAD)
+  add_compile_definitions(_LIBATOMIC_USE_PTHREAD)
 endif()
 
 if(COMPILER_RT_HAS_ATOMIC_KEYWORD AND NOT COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN)
@@ -266,7 +280,7 @@ endif()
 
 # These files are used on 32-bit and 64-bit x86.
 set(x86_ARCH_SOURCES
-  cpu_model.c
+  cpu_model/x86.c
   )
 
 if (NOT MSVC)
@@ -280,6 +294,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendxftf2.c
   fixxfdi.c
   fixxfti.c
   fixunsxfdi.c
@@ -291,6 +306,7 @@ set(x86_80_BIT_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
+  trunctfxf2.c
 )
 
 if (NOT MSVC)
@@ -549,9 +565,28 @@ endif()
 set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
-  cpu_model.c
+  cpu_model/aarch64.c
   aarch64/fp_mode.c
 )
+
+if (COMPILER_RT_HAS_AARCH64_SME)
+  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
+    message(STATUS "AArch64 SME ABI routines enabled")
+    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+  else()
+    if(COMPILER_RT_DISABLE_AARCH64_FMV)
+      message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
+    endif()
+    if(NOT COMPILER_RT_HAS_FNO_BUILTIN_FLAG)
+      message(WARNING "AArch64 SME ABI routines require '-fno-builtin'")
+    endif()
+    if(NOT (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+      message(WARNING "AArch64 SME ABI routines requires sys/auxv.h or COMPILER_RT_BAREMETAL_BUILD flag")
+    endif()
+    message(STATUS "AArch64 SME ABI routines disabled")
+  endif()
+endif()
 
 # Generate outline atomics helpers from lse.S base
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
@@ -591,6 +626,8 @@ if (MINGW)
     aarch64/chkstk.S
   )
 endif()
+
+set(amdgcn_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})
@@ -671,6 +708,8 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
+set(nvptx64_SOURCES ${GENERIC_SOURCES})
+
 set(powerpc_SOURCES ${GENERIC_SOURCES})
 
 set(powerpcspe_SOURCES ${GENERIC_SOURCES})
@@ -700,6 +739,7 @@ endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
+  cpu_model/riscv.c
   riscv/fp_mode.c
   riscv/save.S
   riscv/restore.S
@@ -734,7 +774,7 @@ set(ve_SOURCES
   ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
@@ -753,6 +793,13 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
+
+  # Don't embed directives for picking any specific CRT
+  if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+    append_list_if(COMPILER_RT_HAS_ZL_FLAG /Zl BUILTIN_CFLAGS)
+  endif()
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.
@@ -766,6 +813,21 @@ else ()
     endif()
     if(NOT COMPILER_RT_DEBUG)
       append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fomit-frame-pointer BUILTIN_CFLAGS)
+    endif()
+  endif()
+
+  # Directly targeting the GPU requires a few extra flags.
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+    append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
+                   -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()
   endif()
 
@@ -867,12 +929,14 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   endif()
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if(CAN_TARGET_${arch})
+      list(APPEND COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch} clang_rt.builtins-${arch})
+      append_list_if(MINGW "${MINGW_LIBRARIES}" COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch})
       add_compiler_rt_runtime(clang_rt.atomic
                               ${BUILTIN_TYPE}
                               ARCHS ${arch}
                               SOURCES atomic.c
                               LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
-                              LINK_LIBS clang_rt.builtins-${arch}
+                              LINK_LIBS ${COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch}}
                               PARENT_TARGET builtins-standalone-atomic)
     endif()
   endforeach()
@@ -886,11 +950,6 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   endif()
   add_dependencies(compiler-rt builtins-standalone-atomic)
 endif()
-
-# TODO: COMPILER_RT_BUILD_CRT used to be a cached variable so we need to unset
-# it first so cmake_dependent_option can set the local variable of the same
-# name. This statement can be removed in the future.
-unset(COMPILER_RT_BUILD_CRT CACHE)
 
 cmake_dependent_option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON "COMPILER_RT_HAS_CRT" OFF)
 

@@ -24,6 +24,7 @@ unittest("AnalysisTests") {
     "CaptureTrackingTest.cpp",
     "ConstraintSystemTest.cpp",
     "DDGTest.cpp",
+    "DXILResourceTest.cpp",
     "DomTreeUpdaterTest.cpp",
     "FunctionPropertiesAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",
@@ -42,6 +43,7 @@ unittest("AnalysisTests") {
     "PluginInlineAdvisorAnalysisTest.cpp",
     "PluginInlineOrderAnalysisTest.cpp",
     "ProfileSummaryInfoTest.cpp",
+    "ReplaceWithVecLibTest.cpp",
     "ScalarEvolutionTest.cpp",
     "SparsePropagation.cpp",
     "TBAATest.cpp",
@@ -50,7 +52,6 @@ unittest("AnalysisTests") {
     "UnrollAnalyzerTest.cpp",
     "ValueLatticeTest.cpp",
     "ValueTrackingTest.cpp",
-    "VectorFunctionABITest.cpp",
     "VectorUtilsTest.cpp",
   ]
 

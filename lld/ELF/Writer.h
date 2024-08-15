@@ -17,7 +17,6 @@ namespace lld::elf {
 class InputFile;
 class OutputSection;
 void copySectionsIntoPartitions();
-template <class ELFT> void createSyntheticSections();
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.
@@ -47,6 +46,7 @@ struct PhdrEntry {
 
 void addReservedSymbols();
 bool includeInSymtab(const Symbol &b);
+unsigned getSectionRank(OutputSection &osec);
 
 template <class ELFT> uint32_t calcMipsEFlags();
 
@@ -56,6 +56,7 @@ uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
 bool isMipsN32Abi(const InputFile *f);
 bool isMicroMips();
 bool isMipsR6();
+
 } // namespace lld::elf
 
 #endif

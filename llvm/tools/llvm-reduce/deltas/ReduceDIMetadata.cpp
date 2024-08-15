@@ -15,12 +15,9 @@
 #include "Delta.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InstIterator.h"
-#include <set>
-#include <stack>
 #include <tuple>
 #include <vector>
 
@@ -68,12 +65,13 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     SmallVector<Metadata *, 16> TN;
     for (size_t I = 0; I < Tup->getNumOperands(); ++I) {
       // Ignore any operands that are not DebugInfo metadata nodes.
-      if (isa_and_nonnull<DINode>(Tup->getOperand(I)))
-        // Don't add uninteresting operands to the tuple.
-        if (!O.shouldKeep())
-          continue;
-
-      TN.push_back(Tup->getOperand(I));
+      if (Metadata *Op = Tup->getOperand(I).get()) {
+        if (isa<DINode>(Op) || isa<DIGlobalVariableExpression>(Op))
+          // Don't add uninteresting operands to the tuple.
+          if (!O.shouldKeep())
+            continue;
+        TN.push_back(Op);
+      }
     }
     if (TN.size() != Tup->getNumOperands())
       DbgNode->replaceOperandWith(OpIdx, DbgNode->get(DbgNode->getContext(), TN));

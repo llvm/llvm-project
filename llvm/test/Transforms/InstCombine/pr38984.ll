@@ -25,8 +25,8 @@ define <4 x i1> @PR38984_2() {
 ; CHECK-LABEL: @PR38984_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @offsets, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr getelementptr inbounds ([21 x i16], ptr @a, i16 1, i16 0), <4 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 undef, i16 undef, i16 undef, i16 poison>, i16 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr getelementptr inbounds (i8, ptr @a, i16 42), <4 x i16> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr null, <4 x i16> [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x ptr> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP4]]

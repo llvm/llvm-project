@@ -20,8 +20,30 @@ if(LLDB_ENABLE_LUA)
   set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
+# Generate SBLanguages.h from Dwarf.def.
+set(sb_languages_file
+  ${CMAKE_CURRENT_BINARY_DIR}/../../include/lldb/API/SBLanguages.h)
+set(sb_languages_generator
+  ${LLDB_SOURCE_DIR}/scripts/generate-sbapi-dwarf-enum.py)
+add_custom_command(
+  COMMENT "Generating SBLanguages.h from Dwarf.def"
+  COMMAND "${Python3_EXECUTABLE}"
+      ${sb_languages_generator}
+      ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+      -o ${sb_languages_file}
+  OUTPUT ${sb_languages_file}
+  DEPENDS ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+          ${sb_languages_generator}
+  WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+)
+add_custom_target(lldb-sbapi-dwarf-enums
+  DEPENDS ${sb_languages_file})
+set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
+
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
+  SBAddressRange.cpp
+  SBAddressRangeList.cpp
   SBAttachInfo.cpp
   SBBlock.cpp
   SBBreakpoint.cpp
@@ -34,6 +56,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -45,6 +68,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpec.cpp
   SBFile.cpp
   SBFileSpecList.cpp
+  SBFormat.cpp
   SBFrame.cpp
   SBFunction.cpp
   SBHostOS.cpp
@@ -68,6 +92,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
+  SBStatisticsOptions.cpp
   SBStream.cpp
   SBStringList.cpp
   SBStructuredData.cpp
@@ -97,6 +122,9 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
+
+  DEPENDS
+    lldb-sbapi-dwarf-enums
 
   LINK_LIBS
     lldbBreakpoint
@@ -191,18 +219,19 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 elseif (LLDB_EXPORT_ALL_SYMBOLS)
   MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
   # Pull out the various lldb libraries linked into liblldb, these will be used
-  # when looking for symbols to extract. We ignore plugin libraries here,
-  # because these symbols aren't publicly exposed.
+  # when looking for symbols to extract. We ignore most plugin libraries here,
+  # because we may expose more symbols than the DLL limit and these symbols
+  # aren't useful to expose.
   get_target_property(all_liblldb_libs liblldb LINK_LIBRARIES)
   set(lldb_libs "")
   foreach(lib ${all_liblldb_libs})
     if(TARGET ${lib} AND ${lib} MATCHES "^lldb" AND
-       NOT ${lib} MATCHES "^lldbPlugin")
+       (${lib} IN_LIST LLDB_EXPORT_ALL_SYMBOLS_PLUGINS OR
+        NOT ${lib} MATCHES "^lldbPlugin"))
       get_target_property(lib_type ${lib} TYPE)
       if("${lib_type}" STREQUAL "STATIC_LIBRARY")
         list(APPEND lldb_libs ${lib})
@@ -228,7 +257,6 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   )
 
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
 if (NOT MSVC)

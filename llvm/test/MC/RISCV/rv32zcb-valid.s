@@ -1,12 +1,12 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+m,+zbb,+zba,+zcb -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+m,+zbb,+zba,+zcb < %s \
-# RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,+zcb -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,+zcb --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+m,+zbb,+zba,+zcb -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+m,+zbb,+zba,+zcb < %s \
-# RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,zcb -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,zcb --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 #
 # RUN: not llvm-mc -triple riscv32 \
@@ -43,7 +43,7 @@ c.not s0
 
 # CHECK-ASM-AND-OBJ: c.mul s0, s1
 # CHECK-ASM: encoding: [0x45,0x9c]
-# CHECK-NO-EXT: error: instruction requires the following: 'M' (Integer Multiplication and Division) or 'Zmmul' (Integer Multiplication), 'Zcb' (Compressed basic bit manipulation instructions){{$}}
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions), 'Zmmul' (Integer Multiplication)
 c.mul s0, s1
 
 # CHECK-ASM-AND-OBJ: c.lbu a5, 2(a4)

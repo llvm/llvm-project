@@ -1,0 +1,84 @@
+Test creating ARM64EC importlib.
+
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-dlltool -m arm64ec -d test.def -l test.lib
+RUN: llvm-nm --print-armap test.lib | FileCheck --check-prefix=ARMAP %s
+
+ARMAP:      Archive map
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
+ARMAP-EMPTY:
+ARMAP-NEXT: Archive EC map
+ARMAP-NEXT: #func in test.dll
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ARMAP-NEXT: __imp_aux_func in test.dll
+ARMAP-NEXT: __imp_func in test.dll
+ARMAP-NEXT: func in test.dll
+ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
+
+RUN: llvm-dlltool -m arm64ec -d test.def -N test2.def -l test2.lib
+RUN: llvm-nm --print-armap test2.lib | FileCheck --check-prefix=ARMAP2 %s
+
+ARMAP2:      Archive map
+ARMAP2-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP2-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ARMAP2-NEXT: __imp_otherfunc in test.dll
+ARMAP2-NEXT: otherfunc in test.dll
+ARMAP2-NEXT: test_NULL_THUNK_DATA in test.dll
+ARMAP2-EMPTY:
+ARMAP2-NEXT: Archive EC map
+ARMAP2-NEXT: #func in test.dll
+ARMAP2-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP2-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ARMAP2-NEXT: __imp_aux_func in test.dll
+ARMAP2-NEXT: __imp_func in test.dll
+ARMAP2-NEXT: func in test.dll
+ARMAP2-NEXT: test_NULL_THUNK_DATA in test.dll
+
+RUN: llvm-dlltool -m arm64ec -d test.def --input-native-def test2.def -l test3.lib
+RUN: llvm-nm --print-armap test3.lib | FileCheck --check-prefix=ARMAP2 %s
+
+RUN: not llvm-dlltool -m arm64 -d test.def -N test2.def -l test4.lib 2>&1 | FileCheck --check-prefix=ERR %s
+ERR: native .def file is supported only on arm64ec target
+
+RUN: llvm-dlltool -m arm64ec -d test3.def -l test3.lib
+RUN: llvm-readobj test3.lib | FileCheck --check-prefix=ALIAS %s
+
+ALIAS:      File: test.dll
+ALIAS-NEXT: Format: COFF-import-file-ARM64EC
+ALIAS-NEXT: Type: code
+ALIAS-NEXT: Name type: export as
+ALIAS-NEXT: Export name: efunc
+ALIAS-NEXT: Symbol: __imp_func
+ALIAS-NEXT: Symbol: func
+ALIAS-NEXT: Symbol: __imp_aux_func
+ALIAS-NEXT: Symbol: #func
+ALIAS-EMPTY:
+ALIAS-NEXT: File: test.dll
+ALIAS-NEXT: Format: COFF-import-file-ARM64EC
+ALIAS-NEXT: Type: code
+ALIAS-NEXT: Name type: export as
+ALIAS-NEXT: Export name: efunc
+ALIAS-NEXT: Symbol: __imp_efunc
+ALIAS-NEXT: Symbol: efunc
+ALIAS-NEXT: Symbol: __imp_aux_efunc
+ALIAS-NEXT: Symbol: #efunc
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+    func
+
+#--- test2.def
+LIBRARY test.dll
+EXPORTS
+    otherfunc
+
+#--- test3.def
+LIBRARY test.dll
+EXPORTS
+    func == efunc
+    efunc

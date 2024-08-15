@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "LazyDetector.h"
 #include "ROCm.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -65,7 +66,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
                    const InputInfoList &Inputs, VersionTuple Version,
-                   bool LinkerIsLLD) const;
+                   bool LinkerIsLLD, bool UsePlatformVersion) const;
 
 public:
   Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
@@ -222,6 +223,13 @@ public:
     // There aren't any profiling libs for embedded targets currently.
   }
 
+  // Return the full path of the compiler-rt library on a non-Darwin MachO
+  // system. Those are under
+  // <resourcedir>/lib/darwin/macho_embedded/<...>(.dylib|.a).
+  std::string
+  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                FileType Type = ToolChain::FT_Static) const override;
+
   /// }
   /// @name ToolChain Implementation
   /// {
@@ -298,7 +306,8 @@ public:
     TvOS,
     WatchOS,
     DriverKit,
-    LastDarwinPlatform = DriverKit
+    XROS,
+    LastDarwinPlatform = XROS
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -320,8 +329,8 @@ public:
   /// The target variant triple that was specified (if any).
   mutable std::optional<llvm::Triple> TargetVariantTriple;
 
-  CudaInstallationDetector CudaInstallation;
-  RocmInstallationDetector RocmInstallation;
+  LazyDetector<CudaInstallationDetector> CudaInstallation;
+  LazyDetector<RocmInstallationDetector> RocmInstallation;
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
@@ -353,6 +362,12 @@ public:
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
+
+  // Return the full path of the compiler-rt library on a Darwin MachO system.
+  // Those are under <resourcedir>/lib/darwin/<...>(.dylib|.a).
+  std::string
+  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                FileType Type = ToolChain::FT_Static) const override;
 
 protected:
   /// }
@@ -403,6 +418,16 @@ public:
     assert(TargetInitialized && "Target not initialized!");
     return isTargetIPhoneOS() || isTargetIOSSimulator();
   }
+
+  bool isTargetXROSDevice() const {
+    return TargetPlatform == XROS && TargetEnvironment == NativeEnvironment;
+  }
+
+  bool isTargetXROSSimulator() const {
+    return TargetPlatform == XROS && TargetEnvironment == Simulator;
+  }
+
+  bool isTargetXROS() const { return TargetPlatform == XROS; }
 
   bool isTargetTvOS() const {
     assert(TargetInitialized && "Target not initialized!");
@@ -499,6 +524,10 @@ protected:
   /// targeting.
   bool isAlignedAllocationUnavailable() const;
 
+  /// Return true if c++14 sized deallocation functions are not implemented in
+  /// the c++ standard library of the deployment target we are targeting.
+  bool isSizedDeallocationUnavailable() const;
+
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
@@ -546,7 +575,8 @@ public:
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     // Stack protectors default to on for user code on 10.5,
     // and for everything in 10.6 and beyond
-    if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetDriverKit())
+    if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetDriverKit() ||
+        isTargetXROS())
       return LangOptions::SSPOn;
     else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 6))
       return LangOptions::SSPOn;

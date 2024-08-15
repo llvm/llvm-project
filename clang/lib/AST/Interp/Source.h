@@ -29,7 +29,7 @@ class Function;
 /// Pointer into the code segment.
 class CodePtr final {
 public:
-  CodePtr() : Ptr(nullptr) {}
+  CodePtr() = default;
 
   CodePtr &operator+=(int32_t Offset) {
     Ptr += Offset;
@@ -45,17 +45,22 @@ public:
     assert(Ptr != nullptr && "Invalid code pointer");
     return CodePtr(Ptr - RHS);
   }
+  CodePtr operator+(ssize_t RHS) const {
+    assert(Ptr != nullptr && "Invalid code pointer");
+    return CodePtr(Ptr + RHS);
+  }
 
   bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
   const std::byte *operator*() const { return Ptr; }
-
-  operator bool() const { return Ptr; }
+  explicit operator bool() const { return Ptr; }
+  bool operator<=(const CodePtr &RHS) const { return Ptr <= RHS.Ptr; }
+  bool operator>=(const CodePtr &RHS) const { return Ptr >= RHS.Ptr; }
 
   /// Reads data and advances the pointer.
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
     assert(aligned(Ptr));
     using namespace llvm::support;
-    T Value = endian::read<T, endianness::native, 1>(Ptr);
+    T Value = endian::read<T, llvm::endianness::native>(Ptr);
     Ptr += align(sizeof(T));
     return Value;
   }
@@ -65,7 +70,7 @@ private:
   /// Constructor used by Function to generate pointers.
   CodePtr(const std::byte *Ptr) : Ptr(Ptr) {}
   /// Pointer into the code owned by a function.
-  const std::byte *Ptr;
+  const std::byte *Ptr = nullptr;
 };
 
 /// Describes the statement/declaration an opcode was generated from.

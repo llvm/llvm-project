@@ -64,4 +64,4 @@ Sections:
 
 # CHECK:      00000000 D dexport
 # CHECK-NEXT: 00000001 T fexport
-# CHECK-NEXT: 00000000 D gexport
+# CHECK-NEXT: 00000001 D gexport

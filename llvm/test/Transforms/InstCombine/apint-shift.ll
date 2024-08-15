@@ -240,8 +240,8 @@ define i23 @test11(i23 %x) {
 
 define i47 @test12(i47 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[SH2:%.*]] = and i47 [[X:%.*]], -256
-; CHECK-NEXT:    ret i47 [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and i47 [[X:%.*]], -256
+; CHECK-NEXT:    ret i47 [[SH1]]
 ;
   %sh1 = ashr i47 %X, 8
   %sh2 = shl i47 %sh1, 8
@@ -250,8 +250,8 @@ define i47 @test12(i47 %X) {
 
 define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
 ; CHECK-LABEL: @test12_splat_vec(
-; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
-; CHECK-NEXT:    ret <2 x i47> [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
+; CHECK-NEXT:    ret <2 x i47> [[SH1]]
 ;
   %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>
@@ -273,7 +273,7 @@ define i18 @test13(i18 %x) {
 define i35 @test14(i35 %A) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[B:%.*]] = and i35 [[A:%.*]], -19760
-; CHECK-NEXT:    [[C:%.*]] = or i35 [[B]], 19744
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i35 [[B]], 19744
 ; CHECK-NEXT:    ret i35 [[C]]
 ;
   %B = lshr i35 %A, 4
@@ -481,7 +481,7 @@ define i44 @shl_lshr_eq_amt_multi_use(i44 %A) {
 ; CHECK-LABEL: @shl_lshr_eq_amt_multi_use(
 ; CHECK-NEXT:    [[B:%.*]] = shl i44 [[A:%.*]], 33
 ; CHECK-NEXT:    [[C:%.*]] = and i44 [[A]], 2047
-; CHECK-NEXT:    [[D:%.*]] = or i44 [[B]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = or disjoint i44 [[B]], [[C]]
 ; CHECK-NEXT:    ret i44 [[D]]
 ;
   %B = shl i44 %A, 33
@@ -496,7 +496,7 @@ define <2 x i44> @shl_lshr_eq_amt_multi_use_splat_vec(<2 x i44> %A) {
 ; CHECK-LABEL: @shl_lshr_eq_amt_multi_use_splat_vec(
 ; CHECK-NEXT:    [[B:%.*]] = shl <2 x i44> [[A:%.*]], <i44 33, i44 33>
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i44> [[A]], <i44 2047, i44 2047>
-; CHECK-NEXT:    [[D:%.*]] = or <2 x i44> [[B]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = or disjoint <2 x i44> [[B]], [[C]]
 ; CHECK-NEXT:    ret <2 x i44> [[D]]
 ;
   %B = shl <2 x i44> %A, <i44 33, i44 33>
@@ -564,14 +564,7 @@ define i40 @test26(i40 %A) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
 define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
-; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
-; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
-; CHECK-NEXT:    [[B5_NEG:%.*]] = sext i1 [[TMP1]] to i177
-; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[B5_NEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i177 [[B14]], -1
-; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP2]] to i177
-; CHECK-NEXT:    ret i177 [[B1]]
+; CHECK-NEXT:    ret i177 0
 ;
   %A = alloca i177
   %L1 = load i177, ptr %A

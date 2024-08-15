@@ -14,7 +14,6 @@
 #define BOLT_PROFILE_PROFILEYAMLMAPPING_H
 
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
@@ -94,11 +93,36 @@ template <> struct MappingTraits<bolt::SuccessorInfo> {
   static const bool flow = true;
 };
 
+namespace bolt {
+struct PseudoProbeInfo {
+  llvm::yaml::Hex64 GUID;
+  uint64_t Index;
+  uint8_t Type;
+
+  bool operator==(const PseudoProbeInfo &Other) const {
+    return GUID == Other.GUID && Index == Other.Index;
+  }
+  bool operator!=(const PseudoProbeInfo &Other) const {
+    return !(*this == Other);
+  }
+};
+} // end namespace bolt
+
+template <> struct MappingTraits<bolt::PseudoProbeInfo> {
+  static void mapping(IO &YamlIO, bolt::PseudoProbeInfo &PI) {
+    YamlIO.mapRequired("guid", PI.GUID);
+    YamlIO.mapRequired("id", PI.Index);
+    YamlIO.mapRequired("type", PI.Type);
+  }
+
+  static const bool flow = true;
+};
 } // end namespace yaml
 } // end namespace llvm
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::CallSiteInfo)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::SuccessorInfo)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::bolt::PseudoProbeInfo)
 
 namespace llvm {
 namespace yaml {
@@ -112,6 +136,7 @@ struct BinaryBasicBlockProfile {
   uint64_t EventCount{0};
   std::vector<CallSiteInfo> CallSites;
   std::vector<SuccessorInfo> Successors;
+  std::vector<PseudoProbeInfo> PseudoProbes;
 
   bool operator==(const BinaryBasicBlockProfile &Other) const {
     return Index == Other.Index;
@@ -133,6 +158,8 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
                        std::vector<bolt::CallSiteInfo>());
     YamlIO.mapOptional("succ", BBP.Successors,
                        std::vector<bolt::SuccessorInfo>());
+    YamlIO.mapOptional("pseudo_probes", BBP.PseudoProbes,
+                       std::vector<bolt::PseudoProbeInfo>());
   }
 };
 
@@ -152,6 +179,8 @@ struct BinaryFunctionProfile {
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
+  llvm::yaml::Hex64 GUID{0};
+  llvm::yaml::Hex64 PseudoProbeDescHash{0};
   bool Used{false};
 };
 } // end namespace bolt
@@ -165,6 +194,9 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
     YamlIO.mapRequired("nblocks", BFP.NumBasicBlocks);
     YamlIO.mapOptional("blocks", BFP.Blocks,
                        std::vector<bolt::BinaryBasicBlockProfile>());
+    YamlIO.mapOptional("guid", BFP.GUID, (uint64_t)0);
+    YamlIO.mapOptional("pseudo_probe_desc_hash", BFP.PseudoProbeDescHash,
+                       (uint64_t)0);
   }
 };
 
@@ -178,6 +210,14 @@ template <> struct ScalarBitSetTraits<PROFILE_PF> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<llvm::bolt::HashFunction> {
+  using HashFunction = llvm::bolt::HashFunction;
+  static void enumeration(IO &io, HashFunction &value) {
+    io.enumCase(value, "std-hash", HashFunction::StdHash);
+    io.enumCase(value, "xxh3", HashFunction::XXH3);
+  }
+};
+
 namespace bolt {
 struct BinaryProfileHeader {
   uint32_t Version{1};
@@ -188,6 +228,7 @@ struct BinaryProfileHeader {
   std::string Origin;     // How the profile was obtained.
   std::string EventNames; // Events used for sample profile.
   bool IsDFSOrder{true};  // Whether using DFS block order in function profile
+  llvm::bolt::HashFunction HashFunction; // Hash used for BB/BF hashing
 };
 } // end namespace bolt
 
@@ -200,6 +241,8 @@ template <> struct MappingTraits<bolt::BinaryProfileHeader> {
     YamlIO.mapOptional("profile-origin", Header.Origin);
     YamlIO.mapOptional("profile-events", Header.EventNames);
     YamlIO.mapOptional("dfs-order", Header.IsDFSOrder);
+    YamlIO.mapOptional("hash-func", Header.HashFunction,
+                       llvm::bolt::HashFunction::StdHash);
   }
 };
 

@@ -7,7 +7,7 @@ subroutine test_as_simple_elemental(n)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_as_simple_elemental(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_as_simple_elementalEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_as_simple_elementalEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -26,7 +26,7 @@ end subroutine
 ! CHECK:             %[[VAL_17:.*]] = arith.addi %[[VAL_14]], %[[VAL_16]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_17]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_19:.*]](%[[VAL_3]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
+! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_19:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_18]]#1, %[[VAL_18]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_19]] : !hlfir.expr<4xi32>
@@ -41,9 +41,10 @@ end subroutine
 ! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "lb"},
 ! CHECK-SAME:                                            %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "ub"},
 ! CHECK-SAME:                                            %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "stride"}) {
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_as_strided_elementalElb"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_as_strided_elementalEstride"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_as_strided_elementalEub"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest_as_strided_elementalElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest_as_strided_elementalEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest_as_strided_elementalEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
@@ -72,7 +73,7 @@ end subroutine
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> i32
 ! CHECK:             hlfir.yield_element %[[VAL_31]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_33:.*]](%[[VAL_19]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_33:.*]](%[[VAL_19]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_32]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<4xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_34]]) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_32]]#1, %[[VAL_32]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -91,7 +92,7 @@ subroutine test_as_elemental_with_pure_call(n)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_as_elemental_with_pure_call(
 ! CHECK-SAME:                                                   %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_as_elemental_with_pure_callEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_as_elemental_with_pure_callEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -109,7 +110,7 @@ end subroutine
 ! CHECK:             %[[VAL_16:.*]] = fir.call @_QPfoo(%[[VAL_15]]) fastmath<contract> : (i32) -> i32
 ! CHECK:             hlfir.yield_element %[[VAL_16]] : i32
 ! CHECK:           }
-! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
+! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_17]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_17]]#1, %[[VAL_17]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_18]] : !hlfir.expr<4xi32>
@@ -138,10 +139,10 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_hlfir_expr_result_destruction() {
 ! CHECK:           %[[VAL_36:.*]] = hlfir.elemental %{{.*}} typeparams %{{.*}} unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
 ! CHECK:             %[[VAL_48:.*]] = hlfir.as_expr %{{.*}} move %{{.*}} : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
-! CHECK:             %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_48]] typeparams %{{.*}} {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
+! CHECK:             %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_48]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
 ! CHECK:             %[[VAL_64:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,2>>, index) -> (!fir.heap<!fir.char<1,2>>, !fir.heap<!fir.char<1,2>>)
 ! CHECK:             %[[VAL_66:.*]] = hlfir.as_expr %[[VAL_64]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,2>>, i1) -> !hlfir.expr<!fir.char<1,2>>
-! CHECK:             %[[VAL_68:.*]]:3 = hlfir.associate %[[VAL_66]] typeparams %{{.*}} {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
+! CHECK:             %[[VAL_68:.*]]:3 = hlfir.associate %[[VAL_66]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
 ! CHECK:             %[[VAL_81:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,4>>, index) -> (!fir.heap<!fir.char<1,4>>, !fir.heap<!fir.char<1,4>>)
 ! CHECK:             %[[VAL_83:.*]] = hlfir.as_expr %[[VAL_81]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,4>>, i1) -> !hlfir.expr<!fir.char<1,4>>
 ! CHECK-NOT:         hlfir.destroy %[[VAL_83]]

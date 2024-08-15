@@ -67,16 +67,16 @@ public:
   }
   // Do not use this API to cause the LB of an empty dimension
   // to be anything other than 1.  Use SetBounds() instead if you can.
-  Dimension &SetLowerBound(SubscriptValue lower) {
+  RT_API_ATTRS Dimension &SetLowerBound(SubscriptValue lower) {
     raw_.lower_bound = lower;
     return *this;
   }
-  Dimension &SetUpperBound(SubscriptValue upper) {
+  RT_API_ATTRS Dimension &SetUpperBound(SubscriptValue upper) {
     auto lower{raw_.lower_bound};
     raw_.extent = upper >= lower ? upper - lower + 1 : 0;
     return *this;
   }
-  Dimension &SetExtent(SubscriptValue extent) {
+  RT_API_ATTRS Dimension &SetExtent(SubscriptValue extent) {
     raw_.extent = extent;
     return *this;
   }
@@ -92,17 +92,17 @@ private:
 // The storage for this object follows the last used dim[] entry in a
 // Descriptor (CFI_cdesc_t) generic descriptor.  Space matters here, since
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
-// instances.  The presence of this structure is implied by the flag
-// CFI_cdesc_t.f18Addendum, and the number of elements in the len_[]
+// instances.  The presence of this structure is encoded in the
+// CFI_cdesc_t.extra field, and the number of elements in the len_[]
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
-      : derivedType_{dt} {}
+      : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
-  const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
+  RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
     return derivedType_;
   }
   RT_API_ATTRS DescriptorAddendum &set_derivedType(
@@ -204,7 +204,7 @@ public:
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   RT_API_ATTRS ISO::CFI_cdesc_t &raw() { return raw_; }
-  const RT_API_ATTRS ISO::CFI_cdesc_t &raw() const { return raw_; }
+  RT_API_ATTRS const ISO::CFI_cdesc_t &raw() const { return raw_; }
   RT_API_ATTRS std::size_t ElementBytes() const { return raw_.elem_len; }
   RT_API_ATTRS int rank() const { return raw_.rank; }
   RT_API_ATTRS TypeCode type() const { return TypeCode{raw_.type}; }
@@ -225,7 +225,7 @@ public:
   RT_API_ATTRS Dimension &GetDimension(int dim) {
     return *reinterpret_cast<Dimension *>(&raw_.dim[dim]);
   }
-  const RT_API_ATTRS Dimension &GetDimension(int dim) const {
+  RT_API_ATTRS const Dimension &GetDimension(int dim) const {
     return *reinterpret_cast<const Dimension *>(&raw_.dim[dim]);
   }
 
@@ -339,14 +339,14 @@ public:
       const SubscriptValue *, const int *permutation = nullptr) const;
 
   RT_API_ATTRS DescriptorAddendum *Addendum() {
-    if (raw_.f18Addendum != 0) {
+    if (HasAddendum()) {
       return reinterpret_cast<DescriptorAddendum *>(&GetDimension(rank()));
     } else {
       return nullptr;
     }
   }
-  const RT_API_ATTRS DescriptorAddendum *Addendum() const {
-    if (raw_.f18Addendum != 0) {
+  RT_API_ATTRS const DescriptorAddendum *Addendum() const {
+    if (HasAddendum()) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
     } else {
@@ -375,6 +375,7 @@ public:
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
   RT_API_ATTRS int Allocate();
+  RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
@@ -390,14 +391,21 @@ public:
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    // Arrays with more than 2 elements may also be contiguous even if a
+    // byte stride in one dimension is not a perfect multiple, as long as
+    // this is the last dimension, or if the dimension has one extent and
+    // the following dimension have either one extents or contiguous byte
+    // strides.
+    return stridesAreContiguous || bytes == 0;
   }
 
   // Establishes a pointer to a section or element.
@@ -406,9 +414,32 @@ public:
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
+  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
+
   RT_API_ATTRS void Check() const;
 
   void Dump(FILE * = stdout) const;
+
+// Value of the addendum presence flag.
+#define _CFI_ADDENDUM_FLAG 1
+// Number of bits needed to be shifted when manipulating the allocator index.
+#define _CFI_ALLOCATOR_IDX_SHIFT 1
+// Allocator index mask.
+#define _CFI_ALLOCATOR_IDX_MASK 0b00001110
+
+  RT_API_ATTRS inline bool HasAddendum() const {
+    return raw_.extra & _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline void SetHasAddendum() {
+    raw_.extra |= _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline int GetAllocIdx() const {
+    return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
+  }
+  RT_API_ATTRS inline void SetAllocIdx(int pos) {
+    raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
+    raw_.extra |= (pos << _CFI_ALLOCATOR_IDX_SHIFT);
+  }
 
 private:
   ISO::CFI_cdesc_t raw_;
@@ -438,7 +469,7 @@ public:
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);
   }
-  const RT_API_ATTRS Descriptor &descriptor() const {
+  RT_API_ATTRS const Descriptor &descriptor() const {
     return *reinterpret_cast<const Descriptor *>(storage_);
   }
 
@@ -446,6 +477,7 @@ public:
     assert(descriptor().rank() <= maxRank);
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {
+      (void)addendum;
       assert(hasAddendum);
       assert(addendum->LenParameters() <= maxLengthTypeParameters);
     } else {
@@ -458,5 +490,6 @@ public:
 private:
   char storage_[byteSize]{};
 };
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DESCRIPTOR_H_

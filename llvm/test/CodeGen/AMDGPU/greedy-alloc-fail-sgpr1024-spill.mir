@@ -13,6 +13,7 @@
 name:            greedy_fail_alloc_sgpr1024_spill
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   explicitKernArgSize: 16
@@ -85,7 +86,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
   ; CHECK-NEXT:   renamable $sgpr6 = S_LSHL_B32 renamable $sgpr67, 1, implicit-def dead $scc
-  ; CHECK-NEXT:   dead [[V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32_:%[0-9]+]]:vreg_1024 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 [[V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32_]], 0, killed $sgpr6, 3, implicit-def $m0, implicit $m0, implicit $exec
+  ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:vreg_1024 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 [[COPY]], 0, killed $sgpr6, 3, implicit-def $m0, implicit $m0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
@@ -114,7 +115,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr87 = COPY renamable $sgpr44
   ; CHECK-NEXT:   renamable $sgpr88 = COPY renamable $sgpr44
   ; CHECK-NEXT:   renamable $sgpr89 = COPY renamable $sgpr44
-  ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, implicit $exec
+  ; CHECK-NEXT:   dead [[COPY1:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, implicit $exec
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -125,7 +126,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
   ; CHECK-NEXT:   dead renamable $sgpr4 = S_LSHL_B32 killed renamable $sgpr66, 1, implicit-def dead $scc
-  ; CHECK-NEXT:   dead [[COPY1:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
+  ; CHECK-NEXT:   dead [[COPY2:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   bb.0:

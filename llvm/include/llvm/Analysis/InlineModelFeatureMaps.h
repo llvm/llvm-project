@@ -13,7 +13,6 @@
 #include "llvm/Analysis/TensorSpec.h"
 
 #include <array>
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -40,6 +39,8 @@ namespace llvm {
   M(int64_t, {1}, jump_table_penalty, "Accumulation of costs for jump tables") \
   M(int64_t, {1}, case_cluster_penalty,                                        \
     "Accumulation of costs for case clusters")                                 \
+  M(int64_t, {1}, switch_default_dest_penalty,                                 \
+    "Accumulation of costs for switch default destination")                    \
   M(int64_t, {1}, switch_penalty,                                              \
     "Accumulation of costs for switch statements")                             \
   M(int64_t, {1}, unsimplified_common_instructions,                            \
@@ -92,8 +93,8 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
 
 // List of features. Each feature is defined through a triple:
 // - the name of an enum member, which will be the feature index
-// - a textual name, used for Tensorflow model binding (so it needs to match the
-// names used by the Tensorflow model)
+// - a textual name, used for ML model binding (so it needs to match the
+// names used by the ML model).
 // - a documentation description. Currently, that is not used anywhere
 // programmatically, and serves as workaround to inability of inserting comments
 // in macros.
@@ -120,7 +121,15 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
     "number of blocks reached from a conditional instruction, in the callee")  \
   M(int64_t, {1}, callee_users,                                                \
     "number of module-internal users of the callee, +1 if the callee is "      \
-    "exposed externally")
+    "exposed externally")                                                      \
+  M(int64_t, {1}, is_callee_avail_external,                                    \
+    "Is callee an available-externally linkage type (i.e. could be DCEd if "   \
+    "not "                                                                     \
+    "fully inlined by ElimAvailExtern)")                                       \
+  M(int64_t, {1}, is_caller_avail_external,                                    \
+    "Is caller an available-externally linkage type (i.e. could be DCEd if "   \
+    "not "                                                                     \
+    "fully inlined by ElimAvailExtern)")
 
 // clang-format off
 enum class FeatureIndex : size_t {

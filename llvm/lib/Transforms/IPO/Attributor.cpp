@@ -132,13 +132,13 @@ static cl::opt<bool>
 #ifndef NDEBUG
 static cl::list<std::string>
     SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma seperated list of attribute names that are "
+                  cl::desc("Comma separated list of attribute names that are "
                            "allowed to be seeded."),
                   cl::CommaSeparated);
 
 static cl::list<std::string> FunctionSeedAllowList(
     "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma seperated list of function names that are "
+    cl::desc("Comma separated list of function names that are "
              "allowed to be seeded."),
     cl::CommaSeparated);
 #endif
@@ -260,7 +260,8 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     if (!Initializer)
       return nullptr;
   } else {
-    if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
+    if (!GV->hasLocalLinkage() &&
+        (GV->isInterposable() || !(GV->isConstant() && GV->hasInitializer())))
       return nullptr;
     if (!GV->hasInitializer())
       return UndefValue::get(&Ty);
@@ -274,7 +275,7 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty, DL);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -329,7 +330,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
         return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
       if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
-        return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
+        return ConstantFoldCastInstruction(Instruction::FPTrunc, C, &Ty);
     }
   }
   return nullptr;
@@ -1748,6 +1749,10 @@ bool Attributor::checkForAllCallees(
   return Pred(Callees.getArrayRef());
 }
 
+bool canMarkAsVisited(const User *Usr) {
+  return isa<PHINode>(Usr) || !isa<Instruction>(Usr);
+}
+
 bool Attributor::checkForAllUses(
     function_ref<bool(const Use &, bool &)> Pred,
     const AbstractAttribute &QueryingAA, const Value &V,
@@ -1795,7 +1800,7 @@ bool Attributor::checkForAllUses(
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    if (isa<PHINode>(U->getUser()) && !Visited.insert(U).second)
+    if (canMarkAsVisited(U->getUser()) && !Visited.insert(U).second)
       continue;
     DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U->getUser()))
@@ -2380,8 +2385,7 @@ void Attributor::identifyDeadInternalFunctions() {
   bool FoundLiveInternal = true;
   while (FoundLiveInternal) {
     FoundLiveInternal = false;
-    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-      Function *F = InternalFns[u];
+    for (Function *&F : InternalFns) {
       if (!F)
         continue;
 
@@ -2398,13 +2402,13 @@ void Attributor::identifyDeadInternalFunctions() {
       }
 
       LiveInternalFns.insert(F);
-      InternalFns[u] = nullptr;
+      F = nullptr;
       FoundLiveInternal = true;
     }
   }
 
-  for (unsigned u = 0, e = InternalFns.size(); u < e; ++u)
-    if (Function *F = InternalFns[u])
+  for (Function *F : InternalFns)
+    if (F)
       ToBeDeletedFunctions.insert(F);
 }
 
@@ -2550,12 +2554,9 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (const auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I)) {
-        assert((isa<IntrinsicInst>(CB) || isRunOn(*I->getFunction())) &&
-               "Cannot delete an instruction outside the current SCC!");
-        if (!isa<IntrinsicInst>(CB))
-          Configuration.CGUpdater.removeCallSite(*CB);
-      }
+      assert((!isa<CallBase>(I) || isa<IntrinsicInst>(I) ||
+              isRunOn(*I->getFunction())) &&
+             "Cannot delete an instruction outside the current SCC!");
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())
@@ -2737,6 +2738,8 @@ void Attributor::createShallowWrapper(Function &F) {
       Function::Create(FnTy, F.getLinkage(), F.getAddressSpace(), F.getName());
   F.setName(""); // set the inside function anonymous
   M.getFunctionList().insert(F.getIterator(), Wrapper);
+  // Flag whether the function is using new-debug-info or not.
+  Wrapper->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   F.setLinkage(GlobalValue::InternalLinkage);
 
@@ -2817,6 +2820,8 @@ bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
       VMap[&Arg] = &(*NewFArgIt++);
     }
     SmallVector<ReturnInst *, 8> Returns;
+    // Flag whether the function is using new-debug-info or not.
+    Copied->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
 
     // Copy the body of the original function to the new one
     CloneFunctionInto(Copied, F, VMap,
@@ -3034,6 +3039,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     OldFn->getParent()->getFunctionList().insert(OldFn->getIterator(), NewFn);
     NewFn->takeName(OldFn);
     NewFn->copyAttributesFrom(OldFn);
+    // Flag whether the function is using new-debug-info or not.
+    NewFn->IsNewDbgInfoFormat = OldFn->IsNewDbgInfoFormat;
 
     // Patch the pointer to LLVM function in debug info descriptor.
     NewFn->setSubprogram(OldFn->getSubprogram());
@@ -3116,12 +3123,12 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       // Create a new call or invoke instruction to replace the old one.
       CallBase *NewCB;
       if (InvokeInst *II = dyn_cast<InvokeInst>(OldCB)) {
-        NewCB =
-            InvokeInst::Create(NewFn, II->getNormalDest(), II->getUnwindDest(),
-                               NewArgOperands, OperandBundleDefs, "", OldCB);
+        NewCB = InvokeInst::Create(NewFn, II->getNormalDest(),
+                                   II->getUnwindDest(), NewArgOperands,
+                                   OperandBundleDefs, "", OldCB->getIterator());
       } else {
         auto *NewCI = CallInst::Create(NewFn, NewArgOperands, OperandBundleDefs,
-                                       "", OldCB);
+                                       "", OldCB->getIterator());
         NewCI->setTailCallKind(cast<CallInst>(OldCB)->getTailCallKind());
         NewCB = NewCI;
       }
@@ -3176,7 +3183,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       assert(OldCB.getType() == NewCB.getType() &&
              "Cannot handle call sites with different types!");
       ModifiedFns.insert(OldCB.getFunction());
-      Configuration.CGUpdater.replaceCallSite(OldCB, NewCB);
       OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
@@ -3610,14 +3616,13 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   };
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
-  bool Success;
+  [[maybe_unused]] bool Success;
   bool UsedAssumedInformation = false;
   Success = checkForAllInstructionsImpl(
       nullptr, OpcodeInstMap, CallSitePred, nullptr, nullptr,
       {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
        (unsigned)Instruction::Call},
       UsedAssumedInformation);
-  (void)Success;
   assert(Success && "Expected the check call to be successful!");
 
   auto LoadStorePred = [&](Instruction &I) -> bool {
@@ -3643,7 +3648,17 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
       {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
       UsedAssumedInformation);
-  (void)Success;
+  assert(Success && "Expected the check call to be successful!");
+
+  // AllocaInstPredicate
+  auto AAAllocationInfoPred = [&](Instruction &I) -> bool {
+    getOrCreateAAFor<AAAllocationInfo>(IRPosition::value(I));
+    return true;
+  };
+
+  Success = checkForAllInstructionsImpl(
+      nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
+      {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
   assert(Success && "Expected the check call to be successful!");
 }
 
@@ -3821,7 +3836,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (MaxSpecializationPerCB.getNumOccurrences()) {
     AC.IndirectCalleeSpecializationCallback =
         [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee) {
+            Function &Callee, unsigned) {
           if (MaxSpecializationPerCB == 0)
             return false;
           auto &Set = IndirectCalleeTrackingMap[&CB];
@@ -3938,7 +3953,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
     // to do it eagerly.
-    if (F->hasLocalLinkage()) {
+    if (AC.UseLiveness && F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&

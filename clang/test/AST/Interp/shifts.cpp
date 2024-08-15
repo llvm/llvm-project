@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17 %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,all %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17,all %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,all %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17,all %s
 
 #define INT_MIN (~__INT_MAX__)
 
@@ -34,12 +34,13 @@ namespace shifts {
                  // ref-warning {{shift count is negative}} \
                  // ref-cxx17-warning {{shift count is negative}}
     c = 1 << (unsigned)-1; // expected-warning {{shift count >= width of type}} \
-                           // FIXME: 'implicit conversion' warning missing in the new interpreter. \
+                           // expected-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // cxx17-warning {{shift count >= width of type}} \
+                           // cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // ref-warning {{shift count >= width of type}} \
-                           // ref-warning {{implicit conversion}} \
+                           // ref-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
                            // ref-cxx17-warning {{shift count >= width of type}} \
-                           // ref-cxx17-warning {{implicit conversion}}
+                           // ref-cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}}
     c = 1 >> (unsigned)-1; // expected-warning {{shift count >= width of type}} \
                            // cxx17-warning {{shift count >= width of type}} \
                            // ref-warning {{shift count >= width of type}} \
@@ -187,4 +188,26 @@ namespace shifts {
                           // cxx17-note {{in call to 'foo(2)'}} \
                           // ref-cxx17-error {{not an integral constant expression}} \
                           // ref-cxx17-note {{in call to 'foo(2)'}}
+};
+
+namespace LongInt {
+  constexpr int f() {
+    int a = 1;
+    a <<= (long)0;
+    return 1;
+  }
+  static_assert(f() == 1, "");
+};
+
+enum shiftof {
+    X = (1<<-29), // all-error {{expression is not an integral constant expression}} \
+                  // all-note {{negative shift count -29}}
+
+    X2 = (-1<<29), // cxx17-error {{expression is not an integral constant expression}} \
+                   // cxx17-note {{left shift of negative value -1}} \
+                   // ref-cxx17-error {{expression is not an integral constant expression}} \
+                   // ref-cxx17-note {{left shift of negative value -1}}
+
+    X3 = (1<<32) // all-error {{expression is not an integral constant expression}} \
+                 // all-note {{shift count 32 >= width of type 'int'}}
 };

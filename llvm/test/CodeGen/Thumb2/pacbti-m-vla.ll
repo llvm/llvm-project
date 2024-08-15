@@ -55,15 +55,15 @@ for.body:                                         ; preds = %for.body, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %vla, i32 %i.010
   %3 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %3, %s.09
-  %inc = or i32 %i.010, 1
+  %inc = or disjoint i32 %i.010, 1
   %arrayidx.1 = getelementptr inbounds i32, ptr %vla, i32 %inc
   %4 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %4, %add
-  %inc.1 = or i32 %i.010, 2
+  %inc.1 = or disjoint i32 %i.010, 2
   %arrayidx.2 = getelementptr inbounds i32, ptr %vla, i32 %inc.1
   %5 = load i32, ptr %arrayidx.2, align 4
   %add.2 = add nsw i32 %5, %add.1
-  %inc.2 = or i32 %i.010, 3
+  %inc.2 = or disjoint i32 %i.010, 3
   %arrayidx.3 = getelementptr inbounds i32, ptr %vla, i32 %inc.2
   %6 = load i32, ptr %arrayidx.3, align 4
   %add.3 = add nsw i32 %6, %add.2
@@ -116,7 +116,7 @@ for.body.epil.2:                                  ; preds = %for.body.epil.1
 
 declare dso_local i32 @g(i32, ptr) local_unnamed_addr #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "sign-return-address"="non-leaf"}
 
 !llvm.module.flags = !{!0, !1, !2}
 

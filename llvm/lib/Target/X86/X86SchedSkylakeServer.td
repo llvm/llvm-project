@@ -311,8 +311,10 @@ defm : SKXWriteResPair<WriteFMAX, [SKXPort01],  4, [1], 1, 6>;
 defm : SKXWriteResPair<WriteFMAY, [SKXPort01],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFMAZ, [SKXPort05],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
-defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>;
-defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
+defm : X86WriteRes<WriteDPPS,       [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSY,      [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSLd,     [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 19, [1,3,1,1], 6>;
+defm : X86WriteRes<WriteDPPSYLd,    [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 20, [1,3,1,1], 6>;
 defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
 defm : SKXWriteResPair<WriteFRnd,   [SKXPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : SKXWriteResPair<WriteFRndY,  [SKXPort01], 8, [2], 2, 7>;
@@ -613,8 +615,8 @@ def : WriteRes<WriteNop, []>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort015], 6, [2,1], 3, 6>;
-defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort015], 6, [2,1], 3, 7>;
+defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort01], 6, [2,1], 3, 6>;
+defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort01], 6, [2,1], 3, 7>;
 defm : SKXWriteResPair<WritePHAdd,  [SKXPort5,SKXPort05],  3, [2,1], 3, 5>;
 defm : SKXWriteResPair<WritePHAddX, [SKXPort5,SKXPort015], 3, [2,1], 3, 6>;
 defm : SKXWriteResPair<WritePHAddY, [SKXPort5,SKXPort015], 3, [2,1], 3, 7>;
@@ -1254,8 +1256,8 @@ def SKXWriteResGroup89 : SchedWriteRes<[SKXPort23]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup89], (instregex "LD_F(32|64|80)m")>;
-def: InstRW<[SKXWriteResGroup89], (instrs VBROADCASTF128,
-                                          VBROADCASTI128,
+def: InstRW<[SKXWriteResGroup89], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm,
                                           VBROADCASTSDYrm,
                                           VBROADCASTSSYrm,
                                           VMOVDDUPYrm,
@@ -1379,12 +1381,12 @@ def SKXWriteResGroup97 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let NumMicroOps = 3;
   let ReleaseAtCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2W128rr",
-                                             "VPERMI2W256rr",
-                                             "VPERMI2Wrr",
-                                             "VPERMT2W128rr",
-                                             "VPERMT2W256rr",
-                                             "VPERMT2Wrr")>;
+def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2WZ128rr",
+                                             "VPERMI2WZ256rr",
+                                             "VPERMI2WZrr",
+                                             "VPERMT2WZ128rr",
+                                             "VPERMT2WZ256rr",
+                                             "VPERMT2WZrr")>;
 
 def SKXWriteResGroup99 : SchedWriteRes<[SKXPort23,SKXPort0156]> {
   let Latency = 7;
@@ -1675,14 +1677,14 @@ def: InstRW<[SKXWriteResGroup136], (instregex "VALIGN(D|Q)Z128rm(b?)i",
                                               "VFPCLASSSDZrm(b?)",
                                               "VFPCLASSSSZrm(b?)",
                                               "(V?)PCMPGTQrm",
-                                              "VPERMI2D128rm(b?)",
-                                              "VPERMI2PD128rm(b?)",
-                                              "VPERMI2PS128rm(b?)",
-                                              "VPERMI2Q128rm(b?)",
-                                              "VPERMT2D128rm(b?)",
-                                              "VPERMT2PD128rm(b?)",
-                                              "VPERMT2PS128rm(b?)",
-                                              "VPERMT2Q128rm(b?)",
+                                              "VPERMI2DZ128rm(b?)",
+                                              "VPERMI2PDZ128rm(b?)",
+                                              "VPERMI2PSZ128rm(b?)",
+                                              "VPERMI2QZ128rm(b?)",
+                                              "VPERMT2DZ128rm(b?)",
+                                              "VPERMT2PDZ128rm(b?)",
+                                              "VPERMT2PSZ128rm(b?)",
+                                              "VPERMT2QZ128rm(b?)",
                                               "VPMAXSQZ128rm(b?)",
                                               "VPMAXUQZ128rm(b?)",
                                               "VPMINSQZ128rm(b?)",
@@ -1983,8 +1985,8 @@ def SKXWriteResGroup183 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let NumMicroOps = 4;
   let ReleaseAtCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup183], (instregex "VPERMI2W128rm(b?)",
-                                              "VPERMT2W128rm(b?)")>;
+def: InstRW<[SKXWriteResGroup183], (instregex "VPERMI2WZ128rm(b?)",
+                                              "VPERMT2WZ128rm(b?)")>;
 
 def SKXWriteResGroup187 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 14;
@@ -2010,10 +2012,10 @@ def SKXWriteResGroup189 : SchedWriteRes<[SKXPort5,SKXPort23,SKXPort015]> {
   let NumMicroOps = 4;
   let ReleaseAtCycles = [2,1,1];
 }
-def: InstRW<[SKXWriteResGroup189], (instregex "VPERMI2W256rm(b?)",
-                                              "VPERMI2Wrm(b?)",
-                                              "VPERMT2W256rm(b?)",
-                                              "VPERMT2Wrm(b?)")>;
+def: InstRW<[SKXWriteResGroup189], (instregex "VPERMI2WZ256rm(b?)",
+                                              "VPERMI2WZrm(b?)",
+                                              "VPERMT2WZ256rm(b?)",
+                                              "VPERMT2WZrm(b?)")>;
 
 def SKXWriteResGroup190 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 14;

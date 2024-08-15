@@ -163,10 +163,10 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
 }
 
 INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return real_pthread_join(t, arg);
+  return REAL(pthread_join)(t, arg);
 }
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(char *, index, const char *string, int c)
 ALIAS(WRAP(strchr));

@@ -24,18 +24,19 @@ LOWERINGOPT(Name, Bits, Default)
 /// If true, lower transpose without a runtime call.
 ENUM_LOWERINGOPT(OptimizeTranspose, unsigned, 1, 1)
 
-/// If true, enable polymorphic type lowering feature. Off by default.
-ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 0)
-
-/// If true, lower to High level FIR before lowering to FIR.
-/// Off by default until fully ready.
-ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 0)
+/// If true, lower to High level FIR before lowering to FIR. On by default.
+ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 1)
 
 /// If true, reverse PowerPC native vector element order.
 ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
 
-/// If true, assume external names will be suffixed with an underscore. On by default.
+/// If true, assume external names will be suffixed with an underscore.
+/// On by default.
 ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
+
+/// If true, add nsw flags to loop variable increments.
+/// Off by default.
+ENUM_LOWERINGOPT(NSWOnLoopVarInc, unsigned, 1, 0)
 
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

@@ -2,12 +2,12 @@
 ; RUN: llc -filetype=obj < %s | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; ASM:      .short  4412                    # Record kind: S_COMPILE3
-; ASM-NEXT: .long   83                      # Flags and language
+; ASM-NEXT: .long   19                      # Flags and language
 ; ASM-NEXT: .short  208                     # CPUType
 
 ; OBJ-LABEL: Compile3Sym {
 ; OBJ-NEXT:    Kind: S_COMPILE3 (0x113C)
-; OBJ-NEXT:    Language: Swift (0x53)
+; OBJ-NEXT:    Language: Swift (0x13)
 ; OBJ-NEXT:    Flags [ (0x0)
 ; OBJ-NEXT:    ]
 ; OBJ-NEXT:    Machine: X64 (0xD0)

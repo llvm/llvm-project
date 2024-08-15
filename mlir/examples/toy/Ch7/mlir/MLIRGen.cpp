@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "toy/MLIRGen.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Value.h"
 #include "toy/AST.h"
 #include "toy/Dialect.h"
 
@@ -21,12 +24,24 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
+#include "toy/Lexer.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <numeric>
 #include <optional>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace mlir::toy;
 using namespace toy;
@@ -117,7 +132,7 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(VarDeclExprAST &var, mlir::Value value) {
+  llvm::LogicalResult declare(VarDeclExprAST &var, mlir::Value value) {
     if (symbolTable.count(var.getName()))
       return mlir::failure();
     symbolTable.insert(var.getName(), {value, &var});
@@ -125,7 +140,7 @@ private:
   }
 
   /// Create an MLIR type for the given struct.
-  mlir::LogicalResult mlirGen(StructAST &str) {
+  llvm::LogicalResult mlirGen(StructAST &str) {
     if (structMap.count(str.getName()))
       return emitError(loc(str.loc())) << "error: struct type with name `"
                                        << str.getName() << "' already exists";
@@ -352,7 +367,7 @@ private:
   }
 
   /// Emit a return operation. This will return failure if any generation fails.
-  mlir::LogicalResult mlirGen(ReturnExprAST &ret) {
+  llvm::LogicalResult mlirGen(ReturnExprAST &ret) {
     auto location = loc(ret.loc());
 
     // 'return' takes an optional expression, handle that case here.
@@ -526,7 +541,7 @@ private:
 
   /// Emit a print expression. It emits specific operations for two builtins:
   /// transpose(x) and print(x).
-  mlir::LogicalResult mlirGen(PrintExprAST &call) {
+  llvm::LogicalResult mlirGen(PrintExprAST &call) {
     auto arg = mlirGen(*call.getArg());
     if (!arg)
       return mlir::failure();
@@ -610,7 +625,7 @@ private:
   }
 
   /// Codegen a list of expression, return failure if one of them hit an error.
-  mlir::LogicalResult mlirGen(ExprASTList &blockAST) {
+  llvm::LogicalResult mlirGen(ExprASTList &blockAST) {
     SymbolTableScopeT varScope(symbolTable);
     for (auto &expr : blockAST) {
       // Specific handling for variable declarations, return statement, and

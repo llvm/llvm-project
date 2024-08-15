@@ -282,6 +282,21 @@ TEST(CastingTest, dyn_cast_if_present) {
   EXPECT_FALSE(t4.hasValue);
 }
 
+TEST(CastingTest, isa_check_predicates) {
+  auto IsaFoo = IsaPred<foo>;
+  EXPECT_TRUE(IsaFoo(B1));
+  EXPECT_TRUE(IsaFoo(B2));
+  EXPECT_TRUE(IsaFoo(B3));
+  EXPECT_TRUE(IsaPred<foo>(B4));
+  EXPECT_TRUE((IsaPred<foo, bar>(B4)));
+
+  auto IsaAndPresentFoo = IsaAndPresentPred<foo>;
+  EXPECT_TRUE(IsaAndPresentFoo(B2));
+  EXPECT_TRUE(IsaAndPresentFoo(B4));
+  EXPECT_FALSE(IsaAndPresentPred<foo>(fub()));
+  EXPECT_FALSE((IsaAndPresentPred<foo, bar>(fub())));
+}
+
 std::unique_ptr<derived> newd() { return std::make_unique<derived>(); }
 std::unique_ptr<base> newb() { return std::make_unique<derived>(); }
 

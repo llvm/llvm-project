@@ -31,6 +31,11 @@ public:
   ///     for I in all mutated/inserted instructions:
   ///       !isPreISelGenericOpcode(I.getOpcode())
   virtual bool select(MachineInstr &I) = 0;
+
+  // FIXME: Eliminate dependency on TargetPassConfig for NewPM transition
+  const TargetPassConfig *TPC = nullptr;
+
+  MachineOptimizationRemarkEmitter *MORE = nullptr;
 };
 } // namespace llvm
 

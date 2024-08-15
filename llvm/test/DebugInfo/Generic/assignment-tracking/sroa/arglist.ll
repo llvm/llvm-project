@@ -1,13 +1,14 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that a dbg.assign for a promoted variable becomes a kill location if
 ;; it used an arglist.
 
 ; CHECK: if.then:
-; CHECK-NEXT: dbg.value(metadata i32 poison,
+; CHECK-NEXT: #dbg_value(i32 poison,
 
 ; CHECK: if.else:
-; CHECK-NEXT: dbg.value(metadata i32 2,
+; CHECK-NEXT: #dbg_value(i32 2,
 
 declare i8 @get_i8()
 

@@ -28,7 +28,7 @@ namespace {
 
 class QualifierFixerTest : public FormatTestBase {
 protected:
-  TokenList annotate(llvm::StringRef Code,
+  TokenList annotate(StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
     return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
@@ -305,7 +305,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("Foo inline static const;", "Foo inline const static;", Style);
   verifyFormat("Foo inline static const;", Style);
 
-  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A::*;",
+  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A:: *;",
                "volatile const Foo<volatile T>::Bar<const Type, 5> A::*;",
                Style);
 
@@ -345,13 +345,20 @@ TEST_F(QualifierFixerTest, RightQualifier) {
       "bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args) {",
       Style);
   verifyFormat("Foo<Foo<int> const> P;", "Foo<const Foo<int>> P;", Style);
-  verifyFormat("Foo<Foo<int> const> P;\n", "Foo<const Foo<int>> P;\n", Style);
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
 
   verifyFormat("auto const i = 0;", "const auto i = 0;", Style);
   verifyFormat("auto const &ir = i;", "const auto &ir = i;", Style);
   verifyFormat("auto const *ip = &i;", "const auto *ip = &i;", Style);
+
+  verifyFormat("void f(Concept auto const &x);",
+               "void f(const Concept auto &x);", Style);
+  verifyFormat("void f(std::integral auto const &x);",
+               "void f(const std::integral auto &x);", Style);
+
+  verifyFormat("auto lambda = [] { int const i = 0; };",
+               "auto lambda = [] { const int i = 0; };", Style);
 
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
@@ -516,14 +523,15 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("const INTPTR a;", Style);
 
   // Pointers to members
-  verifyFormat("int S::*a;", Style);
-  verifyFormat("int const S::*a;", "const int S:: *a;", Style);
-  verifyFormat("int const S::*const a;", "const int S::* const a;", Style);
-  verifyFormat("int A::*const A::*p1;", Style);
-  verifyFormat("float (C::*p)(int);", Style);
-  verifyFormat("float (C::*const p)(int);", Style);
-  verifyFormat("float (C::*p)(int) const;", Style);
-  verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
+  verifyFormat("int S:: *a;", Style);
+  verifyFormat("int const S:: *a;", "const int S:: *a;", Style);
+  verifyFormat("int const S:: *const a;", "const int S::* const a;", Style);
+  verifyFormat("int A:: *const A:: *p1;", Style);
+  verifyFormat("float (C:: *p)(int);", Style);
+  verifyFormat("float (C:: *const p)(int);", Style);
+  verifyFormat("float (C:: *p)(int) const;", Style);
+  verifyFormat("float const (C:: *p)(int);", "const float (C::*p)(int);",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {
@@ -653,6 +661,14 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const auto i = 0;", "auto const i = 0;", Style);
   verifyFormat("const auto &ir = i;", "auto const &ir = i;", Style);
   verifyFormat("const auto *ip = &i;", "auto const *ip = &i;", Style);
+
+  verifyFormat("void f(const Concept auto &x);",
+               "void f(Concept auto const &x);", Style);
+  verifyFormat("void f(const std::integral auto &x);",
+               "void f(std::integral auto const &x);", Style);
+
+  verifyFormat("auto lambda = [] { const int i = 0; };",
+               "auto lambda = [] { int const i = 0; };", Style);
 
   verifyFormat("Foo<const Foo<int>> P;\n#if 0\n#else\n#endif",
                "Foo<Foo<int> const> P;\n#if 0\n#else\n#endif", Style);
@@ -815,14 +831,15 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("INTPTR const a;", Style);
 
   // Pointers to members
-  verifyFormat("int S::*a;", Style);
-  verifyFormat("const int S::*a;", "int const S:: *a;", Style);
-  verifyFormat("const int S::*const a;", "int const S::* const a;", Style);
-  verifyFormat("int A::*const A::*p1;", Style);
-  verifyFormat("float (C::*p)(int);", Style);
-  verifyFormat("float (C::*const p)(int);", Style);
-  verifyFormat("float (C::*p)(int) const;", Style);
-  verifyFormat("const float (C::*p)(int);", "float const (C::*p)(int);", Style);
+  verifyFormat("int S:: *a;", Style);
+  verifyFormat("const int S:: *a;", "int const S:: *a;", Style);
+  verifyFormat("const int S:: *const a;", "int const S::* const a;", Style);
+  verifyFormat("int A:: *const A:: *p1;", Style);
+  verifyFormat("float (C:: *p)(int);", Style);
+  verifyFormat("float (C:: *const p)(int);", Style);
+  verifyFormat("float (C:: *p)(int) const;", Style);
+  verifyFormat("const float (C:: *p)(int);", "float const (C::*p)(int);",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
@@ -1038,78 +1055,78 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_constexpr);
   ConfiguredTokens.push_back(tok::kw_friend);
 
-  auto Tokens = annotate(
+  TestLexer lexer{Allocator, Buffers};
+  const auto LangOpts = getFormattingLangOpts();
+
+  auto Tokens = lexer.lex(
       "const static inline auto restrict int double long constexpr friend");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[0], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[1], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[2], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[3], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[4], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[5], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[6], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[7], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[8], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[9], ConfiguredTokens));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[0], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[1], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[2], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[3], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[4], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[5], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[6], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[7], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[8], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[9], ConfiguredTokens, LangOpts));
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[0]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[1]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[2]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[3]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[4]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[5]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[6]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[7]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[8]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[0], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[1], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[2], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[3], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[4], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[5], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[6], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[7], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[8], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[9], LangOpts));
 
-  auto NotTokens = annotate("for while do Foo Bar ");
-
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[0], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[1], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[2], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[3], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[4], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[5], ConfiguredTokens));
+  auto NotTokens = lexer.lex("for while do Foo Bar ");
+  ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0]));
+      isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[1]));
+      isConfiguredQualifierOrType(NotTokens[1], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[2]));
+      isConfiguredQualifierOrType(NotTokens[2], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3]));
+      isConfiguredQualifierOrType(NotTokens[3], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4]));
+      isConfiguredQualifierOrType(NotTokens[4], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5]));
+      isConfiguredQualifierOrType(NotTokens[5], ConfiguredTokens, LangOpts));
+
+  EXPECT_FALSE(isQualifierOrType(NotTokens[0], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[1], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[2], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[3], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[4], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[5], LangOpts));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
 
   auto Tokens = annotate("INT INTPR Foo int");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[0]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[1]));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[2]));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[3]));
+  EXPECT_TRUE(isPossibleMacro(Tokens[0]));
+  EXPECT_TRUE(isPossibleMacro(Tokens[1]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[3]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {
@@ -1157,6 +1174,19 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
   // Don't move qualifiers to the right for aestethics only.
   verifyFormat("inline const static Foo;", Style);
   verifyFormat("const inline static Foo;", Style);
+}
+
+TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "inline", "type"};
+
+  verifyFormat("inline\n"
+               "#if FOO\n"
+               "    constexpr\n"
+               "#endif\n"
+               "    int i = 0;",
+               Style);
 }
 
 TEST_F(QualifierFixerTest, UnsignedQualifier) {
@@ -1254,17 +1284,17 @@ TEST_F(QualifierFixerTest, DisableRegions) {
   ReplacementCount = 0;
   verifyFormat("// clang-format off\n"
                "int const inline static a = 0;\n"
-               "// clang-format on\n",
+               "// clang-format on",
                Style);
   EXPECT_EQ(ReplacementCount, 0);
   verifyFormat("// clang-format off\n"
                "int const inline static a = 0;\n"
                "// clang-format on\n"
-               "inline static const int a = 0;\n",
+               "inline static const int a = 0;",
                "// clang-format off\n"
                "int const inline static a = 0;\n"
                "// clang-format on\n"
-               "int const inline static a = 0;\n",
+               "int const inline static a = 0;",
                Style);
 }
 

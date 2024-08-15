@@ -311,7 +311,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
          "use remapTpiWithGHashes when ghash is enabled");
 
   CVTypeArray types;
-  BinaryStreamReader reader(file->debugTypes, support::little);
+  BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
 
   // When dealing with PCH.OBJ, some indices were already merged.
@@ -465,7 +465,7 @@ static bool equalsPath(StringRef path1, StringRef path2) {
 #if defined(_WIN32)
   return path1.equals_insensitive(path2);
 #else
-  return path1.equals(path2);
+  return path1 == path2;
 #endif
 }
 
@@ -588,7 +588,7 @@ void TpiSource::loadGHashes() {
     ownedGHashes = false;
   } else {
     CVTypeArray types;
-    BinaryStreamReader reader(file->debugTypes, support::little);
+    BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
     cantFail(reader.readArray(types, reader.getLength()));
     assignGHashesFromVector(GloballyHashedType::hashTypes(types));
   }

@@ -11,9 +11,10 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // A single-use lock to allow only a single thread to print the assertion.
 static cpp::Atomic<uint32_t> lock = 0;
@@ -33,7 +34,8 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
   // Only a single line should be printed if an assertion is hit.
   if (gpu::is_first_lane(mask))
     LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
+  gpu::sync_lane(mask);
   LIBC_NAMESPACE::abort();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

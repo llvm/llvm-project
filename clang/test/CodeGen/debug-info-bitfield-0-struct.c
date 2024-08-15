@@ -101,8 +101,10 @@ struct None_B {
   int y : 4;
 };
 
-struct None_C {
-  // BOTH-DAG: ![[NONE_C:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "None_C", file: !{{[0-9]+}}, line: {{[0-9]+}}, size: 32, elements: ![[NONE_C_ELEMENTS:[0-9]+]])
+// AMDGCN does not do unaligned access cheaply, so the bitfield access units
+// would remain single bytes, without the aligned attribure
+struct __attribute__((aligned(4))) None_C {
+  // BOTH-DAG: ![[NONE_C:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "None_C", file: !{{[0-9]+}}, line: {{[0-9]+}}, size: 32, align: 32, elements: ![[NONE_C_ELEMENTS:[0-9]+]])
   // BOTH-DAG: ![[NONE_C_ELEMENTS]] = !{![[NONE_C_X:[0-9]+]], ![[NONE_C_Y:[0-9]+]], ![[NONE_C_A:[0-9]+]], ![[NONE_C_B:[0-9]+]]}
   // BOTH-DAG: ![[NONE_C_X]] = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: ![[NONE_C]], file: !{{[0-9]+}}, line: {{[0-9]+}}, baseType: !{{[0-9]+}}, size: 8, flags: DIFlagBitField, extraData: i64 0)
   // BOTH-DAG: ![[NONE_C_Y]] = !DIDerivedType(tag: DW_TAG_member, name: "y", scope: ![[NONE_C]], file: !{{[0-9]+}}, line: {{[0-9]+}}, baseType: !{{[0-9]+}}, size: 8, offset: 8, flags: DIFlagBitField, extraData: i64 0)

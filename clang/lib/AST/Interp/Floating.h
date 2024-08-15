@@ -69,7 +69,7 @@ public:
   APSInt toAPSInt(unsigned NumBits = 0) const {
     return APSInt(F.bitcastToAPInt());
   }
-  APValue toAPValue() const { return APValue(F); }
+  APValue toAPValue(const ASTContext &) const { return APValue(F); }
   void print(llvm::raw_ostream &OS) const {
     // Can't use APFloat::print() since it appends a newline.
     SmallVector<char, 16> Buffer;
@@ -93,6 +93,7 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isSignaling() const { return F.isSignaling(); }
   bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
   bool isNormal() const { return F.isNormal(); }

@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   InstCombine
   Object
   OrcJIT
+  Passes
   RuntimeDyld
   ScalarOpts
   Support
@@ -15,5 +16,3 @@ set(LLVM_LINK_COMPONENTS
 add_kaleidoscope_chapter(Kaleidoscope-Ch7
   toy.cpp
   )
-
-export_executable_symbols(Kaleidoscope-Ch7)

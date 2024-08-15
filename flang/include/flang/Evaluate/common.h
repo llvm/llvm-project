@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/enum-set.h"
@@ -19,6 +20,7 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <set>
 #include <string>
 
 namespace Fortran::semantics {
@@ -126,9 +128,9 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   return false; // silence g++ warning
 }
 
-ENUM_CLASS(
-    RealFlag, Overflow, DivideByZero, InvalidArgument, Underflow, Inexact)
-
+// These are ordered like the bits in a common fenv.h header file.
+ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
+    Inexact)
 using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 template <typename A> struct ValueWithRealFlags {
@@ -215,22 +217,31 @@ template <typename A> class Expr;
 class FoldingContext {
 public:
   FoldingContext(const common::IntrinsicTypeDefaultKinds &d,
-      const IntrinsicProcTable &t, const TargetCharacteristics &c)
-      : defaults_{d}, intrinsics_{t}, targetCharacteristics_{c} {}
+      const IntrinsicProcTable &t, const TargetCharacteristics &c,
+      const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
+      : defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const parser::ContextualMessages &m,
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t,
-      const TargetCharacteristics &c)
-      : messages_{m}, defaults_{d}, intrinsics_{t}, targetCharacteristics_{c} {}
+      const TargetCharacteristics &c, const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
+      : messages_{m}, defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const FoldingContext &that)
       : messages_{that.messages_}, defaults_{that.defaults_},
         intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
       : messages_{m}, defaults_{that.defaults_}, intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
+        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
 
   parser::ContextualMessages &messages() { return messages_; }
   const parser::ContextualMessages &messages() const { return messages_; }
@@ -242,9 +253,14 @@ public:
   const TargetCharacteristics &targetCharacteristics() const {
     return targetCharacteristics_;
   }
-  bool inModuleFile() const { return inModuleFile_; }
-  FoldingContext &set_inModuleFile(bool yes = true) {
-    inModuleFile_ = yes;
+  const common::LanguageFeatureControl &languageFeatures() const {
+    return languageFeatures_;
+  }
+  std::optional<parser::CharBlock> moduleFileName() const {
+    return moduleFileName_;
+  }
+  FoldingContext &set_moduleFileName(std::optional<parser::CharBlock> n) {
+    moduleFileName_ = n;
     return *this;
   }
 
@@ -264,14 +280,20 @@ public:
     return common::ScopedSet(pdtInstance_, nullptr);
   }
 
+  parser::CharBlock SaveTempName(std::string &&name) {
+    return {*tempNames_.emplace(std::move(name)).first};
+  }
+
 private:
   parser::ContextualMessages messages_;
   const common::IntrinsicTypeDefaultKinds &defaults_;
   const IntrinsicProcTable &intrinsics_;
   const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
-  bool inModuleFile_{false};
+  std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
+  const common::LanguageFeatureControl &languageFeatures_;
+  std::set<std::string> &tempNames_;
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);

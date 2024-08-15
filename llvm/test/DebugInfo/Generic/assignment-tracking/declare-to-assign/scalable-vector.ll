@@ -1,9 +1,10 @@
 ; RUN: opt -passes=declare-to-assign %s -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign %s -S | FileCheck %s
 
 ;; Check declare-to-assign skips scalable vectors for now. i.e. do not replace
 ;; the dbg.declare with a dbg.assign intrinsic.
 
-; CHECK: call void @llvm.dbg.declare(metadata ptr %c
+; CHECK: #dbg_declare(ptr %c
 
 define dso_local void @b() !dbg !9 {
 entry:

@@ -4,7 +4,7 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64e-apple-ios13.0"
   
-  %struct.widget = type { i64, i64, i32, i32, i64, i64, i64, i64, i64, i32, i32, i32, i16, i32, %struct.snork*, %struct.zot, %struct.zot, %struct.zot, %struct.zot, %struct.zot, i64, i64, i64, i32, i64, i32, i32, i32, i8*, %struct.baz, %struct.baz, i64, i64, %struct.snork*, %struct.zot, i32, i32, i32, i32, i32, i32, i32, [32 x i8], i64, i64, %struct.wombat, i32, i64, i64, i64, i64 }
+  %struct.widget = type { i64, i64, i32, i32, i64, i64, i64, i64, i64, i32, i32, i32, i16, i32, ptr, %struct.zot, %struct.zot, %struct.zot, %struct.zot, %struct.zot, i64, i64, i64, i32, i64, i32, i32, i32, ptr, %struct.baz, %struct.baz, i64, i64, ptr, %struct.zot, i32, i32, i32, i32, i32, i32, i32, [32 x i8], i64, i64, %struct.wombat, i32, i64, i64, i64, i64 }
   %struct.baz = type { [4 x i32] }
   %struct.snork = type { i32, i32, [1 x %struct.spam] }
   %struct.spam = type { %struct.baz, i32, i32 }
@@ -12,59 +12,59 @@
   %struct.wombat = type { [2 x i32] }
   %struct.wombat.0 = type { [200 x i32] }
   
-  @__stack_chk_guard = external global i8*
+  @__stack_chk_guard = external global ptr
   
   ; Function Attrs: noredzone ssp
   define hidden void @with_noredzone_80bytes() #0 {
   bb:
-    %StackGuardSlot = alloca i8*, align 8
-    %0 = call i8* @llvm.stackguard()
-    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %StackGuardSlot = alloca ptr, align 8
+    %0 = call ptr @llvm.stackguard()
+    call void @llvm.stackprotector(ptr %0, ptr %StackGuardSlot)
     %tmp = alloca %struct.widget, align 16
-    %tmp1 = alloca %struct.wombat.0*, align 8
-    %tmp2 = alloca %struct.wombat.0*, align 8
-    %tmp3 = alloca %struct.wombat.0*, align 8
-    %tmp4 = alloca %struct.wombat.0*, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    %tmp1 = alloca ptr, align 8
+    %tmp2 = alloca ptr, align 8
+    %tmp3 = alloca ptr, align 8
+    %tmp4 = alloca ptr, align 8
+    store ptr null, ptr %tmp3, align 8
+    store ptr null, ptr %tmp4, align 8
     ret void
   }
 
   define hidden void @with_redzone_480bytes() #2 {
   bb:
-    %StackGuardSlot = alloca i8*, align 8
-    %0 = call i8* @llvm.stackguard()
-    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %StackGuardSlot = alloca ptr, align 8
+    %0 = call ptr @llvm.stackguard()
+    call void @llvm.stackprotector(ptr %0, ptr %StackGuardSlot)
     %tmp = alloca %struct.widget, align 16
-    %tmp1 = alloca %struct.wombat.0*, align 8
-    %tmp2 = alloca %struct.wombat.0*, align 8
-    %tmp3 = alloca %struct.wombat.0*, align 8
-    %tmp4 = alloca %struct.wombat.0*, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    %tmp1 = alloca ptr, align 8
+    %tmp2 = alloca ptr, align 8
+    %tmp3 = alloca ptr, align 8
+    %tmp4 = alloca ptr, align 8
+    store ptr null, ptr %tmp3, align 8
+    store ptr null, ptr %tmp4, align 8
     ret void
   }
 
   define hidden void @with_noredzone_no_mem_between() #0 {
   bb:
-    %StackGuardSlot = alloca i8*, align 8
-    %0 = call i8* @llvm.stackguard()
-    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %StackGuardSlot = alloca ptr, align 8
+    %0 = call ptr @llvm.stackguard()
+    call void @llvm.stackprotector(ptr %0, ptr %StackGuardSlot)
     %tmp = alloca %struct.widget, align 16
-    %tmp1 = alloca %struct.wombat.0*, align 8
-    %tmp2 = alloca %struct.wombat.0*, align 8
-    %tmp3 = alloca %struct.wombat.0*, align 8
-    %tmp4 = alloca %struct.wombat.0*, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp3, align 8
-    store %struct.wombat.0* null, %struct.wombat.0** %tmp4, align 8
+    %tmp1 = alloca ptr, align 8
+    %tmp2 = alloca ptr, align 8
+    %tmp3 = alloca ptr, align 8
+    %tmp4 = alloca ptr, align 8
+    store ptr null, ptr %tmp3, align 8
+    store ptr null, ptr %tmp4, align 8
     ret void
   }
 
   ; Function Attrs: nofree nosync nounwind willreturn
-  declare i8* @llvm.stackguard() #1
+  declare ptr @llvm.stackguard() #1
   
   ; Function Attrs: nofree nosync nounwind willreturn
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { noredzone ssp "frame-pointer"="non-leaf" }
   attributes #1 = { nofree nosync nounwind willreturn }

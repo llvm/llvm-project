@@ -155,8 +155,14 @@ public:
   /// Returns if the current range is empty.
   bool empty() const { return size() == 0; }
 
+  /// Explicit conversion to an OperandRange.
+  OperandRange getAsOperandRange() const;
+
   /// Allow implicit conversion to an OperandRange.
   operator OperandRange() const;
+
+  /// Allow implicit conversion to a MutableArrayRef.
+  operator MutableArrayRef<OpOperand>() const;
 
   /// Returns the owning operation.
   Operation *getOwner() const { return owner; }

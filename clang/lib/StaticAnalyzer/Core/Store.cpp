@@ -402,7 +402,7 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
   Loc BaseL = Base.castAs<Loc>();
   const SubRegion* BaseR = nullptr;
 
-  switch (BaseL.getSubKind()) {
+  switch (BaseL.getKind()) {
   case loc::MemRegionValKind:
     BaseR = cast<SubRegion>(BaseL.castAs<loc::MemRegionVal>().getRegion());
     break;
@@ -472,7 +472,17 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   const auto *ElemR = dyn_cast<ElementRegion>(BaseRegion);
 
   // Convert the offset to the appropriate size and signedness.
-  Offset = svalBuilder.convertToArrayIndex(Offset).castAs<NonLoc>();
+  auto Off = svalBuilder.convertToArrayIndex(Offset).getAs<NonLoc>();
+  if (!Off) {
+    // Handle cases when LazyCompoundVal is used for an array index.
+    // Such case is possible if code does:
+    //   char b[4];
+    //   a[__builtin_bitcast(int, b)];
+    // Return UnknownVal, since we cannot model it.
+    return UnknownVal();
+  }
+
+  Offset = Off.value();
 
   if (!ElemR) {
     // If the base region is not an ElementRegion, create one.

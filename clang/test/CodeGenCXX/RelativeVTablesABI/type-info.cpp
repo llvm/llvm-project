@@ -1,8 +1,6 @@
 // Check typeid() + type_info
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
-
-// CHECK: %"class.std::type_info" = type { ptr, ptr }
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
 
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
@@ -37,7 +35,7 @@
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load ptr, ptr %a
 // CHECK-NEXT:   [[type_info_ptr:%[0-9]+]] = tail call ptr @llvm.load.relative.i32(ptr [[vtable]], i32 -4)
 // CHECK-NEXT:   [[type_info_ptr2:%[0-9]+]] = load ptr, ptr [[type_info_ptr]], align 8
-// CHECK-NEXT:   [[name_ptr:%[a-z0-9._]+]] = getelementptr inbounds %"class.std::type_info", ptr [[type_info_ptr2]], i64 0, i32 1
+// CHECK-NEXT:   [[name_ptr:%[a-z0-9._]+]] = getelementptr inbounds nuw i8, ptr [[type_info_ptr2]], i64 8
 // CHECK-NEXT:   [[name:%[0-9]+]] = load ptr, ptr [[name_ptr]], align 8
 // CHECK-NEXT:   [[eq:%[a-z0-9.]+]] = icmp eq ptr [[name]], @_ZTS1B
 // CHECK-NEXT:   ret i1 [[eq]]

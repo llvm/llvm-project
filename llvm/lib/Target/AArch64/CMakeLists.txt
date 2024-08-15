@@ -42,6 +42,7 @@ add_llvm_target(AArch64CodeGen
   GISel/AArch64RegisterBankInfo.cpp
   AArch64A57FPLoadBalancing.cpp
   AArch64AdvSIMDScalarPass.cpp
+  AArch64Arm64ECCallLowering.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchTargets.cpp
   AArch64CallingConvention.cpp
@@ -71,6 +72,7 @@ add_llvm_target(AArch64CodeGen
   AArch64MIPeepholeOpt.cpp
   AArch64MCInstLower.cpp
   AArch64PointerAuth.cpp
+  AArch64PostCoalescerPass.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
@@ -109,6 +111,7 @@ add_llvm_target(AArch64CodeGen
   Target
   TargetParser
   TransformUtils
+  Vectorize
 
   ADD_TO_COMPONENT
   AArch64

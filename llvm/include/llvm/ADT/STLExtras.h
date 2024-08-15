@@ -21,7 +21,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -406,32 +405,23 @@ public:
   }
 };
 
-/// Helper to determine if type T has a member called rbegin().
-template <typename Ty> class has_rbegin_impl {
-  using yes = char[1];
-  using no = char[2];
+namespace detail {
+template <typename Range>
+using check_has_free_function_rbegin =
+    decltype(adl_rbegin(std::declval<Range &>()));
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-/// Metafunction to determine if T& or T has a member called rbegin().
-template <typename Ty>
-struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
+template <typename Range>
+static constexpr bool HasFreeFunctionRBegin =
+    is_detected<check_has_free_function_rbegin, Range>::value;
+} // namespace detail
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
-  if constexpr (has_rbegin<ContainerTy>::value)
-    return make_range(C.rbegin(), C.rend());
+  if constexpr (detail::HasFreeFunctionRBegin<ContainerTy>)
+    return make_range(adl_rbegin(C), adl_rend(C));
   else
-    return make_range(std::make_reverse_iterator(std::end(C)),
-                      std::make_reverse_iterator(std::begin(C)));
+    return make_range(std::make_reverse_iterator(adl_end(C)),
+                      std::make_reverse_iterator(adl_begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.
@@ -1291,18 +1281,6 @@ public:
     return (*this)[size() - 1];
   }
 
-  /// Compare this range with another.
-  template <typename OtherT>
-  friend bool operator==(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-  }
-  template <typename OtherT>
-  friend bool operator!=(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return !(lhs == rhs);
-  }
-
   /// Return the size of this range.
   size_t size() const { return count; }
 
@@ -1365,6 +1343,23 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
+/// Compare this range with another.
+/// FIXME: Make me a member function instead of friend when it works in C++20.
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return !(lhs == rhs);
+}
 } // end namespace detail
 
 /// This class provides an implementation of a range of
@@ -1941,6 +1936,19 @@ auto partition(R &&Range, UnaryPredicate P) {
   return std::partition(adl_begin(Range), adl_end(Range), P);
 }
 
+/// Provide wrappers to std::binary_search which take ranges instead of having
+/// to pass begin/end explicitly.
+template <typename R, typename T> auto binary_search(R &&Range, T &&Value) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value));
+}
+
+template <typename R, typename T, typename Compare>
+auto binary_search(R &&Range, T &&Value, Compare C) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value), C);
+}
+
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename T> auto lower_bound(R &&Range, T &&Value) {
@@ -1967,6 +1975,22 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+template <typename R> auto min_element(R &&Range) {
+  return std::min_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
+  return std::min_element(adl_begin(Range), adl_end(Range), C);
+}
+
+template <typename R> auto max_element(R &&Range) {
+  return std::max_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
+  return std::max_element(adl_begin(Range), adl_end(Range), C);
+}
+
 template <typename R>
 void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));
@@ -1990,11 +2014,23 @@ auto unique(Range &&R, Predicate P) {
   return std::unique(adl_begin(R), adl_end(R), P);
 }
 
+/// Wrapper function around std::unique to allow calling unique on a
+/// container without having to specify the begin/end iterators.
+template <typename Range> auto unique(Range &&R) {
+  return std::unique(adl_begin(R), adl_end(R));
+}
+
 /// Wrapper function around std::equal to detect if pair-wise elements between
 /// two ranges are the same.
 template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
   return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
                     adl_end(RRange));
+}
+
+template <typename L, typename R, typename BinaryPredicate>
+bool equal(L &&LRange, R &&RRange, BinaryPredicate P) {
+  return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
+                    adl_end(RRange), P);
 }
 
 /// Returns true if all elements in Range are equal or when the Range is empty.
@@ -2026,16 +2062,24 @@ void erase_if(Container &C, UnaryPredicate P) {
 ///
 /// C.erase(remove(C.begin(), C.end(), V), C.end());
 template <typename Container, typename ValueType>
-void erase_value(Container &C, ValueType V) {
+void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-/// Wrapper function to append a range to a container.
+/// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
-inline void append_range(Container &C, Range &&R) {
+void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
+}
+
+/// Appends all `Values` to container `C`.
+template <typename Container, typename... Args>
+void append_values(Container &C, Args &&...Values) {
+  C.reserve(range_size(C) + sizeof...(Args));
+  // Append all values one by one.
+  ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
@@ -2098,7 +2142,7 @@ template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
               !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
-  interleave(c.begin(), c.end(), each_fn, between_fn);
+  interleave(adl_begin(c), adl_end(c), each_fn, between_fn);
 }
 
 /// Overload of interleave for the common case of string separator.
@@ -2106,7 +2150,7 @@ template <typename Container, typename UnaryFunctor, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
 inline void interleave(const Container &c, StreamT &os, UnaryFunctor each_fn,
                        const StringRef &separator) {
-  interleave(c.begin(), c.end(), each_fn, [&] { os << separator; });
+  interleave(adl_begin(c), adl_end(c), each_fn, [&] { os << separator; });
 }
 template <typename Container, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
@@ -2322,7 +2366,7 @@ public:
   detail::index_iterator end() const { return {End}; }
 };
 
-/// Given two or more input ranges, returns a new range whose values are are
+/// Given two or more input ranges, returns a new range whose values are
 /// tuples (A, B, C, ...), such that A is the 0-based index of the item in the
 /// sequence, and B, C, ..., are the values from the original input ranges. All
 /// input ranges are required to have equal lengths. Note that the returned

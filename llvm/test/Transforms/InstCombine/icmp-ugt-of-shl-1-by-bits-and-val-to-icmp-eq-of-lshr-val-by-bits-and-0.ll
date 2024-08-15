@@ -38,13 +38,13 @@ define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
   ret <2 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef(
+define <3 x i1> @p2_vec_poison(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
-  %t0 = shl <3 x i8> <i8 1, i8 undef, i8 1>, %bits
+  %t0 = shl <3 x i8> <i8 1, i8 poison, i8 1>, %bits
   %r = icmp ugt <3 x i8> %t0, %val
   ret <3 x i1> %r
 }

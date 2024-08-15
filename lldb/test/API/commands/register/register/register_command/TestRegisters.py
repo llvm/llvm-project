@@ -618,6 +618,34 @@ class RegisterCommandsTestCase(TestBase):
         # This has an alternative name according to the ABI.
         self.expect("register info x30", substrs=["Name: lr (x30)"])
 
+    @skipIfXmlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
+    @skipIf(archs=no_match(["aarch64"]))
+    def test_register_read_fields(self):
+        """Test that when debugging a live process, we see the fields of certain
+        registers."""
+        self.build()
+        self.common_setup()
+
+        # N/Z/C/V bits will always be present, so check only for those.
+        self.expect(
+            "register read cpsr",
+            patterns=["= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
+        )
+        self.expect(
+            "register read fpsr", patterns=["= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
+        )
+        # AHP/DN/FZ always present, others may vary.
+        self.expect(
+            "register read fpcr", patterns=["= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
+        )
+
+        # Should get enumerator descriptions for RMode.
+        self.expect(
+            "register info fpcr",
+            substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"],
+        )
+
     @skipUnlessPlatform(["linux"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_fs_gs_base(self):

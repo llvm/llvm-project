@@ -44,7 +44,7 @@ namespace llvm {
   /// AtomicExpandPass - At IR level this pass replace atomic instructions with
   /// __atomic_* library calls, or target specific instruction which implement the
   /// same semantics in a way which better fits the target backend.
-  FunctionPass *createAtomicExpandPass();
+  FunctionPass *createAtomicExpandLegacyPass();
 
   /// createUnreachableBlockEliminationPass - The LLVM code generator does not
   /// work well with unreachable basic blocks (what live ranges make sense for a
@@ -64,6 +64,8 @@ namespace llvm {
   /// createBasicBlockSections Pass - This pass assigns sections to machine
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();
+
+  MachineFunctionPass *createBasicBlockPathCloningPass();
 
   /// createMachineFunctionSplitterPass - This pass splits machine functions
   /// using profile information.
@@ -91,9 +93,9 @@ namespace llvm {
   MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
                                                       bool AbortOnFailedISel);
 
-  /// createCodeGenPreparePass - Transform the code to expose more pattern
+  /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
   /// matching during instruction selection.
-  FunctionPass *createCodeGenPreparePass();
+  FunctionPass *createCodeGenPrepareLegacyPass();
 
   /// This pass implements generation of target-specific intrinsics to support
   /// handling of complex number arithmetic
@@ -194,24 +196,29 @@ namespace llvm {
   /// This pass reads flow sensitive profile.
   extern char &MIRProfileLoaderPassID;
 
+  // This pass gives undef values a Pseudo Instruction definition for
+  // Instructions to ensure early-clobber is followed when using the greedy
+  // register allocator.
+  extern char &InitUndefID;
+
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///
   FunctionPass *createFastRegisterAllocator();
-  FunctionPass *createFastRegisterAllocator(RegClassFilterFunc F,
+  FunctionPass *createFastRegisterAllocator(RegAllocFilterFunc F,
                                             bool ClearVirtRegs);
 
   /// BasicRegisterAllocation Pass - This pass implements a degenerate global
   /// register allocator using the basic regalloc framework.
   ///
   FunctionPass *createBasicRegisterAllocator();
-  FunctionPass *createBasicRegisterAllocator(RegClassFilterFunc F);
+  FunctionPass *createBasicRegisterAllocator(RegAllocFilterFunc F);
 
   /// Greedy register allocation pass - This pass implements a global register
   /// allocator for optimized builds.
   ///
   FunctionPass *createGreedyRegisterAllocator();
-  FunctionPass *createGreedyRegisterAllocator(RegClassFilterFunc F);
+  FunctionPass *createGreedyRegisterAllocator(RegAllocFilterFunc F);
 
   /// PBQPRegisterAllocation Pass - This pass implements the Partitioned Boolean
   /// Quadratic Prograaming (PBQP) based register allocator.
@@ -321,10 +328,6 @@ namespace llvm {
   /// prior to output, and importantly after all CFG transformations (such as
   /// branch folding).
   extern char &GCMachineCodeAnalysisID;
-
-  /// Creates a pass to print GC metadata.
-  ///
-  FunctionPass *createGCInfoPrinter(raw_ostream &OS);
 
   /// MachineCSE - This pass performs global CSE on machine instructions.
   extern char &MachineCSEID;
@@ -446,9 +449,6 @@ namespace llvm {
   /// LiveDebugValues pass
   extern char &LiveDebugValuesID;
 
-  /// createJumpInstrTables - This pass creates jump-instruction tables.
-  ModulePass *createJumpInstrTablesPass();
-
   /// InterleavedAccess Pass - This pass identifies and matches interleaved
   /// memory accesses to target specific intrinsics.
   ///
@@ -476,7 +476,8 @@ namespace llvm {
   ///
   Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
                               bool OnlyOptimizeForSize = false,
-                              bool MergeExternalByDefault = false);
+                              bool MergeExternalByDefault = false,
+                              bool MergeConstantByDefault = false);
 
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.
@@ -513,11 +514,6 @@ namespace llvm {
   // the corresponding function in a vector library (e.g., SVML, libmvec).
   FunctionPass *createReplaceWithVeclibLegacyPass();
 
-  /// This pass expands the vector predication intrinsics into unpredicated
-  /// instructions with selects or just the explicit vector length into the
-  /// predicate mask.
-  FunctionPass *createExpandVectorPredicationPass();
-
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeDivRemPass();
 
@@ -525,7 +521,7 @@ namespace llvm {
   FunctionPass *createExpandLargeFpConvertPass();
 
   // This pass expands memcmp() to load/stores.
-  FunctionPass *createExpandMemCmpPass();
+  FunctionPass *createExpandMemCmpLegacyPass();
 
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();
@@ -586,9 +582,6 @@ namespace llvm {
   /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
-
-  /// The pass insert tile config intrinsics for AMX fast register allocation.
-  FunctionPass *createX86PreAMXConfigPass();
 
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.

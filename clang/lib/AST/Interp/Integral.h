@@ -88,6 +88,9 @@ public:
   }
 
   Integral operator-() const { return Integral(-V); }
+  Integral operator-(const Integral &Other) const {
+    return Integral(V - Other.V);
+  }
   Integral operator~() const { return Integral(~V); }
 
   template <unsigned DstBits, bool DstSign>
@@ -95,10 +98,10 @@ public:
     return Integral<DstBits, DstSign>(V);
   }
 
-  explicit operator unsigned() const { return V; }
-  explicit operator int64_t() const { return V; }
-  explicit operator uint64_t() const { return V; }
-  explicit operator int32_t() const { return V; }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return V;
+  }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
@@ -109,7 +112,7 @@ public:
     else
       return APSInt(toAPSInt().zextOrTrunc(NumBits), !Signed);
   }
-  APValue toAPValue() const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   Integral<Bits, false> toUnsigned() const {
     return Integral<Bits, false>(*this);

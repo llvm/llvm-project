@@ -13,7 +13,6 @@
 
 #include "../../clang-tidy/ClangTidyCheck.h"
 #include "AST.h"
-#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -26,6 +25,7 @@
 #include "TidyProvider.h"
 #include "support/Context.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -36,7 +36,10 @@
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -341,9 +344,8 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
   }
   for (const auto &R : AST.getMacros().UnknownMacros)
     MacroExpansionPositions.push_back(R.StartOffset);
-  EXPECT_THAT(
-      MacroExpansionPositions,
-      testing::UnorderedElementsAreArray(TestCase.points()));
+  EXPECT_THAT(MacroExpansionPositions,
+              testing::UnorderedElementsAreArray(TestCase.points()));
 }
 
 MATCHER_P(withFileName, Inc, "") { return arg.FileName == Inc; }
@@ -762,6 +764,35 @@ main:
       << "Should not try to build AST for assembly source file";
 }
 
+TEST(ParsedASTTest, PreambleWithDifferentTarget) {
+  constexpr std::string_view kPreambleTarget = "x86_64";
+  // Specifically picking __builtin_va_list as it triggers crashes when
+  // switching to wasm.
+  // It's due to different predefined types in different targets.
+  auto TU = TestTU::withHeaderCode("void foo(__builtin_va_list);");
+  TU.Code = "void bar() { foo(2); }";
+  TU.ExtraArgs.emplace_back("-target");
+  TU.ExtraArgs.emplace_back(kPreambleTarget);
+  const auto Preamble = TU.preamble();
+
+  // Switch target to wasm.
+  TU.ExtraArgs.pop_back();
+  TU.ExtraArgs.emplace_back("wasm32");
+
+  IgnoreDiagnostics Diags;
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI) << "Failed to build compiler invocation";
+
+  auto AST = ParsedAST::build(testPath(TU.Filename), std::move(Inputs),
+                              std::move(CI), {}, Preamble);
+
+  ASSERT_TRUE(AST);
+  // We use the target from preamble, not with the most-recent flags.
+  EXPECT_EQ(AST->getASTContext().getTargetInfo().getTriple().getArchName(),
+            llvm::StringRef(kPreambleTarget));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

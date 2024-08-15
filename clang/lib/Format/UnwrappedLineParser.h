@@ -15,18 +15,8 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
-#include "Encoding.h"
-#include "FormatToken.h"
 #include "Macros.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Regex.h"
-#include <list>
 #include <stack>
-#include <vector>
 
 namespace clang {
 namespace format {
@@ -58,6 +48,9 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
+
+  /// Nesting level of unbraced body of a control statement.
+  unsigned UnbracedBodyLevel = 0;
 
   bool MustBeDeclaration = false;
 
@@ -151,8 +144,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -168,7 +160,7 @@ private:
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();
-  void parseSwitch();
+  void parseSwitch(bool IsExpr);
   void parseNamespace();
   bool parseModuleImport();
   void parseNew();
@@ -243,6 +235,7 @@ private:
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);
   void calculateBraceTypes(bool ExpectClassBody = false);
+  void setPreviousRBraceType(TokenType Type);
 
   // Marks a conditional compilation edge (for example, an '#if', '#ifdef',
   // '#else' or merge conflict marker). If 'Unreachable' is true, assumes
@@ -325,6 +318,8 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
+  bool IsCpp;
+  LangOptions LangOpts;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
@@ -415,11 +410,13 @@ struct UnwrappedLineNode {
   UnwrappedLineNode() : Tok(nullptr) {}
   UnwrappedLineNode(FormatToken *Tok,
                     llvm::ArrayRef<UnwrappedLine> Children = {})
-      : Tok(Tok), Children(Children.begin(), Children.end()) {}
+      : Tok(Tok), Children(Children) {}
 
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;
 };
+
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
 
 } // end namespace format
 } // end namespace clang

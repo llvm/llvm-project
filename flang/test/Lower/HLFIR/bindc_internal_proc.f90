@@ -3,7 +3,7 @@
 ! internal procedures.
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
-!CHECK: func.func @_QFsub1Pfoo(%{{.*}}: i32
+!CHECK: func.func private @_QFsub1Pfoo(%{{.*}}: i32
 subroutine sub1()
   call foo(42)
 contains
@@ -13,7 +13,7 @@ contains
   end subroutine
 end subroutine
 
-!CHECK: func.func @_QFsub2Pfoo(%{{.*}}: i64
+!CHECK: func.func private @_QFsub2Pfoo(%{{.*}}: i64
 subroutine sub2()
   call foo(42_8)
 contains

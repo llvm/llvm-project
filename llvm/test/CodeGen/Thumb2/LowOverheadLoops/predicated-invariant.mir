@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define dso_local <4 x i32> @invariant_predicated_add_use(i16* nocapture readonly %a, i32* %c, i32 %N, <4 x i32> %pass) #0 {
+  define dso_local <4 x i32> @invariant_predicated_add_use(ptr nocapture readonly %a, ptr %c, i32 %N, <4 x i32> %pass) #0 {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %tmp = add i32 %N, 3
@@ -19,15 +19,15 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <4 x i16>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
     %tmp8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv17, i32 2, <4 x i1> %tmp8, <4 x i16> undef)
     %tmp10 = sext <4 x i16> %wide.masked.load to <4 x i32>
     %acc.next = tail call <4 x i32> @llvm.arm.mve.add.predicated.v4i32.v4i1(<4 x i32> %pass, <4 x i32> %tmp10, <4 x i1> %tmp8, <4 x i32> undef)
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 4
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 4
     %tmp11 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %tmp12 = icmp ne i32 %tmp11, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -38,7 +38,7 @@
     ret <4 x i32> %res
   }
 
-  declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
+  declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32 immarg, <4 x i1>, <4 x i16>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
@@ -74,34 +74,43 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: invariant_predicated_add_use
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $lr, $r0, $r2, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   tCBZ $r2, %bb.3
-  ; CHECK: bb.1.vector.ph:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r2
-  ; CHECK:   renamable $r1 = tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from %fixed-stack.0, align 8)
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
-  ; CHECK: bb.2.vector.body:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, undef renamable $q1
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
-  ; CHECK:   tB %bb.4, 14 /* CC::al */, $noreg
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $q1 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK: bb.4.exit:
-  ; CHECK:   liveins: $q1
-  ; CHECK:   renamable $r0, renamable $r1 = VMOVRRD renamable $d2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d3, 14 /* CC::al */, $noreg, implicit killed $q1
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3
+  ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r2, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   tCBZ $r2, %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.vector.ph:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.vector.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
+  ; CHECK-NEXT:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   tB %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q1 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.exit:
+  ; CHECK-NEXT:   liveins: $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD renamable $d2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d3, 14 /* CC::al */, $noreg, implicit killed $q1
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3
   bb.0.entry:
     successors: %bb.3(0x30000000), %bb.1(0x50000000)
     liveins: $r0, $r2, $r7, $lr

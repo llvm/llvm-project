@@ -26,12 +26,12 @@
 
   declare i32 @foo2(i32)
 
-  declare i32 @foo3(i32*)
+  declare i32 @foo3(ptr)
 
   ; Function Attrs: nounwind optsize
-  define internal fastcc i32 @foo4(i32* nocapture %ignore_ptr) #0 {
+  define internal fastcc i32 @foo4(ptr nocapture %ignore_ptr) #0 {
   entry:
-    %call = tail call i32 @foo3(i32* undef)
+    %call = tail call i32 @foo3(ptr undef)
     switch i32 %call, label %sw.epilog [
       i32 120, label %sw.bb
       i32 48, label %sw.bb73
@@ -62,7 +62,7 @@
     br label %while.cond
 
   while.cond:                                       ; preds = %while.cond, %sw.bb
-    %call5 = tail call i32 @foo3(i32* null)
+    %call5 = tail call i32 @foo3(ptr null)
     br label %while.cond
 
   sw.bb73:                                          ; preds = %entry, %entry, %entry, %entry, %entry, %entry, %entry, %entry
@@ -74,7 +74,7 @@
     br label %while.body83
 
   while.body83:                                     ; preds = %while.body83.preheader, %while.body83
-    %call87 = tail call i32 @foo3(i32* null)
+    %call87 = tail call i32 @foo3(ptr null)
     br label %while.body83
 
   while.end88:                                      ; preds = %sw.bb73
@@ -82,7 +82,7 @@
     unreachable
 
   sw.bb91:                                          ; preds = %entry
-    store i32 1, i32* %ignore_ptr, align 4
+    store i32 1, ptr %ignore_ptr, align 4
     br label %cleanup
 
   sw.bb93:                                          ; preds = %entry
@@ -110,7 +110,7 @@
     br i1 undef, label %cleanup, label %if.then109
 
   if.then109:                                       ; preds = %sw.bb107
-    %call110 = tail call i32 bitcast (i32 (...)* @foo1 to i32 (i8*, i32)*)(i8* undef, i32 %call)
+    %call110 = tail call i32 @foo1(ptr undef, i32 %call)
     unreachable
 
   sw.epilog:                                        ; preds = %entry
@@ -123,7 +123,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind optsize }
   attributes #1 = { nounwind }

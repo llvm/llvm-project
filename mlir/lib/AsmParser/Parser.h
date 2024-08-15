@@ -102,6 +102,9 @@ public:
   const Token &getToken() const { return state.curToken; }
   StringRef getTokenSpelling() const { return state.curToken.getSpelling(); }
 
+  /// Return the last parsed token.
+  const Token &getLastToken() const { return state.lastToken; }
+
   /// If the current token has the specified kind, consume it and return true.
   /// If not, return false.
   bool consumeIf(Token::Kind kind) {
@@ -115,6 +118,7 @@ public:
   void consumeToken() {
     assert(state.curToken.isNot(Token::eof, Token::error) &&
            "shouldn't advance past EOF or errors");
+    state.lastToken = state.curToken;
     state.curToken = state.lex.lexToken();
   }
 
@@ -129,6 +133,7 @@ public:
   /// Reset the parser to the given lexer position.
   void resetToken(const char *tokPos) {
     state.lex.resetPointer(tokPos);
+    state.lastToken = state.curToken;
     state.curToken = state.lex.lexToken();
   }
 
@@ -138,6 +143,9 @@ public:
 
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
+
+  /// Parse an optional integer value only in decimal format from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result);
 
   /// Parse a floating point value from an integer literal token.
   ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,

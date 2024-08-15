@@ -17,10 +17,13 @@
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DynoStats.h"
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -30,6 +33,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -145,6 +149,35 @@ public:
   }
 };
 
+/// BOLT-exclusive errors generated in core BOLT libraries, optionally holding a
+/// string message and whether it is fatal or not. In case it is fatal and if
+/// BOLT is running as a standalone process, the process might be killed as soon
+/// as the error is checked.
+class BOLTError : public ErrorInfo<BOLTError> {
+public:
+  static char ID;
+
+  BOLTError(bool IsFatal, const Twine &S = Twine());
+  void log(raw_ostream &OS) const override;
+  bool isFatal() const { return IsFatal; }
+
+  const std::string &getMessage() const { return Msg; }
+  std::error_code convertToErrorCode() const override;
+
+private:
+  bool IsFatal;
+  std::string Msg;
+};
+
+/// Streams used by BOLT to log regular or error events
+struct JournalingStreams {
+  raw_ostream &Out;
+  raw_ostream &Err;
+};
+
+Error createNonFatalBOLTError(const Twine &S);
+Error createFatalBOLTError(const Twine &S);
+
 class BinaryContext {
   BinaryContext() = delete;
 
@@ -209,11 +242,18 @@ class BinaryContext {
   /// Function fragments to skip.
   std::unordered_set<BinaryFunction *> FragmentsToSkip;
 
+  /// Fragment equivalence classes to query belonging to the same "family" in
+  /// presence of multiple fragments/multiple parents.
+  EquivalenceClasses<const BinaryFunction *> FragmentClasses;
+
   /// The runtime library.
   std::unique_ptr<RuntimeLibrary> RtLibrary;
 
   /// DWP Context.
   std::shared_ptr<DWARFContext> DWPContext;
+
+  /// Decoded pseudo probes.
+  std::shared_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
 
   /// A map of DWO Ids to CUs.
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
@@ -236,8 +276,10 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx);
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
+                      std::unique_ptr<DWARFContext> DwCtx,
+                      JournalingStreams Logger);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -327,7 +369,7 @@ public:
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
-  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = true; }
+  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
   /// Return true if relocations against symbol with a given name
   /// must be created.
@@ -342,6 +384,15 @@ public:
   void setRuntimeLibrary(std::unique_ptr<RuntimeLibrary> Lib) {
     assert(!RtLibrary && "Cannot set runtime library twice.");
     RtLibrary = std::move(Lib);
+  }
+
+  const MCPseudoProbeDecoder *getPseudoProbeDecoder() const {
+    return PseudoProbeDecoder.get();
+  }
+
+  void setPseudoProbeDecoder(std::shared_ptr<MCPseudoProbeDecoder> Decoder) {
+    assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
+    PseudoProbeDecoder = Decoder;
   }
 
   /// Return BinaryFunction containing a given \p Address or nullptr if
@@ -397,6 +448,9 @@ public:
       return JTI->second;
     return nullptr;
   }
+
+  /// Deregister JumpTable registered at a given \p Address and delete it.
+  void deleteJumpTable(uint64_t Address);
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
@@ -554,6 +608,9 @@ public:
   /// Huge page size to use.
   static constexpr unsigned HugePageSize = 0x200000;
 
+  /// Addresses reserved for kernel on x86_64 start at this location.
+  static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
@@ -602,6 +659,13 @@ public:
 
   std::unique_ptr<MCAsmBackend> MAB;
 
+  /// Allows BOLT to print to log whenever it is necessary (with or without
+  /// const references)
+  mutable JournalingStreams Logger;
+
+  /// Indicates if the binary is Linux kernel.
+  bool IsLinuxKernel{false};
+
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 
@@ -610,6 +674,14 @@ public:
 
   /// Indicates if the binary contains split functions.
   bool HasSplitFunctions{false};
+
+  /// Indicates if the function ordering of the binary is finalized.
+  bool HasFinalizedFunctionOrder{false};
+
+  /// Indicates if a separate .text.warm section is needed that contains
+  /// function fragments with
+  /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
+  bool HasWarmSection{false};
 
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
@@ -626,6 +698,9 @@ public:
   /// Indicates if any of local symbols used for functions or data objects
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
+
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
 
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
@@ -644,10 +719,6 @@ public:
 
   /// Binary-wide aggregated stats.
   struct BinaryStats {
-    /// Stats for macro-fusion.
-    uint64_t MissedMacroFusionPairs{0};
-    uint64_t MissedMacroFusionExecCount{0};
-
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
@@ -657,7 +728,15 @@ public:
     uint64_t StaleSampleCount{0};
     ///   the count of matched samples
     uint64_t MatchedSampleCount{0};
+    ///   the number of stale functions that have matching number of blocks in
+    ///   the profile
+    uint64_t NumStaleFuncsWithEqualBlockCount{0};
+    ///   the number of blocks that have matching size but a differing hash
+    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
+
+  // Original binary execution count stats.
+  DynoStats InitialDynoStats;
 
   // Address of the first allocated segment.
   uint64_t FirstAllocAddress{std::numeric_limits<uint64_t>::max()};
@@ -672,6 +751,9 @@ public:
   uint64_t OldTextSectionOffset{0};
   uint64_t OldTextSectionSize{0};
 
+  /// Area in the input binary reserved for BOLT.
+  AddressRange BOLTReserved;
+
   /// Address of the code/function that is executed before any other code in
   /// the binary.
   std::optional<uint64_t> StartFunctionAddress;
@@ -679,6 +761,15 @@ public:
   /// Address of the code/function that is going to be executed right before
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
+
+  /// DT_FINI.
+  std::optional<uint64_t> FiniAddress;
+
+  /// DT_FINI_ARRAY. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArrayAddress;
+
+  /// DT_FINI_ARRAYSZ. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArraySize;
 
   /// Page alignment used for code layout.
   uint64_t PageAlign{HugePageSize};
@@ -709,7 +800,8 @@ public:
                 std::unique_ptr<const MCInstrAnalysis> MIA,
                 std::unique_ptr<MCPlusBuilder> MIB,
                 std::unique_ptr<const MCRegisterInfo> MRI,
-                std::unique_ptr<MCDisassembler> DisAsm);
+                std::unique_ptr<MCDisassembler> DisAsm,
+                JournalingStreams Logger);
 
   ~BinaryContext();
 
@@ -883,8 +975,8 @@ public:
   /// Return true if \p SymbolName was generated internally and was not present
   /// in the input binary.
   bool isInternalSymbolName(const StringRef Name) {
-    return Name.startswith("SYMBOLat") || Name.startswith("DATAat") ||
-           Name.startswith("HOLEat");
+    return Name.starts_with("SYMBOLat") || Name.starts_with("DATAat") ||
+           Name.starts_with("HOLEat");
   }
 
   MCSymbol *getHotTextStartSymbol() const {
@@ -918,6 +1010,8 @@ public:
 
   const char *getMainCodeSectionName() const { return ".text"; }
 
+  const char *getWarmCodeSectionName() const { return ".text.warm"; }
+
   const char *getColdCodeSectionName() const { return ".text.cold"; }
 
   const char *getHotTextMoverSectionName() const { return ".text.mover"; }
@@ -932,6 +1026,10 @@ public:
     return getUniqueSectionByName(".gdb_index");
   }
 
+  ErrorOr<BinarySection &> getDebugNamesSection() const {
+    return getUniqueSectionByName(".debug_names");
+  }
+
   /// @}
 
   /// Register \p TargetFunction as a fragment of \p Function if checks pass:
@@ -939,9 +1037,17 @@ public:
   ///   fragment_name == parent_name.cold(.\d+)?
   /// True if the Function is registered, false if the check failed.
   bool registerFragment(BinaryFunction &TargetFunction,
-                        BinaryFunction &Function) const;
+                        BinaryFunction &Function);
 
-  /// Add unterprocedural reference for \p Function to \p Address
+  /// Return true if two functions belong to the same "family": are fragments
+  /// of one another, or fragments of the same parent, or transitively fragment-
+  /// related.
+  bool areRelatedFragments(const BinaryFunction *LHS,
+                           const BinaryFunction *RHS) const {
+    return FragmentClasses.isEquivalent(LHS, RHS);
+  }
+
+  /// Add interprocedural reference for \p Function to \p Address
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1143,8 +1249,7 @@ public:
 
   /// Return a signed value of \p Size stored at \p Address. The address has
   /// to be a valid statically allocated address for the binary.
-  ErrorOr<uint64_t> getSignedValueAtAddress(uint64_t Address,
-                                            size_t Size) const;
+  ErrorOr<int64_t> getSignedValueAtAddress(uint64_t Address, size_t Size) const;
 
   /// Special case of getUnsignedValueAtAddress() that uses a pointer size.
   ErrorOr<uint64_t> getPointerAtAddress(uint64_t Address) const {
@@ -1221,6 +1326,9 @@ public:
   ///
   /// Return the pair where the first size is for the main part, and the second
   /// size is for the cold one.
+  /// Modify BinaryBasicBlock::OutputAddressRange for each basic block in the
+  /// function in place so that BinaryBasicBlock::getOutputSize() gives the
+  /// emitted size of the basic block.
   std::pair<size_t, size_t> calculateEmittedSize(BinaryFunction &BF,
                                                  bool FixBranches = true);
 
@@ -1230,8 +1338,8 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
-    if (auto Size = MIB->getAnnotationWithDefault<uint32_t>(Inst, "Size"))
-      return Size;
+    if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
 
     if (!Emitter)
       Emitter = this->MCE.get();
@@ -1281,6 +1389,9 @@ public:
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;
 
+  /// Dump the assembly representation of MCInst to debug output.
+  void dump(const MCInst &Inst) const;
+
   /// Print the string name for a CFI operation.
   static void printCFI(raw_ostream &OS, const MCCFIInstruction &Inst);
 
@@ -1313,8 +1424,12 @@ public:
     return Offset;
   }
 
-  void exitWithBugReport(StringRef Message,
-                         const BinaryFunction &Function) const;
+  /// Log BOLT errors to journaling streams and quit process with non-zero error
+  /// code 1 if error is fatal.
+  void logBOLTErrorsAndQuitOnFatal(Error E);
+
+  std::string generateBugReportMessage(StringRef Message,
+                                       const BinaryFunction &Function) const;
 
   struct IndependentCodeEmitter {
     std::unique_ptr<MCObjectFileInfo> LocalMOFI;
@@ -1350,10 +1465,7 @@ public:
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
         *TheTriple, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-        std::unique_ptr<MCCodeEmitter>(MCE), *STI,
-        /* RelaxAll */ false,
-        /* IncrementalLinkerCompatible */ false,
-        /* DWARFMustBeAtTheEnd */ false));
+        std::unique_ptr<MCCodeEmitter>(MCE), *STI));
     return Streamer;
   }
 
@@ -1362,6 +1474,10 @@ public:
     assert(IOAddressMap && "Address map not set yet");
     return *IOAddressMap;
   }
+
+  raw_ostream &outs() const { return Logger.Out; }
+
+  raw_ostream &errs() const { return Logger.Err; }
 };
 
 template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>

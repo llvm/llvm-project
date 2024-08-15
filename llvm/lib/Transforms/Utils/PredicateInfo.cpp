@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
@@ -33,12 +32,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-INITIALIZE_PASS_BEGIN(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
-                      "PredicateInfo Printer", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
-                    "PredicateInfo Printer", false, false)
 static cl::opt<bool> VerifyPredicateInfo(
     "verify-predicateinfo", cl::init(false), cl::Hidden,
     cl::desc("Verify PredicateInfo in legacy printer pass."));
@@ -485,10 +478,8 @@ void PredicateInfoBuilder::processSwitch(
 
   // Remember how many outgoing edges there are to every successor.
   SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-    BasicBlock *TargetBlock = SI->getSuccessor(i);
+  for (BasicBlock *TargetBlock : successors(BranchBB))
     ++SwitchEdges[TargetBlock];
-  }
 
   // Now propagate info for each case value
   for (auto C : SI->cases()) {
@@ -835,20 +826,6 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
 void PredicateInfo::verifyPredicateInfo() const {}
 
-char PredicateInfoPrinterLegacyPass::ID = 0;
-
-PredicateInfoPrinterLegacyPass::PredicateInfoPrinterLegacyPass()
-    : FunctionPass(ID) {
-  initializePredicateInfoPrinterLegacyPassPass(
-      *PassRegistry::getPassRegistry());
-}
-
-void PredicateInfoPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-}
-
 // Replace ssa_copy calls created by PredicateInfo with their operand.
 static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
   for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
@@ -860,18 +837,6 @@ static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
     Inst.replaceAllUsesWith(II->getOperand(0));
     Inst.eraseFromParent();
   }
-}
-
-bool PredicateInfoPrinterLegacyPass::runOnFunction(Function &F) {
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
-  PredInfo->print(dbgs());
-  if (VerifyPredicateInfo)
-    PredInfo->verifyPredicateInfo();
-
-  replaceCreatedSSACopys(*PredInfo, F);
-  return false;
 }
 
 PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,

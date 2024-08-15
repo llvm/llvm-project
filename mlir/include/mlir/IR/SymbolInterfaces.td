@@ -121,7 +121,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         symbol 'newSymbol' that are nested within the given operation 'from'.
         Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
       }],
-      "::mlir::LogicalResult", "replaceAllSymbolUses",
+      "::llvm::LogicalResult", "replaceAllSymbolUses",
       (ins "::mlir::StringAttr":$newSymbol, "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
@@ -171,6 +171,11 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     if (concreteOp.isDeclaration() && concreteOp.isPublic())
       return concreteOp.emitOpError("symbol declaration cannot have public "
              "visibility");
+    auto parent = $_op->getParentOp();
+    if (parent && !parent->hasTrait<OpTrait::SymbolTable>() && parent->isRegistered()) {
+      return concreteOp.emitOpError("symbol's parent must have the SymbolTable "
+             "trait");
+    }
     return success();
   }];
 
@@ -209,7 +214,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this operation.",
-      "::mlir::LogicalResult", "verifySymbolUses",
+      "::llvm::LogicalResult", "verifySymbolUses",
       (ins "::mlir::SymbolTableCollection &":$symbolTable)
     >,
   ];

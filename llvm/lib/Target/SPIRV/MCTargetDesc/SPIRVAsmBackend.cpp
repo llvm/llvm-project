@@ -18,7 +18,7 @@ namespace {
 
 class SPIRVAsmBackend : public MCAsmBackend {
 public:
-  SPIRVAsmBackend(support::endianness Endian) : MCAsmBackend(Endian) {}
+  SPIRVAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -28,13 +28,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
     return createSPIRVObjectTargetWriter();
-  }
-
-  // No instruction requires relaxation.
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
   }
 
   unsigned getNumFixupKinds() const override { return 1; }
@@ -59,5 +52,5 @@ MCAsmBackend *llvm::createSPIRVAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &) {
-  return new SPIRVAsmBackend(support::little);
+  return new SPIRVAsmBackend(llvm::endianness::little);
 }

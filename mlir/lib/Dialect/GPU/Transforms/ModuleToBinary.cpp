@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -37,23 +38,9 @@ class GpuModuleToBinaryPass
     : public impl::GpuModuleToBinaryPassBase<GpuModuleToBinaryPass> {
 public:
   using Base::Base;
-  void getDependentDialects(DialectRegistry &registry) const override;
   void runOnOperation() final;
 };
 } // namespace
-
-void GpuModuleToBinaryPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  // Register all GPU related translations.
-  registry.insert<gpu::GPUDialect>();
-  registry.insert<LLVM::LLVMDialect>();
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 1
-  registry.insert<NVVM::NVVMDialect>();
-#endif
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
-  registry.insert<ROCDL::ROCDLDialect>();
-#endif
-}
 
 void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
@@ -85,10 +72,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
                               lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
-          getOperation(),
-          offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(
-                                  offloadingHandler.getValue())
-                            : OffloadingLLVMTranslationAttrInterface(nullptr),
+          getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))
     return signalPassFailure();
 }
@@ -99,6 +83,9 @@ LogicalResult moduleSerializer(GPUModuleOp op,
                                const TargetOptions &targetOptions) {
   OpBuilder builder(op->getContext());
   SmallVector<Attribute> objects;
+  // Fail if there are no target attributes
+  if (!op.getTargetsAttr())
+    return op.emitError("the module has no target attributes");
   // Serialize all targets.
   for (auto targetAttr : op.getTargetsAttr()) {
     assert(targetAttr && "Target attribute cannot be null.");
@@ -119,6 +106,11 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     }
     objects.push_back(object);
   }
+  if (auto moduleHandler =
+          dyn_cast_or_null<OffloadingLLVMTranslationAttrInterface>(
+              op.getOffloadingHandlerAttr());
+      !handler && moduleHandler)
+    handler = moduleHandler;
   builder.setInsertionPointAfter(op);
   builder.create<gpu::BinaryOp>(op.getLoc(), op.getName(), handler,
                                 builder.getArrayAttr(objects));

@@ -8,10 +8,11 @@
 
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "CoroInternal.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 
 using namespace llvm;
@@ -29,15 +30,13 @@ struct Lowerer : coro::LowererBase {
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
-  Value *FrameRaw = SubFn->getFrame();
+  Value *FramePtr = SubFn->getFrame();
   int Index = SubFn->getIndex();
 
-  auto *FrameTy = StructType::get(
-      SubFn->getContext(), {Builder.getInt8PtrTy(), Builder.getInt8PtrTy()});
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
+  auto *FrameTy = StructType::get(SubFn->getContext(),
+                                  {Builder.getPtrTy(), Builder.getPtrTy()});
 
   Builder.SetInsertPoint(SubFn);
-  auto *FramePtr = Builder.CreateBitCast(FrameRaw, FramePtrTy);
   auto *Gep = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index);
   auto *Load = Builder.CreateLoad(FrameTy->getElementType(Index), Gep);
 

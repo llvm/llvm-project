@@ -138,10 +138,13 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
       Cand = LeftCand;
   }
   int BitsAvail = BC.MIB->getPCRelEncodingSize(Inst) - 1;
-  uint64_t Mask = ~((1ULL << BitsAvail) - 1);
+  assert(BitsAvail < 63 && "PCRelEncodingSize is too large to use int64_t to"
+                           "check for out-of-bounds.");
+  int64_t MaxVal = (1ULL << BitsAvail) - 1;
+  int64_t MinVal = -(1ULL << BitsAvail);
   uint64_t PCRelTgtAddress = Cand->first;
-  PCRelTgtAddress = DotAddress > PCRelTgtAddress ? DotAddress - PCRelTgtAddress
-                                                 : PCRelTgtAddress - DotAddress;
+  int64_t PCOffset = (int64_t)(PCRelTgtAddress - DotAddress);
+
   LLVM_DEBUG({
     if (Candidates.size() > 1)
       dbgs() << "Considering stub group with " << Candidates.size()
@@ -149,7 +152,7 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
              << ", chosen candidate address is "
              << Twine::utohexstr(Cand->first) << "\n";
   });
-  return PCRelTgtAddress & Mask ? nullptr : Cand->second;
+  return (PCOffset < MinVal || PCOffset > MaxVal) ? nullptr : Cand->second;
 }
 
 BinaryBasicBlock *
@@ -199,10 +202,23 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
     }
   } else if (LocalStubsIter != Stubs.end() &&
              LocalStubsIter->second.count(TgtBB)) {
-    // If we are replacing a local stub (because it is now out of range),
-    // use its target instead of creating a stub to jump to another stub
+    // The TgtBB and TgtSym now are the local out-of-range stub and its label.
+    // So, we are attempting to restore BB to its previous state without using
+    // this stub.
     TgtSym = BC.MIB->getTargetSymbol(*TgtBB->begin());
-    TgtBB = BB.getSuccessor(TgtSym, BI);
+    assert(TgtSym &&
+           "First instruction is expected to contain a target symbol.");
+    BinaryBasicBlock *TgtBBSucc = TgtBB->getSuccessor(TgtSym, BI);
+
+    // TgtBB might have no successor. e.g. a stub for a function call.
+    if (TgtBBSucc) {
+      BB.replaceSuccessor(TgtBB, TgtBBSucc, BI.Count, BI.MispredictedCount);
+      assert(TgtBB->getExecutionCount() >= BI.Count &&
+             "At least equal or greater than the branch count.");
+      TgtBB->setExecutionCount(TgtBB->getExecutionCount() - BI.Count);
+    }
+
+    TgtBB = TgtBBSucc;
   }
 
   BinaryBasicBlock *StubBB = lookupLocalStub(BB, Inst, TgtSym, DotAddress);
@@ -290,7 +306,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
-    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
+    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxColdAlignmentBytes())
@@ -349,7 +365,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
         DotAddress = alignTo(DotAddress, opts::AlignText);
     }
 
-    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
+    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxAlignmentBytes())
@@ -443,13 +459,13 @@ uint64_t LongJmpPass::getSymbolAddress(const BinaryContext &BC,
   return Iter->second;
 }
 
-bool LongJmpPass::relaxStub(BinaryBasicBlock &StubBB) {
+Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   const BinaryFunction &Func = *StubBB.getFunction();
   const BinaryContext &BC = Func.getBinaryContext();
   const int Bits = StubBits[&StubBB];
   // Already working with the largest range?
   if (Bits == static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8))
-    return false;
+    return Error::success();
 
   const static int RangeShortJmp = BC.MIB->getShortJmpEncodingSize();
   const static int RangeSingleInstr = BC.MIB->getUncondBranchEncodingSize();
@@ -465,12 +481,12 @@ bool LongJmpPass::relaxStub(BinaryBasicBlock &StubBB) {
                                                      : TgtAddress - DotAddress;
   // If it fits in one instruction, do not relax
   if (!(PCRelTgtAddress & SingleInstrMask))
-    return false;
+    return Error::success();
 
   // Fits short jmp
   if (!(PCRelTgtAddress & ShortJmpMask)) {
     if (Bits >= RangeShortJmp)
-      return false;
+      return Error::success();
 
     LLVM_DEBUG(dbgs() << "Relaxing stub to short jump. PCRelTgtAddress = "
                       << Twine::utohexstr(PCRelTgtAddress)
@@ -478,22 +494,23 @@ bool LongJmpPass::relaxStub(BinaryBasicBlock &StubBB) {
                       << "\n");
     relaxStubToShortJmp(StubBB, RealTargetSym);
     StubBits[&StubBB] = RangeShortJmp;
-    return true;
+    Modified = true;
+    return Error::success();
   }
 
   // The long jmp uses absolute address on AArch64
   // So we could not use it for PIC binaries
-  if (BC.isAArch64() && !BC.HasFixedLoadAddress) {
-    errs() << "BOLT-ERROR: Unable to relax stub for PIC binary\n";
-    exit(1);
-  }
+  if (BC.isAArch64() && !BC.HasFixedLoadAddress)
+    return createFatalBOLTError(
+        "BOLT-ERROR: Unable to relax stub for PIC binary\n");
 
   LLVM_DEBUG(dbgs() << "Relaxing stub to long jump. PCRelTgtAddress = "
                     << Twine::utohexstr(PCRelTgtAddress)
                     << " RealTargetSym = " << RealTargetSym->getName() << "\n");
   relaxStubToLongJmp(StubBB, RealTargetSym);
   StubBits[&StubBB] = static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8);
-  return true;
+  Modified = true;
+  return Error::success();
 }
 
 bool LongJmpPass::needsStub(const BinaryBasicBlock &BB, const MCInst &Inst,
@@ -512,18 +529,19 @@ bool LongJmpPass::needsStub(const BinaryBasicBlock &BB, const MCInst &Inst,
   }
 
   int BitsAvail = BC.MIB->getPCRelEncodingSize(Inst) - 1;
-  uint64_t Mask = ~((1ULL << BitsAvail) - 1);
+  assert(BitsAvail < 63 && "PCRelEncodingSize is too large to use int64_t to"
+                           "check for out-of-bounds.");
+  int64_t MaxVal = (1ULL << BitsAvail) - 1;
+  int64_t MinVal = -(1ULL << BitsAvail);
 
   uint64_t PCRelTgtAddress = getSymbolAddress(BC, TgtSym, TgtBB);
-  PCRelTgtAddress = DotAddress > PCRelTgtAddress ? DotAddress - PCRelTgtAddress
-                                                 : PCRelTgtAddress - DotAddress;
+  int64_t PCOffset = (int64_t)(PCRelTgtAddress - DotAddress);
 
-  return PCRelTgtAddress & Mask;
+  return PCOffset < MinVal || PCOffset > MaxVal;
 }
 
-bool LongJmpPass::relax(BinaryFunction &Func) {
+Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   const BinaryContext &BC = Func.getBinaryContext();
-  bool Modified = false;
 
   assert(BC.isAArch64() && "Unsupported arch");
   constexpr int InsnSize = 4; // AArch64
@@ -595,7 +613,8 @@ bool LongJmpPass::relax(BinaryFunction &Func) {
     if (!Stubs[&Func].count(&BB) || !BB.isValid())
       continue;
 
-    Modified |= relaxStub(BB);
+    if (auto E = relaxStub(BB, Modified))
+      return Error(std::move(E));
   }
 
   for (std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>> &Elmt :
@@ -607,11 +626,11 @@ bool LongJmpPass::relax(BinaryFunction &Func) {
     Func.insertBasicBlocks(Elmt.first, std::move(NewBBs), true);
   }
 
-  return Modified;
+  return Error::success();
 }
 
-void LongJmpPass::runOnFunctions(BinaryContext &BC) {
-  outs() << "BOLT-INFO: Starting stub-insertion pass\n";
+Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
+  BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";
   std::vector<BinaryFunction *> Sorted = BC.getSortedFunctions();
   bool Modified;
   uint32_t Iterations = 0;
@@ -621,19 +640,19 @@ void LongJmpPass::runOnFunctions(BinaryContext &BC) {
     tentativeLayout(BC, Sorted);
     updateStubGroups();
     for (BinaryFunction *Func : Sorted) {
-      if (relax(*Func)) {
-        // Don't ruin non-simple functions, they can't afford to have the layout
-        // changed.
-        if (Func->isSimple())
-          Func->fixBranches();
-        Modified = true;
-      }
+      if (auto E = relax(*Func, Modified))
+        return Error(std::move(E));
+      // Don't ruin non-simple functions, they can't afford to have the layout
+      // changed.
+      if (Modified && Func->isSimple())
+        Func->fixBranches();
     }
   } while (Modified);
-  outs() << "BOLT-INFO: Inserted " << NumHotStubs
-         << " stubs in the hot area and " << NumColdStubs
-         << " stubs in the cold area. Shared " << NumSharedStubs
-         << " times, iterated " << Iterations << " times.\n";
+  BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs
+            << " stubs in the hot area and " << NumColdStubs
+            << " stubs in the cold area. Shared " << NumSharedStubs
+            << " times, iterated " << Iterations << " times.\n";
+  return Error::success();
 }
 } // namespace bolt
 } // namespace llvm

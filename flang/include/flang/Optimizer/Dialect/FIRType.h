@@ -15,6 +15,7 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Type.h"
 
@@ -40,11 +41,25 @@ class BaseBoxType : public mlir::Type {
 public:
   using mlir::Type::Type;
 
+  /// Box attributes.
+  enum class Attribute { None, Allocatable, Pointer };
+
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
+
+  /// Is this the box for an assumed rank?
+  bool isAssumedRank() const;
+
+  /// Return the same type, except for the shape, that is taken the shape
+  /// of shapeMold.
+  BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
+  BaseBoxType getBoxTypeWithNewShape(int rank) const;
+
+  /// Return the same type, except for the attribute (fir.heap/fir.ptr).
+  BaseBoxType getBoxTypeWithNewAttr(Attribute attr) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);
@@ -89,43 +104,44 @@ bool isa_fir_or_std_type(mlir::Type t);
 
 /// Is `t` a FIR dialect type that implies a memory (de)reference?
 inline bool isa_ref_type(mlir::Type t) {
-  return t.isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
-               fir::LLVMPointerType>();
+  return mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
+                   fir::LLVMPointerType>(t);
 }
 
 /// Is `t` a boxed type?
 inline bool isa_box_type(mlir::Type t) {
-  return t.isa<fir::BaseBoxType, fir::BoxCharType, fir::BoxProcType>();
+  return mlir::isa<fir::BaseBoxType, fir::BoxCharType, fir::BoxProcType>(t);
 }
 
 /// Is `t` a type that is always trivially pass-by-reference? Specifically, this
 /// is testing if `t` is a ReferenceType or any box type. Compare this to
 /// conformsWithPassByRef(), which includes pointers and allocatables.
 inline bool isa_passbyref_type(mlir::Type t) {
-  return t.isa<fir::ReferenceType, mlir::FunctionType>() || isa_box_type(t);
+  return mlir::isa<fir::ReferenceType, mlir::FunctionType>(t) ||
+         isa_box_type(t);
 }
 
 /// Is `t` a type that can conform to be pass-by-reference? Depending on the
 /// context, these types may simply demote to pass-by-reference or a reference
 /// to them may have to be passed instead. Functions are always referent.
 inline bool conformsWithPassByRef(mlir::Type t) {
-  return isa_ref_type(t) || isa_box_type(t) || t.isa<mlir::FunctionType>();
+  return isa_ref_type(t) || isa_box_type(t) || mlir::isa<mlir::FunctionType>(t);
 }
 
 /// Is `t` a derived (record) type?
-inline bool isa_derived(mlir::Type t) { return t.isa<fir::RecordType>(); }
+inline bool isa_derived(mlir::Type t) { return mlir::isa<fir::RecordType>(t); }
 
 /// Is `t` type(c_ptr) or type(c_funptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
-  if (auto recTy = t.dyn_cast_or_null<fir::RecordType>())
-    return recTy.getName().endswith("T__builtin_c_ptr") ||
-           recTy.getName().endswith("T__builtin_c_funptr");
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_ptr") ||
+           recTy.getName().ends_with("T__builtin_c_funptr");
   return false;
 }
 
 /// Is `t` a FIR dialect aggregate type?
 inline bool isa_aggregate(mlir::Type t) {
-  return t.isa<SequenceType, mlir::TupleType>() || fir::isa_derived(t);
+  return mlir::isa<SequenceType, mlir::TupleType>(t) || fir::isa_derived(t);
 }
 
 /// Extract the `Type` pointed to from a FIR memory reference type. If `t` is
@@ -138,17 +154,17 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t);
 
 /// Is `t` a FIR Real or MLIR Float type?
 inline bool isa_real(mlir::Type t) {
-  return t.isa<fir::RealType, mlir::FloatType>();
+  return mlir::isa<fir::RealType, mlir::FloatType>(t);
 }
 
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {
-  return t.isa<mlir::IndexType, mlir::IntegerType, fir::IntegerType>();
+  return mlir::isa<mlir::IndexType, mlir::IntegerType, fir::IntegerType>(t);
 }
 
 /// Is `t` a vector type?
 inline bool isa_vector(mlir::Type t) {
-  return t.isa<mlir::VectorType, fir::VectorType>();
+  return mlir::isa<mlir::VectorType, fir::VectorType>(t);
 }
 
 mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
@@ -161,22 +177,22 @@ void verifyIntegralType(mlir::Type type);
 
 /// Is `t` a FIR or MLIR Complex type?
 inline bool isa_complex(mlir::Type t) {
-  return t.isa<fir::ComplexType, mlir::ComplexType>();
+  return mlir::isa<fir::ComplexType, mlir::ComplexType>(t);
 }
 
 /// Is `t` a CHARACTER type? Does not check the length.
-inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
+inline bool isa_char(mlir::Type t) { return mlir::isa<fir::CharacterType>(t); }
 
 /// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
 /// is a dependent type.
 inline bool isa_trivial(mlir::Type t) {
   return isa_integer(t) || isa_real(t) || isa_complex(t) || isa_vector(t) ||
-         t.isa<fir::LogicalType>();
+         mlir::isa<fir::LogicalType>(t);
 }
 
 /// Is `t` a CHARACTER type with a LEN other than 1?
 inline bool isa_char_string(mlir::Type t) {
-  if (auto ct = t.dyn_cast_or_null<fir::CharacterType>())
+  if (auto ct = mlir::dyn_cast_or_null<fir::CharacterType>(t))
     return ct.getLen() != fir::CharacterType::singleton();
   return false;
 }
@@ -190,7 +206,7 @@ bool isa_unknown_size_box(mlir::Type t);
 
 /// Returns true iff `t` is a fir.char type and has an unknown length.
 inline bool characterWithDynamicLen(mlir::Type t) {
-  if (auto charTy = t.dyn_cast<fir::CharacterType>())
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(t))
     return charTy.hasDynamicLen();
   return false;
 }
@@ -205,11 +221,11 @@ inline bool sequenceWithNonConstantShape(fir::SequenceType seqTy) {
 bool hasDynamicSize(mlir::Type t);
 
 inline unsigned getRankOfShapeType(mlir::Type t) {
-  if (auto shTy = t.dyn_cast<fir::ShapeType>())
+  if (auto shTy = mlir::dyn_cast<fir::ShapeType>(t))
     return shTy.getRank();
-  if (auto shTy = t.dyn_cast<fir::ShapeShiftType>())
+  if (auto shTy = mlir::dyn_cast<fir::ShapeShiftType>(t))
     return shTy.getRank();
-  if (auto shTy = t.dyn_cast<fir::ShiftType>())
+  if (auto shTy = mlir::dyn_cast<fir::ShiftType>(t))
     return shTy.getRank();
   return 0;
 }
@@ -217,17 +233,20 @@ inline unsigned getRankOfShapeType(mlir::Type t) {
 /// Get the memory reference type of the data pointer from the box type,
 inline mlir::Type boxMemRefType(fir::BaseBoxType t) {
   auto eleTy = t.getEleTy();
-  if (!eleTy.isa<fir::PointerType, fir::HeapType>())
+  if (!mlir::isa<fir::PointerType, fir::HeapType>(eleTy))
     eleTy = fir::ReferenceType::get(t);
   return eleTy;
 }
 
 /// If `t` is a SequenceType return its element type, otherwise return `t`.
 inline mlir::Type unwrapSequenceType(mlir::Type t) {
-  if (auto seqTy = t.dyn_cast<fir::SequenceType>())
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(t))
     return seqTy.getEleTy();
   return t;
 }
+
+/// Return the nested sequence type if any.
+mlir::Type extractSequenceType(mlir::Type ty);
 
 inline mlir::Type unwrapRefType(mlir::Type t) {
   if (auto eleTy = dyn_cast_ptrEleTy(t))
@@ -267,7 +286,7 @@ inline fir::SequenceType unwrapUntilSeqType(mlir::Type t) {
       t = ty;
       continue;
     }
-    if (auto seqTy = t.dyn_cast<fir::SequenceType>())
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(t))
       return seqTy;
     return {};
   }
@@ -276,8 +295,8 @@ inline fir::SequenceType unwrapUntilSeqType(mlir::Type t) {
 /// Unwrap the referential and sequential outer types (if any). Returns the
 /// the element if type is fir::RecordType
 inline fir::RecordType unwrapIfDerived(fir::BaseBoxType boxTy) {
-  return fir::unwrapSequenceType(fir::unwrapRefType(boxTy.getEleTy()))
-      .template dyn_cast<fir::RecordType>();
+  return mlir::dyn_cast<fir::RecordType>(
+      fir::unwrapSequenceType(fir::unwrapRefType(boxTy.getEleTy())));
 }
 
 /// Return true iff `boxTy` wraps a fir::RecordType with length parameters
@@ -313,6 +332,9 @@ bool isBoxNone(mlir::Type ty);
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);
 
+/// Return true iff `ty` is a type that contains descriptor information.
+bool isTypeWithDescriptor(mlir::Type ty);
+
 /// Return true iff `ty` is a scalar boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 ///      !fir.box<!fir.heap<!fir.type<derived>>>
@@ -330,7 +352,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
-/// Return true iff `ty` is the type of an assumed type.
+/// Return true iff `ty` is the type of an assumed type. In FIR,
+/// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
+/// or `fir.ref|ptr|heap<[fir.array]none>`.
 bool isAssumedType(mlir::Type ty);
 
 /// Return true iff `ty` is the type of an assumed shape array.
@@ -361,7 +385,7 @@ bool isRecordWithDescriptorMember(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with type parameters.
 inline bool isRecordWithTypeParameters(mlir::Type ty) {
-  if (auto recTy = ty.dyn_cast_or_null<fir::RecordType>())
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty))
     return recTy.isDependentType();
   return false;
 }
@@ -385,14 +409,14 @@ mlir::Type fromRealTypeID(mlir::MLIRContext *context, llvm::Type::TypeID typeID,
 int getTypeCode(mlir::Type ty, const KindMapping &kindMap);
 
 inline bool BaseBoxType::classof(mlir::Type type) {
-  return type.isa<fir::BoxType, fir::ClassType>();
+  return mlir::isa<fir::BoxType, fir::ClassType>(type);
 }
 
 /// Return true iff `ty` is none or fir.array<none>.
 inline bool isNoneOrSeqNone(mlir::Type type) {
-  if (auto seqTy = type.dyn_cast<fir::SequenceType>())
-    return seqTy.getEleTy().isa<mlir::NoneType>();
-  return type.isa<mlir::NoneType>();
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
+    return mlir::isa<mlir::NoneType>(seqTy.getEleTy());
+  return mlir::isa<mlir::NoneType>(type);
 }
 
 /// Return a fir.box<T> or fir.class<T> if the type is polymorphic. If the type
@@ -412,28 +436,42 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
-  if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
     return fir::SequenceType::get(
         seqTy.getShape(), updateTypeForUnlimitedPolymorphic(seqTy.getEleTy()));
-  if (auto heapTy = ty.dyn_cast<fir::HeapType>())
+  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
     return fir::HeapType::get(
         updateTypeForUnlimitedPolymorphic(heapTy.getEleTy()));
-  if (auto pointerTy = ty.dyn_cast<fir::PointerType>())
+  if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
     return fir::PointerType::get(
         updateTypeForUnlimitedPolymorphic(pointerTy.getEleTy()));
-  if (!ty.isa<mlir::NoneType, fir::RecordType>())
+  if (!mlir::isa<mlir::NoneType, fir::RecordType>(ty))
     return mlir::NoneType::get(ty.getContext());
   return ty;
 }
 
+/// Replace the element type of \p type by \p newElementType, preserving
+/// all other layers of the type (fir.ref/ptr/heap/array/box/class).
+/// If \p turnBoxIntoClass and the input is a fir.box, it will be turned into
+/// a fir.class in the result.
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass);
+
 /// Is `t` an address to fir.box or class type?
 inline bool isBoxAddress(mlir::Type t) {
-  return fir::isa_ref_type(t) && fir::unwrapRefType(t).isa<fir::BaseBoxType>();
+  return fir::isa_ref_type(t) &&
+         mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(t));
 }
 
 /// Is `t` a fir.box or class address or value type?
 inline bool isBoxAddressOrValue(mlir::Type t) {
-  return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
+  return mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(t));
+}
+
+/// Is this a fir.boxproc address type?
+inline bool isBoxProcAddressType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t && mlir::isa<fir::BoxProcType>(t);
 }
 
 /// Return a string representation of `ty`.
@@ -442,6 +480,17 @@ inline bool isBoxAddressOrValue(mlir::Type t) {
 /// fir.ref<i32> -> prefix_ref_i32
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
+
+/// Return the size and alignment of FIR types.
+/// TODO: consider moving this to a DataLayoutTypeInterface implementation
+/// for FIR types. It should first be ensured that it is OK to open the gate of
+/// target dependent type size inquiries in lowering. It would also not be
+/// straightforward given the need for a kind map that would need to be
+/// converted in terms of mlir::DataLayoutEntryKey.
+std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                        const mlir::DataLayout &dl,
+                        const fir::KindMapping &kindMap);
 
 } // namespace fir
 

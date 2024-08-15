@@ -451,8 +451,60 @@ def IRDL_IsOp : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
+def IRDL_BaseOp : IRDL_ConstraintOp<"base",
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Constraints an attribute/type base";
+  let description = [{
+    `irdl.base` defines a constraint that only accepts a single type
+    or attribute base, e.g. an `IntegerType`. The attribute base is defined
+    either by a symbolic reference to the corresponding IRDL definition,
+    or by the name of the base. Named bases are prefixed with `!` or `#`
+    respectively for types and attributes.
+
+    Example:
+
+    ```mlir
+    irdl.dialect @cmath {
+      irdl.type @complex {
+        %0 = irdl.base "!builtin.integer"
+        irdl.parameters(%0)
+      }
+
+      irdl.type @complex_wrapper {
+        %0 = irdl.base @complex
+        irdl.parameters(%0)
+      }
+    }
+    ```
+
+    The above program defines a `cmath.complex` type that expects a single
+    parameter, which is a type with base name `builtin.integer`, which is the
+    name of an `IntegerType` type.
+    It also defines a `cmath.complex_wrapper` type that expects a single
+    parameter, which is a type of base type `cmath.complex`.
+  }];
+
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$base_ref,
+                       OptionalAttr<StrAttr>:$base_name);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
+  
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$base_ref), [{
+      build($_builder, $_state, base_ref, {});
+    }]>,
+    OpBuilder<(ins "StringAttr":$base_name), [{
+      build($_builder, $_state, {}, base_name);
+    }]>,
+  ];
+
+  let hasVerifier = 1;
+}
+
 def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
-    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";
   let description = [{
     `irdl.parametric` defines a constraint that accepts only a single type

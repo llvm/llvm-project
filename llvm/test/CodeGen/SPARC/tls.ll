@@ -34,9 +34,9 @@
 
 define i32 @test_tls_local() {
 entry:
-  %0 = load i32, i32* @local_symbol, align 4
+  %0 = load i32, ptr @local_symbol, align 4
   %1 = add i32 %0, 1
-  store i32 %1, i32* @local_symbol, align 4
+  store i32 %1, ptr @local_symbol, align 4
   ret i32 %1
 }
 
@@ -68,9 +68,9 @@ entry:
 
 define i32 @test_tls_extern() {
 entry:
-  %0 = load i32, i32* @extern_symbol, align 4
+  %0 = load i32, ptr @extern_symbol, align 4
   %1 = add i32 %0, 1
-  store i32 %1, i32* @extern_symbol, align 4
+  store i32 %1, ptr @extern_symbol, align 4
   ret i32 %1
 }
 

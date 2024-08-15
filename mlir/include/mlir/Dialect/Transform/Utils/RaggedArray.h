@@ -150,6 +150,9 @@ public:
     slices.resize(slices.size() + num, std::pair<size_t, size_t>(-1, 0));
   }
 
+  /// Removes the first subarray in-place. Invalidates iterators to all rows.
+  void removeFront() { slices.erase(slices.begin()); }
+
 private:
   /// Appends the given elements to the storage and returns an ArrayRef
   /// pointing to them in the storage.

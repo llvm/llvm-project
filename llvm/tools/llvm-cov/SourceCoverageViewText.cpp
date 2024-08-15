@@ -337,6 +337,58 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
   }
 }
 
+void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
+                                            unsigned ViewDepth) {
+  for (auto &Record : MRV.Records) {
+    renderLinePrefix(OS, ViewDepth);
+    OS << "---> MC/DC Decision Region (";
+    // Display Line + Column information.
+    const CounterMappingRegion &DecisionRegion = Record.getDecisionRegion();
+    OS << DecisionRegion.LineStart << ":";
+    OS << DecisionRegion.ColumnStart << ") to (";
+    OS << DecisionRegion.LineEnd << ":";
+    OS << DecisionRegion.ColumnEnd << ")\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+
+    // Display MC/DC Information.
+    renderLinePrefix(OS, ViewDepth);
+    OS << "  Number of Conditions: " << Record.getNumConditions() << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++) {
+      renderLinePrefix(OS, ViewDepth);
+      OS << "     " << Record.getConditionHeaderString(i);
+    }
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "  Executed MC/DC Test Vectors:\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "     ";
+    OS << Record.getTestVectorHeaderString();
+    for (unsigned i = 0; i < Record.getNumTestVectors(); i++) {
+      renderLinePrefix(OS, ViewDepth);
+      OS << Record.getTestVectorString(i);
+    }
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++) {
+      renderLinePrefix(OS, ViewDepth);
+      OS << Record.getConditionCoverageString(i);
+    }
+    renderLinePrefix(OS, ViewDepth);
+    OS << "  MC/DC Coverage for Decision: ";
+    colored_ostream(OS, raw_ostream::RED,
+                    getOptions().Colors && Record.getPercentCovered() < 100.0,
+                    /*Bold=*/false, /*BG=*/true)
+        << format("%0.2f", Record.getPercentCovered()) << "%";
+    OS << "\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+  }
+}
+
 void SourceCoverageViewText::renderInstantiationView(raw_ostream &OS,
                                                      InstantiationView &ISV,
                                                      unsigned ViewDepth) {
@@ -362,5 +414,4 @@ void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {
         << getOptions().CreatedTimeStr << "\n";
 }
 
-void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned,
-                                               unsigned) {}
+void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned) {}

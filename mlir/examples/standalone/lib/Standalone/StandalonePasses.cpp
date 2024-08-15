@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "Standalone/StandalonePasses.h"
@@ -24,7 +23,7 @@ public:
   LogicalResult matchAndRewrite(func::FuncOp op,
                                 PatternRewriter &rewriter) const final {
     if (op.getSymName() == "bar") {
-      rewriter.updateRootInPlace(op, [&op]() { op.setSymName("foo"); });
+      rewriter.modifyOpInPlace(op, [&op]() { op.setSymName("foo"); });
       return success();
     }
     return failure();

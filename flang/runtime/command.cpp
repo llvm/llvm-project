@@ -15,6 +15,23 @@
 #include <cstdlib>
 #include <limits>
 
+#ifdef _WIN32
+#include "flang/Common/windows-include.h"
+#include <direct.h>
+#define getcwd _getcwd
+#define PATH_MAX MAX_PATH
+
+// On Windows GetCurrentProcessId returns a DWORD aka uint32_t
+#include <processthreadsapi.h>
+inline pid_t getpid() { return GetCurrentProcessId(); }
+#else
+#include <unistd.h> //getpid()
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+#endif
+
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
   int argc{executionEnvironment.argc};
@@ -25,30 +42,14 @@ std::int32_t RTNAME(ArgumentCount)() {
   return 0;
 }
 
+pid_t RTNAME(GetPID)() { return getpid(); }
+
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {
   std::size_t length{std::strlen(string)};
-  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
+  if (length <= std::numeric_limits<std::int64_t>::max())
     return static_cast<std::int64_t>(length);
-  } else {
-    std::size_t max{std::numeric_limits<std::int64_t>::max()};
-    return length > max ? 0 // Just fail.
-                        : static_cast<std::int64_t>(length);
-  }
-}
-
-static bool IsValidCharDescriptor(const Descriptor *value) {
-  return value && value->IsAllocated() &&
-      value->type() == TypeCode(TypeCategory::Character, 1) &&
-      value->rank() == 0;
-}
-
-static bool IsValidIntDescriptor(const Descriptor *length) {
-  auto typeCode{length->type().GetCategoryAndKind()};
-  // Check that our descriptor is allocated and is a scalar integer with
-  // kind != 1 (i.e. with a large enough decimal exponent range).
-  return length->IsAllocated() && length->rank() == 0 &&
-      length->type().IsInteger() && typeCode && typeCode->second != 1;
+  return 0;
 }
 
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
@@ -58,26 +59,7 @@ static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
   }
 }
 
-static std::int32_t CopyToDescriptor(const Descriptor &value,
-    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
-    std::size_t offset = 0) {
-
-  std::int64_t toCopy{std::min(rawValueLength,
-      static_cast<std::int64_t>(value.ElementBytes() - offset))};
-  if (toCopy < 0) {
-    return ToErrmsg(errmsg, StatValueTooShort);
-  }
-
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
-
-  if (rawValueLength > toCopy) {
-    return ToErrmsg(errmsg, StatValueTooShort);
-  }
-
-  return StatOk;
-}
-
-static std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
+static std::int32_t CheckAndCopyCharsToDescriptor(const Descriptor *value,
     const char *rawValue, const Descriptor *errmsg, std::size_t &offset) {
   bool haveValue{IsValidCharDescriptor(value)};
 
@@ -91,19 +73,11 @@ static std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
 
   std::int32_t stat{StatOk};
   if (haveValue) {
-    stat = CopyToDescriptor(*value, rawValue, len, errmsg, offset);
+    stat = CopyCharsToDescriptor(*value, rawValue, len, errmsg, offset);
   }
 
   offset += len;
   return stat;
-}
-
-static void StoreLengthToDescriptor(
-    const Descriptor *length, std::int64_t value, Terminator &terminator) {
-  auto typeCode{length->type().GetCategoryAndKind()};
-  int kind{typeCode->second};
-  Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
-      kind, terminator, *length, /* atIndex = */ 0, value);
 }
 
 template <int KIND> struct FitsInIntegerKind {
@@ -138,7 +112,7 @@ std::int32_t RTNAME(GetCommandArgument)(std::int32_t n, const Descriptor *value,
   // Store 0 in case we error out later on.
   if (length) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
-    StoreLengthToDescriptor(length, 0, terminator);
+    StoreIntToDescriptor(length, 0, terminator);
   }
 
   if (n < 0 || n >= executionEnvironment.argc) {
@@ -152,11 +126,11 @@ std::int32_t RTNAME(GetCommandArgument)(std::int32_t n, const Descriptor *value,
   }
 
   if (length && FitsInDescriptor(length, argLen, terminator)) {
-    StoreLengthToDescriptor(length, argLen, terminator);
+    StoreIntToDescriptor(length, argLen, terminator);
   }
 
   if (value) {
-    return CopyToDescriptor(*value, arg, argLen, errmsg);
+    return CopyCharsToDescriptor(*value, arg, argLen, errmsg);
   }
 
   return StatOk;
@@ -174,7 +148,7 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   // Store 0 in case we error out later on.
   if (length) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
-    StoreLengthToDescriptor(length, 0, terminator);
+    StoreIntToDescriptor(length, 0, terminator);
   }
 
   auto shouldContinue = [&](std::int32_t stat) -> bool {
@@ -186,11 +160,11 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   std::size_t offset{0};
 
   if (executionEnvironment.argc == 0) {
-    return CheckAndCopyToDescriptor(value, "", errmsg, offset);
+    return CheckAndCopyCharsToDescriptor(value, "", errmsg, offset);
   }
 
   // value = argv[0]
-  std::int32_t stat{CheckAndCopyToDescriptor(
+  std::int32_t stat{CheckAndCopyCharsToDescriptor(
       value, executionEnvironment.argv[0], errmsg, offset)};
   if (!shouldContinue(stat)) {
     return stat;
@@ -198,12 +172,12 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
 
   // value += " " + argv[1:n]
   for (std::int32_t i{1}; i < executionEnvironment.argc; ++i) {
-    stat = CheckAndCopyToDescriptor(value, " ", errmsg, offset);
+    stat = CheckAndCopyCharsToDescriptor(value, " ", errmsg, offset);
     if (!shouldContinue(stat)) {
       return stat;
     }
 
-    stat = CheckAndCopyToDescriptor(
+    stat = CheckAndCopyCharsToDescriptor(
         value, executionEnvironment.argv[i], errmsg, offset);
     if (!shouldContinue(stat)) {
       return stat;
@@ -211,7 +185,7 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   }
 
   if (length && FitsInDescriptor(length, offset, terminator)) {
-    StoreLengthToDescriptor(length, offset, terminator);
+    StoreIntToDescriptor(length, offset, terminator);
   }
 
   // value += spaces for padding
@@ -223,11 +197,11 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
 }
 
 static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
-  std::size_t s{d.ElementBytes() - 1};
-  while (*d.OffsetElement(s) == ' ') {
+  std::size_t s{d.ElementBytes()}; // This can be 0.
+  while (s != 0 && *d.OffsetElement(s - 1) == ' ') {
     --s;
   }
-  return s + 1;
+  return s;
 }
 
 std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
@@ -243,7 +217,7 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
   // Store 0 in case we error out later on.
   if (length) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
-    StoreLengthToDescriptor(length, 0, terminator);
+    StoreIntToDescriptor(length, 0, terminator);
   }
 
   const char *rawValue{nullptr};
@@ -259,13 +233,32 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
 
   std::int64_t varLen{StringLength(rawValue)};
   if (length && FitsInDescriptor(length, varLen, terminator)) {
-    StoreLengthToDescriptor(length, varLen, terminator);
+    StoreIntToDescriptor(length, varLen, terminator);
   }
 
   if (value) {
-    return CopyToDescriptor(*value, rawValue, varLen, errmsg);
+    return CopyCharsToDescriptor(*value, rawValue, varLen, errmsg);
   }
   return StatOk;
+}
+
+std::int32_t RTNAME(GetCwd)(
+    const Descriptor &cwd, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
+
+  char *buf{(char *)AllocateMemoryOrCrash(terminator, PATH_MAX)};
+
+  if (!getcwd(buf, PATH_MAX)) {
+    return StatMissingCurrentWorkDirectory;
+  }
+
+  std::int64_t strLen{StringLength(buf)};
+  std::int32_t status{CopyCharsToDescriptor(cwd, buf, strLen)};
+
+  std::free(buf);
+  return status;
 }
 
 } // namespace Fortran::runtime

@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=mem2reg <%s | FileCheck %s
+; RUN: opt -S -passes=mem2reg <%s --try-experimental-debuginfo-iterators | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
@@ -7,10 +8,10 @@ declare void @foo(i32, i64, ptr)
 define void @baz(i32 %a) nounwind ssp !dbg !1 {
 ; CHECK-LABEL:  entry:
 ; CHECK-NEXT:     %"alloca point" = bitcast i32 0 to i32{{$}}
-; CHECK-NEXT:     call void @llvm.dbg.value(metadata i32 %a,{{.*}}, !dbg
-; CHECK-NEXT:     call void @llvm.dbg.value(metadata i32 %a,{{.*}}, !dbg
-; CHECK-NEXT:     call void @llvm.dbg.value(metadata i64 55,{{.*}}, !dbg
-; CHECK-NEXT:     call void @llvm.dbg.value(metadata ptr @baz,{{.*}}, !dbg
+; CHECK-NEXT:     #dbg_value(i32 %a,{{.*}}, 
+; CHECK-NEXT:     #dbg_value(i32 %a,{{.*}}, 
+; CHECK-NEXT:     #dbg_value(i64 55,{{.*}}, 
+; CHECK-NEXT:     #dbg_value(ptr @baz,{{.*}}, 
 ; CHECK-NEXT:     call void @foo({{.*}}, !dbg
 ; CHECK-NEXT:     br label %return, !dbg
 entry:

@@ -12,6 +12,8 @@
 #include "SymbolFileDWARF.h"
 #include <optional>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.
   static char ID;
@@ -32,7 +34,7 @@ public:
 
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
-  void GetObjCMethods(lldb_private::ConstString class_name,
+  void GetObjCMethods(ConstString class_name,
                       llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
   llvm::Expected<lldb::TypeSystemSP>
@@ -41,35 +43,48 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
-  lldb::offset_t
-  GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
-                           const lldb::offset_t data_offset,
-                           const uint8_t op) const override;
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override;
 
-  bool ParseVendorDWARFOpcode(
-      uint8_t op, const lldb_private::DataExtractor &opcodes,
-      lldb::offset_t &offset,
-      std::vector<lldb_private::Value> &stack) const override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                              lldb::offset_t &offset,
+                              std::vector<Value> &stack) const override;
+
+  void FindGlobalVariables(ConstString name,
+                           const CompilerDeclContext &parent_decl_ctx,
+                           uint32_t max_matches,
+                           VariableList &variables) override;
+
+  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
+
+  bool GetDebugInfoIndexWasLoadedFromCache() const override;
+  void SetDebugInfoIndexWasLoadedFromCache() override;
+  bool GetDebugInfoIndexWasSavedToCache() const override;
+  void SetDebugInfoIndexWasSavedToCache() override;
+  bool GetDebugInfoHadFrameVariableErrors() const override;
+  void SetDebugInfoHadFrameVariableErrors() override;
+
+  SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref) override;
 
 protected:
   DIEToTypePtr &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
 
-  DIEToClangType &GetForwardDeclDieToClangType() override;
-
-  ClangTypeToDIE &GetForwardDeclClangTypeToDie() override;
+  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+  GetForwardDeclCompilerTypeToDIE() override;
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
+  DWARFDIE FindDefinitionDIE(const DWARFDIE &die) override;
+
   lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) override;
-
-  lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, lldb_private::ConstString type_name,
-      bool must_be_implementation) override;
-
-  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
+  FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
+                                       ConstString type_name,
+                                       bool must_be_implementation) override;
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.
@@ -77,5 +92,7 @@ protected:
 
   SymbolFileDWARF &m_base_symbol_file;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H

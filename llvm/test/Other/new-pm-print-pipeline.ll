@@ -6,9 +6,6 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate)),invalidate<globals-aa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-1
 ; CHECK-1: rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate<header-duplication;no-prepare-for-lto>)),invalidate<globals-aa>
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='repeat<5>(function(mem2reg)),invalidate<all>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-2
-; CHECK-2: repeat<5>(function(mem2reg)),invalidate<all>
-
 ;; Test that we get ClassName printed when there is no ClassName to pass-name mapping (as is the case for the BitcodeWriterPass).
 ; RUN: opt -o /dev/null -disable-verify -print-pipeline-passes -passes='function(mem2reg)' < %s -disable-pipeline-verification | FileCheck %s --match-full-lines --check-prefixes=CHECK-3
 ; CHECK-3: function(mem2reg),BitcodeWriterPass
@@ -52,8 +49,8 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(print<stack-lifetime><may>,print<stack-lifetime><must>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-17
 ; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
-; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch;speculate-unpredictables>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch;no-speculate-unpredictables>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
+; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch;speculate-unpredictables>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch;no-speculate-unpredictables>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only>,loop-vectorize<interleave-forced-only;vectorize-forced-only>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-19
 ; CHECK-19: function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only;>,loop-vectorize<interleave-forced-only;vectorize-forced-only;>)
@@ -62,7 +59,7 @@
 ; CHECK-20: cgscc(inline<only-mandatory>,inline),cgscc(inline)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='scc-oz-module-inliner' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-21
-; CHECK-21: require<globals-aa>,function(invalidate<aa>),require<profile-summary>,cgscc(devirt<4>(inline<only-mandatory>,inline,{{.*}},instcombine{{.*}}))
+; CHECK-21: require<globals-aa>,function(invalidate<aa>),require<profile-summary>,cgscc(devirt<4>(inline,{{.*}},instcombine{{.*}}))
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<eager-inv>(no-op-function)),function<eager-inv>(no-op-function)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-22
 ; CHECK-22: cgscc(function<eager-inv>(no-op-function)),function<eager-inv>(no-op-function)
@@ -120,3 +117,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
 ; CHECK-35: globaldce<vfe-linkage-unit-visibility>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='speculative-execution<only-if-divergent-target>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-36
+; CHECK-36: function(speculative-execution<only-if-divergent-target>)

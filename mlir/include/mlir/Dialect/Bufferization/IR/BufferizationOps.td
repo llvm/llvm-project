@@ -10,12 +10,13 @@
 #define BUFFERIZATION_OPS
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
-include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/SubsetOpInterface.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 
 class Bufferization_Op<string mnemonic, list<Trait> traits = []>
@@ -216,10 +217,11 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
-        [AllShapesMatch<["source", "dest"]>,
-         AllElementTypesMatch<["source", "dest"]>,
+        [AllElementTypesMatch<["source", "dest"]>,
          BufferizableOpInterface, DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+         DeclareOpInterfaceMethods<SubsetOpInterface,
+            ["operatesOnEquivalentSubset", "operatesOnDisjointSubset"]>,
          DeclareOpInterfaceMethods<SubsetInsertionOpInterface,
             ["getSourceOperand", "getValuesNeededToBuildSubsetExtraction",
              "buildSubsetExtraction", "isEquivalentSubset"]>,
@@ -236,9 +238,9 @@ def Bufferization_MaterializeInDestinationOp
     memref, `source` materializes in `dest`, which is already a buffer. The op
     has no results in that case.
 
-    `source`, `dest` and `result` (if present) must have the same shape and
-    element type. If the op has a result, the types of `result` and `dest` must
-    match exactly (e.g., including any tensor encodings).
+    `source`, `dest` and `result` (if present) must have the same runtime shape
+    and element type. If the op has a result, the types of `result` and `dest`
+    must match exactly (e.g., including any tensor encodings).
 
     By default, this op bufferizes to a memcpy from the future buffer of the
     `source` tensor to the future buffer of the `dest` tensor or to the `dest`
@@ -246,28 +248,32 @@ def Bufferization_MaterializeInDestinationOp
     rewrite IR such that a computation is performed directly in `dest` and no
     memcpy is needed.
 
-    If `dest` is a buffer, the `restrict` and `writable` attributes must be
-    specified. These attributes have the same meaning as the respective
-    attributes of `bufferization.to_tensor`. `writable` indicates that the
-    `dest` buffer is considered writable. It does not make sense to materialize
-    a computation in a read-only buffer, so `writable` is required. `restrict`
-    indicates that this op is the only way for the tensor IR to access `dest`
-    (or an alias thereof). E.g., there must be no other `to_tensor` ops with
-    `dest` or with an alias of `dest`. Such IR is not supported by
-    One-Shot Bufferize. Ops that have incorrect usage of `restrict` may
-    bufferize incorrectly.
+    If `dest` is a buffer, the `writable` attribute must be specified and the
+    `restrict` keyword can be specified. These attributes have the same meaning
+    as the respective attributes of `bufferization.to_tensor`.
 
-    Note: `restrict` and `writable` could be removed from this op because they
-    must always be set for memref destinations. This op has these attributes to
-    make clear the requirements on the `dest` operand in the op assembly format.
-    Moreover, these requirements may be relaxed at some point in the future.
+    `writable` indicates that the `dest` buffer is considered writable. It does
+    not make sense to materialize a computation in a read-only buffer, so
+    `writable` is required.
+
+    `restrict` indicates that there is no `bufferization.to_tensor` op and no
+    other `bufferization.materialize_in_destination` op with `dest` (or an alias
+    thereof) and "restrict". Only ops with this attribute are considered for
+    "empty tensor elimination". As part of empty tensor elimination, a new
+    `to_tensor` op with `dest` may be inserted and the `restrict` attribute is
+    transferred from this op to the new `to_tensor` op. Having "restrict" on
+    this op guarantees that performing empty tensor elimination would not create
+    invalid IR (i.e., having multiple `to_tensor restrict` with aliasing
+    buffers).
+
+    Note: `writable` could be removed from this op because it must always be set
+    for memref destinations. This op has that attribute to make clear the
+    requirements on the `dest` operand in the op assembly format.
 
     Note: If `dest` is a tensor, `tensor.insert_slice` could be used for the
     same purpose, but since tensor dialect ops only indicate *what* should be
     computed but not *where*, it could fold away, causing the computation to
-    materialize in a different buffer. It is also possible that the
-    `tensor.insert_slice` destination bufferizes out-of-place, which would also
-    cause the computation to materialize in a buffer different buffer.
+    materialize in a different buffer.
   }];
 
   let arguments = (ins AnyTensor:$source, AnyShaped:$dest,

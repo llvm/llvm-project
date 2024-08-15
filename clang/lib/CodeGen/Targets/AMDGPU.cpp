@@ -45,11 +45,12 @@ public:
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
-  ABIArgInfo classifyArgumentType(QualType Ty, unsigned &NumRegsLeft) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool Variadic,
+                                  unsigned &NumRegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -103,19 +104,27 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  unsigned ArgumentIndex = 0;
+  const unsigned numFixedArguments = FI.getNumRequiredArgs();
+
   unsigned NumRegsLeft = MaxNumRegsForArgsRet;
   for (auto &Arg : FI.arguments()) {
     if (CC == llvm::CallingConv::AMDGPU_KERNEL) {
       Arg.info = classifyKernelArgumentType(Arg.type);
     } else {
-      Arg.info = classifyArgumentType(Arg.type, NumRegsLeft);
+      bool FixedArgument = ArgumentIndex++ < numFixedArguments;
+      Arg.info = classifyArgumentType(Arg.type, !FixedArgument, NumRegsLeft);
     }
   }
 }
 
-Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
-  llvm_unreachable("AMDGPU does not support varargs");
+RValue AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty, AggValueSlot Slot) const {
+  const bool IsIndirect = false;
+  const bool AllowHigherAlign = false;
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(4), AllowHigherAlign, Slot);
 }
 
 ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
@@ -197,11 +206,19 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
-ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
+ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
                                                unsigned &NumRegsLeft) const {
   assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (Variadic) {
+    return ABIArgInfo::getDirect(/*T=*/nullptr,
+                                 /*Offset=*/0,
+                                 /*Padding=*/nullptr,
+                                 /*CanBeFlattened=*/false,
+                                 /*Align=*/0);
+  }
 
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
@@ -294,6 +311,8 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::AtomicRMWInst &RMW) const override;
   llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                          llvm::Function *BlockInvokeFunc,
                                          llvm::Type *BlockTy) const override;
@@ -356,15 +375,42 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
+    uint32_t X = Attr->getMaxNumWorkGroupsX()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    // Y and Z dimensions default to 1 if not specified
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()
+                     ? Attr->getMaxNumWorkGroupsY()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
+                     ? Attr->getMaxNumWorkGroupsZ()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+
+    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
+  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
 /// AMDGPU ROCm device libraries.
 void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "llvm.amdgcn.abi.version";
+  StringRef Name = "__oclc_ABI_version";
   llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
   if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
+    return;
+
+  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
+      llvm::CodeObjectVersionKind::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
@@ -467,20 +513,25 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   std::string Name;
   switch (Scope) {
   case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
     Name = "singlethread";
     break;
   case SyncScope::HIPWavefront:
   case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
     Name = "workgroup";
     break;
   case SyncScope::HIPAgent:
   case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
     Name = "agent";
     break;
+  case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
@@ -495,6 +546,23 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   }
 
   return Ctx.getOrInsertSyncScopeID(Name);
+}
+
+void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::AtomicRMWInst &RMW) const {
+  if (!CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
+    return;
+
+  // TODO: Introduce new, more controlled options that also work for integers,
+  // and deprecate allowAMDGPUUnsafeFPAtomics.
+  llvm::AtomicRMWInst::BinOp RMWOp = RMW.getOperation();
+  if (llvm::AtomicRMWInst::isFPOperation(RMWOp)) {
+    llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.memory", Empty);
+
+    if (RMWOp == llvm::AtomicRMWInst::FAdd && RMW.getType()->isFloatTy())
+      RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
@@ -594,7 +662,8 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *FlatWGS,
-    const ReqdWorkGroupSizeAttr *ReqdWGS) {
+    const ReqdWorkGroupSizeAttr *ReqdWGS, int32_t *MinThreadsVal,
+    int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
   if (FlatWGS) {
@@ -607,8 +676,13 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
+    if (MinThreadsVal)
+      *MinThreadsVal = Min;
+    if (MaxThreadsVal)
+      *MaxThreadsVal = Max;
     std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
-    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+    if (F)
+      F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   } else
     assert(Max == 0 && "Max must be zero");
 }

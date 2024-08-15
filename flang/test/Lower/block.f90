@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain
 program bb ! block stack management and exits
@@ -81,7 +81,7 @@ program bb ! block stack management and exits
 
     ! CHECK: %[[V_51:[0-9]+]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
     ! CHECK: fir.store %c5{{.*}} to %[[V_0]] : !fir.ref<i32>
-    ! CHECK: fir.call @ss(%[[V_0]]) fastmath<contract> : (!fir.ref<i32>) -> ()
+    ! CHECK: fir.call @ss(%[[V_0]]) fastmath<contract> {is_bind_c} : (!fir.ref<i32>) -> ()
     ! CHECK: fir.call @llvm.stackrestore.p0(%[[V_51]]) fastmath<contract> : (!fir.ref<i8>) -> ()
     block
       interface

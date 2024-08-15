@@ -9,27 +9,53 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 
-#include <vector>
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace llvm {
 
 struct Align;
 class AAResults;
 class DataLayout;
-class Function;
 class GlobalVariable;
 class LoadInst;
 class MemoryDef;
 class MemorySSA;
-class Module;
 class Value;
+class Function;
+class CallGraph;
+class Module;
 
 namespace AMDGPU {
 
-Align getAlign(DataLayout const &DL, const GlobalVariable *GV);
+using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
+using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
+
+Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);
+
+struct LDSUsesInfoTy {
+  FunctionVariableMap direct_access;
+  FunctionVariableMap indirect_access;
+};
+
+bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M);
+
+void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
+                            FunctionVariableMap &kernels,
+                            FunctionVariableMap &functions);
+
+bool isKernelLDS(const Function *F);
+
+LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M);
+
+/// Strip FnAttr attribute from any functions where we may have
+/// introduced its use.
+void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
+                               ArrayRef<StringRef> FnAttrs);
 
 /// Given a \p Def clobbering a load from \p Ptr according to the MSSA check
 /// if this is actually a memory update or an artificial clobber to facilitate

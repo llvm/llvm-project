@@ -273,10 +273,9 @@ namespace {
       std::string SStr;
       llvm::raw_string_ostream S(SStr);
       New->printPretty(S, nullptr, PrintingPolicy(LangOpts));
-      const std::string &Str = S.str();
 
       // If replacement succeeded or warning disabled return with no warning.
-      if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, Str)) {
+      if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, SStr)) {
         ReplacedNodes[Old] = New;
         return;
       }
@@ -465,15 +464,15 @@ namespace {
 
     std::string SynthesizeByrefCopyDestroyHelper(VarDecl *VD, int flag);
     std::string SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockFunc(BlockExpr *CE, int i,
-                                      StringRef funcName, std::string Tag);
-    std::string SynthesizeBlockImpl(BlockExpr *CE,
-                                    std::string Tag, std::string Desc);
-    std::string SynthesizeBlockDescriptor(std::string DescTag,
-                                          std::string ImplTag,
-                                          int i, StringRef funcName,
-                                          unsigned hasCopy);
+                                           StringRef funcName,
+                                           const std::string &Tag);
+    std::string SynthesizeBlockFunc(BlockExpr *CE, int i, StringRef funcName,
+                                    const std::string &Tag);
+    std::string SynthesizeBlockImpl(BlockExpr *CE, const std::string &Tag,
+                                    const std::string &Desc);
+    std::string SynthesizeBlockDescriptor(const std::string &DescTag,
+                                          const std::string &ImplTag, int i,
+                                          StringRef funcName, unsigned hasCopy);
     Stmt *SynthesizeBlockCall(CallExpr *Exp, const Expr* BlockExp);
     void SynthesizeBlockLiterals(SourceLocation FunLocStart,
                                  StringRef FunName);
@@ -592,7 +591,7 @@ namespace {
     }
 
     bool ImplementationIsNonLazy(const ObjCImplDecl *OD) const {
-      IdentifierInfo* II = &Context->Idents.get("load");
+      const IdentifierInfo *II = &Context->Idents.get("load");
       Selector LoadSel = Context->Selectors.getSelector(0, &II);
       return OD->getClassMethod(LoadSel) != nullptr;
     }
@@ -600,8 +599,8 @@ namespace {
     StringLiteral *getStringLiteral(StringRef Str) {
       QualType StrType = Context->getConstantArrayType(
           Context->CharTy, llvm::APInt(32, Str.size() + 1), nullptr,
-          ArrayType::Normal, 0);
-      return StringLiteral::Create(*Context, Str, StringLiteral::Ordinary,
+          ArraySizeModifier::Normal, 0);
+      return StringLiteral::Create(*Context, Str, StringLiteralKind::Ordinary,
                                    /*Pascal=*/false, StrType, SourceLocation());
     }
   };
@@ -864,9 +863,9 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
         CDecl = CatDecl->getClassInterface();
       std::string RecName = std::string(CDecl->getName());
       RecName += "_IMPL";
-      RecordDecl *RD =
-          RecordDecl::Create(*Context, TTK_Struct, TUDecl, SourceLocation(),
-                             SourceLocation(), &Context->Idents.get(RecName));
+      RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
+                                          SourceLocation(), SourceLocation(),
+                                          &Context->Idents.get(RecName));
       QualType PtrStructIMPL = Context->getPointerType(Context->getTagDeclType(RD));
       unsigned UnsignedIntSize =
       static_cast<unsigned>(Context->getTypeSize(Context->UnsignedIntTy));
@@ -2581,7 +2580,7 @@ Stmt *RewriteModernObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));
-  Preamble += prettyBuf.str();
+  Preamble += prettyBufS;
   Preamble += ",";
   Preamble += utostr(Exp->getString()->getByteLength()) + "};\n";
 
@@ -2978,9 +2977,9 @@ Stmt *RewriteModernObjC::RewriteObjCDictionaryLiteralExpr(ObjCDictionaryLiteral 
 // };
 QualType RewriteModernObjC::getSuperStructType() {
   if (!SuperStructDecl) {
-    SuperStructDecl = RecordDecl::Create(*Context, TTK_Struct, TUDecl,
-                                         SourceLocation(), SourceLocation(),
-                                         &Context->Idents.get("__rw_objc_super"));
+    SuperStructDecl = RecordDecl::Create(
+        *Context, TagTypeKind::Struct, TUDecl, SourceLocation(),
+        SourceLocation(), &Context->Idents.get("__rw_objc_super"));
     QualType FieldTypes[2];
 
     // struct objc_object *object;
@@ -3006,9 +3005,9 @@ QualType RewriteModernObjC::getSuperStructType() {
 
 QualType RewriteModernObjC::getConstantStringStructType() {
   if (!ConstantStringDecl) {
-    ConstantStringDecl = RecordDecl::Create(*Context, TTK_Struct, TUDecl,
-                                            SourceLocation(), SourceLocation(),
-                         &Context->Idents.get("__NSConstantStringImpl"));
+    ConstantStringDecl = RecordDecl::Create(
+        *Context, TagTypeKind::Struct, TUDecl, SourceLocation(),
+        SourceLocation(), &Context->Idents.get("__NSConstantStringImpl"));
     QualType FieldTypes[4];
 
     // struct objc_object *receiver;
@@ -3782,10 +3781,9 @@ QualType RewriteModernObjC::SynthesizeBitfieldGroupStructType(
                               SmallVectorImpl<ObjCIvarDecl *> &IVars) {
   std::string StructTagName;
   ObjCIvarBitfieldGroupType(IV, StructTagName);
-  RecordDecl *RD = RecordDecl::Create(*Context, TTK_Struct,
-                                      Context->getTranslationUnitDecl(),
-                                      SourceLocation(), SourceLocation(),
-                                      &Context->Idents.get(StructTagName));
+  RecordDecl *RD = RecordDecl::Create(
+      *Context, TagTypeKind::Struct, Context->getTranslationUnitDecl(),
+      SourceLocation(), SourceLocation(), &Context->Idents.get(StructTagName));
   for (unsigned i=0, e = IVars.size(); i < e; i++) {
     ObjCIvarDecl *Ivar = IVars[i];
     RD->addDecl(FieldDecl::Create(*Context, RD, SourceLocation(), SourceLocation(),
@@ -4038,7 +4036,7 @@ static bool HasLocalVariableExternalStorage(ValueDecl *VD) {
 
 std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
                                                    StringRef funcName,
-                                                   std::string Tag) {
+                                                   const std::string &Tag) {
   const FunctionType *AFT = CE->getFunctionType();
   QualType RT = AFT->getReturnType();
   std::string StructRef = "struct " + Tag;
@@ -4132,9 +4130,8 @@ std::string RewriteModernObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
-                                                   StringRef funcName,
-                                                   std::string Tag) {
+std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(
+    BlockExpr *CE, int i, StringRef funcName, const std::string &Tag) {
   std::string StructRef = "struct " + Tag;
   std::string S = "static void __";
 
@@ -4176,8 +4173,9 @@ std::string RewriteModernObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
-                                             std::string Desc) {
+std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE,
+                                                   const std::string &Tag,
+                                                   const std::string &Desc) {
   std::string S = "\nstruct " + Tag;
   std::string Constructor = "  " + Tag;
 
@@ -4291,10 +4289,9 @@ std::string RewriteModernObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Ta
   return S;
 }
 
-std::string RewriteModernObjC::SynthesizeBlockDescriptor(std::string DescTag,
-                                                   std::string ImplTag, int i,
-                                                   StringRef FunName,
-                                                   unsigned hasCopy) {
+std::string RewriteModernObjC::SynthesizeBlockDescriptor(
+    const std::string &DescTag, const std::string &ImplTag, int i,
+    StringRef FunName, unsigned hasCopy) {
   std::string S = "\nstatic struct " + DescTag;
 
   S += " {\n  size_t reserved;\n";
@@ -4416,7 +4413,7 @@ void RewriteModernObjC::SynthesizeBlockLiterals(SourceLocation FunLocStart,
     llvm::raw_string_ostream constructorExprBuf(SStr);
     GlobalConstructionExp->printPretty(constructorExprBuf, nullptr,
                                        PrintingPolicy(LangOpts));
-    globalBuf += constructorExprBuf.str();
+    globalBuf += SStr;
     globalBuf += ";\n";
     InsertText(FunLocStart, globalBuf);
     GlobalConstructionExp = nullptr;
@@ -4588,7 +4585,7 @@ Stmt *RewriteModernObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp
   const FunctionProtoType *FTP = dyn_cast<FunctionProtoType>(FT);
   // FTP will be null for closures that don't take arguments.
 
-  RecordDecl *RD = RecordDecl::Create(*Context, TTK_Struct, TUDecl,
+  RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                       SourceLocation(), SourceLocation(),
                                       &Context->Idents.get("__block_impl"));
   QualType PtrBlock = Context->getPointerType(Context->getTagDeclType(RD));
@@ -5347,9 +5344,9 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
       RewriteByRefString(RecName, Name, ND, true);
       IdentifierInfo *II = &Context->Idents.get(RecName.c_str()
                                                 + sizeof("struct"));
-      RecordDecl *RD = RecordDecl::Create(*Context, TTK_Struct, TUDecl,
-                                          SourceLocation(), SourceLocation(),
-                                          II);
+      RecordDecl *RD =
+          RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
+                             SourceLocation(), SourceLocation(), II);
       assert(RD && "SynthBlockInitExpr(): Can't find RecordDecl");
       QualType castT = Context->getPointerType(Context->getTagDeclType(RD));
 
@@ -6855,7 +6852,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
   std::vector<ObjCMethodDecl *> InstanceMethods, ClassMethods;
   std::vector<ObjCMethodDecl *> OptInstanceMethods, OptClassMethods;
   for (auto *MD : PDecl->instance_methods()) {
-    if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
+    if (MD->getImplementationControl() == ObjCImplementationControl::Optional) {
       OptInstanceMethods.push_back(MD);
     } else {
       InstanceMethods.push_back(MD);
@@ -6863,7 +6860,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
   }
 
   for (auto *MD : PDecl->class_methods()) {
-    if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
+    if (MD->getImplementationControl() == ObjCImplementationControl::Optional) {
       OptClassMethods.push_back(MD);
     } else {
       ClassMethods.push_back(MD);
@@ -7508,8 +7505,8 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
           std::string RecName = std::string(CDecl->getName());
           RecName += "_IMPL";
           RecordDecl *RD = RecordDecl::Create(
-              *Context, TTK_Struct, TUDecl, SourceLocation(), SourceLocation(),
-              &Context->Idents.get(RecName));
+              *Context, TagTypeKind::Struct, TUDecl, SourceLocation(),
+              SourceLocation(), &Context->Idents.get(RecName));
           QualType PtrStructIMPL = Context->getPointerType(Context->getTagDeclType(RD));
           unsigned UnsignedIntSize =
             static_cast<unsigned>(Context->getTypeSize(Context->UnsignedIntTy));

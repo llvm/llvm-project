@@ -37,8 +37,10 @@
 // C family source language (with and without preprocessing).
 TYPE("cpp-output",               PP_C,         INVALID,         "i",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("c",                        C,            PP_C,            "c",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("cl",                       CL,           PP_C,            "cl",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("clcpp",                    CLCXX,        PP_CXX,          "clcpp",  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("cl",                       CL,           PP_CL,           "cl",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("cl-cpp-output",            PP_CL,        INVALID,         "cli",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("clcpp",                    CLCXX,        PP_CLCXX,        "clcpp",  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("clcpp-cpp-output",         PP_CLCXX,     INVALID,         "clii",   phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("cuda-cpp-output",          PP_CUDA,      INVALID,         "cui",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("cuda",                     CUDA,         PP_CUDA,         "cu",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("cuda",                     CUDA_DEVICE,  PP_CUDA,         "cu",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
@@ -88,6 +90,7 @@ TYPE("ir",                       LLVM_BC,      INVALID,         "bc",     phases
 TYPE("lto-ir",                   LTO_IR,       INVALID,         "s",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
+TYPE("cir",                      CIR,          INVALID,         "cir",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 // Misc.
 TYPE("ast",                      AST,          INVALID,         "ast",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::IfsMerge)

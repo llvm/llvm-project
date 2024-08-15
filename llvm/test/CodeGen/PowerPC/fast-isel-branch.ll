@@ -76,24 +76,24 @@ define signext i32 @bar() #0 {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:
-  %0 = load i32, i32* %i, align 4
-  %1 = load i32, i32* @x, align 4
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr @x, align 4
   %cmp = icmp slt i32 %0, %1
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
-  call void bitcast (void (...)* @foo to void ()*)()
+  call void @foo()
   br label %for.inc
 
 for.inc:
-  %2 = load i32, i32* %i, align 4
+  %2 = load i32, ptr %i, align 4
   %inc = add nsw i32 %2, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:

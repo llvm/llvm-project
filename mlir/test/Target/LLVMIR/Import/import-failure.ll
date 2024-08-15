@@ -59,18 +59,17 @@ define void @unhandled_intrinsic() gc "example" {
 
 ; // -----
 
+; Check that debug intrinsics with an unsupported argument are dropped.
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
+; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !DIArgList(i64 %{{.*}}, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value))
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
-define void @dropped_instruction(i64 %arg1) {
-  call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
-  call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
-  call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
+; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression())
+define void @unsupported_argument(i64 %arg1) {
+  tail call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
+  tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }
 

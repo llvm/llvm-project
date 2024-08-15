@@ -21,9 +21,6 @@
 ;     5	  }
 ;     6	}
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.11.0"
-
 ; HOTNESS: remark: /tmp/t.c:3:3: loop not distributed: use -Rpass-analysis=loop-distribute for more info (hotness: 300)
 ; HOTNESS: remark: /tmp/t.c:3:3: loop not distributed: memory operations are safe for vectorization (hotness: 300)
 ; NO_HOTNESS: remark: /tmp/t.c:3:3: loop not distributed: use -Rpass-analysis=loop-distribute for more info{{$}}
@@ -79,5 +76,5 @@ for.cond.cleanup:
 !20 = distinct !{!20, !21}
 !21 = !{!"llvm.loop.distribute.enable", i1 true}
 !22 = !{!"function_entry_count", i64 3}
-!23 = !{!"branch_weights", i32 99, i32 1}
+!23 = !{!"branch_weights", i32 2000, i32 1}
 !24 = !{!"branch_weights", i32 1, i32 99}

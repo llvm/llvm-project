@@ -16,13 +16,12 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/Support/Endian.h"
 #include <optional>
 #include <string>
 #include <tuple>
 
 namespace llvm {
-template <typename HasherT, support::endianness Endianness> class HashBuilder;
+template <typename HasherT, llvm::endianness Endianness> class HashBuilder;
 class raw_ostream;
 class StringRef;
 
@@ -173,7 +172,7 @@ public:
     return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
                       const VersionTuple &VT) {
     HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);

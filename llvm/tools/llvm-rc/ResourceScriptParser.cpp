@@ -238,7 +238,24 @@ Expected<StringRef> RCParser::readString() {
 Expected<StringRef> RCParser::readFilename() {
   if (!isNextTokenKind(Kind::String) && !isNextTokenKind(Kind::Identifier))
     return getExpectedError("string");
-  return read().value();
+  const RCToken &Token = read();
+  StringRef Str = Token.value();
+  if (Token.kind() != Kind::String)
+    return Str;
+  while (isNextTokenKind(Kind::String)) {
+    const RCToken &NextToken = read();
+    StringRef Next = NextToken.value();
+    bool IsWide = Str.consume_front_insensitive("L");
+    Next.consume_front_insensitive("L");
+    bool StrUnquoted = Str.consume_front("\"") && Str.consume_back("\"");
+    bool NextUnquoted = Next.consume_front("\"") && Next.consume_back("\"");
+    assert(StrUnquoted && NextUnquoted);
+    (void)StrUnquoted;
+    (void)NextUnquoted;
+
+    Str = Saver.save(Twine(IsWide ? "L" : "") + "\"" + Str + Next + "\"");
+  }
+  return Str;
 }
 
 Expected<StringRef> RCParser::readIdentifier() {
@@ -413,6 +430,8 @@ RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
       return parseFontStmt(StmtsType);
     if (TypeToken->equals_insensitive("STYLE"))
       return parseStyleStmt();
+    if (TypeToken->equals_insensitive("MENU"))
+      return parseMenuStmt();
   }
 
   return getExpectedError("optional statement type, BEGIN or '{'",
@@ -499,9 +518,10 @@ RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
   // Check if this is a file resource.
   switch (look().kind()) {
   case Kind::String:
-  case Kind::Identifier:
-    return std::make_unique<UserDefinedResource>(Type, read().value(),
-                                                 MemoryFlags);
+  case Kind::Identifier: {
+    ASSIGN_OR_RETURN(Filename, readFilename());
+    return std::make_unique<UserDefinedResource>(Type, *Filename, MemoryFlags);
+  }
   default:
     break;
   }
@@ -945,6 +965,11 @@ RCParser::ParseOptionType RCParser::parseStyleStmt() {
 RCParser::ParseOptionType RCParser::parseExStyleStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return std::make_unique<ExStyleStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseMenuStmt() {
+  ASSIGN_OR_RETURN(Arg, readIntOrString());
+  return std::make_unique<MenuStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {

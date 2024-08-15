@@ -38,6 +38,8 @@ bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
       return yaml2elf(*Doc.Elf, Out, ErrHandler, MaxSize);
     if (Doc.Coff)
       return yaml2coff(*Doc.Coff, Out, ErrHandler);
+    if (Doc.Goff)
+      return yaml2goff(*Doc.Goff, Out, ErrHandler);
     if (Doc.MachO || Doc.FatMachO)
       return yaml2macho(Doc, Out, ErrHandler);
     if (Doc.Minidump)

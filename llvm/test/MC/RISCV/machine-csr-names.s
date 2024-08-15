@@ -9,9 +9,6 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
-#
-# RUN: llvm-mc -triple riscv32 %s 2>&1 | FileCheck -check-prefix CHECK-WARN %s
-# RUN: llvm-mc -triple riscv64 %s 2>&1 | FileCheck -check-prefix CHECK-WARN %s
 
 ##################################
 # Machine Information Registers
@@ -1495,8 +1492,6 @@ csrrs t1, dscratch, zero
 # uimm12
 csrrs t2, 0x7B2, zero
 
-# CHECK-WARN: warning: 'dscratch' is a deprecated alias for 'dscratch0'
-
 # dscratch1
 # name
 # CHECK-INST: csrrs t1, dscratch1, zero
@@ -1948,8 +1943,6 @@ csrrs t2, 0x320, zero
 csrrs t1, mucounteren, zero
 # uimm12
 csrrs t2, 0x320, zero
-
-# CHECK-WARN: warning: 'mucounteren' is a deprecated alias for 'mcountinhibit'
 
 # mhpmevent3
 # name
@@ -2449,6 +2442,76 @@ csrrs t2, 0x350, zero
 csrrs t1, mireg, zero
 # uimm12
 csrrs t2, 0x351, zero
+
+# mireg2
+# name
+# CHECK-INST: csrrs t1, mireg2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg2
+# uimm12
+# CHECK-INST: csrrs t2, mireg2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg2
+# name
+csrrs t1, mireg2, zero
+# uimm12
+csrrs t2, 0x352, zero
+
+# mireg3
+# name
+# CHECK-INST: csrrs t1, mireg3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg3
+# uimm12
+# CHECK-INST: csrrs t2, mireg3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg3
+# name
+csrrs t1, mireg3, zero
+# uimm12
+csrrs t2, 0x353, zero
+
+# mireg4
+# name
+# CHECK-INST: csrrs t1, mireg4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg4
+# uimm12
+# CHECK-INST: csrrs t2, mireg4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg4
+# name
+csrrs t1, mireg4, zero
+# uimm12
+csrrs t2, 0x355, zero
+
+# mireg5
+# name
+# CHECK-INST: csrrs t1, mireg5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg5
+# uimm12
+# CHECK-INST: csrrs t2, mireg5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg5
+# name
+csrrs t1, mireg5, zero
+# uimm12
+csrrs t2, 0x356, zero
+
+# mireg6
+# name
+# CHECK-INST: csrrs t1, mireg6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg6
+# uimm12
+# CHECK-INST: csrrs t2, mireg6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg6
+# name
+csrrs t1, mireg6, zero
+# uimm12
+csrrs t2, 0x357, zero
 
 # mtopei
 # name

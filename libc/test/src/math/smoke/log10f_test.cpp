@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcLog10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcLog10fTest, SpecialNumbers) {
+TEST_F(LlvmLibcLog10fTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10f(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10f(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(neg_inf), FE_INVALID);

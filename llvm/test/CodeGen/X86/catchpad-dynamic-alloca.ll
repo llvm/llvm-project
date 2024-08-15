@@ -62,4 +62,4 @@ catch.switch:
 ; CHECK-LABEL: $handlerMap$0$test2:
 ; CHECK:      .long   0
 ; CHECK-NEXT: .long   0
-; CHECK-NEXT: .long   8
+; CHECK-NEXT: .long   16

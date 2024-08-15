@@ -30,6 +30,20 @@ class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
 
+class OutputCategoryAggregator {
+private:
+  std::map<std::string, unsigned> Aggregation;
+  bool IncludeDetail;
+
+public:
+  OutputCategoryAggregator(bool includeDetail = false)
+      : IncludeDetail(includeDetail) {}
+  void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
+  size_t GetNumCategories() const { return Aggregation.size(); }
+  void Report(StringRef s, std::function<void()> detailCallback);
+  void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+};
+
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
 public:
@@ -81,6 +95,7 @@ private:
   DWARFContext &DCtx;
   DIDumpOptions DumpOpts;
   uint32_t NumDebugLineErrors = 0;
+  OutputCategoryAggregator ErrorCategory;
   // Used to relax some checks that do not currently work portably
   bool IsObjectFile;
   bool IsMachOObject;
@@ -156,7 +171,6 @@ private:
   unsigned verifyUnitSection(const DWARFSection &S);
   unsigned verifyUnits(const DWARFUnitVector &Units);
 
-  unsigned verifyIndexes(const DWARFObject &DObj);
   unsigned verifyIndex(StringRef Name, DWARFSectionKind SectionKind,
                        StringRef Index);
 
@@ -346,9 +360,12 @@ public:
   ///
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugStrOffsets();
-  bool verifyDebugStrOffsets(
-      StringRef SectionName, const DWARFSection &Section, StringRef StrData,
-      void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
+  bool verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
+                             StringRef SectionName, const DWARFSection &Section,
+                             StringRef StrData);
+
+  /// Emits any aggregate information collected, depending on the dump options
+  void summarize();
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,

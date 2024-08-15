@@ -16,6 +16,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
@@ -43,11 +44,11 @@ struct DebugConfigCLOptions : public DebugConfig {
             "Comma separated list of locations to filter actions from logging"),
         cl::CommaSeparated,
         cl::cb<void, std::string>([&](const std::string &location) {
-          static bool register_once = [&] {
+          static bool registerOnce = [&] {
             addLogActionLocFilter(&locBreakpointManager);
             return true;
           }();
-          (void)register_once;
+          (void)registerOnce;
           static std::vector<std::string> locations;
           locations.push_back(location);
           StringRef locStr = locations.back();

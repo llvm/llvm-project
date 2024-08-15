@@ -70,6 +70,23 @@ struct MemoryDescriptor {
 };
 static_assert(sizeof(MemoryDescriptor) == 16);
 
+struct MemoryDescriptor_64 {
+  support::ulittle64_t StartOfMemoryRange;
+  support::ulittle64_t DataSize;
+};
+static_assert(sizeof(MemoryDescriptor_64) == 16);
+
+struct MemoryListHeader {
+  support::ulittle32_t NumberOfMemoryRanges;
+};
+static_assert(sizeof(MemoryListHeader) == 4);
+
+struct Memory64ListHeader {
+  support::ulittle64_t NumberOfMemoryRanges;
+  support::ulittle64_t BaseRVA;
+};
+static_assert(sizeof(Memory64ListHeader) == 16);
+
 struct MemoryInfoListHeader {
   support::ulittle32_t SizeOfHeader;
   support::ulittle32_t SizeOfEntry;

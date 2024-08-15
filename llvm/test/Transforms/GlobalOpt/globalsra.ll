@@ -8,7 +8,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
     { double } { double 1.727000e+01 } }                ; <ptr> [#uses=3]
 
 define void @onlystore() {
-        store i32 123, ptr getelementptr ({ i32, float, { double } }, ptr @G, i32 0, i32 0)
+        store i32 123, ptr @G
         ret void
 }
 
@@ -29,7 +29,7 @@ define double @constantize() {
     { double } { double 1.727000e+01 } }                ; <ptr> [#uses=3]
 
 define void @onlystore2() {
-        store i32 123, ptr getelementptr ({ i32, float, { double } }, ptr @G2, i32 0, i32 0)
+        store i32 123, ptr @G2
         ret void
 }
 

@@ -11,7 +11,7 @@ body: |
 
     ; CHECK: RDFFRS_PPz
     ; CHECK-NOT: PTEST
-    %1:ppr_3b = RDFFR_PPz %0:ppr_3b
+    %1:ppr_3b = RDFFR_PPz %0:ppr_3b, implicit $ffr
     PTEST_PP killed %0:ppr_3b, killed %1:ppr_3b, implicit-def $nzcv
 
     ; Consume nzcv
@@ -32,7 +32,7 @@ body: |
 
     ; CHECK: RDFFR_PPz
     ; CHECK: PTEST
-    %2:ppr_3b = RDFFR_PPz %0:ppr_3b
+    %2:ppr_3b = RDFFR_PPz %0:ppr_3b, implicit $ffr
     PTEST_PP killed %1:ppr_3b, killed %2:ppr_3b, implicit-def $nzcv
 
     ; Consume nzcv
@@ -53,7 +53,7 @@ body: |
     ; CHECK: RDFFR_PPz
     ; CHECK-NEXT: ADDSXrr
     ; CHECK-NEXT: PTEST_PP
-    %1:ppr_3b = RDFFR_PPz %0:ppr_3b
+    %1:ppr_3b = RDFFR_PPz %0:ppr_3b, implicit $ffr
     ; Clobber nzcv
     $x0 = ADDSXrr $x0, $x0, implicit-def $nzcv
     PTEST_PP killed %0:ppr_3b, killed %1:ppr_3b, implicit-def $nzcv
@@ -78,7 +78,7 @@ body: |
     ; CHECK: RDFFR_PPz
     ; CHECK-NEXT: CSINCWr
     ; CHECK-NEXT: PTEST_PP
-    %1:ppr_3b = RDFFR_PPz %0:ppr_3b
+    %1:ppr_3b = RDFFR_PPz %0:ppr_3b, implicit $ffr
     ; Consume nzcv
     %2:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     PTEST_PP killed %0:ppr_3b, killed %1:ppr_3b, implicit-def $nzcv

@@ -37,17 +37,13 @@ friend int get(MyPairLike const&)
 
 } // namespace my_ns
 
-namespace std {
-
 template <>
-struct tuple_size<my_ns::MyPairLike> : std::integral_constant<std::size_t, 2> {};
+struct std::tuple_size<my_ns::MyPairLike> : std::integral_constant<std::size_t, 2> {};
 
 template <std::size_t N>
-struct tuple_element<N, my_ns::MyPairLike> {
+struct std::tuple_element<N, my_ns::MyPairLike> {
   using type = int;
 };
-
-} // namespace std
 
 // https://github.com/llvm/llvm-project/issues/65620
 // This used to be a hard error
@@ -79,25 +75,15 @@ constexpr bool test() {
       static_assert(!std::is_constructible_v<std::pair<int, int>, std::tuple<int, int, int>>); // too large
     }
 
-    // Check from ranges::subrange
+    // Check that the constructor excludes ranges::subrange
     {
       int data[] = {1, 2, 3, 4, 5};
-      std::ranges::subrange a(data);
-      {
-        std::pair<int*, int*> p(a);
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
-      {
-        std::pair<int*, int*> p{a};
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
-      {
-        std::pair<int*, int*> p = a;
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
+      const std::ranges::subrange a(data);
+      // Note the expression below would be ambiguous if pair's
+      // constructor does not exclude subrange
+      std::pair<int*, int*> p = a;
+      assert(p.first == data + 0);
+      assert(p.second == data + 5);
     }
   }
 

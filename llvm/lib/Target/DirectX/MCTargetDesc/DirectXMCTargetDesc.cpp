@@ -72,7 +72,8 @@ public:
 class DXILAsmBackend : public MCAsmBackend {
 
 public:
-  DXILAsmBackend(const MCSubtargetInfo &STI) : MCAsmBackend(support::little) {}
+  DXILAsmBackend(const MCSubtargetInfo &STI)
+      : MCAsmBackend(llvm::endianness::little) {}
   ~DXILAsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -89,12 +90,6 @@ public:
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
-    return true;
-  }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
     return true;
   }
 };

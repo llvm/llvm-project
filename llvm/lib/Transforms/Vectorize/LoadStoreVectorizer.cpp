@@ -103,13 +103,11 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
-#include <limits>
 #include <numeric>
 #include <optional>
 #include <tuple>
@@ -218,6 +216,8 @@ void reorder(Instruction *I) {
       if (IM->getParent() != I->getParent())
         continue;
 
+      assert(IM != I && "Unexpected cycle while re-ordering instructions");
+
       if (!IM->comesBefore(I)) {
         InstructionsToMove.insert(IM);
         Worklist.push_back(IM);
@@ -254,7 +254,7 @@ public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
       : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
+        DL(F.getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 
@@ -894,7 +894,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // Loads get hoisted to the location of the first load in the chain.  We may
     // also need to hoist the (transitive) operands of the loads.
     Builder.SetInsertPoint(
-        std::min_element(C.begin(), C.end(), [](const auto &A, const auto &B) {
+        llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
 
@@ -946,10 +946,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     reorder(VecInst);
   } else {
     // Stores get sunk to the location of the last store in the chain.
-    Builder.SetInsertPoint(
-        std::max_element(C.begin(), C.end(), [](auto &A, auto &B) {
-          return A.Inst->comesBefore(B.Inst);
-        })->Inst);
+    Builder.SetInsertPoint(llvm::max_element(C, [](auto &A, auto &B) {
+                             return A.Inst->comesBefore(B.Inst);
+                           })->Inst);
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);
@@ -1195,7 +1194,7 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
       OpA->getType() != OpB->getType())
     return std::nullopt;
 
-  uint64_t Stride = DL.getTypeAllocSize(GTIA.getIndexedType());
+  uint64_t Stride = GTIA.getSequentialElementStride(DL);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))

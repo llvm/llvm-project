@@ -214,7 +214,7 @@ define i64 @remainder_triangle_i64(i64 %a, i64 %b, ptr %rp) {
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i64 [[DIV]]
@@ -246,7 +246,7 @@ define i128 @remainder_triangle_i128(i128 %a, i128 %b, ptr %rp) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B_FROZEN]]
 ; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A_FROZEN]], [[TMP0]]
-; CHECK-NEXT:    store i128 [[REM_DECOMPOSED]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i128 [[REM_DECOMPOSED]], ptr [[RP]], align 16
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i128 [[DIV]]
@@ -275,7 +275,7 @@ define i64 @remainder_triangle_i64_multiple_rem_edges(i64 %a, i64 %b, i64 %c, pt
 ; CHECK-NEXT:    i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 8
 ; CHECK-NEXT:    br label [[SW_DEFAULT]]
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    ret i64 [[DIV]]
@@ -306,7 +306,7 @@ define i64 @remainder_triangle_i64_multiple_div_edges(i64 %a, i64 %b, i64 %c, pt
 ; CHECK-NEXT:    i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 8
 ; CHECK-NEXT:    br label [[SW_BB]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i64 [[DIV]]
@@ -339,7 +339,7 @@ define i64 @remainder_triangle_i64_maythrow_rem(i64 %a, i64 %b, ptr %rp) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @maythrow()
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B]]
@@ -369,7 +369,7 @@ define i64 @remainder_triangle_i64_maythrow_div(i64 %a, i64 %b, ptr %rp) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    call void @maythrow()
@@ -401,7 +401,7 @@ define i128 @remainder_triangle_i128_maythrow_rem(i128 %a, i128 %b, ptr %rp) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @maythrow()
 ; CHECK-NEXT:    [[REM:%.*]] = urem i128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i128 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i128 [[REM]], ptr [[RP]], align 16
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A]], [[B]]
@@ -431,7 +431,7 @@ define i128 @remainder_triangle_i128_maythrow_div(i128 %a, i128 %b, ptr %rp) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i128 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i128 [[REM]], ptr [[RP]], align 16
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    call void @maythrow()
@@ -464,7 +464,7 @@ define i64 @remainder_not_triangle_i32(i64 %a, i64 %b, i64 %c, ptr %rp) {
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 8
 ; CHECK-NEXT:    br label [[SW_BB1]]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B]]
@@ -501,7 +501,7 @@ define i64 @remainder_not_triangle_i32_2(i64 %a, i64 %b, i64 %c, ptr %rp) {
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END3:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 4
+; CHECK-NEXT:    store i64 [[REM]], ptr [[RP]], align 8
 ; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i64 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label [[IF_END3]], label [[RETURN:%.*]]
 ; CHECK:       if.end3:

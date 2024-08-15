@@ -10,12 +10,12 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -53,10 +53,9 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
 static bool insertionPointDominatesUses(const DominanceInfo &domInfo,
                                         Operation *insertionPoint,
                                         Operation *emptyTensorOp) {
-  for (Operation *user : emptyTensorOp->getUsers())
-    if (!domInfo.dominates(insertionPoint, user))
-      return false;
-  return true;
+  return llvm::all_of(emptyTensorOp->getUsers(), [&](Operation *user) {
+    return domInfo.dominates(insertionPoint, user);
+  });
 }
 
 /// Find a valid insertion point for a replacement of `emptyTensorOp`, assuming
@@ -153,6 +152,9 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       if (emptyTensorOp == replacement.getDefiningOp())
         continue;
       if (replacement.getType() != v.getType()) {
+        if (cast<ShapedType>(replacement.getType()).getElementType() !=
+            cast<ShapedType>(v.getType()).getElementType())
+          continue;
         rewriter.setInsertionPointAfterValue(replacement);
         replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
                                                       replacement);
@@ -183,8 +185,8 @@ struct EmptyTensorElimination
 };
 } // namespace
 
-void EmptyTensorElimination::runOnOperation() {
-  Operation *op = getOperation();
+LogicalResult mlir::bufferization::eliminateEmptyTensors(RewriterBase &rewriter,
+                                                         Operation *op) {
   auto moduleOp = dyn_cast<ModuleOp>(op);
   OneShotBufferizationOptions options;
   options.allowReturnAllocsFromLoops = true;
@@ -193,21 +195,21 @@ void EmptyTensorElimination::runOnOperation() {
   OneShotAnalysisState state(op, options);
   if (moduleOp) {
     // Module analysis takes into account function boundaries.
-    if (failed(analyzeModuleOp(moduleOp, state))) {
-      signalPassFailure();
-      return;
-    }
+    if (failed(analyzeModuleOp(moduleOp, state)))
+      return failure();
   } else {
     // Regular One-Shot Bufferize ignores func.func block arguments, func.call,
     // func.return.
-    if (failed(analyzeOp(op, state))) {
-      signalPassFailure();
-      return;
-    }
+    if (failed(analyzeOp(op, state)))
+      return failure();
   }
 
-  IRRewriter rewriter(op->getContext());
-  if (failed(bufferization::eliminateEmptyTensors(rewriter, op, state)))
+  return bufferization::eliminateEmptyTensors(rewriter, op, state);
+}
+
+void EmptyTensorElimination::runOnOperation() {
+  IRRewriter rewriter(getOperation()->getContext());
+  if (failed(bufferization::eliminateEmptyTensors(rewriter, getOperation())))
     signalPassFailure();
 }
 

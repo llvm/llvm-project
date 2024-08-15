@@ -1421,23 +1421,6 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
   return true;
 }
 
-void ArchSpec::PiecewiseTripleCompare(
-    const ArchSpec &other, bool &arch_different, bool &vendor_different,
-    bool &os_different, bool &os_version_different, bool &env_different) const {
-  const llvm::Triple &me(GetTriple());
-  const llvm::Triple &them(other.GetTriple());
-
-  arch_different = (me.getArch() != them.getArch());
-
-  vendor_different = (me.getVendor() != them.getVendor());
-
-  os_different = (me.getOS() != them.getOS());
-
-  os_version_different = (me.getOSMajorVersion() != them.getOSMajorVersion());
-
-  env_different = (me.getEnvironment() != them.getEnvironment());
-}
-
 bool ArchSpec::IsAlwaysThumbInstructions() const {
   std::string Status;
   if (GetTriple().getArch() == llvm::Triple::arm ||

@@ -27,10 +27,10 @@ TEST_F(ExtractVariableTest, Test) {
       return [[[[t.b[[a]]r]]([[t.z]])]];
     }
     void f() {
-      int a = [[5 +]] [[4 * [[[[xyz]]()]]]];
+      int a = 5 + [[4 * [[[[xyz]]()]]]];
       // multivariable initialization
       if(1)
-        int x = [[1]], y = [[a + 1]], a = [[1]], z = a + 1;
+        int x = [[1]] + 1, y = a + [[1]], a = [[1]] + 2, z = a + 1;
       // if without else
       if([[1]])
         a = [[1]] + 1;
@@ -61,9 +61,33 @@ TEST_F(ExtractVariableTest, Test) {
   ExtraArgs = {"-xc"};
   const char *AvailableC = R"cpp(
     void foo() {
-      int x = [[1]];
+      int x = [[1]] + 1;
     })cpp";
   EXPECT_AVAILABLE(AvailableC);
+
+  ExtraArgs = {"-xc"};
+  const char *NoCrashCasesC = R"cpp(
+    // error-ok: broken code, but shouldn't crash
+    int x = [[foo()]];
+    )cpp";
+  EXPECT_UNAVAILABLE(NoCrashCasesC);
+
+  ExtraArgs = {"-xc"};
+  const char *NoCrashDesignator = R"cpp(
+    struct A {
+      struct {
+        int x;
+      };
+    };
+    struct B {
+      int y;
+    };
+    void foo(struct B *b) {
+      struct A a = {.x=b[[->]]y};
+    }
+  )cpp";
+  EXPECT_AVAILABLE(NoCrashDesignator);
+
   ExtraArgs = {"-xobjective-c"};
   const char *AvailableObjC = R"cpp(
     __attribute__((objc_root_class))
@@ -71,7 +95,7 @@ TEST_F(ExtractVariableTest, Test) {
     @end
     @implementation Foo
     - (void)method {
-      int x = [[1 + 2]];
+      int x = [[1]] + 2;
     }
     @end)cpp";
   EXPECT_AVAILABLE(AvailableObjC);
@@ -95,6 +119,9 @@ TEST_F(ExtractVariableTest, Test) {
         }
         int z = [[1]];
       } t;
+      int x = [[1 + 2]];
+      int y;
+      y = [[1 + 2]];
       return [[t]].bar([[t]].z);
     }
     void v() { return; }
@@ -422,8 +449,8 @@ TEST_F(ExtractVariableTest, Test) {
                     int member = 42;
 };
                 )cpp"},
-      {R"cpp(void f() { auto x = [[ [](){ return 42; }]]; })cpp",
-       R"cpp(void f() { auto placeholder = [](){ return 42; }; auto x =  placeholder; })cpp"},
+      {R"cpp(void f() { auto x = +[[ [](){ return 42; }]]; })cpp",
+       R"cpp(void f() { auto placeholder = [](){ return 42; }; auto x = + placeholder; })cpp"},
       {R"cpp(
         template <typename T>
         auto sink(T f) { return f(); }
@@ -507,13 +534,13 @@ TEST_F(ExtractVariableTest, Test) {
       {R"cpp(
         template <typename ...Ts>
         void foo(Ts ...args) {
-          auto x = [[ [&args...]() {} ]];
+          auto x = +[[ [&args...]() {} ]];
         }
       )cpp",
        R"cpp(
         template <typename ...Ts>
         void foo(Ts ...args) {
-          auto placeholder = [&args...]() {}; auto x =  placeholder ;
+          auto placeholder = [&args...]() {}; auto x = + placeholder ;
         }
       )cpp"},
       {R"cpp(
@@ -525,7 +552,7 @@ TEST_F(ExtractVariableTest, Test) {
         int main() {
           Coordinates c = {};
           const auto [x, y] = c;
-          auto f = [[ [&]() { return x + y; } ]];
+          auto f = [[ [&]() { return x + y; } ]]();
         }
         )cpp",
        R"cpp(
@@ -537,7 +564,7 @@ TEST_F(ExtractVariableTest, Test) {
         int main() {
           Coordinates c = {};
           const auto [x, y] = c;
-          auto placeholder = [&]() { return x + y; }; auto f =  placeholder ;
+          auto placeholder = [&]() { return x + y; }; auto f =  placeholder ();
         }
         )cpp"},
       {R"cpp(
@@ -549,7 +576,7 @@ TEST_F(ExtractVariableTest, Test) {
         int main() {
           Coordinates c = {};
           if (const auto [x, y] = c; x > y) {
-            auto f = [[ [&]() { return x + y; } ]];
+            auto f = [[ [&]() { return x + y; } ]]();
           }
         }
         )cpp",
@@ -562,7 +589,7 @@ TEST_F(ExtractVariableTest, Test) {
         int main() {
           Coordinates c = {};
           if (const auto [x, y] = c; x > y) {
-            auto placeholder = [&]() { return x + y; }; auto f =  placeholder ;
+            auto placeholder = [&]() { return x + y; }; auto f =  placeholder ();
           }
         }
         )cpp"},

@@ -35,13 +35,15 @@ namespace {
 /// starting a pass pipeline that involves dialect conversion to LLVM.
 class LoadDependentDialectExtension : public DialectExtensionBase {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoadDependentDialectExtension)
+
   LoadDependentDialectExtension() : DialectExtensionBase(/*dialectNames=*/{}) {}
 
   void apply(MLIRContext *context,
              MutableArrayRef<Dialect *> dialects) const final {
     LLVM_DEBUG(llvm::dbgs() << "Convert to LLVM extension load\n");
     for (Dialect *dialect : dialects) {
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface)
         continue;
       LLVM_DEBUG(llvm::dbgs() << "Convert to LLVM found dialect interface for "
@@ -87,7 +89,7 @@ public:
         if (!dialect)
           return emitError(UnknownLoc::get(context))
                  << "dialect not loaded: " << dialectName << "\n";
-        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
         if (!iface)
           return emitError(UnknownLoc::get(context))
                  << "dialect does not implement ConvertToLLVMPatternInterface: "
@@ -101,7 +103,7 @@ public:
       for (Dialect *dialect : context->getLoadedDialects()) {
         // First time we encounter this dialect: if it implements the interface,
         // let's populate patterns !
-        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
         if (!iface)
           continue;
         iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
@@ -123,6 +125,11 @@ public:
 };
 
 } // namespace
+
+void mlir::registerConvertToLLVMDependentDialectLoading(
+    DialectRegistry &registry) {
+  registry.addExtensions<LoadDependentDialectExtension>();
+}
 
 std::unique_ptr<Pass> mlir::createConvertToLLVMPass() {
   return std::make_unique<ConvertToLLVMPass>();

@@ -601,7 +601,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
   {
     auto builder = OpBuilder::atBlockBegin(latchBlock);
     interface.createConditionalBranch(
-        builder.getUnknownLoc(), builder, shouldRepeat, loopHeader,
+        loc, builder, shouldRepeat, loopHeader,
         latchBlock->getArguments().take_front(loopHeader->getNumArguments()),
         /*falseDest=*/exitBlock,
         /*falseArgs=*/{});
@@ -1183,8 +1183,7 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     auto builder = OpBuilder::atBlockTerminator(user->getBlock());
     LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
         user->getLoc(), builder, structuredCondOp, user,
-        static_cast<OperandRange>(
-            getMutableSuccessorOperands(user->getBlock(), 0)));
+        getMutableSuccessorOperands(user->getBlock(), 0).getAsOperandRange());
     if (failed(result))
       return failure();
     user->erase();

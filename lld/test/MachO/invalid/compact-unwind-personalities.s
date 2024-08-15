@@ -14,9 +14,9 @@
 # DWARF: Indirect symbols
 # DWARF: address            index name
 # DWARF: 0x[[#%x,GXX_PERSONALITY:]]     {{.*}} ___gxx_personality_v0
-# DWARF: 0x[[#%x,PERSONALITY_1:]]     {{.*}} _personality_1
-# DWARF: 0x[[#%x,PERSONALITY_2:]]     {{.*}} _personality_2
-# DWARF: 0x[[#%x,PERSONALITY_3:]]     {{.*}} _personality_3
+# DWARF: 0x[[#%x,PERSONALITY_1:]]       LOCAL
+# DWARF: 0x[[#%x,PERSONALITY_2:]]       LOCAL
+# DWARF: 0x[[#%x,PERSONALITY_3:]]       LOCAL
 # DWARF: .eh_frame contents:
 # DWARF: Personality Address: [[#%.16x,GXX_PERSONALITY]]
 # DWARF: Personality Address: [[#%.16x,PERSONALITY_1]]

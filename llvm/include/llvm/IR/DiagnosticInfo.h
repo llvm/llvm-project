@@ -1076,11 +1076,11 @@ class DiagnosticInfoSrcMgr : public DiagnosticInfo {
 
   // For inlineasm !srcloc translation.
   bool InlineAsmDiag;
-  unsigned LocCookie;
+  uint64_t LocCookie;
 
 public:
   DiagnosticInfoSrcMgr(const SMDiagnostic &Diagnostic, StringRef ModName,
-                       bool InlineAsmDiag = true, unsigned LocCookie = 0)
+                       bool InlineAsmDiag = true, uint64_t LocCookie = 0)
       : DiagnosticInfo(DK_SrcMgr, getDiagnosticSeverity(Diagnostic.getKind())),
         Diagnostic(Diagnostic), ModName(ModName), InlineAsmDiag(InlineAsmDiag),
         LocCookie(LocCookie) {}
@@ -1088,7 +1088,7 @@ public:
   StringRef getModuleName() const { return ModName; }
   bool isInlineAsmDiag() const { return InlineAsmDiag; }
   const SMDiagnostic &getSMDiag() const { return Diagnostic; }
-  unsigned getLocCookie() const { return LocCookie; }
+  uint64_t getLocCookie() const { return LocCookie; }
   void print(DiagnosticPrinter &DP) const override;
 
   static bool classof(const DiagnosticInfo *DI) {
@@ -1101,16 +1101,16 @@ void diagnoseDontCall(const CallInst &CI);
 class DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
   StringRef Note;
-  unsigned LocCookie;
+  uint64_t LocCookie;
 
 public:
   DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, unsigned LocCookie)
+                         DiagnosticSeverity DS, uint64_t LocCookie)
       : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
         LocCookie(LocCookie) {}
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
-  unsigned getLocCookie() const { return LocCookie; }
+  uint64_t getLocCookie() const { return LocCookie; }
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;

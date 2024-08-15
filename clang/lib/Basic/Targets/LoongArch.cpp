@@ -200,13 +200,41 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Define __loongarch_arch.
   StringRef ArchName = getCPU();
-  Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+  if (ArchName == "loongarch64") {
+    if (HasFeatureLSX) {
+      // TODO: As more features of the V1.1 ISA are supported, a unified "v1.1"
+      // arch feature set will be used to include all sub-features belonging to
+      // the V1.1 ISA version.
+      if (HasFeatureFrecipe)
+        Builder.defineMacro("__loongarch_arch",
+                            Twine('"') + "la64v1.1" + Twine('"'));
+      else
+        Builder.defineMacro("__loongarch_arch",
+                            Twine('"') + "la64v1.0" + Twine('"'));
+    } else {
+      Builder.defineMacro("__loongarch_arch",
+                          Twine('"') + ArchName + Twine('"'));
+    }
+  } else {
+    Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+  }
 
   // Define __loongarch_tune.
   StringRef TuneCPU = getTargetOpts().TuneCPU;
   if (TuneCPU.empty())
     TuneCPU = ArchName;
   Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
+
+  if (HasFeatureLASX) {
+    Builder.defineMacro("__loongarch_simd_width", "256");
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+    Builder.defineMacro("__loongarch_asx", Twine(1));
+  } else if (HasFeatureLSX) {
+    Builder.defineMacro("__loongarch_simd_width", "128");
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+  }
+  if (HasFeatureFrecipe)
+    Builder.defineMacro("__loongarch_frecipe", Twine(1));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -257,6 +285,8 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Case("loongarch64", Is64Bit)
       .Case("32bit", !Is64Bit)
       .Case("64bit", Is64Bit)
+      .Case("lsx", HasFeatureLSX)
+      .Case("lasx", HasFeatureLASX)
       .Default(false);
 }
 
@@ -274,7 +304,14 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       if (Feature == "+d") {
         HasFeatureD = true;
       }
-    }
+    } else if (Feature == "+lsx")
+      HasFeatureLSX = true;
+    else if (Feature == "+lasx")
+      HasFeatureLASX = true;
+    else if (Feature == "-ual")
+      HasUnalignedAccess = false;
+    else if (Feature == "+frecipe")
+      HasFeatureFrecipe = true;
   }
   return true;
 }

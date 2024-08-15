@@ -121,9 +121,9 @@ define i1 @or_ne_notY_eq_1s(i8 %x, i8 %y) {
 
 define i1 @or_ne_notY_eq_1s_fail_bad_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_notY_eq_1s_fail_bad_not(
-; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ny = xor i8 %y, -2
@@ -207,10 +207,8 @@ define i1 @or_sle_intmin_indirect_2(i8 %xx, i8 %C, i8 %z) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], -128
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[NC:%.*]] = sub i8 0, [[C]]
-; CHECK-NEXT:    [[CP2:%.*]] = and i8 [[NC]], [[C]]
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X]], [[CP2]]
+; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X]], -128
 ; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[XN1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ; CHECK:       pos:
@@ -247,9 +245,7 @@ define i1 @or_sgt_intmin_indirect(i8 %x, i8 %C) {
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[C:%.*]], -128
 ; CHECK-NEXT:    br i1 [[C_NOT]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[NC:%.*]] = sub i8 0, [[C]]
-; CHECK-NEXT:    [[CP2:%.*]] = and i8 [[NC]], [[C]]
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[CP2]], [[X:%.*]]
+; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], -128
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XN1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ; CHECK:       pos:
@@ -375,5 +371,41 @@ define i1 @pr64610(ptr %b) {
   %s = select i1 %v, i32 74, i32 0
   %or = or i32 %s, 1
   %r = icmp ugt i32 %or, %s
+  ret i1 %r
+}
+
+define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y, i8 %z) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zz = xor i8 %z, -1
+  %yy = select i1 %y, i8 7, i8 %zz
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
+
+define i1 @icmp_eq_x_invertable_y2(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %yy = xor i8 %y, -1
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
+
+define i1 @PR38139(i8 %arg) {
+; CHECK-LABEL: @PR38139(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[ARG:%.*]], -64
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %masked = or i8 %arg, 192
+  %r = icmp ne i8 %masked, %arg
   ret i1 %r
 }

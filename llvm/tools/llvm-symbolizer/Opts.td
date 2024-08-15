@@ -55,6 +55,7 @@ def pretty_print : F<"pretty-print", "Make the output more human friendly">;
 defm print_source_context_lines : Eq<"print-source-context-lines", "Print N lines of source file context">;
 def relative_address : F<"relative-address", "Interpret addresses as addresses relative to the image base">;
 def relativenames : F<"relativenames", "Strip the compilation directory from paths">;
+def skip_line_zero : F<"skip-line-zero","If an address does not have an associated line number, use the last line number from the current sequence in the line-table">;
 defm untag_addresses : B<"untag-addresses", "", "Remove memory tags from addresses before symbolization">;
 def use_dia: F<"dia", "Use the DIA library to access symbols (Windows only)">;
 def verbose : F<"verbose", "Print verbose line info">;
@@ -82,5 +83,3 @@ def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --n
 // Compatibility aliases for pprof's symbolizer.
 def : Flag<["-"], "demangle=true">, Alias<demangle>, HelpText<"Alias for --demangle">;
 def : Flag<["-"], "demangle=false">, Alias<no_demangle>, HelpText<"Alias for --no-demangle">;
-// Compatibility no-op options.
-def : Flag<["--"], "use-symbol-table=true">;

@@ -197,6 +197,16 @@ def ASITag : Operand<i32> {
   let ParserMatchClass = SparcASITagAsmOperand;
 }
 
+def SparcPrefetchTagAsmOperand : AsmOperandClass {
+  let Name = "PrefetchTag";
+  let ParserMethod = "parsePrefetchTag";
+}
+
+def PrefetchTag : Operand<i32> {
+  let PrintMethod = "printPrefetchTag";
+  let ParserMatchClass = SparcPrefetchTagAsmOperand;
+}
+
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
@@ -222,6 +232,7 @@ def calltarget : Operand<i32> {
 }
 
 def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
   let DecoderMethod = "DecodeSIMM13";
   let EncoderMethod = "getSImm13OpValue";
 }
@@ -692,38 +703,38 @@ let DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
 }
 
 let rd = 0 in {
-  let Defs = [CPSR] in {
-    def STCSRrr : F3_1<3, 0b110101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [CPSR] in {
+    def STCSRrr : F3_1<3, 0b110101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "st %csr, [$addr]", [], IIC_st>;
-    def STCSRri : F3_2<3, 0b110101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STCSRri : F3_2<3, 0b110101, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "st %csr, [$addr]", [], IIC_st>;
   }
-  let Defs = [CPQ] in {
-    def STDCQrr : F3_1<3, 0b110110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [CPQ] in {
+    def STDCQrr : F3_1<3, 0b110110, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "std %cq, [$addr]", [], IIC_std>;
-    def STDCQri : F3_2<3, 0b110110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STDCQri : F3_2<3, 0b110110, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "std %cq, [$addr]", [], IIC_std>;
   }
 }
 
 let rd = 0 in {
-  let Defs = [FSR] in {
-    def STFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [FSR] in {
+    def STFSRrr : F3_1<3, 0b100101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		   "st %fsr, [$addr]", [], IIC_st>;
-    def STFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STFSRri : F3_2<3, 0b100101, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		   "st %fsr, [$addr]", [], IIC_st>;
   }
-  let Defs = [FQ] in {
-    def STDFQrr : F3_1<3, 0b100110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Defs = [FQ] in {
+    def STDFQrr : F3_1<3, 0b100110, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		   "std %fq, [$addr]", [], IIC_std>;
-    def STDFQri : F3_2<3, 0b100110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STDFQri : F3_2<3, 0b100110, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		   "std %fq, [$addr]", [], IIC_std>;
   }
 }
-let rd = 1, Defs = [FSR] in {
-  def STXFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+let rd = 1, mayStore = 1, Uses = [FSR] in {
+  def STXFSRrr : F3_1<3, 0b100101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-  def STXFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+  def STXFSRri : F3_2<3, 0b100101, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
 }
 
@@ -733,11 +744,11 @@ let Constraints = "$val = $rd" in {
   def SWAPrr : F3_1<3, 0b001111,
                  (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, IntRegs:$val),
                  "swap [$addr], $rd",
-                 [(set i32:$rd, (atomic_swap_32 ADDRrr:$addr, i32:$val))]>;
+                 [(set i32:$rd, (atomic_swap_i32 ADDRrr:$addr, i32:$val))]>;
   def SWAPri : F3_2<3, 0b001111,
                  (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr, IntRegs:$val),
                  "swap [$addr], $rd",
-                 [(set i32:$rd, (atomic_swap_32 ADDRri:$addr, i32:$val))]>;
+                 [(set i32:$rd, (atomic_swap_i32 ADDRri:$addr, i32:$val))]>;
   def SWAPArr : F3_1_asi<3, 0b011111,
                  (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi, IntRegs:$val),
                  "swapa [$addr] $asi, $rd",
@@ -829,23 +840,14 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC] in
+let Defs = [ICC], hasPostISelHook = true in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
   defm SUBC   : F3_12np <"subx", 0b001100>;
 
-// cmp (from Section A.3) is a specialized alias for subcc
-let Defs = [ICC], rd = 0 in {
-  def CMPrr   : F3_1<2, 0b010100,
-                     (outs), (ins IntRegs:$rs1, IntRegs:$rs2),
-                     "cmp $rs1, $rs2",
-                     [(SPcmpicc i32:$rs1, i32:$rs2)]>;
-  def CMPri   : F3_2<2, 0b010100,
-                     (outs), (ins IntRegs:$rs1, simm13Op:$simm13),
-                     "cmp $rs1, $simm13",
-                     [(SPcmpicc i32:$rs1, (i32 simm13:$simm13))]>;
-}
+def : Pat<(SPcmpicc i32:$lhs, i32:$rhs), (SUBCCrr $lhs, $rhs)>;
+def : Pat<(SPcmpicc i32:$lhs, (i32 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 
 // Section B.18 - Multiply Instructions, p. 113
 let Defs = [Y] in {
@@ -1775,11 +1777,18 @@ let Predicates = [HasV9], rs1 = 0, rs2 = 0 in {
 // Section A.42 - Prefetch Data
 let Predicates = [HasV9] in {
   def PREFETCHr : F3_1<3, 0b101101,
-                   (outs), (ins (MEMrr $rs1, $rs2):$addr, shift_imm5:$rd),
+                   (outs), (ins (MEMrr $rs1, $rs2):$addr, PrefetchTag:$rd),
                    "prefetch [$addr], $rd", []>;
   def PREFETCHi : F3_2<3, 0b101101,
-                   (outs), (ins (MEMri $rs1, $simm13):$addr, shift_imm5:$rd),
+                   (outs), (ins (MEMri $rs1, $simm13):$addr, PrefetchTag:$rd),
                    "prefetch [$addr], $rd", []>;
+  def PREFETCHAr : F3_1_asi<3, 0b111101, (outs),
+                    (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi, PrefetchTag:$rd),
+                    "prefetcha [$addr] $asi, $rd", []>;
+  let Uses = [ASR3] in
+  def PREFETCHAi : F3_2<3, 0b111101, (outs),
+                    (ins (MEMri $rs1, $simm13):$addr, PrefetchTag:$rd),
+                    "prefetcha [$addr] %asi, $rd", []>;
 }
 
 
@@ -1904,12 +1913,12 @@ def : Pat<(atomic_store_32 i32:$val, ADDRrr:$dst), (STrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_32 i32:$val, ADDRri:$dst), (STri ADDRri:$dst, $val)>;
 
 let Predicates = [HasV9] in
-def : Pat<(atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap),
+def : Pat<(atomic_cmp_swap_i32 iPTR:$rs1, i32:$rs2, i32:$swap),
           (CASArr $rs1, $rs2, $swap, 0x80)>;
 
 // Same pattern as CASArr above, but with a different ASI.
 let Predicates = [HasLeonCASA] in
-def : Pat<(atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap),
+def : Pat<(atomic_cmp_swap_i32 iPTR:$rs1, i32:$rs2, i32:$swap),
           (CASArr $rs1, $rs2, $swap, 0x0A)>;
 
 // A register pair with zero upper half.

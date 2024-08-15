@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
-// RUN: -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
 // RUN: -ffp-exception-behavior=maytrap -DEXCEPT=1 \
-// RUN: -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED --implicit-check-not=fpexcept.maytrap %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
-// RUN: -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
 // RUN: -ffp-exception-behavior=maytrap -DEXCEPT=1 \
-// RUN: -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM --implicit-check-not=fpexcept.maytrap  %s
 
@@ -150,7 +150,7 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 }
 
 // COMMON-LABEL: test_vfma_n_f16
-// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half %c, i32 3
@@ -163,7 +163,7 @@ float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 }
 
 // COMMON-LABEL: test_vfmaq_n_f16
-// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half %c, i32 3
@@ -271,7 +271,7 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 
 // COMMON-LABEL: test_vfms_n_f16
 // COMMONIR:      [[SUB:%.*]]  = fneg <4 x half> %b
-// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half %c, i32 3
@@ -285,7 +285,7 @@ float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 
 // COMMON-LABEL: test_vfmsq_n_f16
 // COMMONIR:      [[SUB:%.*]]  = fneg <8 x half> %b
-// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half %c, i32 3

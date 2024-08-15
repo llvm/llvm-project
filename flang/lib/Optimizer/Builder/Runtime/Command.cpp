@@ -48,6 +48,14 @@ mlir::Value fir::runtime::genGetCommand(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
 }
 
+mlir::Value fir::runtime::genGetPID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetPID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+}
+
 mlir::Value fir::runtime::genGetCommandArgument(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value number,
     mlir::Value value, mlir::Value length, mlir::Value errmsg) {
@@ -79,4 +87,17 @@ mlir::Value fir::runtime::genGetEnvVariable(fir::FirOpBuilder &builder,
       builder, loc, runtimeFuncTy, name, value, length, trimName, errmsg,
       sourceFile, sourceLine);
   return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genGetCwd(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value cwd) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetCwd)>(loc, builder);
+  auto runtimeFuncTy = func.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, cwd, sourceFile, sourceLine);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }

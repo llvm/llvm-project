@@ -8,8 +8,8 @@ entry:
   %cond = icmp eq i32 %a, 42
   br i1 %cond, label %exit, label %deopt
 
-; CHECK:  edge entry -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK:  edge entry -> deopt probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK:  edge %entry -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge %entry -> %deopt probability is 0x00000000 / 0x80000000 = 0.00%
 
 deopt:
   %rval = call i32(...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]

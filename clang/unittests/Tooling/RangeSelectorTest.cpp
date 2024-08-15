@@ -28,7 +28,6 @@ using ::llvm::HasValue;
 using ::llvm::StringError;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
-using ::testing::Property;
 
 using MatchResult = MatchFinder::MatchResult;
 
@@ -650,6 +649,48 @@ TEST(RangeSelectorTest, CallArgsErrors) {
                        Failed<StringError>(withUnboundNodeMessage()));
   EXPECT_THAT_EXPECTED(selectFromAssorted(callArgs("stmt")),
                        Failed<StringError>(withTypeErrorMessage("stmt")));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    C f() {
+      return C(1, 2);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprBracedArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    C f() {
+      return {1, 2};
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprNoArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C();
+    };
+    C f() {
+      return C();
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue(""));
 }
 
 TEST(RangeSelectorTest, StatementsOp) {

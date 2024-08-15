@@ -875,7 +875,7 @@ void generateStringPrint(llvm::LLVMContext &context,
   }
 
   llvm::Value *cast = builder.CreatePointerCast(stringVar,
-                                                builder.getInt8PtrTy());
+                                                builder.getPtrTy());
   builder.CreateCall(printFunct, cast);
 }
 
@@ -919,7 +919,7 @@ void generateIntegerPrint(llvm::LLVMContext &context,
   }
 
   llvm::Value *cast = builder.CreateBitCast(stringVar,
-                                            builder.getInt8PtrTy());
+                                            builder.getPtrTy());
   builder.CreateCall(&printFunct, {&toPrint, cast});
 }
 
@@ -970,7 +970,7 @@ static llvm::BasicBlock *createFinallyBlock(llvm::LLVMContext &context,
                                          ourExceptionNotThrownState->getType(),
                                          ourExceptionNotThrownState);
 
-  llvm::PointerType *exceptionStorageType = builder.getInt8PtrTy();
+  llvm::PointerType *exceptionStorageType = builder.getPtrTy();
   *exceptionStorage = createEntryBlockAlloca(toAddTo,
                                              "exceptionStorage",
                                              exceptionStorageType,
@@ -1244,8 +1244,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Value *unwindExceptionClass =
       builder.CreateLoad(builder.CreateStructGEP(
           ourUnwindExceptionType,
-          builder.CreatePointerCast(unwindException,
-                                    ourUnwindExceptionType->getPointerTo()),
+          unwindException,
           0));
 
   // Branch to the externalExceptionBlock if the exception is foreign or
@@ -1277,10 +1276,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // (OurException instance).
   //
   // Note: ourBaseFromUnwindOffset is usually negative
-  llvm::Value *typeInfoThrown = builder.CreatePointerCast(
-                                  builder.CreateConstGEP1_64(unwindException,
-                                                       ourBaseFromUnwindOffset),
-                                  ourExceptionType->getPointerTo());
+  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(unwindException,
+                                                      ourBaseFromUnwindOffset));
 
   // Retrieve thrown exception type info type
   //
@@ -1289,7 +1286,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   typeInfoThrown = builder.CreateStructGEP(ourExceptionType, typeInfoThrown, 0);
 
   llvm::Value *typeInfoThrownType =
-      builder.CreateStructGEP(builder.getInt8PtrTy(), typeInfoThrown, 0);
+      builder.CreateStructGEP(builder.getPtrTy(), typeInfoThrown, 0);
 
   generateIntegerPrint(context,
                        module,
@@ -1614,7 +1611,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
                                           TypeArray(builder.getInt32Ty()));
 
   llvm::Type *caughtResultFieldTypes[] = {
-    builder.getInt8PtrTy(),
+    builder.getPtrTy(),
     builder.getInt32Ty()
   };
 
@@ -1697,7 +1694,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   argTypes.clear();
   argTypes.push_back(builder.getInt32Ty());
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1716,7 +1713,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   argTypes.clear();
   argTypes.push_back(builder.getInt64Ty());
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1734,7 +1731,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
   retType = builder.getVoidTy();
 
   argTypes.clear();
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1770,7 +1767,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
   retType = builder.getVoidTy();
 
   argTypes.clear();
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1785,7 +1782,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   // createOurException
 
-  retType = builder.getInt8PtrTy();
+  retType = builder.getPtrTy();
 
   argTypes.clear();
   argTypes.push_back(builder.getInt32Ty());
@@ -1806,7 +1803,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
   retType = builder.getInt32Ty();
 
   argTypes.clear();
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1826,7 +1823,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
   retType = builder.getInt32Ty();
 
   argTypes.clear();
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1849,8 +1846,8 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
   argTypes.push_back(builder.getInt32Ty());
   argTypes.push_back(builder.getInt32Ty());
   argTypes.push_back(builder.getInt64Ty());
-  argTypes.push_back(builder.getInt8PtrTy());
-  argTypes.push_back(builder.getInt8PtrTy());
+  argTypes.push_back(builder.getPtrTy());
+  argTypes.push_back(builder.getPtrTy());
 
   argNames.clear();
 
@@ -1865,7 +1862,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   // llvm.eh.typeid.for intrinsic
 
-  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for);
+  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for, builder.getPtrTy());
 }
 
 

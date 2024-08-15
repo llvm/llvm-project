@@ -8,8 +8,10 @@ define void @tinkywinky() {
 ; CHECK-LABEL: @tinkywinky(
 ; CHECK-NEXT:    [[PATATINO:%.*]] = load i8, ptr @a, align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[PATATINO]], 0
-; CHECK-NEXT:    [[LNOT_EXT:%.*]] = zext i1 [[TOBOOL_NOT]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[LNOT_EXT]], xor (i32 zext (i1 icmp ne (ptr @a, ptr @b) to i32), i32 2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @a, @b
+; CHECK-NEXT:    [[XOR1:%.*]] = or i1 [[CMP]], [[TOBOOL_NOT]]
+; CHECK-NEXT:    [[XOR:%.*]] = zext i1 [[XOR1]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[XOR]], 2
 ; CHECK-NEXT:    store i32 [[OR]], ptr @b, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -17,7 +19,10 @@ define void @tinkywinky() {
   %tobool = icmp ne i8 %patatino, 0
   %lnot = xor i1 %tobool, true
   %lnot.ext = zext i1 %lnot to i32
-  %or = or i32 xor (i32 zext (i1 icmp ne (ptr @a, ptr @b) to i32), i32 2), %lnot.ext
+  %cmp = icmp ne ptr @a, @b
+  %zext = zext i1 %cmp to i32
+  %xor = xor i32 %zext, 2
+  %or = or i32 %xor, %lnot.ext
   store i32 %or, ptr @b, align 4
   ret void
 }

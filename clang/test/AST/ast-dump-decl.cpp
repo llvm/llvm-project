@@ -248,19 +248,19 @@ namespace testFunctionTemplateDecl {
   // CHECK-NEXT:  | |-TemplateArgument type 'testFunctionTemplateDecl::A'
   // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::A'
   // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'A'
-  // CHECK-NEXT:  | |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::A':'testFunctionTemplateDecl::A'
+  // CHECK-NEXT:  | |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::A'
   // CHECK-NEXT:  | `-CompoundStmt 0x{{.+}} <col:53, col:55>
   // CHECK-NEXT:  |-Function 0x{{.+}} 'TestFunctionTemplate' 'void (B)'
   // CHECK-NEXT:  |-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 TestFunctionTemplate 'void (testFunctionTemplateDecl::C)'
   // CHECK-NEXT:  | |-TemplateArgument type 'testFunctionTemplateDecl::C'
   // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::C'
   // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'C'
-  // CHECK-NEXT:  | `-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::C':'testFunctionTemplateDecl::C'
+  // CHECK-NEXT:  | `-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::C'
   // CHECK-NEXT:  `-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 TestFunctionTemplate 'void (testFunctionTemplateDecl::D)'
   // CHECK-NEXT:    |-TemplateArgument type 'testFunctionTemplateDecl::D'
   // CHECK-NEXT:    | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::D'
   // CHECK-NEXT:    |   `-CXXRecord 0x{{.+}} 'D'
-  // CHECK-NEXT:    |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::D':'testFunctionTemplateDecl::D'
+  // CHECK-NEXT:    |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::D'
   // CHECK-NEXT:    `-CompoundStmt 0x{{.+}} <col:53, col:55>
 
   // CHECK:       FunctionDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, col:41> col:19 TestFunctionTemplate 'void (B)'
@@ -459,21 +459,23 @@ namespace testClassTemplateDecl {
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-148]]:3, col:31> col:31 TestTemplateDefaultNonType{{$}}
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I{{$}}
-// CHECK-NEXT:  | `-TemplateArgument expr{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <col:20> expr '42'{{$}}
 // CHECK-NEXT:  |   `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42{{$}}
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <col:42> template TestClassTemplate{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <col:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
+// CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <line:{{.*}}:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template TestClassTemplate{{$}}
-// CHECK-NEXT:  |   `-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
+// CHECK-NEXT:  |   |-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
+// CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition{{$}}
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
@@ -500,7 +502,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:     |-TemplateArgument type 'testCanonicalTemplate::A'{{$}}
   // CHECK-NEXT:     | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'{{$}}
   // CHECK-NEXT:     |   `-CXXRecord 0x{{.+}} 'A'{{$}}
-  // CHECK-NEXT:     `-ParmVarDecl 0x{{.*}} <col:50> col:51 'testCanonicalTemplate::A':'testCanonicalTemplate::A'{{$}}
+  // CHECK-NEXT:     `-ParmVarDecl 0x{{.*}} <col:50> col:51 'testCanonicalTemplate::A'{{$}}
 
   // CHECK:      FunctionTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-12]]:3, col:51> col:29 TestFunctionTemplate{{$}}
   // CHECK-NEXT:   |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
@@ -613,15 +615,15 @@ namespace testCanonicalTemplate {
   // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-11]]:7, col:43> col:43 TestVarTemplate{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:16, col:25> col:25 referenced typename depth 0 index 0 T{{$}}
   // CHECK-NEXT: |-VarDecl 0x{{.+}} <col:28, col:43> col:43 TestVarTemplate 'const T' static{{$}}
-  // CHECK-NEXT: |-VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-11]]:3, col:34> col:14 referenced TestVarTemplate 'const int':'const int' implicit_instantiation cinit{{$}}
+  // CHECK-NEXT: |-VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-12]]:3, line:[[@LINE-11]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit{{$}}
   // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'testCanonicalTemplate::S'{{$}}
   // CHECK-NEXT: | |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | | `-BuiltinType 0x{{.+}} 'int'{{$}}
-  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int':'int'{{$}}
-  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-19]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' implicit_instantiation static{{$}}
+  // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int'{{$}}
+  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-19]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static{{$}}
   // CHECK-NEXT:   `-TemplateArgument type 'int'{{$}}
 
-  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-22]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' implicit_instantiation static{{$}}
+  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-22]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static{{$}}
   // CHECK-NEXT:`-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT:  `-BuiltinType 0x{{.+}} 'int'{{$}}
 
@@ -630,15 +632,15 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-25]]:3, col:34> col:14 TestVarTemplate 'const T' cinit{{$}}
   // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'testCanonicalTemplate::S'{{$}}
   // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'void'{{$}}
-  // CHECK-NEXT: |-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int':'const int'{{$}}
-  // CHECK-NEXT: `-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int':'const int'{{$}}
-    
-  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-31]]:3, col:34> col:14 referenced TestVarTemplate 'const int':'const int' implicit_instantiation cinit{{$}}
+  // CHECK-NEXT: |-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
+  // CHECK-NEXT: `-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
+
+  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, line:[[@LINE-31]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit{{$}}
   // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'testCanonicalTemplate::S'{{$}}
   // CHECK-NEXT: |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'int'{{$}}
-  // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int':'int'{{$}}
-} 
+  // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int'{{$}}
+}
 
 template <class T>
 class TestClassScopeFunctionSpecialization {
@@ -671,7 +673,7 @@ namespace TestNonTypeTemplateParmDecl {
 // CHECK:      NamespaceDecl{{.*}} TestNonTypeTemplateParmDecl
 // CHECK-NEXT:   FunctionTemplateDecl
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 0 I
-// CHECK-NEXT:       TemplateArgument expr
+// CHECK-NEXT:       TemplateArgument {{.*}} expr
 // CHECK-NEXT:         IntegerLiteral{{.*}} 'int' 1
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 1 ... J
 
@@ -683,7 +685,8 @@ namespace TestTemplateTemplateParmDecl {
 // CHECK:        FunctionTemplateDecl
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} T
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
-// CHECK-NEXT:       TemplateArgument{{.*}} template A
+// CHECK-NEXT:       TemplateArgument{{.*}} template 'A':'TestTemplateTemplateParmDecl::A' qualified{{$}}
+// CHECK-NEXT:         ClassTemplateDecl {{.*}} A
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} ... U
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
 
@@ -710,12 +713,12 @@ namespace TestTemplateArgument {
   template<int> class testIntegral { };
   template class testIntegral<1>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testIntegral
-  // CHECK:        TemplateArgument{{.*}} integral 1
+  // CHECK:        TemplateArgument{{.*}} integral '1'
 
   template<template<typename> class> class testTemplate { };
   template class testTemplate<A>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testTemplate
-  // CHECK:        TemplateArgument{{.*}} A
+  // CHECK:        TemplateArgument{{.*}} 'TestTemplateArgument::A'{{$}}
 
   template<template<typename> class ...T> class C {
     B<T...> testTemplateExpansion;
@@ -731,10 +734,10 @@ namespace TestTemplateArgument {
   template<int, int ...> class testPack { };
   template class testPack<0, 1, 2>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testPack
-  // CHECK:        TemplateArgument{{.*}} integral 0
+  // CHECK:        TemplateArgument{{.*}} integral '0'
   // CHECK-NEXT:   TemplateArgument{{.*}} pack
-  // CHECK-NEXT:     TemplateArgument{{.*}} integral 1
-  // CHECK-NEXT:     TemplateArgument{{.*}} integral 2
+  // CHECK-NEXT:     TemplateArgument{{.*}} integral '1'
+  // CHECK-NEXT:     TemplateArgument{{.*}} integral '2'
 }
 
 namespace testUsingDecl {
@@ -856,7 +859,7 @@ namespace TestConstexprVariableTemplateWithInitializer {
   inline constexpr in_place_type_t<_Tp> in_place_type{};
   // CHECK:     -VarTemplateDecl 0x{{.+}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:55> col:41 in_place_type{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-3]]:13, col:22> col:22 referenced typename depth 0 index 0 _Tp{{$}}
-  // CHECK-NEXT: `-VarDecl 0x{{.+}} <line:[[@LINE-3]]:3, col:55> col:41 in_place_type 'const in_place_type_t<_Tp>':'const in_place_type_t<_Tp>' inline constexpr listinit{{$}}
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <line:[[@LINE-3]]:3, col:55> col:41 in_place_type 'const in_place_type_t<_Tp>' inline constexpr listinit{{$}}
   // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:54, col:55> 'void'{{$}}
 
   template <typename T> constexpr T call_init(0);

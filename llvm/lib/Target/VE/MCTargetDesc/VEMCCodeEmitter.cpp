@@ -82,7 +82,7 @@ void VEMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write<uint64_t>(CB, Bits, support::little);
+  support::endian::write<uint64_t>(CB, Bits, llvm::endianness::little);
 
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }

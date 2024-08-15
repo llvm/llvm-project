@@ -11,9 +11,29 @@ add_header_library(
 )
 
 add_header_library(
+  os
+  HDRS
+    os.h
+)
+
+add_header_library(
   cpu_features
   HDRS
     cpu_features.h
   DEPENDS
     .architectures
+)
+
+add_header_library(
+  types
+  HDRS
+    types.h
+  DEPENDS
+    .architectures
+    .compiler
+    .cpu_features
+    .os
+    libc.hdr.float_macros
+    libc.include.llvm-libc-macros.float16_macros
+    libc.include.llvm-libc-types.float128
 )

@@ -32,7 +32,6 @@ class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
-class Loop;
 class Module;
 class Type;
 class Value;
@@ -114,6 +113,10 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
+    // If true, the outlined function has aggregate argument in zero address
+    // space.
+    bool ArgsInZeroAddressSpace;
+
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -128,23 +131,16 @@ public:
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
     /// the function from which the code is being extracted.
+    /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
+    /// param pointer of the outlined function is declared in zero address
+    /// space.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "");
-
-    /// Create a code extractor for a loop body.
-    ///
-    /// Behaves just like the generic code sequence constructor, but uses the
-    /// block sequence of the loop.
-    CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
-                  BlockFrequencyInfo *BFI = nullptr,
-                  BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr,
-                  std::string Suffix = "");
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
 
     /// Perform the extraction, returning the new function.
     ///
@@ -242,7 +238,7 @@ public:
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
+    void severSplitPHINodesOfExits(const SetVector<BasicBlock *> &Exits);
     void splitReturnBlocks();
 
     Function *constructFunction(const ValueSet &inputs,

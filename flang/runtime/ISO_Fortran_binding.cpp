@@ -13,6 +13,7 @@
 #include "terminator.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/pointer.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdlib>
 
@@ -75,7 +76,7 @@ RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
     dim->sm = byteSize;
     byteSize *= extent;
   }
-  void *p{std::malloc(byteSize)};
+  void *p{runtime::AllocateValidatedPointerPayload(byteSize)};
   if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -91,8 +92,11 @@ RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *descriptor) {
   if (descriptor->version != CFI_VERSION) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  if (descriptor->attribute != CFI_attribute_allocatable &&
-      descriptor->attribute != CFI_attribute_pointer) {
+  if (descriptor->attribute == CFI_attribute_pointer) {
+    if (!runtime::ValidatePointerPayload(*descriptor)) {
+      return CFI_INVALID_DESCRIPTOR;
+    }
+  } else if (descriptor->attribute != CFI_attribute_allocatable) {
     // Non-interoperable object
     return CFI_INVALID_DESCRIPTOR;
   }
@@ -125,14 +129,18 @@ RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
 }
 
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+  // See Descriptor::IsContiguous for the rationale.
+  bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    if (bytes != descriptor->dim[j].sm) {
-      return 0;
-    }
+    stridesAreContiguous &=
+        (bytes == descriptor->dim[j].sm) || (descriptor->dim[j].extent == 1);
     bytes *= descriptor->dim[j].extent;
   }
-  return 1;
+  if (stridesAreContiguous || bytes == 0) {
+    return 1;
+  }
+  return 0;
 }
 
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,

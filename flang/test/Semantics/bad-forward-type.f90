@@ -76,7 +76,8 @@ subroutine s8
   !ERROR: Cannot construct value for derived type 't2' before it is defined
   parameter(y=t2(12.3))
   type t2
-    real :: c
+    !ERROR: Cannot construct value for derived type 't2' before it is defined
+    real :: c = transfer(t2(),0.)
   end type
 end subroutine
 
@@ -84,7 +85,6 @@ subroutine s9
   type con
     Type(t(3)), pointer :: y
   end type
-  !ERROR: Cannot construct value for derived type 't' before it is defined
   Integer :: nn = Size(Transfer(t(3)(666),[0]))
   type :: t(n)
     integer, kind :: n = 3

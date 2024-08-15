@@ -75,7 +75,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
   auto BailOut = [&](Error Err) {
     std::pair<void *, Allocation> AllocToDestroy;
 
-    // Get allocation to destory.
+    // Get allocation to destroy.
     {
       std::lock_guard<std::mutex> Lock(M);
       auto I = Allocations.find(Base.toPtr<void *>());
@@ -153,7 +153,7 @@ Error SimpleExecutorMemoryManager::deallocate(
   std::vector<std::pair<void *, Allocation>> AllocPairs;
   AllocPairs.reserve(Bases.size());
 
-  // Get allocation to destory.
+  // Get allocation to destroy.
   Error Err = Error::success();
   {
     std::lock_guard<std::mutex> Lock(M);

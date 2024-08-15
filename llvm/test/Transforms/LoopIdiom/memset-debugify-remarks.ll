@@ -2,6 +2,9 @@
 ; RUN: opt -passes=debugify,loop-idiom,verify -pass-remarks=loop-idiom -pass-remarks-analysis=loop-idiom -pass-remarks-output=%t.yaml -verify-each -verify-dom-info -verify-loop-info  < %s -S 2>&1 | FileCheck %s
 ; RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=YAML
 
+; RUN: opt -passes=debugify,loop-idiom,verify -pass-remarks=loop-idiom -pass-remarks-analysis=loop-idiom -pass-remarks-output=%t.yaml -verify-each -verify-dom-info -verify-loop-info  < %s -S 2>&1 --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=YAML
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -36,7 +39,7 @@ define void @_Z15my_basic_memsetPcS_c(ptr %ptr, ptr %end, i8 %value) {
 ; CHECK-NEXT:    [[PTR2:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64, !dbg [[DBG15]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[PTR]], [[END]], !dbg [[DBG15]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15]]
+; CHECK-NEXT:      #dbg_value(i1 [[CMP3]], [[META9:![0-9]+]], !DIExpression(), [[DBG15]])
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[PTR2]], !dbg [[DBG17:![0-9]+]]
@@ -44,11 +47,11 @@ define void @_Z15my_basic_memsetPcS_c(ptr %ptr, ptr %end, i8 %value) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG17]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[PTR_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR]], [[FOR_BODY_PREHEADER]] ], !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[PTR_ADDR_04]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
+; CHECK-NEXT:      #dbg_value(ptr [[PTR_ADDR_04]], [[META11:![0-9]+]], !DIExpression(), [[DBG19]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PTR_ADDR_04]], i64 1, !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[INCDEC_PTR]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(ptr [[INCDEC_PTR]], [[META13:![0-9]+]], !DIExpression(), [[DBG20]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[END]], !dbg [[DBG21:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG21]]
+; CHECK-NEXT:      #dbg_value(i1 [[CMP]], [[META14:![0-9]+]], !DIExpression(), [[DBG21]])
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]], !dbg [[DBG17]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG22:![0-9]+]]

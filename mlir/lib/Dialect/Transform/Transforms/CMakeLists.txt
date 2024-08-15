@@ -1,7 +1,8 @@
 add_mlir_dialect_library(MLIRTransformDialectTransforms
   CheckUses.cpp
   InferEffects.cpp
-  TransformInterpreterPassBase.cpp
+  InterpreterPass.cpp
+  PreloadLibraryPass.cpp
   TransformInterpreterUtils.cpp
 
   DEPENDS

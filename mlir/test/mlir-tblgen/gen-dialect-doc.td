@@ -3,6 +3,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -69,6 +70,16 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+def TestEnum :
+    I32EnumAttr<"TestEnum",
+        "enum summary", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">]> {
+  let genSpecializedAttr = 1;
+  let cppNamespace = "NS";
+}
+
 // CHECK: Dialect without a [TOC] here.
 // CHECK: TOC added by tool.
 // CHECK: [TOC]
@@ -81,11 +92,11 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: Other group
 // CHECK: test.b
 // CHECK: test.c
-// CHECK: Traits: SingleBlock, SingleBlockImplicitTerminator<YieldOp>
-// CHECK: Interfaces: NoMemoryEffect (MemoryEffectOpInterface)
-// CHECK: Effects: MemoryEffects::Effect{}
+// CHECK: Traits: `SingleBlockImplicitTerminator<YieldOp>`, `SingleBlock`
+// CHECK: Interfaces: `NoMemoryEffect (MemoryEffectOpInterface)`
+// CHECK: Effects: `MemoryEffects::Effect{}`
 
-// CHECK: ## Attribute constraint definition
+// CHECK: ## Attribute constraints
 // CHECK: ### attribute summary
 // CHECK: attribute description
 
@@ -97,7 +108,7 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: Syntax:
 // CHECK: #test.test_attr_def_params
 
-// CHECK: ## Type constraint definition
+// CHECK: ## Type constraints
 // CHECK: ### type summary
 // CHECK: type description
 
@@ -108,6 +119,16 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: TestTypeDefParamsType
 // CHECK: Syntax:
 // CHECK: !test.test_type_def_params
+
+// CHECK: ## Enums
+// CHECK: ### TestEnum
+// CHECK: enum summary
+// CHECK: #### Cases:
+// CHECK: | Symbol | Value | String |
+// CHECK: | :----: | :---: | ------ |
+// CHECK: | First | `0` | first |
+// CHECK: | Second | `1` | second |
+// CHECK: | Third | `2` | third |
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";

@@ -20,7 +20,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
@@ -58,8 +57,7 @@ static std::string percentEncodeURICharacter(char C) {
   // should be written out directly. Otherwise, percent
   // encode the character and write that out instead of the
   // reserved character.
-  if (llvm::isAlnum(C) ||
-      StringRef::npos != StringRef("-._~:@!$&'()*+,;=").find(C))
+  if (llvm::isAlnum(C) || StringRef("-._~:@!$&'()*+,;=").contains(C))
     return std::string(&C, 1);
   return "%" + llvm::toHex(StringRef(&C, 1));
 }
@@ -75,7 +73,7 @@ static std::string fileNameToURI(StringRef Filename) {
 
   // Get the root name to see if it has a URI authority.
   StringRef Root = sys::path::root_name(Filename);
-  if (Root.startswith("//")) {
+  if (Root.starts_with("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
   } else if (!Root.empty()) {
@@ -143,7 +141,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
 /// @{
 
 /// \internal
-json::Object createMessage(StringRef Text) {
+static json::Object createMessage(StringRef Text) {
   return json::Object{{"text", Text.str()}};
 }
 

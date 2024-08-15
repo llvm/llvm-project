@@ -127,6 +127,8 @@ public:
     return lldb::eLanguageTypeObjC;
   }
 
+  llvm::StringRef GetUserEntryPointName() const override { return "main"; }
+
   // Get all possible names for a method. Examples:
   // If method_name is "+[NSString(my_additions) myStringWithCString:]"
   //   variant_names[0] => "+[NSString myStringWithCString:]"
@@ -191,6 +193,8 @@ public:
   }
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
+
+  bool SupportsExceptionBreakpointsOnThrow() const override { return true; }
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
-// RUN:   %s -S -emit-llvm -o - | FileCheck %s
+// RUN:   %s -emit-llvm -o - | FileCheck %s
 
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX940 %s
@@ -42,7 +42,11 @@ short2 test_global_add_2bf16(__global short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2bf16
-// CHECK: call <2 x i16> @llvm.amdgcn.ds.fadd.v2bf16(ptr addrspace(3) %{{.*}}, <2 x i16> %
+
+// CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
+// CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
+
 // GFX940-LABEL:  test_local_add_2bf16
 // GFX940: ds_pk_add_rtn_bf16
 short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
@@ -50,7 +54,7 @@ short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2f16
-// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
+// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x half> %{{.+}} seq_cst, align 4
 // GFX940-LABEL:  test_local_add_2f16
 // GFX940: ds_pk_add_rtn_f16
 half2 test_local_add_2f16(__local half2 *addr, half2 x) {
@@ -58,7 +62,7 @@ half2 test_local_add_2f16(__local half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2f16_noret
-// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
+// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x half> %{{.+}} seq_cst, align 4
 // GFX940-LABEL:  test_local_add_2f16_noret
 // GFX940: ds_pk_add_f16
 void test_local_add_2f16_noret(__local half2 *addr, half2 x) {
