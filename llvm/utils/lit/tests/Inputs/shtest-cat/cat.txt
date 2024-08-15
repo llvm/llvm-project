@@ -7,7 +7,7 @@
 # RUN: %{python} %S/../check_path.py file %t/tempcat.write > %t/path.out
 # RUN: FileCheck --check-prefix=FILE-EXISTS < %t/path.out %s
 # RUN: FileCheck --check-prefix=CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace < %t/tempcat.write %s
+# RUN:      --match-full-lines --strict-whitespace < %t/tempcat.write %s
 # FILE-EXISTS: True
 # CAT-OUTPUT:abcdefgh
 #
@@ -22,7 +22,7 @@
 # RUN: %{python} %S/../check_path.py file %t/tempmulticat.write > %t/path.out
 # RUN: FileCheck --check-prefix=MULTI-FILE-EXISTS < %t/path.out %s
 # RUN: FileCheck --check-prefix=MULTI-CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace < %t/tempmulticat.write %s
+# RUN:      --match-full-lines --strict-whitespace < %t/tempmulticat.write %s
 # MULTI-FILE-EXISTS: True
 # MULTI-CAT-OUTPUT:abcdefgh
 # MULTI-CAT-OUTPUT-NEXT:efghijkl
@@ -35,8 +35,8 @@
 # RUN: echo "abcdefgh" > %t/temp1.write
 # RUN: echo "efghijkl" > %t/temp2.write
 # RUN: cat %t/temp1.write %t/temp2.write \
-# RUN: | FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace %s
+# RUN:      | FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
 # PIPED-CAT-OUTPUT:abcdefgh
 # PIPED-CAT-OUTPUT-NEXT:efghijkl
 #
@@ -47,20 +47,20 @@
 # RUN: echo "cvbnm" > %t/temp1.write
 # RUN: echo "qwerty" > %t/temp2.write
 # RUN: cat %t/*.write \
-# RUN: | FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace %s
+# RUN:      | FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
 # GLOB-CAT-OUTPUT:cvbnm
 # GLOB-CAT-OUTPUT-NEXT:qwerty
 #
 ## Test cat command with -v and --show-nonprinting option.
-## The -v/--show-nonprinting option format text input into ^ and M- notation
+## The -v/--show-nonprinting options format text input into ^ and M- notation
 #
 # RUN: cat -v %S/cat_nonprinting.bin \
-# RUN: | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace %s
+# RUN:      | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
 # RUN: cat --show-nonprinting %S/cat_nonprinting.bin \
-# RUN: | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
-# RUN: --match-full-lines --strict-whitespace %s
+# RUN:      | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
 # NP-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H
 # NP-CAT-OUTPUT-NEXT:^K^L^M^N^O^P^Q^R^S
 # NP-CAT-OUTPUT-NEXT:^T^U^V^W^X^Y^Z^[^\^]^^^_ !"#$%&'
