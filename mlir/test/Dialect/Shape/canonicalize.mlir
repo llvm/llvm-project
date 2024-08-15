@@ -1519,6 +1519,19 @@ func.func @extract_shapeof(%arg0 : tensor<?x?xf64>) -> index {
  return %result : index
 }
 
+// -----
+
+// CHECK-LABEL: func @extract_shapeof_static_indice
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<?x?xf64>
+func.func @extract_shapeof_static_indice(%arg0 : tensor<?x?xf64>) -> index {
+// CHECK:        %[[C1:.*]] = arith.constant 1
+ %shape = shape.shape_of %arg0 : tensor<?x?xf64> -> tensor<2xindex>
+// CHECK:        %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C1]]
+ %result = tensor.extract %shape[1] : tensor<2xindex>
+// CHECK:        return %[[DIM]]
+ return %result : index
+}
+
 
 // -----
 

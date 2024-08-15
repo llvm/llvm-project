@@ -332,12 +332,37 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
     ```mlir
     %4 = tensor.extract %t[%1, %2] : tensor<4x4xi32>
     %5 = tensor.extract %rt[%1, %2] : tensor<?x?xi32>
+    %6 = tensor.extract %rt[3, 4] : tensor<?x?xi32>
+    %7 = tensor.extract %rt[%1, 4] : tensor<?x?xi32>
     ```
   }];
 
-  let arguments = (ins AnyRankedTensor:$tensor, Variadic<Index>:$indices);
+  let arguments = (ins
+    AnyRankedTensor:$tensor,
+    Variadic<Index>:$indices,
+    DenseI64ArrayAttr:$static_indices
+  );
   let results = (outs AnyType:$result);
-  let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
+  let assemblyFormat = [{
+    $tensor ``
+    custom<DynamicIndexList>($indices, $static_indices)
+    attr-dict `:` type($tensor)
+  }];
+
+  let builders = [
+    // Build an ExtractOp with mixed static and dynamic indexes.
+    OpBuilder<(ins "Value":$tensor, "ArrayRef<OpFoldResult>":$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractOp with mixed static, dynamic indexes and inferred result type.
+    OpBuilder<(ins "Type":$resultType, "Value":$tensor, "ArrayRef<OpFoldResult>":$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractOp with dynamic indexes.
+    OpBuilder<(ins "Value":$source, CArg<"ValueRange", "{}">:$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractOp with dynamic indexes and inferred result type.
+    OpBuilder<(ins "Type":$resultType, "Value":$source, CArg<"ValueRange", "{}">:$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+  ];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -808,15 +833,34 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
 
   let arguments = (ins AnyType:$scalar,
                        AnyRankedTensor:$dest,
-                       Variadic<Index>:$indices);
+                       Variadic<Index>:$indices,
+                       DenseI64ArrayAttr:$static_indices
+  );
   let results = (outs AnyRankedTensor:$result);
   let assemblyFormat = [{
-    $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
+    $scalar `into`
+    $dest `` custom<DynamicIndexList>($indices, $static_indices)
+    attr-dict `:` type($dest)
   }];
 
   let extraClassDeclaration = [{
     MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
   }];
+
+  let builders = [
+    // Build an InsertOp with mixed static and dynamic indexes.
+    OpBuilder<(ins "Value":$scalar, "Value":$dest, "ArrayRef<OpFoldResult>":$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an InsertOp with mixed static, dynamic indexes and inferred result type.
+    OpBuilder<(ins "Type":$resultType, "Value":$scalar, "Value":$dest, "ArrayRef<OpFoldResult>":$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an InsertOp with dynamic indexes.
+    OpBuilder<(ins "Value":$scalar, "Value":$dest,  CArg<"ValueRange", "{}">:$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an InsertOp with dynamic indexes and inferred result type.
+    OpBuilder<(ins "Type":$resultType, "Value":$scalar, "Value":$dest, CArg<"ValueRange", "{}">:$indexes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+  ];
 
   let hasFolder = 1;
   let hasVerifier = 1;
