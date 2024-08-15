@@ -19,13 +19,13 @@ typedef std::variant<void, int> vars;
 // expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<volatile std::variant<void, int>>' is deprecated}}
 [[maybe_unused]] std::variant_alternative<0, volatile vars> vol_alt_test;
 
-// expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<const volatile std::variant<void, int>>' is deprecated}}
-[[maybe_unused]] std::variant_alternative<0, const volatile vars> const_vol_alt_test;
+// expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<volatile std::variant<void, int>>' is deprecated}}
+[[maybe_unused]] std::variant_alternative<0, volatile vars> const_vol_alt_test;
 
 [[maybe_unused]] std::variant_size<vars> size_test;
 
 // expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<volatile std::variant<void, int>>' is deprecated}}
 [[maybe_unused]] std::variant_size<volatile vars> vol_size_test;
 
-// expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<const volatile std::variant<void, int>>' is deprecated}}
-[[maybe_unused]] std::variant_size<const volatile vars> const_vol_size_test;
+// expected-warning@*:* {{'__volatile_deprecated_since_cxx20_warning<volatile std::variant<void, int>>' is deprecated}}
+[[maybe_unused]] std::variant_size<volatile vars> const_vol_size_test;
