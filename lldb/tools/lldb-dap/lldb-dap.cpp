@@ -4331,6 +4331,12 @@ void request_readMemory(const llvm::json::Object &request) {
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
+  if (!region_info.IsReadable()) {
+    response["success"] = false;
+    response.try_emplace("message", "Memory region is not readable");
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
   const uint64_t available_count =
       std::min(requested_count, region_info.GetRegionEnd() - addr);
   const uint64_t unavailable_count = requested_count - available_count;
