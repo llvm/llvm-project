@@ -27,7 +27,7 @@ class Platform;
 class ExecutionContext;
 class RegisterFlags;
 
-typedef llvm::SmallString<128> PathSmallString;
+typedef llvm::SmallString<256> PathSmallString;
 
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
