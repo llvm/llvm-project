@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -1196,6 +1197,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
+    // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
+    // mechanism for GUIDs.
+    MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse)
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
