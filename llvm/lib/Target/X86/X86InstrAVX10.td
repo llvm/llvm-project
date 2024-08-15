@@ -642,10 +642,10 @@ multiclass avx10_cvt2ps2ph_rc<bits<8> opc, string OpcodeStr, X86FoldableSchedWri
 }
 
 multiclass avx10_cvt2ps2ph<bits<8> opc, string OpcodeStr,
-                             X86SchedWriteWidths sched,
-                             AVX512VLVectorVTInfo _SrcVTInfo,
-                             AVX512VLVectorVTInfo _DstVTInfo,
-                             SDNode OpNode, SDNode OpNodeRnd> {
+                           X86SchedWriteWidths sched,
+                           AVX512VLVectorVTInfo _SrcVTInfo,
+                           AVX512VLVectorVTInfo _DstVTInfo,
+                           SDNode OpNode, SDNode OpNodeRnd> {
   let Predicates = [HasAVX10_2_512], Uses = [MXCSR] in {
     defm Z : avx512_binop_rm2<opc, OpcodeStr, sched.ZMM, OpNode,
                               _SrcVTInfo.info512, _DstVTInfo.info512,
@@ -678,57 +678,34 @@ defm VCVT2PS2PHX : avx10_cvt2ps2ph<0x67, "vcvt2ps2phx",
                                    avx512vl_f32_info, avx512vl_f16_info,
                                    X86vcvt2ps2phx, X86vcvt2ps2phxRnd>, T8;
 
-multiclass avx10_binop_all<bits<8> opc, string OpcodeStr,
-                           X86SchedWriteWidths sched,
-                           AVX512VLVectorVTInfo _SrcVTInfo,
-                           AVX512VLVectorVTInfo _DstVTInfo,
-                           SDNode OpNode,
-                           bit IsCommutable = 0> {
-  let Predicates = [HasAVX10_2_512] in
-    defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, sched.ZMM, OpNode,
-                                   _SrcVTInfo.info512, _DstVTInfo.info512,
-                                   _SrcVTInfo.info512, IsCommutable>,
-                                  EVEX_V512;
-  let Predicates = [HasAVX10_2] in {
-    defm NAME#Z256 : avx512_binop_rm2<opc, OpcodeStr, sched.YMM, OpNode,
-                                      _SrcVTInfo.info256, _DstVTInfo.info256,
-                                      _SrcVTInfo.info256, IsCommutable>,
-                                     EVEX_V256;
-    defm NAME#Z128 : avx512_binop_rm2<opc, OpcodeStr, sched.XMM, OpNode,
-                                      _SrcVTInfo.info128, _DstVTInfo.info128,
-                                      _SrcVTInfo.info128, IsCommutable>,
-                                     EVEX_V128;
-  }
-}
-
-defm VCVTNE2PH2BF8 : avx10_binop_all<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2BF8 : avx512_binop_all2<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2bf8, 0>,
+                                     X86vcvtne2ph2bf8, [HasAVX10_2_512], [HasAVX10_2], 0>,
                                     EVEX_CD8<16, CD8VF>, T8, XD;
-defm VCVTNE2PH2BF8S : avx10_binop_all<0x74, "vcvtne2ph2bf8s", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2BF8S : avx512_binop_all2<0x74, "vcvtne2ph2bf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2bf8s, 0>,
+                                      X86vcvtne2ph2bf8s, [HasAVX10_2_512], [HasAVX10_2], 0>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8 : avx10_binop_all<0x18, "vcvtne2ph2hf8", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2HF8 : avx512_binop_all2<0x18, "vcvtne2ph2hf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2hf8, 0>,
+                                     X86vcvtne2ph2hf8, [HasAVX10_2_512], [HasAVX10_2], 0>,
                                     EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8S : avx10_binop_all<0x1b, "vcvtne2ph2hf8s", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2HF8S : avx512_binop_all2<0x1b, "vcvtne2ph2hf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2hf8s, 0>,
+                                      X86vcvtne2ph2hf8s, [HasAVX10_2_512], [HasAVX10_2], 0>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
 
 multiclass avx10_convert_3op_packed<bits<8> OpCode, string OpcodeStr,
-           X86VectorVTInfo vt_dst, X86VectorVTInfo vt_src1,
-           X86VectorVTInfo vt_src2, SDPatternOperator OpNode,
-           SDPatternOperator MaskOpNode, X86FoldableSchedWrite sched,
-           string Broadcast = vt_src2.BroadcastStr,
-           X86MemOperand MemOp = vt_src2.MemOp,
-           RegisterClass MaskRC = vt_src2.KRCWM,
-           dag LdDAG = (vt_dst.VT (OpNode (vt_src1.VT vt_src1.RC:$src1),
-                                  (vt_src2.VT (vt_src2.LdFrag addr:$src2)))),
-           dag MaskLdDAG = (vt_dst.VT (MaskOpNode (vt_src1.VT vt_src1.RC:$src1),
-                                      (vt_src2.VT (vt_src2.LdFrag addr:$src2))))> {
+                                    X86VectorVTInfo vt_dst, X86VectorVTInfo vt_src1,
+                                    X86VectorVTInfo vt_src2, SDPatternOperator OpNode,
+                                    SDPatternOperator MaskOpNode, X86FoldableSchedWrite sched,
+                                    string Broadcast = vt_src2.BroadcastStr,
+                                    X86MemOperand MemOp = vt_src2.MemOp,
+                                    RegisterClass MaskRC = vt_src2.KRCWM,
+                                    dag LdDAG = (vt_dst.VT (OpNode (vt_src1.VT vt_src1.RC:$src1),
+                                                           (vt_src2.VT (vt_src2.LdFrag addr:$src2)))),
+                                    dag MaskLdDAG = (vt_dst.VT (MaskOpNode (vt_src1.VT vt_src1.RC:$src1),
+                                                               (vt_src2.VT (vt_src2.LdFrag addr:$src2))))> {
   defm rr : AVX512_maskable_cvt<OpCode, MRMSrcReg, vt_dst, (outs vt_dst.RC:$dst),
                       (ins vt_src1.RC:$src1, vt_src2.RC:$src2),
                       (ins vt_dst.RC:$src0, MaskRC:$mask, vt_src1.RC:$src1, vt_src2.RC:$src2),

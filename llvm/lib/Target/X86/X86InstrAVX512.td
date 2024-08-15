@@ -12674,22 +12674,22 @@ multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
                              X86SchedWriteWidths sched,
                              AVX512VLVectorVTInfo _SrcVTInfo,
                              AVX512VLVectorVTInfo _DstVTInfo,
-                             SDNode OpNode, Predicate prd,
-                             bit IsCommutable = 0> {
-  let Predicates = [prd] in
+                             SDNode OpNode, list<Predicate> prds512,
+                             list<Predicate> prds, bit IsCommutable = 0> {
+  let Predicates = prds512 in
     defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, sched.ZMM, OpNode,
                                    _SrcVTInfo.info512, _DstVTInfo.info512,
                                    _SrcVTInfo.info512, IsCommutable>,
-                                   EVEX_V512, EVEX_CD8<32, CD8VF>;
-  let Predicates = [HasVLX, prd] in {
+                                   EVEX_V512;
+  let Predicates = prds in {
     defm NAME#Z256 : avx512_binop_rm2<opc, OpcodeStr, sched.YMM, OpNode,
                                       _SrcVTInfo.info256, _DstVTInfo.info256,
                                       _SrcVTInfo.info256, IsCommutable>,
-                                     EVEX_V256, EVEX_CD8<32, CD8VF>;
+                                     EVEX_V256;
     defm NAME#Z128 : avx512_binop_rm2<opc, OpcodeStr, sched.XMM, OpNode,
                                       _SrcVTInfo.info128, _DstVTInfo.info128,
                                       _SrcVTInfo.info128, IsCommutable>,
-                                      EVEX_V128, EVEX_CD8<32, CD8VF>;
+                                      EVEX_V128;
   }
 }
 
@@ -12697,7 +12697,8 @@ let ExeDomain = SSEPackedSingle in
 defm VCVTNE2PS2BF16 : avx512_binop_all2<0x72, "vcvtne2ps2bf16",
                                         SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
                                         avx512vl_f32_info, avx512vl_bf16_info,
-                                        X86cvtne2ps2bf16, HasBF16, 0>, T8, XD;
+                                        X86cvtne2ps2bf16, [HasBF16], [HasVLX, HasBF16], 0>,
+                                        EVEX_CD8<32, CD8VF>, T8, XD;
 
 // Truncate Float to BFloat16
 multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,

@@ -7173,13 +7173,13 @@ def int_x86_avx10_vcvtne2ph2hf8s256 : ClangBuiltin<"__builtin_ia32_vcvtne2ph2hf8
 def int_x86_avx10_vcvtne2ph2hf8s512 : ClangBuiltin<"__builtin_ia32_vcvtne2ph2hf8s_512">,
         DefaultAttrsIntrinsic<[llvm_v64i8_ty], [llvm_v32f16_ty, llvm_v32f16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_mask_vcvthf82ph128 : ClangBuiltin<"__builtin_ia32_vcvtnehf8_2ph128_mask">,
+def int_x86_avx10_mask_vcvthf82ph128 : ClangBuiltin<"__builtin_ia32_vcvthf8_2ph128_mask">,
         DefaultAttrsIntrinsic<[llvm_v8f16_ty], [llvm_v16i8_ty, llvm_v8f16_ty, llvm_i8_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_mask_vcvthf82ph256 : ClangBuiltin<"__builtin_ia32_vcvtnehf8_2ph256_mask">,
+def int_x86_avx10_mask_vcvthf82ph256 : ClangBuiltin<"__builtin_ia32_vcvthf8_2ph256_mask">,
         DefaultAttrsIntrinsic<[llvm_v16f16_ty], [llvm_v16i8_ty, llvm_v16f16_ty, llvm_i16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_mask_vcvthf82ph512 : ClangBuiltin<"__builtin_ia32_vcvtnehf8_2ph512_mask">,
+def int_x86_avx10_mask_vcvthf82ph512 : ClangBuiltin<"__builtin_ia32_vcvthf8_2ph512_mask">,
         DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_v32i8_ty, llvm_v32f16_ty, llvm_i32_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtneph2bf8128 : ClangBuiltin<"__builtin_ia32_vcvtneph2bf8_128_mask">,

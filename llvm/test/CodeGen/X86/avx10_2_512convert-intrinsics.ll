@@ -2,8 +2,8 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=CHECK,X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=CHECK,X86
 
-define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512(<16 x float> %A, <16 x float> %B) {
-; CHECK-LABEL: test_int_x86_avx512_vcvt2ps2phx512:
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512(<16 x float> %A, <16 x float> %B) {
+; CHECK-LABEL: test_int_x86_avx10_vcvt2ps2phx512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvt2ps2phx %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x67,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -11,14 +11,14 @@ define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512(<16 x float> %A, <16 x fl
   ret <32 x half> %ret
 }
 
-define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512_mask(<32 x half> %W, i32 %U, <16 x float> %A, <16 x float> %B) {
-; X64-LABEL: test_int_x86_avx512_vcvt2ps2phx512_mask:
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512_mask(<32 x half> %W, i32 %U, <16 x float> %A, <16 x float> %B) {
+; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx512_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vcvt2ps2phx %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x49,0x67,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx512_vcvt2ps2phx512_mask:
+; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx512_mask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvt2ps2phx %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x49,0x67,0xc2]
@@ -27,8 +27,24 @@ define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512_mask(<32 x half> %W, i32 
   ret <32 x half> %ret
 }
 
-define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512_round(<16 x float> %A, <16 x float> %B) {
-; CHECK-LABEL: test_int_x86_avx512_vcvt2ps2phx512_round:
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512_maskz(i32 %U, <16 x float> %A, <16 x float> %B) {
+; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx512_maskz:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vcvt2ps2phx %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0x67,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx512_maskz:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvt2ps2phx %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0x67,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <32 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.512(<16 x float> %A, <16 x float> %B, <32 x half> zeroinitializer, i32 %U, i32 4)
+  ret <32 x half> %ret
+}
+
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512_round(<16 x float> %A, <16 x float> %B) {
+; CHECK-LABEL: test_int_x86_avx10_vcvt2ps2phx512_round:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvt2ps2phx {rz-sae}, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x78,0x67,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -36,19 +52,35 @@ define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512_round(<16 x float> %A, <1
   ret <32 x half> %ret
 }
 
-define <32 x half> @test_int_x86_avx512_vcvt2ps2phx512_round_mask(<32 x half> %W, i32 %U, <16 x float> %A, <16 x float> %B) {
-; X64-LABEL: test_int_x86_avx512_vcvt2ps2phx512_round_mask:
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512_round_mask(<32 x half> %W, i32 %U, <16 x float> %A, <16 x float> %B) {
+; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx512_round_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vcvt2ps2phx {rz-sae}, %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x79,0x67,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx512_vcvt2ps2phx512_round_mask:
+; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx512_round_mask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvt2ps2phx {rz-sae}, %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x75,0x79,0x67,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <32 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.512(<16 x float> %A, <16 x float> %B, <32 x half> %W, i32 %U, i32 11)
+  ret <32 x half> %ret
+}
+
+define <32 x half> @test_int_x86_avx10_vcvt2ps2phx512_round_maskz(i32 %U, <16 x float> %A, <16 x float> %B) {
+; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx512_round_maskz:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vcvt2ps2phx {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xf9,0x67,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx512_round_maskz:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvt2ps2phx {rz-sae}, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xf9,0x67,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %ret = call <32 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.512(<16 x float> %A, <16 x float> %B, <32 x half> zeroinitializer, i32 %U, i32 11)
   ret <32 x half> %ret
 }
 
