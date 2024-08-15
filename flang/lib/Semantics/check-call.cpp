@@ -1645,7 +1645,8 @@ static void CheckPresent(evaluate::ActualArguments &arguments,
       } else {
         symbol = arg->GetAssumedTypeDummy();
       }
-      if (!symbol || !symbol->attrs().test(semantics::Attr::OPTIONAL)) {
+      if (!symbol ||
+          !symbol->GetUltimate().attrs().test(semantics::Attr::OPTIONAL)) {
         messages.Say(arg ? arg->sourceLocation() : messages.at(),
             "Argument of PRESENT() must be the name of a whole OPTIONAL dummy argument"_err_en_US);
       }
