@@ -392,6 +392,36 @@ Moved checkers
 Sanitizers
 ----------
 
+- Added the ``-fsanitize-overflow-pattern-exclusion=`` flag which can be used
+  to disable specific overflow-dependent code patterns. The supported patterns
+  are: ``add-overflow-test``, ``negated-unsigned-const``, and
+  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
+  available patterns by specifying ``all``. Conversely, you can disable all
+  exclusions with ``none``.
+
+  .. code-block:: c++
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=add-overflow-test``
+     int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=negated-unsigned-const``
+     void negation_overflow() {
+       unsigned long foo = -1UL; // No longer causes a negation overflow warning
+       unsigned long bar = -2UL; // and so on...
+     }
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=post-decr-while``
+     void while_post_decrement() {
+       unsigned char count = 16;
+       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+     }
+
+  Many existing projects have a large amount of these code patterns present.
+  This new flag should allow those projects to enable integer sanitizers with
+  less noise.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
