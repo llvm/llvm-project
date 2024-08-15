@@ -596,9 +596,8 @@ define dso_local ptr @load_ba_1() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp0: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi12:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI12_0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi12)(a0)
-; RV64I-LARGE-NEXT:    ld a0, 0(a0)
 ; RV64I-LARGE-NEXT:    ret
 entry:
   br label %label
@@ -647,9 +646,8 @@ define dso_local ptr @load_ba_2() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp1: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi13:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI13_0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp1+8)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi13)(a0)
-; RV64I-LARGE-NEXT:    ld a0, 8(a0)
 ; RV64I-LARGE-NEXT:    ret
 entry:
   br label %label

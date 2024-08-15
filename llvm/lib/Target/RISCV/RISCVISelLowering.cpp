@@ -7419,17 +7419,6 @@ static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
 }
 
-static SDValue getLargeBlockAddress(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
-                                    SelectionDAG &DAG) {
-  RISCVConstantPoolConstant *CPV =
-      RISCVConstantPoolConstant::Create(N->getBlockAddress());
-  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
-  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
-  return DAG.getLoad(
-      Ty, DL, DAG.getEntryNode(), LC,
-      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
-}
-
 static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
                                       SelectionDAG &DAG) {
   RISCVConstantPoolSymbol *CPV =
@@ -7445,8 +7434,6 @@ template <class NodeTy>
 static SDValue getLargeAddr(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) {
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N)) {
     return getLargeGlobalAddress(G, DL, Ty, DAG);
-  } else if (BlockAddressSDNode *B = dyn_cast<BlockAddressSDNode>(N)) {
-    return getLargeBlockAddress(B, DL, Ty, DAG);
   } else {
     // Using pc-relative mode for other node type.
     SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);

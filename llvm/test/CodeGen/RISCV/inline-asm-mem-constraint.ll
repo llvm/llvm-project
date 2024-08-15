@@ -490,10 +490,9 @@ define void @constraint_m_with_local_1() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp0: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi6:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI9_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi6)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 0(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -552,10 +551,9 @@ define void @constraint_m_with_local_2() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp1: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi7:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI10_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi7)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp1+4)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 4(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi7)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -614,10 +612,9 @@ define void @constraint_m_with_local_3() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp2: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi8:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI11_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp2+2000)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 2000(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -2118,10 +2115,9 @@ define void @constraint_o_with_local_1() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp3: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi22:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI28_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi22)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp3)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 0(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi22)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -2180,10 +2176,9 @@ define void @constraint_o_with_local_2() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp4: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi23:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI29_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi23)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp4+4)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 4(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi23)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -2242,10 +2237,9 @@ define void @constraint_o_with_local_3() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp5: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi24:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI30_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi24)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp5+2000)
 ; RV64I-LARGE-NEXT:    #APP
-; RV64I-LARGE-NEXT:    lw zero, 2000(a0)
+; RV64I-LARGE-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi24)(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 entry:
@@ -3219,8 +3213,8 @@ define void @constraint_A_with_local_1() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp6: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi34:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI42_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi34)(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp6)
+; RV64I-LARGE-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi34)
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    lw zero, 0(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
@@ -3285,9 +3279,8 @@ define void @constraint_A_with_local_2() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp7: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi35:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI43_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi35)(a0)
-; RV64I-LARGE-NEXT:    addi a0, a0, 4
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp7+4)
+; RV64I-LARGE-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi35)
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    lw zero, 0(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP
@@ -3352,9 +3345,8 @@ define void @constraint_A_with_local_3() nounwind {
 ; RV64I-LARGE-NEXT:  .Ltmp8: # Block address taken
 ; RV64I-LARGE-NEXT:  # %bb.1: # %label
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi36:
-; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI44_0)
-; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi36)(a0)
-; RV64I-LARGE-NEXT:    addi a0, a0, 2000
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp8+2000)
+; RV64I-LARGE-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi36)
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    lw zero, 0(a0)
 ; RV64I-LARGE-NEXT:    #NO_APP

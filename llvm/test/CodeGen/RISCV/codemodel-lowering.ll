@@ -194,8 +194,8 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV64I-LARGE:       # %bb.0: # %entry
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi2:
-; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI2_0)
-; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi2)(a1)
+; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
+; RV64I-LARGE-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi2)
 ; RV64I-LARGE-NEXT:    li a2, 101
 ; RV64I-LARGE-NEXT:    sd a1, 8(sp)
 ; RV64I-LARGE-NEXT:    blt a0, a2, .LBB2_3
