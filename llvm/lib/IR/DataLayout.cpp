@@ -17,6 +17,7 @@
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -215,7 +216,7 @@ DataLayout::DataLayout()
       PointerSpecs(ArrayRef(DefaultPointerSpecs)) {}
 
 DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
-  if (Error Err = parseSpecifier(LayoutString))
+  if (Error Err = parseLayoutString(LayoutString))
     report_fatal_error(std::move(Err));
 }
 
@@ -260,9 +261,9 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          StructPrefAlignment == Other.StructPrefAlignment;
 }
 
-Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
+Expected<DataLayout> DataLayout::parse(StringRef LayoutString) {
   DataLayout Layout;
-  if (Error Err = Layout.parseSpecifier(LayoutDescription))
+  if (Error Err = Layout.parseLayoutString(LayoutString))
     return std::move(Err);
   return Layout;
 }
@@ -311,289 +312,295 @@ static Error getAddrSpace(StringRef R, unsigned &AddrSpace) {
   return Error::success();
 }
 
-Error DataLayout::parseSpecifier(StringRef Desc) {
-  StringRepresentation = std::string(Desc);
-  while (!Desc.empty()) {
-    // Split at '-'.
-    std::pair<StringRef, StringRef> Split;
-    if (Error Err = ::split(Desc, '-', Split))
+Error DataLayout::parseSpecification(StringRef Spec) {
+  // Split at ':'.
+  std::pair<StringRef, StringRef> Split;
+  if (Error Err = ::split(Spec, ':', Split))
+    return Err;
+
+  // Aliases used below.
+  StringRef &Tok = Split.first;   // Current token.
+  StringRef &Rest = Split.second; // The rest of the string.
+
+  if (Tok == "ni") {
+    do {
+      if (Error Err = ::split(Rest, ':', Split))
+        return Err;
+      Rest = Split.second;
+      unsigned AS;
+      if (Error Err = getInt(Split.first, AS))
+        return Err;
+      if (AS == 0)
+        return reportError("Address space 0 can never be non-integral");
+      NonIntegralAddressSpaces.push_back(AS);
+    } while (!Rest.empty());
+
+    return Error::success();
+  }
+
+  char SpecifierChar = Tok.front();
+  Tok = Tok.substr(1);
+
+  switch (SpecifierChar) {
+  case 's':
+    // Deprecated, but ignoring here to preserve loading older textual llvm
+    // ASM file
+    break;
+  case 'E':
+    BigEndian = true;
+    break;
+  case 'e':
+    BigEndian = false;
+    break;
+  case 'p': {
+    // Address space.
+    unsigned AddrSpace = 0;
+    if (!Tok.empty())
+      if (Error Err = getInt(Tok, AddrSpace))
+        return Err;
+    if (!isUInt<24>(AddrSpace))
+      return reportError("Invalid address space, must be a 24-bit integer");
+
+    // Size.
+    if (Rest.empty())
+      return reportError(
+          "Missing size specification for pointer in datalayout string");
+    if (Error Err = ::split(Rest, ':', Split))
       return Err;
-    Desc = Split.second;
-
-    // Split at ':'.
-    if (Error Err = ::split(Split.first, ':', Split))
+    unsigned PointerMemSize;
+    if (Error Err = getInt(Tok, PointerMemSize))
       return Err;
+    if (!PointerMemSize)
+      return reportError("Invalid pointer size of 0 bytes");
 
-    // Aliases used below.
-    StringRef &Tok  = Split.first;  // Current token.
-    StringRef &Rest = Split.second; // The rest of the string.
+    // ABI alignment.
+    if (Rest.empty())
+      return reportError(
+          "Missing alignment specification for pointer in datalayout string");
+    if (Error Err = ::split(Rest, ':', Split))
+      return Err;
+    unsigned PointerABIAlign;
+    if (Error Err = getIntInBytes(Tok, PointerABIAlign))
+      return Err;
+    if (!isPowerOf2_64(PointerABIAlign))
+      return reportError("Pointer ABI alignment must be a power of 2");
 
-    if (Tok == "ni") {
-      do {
+    // Size of index used in GEP for address calculation.
+    // The parameter is optional. By default it is equal to size of pointer.
+    unsigned IndexSize = PointerMemSize;
+
+    // Preferred alignment.
+    unsigned PointerPrefAlign = PointerABIAlign;
+    if (!Rest.empty()) {
+      if (Error Err = ::split(Rest, ':', Split))
+        return Err;
+      if (Error Err = getIntInBytes(Tok, PointerPrefAlign))
+        return Err;
+      if (!isPowerOf2_64(PointerPrefAlign))
+        return reportError("Pointer preferred alignment must be a power of 2");
+
+      // Now read the index. It is the second optional parameter here.
+      if (!Rest.empty()) {
         if (Error Err = ::split(Rest, ':', Split))
           return Err;
-        Rest = Split.second;
-        unsigned AS;
-        if (Error Err = getInt(Split.first, AS))
+        if (Error Err = getInt(Tok, IndexSize))
           return Err;
-        if (AS == 0)
-          return reportError("Address space 0 can never be non-integral");
-        NonIntegralAddressSpaces.push_back(AS);
-      } while (!Rest.empty());
-
-      continue;
+        if (!IndexSize)
+          return reportError("Invalid index size of 0 bytes");
+      }
     }
-
-    char SpecifierChar = Tok.front();
-    Tok = Tok.substr(1);
-
+    if (Error Err = setPointerSpec(AddrSpace, PointerMemSize,
+                                   assumeAligned(PointerABIAlign),
+                                   assumeAligned(PointerPrefAlign), IndexSize))
+      return Err;
+    break;
+  }
+  case 'i':
+  case 'v':
+  case 'f':
+  case 'a': {
+    TypeSpecifier Specifier;
     switch (SpecifierChar) {
-    case 's':
-      // Deprecated, but ignoring here to preserve loading older textual llvm
-      // ASM file
-      break;
-    case 'E':
-      BigEndian = true;
-      break;
-    case 'e':
-      BigEndian = false;
-      break;
-    case 'p': {
-      // Address space.
-      unsigned AddrSpace = 0;
-      if (!Tok.empty())
-        if (Error Err = getInt(Tok, AddrSpace))
-          return Err;
-      if (!isUInt<24>(AddrSpace))
-        return reportError("Invalid address space, must be a 24-bit integer");
-
-      // Size.
-      if (Rest.empty())
-        return reportError(
-            "Missing size specification for pointer in datalayout string");
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      unsigned PointerMemSize;
-      if (Error Err = getInt(Tok, PointerMemSize))
-        return Err;
-      if (!PointerMemSize)
-        return reportError("Invalid pointer size of 0 bytes");
-
-      // ABI alignment.
-      if (Rest.empty())
-        return reportError(
-            "Missing alignment specification for pointer in datalayout string");
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      unsigned PointerABIAlign;
-      if (Error Err = getIntInBytes(Tok, PointerABIAlign))
-        return Err;
-      if (!isPowerOf2_64(PointerABIAlign))
-        return reportError("Pointer ABI alignment must be a power of 2");
-
-      // Size of index used in GEP for address calculation.
-      // The parameter is optional. By default it is equal to size of pointer.
-      unsigned IndexSize = PointerMemSize;
-
-      // Preferred alignment.
-      unsigned PointerPrefAlign = PointerABIAlign;
-      if (!Rest.empty()) {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        if (Error Err = getIntInBytes(Tok, PointerPrefAlign))
-          return Err;
-        if (!isPowerOf2_64(PointerPrefAlign))
-          return reportError(
-              "Pointer preferred alignment must be a power of 2");
-
-        // Now read the index. It is the second optional parameter here.
-        if (!Rest.empty()) {
-          if (Error Err = ::split(Rest, ':', Split))
-            return Err;
-          if (Error Err = getInt(Tok, IndexSize))
-            return Err;
-          if (!IndexSize)
-            return reportError("Invalid index size of 0 bytes");
-        }
-      }
-      if (Error Err = setPointerSpec(
-              AddrSpace, PointerMemSize, assumeAligned(PointerABIAlign),
-              assumeAligned(PointerPrefAlign), IndexSize))
-        return Err;
-      break;
-    }
+    default:
+      llvm_unreachable("Unexpected specifier!");
     case 'i':
+      Specifier = TypeSpecifier::Integer;
+      break;
     case 'v':
+      Specifier = TypeSpecifier::Vector;
+      break;
     case 'f':
-    case 'a': {
-      TypeSpecifier Specifier;
-      switch (SpecifierChar) {
-      default:
-        llvm_unreachable("Unexpected specifier!");
-      case 'i':
-        Specifier = TypeSpecifier::Integer;
-        break;
-      case 'v':
-        Specifier = TypeSpecifier::Vector;
-        break;
-      case 'f':
-        Specifier = TypeSpecifier::Float;
-        break;
-      case 'a':
-        Specifier = TypeSpecifier::Aggregate;
-        break;
-      }
+      Specifier = TypeSpecifier::Float;
+      break;
+    case 'a':
+      Specifier = TypeSpecifier::Aggregate;
+      break;
+    }
 
-      // Bit size.
-      unsigned Size = 0;
-      if (!Tok.empty())
-        if (Error Err = getInt(Tok, Size))
-          return Err;
+    // Bit size.
+    unsigned Size = 0;
+    if (!Tok.empty())
+      if (Error Err = getInt(Tok, Size))
+        return Err;
 
-      if (Specifier == TypeSpecifier::Aggregate && Size != 0)
-        return reportError(
-            "Sized aggregate specification in datalayout string");
+    if (Specifier == TypeSpecifier::Aggregate && Size != 0)
+      return reportError("Sized aggregate specification in datalayout string");
 
-      // ABI alignment.
-      if (Rest.empty())
-        return reportError(
-            "Missing alignment specification in datalayout string");
+    // ABI alignment.
+    if (Rest.empty())
+      return reportError(
+          "Missing alignment specification in datalayout string");
+    if (Error Err = ::split(Rest, ':', Split))
+      return Err;
+    unsigned ABIAlign;
+    if (Error Err = getIntInBytes(Tok, ABIAlign))
+      return Err;
+    if (Specifier != TypeSpecifier::Aggregate && !ABIAlign)
+      return reportError(
+          "ABI alignment specification must be >0 for non-aggregate types");
+
+    if (!isUInt<16>(ABIAlign))
+      return reportError("Invalid ABI alignment, must be a 16bit integer");
+    if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
+      return reportError("Invalid ABI alignment, must be a power of 2");
+    if (Specifier == TypeSpecifier::Integer && Size == 8 && ABIAlign != 1)
+      return reportError("Invalid ABI alignment, i8 must be naturally aligned");
+
+    // Preferred alignment.
+    unsigned PrefAlign = ABIAlign;
+    if (!Rest.empty()) {
       if (Error Err = ::split(Rest, ':', Split))
         return Err;
-      unsigned ABIAlign;
-      if (Error Err = getIntInBytes(Tok, ABIAlign))
+      if (Error Err = getIntInBytes(Tok, PrefAlign))
         return Err;
-      if (Specifier != TypeSpecifier::Aggregate && !ABIAlign)
+    }
+
+    if (!isUInt<16>(PrefAlign))
+      return reportError(
+          "Invalid preferred alignment, must be a 16bit integer");
+    if (PrefAlign != 0 && !isPowerOf2_64(PrefAlign))
+      return reportError("Invalid preferred alignment, must be a power of 2");
+
+    if (Error Err = setPrimitiveSpec(Specifier, Size, assumeAligned(ABIAlign),
+                                     assumeAligned(PrefAlign)))
+      return Err;
+
+    break;
+  }
+  case 'n': // Native integer types.
+    while (true) {
+      unsigned Width;
+      if (Error Err = getInt(Tok, Width))
+        return Err;
+      if (Width == 0)
         return reportError(
-            "ABI alignment specification must be >0 for non-aggregate types");
-
-      if (!isUInt<16>(ABIAlign))
-        return reportError("Invalid ABI alignment, must be a 16bit integer");
-      if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
-        return reportError("Invalid ABI alignment, must be a power of 2");
-      if (Specifier == TypeSpecifier::Integer && Size == 8 && ABIAlign != 1)
-        return reportError(
-            "Invalid ABI alignment, i8 must be naturally aligned");
-
-      // Preferred alignment.
-      unsigned PrefAlign = ABIAlign;
-      if (!Rest.empty()) {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        if (Error Err = getIntInBytes(Tok, PrefAlign))
-          return Err;
-      }
-
-      if (!isUInt<16>(PrefAlign))
-        return reportError(
-            "Invalid preferred alignment, must be a 16bit integer");
-      if (PrefAlign != 0 && !isPowerOf2_64(PrefAlign))
-        return reportError("Invalid preferred alignment, must be a power of 2");
-
-      if (Error Err = setPrimitiveSpec(Specifier, Size, assumeAligned(ABIAlign),
-                                       assumeAligned(PrefAlign)))
-        return Err;
-
-      break;
-    }
-    case 'n':  // Native integer types.
-      while (true) {
-        unsigned Width;
-        if (Error Err = getInt(Tok, Width))
-          return Err;
-        if (Width == 0)
-          return reportError(
-              "Zero width native integer type in datalayout string");
-        LegalIntWidths.push_back(Width);
-        if (Rest.empty())
-          break;
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-      }
-      break;
-    case 'S': { // Stack natural alignment.
-      uint64_t Alignment;
-      if (Error Err = getIntInBytes(Tok, Alignment))
-        return Err;
-      if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-        return reportError("Alignment is neither 0 nor a power of 2");
-      StackNaturalAlign = MaybeAlign(Alignment);
-      break;
-    }
-    case 'F': {
-      switch (Tok.front()) {
-      case 'i':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
-        break;
-      case 'n':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
-        break;
-      default:
-        return reportError("Unknown function pointer alignment type in "
-                           "datalayout string");
-      }
-      Tok = Tok.substr(1);
-      uint64_t Alignment;
-      if (Error Err = getIntInBytes(Tok, Alignment))
-        return Err;
-      if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-        return reportError("Alignment is neither 0 nor a power of 2");
-      FunctionPtrAlign = MaybeAlign(Alignment);
-      break;
-    }
-    case 'P': { // Function address space.
-      if (Error Err = getAddrSpace(Tok, ProgramAddrSpace))
-        return Err;
-      break;
-    }
-    case 'A': { // Default stack/alloca address space.
-      if (Error Err = getAddrSpace(Tok, AllocaAddrSpace))
-        return Err;
-      break;
-    }
-    case 'G': { // Default address space for global variables.
-      if (Error Err = getAddrSpace(Tok, DefaultGlobalsAddrSpace))
-        return Err;
-      break;
-    }
-    case 'm':
-      if (!Tok.empty())
-        return reportError("Unexpected trailing characters after mangling "
-                           "specifier in datalayout string");
+            "Zero width native integer type in datalayout string");
+      LegalIntWidths.push_back(Width);
       if (Rest.empty())
-        return reportError("Expected mangling specifier in datalayout string");
-      if (Rest.size() > 1)
-        return reportError("Unknown mangling specifier in datalayout string");
-      switch(Rest[0]) {
-      default:
-        return reportError("Unknown mangling in datalayout string");
-      case 'e':
-        ManglingMode = MM_ELF;
         break;
-      case 'l':
-        ManglingMode = MM_GOFF;
-        break;
-      case 'o':
-        ManglingMode = MM_MachO;
-        break;
-      case 'm':
-        ManglingMode = MM_Mips;
-        break;
-      case 'w':
-        ManglingMode = MM_WinCOFF;
-        break;
-      case 'x':
-        ManglingMode = MM_WinCOFFX86;
-        break;
-      case 'a':
-        ManglingMode = MM_XCOFF;
-        break;
-      }
+      if (Error Err = ::split(Rest, ':', Split))
+        return Err;
+    }
+    break;
+  case 'S': { // Stack natural alignment.
+    uint64_t Alignment;
+    if (Error Err = getIntInBytes(Tok, Alignment))
+      return Err;
+    if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
+      return reportError("Alignment is neither 0 nor a power of 2");
+    StackNaturalAlign = MaybeAlign(Alignment);
+    break;
+  }
+  case 'F': {
+    switch (Tok.front()) {
+    case 'i':
+      TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
+      break;
+    case 'n':
+      TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
       break;
     default:
-      return reportError("Unknown specifier in datalayout string");
+      return reportError("Unknown function pointer alignment type in "
+                         "datalayout string");
+    }
+    Tok = Tok.substr(1);
+    uint64_t Alignment;
+    if (Error Err = getIntInBytes(Tok, Alignment))
+      return Err;
+    if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
+      return reportError("Alignment is neither 0 nor a power of 2");
+    FunctionPtrAlign = MaybeAlign(Alignment);
+    break;
+  }
+  case 'P': { // Function address space.
+    if (Error Err = getAddrSpace(Tok, ProgramAddrSpace))
+      return Err;
+    break;
+  }
+  case 'A': { // Default stack/alloca address space.
+    if (Error Err = getAddrSpace(Tok, AllocaAddrSpace))
+      return Err;
+    break;
+  }
+  case 'G': { // Default address space for global variables.
+    if (Error Err = getAddrSpace(Tok, DefaultGlobalsAddrSpace))
+      return Err;
+    break;
+  }
+  case 'm':
+    if (!Tok.empty())
+      return reportError("Unexpected trailing characters after mangling "
+                         "specifier in datalayout string");
+    if (Rest.empty())
+      return reportError("Expected mangling specifier in datalayout string");
+    if (Rest.size() > 1)
+      return reportError("Unknown mangling specifier in datalayout string");
+    switch (Rest[0]) {
+    default:
+      return reportError("Unknown mangling in datalayout string");
+    case 'e':
+      ManglingMode = MM_ELF;
+      break;
+    case 'l':
+      ManglingMode = MM_GOFF;
+      break;
+    case 'o':
+      ManglingMode = MM_MachO;
+      break;
+    case 'm':
+      ManglingMode = MM_Mips;
+      break;
+    case 'w':
+      ManglingMode = MM_WinCOFF;
+      break;
+    case 'x':
+      ManglingMode = MM_WinCOFFX86;
+      break;
+    case 'a':
+      ManglingMode = MM_XCOFF;
       break;
     }
+    break;
+  default:
+    return reportError("Unknown specifier in datalayout string");
+  }
+
+  return Error::success();
+}
+
+Error DataLayout::parseLayoutString(StringRef LayoutString) {
+  StringRepresentation = std::string(LayoutString);
+
+  if (LayoutString.empty())
+    return Error::success();
+
+  // Split the data layout string into specifications separated by '-' and
+  // parse each specification individually, updating internal data structures.
+  for (StringRef Spec : split(LayoutString, '-')) {
+    if (Spec.empty())
+      return createStringError("empty specification is not allowed");
+    if (Error Err = parseSpecification(Spec))
+      return Err;
   }
 
   return Error::success();
