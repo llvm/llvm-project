@@ -217,6 +217,39 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
                      AMDGPU::OperandSemantics::INT, Decoder);
 }
 
+static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
+                                    uint64_t /* Addr */,
+                                    const MCDisassembler *Decoder,
+                                    AMDGPUDisassembler::OpWidthTy OPW) {
+  // Uniform-indexed resource. SGPR[0..123] encoded as 128-251
+  if (Imm >= 128 && Imm < 256)
+    Imm -= 128;
+  return decodeSrcOp(Inst, 9, OPW, Imm, Imm, false, 0,
+                     AMDGPU::OperandSemantics::INT, Decoder);
+}
+
+static DecodeStatus decodeRsrcReg256(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  AMDGPUDisassembler::OpWidthTy OPW = llvm::AMDGPUDisassembler::OPW32;
+  // 0-120: Uniform-direct resource in SGPRs(SReg_256)
+  if (Imm < 128)
+    OPW = AMDGPUDisassembler::OPW256;
+
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OPW);
+}
+
+static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  AMDGPUDisassembler::OpWidthTy OPW = llvm::AMDGPUDisassembler::OPW32;
+  // 0-120: Uniform-direct resource in SGPRs(SReg_128)
+  if (Imm < 128)
+    OPW = AMDGPUDisassembler::OPW128;
+
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OPW);
+}
+
 // Decoder for Src(9-bit encoding) AGPR, register number encoded in 9bits, set
 // Imm{9} to 1 (set acc) and decode using 'enum10' from decodeSrcOp, registers
 // only.
@@ -1182,7 +1215,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx13;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;

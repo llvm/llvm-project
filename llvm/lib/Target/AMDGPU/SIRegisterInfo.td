@@ -1197,6 +1197,11 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
 }
 } // End GeneratePressureSet = 0
 
+def RsrcReg : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32, SReg_32, SReg_256, SReg_128)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,
@@ -1275,6 +1280,16 @@ def OperandSemantics {
   int BF16 = 2;
   int FP32 = 3;
   int FP64 = 4;
+}
+
+def RsrcReg256Op : RegisterOperand<RsrcReg> {
+  let DecoderMethod = "decodeRsrcReg256";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+}
+
+def RsrcReg128Op : RegisterOperand<RsrcReg> {
+  let DecoderMethod = "decodeRsrcReg128";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
 // V_LOAD/STORE_IDX indexing operand

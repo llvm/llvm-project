@@ -2046,6 +2046,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
+   FeatureNSAEncoding,
+   FeaturePartialNSAEncoding,
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,

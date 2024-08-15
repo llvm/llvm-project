@@ -57,6 +57,10 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueRsrcRegOp(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -678,6 +682,20 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
     return;
   }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  bool IsSReg32 =
+      MRI.getRegClass(AMDGPU::SReg_32RegClassID).contains(MO.getReg());
+  unsigned Enc = MRI.getEncodingValue(MO.getReg());
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  bool IsVGPROrAGPR =
+      Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
+  Op = Idx | IsVGPROrAGPR << 8 | IsSReg32 << 7;
+  return;
 }
 
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
