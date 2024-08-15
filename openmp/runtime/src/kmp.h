@@ -4731,6 +4731,8 @@ public:
       : f(nullptr) {
     open(filename, mode, env_var);
   }
+  kmp_safe_raii_file_t(const kmp_safe_raii_file_t &other) = delete;
+  kmp_safe_raii_file_t &operator=(const kmp_safe_raii_file_t &other) = delete;
   ~kmp_safe_raii_file_t() { close(); }
 
   /// Open filename using mode. This is automatically closed in the destructor.
