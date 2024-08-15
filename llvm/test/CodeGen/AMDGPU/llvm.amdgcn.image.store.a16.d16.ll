@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12PLUS,GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12PLUS,GFX13 %s
 
 define amdgpu_ps void @store_f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <2 x i32> %val) {
 ; GFX9-LABEL: store_f16_1d:
@@ -28,6 +29,13 @@ define amdgpu_ps void @store_f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <2
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_f16_1d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %bitcast = bitcast <2 x i32> %val to <4 x half>
@@ -59,6 +67,13 @@ define amdgpu_ps void @store_v2f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v2f16_1d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %bitcast = bitcast <2 x i32> %val to <4 x half>
@@ -90,6 +105,13 @@ define amdgpu_ps void @store_v3f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v3f16_1d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %bitcast = bitcast <2 x i32> %val to <4 x half>
@@ -121,6 +143,13 @@ define amdgpu_ps void @store_v4f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v4f16_1d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %bitcast = bitcast <2 x i32> %val to <4 x half>
@@ -152,6 +181,13 @@ define amdgpu_ps void @store_f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <2
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_f16_2d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %y = extractelement <2 x i16> %coords, i32 1
@@ -184,6 +220,13 @@ define amdgpu_ps void @store_v2f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v2f16_2d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %y = extractelement <2 x i16> %coords, i32 1
@@ -216,6 +259,13 @@ define amdgpu_ps void @store_v3f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v3f16_2d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %y = extractelement <2 x i16> %coords, i32 1
@@ -248,6 +298,13 @@ define amdgpu_ps void @store_v4f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v4f16_2d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
   %y = extractelement <2 x i16> %coords, i32 1
@@ -280,6 +337,12 @@ define amdgpu_ps void @store_f16_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo,
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_f16_3d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_store v[2:3], [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
   %y = extractelement <2 x i16> %coords_lo, i32 1
@@ -313,6 +376,12 @@ define amdgpu_ps void @store_v2f16_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v2f16_3d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_store v[2:3], [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
   %y = extractelement <2 x i16> %coords_lo, i32 1
@@ -346,6 +415,12 @@ define amdgpu_ps void @store_v3f16_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v3f16_3d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_store v[2:3], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
   %y = extractelement <2 x i16> %coords_lo, i32 1
@@ -379,6 +454,12 @@ define amdgpu_ps void @store_v4f16_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: store_v4f16_3d:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_store v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D a16 d16
+; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
   %y = extractelement <2 x i16> %coords_lo, i32 1
@@ -394,3 +475,5 @@ declare void @llvm.amdgcn.image.store.3d.v4f16.i16(<4 x half>, i32, i16, i16, i1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12PLUS: {{.*}}
