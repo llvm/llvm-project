@@ -238,9 +238,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto FloatVT = EVT::getFloatingPointVT(32);
 
   SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
@@ -251,6 +253,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
 
   SDValue VScale = DAG->getVScale(DL, Int32VT, APInt::getMaxValue(32));
+
+  SDValue FPToSI = DAG->getNode(ISD::FP_TO_SINT, DL, FloatVT, Op2);
+  SDValue FPToUI = DAG->getNode(ISD::FP_TO_UINT, DL, FloatVT, Op2);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
@@ -263,6 +268,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
+
+  EXPECT_TRUE(sd_match(FPToUI, m_FPToUI(m_Value())));
+  EXPECT_TRUE(sd_match(FPToSI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
