@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++14 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-uninitialized -std=c++14 -fsyntax-only -verify
 
 // expected-no-diagnostics
 
@@ -156,11 +156,11 @@ void CharUsage() {
   constexpr auto a = FourCharsVecSize{6, 3, 2, 1} +
             FourCharsVecSize{12, 15, 5, 7};
   static_assert(a[0] == 18 && a[1] == 18 && a[2] == 7 && a[3] == 8, "");
-  
+
   constexpr auto b = FourCharsVecSize{19, 15, 13, 12} -
                      FourCharsVecSize{13, 14, 5, 3};
   static_assert(b[0] == 6 && b[1] == 1 && b[2] == 8 && b[3] == 9, "");
-  
+
   constexpr auto c = FourCharsVecSize{8, 4, 2, 1} *
                      FourCharsVecSize{3, 4, 5, 6};
   static_assert(c[0] == 24 && c[1] == 16 && c[2] == 10 && c[3] == 6, "");
@@ -175,13 +175,13 @@ void CharUsage() {
 
   constexpr auto f = FourCharsVecSize{6, 3, 2, 1} + 3;
   static_assert(f[0] == 9 && f[1] == 6 && f[2] == 5 && f[3] == 4, "");
-  
+
   constexpr auto g = FourCharsVecSize{19, 15, 12, 10} - 3;
-  static_assert(g[0] == 16 && g[1] == 12 && g[2] == 9 && g[3] == 7, "");  
+  static_assert(g[0] == 16 && g[1] == 12 && g[2] == 9 && g[3] == 7, "");
 
   constexpr auto h = FourCharsVecSize{8, 4, 2, 1} * 3;
   static_assert(h[0] == 24 && h[1] == 12 && h[2] == 6 && h[3] == 3, "");
- 
+
   constexpr auto j = FourCharsVecSize{12, 15, 18, 21} / 3;
   static_assert(j[0] == 4 && j[1] == 5 && j[2] == 6 && j[3] == 7, "");
 
@@ -193,7 +193,7 @@ void CharUsage() {
 
   constexpr auto m = 20 - FourCharsVecSize{19, 15, 12, 10};
   static_assert(m[0] == 1 && m[1] == 5 && m[2] == 8 && m[3] == 10, "");
- 
+
   constexpr auto n = 3 * FourCharsVecSize{8, 4, 2, 1};
   static_assert(n[0] == 24 && n[1] == 12 && n[2] == 6 && n[3] == 3, "");
 
@@ -254,7 +254,7 @@ void CharUsage() {
 
   constexpr auto E = FourCharsVecSize{1, 2, 3, 4} <= 3;
   static_assert(E[0] == -1 && E[1] == -1 && E[2] == -1 && E[3] == 0, "");
-    
+
   constexpr auto F = FourCharsVecSize{1, 2, 3, 4} >= 3;
   static_assert(F[0] == 0 && F[1] == 0 && F[2] == -1 && F[3] == -1, "");
 
@@ -267,7 +267,7 @@ void CharUsage() {
   constexpr auto I = FourCharsVecSize{1, 2, 3, 4} &
                      FourCharsVecSize{4, 3, 2, 1};
   static_assert(I[0] == 0 && I[1] == 2 && I[2] == 2 && I[3] == 0, "");
- 
+
   constexpr auto J = FourCharsVecSize{1, 2, 3, 4} ^
                      FourCharsVecSize { 4, 3, 2, 1 };
   static_assert(J[0] == 5 && J[1] == 1 && J[2] == 1 && J[3] == 5, "");
@@ -288,7 +288,7 @@ void CharUsage() {
   constexpr auto O = FourCharsVecSize{5, 0, 6, 0} &&
                      FourCharsVecSize{5, 5, 0, 0};
   static_assert(O[0] == 1 && O[1] == 0 && O[2] == 0 && O[3] == 0, "");
-  
+
   constexpr auto P = FourCharsVecSize{5, 0, 6, 0} ||
                      FourCharsVecSize{5, 5, 0, 0};
   static_assert(P[0] == 1 && P[1] == 1 && P[2] == 1 && P[3] == 0, "");
@@ -330,7 +330,7 @@ void CharUsage() {
   static_assert(ac[0] == 20 && ac[1] == 19 && ac[2] == 15 && ac[3] == 1, "");
 
   constexpr auto ad = CmpBinOr(a, b);
-  static_assert(ad[0] == 22 && ad[1] == 19 && ad[2] == 15 && ad[3] == 9, ""); 
+  static_assert(ad[0] == 22 && ad[1] == 19 && ad[2] == 15 && ad[3] == 9, "");
 
   constexpr auto ae = ~FourCharsVecSize{1, 2, 10, 20};
   static_assert(ae[0] == -2 && ae[1] == -3 && ae[2] == -11 && ae[3] == -21, "");
@@ -395,7 +395,7 @@ void CharExtVecUsage() {
 
   constexpr auto r = FourCharsExtVec{19, 15, 12, 10} >>
                      FourCharsExtVec{1, 1, 2, 2};
-  static_assert(r[0] == 9 && r[1] == 7 && r[2] == 3 && r[3] == 2, ""); 
+  static_assert(r[0] == 9 && r[1] == 7 && r[2] == 3 && r[3] == 2, "");
 
   constexpr auto s = FourCharsExtVec{6, 3, 5, 10} << 1;
   static_assert(s[0] == 12 && s[1] == 6 && s[2] == 10 && s[3] == 20, "");
@@ -441,7 +441,7 @@ void CharExtVecUsage() {
 
   constexpr auto E = FourCharsExtVec{1, 2, 3, 4} <= 3;
   static_assert(E[0] == -1 && E[1] == -1 && E[2] == -1 && E[3] == 0, "");
-  
+
   constexpr auto F = FourCharsExtVec{1, 2, 3, 4} >= 3;
   static_assert(F[0] == 0 && F[1] == 0 && F[2] == -1 && F[3] == -1, "");
 
@@ -462,7 +462,7 @@ void CharExtVecUsage() {
   constexpr auto K = FourCharsExtVec{1, 2, 3, 4} |
                      FourCharsExtVec{4, 3, 2, 1};
   static_assert(K[0] == 5 && K[1] == 3 && K[2] == 3 && K[3] == 5, "");
-  
+
   constexpr auto L = FourCharsExtVec{1, 2, 3, 4} & 3;
   static_assert(L[0] == 1 && L[1] == 2 && L[2] == 3 && L[3] == 0, "");
 
@@ -549,7 +549,7 @@ void FloatUsage() {
   constexpr auto g = FourFloatsVecSize{19, 15, 12, 10} - 3;
   static_assert(g[0] == 1.600000e+01 && g[1] == 1.200000e+01 && g[2] == 9.000000e+00 && g[3] == 7.000000e+00, "");
 
-  constexpr auto h = FourFloatsVecSize{8, 4, 2, 1} * 3;  
+  constexpr auto h = FourFloatsVecSize{8, 4, 2, 1} * 3;
   static_assert(h[0] == 2.400000e+01 && h[1] == 1.200000e+01 && h[2] == 6.000000e+00 && h[3] == 3.000000e+00, "");
 
   constexpr auto j = FourFloatsVecSize{12, 15, 18, 21} / 3;
@@ -593,7 +593,7 @@ void FloatUsage() {
 
   constexpr auto C = FourFloatsVecSize{1, 2, 3, 4} < 3;
   static_assert(C[0] == -1 && C[1] == -1 && C[2] == 0 && C[3] == 0, "");
-     
+
   constexpr auto D = FourFloatsVecSize{1, 2, 3, 4} > 3;
   static_assert(D[0] == 0 && D[1] == 0 && D[2] == 0 && D[3] == -1, "");
 
@@ -607,7 +607,7 @@ void FloatUsage() {
   static_assert(G[0] == 0 && G[1] == 0 && G[2] == -1 && G[3] == 0, "");
 
   constexpr auto H = FourFloatsVecSize{1, 2, 3, 4} != 3;
-  static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");  
+  static_assert(H[0] == -1 && H[1] == -1 && H[2] == 0 && H[3] == -1, "");
 
   constexpr auto O = FourFloatsVecSize{5, 0, 6, 0} &&
                      FourFloatsVecSize{5, 5, 0, 0};
@@ -655,7 +655,7 @@ void FloatVecUsage() {
   constexpr auto c = FourFloatsVecSize{8, 4, 2, 1} *
                      FourFloatsVecSize{3, 4, 5, 6};
   static_assert(c[0] == 2.400000e+01 && c[1] == 1.600000e+01 && c[2] == 1.000000e+01 && c[3] == 6.000000e+00, "");
-                      
+
   constexpr auto d = FourFloatsVecSize{12, 12, 10, 10} /
                      FourFloatsVecSize{6, 4, 5, 2};
   static_assert(d[0] == 2.000000e+00 && d[1] == 3.000000e+00 && d[2] == 2.000000e+00 && d[3] == 5.000000e+00, "");
@@ -741,14 +741,14 @@ void FloatVecUsage() {
   static_assert(R[0] == 1 && R[1] == 1 && R[2] == 1 && R[3] == 1, "");
 
   constexpr auto T = CmpMul(a, b);
-  static_assert(T[0] == 1.080000e+02 && T[1] == 1.800000e+01 && T[2] == 5.600000e+01 && T[3] == 7.200000e+01, ""); 
+  static_assert(T[0] == 1.080000e+02 && T[1] == 1.800000e+01 && T[2] == 5.600000e+01 && T[3] == 7.200000e+01, "");
 
   constexpr auto U = CmpDiv(a, b);
   static_assert(CmpF(U[0], a[0] / b[0]) && CmpF(U[1], a[1] / b[1]) && CmpF(U[2], a[2] / b[2]) && CmpF(U[3], a[3] / b[3]), "");
 
   constexpr auto X = CmpAdd(a, b);
   static_assert(X[0] == 2.400000e+01 && X[1] == 1.900000e+01 && X[2] == 1.500000e+01 && X[3] == 1.700000e+01, "");
- 
+
   constexpr auto Y = CmpSub(a, b);
   static_assert(Y[0] == 1.200000e+01 && Y[1] == 1.700000e+01 && Y[2] == -1.000000e+00 && Y[3] == -1.000000e+00, "");
 
@@ -826,7 +826,7 @@ void BoolVecUsage() {
 
   constexpr auto i = FourBoolsExtVec{true, false, true, false} ^
                      FourBoolsExtVec { false, false, true, true };
-  static_assert(i[0] == true && i[1] == false && i[2] == false && i[3] == true, "");  
+  static_assert(i[0] == true && i[1] == false && i[2] == false && i[3] == true, "");
 
   constexpr auto j = !FourBoolsExtVec{true, false, true, false};
   static_assert(j[0] == false && j[1] == true && j[2] == false && j[3] == true, "");
