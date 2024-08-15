@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -target x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -o - %s | FileCheck %s
 
 // Check for potential false positives from patterns that _almost_ match classic overflow-dependent or overflow-prone code patterns
 extern unsigned a, b, c;
