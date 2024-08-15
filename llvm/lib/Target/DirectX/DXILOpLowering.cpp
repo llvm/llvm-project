@@ -78,6 +78,7 @@ class OpLowerer {
   DXILOpBuilder OpBuilder;
   DXILResourceMap &DRM;
   SmallVector<CallInst *> CleanupCasts;
+  bool HasErrors = false;
 
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
@@ -94,6 +95,7 @@ public:
         DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
                                        CI->getDebugLoc());
         M.getContext().diagnose(Diag);
+        HasErrors = true;
         continue;
       }
     }
@@ -305,6 +307,11 @@ public:
       Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
 
       Value *Data = CI->getArgOperand(2);
+      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
+      if (!DataTy || DataTy->getNumElements() != 4)
+        return make_error<StringError>(
+            "typedBufferStore data must be a vector of 4 elements",
+            inconvertibleErrorCode());
       Value *Data0 =
           IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
       Value *Data1 =
@@ -353,7 +360,7 @@ public:
       }
       Updated = true;
     }
-    if (Updated)
+    if (Updated && !HasErrors)
       cleanupHandleCasts();
 
     return Updated;
