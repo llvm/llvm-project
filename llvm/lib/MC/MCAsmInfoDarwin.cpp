@@ -81,7 +81,6 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
 
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
-  HasAltEntry = true;
 
   DwarfUsesRelocationsAcrossSections = false;
   SetDirectiveSuppressesReloc = true;
