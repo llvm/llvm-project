@@ -1995,8 +1995,15 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
 
   // Handle the vector case.  The base must be a vector, the index must be an
   // integer value.
-  Value *RowIdx = Visit(E->getRowIdx());
-  Value *ColumnIdx = Visit(E->getColumnIdx());
+  auto VisitIndex = [this](Expr *E) {
+    llvm::Value *Idx = Visit(E);
+    bool IsSigned = E->getType()->isSignedIntegerOrEnumerationType();
+    if (Idx->getType() != CGF.IntPtrTy)
+      Idx = Builder.CreateIntCast(Idx, CGF.IntPtrTy, IsSigned);
+    return Idx;
+  };
+  Value *RowIdx = VisitIndex(E->getRowIdx());
+  Value *ColumnIdx = VisitIndex(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   unsigned NumRows = MatrixTy->getNumRows();

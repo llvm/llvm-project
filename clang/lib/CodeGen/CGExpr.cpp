@@ -4397,8 +4397,18 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
       !E->isIncomplete() &&
       "incomplete matrix subscript expressions should be rejected during Sema");
   LValue Base = EmitLValue(E->getBase());
-  llvm::Value *RowIdx = EmitScalarExpr(E->getRowIdx());
-  llvm::Value *ColIdx = EmitScalarExpr(E->getColumnIdx());
+
+  // Extend or truncate the index type to 32 or 64-bits.
+  auto EmitIndex = [this](const Expr *E) {
+    llvm::Value *Idx = EmitScalarExpr(E);
+    bool IsSigned = E->getType()->isSignedIntegerOrEnumerationType();
+    if (Idx->getType() != IntPtrTy)
+      Idx = Builder.CreateIntCast(Idx, IntPtrTy, IsSigned);
+    return Idx;
+  };
+  llvm::Value *RowIdx = EmitIndex(E->getRowIdx());
+  llvm::Value *ColIdx = EmitIndex(E->getColumnIdx());
+
   llvm::Value *NumRows = Builder.getIntN(
       RowIdx->getType()->getScalarSizeInBits(),
       E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
