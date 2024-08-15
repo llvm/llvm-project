@@ -96,6 +96,9 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
 }
 AnalysisKey CtxProfAnalysis::Key;
 
+CtxProfAnalysis::CtxProfAnalysis(StringRef Profile)
+    : Profile(Profile.empty() ? UseCtxProfile : Profile) {}
+
 PGOContextualProfile CtxProfAnalysis::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Profile);
