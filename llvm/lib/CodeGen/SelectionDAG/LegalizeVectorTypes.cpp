@@ -891,8 +891,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
                                                           unsigned OpNo) {
   // We should not be attempting to scalarize the containing vector
   assert(OpNo == 1);
-  SDValue Elt = GetScalarizedVector(N->getOperand(OpNo));
-  SDValue ContainingVec = N->getOperand(1 - OpNo);
+  SDValue Elt = GetScalarizedVector(N->getOperand(1));
+  SDValue ContainingVec = N->getOperand(0);
   return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N),
                      ContainingVec.getValueType(), ContainingVec, Elt,
                      N->getOperand(2));
