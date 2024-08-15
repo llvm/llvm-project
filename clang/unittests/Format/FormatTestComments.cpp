@@ -494,8 +494,8 @@ TEST_F(FormatTestComments, AlignsBlockComments) {
 TEST_F(FormatTestComments, CommentReflowingCanBeTurnedOff) {
   FormatStyle Style = getLLVMStyleWithColumns(20);
   Style.ReflowComments = FormatStyle::RCS_Never;
-  verifyNoChange("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
+  verifyFormat("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
                  "aaaaaaaaa*/",
                  Style);
@@ -510,8 +510,8 @@ TEST_F(FormatTestComments, CommentReflowingCanBeTurnedOff) {
 TEST_F(FormatTestComments, CommentReflowingCanApplyOnlyToIndents) {
   FormatStyle Style = getLLVMStyleWithColumns(20);
   Style.ReflowComments = FormatStyle::RCS_IndentOnly;
-  verifyNoChange("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
+  verifyFormat("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
                  "aaaaaaaaa*/",
                  Style);

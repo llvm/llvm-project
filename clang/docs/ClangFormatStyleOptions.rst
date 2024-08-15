@@ -5299,7 +5299,7 @@ the configuration (without a prefix: ``Auto``).
         * and a misaligned second line */
 
   * ``RCS_Always`` (in configuration: ``Always``)
-    Apply indentation rules and re-flow long comments into new lines, trying
+    Apply indentation rules and reflow long comments into new lines, trying
     to obey the ``ColumnLimit``.
 
     .. code-block:: c++
