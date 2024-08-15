@@ -264,6 +264,7 @@ protected:
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
+  bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;

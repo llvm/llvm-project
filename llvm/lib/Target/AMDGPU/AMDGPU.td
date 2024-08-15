@@ -1323,6 +1323,13 @@ def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
   "Use block load/store for VGPR callee saved registers"
 >;
 
+def FeatureGloballyAddressableScratch : SubtargetFeature<
+  "globally-addressable-scratch",
+  "HasGloballyAddressableScratch",
+  "true",
+  "FLAT instructions can access scratch memory for any thread in any wave"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1956,7 +1963,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
-   FeatureMemoryAtomicFAddF32DenormalSupport
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureGloballyAddressableScratch,
 ]>;
 
 def FeatureISAVersion12_11 : FeatureSet<
