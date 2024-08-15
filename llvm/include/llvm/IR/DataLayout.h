@@ -165,9 +165,11 @@ private:
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
-  /// Attempts to parse a target data specification string and reports an error
-  /// if the string is malformed.
-  Error parseSpecifier(StringRef Desc);
+  /// Attempts to parse a single specification.
+  Error parseSpecification(StringRef Specification);
+
+  /// Attempts to parse a data layout string.
+  Error parseLayoutString(StringRef LayoutString);
 
 public:
   /// Constructs a DataLayout with default values.
@@ -188,7 +190,7 @@ public:
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.
-  static Expected<DataLayout> parse(StringRef LayoutDescription);
+  static Expected<DataLayout> parse(StringRef LayoutString);
 
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
