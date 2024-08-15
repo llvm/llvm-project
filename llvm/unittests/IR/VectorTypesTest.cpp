@@ -276,7 +276,7 @@ TEST(VectorTypesTest, BaseVectorType) {
 
 TEST(VectorTypesTest, FixedLenComparisons) {
   LLVMContext Ctx;
-  DataLayout DL("");
+  DataLayout DL;
 
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Type *Int64Ty = Type::getInt64Ty(Ctx);
@@ -322,7 +322,7 @@ TEST(VectorTypesTest, FixedLenComparisons) {
 
 TEST(VectorTypesTest, ScalableComparisons) {
   LLVMContext Ctx;
-  DataLayout DL("");
+  DataLayout DL;
 
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Type *Int64Ty = Type::getInt64Ty(Ctx);

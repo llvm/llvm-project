@@ -2327,8 +2327,8 @@ struct AANoFreeFloating : AANoFreeImpl {
             DepClassTy::REQUIRED, IsKnown);
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
-          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+      if (isa<GetElementPtrInst>(UserI) || isa<PHINode>(UserI) ||
+          isa<SelectInst>(UserI)) {
         Follow = true;
         return true;
       }
@@ -12357,7 +12357,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
     for (Function *NewCallee : AssumedCallees) {
-      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee)) {
+      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
+                                               AssumedCallees.size())) {
         SkippedAssumedCallees.push_back(NewCallee);
         SpecializedForAllCallees = false;
         continue;

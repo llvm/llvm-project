@@ -45,6 +45,7 @@ DEF_INSTR(Call,           OP(Call),           CallInst)
 DEF_INSTR(Invoke,         OP(Invoke),         InvokeInst)
 DEF_INSTR(CallBr,         OP(CallBr),         CallBrInst)
 DEF_INSTR(GetElementPtr,  OP(GetElementPtr),  GetElementPtrInst)
+DEF_INSTR(AtomicCmpXchg, OP(AtomicCmpXchg), AtomicCmpXchgInst)
 DEF_INSTR(Alloca,         OP(Alloca),         AllocaInst)
 DEF_INSTR(Cast,   OPCODES(\
                           OP(ZExt)          \

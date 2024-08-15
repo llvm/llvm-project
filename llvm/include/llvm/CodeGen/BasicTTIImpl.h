@@ -525,7 +525,7 @@ public:
         TM.getCodeModel() == CodeModel::Large)
       return false;
 
-    Triple TargetTriple = TM.getTargetTriple();
+    const Triple &TargetTriple = TM.getTargetTriple();
     if (!TargetTriple.isArch64Bit())
       return false;
 
@@ -2036,6 +2036,12 @@ public:
       break;
     case Intrinsic::maximum:
       ISD = ISD::FMAXIMUM;
+      break;
+    case Intrinsic::minimumnum:
+      ISD = ISD::FMINIMUMNUM;
+      break;
+    case Intrinsic::maximumnum:
+      ISD = ISD::FMAXIMUMNUM;
       break;
     case Intrinsic::copysign:
       ISD = ISD::FCOPYSIGN;

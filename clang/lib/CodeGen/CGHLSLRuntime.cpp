@@ -301,7 +301,7 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
 
     llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
-    bool IsROV = HLSLResAttr->getIsROV();
+    bool IsROV = FD->hasAttr<HLSLROVAttr>();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
     BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
@@ -410,6 +410,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+}
+
+void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
+                                              llvm::Function *Fn) {
+  if (FD->isInExportDeclContext()) {
+    const StringRef ExportAttrKindStr = "hlsl.export";
+    Fn->addFnAttr(ExportAttrKindStr);
+  }
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,

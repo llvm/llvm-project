@@ -226,13 +226,13 @@ public:
 ///
 template <auto GetterFn, auto SetterFn>
 class GenericSetter final : public IRChangeBase {
-  /// Helper for getting the class type from the getter
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)() const);
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)());
-
-  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  /// Traits for getting the class type from GetterFn type.
+  template <typename> struct GetClassTypeFromGetter;
+  template <typename RetT, typename ClassT>
+  struct GetClassTypeFromGetter<RetT (ClassT::*)() const> {
+    using ClassType = ClassT;
+  };
+  using InstrT = typename GetClassTypeFromGetter<decltype(GetterFn)>::ClassType;
   using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT>;
   InstrT *I;
   SavedValT OrigVal;
