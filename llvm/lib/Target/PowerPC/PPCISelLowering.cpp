@@ -11490,13 +11490,38 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Op0 = Op.getOperand(0);
+  ReuseLoadInfo RLI;
+  if (Subtarget.hasVSX() && Op.getValueType() == MVT::v4i32 &&
+      Op0.getOpcode() == ISD::LOAD && Op0.getValueType() == MVT::i32 &&
+      Op0.hasOneUse() &&
+      canReuseLoadAddress(Op0, MVT::i32, RLI, DAG, ISD::NON_EXTLOAD)) {
+
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(RLI.MPI, MachineMemOperand::MOLoad, 4,
+                                RLI.Alignment, RLI.AAInfo, RLI.Ranges);
+    SDValue Ops[] = {RLI.Chain, RLI.Ptr};
+    SDValue Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWAX, dl,
+                                           DAG.getVTList(MVT::f64, MVT::Other),
+                                           Ops, MVT::i32, MMO);
+    spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+
+    SDValue ConvVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, Bits);
+    SDValue Bitcast = DAG.getBitcast(MVT::v4i32, ConvVec);
+    unsigned LowIx = Subtarget.isLittleEndian() ? 3 : 1;
+    return DAG.getNode(PPCISD::XXSPLT, dl, MVT::v4i32, Bitcast,
+                       DAG.getConstant(LowIx, dl, MVT::i32));
+  }
+
   // Create a stack slot that is 16-byte aligned.
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   int FrameIdx = MFI.CreateStackObject(16, Align(16), false);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-  SDValue Val = Op.getOperand(0);
+  SDValue Val = Op0;
   EVT ValVT = Val.getValueType();
   // P10 hardware store forwarding requires that a single store contains all
   // the data for the load. P10 is able to merge a pair of adjacent stores. Try
