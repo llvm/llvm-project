@@ -4018,6 +4018,16 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
       NewPredicate = ICmpInst::ICMP_ULE;
     break;
 
+  case ICmpInst::ICMP_ULT:
+    if (C.ugt(1) && !C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_UGE;
+    break;
+
+  case ICmpInst::ICMP_UGT:
+    if (!C.isZero() && !C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_ULT;
+    break;
+
   default:
     break;
   }

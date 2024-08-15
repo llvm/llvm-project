@@ -161,8 +161,7 @@ define i1 @ucmp_sle_neg_1(i32 %x, i32 %y) {
 define i1 @ucmp_ult_positive_const_gt_than_1_lt_than_umax(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_ult_positive_const_gt_than_1_lt_than_umax(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -174,8 +173,7 @@ define i1 @ucmp_ult_positive_const_gt_than_1_lt_than_umax(i32 %x, i32 %y) {
 define i1 @ucmp_ugt_const_not_0_or_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_ugt_const_not_0_or_neg1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
