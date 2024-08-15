@@ -150,6 +150,17 @@ mlir::Type elementTypeIfVector(mlir::Type type) {
   return type;
 }
 
+mlir::LLVM::Visibility
+lowerCIRVisibilityToLLVMVisibility(mlir::cir::VisibilityKind visibilityKind) {
+  switch (visibilityKind) {
+  case mlir::cir::VisibilityKind::Default:
+    return ::mlir::LLVM::Visibility::Default;
+  case mlir::cir::VisibilityKind::Hidden:
+    return ::mlir::LLVM::Visibility::Hidden;
+  case mlir::cir::VisibilityKind::Protected:
+    return ::mlir::LLVM::Visibility::Protected;
+  }
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1686,6 +1697,10 @@ public:
         Loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
         mlir::SymbolRefAttr(), attributes);
 
+    fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
+        getContext(), lowerCIRVisibilityToLLVMVisibility(
+                          op.getGlobalVisibilityAttr().getValue())));
+
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
                                            &signatureConversion)))
@@ -1919,11 +1934,16 @@ public:
     const auto loc = op.getLoc();
     std::optional<mlir::StringRef> section = op.getSection();
     std::optional<mlir::Attribute> init = op.getInitialValue();
+    mlir::LLVM::VisibilityAttr visibility = mlir::LLVM::VisibilityAttr::get(
+        getContext(), lowerCIRVisibilityToLLVMVisibility(
+                          op.getGlobalVisibilityAttr().getValue()));
 
     SmallVector<mlir::NamedAttribute> attributes;
     if (section.has_value())
       attributes.push_back(rewriter.getNamedAttr(
           "section", rewriter.getStringAttr(section.value())));
+
+    attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
 
     // Check for missing funcionalities.
     if (!init.has_value()) {
@@ -2020,9 +2040,11 @@ public:
         /*alignment*/ 0, /*addrSpace*/ getGlobalOpTargetAddrSpace(op),
         /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
         /*comdat*/ mlir::SymbolRefAttr(), attributes);
+
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     if (op.getComdat())
       addComdat(llvmGlobalOp, comdatOp, rewriter, mod);
+
     return mlir::success();
   }
 

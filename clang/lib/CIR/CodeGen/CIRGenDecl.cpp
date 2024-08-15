@@ -573,6 +573,7 @@ mlir::cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // FIXME(cir): OG codegen inserts new GV before old one, we probably don't
     // need that?
     GV.setVisibility(OldGV.getVisibility());
+    GV.setGlobalVisibilityAttr(OldGV.getGlobalVisibilityAttr());
     GV.setInitialValueAttr(Init);
     GV.setTlsModelAttr(OldGV.getTlsModelAttr());
     assert(!MissingFeatures::setDSOLocal());

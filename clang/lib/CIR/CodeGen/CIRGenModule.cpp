@@ -945,6 +945,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
         GV.setSectionAttr(builder.getStringAttr(SA->getName()));
     }
 
+    GV.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(D));
+
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
       assert(0 && "not implemented");
@@ -1246,6 +1248,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   if (const SectionAttr *SA = D->getAttr<SectionAttr>())
     GV.setSectionAttr(builder.getStringAttr(SA->getName()));
 
+  GV.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(D));
+
   // TODO(cir):
   // GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 
@@ -1316,7 +1320,6 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
 
 void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
   const auto *D = cast<ValueDecl>(GD.getDecl());
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // At -O0, don't generate CIR for functions with available_externally
     // linkage.
@@ -1345,8 +1348,9 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
     return;
   }
 
-  if (const auto *VD = dyn_cast<VarDecl>(D))
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
     return buildGlobalVarDefinition(VD, !VD->hasDefinition());
+  }
 
   llvm_unreachable("Invalid argument to buildGlobalDefinition()");
 }
@@ -1780,6 +1784,32 @@ mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
   }
   }
   llvm_unreachable("linkage should be handled above!");
+}
+
+mlir::cir::VisibilityKind
+CIRGenModule::getGlobalVisibilityKindFromClangVisibility(
+    clang::VisibilityAttr::VisibilityType visibility) {
+  switch (visibility) {
+  case clang::VisibilityAttr::VisibilityType::Default:
+    return VisibilityKind::Default;
+  case clang::VisibilityAttr::VisibilityType::Hidden:
+    return VisibilityKind::Hidden;
+  case clang::VisibilityAttr::VisibilityType::Protected:
+    return VisibilityKind::Protected;
+  }
+}
+
+mlir::cir::VisibilityAttr
+CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
+  const clang::VisibilityAttr *VA = decl->getAttr<clang::VisibilityAttr>();
+  mlir::cir::VisibilityAttr cirVisibility =
+      mlir::cir::VisibilityAttr::get(builder.getContext());
+  if (VA) {
+    cirVisibility = mlir::cir::VisibilityAttr::get(
+        builder.getContext(),
+        getGlobalVisibilityKindFromClangVisibility(VA->getVisibility()));
+  }
+  return cirVisibility;
 }
 
 mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
@@ -2401,6 +2431,8 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Complete the remaining part of the function.
   assert(!MissingFeatures::setFunctionAttributes());
+  auto decl = globalDecl.getDecl();
+  func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
 }
 
 /// If the specified mangled name is not in the module,
