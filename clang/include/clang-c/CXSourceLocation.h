@@ -75,14 +75,14 @@ CINDEX_LINKAGE unsigned clang_equalLocations(CXSourceLocation loc1,
                                              CXSourceLocation loc2);
 
 /**
- * Determine for two source locations if they refer to the same file
- * and one of them comes strictly before the other in the source code.
+ * Determine for two source locations if the first comes
+ * strictly before the second one in the source code.
  *
- * \returns non-zero if the source locations refer to the same file and the
- * first one comes strictly before the second one, zero otherwise.
+ * \returns non-zero if the first source location comes
+ * strictly before the second one, zero otherwise.
  */
-CINDEX_LINKAGE unsigned clang_lessThanLocations(CXSourceLocation loc1,
-                                                CXSourceLocation loc2);
+CINDEX_LINKAGE unsigned clang_isBeforeInTranslationUnit(CXSourceLocation loc1,
+                                                        CXSourceLocation loc2);
 
 /**
  * Returns non-zero if the given source location is in a system header.

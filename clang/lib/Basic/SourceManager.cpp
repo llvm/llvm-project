@@ -2038,7 +2038,7 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
   if (InSameTU.first)
     return InSameTU.second;
-  // This case is used by libclang: clang_lessThanLocations
+  // This case is used by libclang: clang_isBeforeInTranslationUnit
   return LOffs.first < ROffs.first;
 }
 

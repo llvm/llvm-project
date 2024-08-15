@@ -320,7 +320,7 @@ class SourceLocation(Structure):
         return not self.__eq__(other)
 
     def __lt__(self, other: SourceLocation) -> bool:
-        return conf.lib.clang_lessThanLocations(self, other)  # type: ignore [no-any-return]
+        return conf.lib.clang_isBeforeInTranslationUnit(self, other)  # type: ignore [no-any-return]
 
     def __le__(self, other: SourceLocation) -> bool:
         return self < other or self == other
@@ -3895,7 +3895,7 @@ functionList: list[LibFunc] = [
     ("clang_isUnexposed", [CursorKind], bool),
     ("clang_isVirtualBase", [Cursor], bool),
     ("clang_isVolatileQualifiedType", [Type], bool),
-    ("clang_lessThanLocations", [SourceLocation, SourceLocation], bool),
+    ("clang_isBeforeInTranslationUnit", [SourceLocation, SourceLocation], bool),
     (
         "clang_parseTranslationUnit",
         [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int],
