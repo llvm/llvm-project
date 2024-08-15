@@ -752,7 +752,7 @@ Error RISCVISAInfo::checkDependency() {
 
   if (Exts.count("zvbc32e") && !Exts.count("zve32x"))
     return getError(
-        "'zvbc32e' requires 'v' or 'zve32*' extension to also be specified");
+        "'zvbc32e' requires 'v' or 'zve*' extension to also be specified");
 
   if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkgs") ||
        Exts.count("zvkned") || Exts.count("zvknha") || Exts.count("zvksed") ||

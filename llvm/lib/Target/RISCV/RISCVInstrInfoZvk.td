@@ -150,7 +150,7 @@ let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
                  SchedBinaryMC<"WriteVGMULV", "ReadVGMULV", "ReadVGMULV">;
 } // Predicates = [HasStdExtZvkg]
 
-let Predicates = [HasStdExtZvkgs], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvkgs], RVVConstraint = VS2Constraint in {
   def VGHSH_VS : PALUVVNoVmTernary<0b100011, OPMVV, "vghsh.vs">,
                  SchedTernaryMC<"WriteVGHSHV", "ReadVGHSHV", "ReadVGHSHV",
                                 "ReadVGHSHV">;
