@@ -666,6 +666,8 @@ public:
 
   mlir::Value buildScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
+  mlir::Value buildComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
+                                        bool isInc, bool isPre);
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
@@ -798,6 +800,9 @@ public:
   /// l-value must be a simple l-value.
   mlir::Value buildLoadOfScalar(LValue lvalue, clang::SourceLocation Loc);
   mlir::Value buildLoadOfScalar(LValue lvalue, mlir::Location Loc);
+
+  /// Load a complex number from the specified l-value.
+  mlir::Value buildLoadOfComplex(LValue src, SourceLocation loc);
 
   Address buildLoadOfReference(LValue RefLVal, mlir::Location Loc,
                                LValueBaseInfo *PointeeBaseInfo = nullptr);

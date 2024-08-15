@@ -1325,7 +1325,7 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
     LValue LV = buildLValue(E->getSubExpr());
 
     if (E->getType()->isAnyComplexType()) {
-      assert(0 && "not implemented");
+      buildComplexPrePostIncDec(E, LV, isInc, true /*isPre*/);
     } else {
       buildScalarPrePostIncDec(E, LV, isInc, isPre);
     }

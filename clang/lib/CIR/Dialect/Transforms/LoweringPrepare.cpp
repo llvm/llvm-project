@@ -356,10 +356,6 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
 
   auto loc = op.getLoc();
   auto opKind = op.getKind();
-  assert((opKind == mlir::cir::UnaryOpKind::Plus ||
-          opKind == mlir::cir::UnaryOpKind::Minus ||
-          opKind == mlir::cir::UnaryOpKind::Not) &&
-         "invalid unary op kind on complex numbers");
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
@@ -372,6 +368,12 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
   mlir::Value resultReal;
   mlir::Value resultImag;
   switch (opKind) {
+  case mlir::cir::UnaryOpKind::Inc:
+  case mlir::cir::UnaryOpKind::Dec:
+    resultReal = builder.createUnaryOp(loc, opKind, operandReal);
+    resultImag = operandImag;
+    break;
+
   case mlir::cir::UnaryOpKind::Plus:
   case mlir::cir::UnaryOpKind::Minus:
     resultReal = builder.createUnaryOp(loc, opKind, operandReal);
