@@ -65,9 +65,9 @@ Clang Python Bindings Potentially Breaking Changes
 - Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
   statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
-- If ``SourceRange.__contains__`` is used with a single-line ``SourceRange``, the check used
-  to return ``True`` if the end of the ``SourceLocation`` lay after the end of the ``SourceRange``
-  on the same line. This is changed to return ``False`` now.
+- For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
+  but after the end of the ``SourceRange``, ``SourceRange.__contains__``
+  used to incorrectly return ``True``. (#GH22617), (#GH52827)
 
 What's New in Clang |release|?
 ==============================
@@ -358,8 +358,6 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
-- Fixed a bug in ``SourceRange.__contains__`` that led to false positives
-  when the source range is only one line. 
 
 OpenMP Support
 --------------

@@ -381,14 +381,6 @@ class SourceRange(Structure):
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
-        if other.file is None and self.start.file is None:
-            pass
-        elif (
-            self.start.file.name != other.file.name
-            or other.file.name != self.end.file.name
-        ):
-            # same file name
-            return False
         return self.start <= other <= self.end
 
     def __repr__(self):

@@ -1,6 +1,11 @@
-import unittest
+import os
+from clang.cindex import Config
 
-from clang.cindex import SourceLocation, SourceRange
+if "CLANG_LIBRARY_PATH" in os.environ:
+    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
+
+import unittest
+from clang.cindex import SourceLocation, SourceRange, TranslationUnit
 
 from .util import get_tu
 
@@ -52,3 +57,29 @@ aaaaa"""
 
         assert l21 in r14_32  # In range at start of center line
         assert l25 in r14_32  # In range at end of center line
+
+        # In range within included file
+        tu2 = TranslationUnit.from_source(
+            "main.c",
+            unsaved_files=[
+                (
+                    "main.c",
+                    """int a[] = {
+#include "numbers.inc"
+};
+""",
+                ),
+                (
+                    "./numbers.inc",
+                    """1,
+2,
+3,
+4
+                 """,
+                ),
+            ],
+        )
+
+        r_curly = create_range(tu2, 1, 11, 3, 1)
+        l_f2 = SourceLocation.from_position(tu2, tu2.get_file("./numbers.inc"), 4, 1)
+        assert l_f2 in r_curly
