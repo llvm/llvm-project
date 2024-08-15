@@ -284,6 +284,14 @@ static BlockDtorFn getDtorPrim(PrimType Type) {
 }
 
 static BlockMoveFn getMovePrim(PrimType Type) {
+  if (Type == PT_Float)
+    return moveTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return moveTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return moveTy<PrimConv<PT_IntAPS>::T>;
+  if (Type == PT_MemberPtr)
+    return moveTy<PrimConv<PT_MemberPtr>::T>;
   COMPOSITE_TYPE_SWITCH(Type, return moveTy<T>, return nullptr);
 }
 
