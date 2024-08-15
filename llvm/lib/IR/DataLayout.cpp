@@ -154,7 +154,7 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
 }
 
 namespace {
-// Predicate to sort primitive specs by bit width.
+/// Predicate to sort primitive specs by bit width.
 struct LessPrimitiveBitWidth {
   bool operator()(const DataLayout::PrimitiveSpec &LHS,
                   unsigned RHSBitWidth) const {
@@ -162,7 +162,7 @@ struct LessPrimitiveBitWidth {
   }
 };
 
-// Predicate to sort pointer specs by address space number.
+/// Predicate to sort pointer specs by address space number.
 struct LessPointerAddrSpace {
   bool operator()(const DataLayout::PointerSpec &LHS,
                   unsigned RHSAddrSpace) const {
