@@ -15,6 +15,7 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
+#include "CIRGenOpenCLRuntime.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -101,6 +102,9 @@ private:
 
   /// Holds information about C++ vtables.
   CIRGenVTables VTables;
+
+  /// Holds the OpenCL runtime
+  std::unique_ptr<CIRGenOpenCLRuntime> openCLRuntime;
 
   /// Holds the OpenMP runtime
   std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
@@ -699,6 +703,16 @@ public:
 
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
+
+  /// Return a reference to the configured OpenMP runtime.
+  CIRGenOpenCLRuntime &getOpenCLRuntime() {
+    assert(openCLRuntime != nullptr);
+    return *openCLRuntime;
+  }
+
+  void createOpenCLRuntime() {
+    openCLRuntime.reset(new CIRGenOpenCLRuntime(*this));
+  }
 
   /// Return a reference to the configured OpenMP runtime.
   CIRGenOpenMPRuntime &getOpenMPRuntime() {

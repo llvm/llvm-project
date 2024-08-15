@@ -165,6 +165,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
       /*isSigned=*/true);
 
+  if (langOpts.OpenCL) {
+    createOpenCLRuntime();
+  }
+
   mlir::cir::sob::SignedOverflowBehavior sob;
   switch (langOpts.getSignedOverflowBehavior()) {
   case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
