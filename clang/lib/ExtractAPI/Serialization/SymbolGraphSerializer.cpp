@@ -104,6 +104,10 @@ Object serializePlatform(const Triple &T) {
   Object Platform;
   Platform["architecture"] = T.getArchName();
   Platform["vendor"] = T.getVendorName();
+
+  if (!T.getEnvironmentName().empty())
+    Platform["environment"] = T.getEnvironmentName();
+
   Platform["operatingSystem"] = serializeOperatingSystem(T);
   return Platform;
 }
@@ -171,22 +175,25 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-  Object Availability;
 
-  Availability["domain"] = Avail.Domain;
+  if (Avail.Domain.str() != "") {
+    Object Availability;
+    Availability["domain"] = Avail.Domain;
 
-  if (Avail.isUnavailable()) {
-    Availability["isUnconditionallyUnavailable"] = true;
-  } else {
-    serializeObject(Availability, "introduced",
-                    serializeSemanticVersion(Avail.Introduced));
-    serializeObject(Availability, "deprecated",
-                    serializeSemanticVersion(Avail.Deprecated));
-    serializeObject(Availability, "obsoleted",
-                    serializeSemanticVersion(Avail.Obsoleted));
+    if (Avail.isUnavailable()) {
+      Availability["isUnconditionallyUnavailable"] = true;
+    } else {
+      serializeObject(Availability, "introduced",
+                      serializeSemanticVersion(Avail.Introduced));
+      serializeObject(Availability, "deprecated",
+                      serializeSemanticVersion(Avail.Deprecated));
+      serializeObject(Availability, "obsoleted",
+                      serializeSemanticVersion(Avail.Obsoleted));
+    }
+
+    AvailabilityArray.emplace_back(std::move(Availability));
   }
 
-  AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }
 
