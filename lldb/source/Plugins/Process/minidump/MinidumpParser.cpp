@@ -429,7 +429,6 @@ const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
 
 std::optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  llvm::ArrayRef<uint8_t> data64 = GetStream(StreamType::Memory64List);
   Log *log = GetLog(LLDBLog::Modules);
 
   auto ExpectedMemory = GetMinidumpFile().getMemoryList();
@@ -457,34 +456,24 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
     }
   }
 
-  // Some Minidumps have a Memory64ListStream that captures all the heap memory
-  // (full-memory Minidumps).  We can't exactly use the same loop as above,
-  // because the Minidump uses slightly different data structures to describe
-  // those
-
-  if (!data64.empty()) {
-    llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
-    uint64_t base_rva;
-    std::tie(memory64_list, base_rva) =
-        MinidumpMemoryDescriptor64::ParseMemory64List(data64);
-
-    if (memory64_list.empty())
-      return std::nullopt;
-
-    for (const auto &memory_desc64 : memory64_list) {
-      const lldb::addr_t range_start = memory_desc64.start_of_memory_range;
-      const size_t range_size = memory_desc64.data_size;
-
-      if (base_rva + range_size > GetData().size())
-        return std::nullopt;
-
-      if (range_start <= addr && addr < range_start + range_size) {
-        return minidump::Range(range_start,
-                               GetData().slice(base_rva, range_size));
+  if (!GetStream(StreamType::Memory64List).empty()) {
+    llvm::Error err = llvm::Error::success();
+    for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
+      // Explicit error check so we can return from within
+      if (memory_desc.first.StartOfMemoryRange <= addr 
+          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize 
+          && !err) {
+        return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
       }
-      base_rva += range_size;
     }
+
+    if (err)
+      // Without std::move(err) fails with 
+      // error: call to deleted constructor of '::llvm::Error'
+      LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
   }
+  
+
 
   return std::nullopt;
 }
@@ -510,6 +499,11 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
 
   const size_t overlap = std::min(size, range->range_ref.size() - offset);
   return range->range_ref.slice(offset, overlap);
+}
+
+llvm::iterator_range<FallibleMemory64Iterator> MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
+  llvm::ErrorAsOutParameter ErrAsOutParam(&err);
+  return m_file->getMemory64List(err);
 }
 
 static bool
@@ -564,21 +558,6 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
     memory32_list = *ExpectedMemory;
   }
 
-  size_t num_regions = memory32_list ? memory32_list->size() : 0;
-
-  llvm::ArrayRef<uint8_t> data =
-      parser.GetStream(StreamType::Memory64List);
-
-  llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
-  if (!data.empty()) {
-    uint64_t base_rva;
-    std::tie(memory64_list, base_rva) =
-        MinidumpMemoryDescriptor64::ParseMemory64List(data);
-
-    num_regions += memory64_list.size();
-  }
-
-  regions.reserve(num_regions);
   if (memory32_list) {
     for (const MemoryDescriptor &memory_desc : *memory32_list) {
       if (memory_desc.Memory.DataSize == 0)
@@ -592,16 +571,25 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
     }
   }
 
-  for (const auto &memory_desc : memory64_list) {
-    if (memory_desc.data_size == 0)
-      continue;
-    MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
-    region.GetRange().SetByteSize(memory_desc.data_size);
-    region.SetReadable(MemoryRegionInfo::eYes);
-    region.SetMapped(MemoryRegionInfo::eYes);
-    regions.push_back(region);
+  if (!parser.GetStream(StreamType::Memory64List).empty()) {
+    llvm::Error err = llvm::Error::success();
+    for (const auto &memory_desc : parser.GetMemory64Iterator(err)) {
+      if (memory_desc.first.DataSize == 0)
+        continue;
+      MemoryRegionInfo region;
+      region.GetRange().SetRangeBase(memory_desc.first.StartOfMemoryRange);
+      region.GetRange().SetByteSize(memory_desc.first.DataSize);
+      region.SetReadable(MemoryRegionInfo::eYes);
+      region.SetMapped(MemoryRegionInfo::eYes);
+      regions.push_back(region);
+    }
+
+    if (err) {
+      LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
+      return false;
+    }
   }
+
   regions.shrink_to_fit();
   return !regions.empty();
 }

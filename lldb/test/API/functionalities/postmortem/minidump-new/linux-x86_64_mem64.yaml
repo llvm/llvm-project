@@ -31,10 +31,13 @@ Streams:
           Content:         ''
   - Type:            Memory64List
     Memory Ranges:
-      - Start of memory range: 0x7FFF12A84030
+      - Start of Memory Range: 0x7FFF12A84030
         Data Size:       0x2FD0
-      - Start of memory range: 0x00007fff12a87000
+        Content :        ''
+      - Start of Memory Range: 0x00007fff12a87000
         Data Size:       0x00000018
-      - Start of memory range: 0x00007fff12a87018
+        Content :        ''
+      - Start of Memory Range: 0x00007fff12a87018
         Data Size:       0x00000400
+        Content :        ''
 ...
