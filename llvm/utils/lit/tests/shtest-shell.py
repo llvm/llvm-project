@@ -4,7 +4,7 @@
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.
 # RUN: cat %t.out
-# RUN: FileCheck --input-file %t.out %s
+# RUN: FileCheck --input-file %t.out %s --dump-input-context=1000
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
 # on stdout-encoding.txt
@@ -27,6 +27,12 @@
 # CHECK: ***
 
 # CHECK: PASS: shtest-shell :: continuations.txt
+
+# CHECK: FAIL: shtest-shell :: curly-brace-error.txt
+# CHECK: # executed command: '{' echo foo
+# CHECK-NEXT: # .---command stderr------------
+# CHECK-NEXT: # | '{': command not found
+# CHECK: error: command failed with exit status: 127
 
 # CHECK: FAIL: shtest-shell :: curly-brace.txt
 # CHECK: # executed command: '{' echo bar
@@ -641,4 +647,4 @@
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (37)
+# CHECK: Failed Tests (38)

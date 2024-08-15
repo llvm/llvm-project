@@ -10,3 +10,11 @@
 
 # TWO-CMDS: foo
 # TWO-CMDS: bar
+
+## Test nested curly brace.
+# RUN: { echo foo; { echo bar; echo baz; }; } | FileCheck --check-prefix=NESTED %s
+# RUN: { { echo foo; echo bar; }; echo baz; } | FileCheck --check-prefix=NESTED %s
+
+# NESTED: foo
+# NESTED: bar
+# NESTED: baz
