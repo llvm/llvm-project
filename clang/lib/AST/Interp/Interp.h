@@ -2702,9 +2702,9 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   const Function *F = FuncPtr.getFunction();
   if (!F) {
-    const Expr *E = S.Current->getExpr(OpPC);
+    const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
     S.FFDiag(E, diag::note_constexpr_null_callee)
-        << const_cast<Expr *>(E) << E->getSourceRange();
+        << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
     return false;
   }
 
