@@ -2797,9 +2797,8 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
     return {};
   }
   case FixitStrategy::Kind::Array: {
-    if (VD->isLocalVarDecl())
-      if (auto CAT = Ctx.getAsConstantArrayType(VD->getType()))
-        return fixVariableWithArray(VD, Tracker, Ctx, Handler);
+    if (VD->isLocalVarDecl() && Ctx.getAsConstantArrayType(VD->getType()))
+      return fixVariableWithArray(VD, Tracker, Ctx, Handler);
 
     DEBUG_NOTE_DECL_FAIL(VD, " : not a local const-size array");
     return {};
