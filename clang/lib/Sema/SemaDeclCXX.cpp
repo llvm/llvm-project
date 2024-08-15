@@ -17562,6 +17562,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   // If '...' is present, the type must contain an unexpanded parameter
   // pack, and vice versa.
+  bool Invalid = false;
   if (EllipsisLoc.isInvalid() &&
       DiagnoseUnexpandedParameterPack(Loc, TSI, UPPC_FriendDeclaration))
     return nullptr;
@@ -17569,7 +17570,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
       !TSI->getType()->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
         << TSI->getTypeLoc().getSourceRange();
-    EllipsisLoc = SourceLocation();
+    Invalid = true;
   }
 
   if (!T->isElaboratedTypeSpecifier()) {
@@ -17628,6 +17629,9 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   D->setAccess(AS_public);
   CurContext->addDecl(D);
+
+  if (Invalid)
+    D->setInvalidDecl();
 
   return D;
 }
