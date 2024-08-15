@@ -5063,6 +5063,12 @@ def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
 def : Pat<(fmaxnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
           (FMAXNMHrr FPR16:$a, FPR16:$b)>;
 
+def : Pat<(f16 (fcanonicalize f16:$a)),
+          (FMINNMHrr   f16:$a, f16:$a)>;
+def : Pat<(f32 (fcanonicalize f32:$a)),
+          (FMINNMSrr   f32:$a, f32:$a)>;
+def : Pat<(f64 (fcanonicalize f64:$a)),
+          (FMINNMDrr   f64:$a, f64:$a)>;
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5587,6 +5593,17 @@ def : Pat<(v2f32 (fmaxnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
           (v2f32 (FMAXNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
 def : Pat<(v4f16 (fmaxnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
           (v4f16 (FMAXNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+
+def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v4f32 (fcanonicalize (v4f32 V128:$Rn))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rn)))>;
+def : Pat<(v8f16 (fcanonicalize (v8f16 V128:$Rn))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rn)))>;
+def : Pat<(v2f32 (fcanonicalize (v2f32 V64:$Rn))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rn)))>;
+def : Pat<(v4f16 (fcanonicalize (v4f16 V64:$Rn))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rn)))>;
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.
