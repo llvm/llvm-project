@@ -515,9 +515,8 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
         std::min<size_t>(std::distance(psargs, psargs_end), argentry.size());
     auto arg_iterator = std::begin(argentry);
     psargs = std::copy_n(arg_iterator, len, psargs);
-    if (psargs != psargs_end) {
+    if (psargs != psargs_end)
       *(psargs++) = ' ';
-    }
     ++argentry_iterator;
   }
   *(psargs - 1) = '\0';
