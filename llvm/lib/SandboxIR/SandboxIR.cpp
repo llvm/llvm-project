@@ -1220,6 +1220,71 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
 }
 
 /// \Returns the LLVM opcode that corresponds to \p Opc.
+static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
+  switch (Opc) {
+  case Instruction::Opcode::FNeg:
+    return static_cast<llvm::Instruction::UnaryOps>(llvm::Instruction::FNeg);
+  default:
+    llvm_unreachable("Not a unary op!");
+  }
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             BBIterator WhereIt, BasicBlock *WhereBB,
+                             Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *NewLLVMV = Builder.CreateUnOp(getLLVMUnaryOp(Op), OpV->Val, Name);
+  if (auto *NewUnOpV = dyn_cast<llvm::UnaryOperator>(NewLLVMV)) {
+    return Ctx.createUnaryOperator(NewUnOpV);
+  }
+  assert(isa<llvm::Constant>(NewLLVMV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewLLVMV));
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             Instruction *InsertBefore, Context &Ctx,
+                             const Twine &Name) {
+  return create(Op, OpV, InsertBefore->getIterator(), InsertBefore->getParent(),
+                Ctx, Name);
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             BasicBlock *InsertAfter, Context &Ctx,
+                             const Twine &Name) {
+  return create(Op, OpV, InsertAfter->end(), InsertAfter, Ctx, Name);
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom, BBIterator WhereIt,
+                                            BasicBlock *WhereBB, Context &Ctx,
+                                            const Twine &Name) {
+  auto *NewV = create(Op, OpV, WhereIt, WhereBB, Ctx, Name);
+  if (auto *UnI = dyn_cast<llvm::UnaryOperator>(NewV->Val))
+    UnI->copyIRFlags(CopyFrom->Val);
+  return NewV;
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom,
+                                            Instruction *InsertBefore,
+                                            Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertBefore->getIterator(),
+                               InsertBefore->getParent(), Ctx, Name);
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom,
+                                            BasicBlock *InsertAtEnd,
+                                            Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertAtEnd->end(),
+                               InsertAtEnd, Ctx, Name);
+}
+
+/// \Returns the LLVM opcode that corresponds to \p Opc.
 static llvm::Instruction::BinaryOps getLLVMBinaryOp(Instruction::Opcode Opc) {
   switch (Opc) {
   case Instruction::Opcode::Add:
@@ -1729,6 +1794,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::FNeg: {
+    auto *LLVMUnaryOperator = cast<llvm::UnaryOperator>(LLVMV);
+    It->second = std::unique_ptr<UnaryOperator>(
+        new UnaryOperator(LLVMUnaryOperator, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Add:
   case llvm::Instruction::FAdd:
   case llvm::Instruction::Sub:
@@ -1874,6 +1945,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
+  auto NewPtr = std::unique_ptr<UnaryOperator>(new UnaryOperator(I, *this));
+  return cast<UnaryOperator>(registerValue(std::move(NewPtr)));
 }
 BinaryOperator *Context::createBinaryOperator(llvm::BinaryOperator *I) {
   auto NewPtr = std::unique_ptr<BinaryOperator>(new BinaryOperator(I, *this));
