@@ -39,9 +39,7 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <vscale x 8 x i64> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul <vscale x 8 x i64> [[TMP16]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 3, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 3, [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 3, [[TMP14]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT1]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -121,9 +119,7 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul <vscale x 4 x i32> [[TMP10]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 4, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 4, [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 4, [[TMP8]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -8529,7 +8529,6 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
 
-  VPBuilder PhBuilder(cast<VPBasicBlock>(TopRegion->getSinglePredecessor()));
   VPBuilder Builder(TopRegion->getExitingBasicBlock());
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   auto *CanonicalIVIncrement = Builder.createOverflowingOp(

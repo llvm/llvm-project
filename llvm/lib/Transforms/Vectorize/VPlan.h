@@ -3296,6 +3296,7 @@ class VPlan {
   /// Represents the vector trip count.
   VPValue VectorTripCount;
 
+  /// Represents the vectorization factor of the loop.
   VPValue VF;
 
   /// Represents the loop-invariant VF * UF of the vector loop region.
@@ -3396,6 +3397,7 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
+  /// Returns the VF of the vector loop region.
   VPValue *getVF() { return &VF; };
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
