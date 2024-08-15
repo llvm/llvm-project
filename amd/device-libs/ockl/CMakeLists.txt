@@ -14,4 +14,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
+set_source_files_properties(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/gaaf.cl
+  PROPERTIES COMPILE_FLAGS "-munsafe-fp-atomics")
+
 opencl_bc_lib(NAME ockl SOURCES ${sources})
