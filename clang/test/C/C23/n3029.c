@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only --embed-dir=%S/Inputs -std=c23 %s -pedantic
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux-gnu -fsyntax-only --embed-dir=%S/Inputs -std=c23 %s -pedantic
 
 #include <limits.h>
 
