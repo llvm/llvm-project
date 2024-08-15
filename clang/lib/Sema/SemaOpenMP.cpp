@@ -17968,7 +17968,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
     return UnresolvedLookupExpr::Create(
         SemaRef.Context, /*NamingClass=*/nullptr,
         ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), ReductionId,
-        /*ADL=*/true, ResSet.begin(), ResSet.end(), /*KnownDependent=*/false);
+        /*ADL=*/true, ResSet.begin(), ResSet.end(), /*KnownDependent=*/false,
+        /*KnownInstantiationDependent=*/false);
   }
   // Lookup inside the classes.
   // C++ [over.match.oper]p3:
@@ -20834,7 +20835,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
     return UnresolvedLookupExpr::Create(
         SemaRef.Context, /*NamingClass=*/nullptr,
         MapperIdScopeSpec.getWithLocInContext(SemaRef.Context), MapperId,
-        /*ADL=*/false, URS.begin(), URS.end(), /*KnownDependent=*/false);
+        /*ADL=*/false, URS.begin(), URS.end(), /*KnownDependent=*/false,
+        /*KnownInstantiationDependent=*/false);
   }
   SourceLocation Loc = MapperId.getLoc();
   // [OpenMP 5.0], 2.19.7.3 declare mapper Directive, Restrictions
