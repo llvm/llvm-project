@@ -424,9 +424,9 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
 std::optional<ELFLinuxPrPsInfo>
 ELFLinuxPrPsInfo::Populate(const lldb::ProcessSP &process_sp) {
   ProcessInstanceInfo info;
-  if (!process_sp->GetProcessInfo(info)) {
+  if (!process_sp->GetProcessInfo(info))
     return std::nullopt;
-  }
+
   return Populate(info, process_sp->GetState());
 }
 
@@ -483,24 +483,21 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
    * dubious
    */
 
-  if (info.EffectiveUserIDIsValid()) {
+  if (info.EffectiveUserIDIsValid())
     prpsinfo.pr_uid = info.GetUserID();
-  }
-  if (info.EffectiveGroupIDIsValid()) {
+
+  if (info.EffectiveGroupIDIsValid())
     prpsinfo.pr_gid = info.GetGroupID();
-  }
 
-  if (info.ParentProcessIDIsValid()) {
+  if (info.ParentProcessIDIsValid())
     prpsinfo.pr_ppid = info.GetParentProcessID();
-  }
 
-  if (info.ProcessGroupIDIsValid()) {
+  if (info.ProcessGroupIDIsValid())
     prpsinfo.pr_pgrp = info.GetProcessGroupID();
-  }
 
-  if (info.ProcessSessionIDIsValid()) {
+  if (info.ProcessSessionIDIsValid())
     prpsinfo.pr_sid = info.GetProcessSessionID();
-  }
+
   constexpr size_t fname_len = std::extent_v<decltype(prpsinfo.pr_fname)>;
   static_assert(fname_len > 0, "This should always be non zero");
   const llvm::StringRef fname = info.GetNameAsStringRef();
