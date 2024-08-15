@@ -10919,49 +10919,6 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
   return nullptr;
 }
 
-// Should only be called when getFunctionEffects() returns a non-empty set.
-// Decl should be a FunctionDecl or BlockDecl.
-void Sema::maybeAddDeclWithEffects(const Decl *D,
-                                   const FunctionEffectsRef &FX) {
-  if (!D->hasBody()) {
-    if (const auto *FD = D->getAsFunction(); FD && !FD->willHaveBody())
-      return;
-  }
-
-  if (Diags.getIgnoreAllWarnings() ||
-      (Diags.getSuppressSystemWarnings() &&
-       SourceMgr.isInSystemHeader(D->getLocation())))
-    return;
-
-  if (hasUncompilableErrorOccurred())
-    return;
-
-  // For code in dependent contexts, we'll do this at instantiation time.
-  // Without this check, we would analyze the function based on placeholder
-  // template parameters, and potentially generate spurious diagnostics.
-  if (cast<DeclContext>(D)->isDependentContext())
-    return;
-
-  addDeclWithEffects(D, FX);
-}
-
-void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
-  // To avoid the possibility of conflict, don't add effects which are
-  // not FE_InferrableOnCallees and therefore not verified; this removes
-  // blocking/allocating but keeps nonblocking/nonallocating.
-  // Also, ignore any conditions when building the list of effects.
-  bool AnyVerifiable = false;
-  for (const FunctionEffectWithCondition &EC : FX)
-    if (EC.Effect.flags() & FunctionEffect::FE_InferrableOnCallees) {
-      AllEffectsToVerify.insert(EC.Effect);
-      AnyVerifiable = true;
-    }
-
-  // Record the declaration for later analysis.
-  if (AnyVerifiable)
-    DeclsWithEffectsToVerify.push_back(D);
-}
-
 bool Sema::canFullyTypeCheckRedeclaration(ValueDecl *NewD, ValueDecl *OldD,
                                           QualType NewT, QualType OldT) {
   if (!NewD->getLexicalDeclContext()->isDependentContext())
@@ -20330,60 +20287,4 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
-}
-
-void Sema::diagnoseFunctionEffectMergeConflicts(
-    const FunctionEffectSet::Conflicts &Errs, SourceLocation NewLoc,
-    SourceLocation OldLoc) {
-  for (const FunctionEffectSet::Conflict &Conflict : Errs) {
-    Diag(NewLoc, diag::warn_conflicting_func_effects)
-        << Conflict.Kept.description() << Conflict.Rejected.description();
-    Diag(OldLoc, diag::note_previous_declaration);
-  }
-}
-
-bool Sema::diagnoseConflictingFunctionEffect(
-    const FunctionEffectsRef &FX, const FunctionEffectWithCondition &NewEC,
-    SourceLocation NewAttrLoc) {
-  // If the new effect has a condition, we can't detect conflicts until the
-  // condition is resolved.
-  if (NewEC.Cond.getCondition() != nullptr)
-    return false;
-
-  // Diagnose the new attribute as incompatible with a previous one.
-  auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
-    Diag(NewAttrLoc, diag::err_attributes_are_not_compatible)
-        << ("'" + NewEC.description() + "'")
-        << ("'" + PrevEC.description() + "'") << false;
-    // We don't necessarily have the location of the previous attribute,
-    // so no note.
-    return true;
-  };
-
-  // Compare against previous attributes.
-  FunctionEffect::Kind NewKind = NewEC.Effect.kind();
-
-  for (const FunctionEffectWithCondition &PrevEC : FX) {
-    // Again, can't check yet when the effect is conditional.
-    if (PrevEC.Cond.getCondition() != nullptr)
-      continue;
-
-    FunctionEffect::Kind PrevKind = PrevEC.Effect.kind();
-    // Note that we allow PrevKind == NewKind; it's redundant and ignored.
-
-    if (PrevEC.Effect.oppositeKind() == NewKind)
-      return Incompatible(PrevEC);
-
-    // A new allocating is incompatible with a previous nonblocking.
-    if (PrevKind == FunctionEffect::Kind::NonBlocking &&
-        NewKind == FunctionEffect::Kind::Allocating)
-      return Incompatible(PrevEC);
-
-    // A new nonblocking is incompatible with a previous allocating.
-    if (PrevKind == FunctionEffect::Kind::Allocating &&
-        NewKind == FunctionEffect::Kind::NonBlocking)
-      return Incompatible(PrevEC);
-  }
-
-  return false;
 }
