@@ -1688,6 +1688,16 @@ const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
   ENUM_ENT(EF_RISCV_TSO, "TSO"),
 };
 
+const EnumEntry<unsigned> ElfHeaderSPARCFlags[] = {
+    ENUM_ENT(EF_SPARC_32PLUS, "V8+ ABI"),
+    ENUM_ENT(EF_SPARC_SUN_US1, "Sun UltraSPARC I extensions"),
+    ENUM_ENT(EF_SPARC_HAL_R1, "HAL/Fujitsu R1 extensions"),
+    ENUM_ENT(EF_SPARC_SUN_US3, "Sun UltraSPARC III extensions"),
+    ENUM_ENT(EF_SPARCV9_TSO, "Total Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_PSO, "Partial Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_RMO, "Relaxed Memory Ordering"),
+};
+
 const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR1),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR2),
@@ -3629,6 +3639,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+  else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                          unsigned(ELF::EF_SPARCV9_MM));
   else if (e.e_machine == EM_AVR)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderAVRFlags),
                           unsigned(ELF::EF_AVR_ARCH_MASK));
@@ -7122,6 +7135,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+    else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                   unsigned(ELF::EF_SPARCV9_MM));
     else if (E.e_machine == EM_AVR)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderAVRFlags),
                    unsigned(ELF::EF_AVR_ARCH_MASK));
