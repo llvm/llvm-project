@@ -28,6 +28,9 @@ ErrataWorkaround::ErrataWorkaround() : MachineFunctionPass(ID) {
 INITIALIZE_PASS(ErrataWorkaround, "errata-workaround", "Errata workaround pass",
                 false, false)
 
+// Move iterator to the next instruction in the function, ignoring
+// meta instructions and inline assembly. Returns false when reaching
+// the end of the function.
 bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
 
   MachineBasicBlock *MBB = I->getParent();
@@ -142,6 +145,9 @@ bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
   return true;
 }
 
+// Insert a NOP at branch target if load in delay slot and atomic
+// instruction at branch target. Also insert a NOP between load
+// instruction and atomic instruction (swap or casa).
 bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
 
   // Check for load instruction or branch bundled with load instruction
