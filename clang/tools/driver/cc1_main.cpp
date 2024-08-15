@@ -260,12 +260,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Invocation->getFrontendOpts().ModuleBuildDaemon) {
 
     // Scanner needs cc1 invocations working directory
-    IntrusiveRefCntPtr<vfs::FileSystem> System =
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> System =
         createVFSFromCompilerInvocation(*Invocation, Diags);
-    ErrorOr<std::string> MaybeCWD = System->getCurrentWorkingDirectory();
+    llvm::ErrorOr<std::string> MaybeCWD = System->getCurrentWorkingDirectory();
 
     if (MaybeCWD.getError()) {
-      errs() << "Could not get working directory: "
+      llvm::errs() << "Could not get working directory: "
              << MaybeCWD.getError().message() << "\n";
       return 1;
     }
@@ -274,7 +274,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
         cc1modbuildd::updateCC1WithModuleBuildDaemon(*Invocation, Argv, Argv0,
                                                      *MaybeCWD);
     if (!MaybeUpdatedArgv) {
-      errs() << toString(std::move(MaybeUpdatedArgv.takeError())) << '\n';
+      llvm::errs() << toString(std::move(MaybeUpdatedArgv.takeError())) << '\n';
       return 1;
     }
 
@@ -287,10 +287,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 #endif
 
-  outs() << "translation unit command line" << '\n';
+  llvm::outs() << "translation unit command line" << '\n';
   for (const auto &Arg : Argv)
-    outs() << Arg << " ";
-  outs() << "\n";
+    llvm::outs() << Arg << " ";
+  llvm::outs() << "\n";
 
   // If Argv was modified by the module build daemon create new Invocation
   if (!Argv.equals(ArrayRef<const char *>(CharUpdatedArgv)) &&

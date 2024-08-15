@@ -15,15 +15,12 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 
-using namespace clang;
-using namespace llvm;
-
 namespace cc1modbuildd {
 
-Expected<int> createSocket();
-Expected<int> connectToSocket(StringRef SocketPath);
-Expected<int> connectAndWriteToSocket(std::string Buffer, StringRef SocketPath);
-Expected<std::string> readFromSocket(int FD);
+llvm::Expected<int> createSocket();
+llvm::Expected<int> connectToSocket(llvm::StringRef SocketPath);
+llvm::Expected<int> connectAndWriteToSocket(std::string Buffer, llvm::StringRef SocketPath);
+llvm::Expected<std::string> readFromSocket(int FD);
 llvm::Error writeToSocket(std::string Buffer, int WriteFD);
 
 } // namespace cc1modbuildd

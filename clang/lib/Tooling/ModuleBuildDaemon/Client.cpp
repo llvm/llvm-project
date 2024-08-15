@@ -42,7 +42,7 @@ std::string cc1modbuildd::getBasePath() {
   Hash.update(getClangFullVersion());
   auto HashResult = Hash.final<sizeof(uint64_t)>();
   uint64_t HashValue =
-      llvm::support::endian::read<uint64_t, llvm::support::native>(
+      llvm::support::endian::read<uint64_t, llvm::endianness::native>(
           HashResult.data());
   std::string Key = toString(llvm::APInt(64, HashValue), 36, /*Signed*/ false);
 

@@ -31,18 +31,18 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-Expected<int> cc1modbuildd::createSocket() {
+llvm::Expected<int> cc1modbuildd::createSocket() {
   int FD;
   if ((FD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     std::string Msg = "socket create error: " + std::string(strerror(errno));
-    return createStringError(inconvertibleErrorCode(), Msg);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), Msg);
   }
   return FD;
 }
 
-Expected<int> cc1modbuildd::connectToSocket(StringRef SocketPath) {
+llvm::Expected<int> cc1modbuildd::connectToSocket(llvm::StringRef SocketPath) {
 
-  Expected<int> MaybeFD = cc1modbuildd::createSocket();
+  llvm::Expected<int> MaybeFD = cc1modbuildd::createSocket();
   if (!MaybeFD)
     return std::move(MaybeFD.takeError());
 
@@ -56,15 +56,15 @@ Expected<int> cc1modbuildd::connectToSocket(StringRef SocketPath) {
   if (connect(FD, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
     close(FD);
     std::string msg = "socket connect error: " + std::string(strerror(errno));
-    return createStringError(inconvertibleErrorCode(), msg);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), msg);
   }
   return FD;
 }
 
-Expected<int> cc1modbuildd::connectAndWriteToSocket(std::string Buffer,
-                                                    StringRef SocketPath) {
+llvm::Expected<int> cc1modbuildd::connectAndWriteToSocket(std::string Buffer,
+                                                    llvm::StringRef SocketPath) {
 
-  Expected<int> MaybeConnectedFD = connectToSocket(SocketPath);
+  llvm::Expected<int> MaybeConnectedFD = connectToSocket(SocketPath);
   if (!MaybeConnectedFD)
     return std::move(MaybeConnectedFD.takeError());
 
@@ -76,7 +76,7 @@ Expected<int> cc1modbuildd::connectAndWriteToSocket(std::string Buffer,
   return ConnectedFD;
 }
 
-Expected<std::string> cc1modbuildd::readFromSocket(int FD) {
+llvm::Expected<std::string> cc1modbuildd::readFromSocket(int FD) {
 
   const size_t BUFFER_SIZE = 4096;
   std::vector<char> Buffer(BUFFER_SIZE);
@@ -96,10 +96,10 @@ Expected<std::string> cc1modbuildd::readFromSocket(int FD) {
 
   if (n < 0) {
     std::string Msg = "socket read error: " + std::string(strerror(errno));
-    return llvm::make_error<StringError>(Msg, inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(Msg, llvm::inconvertibleErrorCode());
   }
   if (n == 0)
-    return llvm::make_error<StringError>("EOF", inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>("EOF", llvm::inconvertibleErrorCode());
   return std::string(Buffer.begin(), Buffer.end());
 }
 
@@ -112,7 +112,7 @@ llvm::Error cc1modbuildd::writeToSocket(std::string Buffer, int WriteFD) {
     ssize_t BytesWritten = write(WriteFD, Bytes, BytesToWrite);
     if (BytesWritten == -1) {
       std::string Msg = "socket write error: " + std::string(strerror(errno));
-      return llvm::make_error<StringError>(Msg, inconvertibleErrorCode());
+      return llvm::make_error<llvm::StringError>(Msg, llvm::inconvertibleErrorCode());
     }
 
     if (!BytesWritten || BytesWritten > BytesToWrite)

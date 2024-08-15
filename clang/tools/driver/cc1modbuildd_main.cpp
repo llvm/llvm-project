@@ -166,9 +166,7 @@ static Expected<TranslationUnitDeps>
 scanTranslationUnit(cc1modbuildd::RegisterMsg Request) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Full,
-                                    /*OptimizeArgs*/ false,
-                                    /*EagerLoadModules*/ false);
+                                    ScanningOutputFormat::Full);
 
   DependencyScanningTool Tool(Service);
   llvm::DenseSet<ModuleID> AlreadySeenModules;
@@ -492,7 +490,7 @@ void ModuleBuildDaemonServer::handleClient(int Client) {
 
 int ModuleBuildDaemonServer::listenForClients() {
 
-  llvm::ThreadPool Pool;
+  llvm::DefaultThreadPool Pool;
   int Client;
 
   while (true) {

@@ -15,14 +15,12 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/Error.h"
 
 #define MAX_BUFFER 4096
 #define SOCKET_FILE_NAME "mbd.sock"
 #define STDOUT_FILE_NAME "mbd.out"
 #define STDERR_FILE_NAME "mbd.err"
-
-using namespace clang;
-using namespace llvm;
 
 namespace cc1modbuildd {
 
@@ -32,24 +30,24 @@ std::string getBasePath();
 
 llvm::Error attemptHandshake(int SocketFD);
 
-llvm::Error spawnModuleBuildDaemon(StringRef BasePath, const char *Argv0);
+llvm::Error spawnModuleBuildDaemon(llvm::StringRef BasePath, const char *Argv0);
 
-Expected<int> getModuleBuildDaemon(const char *Argv0, StringRef BasePath);
+llvm::Expected<int> getModuleBuildDaemon(const char *Argv0, llvm::StringRef BasePath);
 
 // Sends request to module build daemon
-llvm::Error registerTranslationUnit(ArrayRef<const char *> CC1Cmd,
-                                    StringRef Argv0, StringRef CWD,
+llvm::Error registerTranslationUnit(llvm::ArrayRef<const char *> CC1Cmd,
+                                    llvm::StringRef Argv0, llvm::StringRef CWD,
                                     int ServerFD);
 
 // Processes response from module build daemon
-Expected<std::vector<std::string>> getUpdatedCC1(int ServerFD);
+llvm::Expected<std::vector<std::string>> getUpdatedCC1(int ServerFD);
 
 // Work in progress. Eventually function will modify CC1 command line to include
 // path to modules already built by the daemon
-Expected<std::vector<std::string>>
-updateCC1WithModuleBuildDaemon(const CompilerInvocation &Clang,
-                               ArrayRef<const char *> CC1Cmd, const char *Argv0,
-                               StringRef CWD);
+llvm::Expected<std::vector<std::string>>
+updateCC1WithModuleBuildDaemon(const clang::CompilerInvocation &Clang,
+                               llvm::ArrayRef<const char *> CC1Cmd, const char *Argv0,
+                               llvm::StringRef CWD);
 
 } // namespace cc1modbuildd
 
