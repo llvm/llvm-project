@@ -22,23 +22,6 @@
 namespace llvm {
 namespace dxil {
 
-enum class ParameterKind : uint8_t {
-  Invalid = 0,
-  Void,
-  Half,
-  Float,
-  Double,
-  I1,
-  I8,
-  I16,
-  I32,
-  I64,
-  Overload,
-  CBufferRet,
-  ResourceRet,
-  DXILHandle,
-};
-
 enum class ResourceClass : uint8_t {
   SRV = 0,
   UAV,
