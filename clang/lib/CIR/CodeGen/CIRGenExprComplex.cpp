@@ -134,9 +134,7 @@ public:
 
   // Operators.
   mlir::Value VisitPrePostIncDec(const UnaryOperator *E, bool isInc,
-                                 bool isPre) {
-    llvm_unreachable("NYI");
-  }
+                                 bool isPre);
   mlir::Value VisitUnaryPostDec(const UnaryOperator *E) {
     return VisitPrePostIncDec(E, false, false);
   }
@@ -535,6 +533,12 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
     return buildLoadOfLValue(E);
 
   return CGF.buildCallExpr(E).getComplexVal();
+}
+
+mlir::Value ComplexExprEmitter::VisitPrePostIncDec(const UnaryOperator *E,
+                                                   bool isInc, bool isPre) {
+  LValue LV = CGF.buildLValue(E->getSubExpr());
+  return CGF.buildComplexPrePostIncDec(E, LV, isInc, isPre);
 }
 
 mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
@@ -968,4 +972,28 @@ LValue CIRGenFunction::buildComplexCompoundAssignmentLValue(
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).buildCompoundAssignLValue(E, Op, Val);
+}
+
+mlir::Value CIRGenFunction::buildComplexPrePostIncDec(const UnaryOperator *E,
+                                                      LValue LV, bool isInc,
+                                                      bool isPre) {
+  mlir::Value InVal = buildLoadOfComplex(LV, E->getExprLoc());
+
+  auto Loc = getLoc(E->getExprLoc());
+  auto OpKind =
+      isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec;
+  mlir::Value IncVal = builder.createUnaryOp(Loc, OpKind, InVal);
+
+  // Store the updated result through the lvalue.
+  buildStoreOfComplex(Loc, IncVal, LV, /*init*/ false);
+  if (getLangOpts().OpenMP)
+    llvm_unreachable("NYI");
+
+  // If this is a postinc, return the value read from memory, otherwise use the
+  // updated value.
+  return isPre ? IncVal : InVal;
+}
+
+mlir::Value CIRGenFunction::buildLoadOfComplex(LValue src, SourceLocation loc) {
+  return ComplexExprEmitter(*this).buildLoadOfLValue(src, loc);
 }
