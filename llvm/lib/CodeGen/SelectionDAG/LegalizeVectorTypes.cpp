@@ -889,10 +889,13 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
 /// instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
                                                           unsigned OpNo) {
-  auto Elt = GetScalarizedVector(N->getOperand(OpNo));
-  auto VecOp = N->getOperand(1 - OpNo);
-  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), VecOp.getValueType(),
-                     VecOp, Elt, N->getOperand(2));
+  // We should not be attempting to scalarize the containing vector
+  assert(OpNo == 1);
+  SDValue Elt = GetScalarizedVector(N->getOperand(OpNo));
+  SDValue ContainingVec = N->getOperand(1 - OpNo);
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N),
+                     ContainingVec.getValueType(), ContainingVec, Elt,
+                     N->getOperand(2));
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>,
