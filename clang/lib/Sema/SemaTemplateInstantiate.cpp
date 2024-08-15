@@ -4387,6 +4387,11 @@ LocalInstantiationScope::findInstantiationOf(const Decl *D) {
       // a previous declaration.
       if (const TagDecl *Tag = dyn_cast<TagDecl>(CheckD))
         CheckD = Tag->getPreviousDecl();
+      else if (const VarDecl *VD = dyn_cast<VarDecl>(CheckD))
+        // Check re-declaration chain for variable to deduplicate variables
+        // that might be captured inside lambdas. Function and lambda class
+        // inside can be loaded from different modules.
+        CheckD = VD->getPreviousDecl();
       else
         CheckD = nullptr;
     } while (CheckD);
