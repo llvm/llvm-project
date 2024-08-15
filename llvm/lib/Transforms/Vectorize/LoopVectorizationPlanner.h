@@ -174,8 +174,8 @@ public:
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
 
-  VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
-                     const Twine &Name = "") {
+  VPInstruction *createNot(VPValue *Operand, DebugLoc DL = {},
+                           const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
@@ -229,6 +229,37 @@ public:
                                 const Twine &Name = "") {
     return tryInsertInstruction(new VPInstruction(
         Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+  }
+
+  VPInstruction *createCSAMaskPhi(VPValue *InitMask, DebugLoc DL,
+                                  const Twine &Name) {
+    return createInstruction(VPInstruction::CSAMaskPhi, {InitMask}, DL, Name);
+  }
+
+  VPInstruction *createAnyOf(VPValue *Cond, DebugLoc DL, const Twine &Name) {
+    return createInstruction(VPInstruction::AnyOf, {Cond}, DL, Name);
+  }
+
+  VPInstruction *createCSAMaskSel(VPValue *Cond, VPValue *MaskPhi,
+                                  VPValue *AnyOf, DebugLoc DL,
+                                  const Twine &Name) {
+    return createInstruction(VPInstruction::CSAMaskSel, {Cond, MaskPhi, AnyOf},
+                             DL, Name);
+  }
+
+  VPInstruction *createAnyOfEVL(VPValue *Cond, VPValue *EVL, DebugLoc DL,
+                                const Twine &Name) {
+    return createInstruction(VPInstruction::AnyOfEVL, {Cond, EVL}, DL, Name);
+  }
+
+  VPInstruction *createCSAVLPhi(DebugLoc DL, const Twine &Name) {
+    return createInstruction(VPInstruction::CSAVLPhi, {}, DL, Name);
+  }
+
+  VPInstruction *createCSAVLSel(VPValue *AnyOfEVL, VPValue *VLPhi, VPValue *EVL,
+                                DebugLoc DL, const Twine &Name) {
+    return createInstruction(VPInstruction::CSAVLSel, {AnyOfEVL, VLPhi, EVL},
+                             DL, Name);
   }
 
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,

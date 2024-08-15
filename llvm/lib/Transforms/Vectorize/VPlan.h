@@ -795,8 +795,27 @@ public:
   bool mayHaveSideEffects() const;
 
   /// Returns true for PHI-like recipes.
-  bool isPhi() const {
+  virtual bool isPhi() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
     return getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC;
+  }
+
+  /// Returns true for PHI-like recipes that exists in vector loop header basic
+  /// block
+  virtual bool isHeaderPhi() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
+    return (getVPDefID() >= VPFirstHeaderPHISC &&
+            getVPDefID() <= VPLastHeaderPHISC) ||
+           getVPDefID() == VPWidenPHISC;
+  }
+
+  /// Returns true for PHI-like recipes that generate their own backedge
+  virtual bool isPhiThatGeneratesBackedge() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
+    return getVPDefID() == VPWidenPHISC || getVPDefID() == VPCSAHeaderPHISC;
   }
 
   /// Returns true if the recipe may read from memory.
@@ -889,6 +908,9 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
+    case VPRecipeBase::VPCSAHeaderPHISC:
+    case VPRecipeBase::VPCSADataUpdateSC:
+    case VPRecipeBase::VPCSAExtractScalarSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
@@ -1243,6 +1265,11 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its single
     // operand is true.
     AnyOf,
+    CSAMaskPhi,
+    CSAMaskSel,
+    CSAVLPhi,
+    CSAVLSel,
+    AnyOfEVL,
   };
 
 private:
@@ -1393,6 +1420,16 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Returns true for PHI-like recipes.
+  bool isPhi() const override;
+
+  /// Returns true for PHI-like recipes that exists in vector loop header basic
+  /// block
+  bool isHeaderPhi() const override;
+
+  /// Returns true for PHI-like recipes that generate their own backedge
+  bool isPhiThatGeneratesBackedge() const override;
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -2848,6 +2885,128 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+};
+
+class VPCSAHeaderPHIRecipe final : public VPHeaderPHIRecipe {
+public:
+  VPCSAHeaderPHIRecipe(PHINode *Phi, VPValue *VPInitData)
+      : VPHeaderPHIRecipe(VPDef::VPCSAHeaderPHISC, Phi, VPInitData) {}
+
+  ~VPCSAHeaderPHIRecipe() override = default;
+
+  VPCSAHeaderPHIRecipe *clone() override {
+    return new VPCSAHeaderPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
+                                    getOperand(0));
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPCSAHeaderPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPCSAHeaderPHISC;
+  }
+
+  VPValue *getVPInitData() { return getOperand(0); }
+
+  VPValue *NewData = nullptr;
+  void setDataUpdate(VPValue *V) { NewData = V; }
+  VPValue *getVPNewData() { return NewData; }
+};
+
+class VPCSADataUpdateRecipe final : public VPSingleDefRecipe {
+public:
+  VPCSADataUpdateRecipe(SelectInst *SI, ArrayRef<VPValue *> Operands)
+      : VPSingleDefRecipe(VPDef::VPCSADataUpdateSC, Operands, SI) {}
+
+  ~VPCSADataUpdateRecipe() override = default;
+
+  VPCSADataUpdateRecipe *clone() override {
+    SmallVector<VPValue *> Ops(operands());
+    return new VPCSADataUpdateRecipe(cast<SelectInst>(getUnderlyingInstr()),
+                                     Ops);
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPCSADataUpdateSC)
+
+  VPValue *getVPDataPhi() const { return getOperand(0); }
+
+  // The condition from the original select statement
+  VPValue *getVPCond() const { return getOperand(1); }
+
+  // The true value from the original select statement
+  VPValue *getVPTrue() const { return getOperand(2); }
+
+  // The false value from the original select statement
+  VPValue *getVPFalse() const { return getOperand(3); }
+
+  // We combine the setters so we can be sure NewMask is before AnyOf
+  // in the operands list, so the getters can be sure which operand numbers
+  // to get.
+  void setVPNewMaskAndVPAnyOf(VPValue *NewMask, VPValue *AnyOf) {
+    addOperand(NewMask);
+    addOperand(AnyOf);
+  }
+
+  VPValue *getVPNewMask() const { return getOperand(4); }
+
+  VPValue *getVPAnyOf() const { return getOperand(5); }
+};
+
+class VPCSAExtractScalarRecipe final : public VPSingleDefRecipe {
+  SmallVector<PHINode *> PhisToFix;
+
+public:
+  VPCSAExtractScalarRecipe(ArrayRef<VPValue *> Operands,
+                           SmallVector<PHINode *> PhisToFix)
+      : VPSingleDefRecipe(VPDef::VPCSAExtractScalarSC, Operands),
+        PhisToFix(PhisToFix) {}
+
+  ~VPCSAExtractScalarRecipe() override = default;
+
+  VPCSAExtractScalarRecipe *clone() override {
+    SmallVector<VPValue *> Ops(operands());
+    return new VPCSAExtractScalarRecipe(Ops, PhisToFix);
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPCSAExtractScalarSC)
+
+  VPValue *getVPInitScalar() const { return getOperand(0); }
+  VPValue *getVPMaskSel() const { return getOperand(1); }
+  VPValue *getVPDataSel() const { return getOperand(2); }
+  VPValue *getVPCSAVLSel() const { return getOperand(3); }
+  bool usesEVL() const { return getNumOperands() == 4; }
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when

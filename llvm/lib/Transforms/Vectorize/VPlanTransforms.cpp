@@ -1442,6 +1442,59 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
+/// Add recipes required to make CSA work with EVL based approach. This
+/// includes replacing \p AnyOf with \p AnyOfEVL, and adding \p
+/// CSAVLPhi and \p CSAVLSel instructions.
+static void addExplicitVectorLengthForCSA(VPlan &Plan, VPValue &EVL) {
+  for (VPRecipeBase &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
+    // AnyOf is used to keep track of whether any condition on the
+    // current iteration is active. This is used to decide whether the mask
+    // should be updated. When we are using EVL, we must only consider the first
+    // EVL number of elements in the mask. Replace AnyOf with the EVL
+    // specific AnyOf instruction.
+    if (auto *VPAnyOf = dyn_cast<VPInstruction>(&R)) {
+      bool IsCSAAnyOf = false;
+      for (auto *U : VPAnyOf->users())
+        if (auto *UI = dyn_cast<VPInstruction>(U))
+          IsCSAAnyOf |= UI->getOpcode() == VPInstruction::CSAMaskSel;
+      if (!IsCSAAnyOf)
+        continue;
+
+      if (VPAnyOf->getOpcode() == VPInstruction::AnyOf) {
+        VPBuilder B;
+        auto *VPAnyOfEVL =
+            B.createAnyOfEVL(VPAnyOf->getOperand(0), &EVL,
+                             VPAnyOf->getDebugLoc(), "csa.cond.anyof");
+        VPAnyOfEVL->insertBefore(VPAnyOf);
+        VPAnyOf->replaceAllUsesWith(VPAnyOfEVL->getVPSingleValue());
+        VPAnyOf->eraseFromParent();
+
+        // When we are using EVL, we must keep track of the most recent EVL when
+        // at least one lane in the mask was active. Imagine the scenario: on
+        // iteration N, there was at least one active lane in the mask. Then on
+        // all future iteration there was no active lanes in the mask. When it
+        // is time to extract the scalar from the data vector, we must use the
+        // EVL that corresponds to the EVL that was used when the mask vector
+        // was last updated. To do this, we introduce CSAVLPhi and CSAVLSel
+        // instructions
+        auto *VPVLPhi = B.createCSAVLPhi({}, "csa.vl.phi");
+        auto *VPVLSel =
+            B.createCSAVLSel(VPAnyOfEVL, VPVLPhi, &EVL, {}, "csa.vl.sel");
+        VPVLPhi->insertBefore(&*VPAnyOfEVL->getParent()->getFirstNonPhi());
+        VPVLSel->insertAfter(VPAnyOfEVL);
+
+        // The ExtractScalarRecipe needs to use VPVLSel as an operand.
+        for (auto *U : VPAnyOfEVL->users())
+          if (auto *DataUpdate = dyn_cast<VPCSADataUpdateRecipe>(U))
+            for (auto *DataUpdateU : DataUpdate->users())
+              if (auto *Extract =
+                      dyn_cast<VPCSAExtractScalarRecipe>(DataUpdateU))
+                Extract->addOperand(VPVLSel);
+      }
+    }
+  }
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
@@ -1569,6 +1622,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     recursivelyDeleteDeadRecipes(HeaderMask);
   }
+
+  // We build the scalar version of a CSA when VF=ElementCount::getFixed(1),
+  // which does not require an EVL.
+  if (!Plan.hasScalarVFOnly())
+    addExplicitVectorLengthForCSA(Plan, EVL);
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and

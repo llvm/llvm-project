@@ -348,6 +348,8 @@ public:
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
+    VPCSADataUpdateSC,
+    VPCSAExtractScalarSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,
@@ -360,6 +362,7 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPScalarPHISC,
+    VPCSAHeaderPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
