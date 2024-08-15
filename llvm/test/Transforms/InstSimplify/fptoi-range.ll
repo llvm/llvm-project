@@ -34,9 +34,7 @@ define i1 @f16_si16_max2(half %f) {
 
 define i1 @f16_si128_max2(half %f) {
 ; CHECK-LABEL: @f16_si128_max2(
-; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i128
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i128 [[I]], 65504
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = fptosi half %f to i128
   %c = icmp sgt i128 %i, 65504
@@ -54,9 +52,7 @@ define i1 @f16_si_min1(half %f) {
 
 define i1 @f16_si128_min1(half %f) {
 ; CHECK-LABEL: @f16_si128_min1(
-; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i128
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i128 [[I]], -65504
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i = fptosi half %f to i128
   %c = icmp sge i128 %i, -65504
