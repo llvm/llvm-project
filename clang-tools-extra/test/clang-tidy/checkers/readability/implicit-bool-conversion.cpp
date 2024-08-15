@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t
 // RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
-// RUN:         readability-implicit-bool-conversion.UseUpperCaseSuffix: true \
+// RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
 // RUN:     }}'
 
 // We need NULL macro, but some buildbots don't like including <cstddef> header

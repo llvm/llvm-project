@@ -134,7 +134,7 @@ Options
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
 
-.. option::  UseUpperCaseSuffix
+.. option::  UseUpperCaseLiteralSuffix
 
    When `true`, the replacements will use an uppercase literal suffix in the
    provided fixes.
@@ -147,4 +147,4 @@ Example
   uint32_t foo;
   if (foo) {}
   // ^ propose replacement default: if (foo != 0u) {}
-  // ^ propose replacement with option `UseUpperCaseSuffix`: if (foo != 0U) {}
+  // ^ propose replacement with option `UseUpperCaseLiteralSuffix`: if (foo != 0U) {}
