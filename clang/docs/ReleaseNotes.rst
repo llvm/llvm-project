@@ -73,7 +73,7 @@ C++ Specific Potentially Breaking Changes
     template <> // error: extraneous template head
     template <typename T>
     void f();
-    
+
 ABI Changes in This Version
 ---------------------------
 
@@ -254,6 +254,7 @@ Bug Fixes to C++ Support
   specialization of a conversion function template.
 - Correctly diagnose attempts to use a concept name in its own definition;
   A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
+- Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
