@@ -3208,7 +3208,7 @@ public:
 
   /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
   /// \p nullptr if either the attribute or the field doesn't exist.
-  const FieldDecl *FindCountedByField() const;
+  const FieldDecl *findCountedByField() const;
 
 private:
   void setLazyInClassInitializer(LazyDeclStmtPtr NewInit);

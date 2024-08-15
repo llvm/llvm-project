@@ -4678,7 +4678,7 @@ void FieldDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
   DeclaratorDecl::printName(OS, Policy);
 }
 
-const FieldDecl *FieldDecl::FindCountedByField() const {
+const FieldDecl *FieldDecl::findCountedByField() const {
   const auto *CAT = getType()->getAs<CountAttributedType>();
   if (!CAT)
     return nullptr;
