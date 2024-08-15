@@ -111,6 +111,7 @@ class ConstantInt;
 class Context;
 class Function;
 class Instruction;
+class FreezeInst;
 class FenceInst;
 class SelectInst;
 class ExtractElementInst;
@@ -251,6 +252,7 @@ protected:
   friend class Context;               // For getting `Val`.
   friend class User;                  // For getting `Val`.
   friend class Use;                   // For getting `Val`.
+  friend class FreezeInst;            // For getting `Val`.
   friend class FenceInst;             // For getting `Val`.
   friend class SelectInst;            // For getting `Val`.
   friend class ExtractElementInst;    // For getting `Val`.
@@ -682,6 +684,7 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
+  friend class FreezeInst;         // For getTopmostLLVMInstruction().
   friend class FenceInst;          // For getTopmostLLVMInstruction().
   friend class SelectInst;         // For getTopmostLLVMInstruction().
   friend class ExtractElementInst; // For getTopmostLLVMInstruction().
@@ -1528,10 +1531,23 @@ protected:
 
 public:
   static bool classof(const Instruction *I) {
-    return isa<LoadInst>(I) || isa<CastInst>(I);
+    return isa<LoadInst>(I) || isa<CastInst>(I) || isa<FreezeInst>(I);
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+class FreezeInst : public UnaryInstruction {
+  FreezeInst(llvm::FreezeInst *FI, Context &Ctx)
+      : UnaryInstruction(ClassID::Freeze, Opcode::Freeze, FI, Ctx) {}
+  friend Context; // For constructor;
+
+public:
+  static FreezeInst *create(Value *V, BBIterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Freeze;
   }
 };
 
@@ -2930,6 +2946,8 @@ protected:
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
+  FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
+  friend FreezeInst; // For createFreezeInst()
   FenceInst *createFenceInst(llvm::FenceInst *SI);
   friend FenceInst; // For createFenceInst()
   SelectInst *createSelectInst(llvm::SelectInst *SI);
