@@ -5606,7 +5606,7 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
                                     getLangOpts().getStrictFlexArraysLevel()) &&
       ME->getMemberDecl()->getType()->isCountAttributedType()) {
     if (const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl()))
-      if (const FieldDecl *CountFD = FAMDecl->FindCountedByField())
+      if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
         // The proper return type should be a pointer to the type of the
         // counted_by's 'count' field.
         TheCall->setType(Context.getPointerType(CountFD->getType()));

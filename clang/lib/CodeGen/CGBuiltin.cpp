@@ -3703,7 +3703,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->FindCountedByField())
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
           Result = GetCountedByFieldExprGEP(ME, FAMDecl, CountFD);
       }
     }
