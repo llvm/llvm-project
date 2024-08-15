@@ -1428,6 +1428,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
+  EnableExtLdPromotion = true;
 
   // Let the subtarget decide if a predictable select is more expensive than the
   // corresponding branch. This information is used in CGP/SelectOpt to decide
@@ -13843,8 +13844,10 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Fold (sext_inreg (fmv_x_anyexth X), i16) -> (fmv_x_signexth X)
+  // Don't do this with Zhinx. We need to explicitly sign extend the GPR.
   if (Src.getOpcode() == RISCVISD::FMV_X_ANYEXTH &&
-      cast<VTSDNode>(N->getOperand(1))->getVT().bitsGE(MVT::i16))
+      cast<VTSDNode>(N->getOperand(1))->getVT().bitsGE(MVT::i16) &&
+      Subtarget.hasStdExtZfhmin())
     return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), VT,
                        Src.getOperand(0));
 
