@@ -51,7 +51,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Reads at offset 0x0 fail
         mem = self.dap_server.request_read_memory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
-        self.assertTrue(mem["message"].startswith("Unable to read memory: "))
+        self.assertEqual(mem["message"], "Memory region is not readable")
 
     def test_memory_refs_variables(self):
         """
