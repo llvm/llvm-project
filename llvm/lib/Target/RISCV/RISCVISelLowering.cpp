@@ -10348,8 +10348,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
 
   // At LMUL > 1, do the index computation in 16 bits to reduce register
   // pressure.
-  if (IntVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(MaxVLMAX - 1) &&
+  if (IntVT.getScalarType().bitsGT(MVT::i16) &&
       IntVT.bitsGT(getLMUL1VT(IntVT))) {
+    assert(isUInt<16>(MaxVLMAX - 1)); // Largest VLMAX is 65536 @ zvl65536b
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IntVT = IntVT.changeVectorElementType(MVT::i16);
   }
