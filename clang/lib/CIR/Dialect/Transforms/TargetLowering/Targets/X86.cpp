@@ -235,9 +235,8 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
     } else if (isa<IntType>(Ty)) {
 
       // FIXME(cir): Clang's BuiltinType::Kind allow comparisons (GT, LT, etc).
-      // We should implement this in CIR to simplify the conditions below. BTW,
-      // I'm not sure if the comparisons below are truly equivalent to the ones
-      // in Clang.
+      // We should implement this in CIR to simplify the conditions below. Hence,
+      // Comparisons below might not be truly equivalent to the ones in Clang.
       if (isa<IntType>(Ty)) {
         Current = Class::Integer;
       }

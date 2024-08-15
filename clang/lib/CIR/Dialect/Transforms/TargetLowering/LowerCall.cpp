@@ -42,8 +42,8 @@ arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
   }
 
   // TODO(cir): There's some CC stuff related to no-proto functions here, but
-  // I'm skipping it since it requires CodeGen info. Maybe we can embbed this
-  // information in the FuncOp during CIRGen.
+  // its skipped here since it requires CodeGen info. Maybe this information
+  // could be embbed  in the FuncOp during CIRGen.
 
   assert(!::cir::MissingFeatures::chainCall() && !chainCall && "NYI");
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
@@ -120,8 +120,8 @@ void LowerModule::constructAttributeList(StringRef Name,
   // }
 
   // NOTE(cir): The original code adds default and no-builtin attributes here as
-  // well. AFAIK, these are ABI/Target-agnostic, so it would be better handled
-  // in CIRGen. Regardless, I'm leaving this comment here as a heads up.
+  // well. These are ABI/Target-agnostic, so it would be better handled in
+  // CIRGen.
 
   // Override some default IR attributes based on declaration-specific
   // information.

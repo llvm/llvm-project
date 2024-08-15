@@ -135,6 +135,7 @@ struct MissingFeatures {
   static bool syncScopeID() { return false; }
 
   // Misc
+  static bool cacheRecordLayouts() { return false; }
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -282,6 +283,9 @@ struct MissingFeatures {
   // up argument registers), but we do not yet track such cases.
   static bool chainCall() { return false; }
 
+  // ARM-specific feature that can be specified as a function attribute in C.
+  static bool cmseNonSecureCallAttr() { return false; }
+
   // ABI-lowering has special handling for regcall calling convention (tries to
   // pass every argument in regs). We don't support it just yet.
   static bool regCall() { return false; }
@@ -326,6 +330,9 @@ struct MissingFeatures {
   // CIR modules parsed from text form may not carry the triple or data layout
   // specs. We should make it always present.
   static bool makeTripleAlwaysPresent() { return false; }
+
+  // This Itanium bit is currently being skipped in cir.
+  static bool itaniumRecordLayoutBuilderFinishLayout() { return false; }
 };
 
 } // namespace cir

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRRecordLayout.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace mlir {
 namespace cir {
@@ -45,10 +46,8 @@ CIRRecordLayout::CIRRecordLayout(
   CXXInfo->NonVirtualAlignment = nonvirtualalignment;
   CXXInfo->PreferredNVAlignment = preferrednvalignment;
   CXXInfo->SizeOfLargestEmptySubobject = SizeOfLargestEmptySubobject;
-  // FIXME(cir): I'm assuming that since we are not dealing with inherited
-  // classes yet, removing the following lines will be ok.
-  // CXXInfo->BaseOffsets = BaseOffsets;
-  // CXXInfo->VBaseOffsets = VBaseOffsets;
+  // FIXME(cir): Initialize base classes offsets.
+  assert(!::cir::MissingFeatures::getCXXRecordBases());
   CXXInfo->HasOwnVFPtr = hasOwnVFPtr;
   CXXInfo->VBPtrOffset = vbptroffset;
   CXXInfo->HasExtendableVFPtr = hasExtendableVFPtr;
