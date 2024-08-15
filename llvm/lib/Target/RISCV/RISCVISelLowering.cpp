@@ -20207,15 +20207,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
                    dyn_cast<ExternalSymbolSDNode>(Callee)) {
       Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
     }
-  } else {
-    if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      const GlobalValue *GV = S->getGlobal();
-      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
-    } else if (ExternalSymbolSDNode *S =
-                   dyn_cast<ExternalSymbolSDNode>(Callee)) {
-      Callee =
-          DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, RISCVII::MO_CALL);
-    }
+  } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    const GlobalValue *GV = S->getGlobal();
+    Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
+  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, RISCVII::MO_CALL);
   }
 
   // The first call operand is the chain and the second is the target address.
