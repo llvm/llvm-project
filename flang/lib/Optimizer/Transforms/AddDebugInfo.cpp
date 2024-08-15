@@ -247,12 +247,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
   fir::DebugTypeGenerator typeGen(module);
   for (auto resTy : funcOp.getResultTypes()) {
-    auto tyAttr = typeGen.convertType(resTy, fileAttr, cuAttr, nullptr);
+    auto tyAttr =
+        typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
     types.push_back(tyAttr);
   }
   for (auto inTy : funcOp.getArgumentTypes()) {
     auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
-                                      cuAttr, nullptr);
+                                      cuAttr, /*declOp=*/nullptr);
     types.push_back(tyAttr);
   }
 
@@ -359,7 +360,8 @@ void AddDebugInfoPass::runOnOperation() {
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     // Process 'GlobalOp' only if full debug info is requested.
     for (auto globalOp : module.getOps<fir::GlobalOp>())
-      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable, nullptr);
+      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable,
+                     /*declOp=*/nullptr);
   }
 }
 
