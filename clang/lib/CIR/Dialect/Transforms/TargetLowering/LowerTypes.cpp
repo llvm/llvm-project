@@ -108,8 +108,8 @@ mlir::Type LowerTypes::convertType(Type T) {
   /// LLVM IR representation for a given AST type. When a the ABI-specific
   /// function info sets a nullptr for a return or argument type, the default
   /// type given by this method is used. In CIR's case, its types are already
-  /// supposed to be ABI-specific, so this method is not really useful here. I'm
-  /// keeping it here for parity's sake.
+  /// supposed to be ABI-specific, so this method is not really useful here.
+  /// It's kept here for codegen parity's sake.
 
   // Certain CIR types are already ABI-specific, so we just return them.
   if (isa<BoolType, IntType, SingleType, DoubleType>(T)) {

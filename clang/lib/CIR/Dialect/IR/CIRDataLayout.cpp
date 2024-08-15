@@ -157,25 +157,25 @@ CIRDataLayout::getStructLayout(mlir::cir::StructType Ty) const {
 }
 
 /*!
-  \param abi_or_pref Flag that determines which alignment is returned. true
+  \param abiOrPref Flag that determines which alignment is returned. true
   returns the ABI alignment, false returns the preferred alignment.
   \param Ty The underlying type for which alignment is determined.
 
-  Get the ABI (\a abi_or_pref == true) or preferred alignment (\a abi_or_pref
+  Get the ABI (\a abiOrPref == true) or preferred alignment (\a abiOrPref
   == false) for the requested type \a Ty.
  */
-llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abi_or_pref) const {
+llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
 
   if (llvm::isa<mlir::cir::StructType>(Ty)) {
     // Packed structure types always have an ABI alignment of one.
-    if (::cir::MissingFeatures::recordDeclIsPacked() && abi_or_pref)
+    if (::cir::MissingFeatures::recordDeclIsPacked() && abiOrPref)
       llvm_unreachable("NYI");
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout =
         getStructLayout(llvm::cast<mlir::cir::StructType>(Ty));
     const llvm::Align Align =
-        abi_or_pref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
+        abiOrPref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
     return std::max(Align, Layout->getAlignment());
   }
 
@@ -184,7 +184,7 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abi_or_pref) const {
   assert(!::cir::MissingFeatures::addressSpace());
 
   // Fetch type alignment from MLIR's data layout.
-  unsigned align = abi_or_pref ? layout.getTypeABIAlignment(Ty)
+  unsigned align = abiOrPref ? layout.getTypeABIAlignment(Ty)
                                : layout.getTypePreferredAlignment(Ty);
   return llvm::Align(align);
 }

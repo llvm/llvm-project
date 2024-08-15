@@ -239,18 +239,10 @@ void ItaniumRecordLayoutBuilder::layout(const StructType RT) {
 
   layoutFields(RT);
 
-  // NonVirtualSize = Context.toCharUnitsFromBits(
-  //     llvm::alignTo(getSizeInBits(),
-  //     Context.getTargetInfo().getCharAlign()));
-  // NonVirtualAlignment = Alignment;
-  // PreferredNVAlignment = PreferredAlignment;
+  // FIXME(cir): Handle virtual-related layouts.
+  assert(!::cir::MissingFeatures::getCXXRecordBases());
 
-  // // Lay out the virtual bases and add the primary virtual base offsets.
-  // LayoutVirtualBases(RD, RD);
-
-  // // Finally, round the size of the total struct up to the alignment
-  // // of the struct itself.
-  // FinishLayout(RD);
+  assert(!::cir::MissingFeatures::itaniumRecordLayoutBuilderFinishLayout());
 }
 
 void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
@@ -558,10 +550,6 @@ static bool mustSkipTailPadding(clang::TargetCXXABI ABI, const StructType RD) {
     return false;
 
   case clang::TargetCXXABI::UseTailPaddingUnlessPOD03:
-    // FIXME: To the extent that this is meant to cover the Itanium ABI
-    // rules, we should implement the restrictions about over-sized
-    // bitfields:
-    //
     // http://itanium-cxx-abi.github.io/cxx-abi/abi.html#POD :
     //   In general, a type is considered a POD for the purposes of
     //   layout if it is a POD type (in the sense of ISO C++
@@ -605,7 +593,8 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
 
   assert(RT.isComplete() && "Cannot get layout of forward declarations!");
 
-  // FIXME(cir): Cache the layout. Also, use a more MLIR-based approach.
+  // FIXME(cir): Use a more MLIR-based approach by using it's buitin data layout
+  // features, such as interfaces, cacheing, and the DLTI dialect.
 
   const CIRRecordLayout *NewEntry = nullptr;
 
@@ -642,8 +631,8 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
         Builder.PrimaryBaseIsVirtual, nullptr, false, false);
   }
 
-  // TODO(cir): Cache the layout.
   // TODO(cir): Add option to dump the layouts.
+  assert(!::cir::MissingFeatures::cacheRecordLayouts());
 
   return *NewEntry;
 }

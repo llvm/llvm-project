@@ -61,8 +61,8 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   // FIXME(cir): Here we fetch the width and alignment of a type considering the
   // current target. We can likely improve this using MLIR's data layout, or
   // some other interface, to abstract this away (e.g. type.getWidth() &
-  // type.getAlign()). I'm not sure if data layoot suffices because this would
-  // involve some other types such as vectors and complex numbers.
+  // type.getAlign()). Verify if data layout suffices because this would involve
+  // some other types such as vectors and complex numbers.
   // FIXME(cir): In the original codegen, this receives an AST type, meaning it
   // differs chars from integers, something that is not possible with the
   // current level of CIR.

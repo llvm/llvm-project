@@ -434,8 +434,7 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
 
       // If there is a dominating store to ReturnValue, we can elide
       // the load, zap the store, and usually zap the alloca.
-      // NOTE(cir): This seems like a premature optimization case, so I'm
-      // skipping it.
+      // NOTE(cir): This seems like a premature optimization case. Skipping it.
       if (::cir::MissingFeatures::returnValueDominatingStoreOptmiization()) {
         llvm_unreachable("NYI");
       }
@@ -453,12 +452,6 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
       mlir::PatternRewriter::InsertionGuard guard(rewriter);
       NewFn->walk([&](ReturnOp returnOp) {
         rewriter.setInsertionPoint(returnOp);
-
-        // TODO(cir): I'm not sure if we need this offset here or in CIRGen.
-        // Perhaps both? For now I'm just ignoring it.
-        // Value V = emitAddressAtOffset(*this, getResultAlloca(returnOp),
-        // RetAI);
-
         RV = castReturnValue(returnOp->getOperand(0), RetAI.getCoerceToType(),
                              *this);
         rewriter.replaceOpWithNewOp<ReturnOp>(returnOp, RV);
@@ -655,7 +648,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 
   FuncType IRFuncTy = LM.getTypes().getFunctionType(CallInfo);
 
-  // NOTE(cir): Some target/ABI related checks happen here. I'm skipping them
+  // NOTE(cir): Some target/ABI related checks happen here. They are skipped
   // under the assumption that they are handled in CIRGen.
 
   // 1. Set up the arguments.
@@ -737,7 +730,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       if (!isa<StructType>(I->getType())) {
         llvm_unreachable("NYI");
       } else {
-        // NOTE(cir): I'm leaving L/RValue stuff for CIRGen to handle.
+        // NOTE(cir): L/RValue stuff are left for CIRGen to handle.
         Src = *I;
       }
 
@@ -756,6 +749,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
         Value Load = createCoercedValue(Src, ArgInfo.getCoerceToType(), *this);
 
         // FIXME(cir): We should probably handle CMSE non-secure calls here
+        assert(!::cir::MissingFeatures::cmseNonSecureCallAttr());
 
         // since they are a ARM-specific feature.
         if (::cir::MissingFeatures::undef())
@@ -856,6 +850,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // FIXME(cir): Use return value slot here.
       Value RetVal = callOp.getResult();
       // TODO(cir): Check for volatile return values.
+      assert(!::cir::MissingFeatures::volatileTypes());
 
       // NOTE(cir): If the function returns, there should always be a valid
       // return value present. Instead of setting the return value here, we
@@ -863,6 +858,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       if (!RetVal) {
         RetVal = callOp.getResult();
         // TODO(cir): Check for volatile return values.
+        assert(::cir::MissingFeatures::volatileTypes());
       }
 
       // An empty record can overlap other data (if declared with
@@ -870,8 +866,6 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // actual data to store.
       if (dyn_cast<StructType>(RetTy) &&
           cast<StructType>(RetTy).getNumElements() != 0) {
-        // NOTE(cir): I'm assuming we don't need to change any offsets here.
-        // Value StorePtr = emitAddressAtOffset(*this, RetVal, RetAI);
         RetVal =
             createCoercedValue(newCallOp.getResult(), RetVal.getType(), *this);
       }

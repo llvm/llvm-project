@@ -55,7 +55,7 @@ public:
   const StructLayout *getStructLayout(mlir::cir::StructType Ty) const;
 
   /// Internal helper method that returns requested alignment for type.
-  llvm::Align getAlignment(mlir::Type Ty, bool abi_or_pref) const;
+  llvm::Align getAlignment(mlir::Type Ty, bool abiOrPref) const;
 
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
@@ -93,8 +93,6 @@ public:
     return layout.getTypeSizeInBits(Ty);
   }
 
-  // The implementation of this method is provided inline as it is particularly
-  // well suited to constant folding when called on a specific Type subclass.
   llvm::TypeSize getTypeSizeInBits(mlir::Type Ty) const;
 
   mlir::Type getIntPtrType(mlir::Type Ty) const {
