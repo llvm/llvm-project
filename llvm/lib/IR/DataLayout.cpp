@@ -17,6 +17,7 @@
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -575,12 +576,9 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
   if (LayoutString.empty())
     return Error::success();
 
-  // Split the data layout string into specifications separated by '-'.
-  SmallVector<StringRef, 16> Specs;
-  LayoutString.split(Specs, '-');
-
-  // Parse each specification individually, updating internal data structures.
-  for (StringRef Spec : Specs) {
+  // Split the data layout string into specifications separated by '-' and
+  // parse each specification individually, updating internal data structures.
+  for (StringRef Spec : split(LayoutString, '-')) {
     if (Spec.empty())
       return createStringError("empty specification is not allowed");
     if (Error Err = parseSpecification(Spec))
