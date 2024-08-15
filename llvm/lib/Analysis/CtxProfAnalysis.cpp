@@ -21,7 +21,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 
 #define DEBUG_TYPE "ctx_prof"
 
