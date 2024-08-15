@@ -19,7 +19,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <unistd.h>
