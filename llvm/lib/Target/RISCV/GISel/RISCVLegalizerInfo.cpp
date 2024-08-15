@@ -74,7 +74,9 @@ static LegalityPredicate typeIsLegalPtrVec(unsigned TypeIdx,
   LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
     return ST.hasVInstructions() &&
            (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
-            ST.getELen() == 64);
+            ST.getELen() == 64) &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 16 ||
+            Query.Types[TypeIdx].getScalarSizeInBits() == 32);
   };
   return all(typeInSet(TypeIdx, PtrVecTys), P);
 }
@@ -127,6 +129,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT nxv2p0 = LLT::scalable_vector(2, p0);
   const LLT nxv4p0 = LLT::scalable_vector(4, p0);
   const LLT nxv8p0 = LLT::scalable_vector(8, p0);
+  const LLT nxv16p0 = LLT::scalable_vector(16, p0);
 
   using namespace TargetOpcode;
 
@@ -137,7 +140,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                         nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
                         nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
 
-  auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0};
+  auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
