@@ -556,7 +556,7 @@ struct BasicAAResult::DecomposedGEP {
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Nowrap flags common to all GEP operations involved in expression.
-  GEPNoWrapFlags NWFlags = GEPNoWrapFlags::none();
+  GEPNoWrapFlags NWFlags = GEPNoWrapFlags::all();
 
   void dump() const {
     print(dbgs());
@@ -591,8 +591,6 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
   const Instruction *CxtI = dyn_cast<Instruction>(V);
-
-  bool SeenGEPNWFlags = false;
 
   unsigned MaxIndexSize = DL.getMaxIndexSizeInBits();
   DecomposedGEP Decomposed;
@@ -647,12 +645,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     }
 
     // Track the common nowrap flags for all GEPs we see.
-    if (SeenGEPNWFlags) {
-      Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
-    } else {
-      Decomposed.NWFlags = GEPOp->getNoWrapFlags();
-      SeenGEPNWFlags = true;
-    }
+    Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
