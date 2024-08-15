@@ -1371,6 +1371,9 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               llvm::ArrayRef<const semantics::Symbol *> wrapperSyms,
               llvm::ArrayRef<mlir::BlockArgument> wrapperArgs,
               llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+  assert(wrapperSyms.size() == wrapperArgs.size() &&
+         "Number of symbols and wrapper block arguments must match");
+
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperSyms, wrapperArgs);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
@@ -2083,8 +2086,6 @@ static void genCompositeDistributeSimd(
       llvm::concat<mlir::BlockArgument>(distributeOp.getRegion().getArguments(),
                                         simdOp.getRegion().getArguments()));
 
-  assert(wrapperArgs.empty() &&
-         "Block args for omp.simd and omp.distribute currently not expected");
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, /*wrapperSyms=*/{}, wrapperArgs,
                 llvm::omp::Directive::OMPD_distribute_simd, dsp);
@@ -2132,8 +2133,6 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   auto wrapperArgs = llvm::to_vector(llvm::concat<mlir::BlockArgument>(
       wsloopOp.getRegion().getArguments(), simdOp.getRegion().getArguments()));
 
-  assert(wsloopReductionSyms.size() == wrapperArgs.size() &&
-         "Number of symbols and wrapper block arguments must match");
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, wsloopReductionSyms, wrapperArgs,
                 llvm::omp::Directive::OMPD_do_simd, dsp);

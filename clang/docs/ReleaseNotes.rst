@@ -77,8 +77,6 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
-- Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
-
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -256,6 +254,9 @@ Bug Fixes to C++ Support
   specialization of a conversion function template.
 - Correctly diagnose attempts to use a concept name in its own definition;
   A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
+- Properly reject defaulted relational operators with invalid types for explicit object parameters,
+  e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
+- Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 
 Bug Fixes to AST Handling

@@ -1243,8 +1243,8 @@ public:
     StridedVectorize
   };
 
-  using ValueList = SmallVector<Value *, 4>;
-  using ValueSet = SmallPtrSet<Value *, 8>;
+  using ValueList = SmallVector<Value *, 8>;
+  using ValueSet = SmallPtrSet<Value *, 16>;
   using ExtraValueToDebugLocsMap =
       MapVector<Value *, SmallVector<Instruction *, 2>>;
   using OrdersType = SmallVector<unsigned, 0>;
@@ -3106,7 +3106,7 @@ private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
     /// reordering of operands during buildTree_rec() and vectorizeTree().
-    SmallVector<ValueList, 0> Operands;
+    SmallVector<ValueList, 2> Operands;
 
     /// The main/alternate instruction.
     Instruction *MainOp = nullptr;
@@ -3714,13 +3714,13 @@ private:
 
     /// The dependent memory instructions.
     /// This list is derived on demand in calculateDependencies().
-    SmallVector<ScheduleData *, 0> MemoryDependencies;
+    SmallVector<ScheduleData *, 4> MemoryDependencies;
 
     /// List of instructions which this instruction could be control dependent
     /// on.  Allowing such nodes to be scheduled below this one could introduce
     /// a runtime fault which didn't exist in the original program.
     /// ex: this is a load or udiv following a readonly call which inf loops
-    SmallVector<ScheduleData *, 0> ControlDependencies;
+    SmallVector<ScheduleData *, 4> ControlDependencies;
 
     /// This ScheduleData is in the current scheduling region if this matches
     /// the current SchedulingRegionID of BlockScheduling.
@@ -15661,7 +15661,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (any_of(E.Scalars, [&](Value *V) {
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
-                 (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                 (E.Idx == 0 && UserIgnoreList &&
+                  UserIgnoreList->contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
                   !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);
