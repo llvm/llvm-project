@@ -63,6 +63,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -5006,6 +5007,13 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
   return GetPropertyAtIndexAs<InlineStrategy>(
       idx,
       static_cast<InlineStrategy>(g_target_properties[idx].default_uint_value));
+}
+
+// Returning RealpathPrefixes, but the setting's type is FileSpecList. We do
+// this because we want the FileSpecList to normalize the file paths for us.
+RealpathPrefixes TargetProperties::GetSourceRealpathPrefixes() const {
+  const uint32_t idx = ePropertySourceRealpathPrefixes;
+  return RealpathPrefixes(GetPropertyAtIndexAs<FileSpecList>(idx, {}));
 }
 
 llvm::StringRef TargetProperties::GetArg0() const {
