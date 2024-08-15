@@ -503,9 +503,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // as the destination.
   getActionDefinitionsBuilder(G_VAARG)
       // TODO: Implement narrowScalar and widenScalar for G_VAARG for types
-      // outside the [s32, sXLen] range.
-      .clampScalar(0, s32, sXLen)
-      .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
+      // other than sXLen.
+      .clampScalar(0, sXLen, sXLen)
+      .lowerForCartesianProduct({sXLen, p0}, {p0});
 
   getActionDefinitionsBuilder(G_VSCALE)
       .clampScalar(0, sXLen, sXLen)

@@ -5428,7 +5428,8 @@ def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
 def ext_template_spec_extra_headers : ExtWarn<
-  "extraneous template parameter list in template specialization">;
+  "extraneous template parameter list in template specialization">,
+   InGroup<DiagGroup<"extraneous-template-head">>, DefaultError;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
   "declared here">;
@@ -9751,7 +9752,7 @@ def err_defaulted_special_member_quals : Error<
   "have 'const'%select{, 'constexpr'|}1 or 'volatile' qualifiers">;
 def err_defaulted_special_member_explicit_object_mismatch : Error<
   "the type of the explicit object parameter of an explicitly-defaulted "
-  "%select{copy|move}0 assignment operator should match the type of the class %1">;
+  "%select{copy|move}0 assignment operator should be reference to %1">;
 def err_defaulted_special_member_volatile_param : Error<
   "the parameter for an explicitly-defaulted %sub{select_special_member_kind}0 "
   "may not be volatile">;

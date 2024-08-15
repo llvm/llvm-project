@@ -5425,8 +5425,9 @@ cc_library(
     includes = ["include"],
     deps = [
 	":DataLayoutInterfaces",
+        ":Analysis",
         ":FuncDialect",
-	":InliningUtils",
+	    ":InliningUtils",
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
