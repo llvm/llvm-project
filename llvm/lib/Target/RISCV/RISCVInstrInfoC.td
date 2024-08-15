@@ -764,9 +764,9 @@ def InsnCR : DirectiveInsnCR<(outs AnyReg:$rd), (ins uimm2_opcode:$opcode,
                                                      uimm4:$funct4,
                                                      AnyReg:$rs2),
                              "$opcode, $funct4, $rd, $rs2">;
-def InsnCI : DirectiveInsnCI<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
-                                                      uimm3:$funct3,
-                                                      simm6:$imm6),
+def InsnCI : DirectiveInsnCI<(outs AnyReg:$rd), (ins uimm2_opcode:$opcode,
+                                                     uimm3:$funct3,
+                                                     simm6:$imm6),
                              "$opcode, $funct3, $rd, $imm6">;
 def InsnCIW : DirectiveInsnCIW<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
                                                         uimm3:$funct3,
@@ -818,7 +818,7 @@ def : InstAlias<".insn_cr $opcode, $funct4, $rd, $rs2",
                 (InsnCR AnyReg:$rd, uimm2_opcode:$opcode, uimm4:$funct4,
                         AnyReg:$rs2)>;
 def : InstAlias<".insn_ci $opcode, $funct3, $rd, $imm6",
-                (InsnCI AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
+                (InsnCI AnyReg:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
                         simm6:$imm6)>;
 def : InstAlias<".insn_ciw $opcode, $funct3, $rd, $imm8",
                 (InsnCIW AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,

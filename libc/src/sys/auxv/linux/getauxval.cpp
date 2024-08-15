@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/auxv/getauxval.h"
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
@@ -155,7 +155,7 @@ static void initialize_auxv_once(void) {
 
 static AuxEntry read_entry(int fd) {
   AuxEntry buf;
-  ssize_t size = sizeof(AuxEntry);
+  size_t size = sizeof(AuxEntry);
   char *ptr = reinterpret_cast<char *>(&buf);
   while (size > 0) {
     ssize_t ret = read(fd, ptr, size);

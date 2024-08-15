@@ -227,3 +227,13 @@ struct r6 {};
 
 using r6i = r6<int>;
 // expected-error@-1 {{constraints not satisfied for class template 'r6' [with T = int]}}
+
+namespace GH73885 {
+
+template <class> // expected-error {{extraneous}}
+template <class T> requires(T{})
+constexpr bool e_v = true;
+
+static_assert(e_v<bool>);
+
+} // namespace GH73885

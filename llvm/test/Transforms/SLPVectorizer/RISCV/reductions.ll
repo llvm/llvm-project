@@ -142,6 +142,64 @@ entry:
   ret i64 %add.15
 }
 
+
+define i64 @red_strided_ld_16xi64(ptr %ptr) {
+; CHECK-LABEL: @red_strided_ld_16xi64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %ld0 = load i64, ptr %ptr
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 2
+  %ld1 = load i64, ptr %gep
+  %add.1 = add nuw nsw i64 %ld0, %ld1
+  %gep.1 = getelementptr inbounds i64, ptr %ptr, i64 4
+  %ld2 = load i64, ptr %gep.1
+  %add.2 = add nuw nsw i64 %add.1, %ld2
+  %gep.2 = getelementptr inbounds i64, ptr %ptr, i64 6
+  %ld3 = load i64, ptr %gep.2
+  %add.3 = add nuw nsw i64 %add.2, %ld3
+  %gep.3 = getelementptr inbounds i64, ptr %ptr, i64 8
+  %ld4 = load i64, ptr %gep.3
+  %add.4 = add nuw nsw i64 %add.3, %ld4
+  %gep.4 = getelementptr inbounds i64, ptr %ptr, i64 10
+  %ld5 = load i64, ptr %gep.4
+  %add.5 = add nuw nsw i64 %add.4, %ld5
+  %gep.5 = getelementptr inbounds i64, ptr %ptr, i64 12
+  %ld6 = load i64, ptr %gep.5
+  %add.6 = add nuw nsw i64 %add.5, %ld6
+  %gep.6 = getelementptr inbounds i64, ptr %ptr, i64 14
+  %ld7 = load i64, ptr %gep.6
+  %add.7 = add nuw nsw i64 %add.6, %ld7
+  %gep.7 = getelementptr inbounds i64, ptr %ptr, i64 16
+  %ld8 = load i64, ptr %gep.7
+  %add.8 = add nuw nsw i64 %add.7, %ld8
+  %gep.8 = getelementptr inbounds i64, ptr %ptr, i64 18
+  %ld9 = load i64, ptr %gep.8
+  %add.9 = add nuw nsw i64 %add.8, %ld9
+  %gep.9 = getelementptr inbounds i64, ptr %ptr, i64 20
+  %ld10 = load i64, ptr %gep.9
+  %add.10 = add nuw nsw i64 %add.9, %ld10
+  %gep.10 = getelementptr inbounds i64, ptr %ptr, i64 22
+  %ld11 = load i64, ptr %gep.10
+  %add.11 = add nuw nsw i64 %add.10, %ld11
+  %gep.11 = getelementptr inbounds i64, ptr %ptr, i64 24
+  %ld12 = load i64, ptr %gep.11
+  %add.12 = add nuw nsw i64 %add.11, %ld12
+  %gep.12 = getelementptr inbounds i64, ptr %ptr, i64 26
+  %ld13 = load i64, ptr %gep.12
+  %add.13 = add nuw nsw i64 %add.12, %ld13
+  %gep.13 = getelementptr inbounds i64, ptr %ptr, i64 28
+  %ld14 = load i64, ptr %gep.13
+  %add.14 = add nuw nsw i64 %add.13, %ld14
+  %gep.14 = getelementptr inbounds i64, ptr %ptr, i64 30
+  %ld15 = load i64, ptr %gep.14
+  %add.15 = add nuw nsw i64 %add.14, %ld15
+  ret i64 %add.15
+}
+
 ; Next batch test differen reductions kinds
 
 %struct.buf = type { [8 x i8] }

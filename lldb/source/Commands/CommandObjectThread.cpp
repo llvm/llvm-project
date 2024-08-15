@@ -247,8 +247,6 @@ protected:
   CommandOptions m_options;
 };
 
-enum StepScope { eStepScopeSource, eStepScopeInstruction };
-
 #define LLDB_OPTIONS_thread_step_scope
 #include "CommandOptions.inc"
 
@@ -374,15 +372,13 @@ public:
   CommandObjectThreadStepWithTypeAndScope(CommandInterpreter &interpreter,
                                           const char *name, const char *help,
                                           const char *syntax,
-                                          StepType step_type,
-                                          StepScope step_scope)
+                                          StepType step_type)
       : CommandObjectParsed(interpreter, name, help, syntax,
                             eCommandRequiresProcess | eCommandRequiresThread |
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
-        m_step_type(step_type), m_step_scope(step_scope),
-        m_class_options("scripted step") {
+        m_step_type(step_type), m_class_options("scripted step") {
     AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
@@ -621,7 +617,6 @@ protected:
   }
 
   StepType m_step_type;
-  StepScope m_step_scope;
   ThreadStepScopeOptionGroup m_options;
   OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
@@ -882,7 +877,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -2561,35 +2556,35 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      interpreter, "thread step-in",
                      "Source level single step, stepping into calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeInto, eStepScopeSource)));
+                     nullptr, eStepTypeInto)));
 
   LoadSubCommand("step-out",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-out",
                      "Finish executing the current stack frame and stop after "
                      "returning.  Defaults to current thread unless specified.",
-                     nullptr, eStepTypeOut, eStepScopeSource)));
+                     nullptr, eStepTypeOut)));
 
   LoadSubCommand("step-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-over",
                      "Source level single step, stepping over calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeOver, eStepScopeSource)));
+                     nullptr, eStepTypeOver)));
 
   LoadSubCommand("step-inst",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst",
                      "Instruction level single step, stepping into calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTrace, eStepScopeInstruction)));
+                     nullptr, eStepTypeTrace)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst-over",
                      "Instruction level single step, stepping over calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTraceOver, eStepScopeInstruction)));
+                     nullptr, eStepTypeTraceOver)));
 
   LoadSubCommand(
       "step-scripted",
@@ -2600,7 +2595,7 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
           "that will be used to populate an SBStructuredData Dictionary, which "
           "will be passed to the constructor of the class implementing the "
           "scripted step.  See the Python Reference for more details.",
-          nullptr, eStepTypeScripted, eStepScopeSource)));
+          nullptr, eStepTypeScripted)));
 
   LoadSubCommand("plan", CommandObjectSP(new CommandObjectMultiwordThreadPlan(
                              interpreter)));

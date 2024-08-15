@@ -62,32 +62,32 @@ define amdgpu_kernel void @fmuladd_f16(ptr addrspace(1) %out, ptr addrspace(1) %
 ;
 ; GFX10-FLUSH-LABEL: fmuladd_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLUSH-NEXT:    s_clause 0x2
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-LABEL: fmuladd_f16:
 ; GFX10-DENORM:       ; %bb.0:
-; GFX10-DENORM-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-DENORM-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_clause 0x2
-; GFX10-DENORM-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-DENORM-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-DENORM-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-DENORM-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-DENORM-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-DENORM-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-NEXT:    v_fmac_f16_e32 v3, v1, v2
-; GFX10-DENORM-NEXT:    global_store_short v0, v3, s[0:1]
+; GFX10-DENORM-NEXT:    global_store_short v0, v3, s[4:5]
 ; GFX10-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: fmuladd_f16:
@@ -176,48 +176,48 @@ define amdgpu_kernel void @fmul_fadd_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ;
 ; GFX10-FLUSH-LABEL: fmul_fadd_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLUSH-NEXT:    s_clause 0x2
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: fmul_fadd_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    s_clause 0x2
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: fmul_fadd_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    s_clause 0x2
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fmac_f16_e32 v3, v1, v2
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v3, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v3, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: fmul_fadd_f16:
@@ -326,32 +326,32 @@ define amdgpu_kernel void @fmul_fadd_contract_f16(ptr addrspace(1) %out, ptr add
 ;
 ; GFX10-FLUSH-LABEL: fmul_fadd_contract_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLUSH-NEXT:    s_clause 0x2
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_add_f16_e32 v1, v1, v3
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-LABEL: fmul_fadd_contract_f16:
 ; GFX10-DENORM:       ; %bb.0:
-; GFX10-DENORM-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
+; GFX10-DENORM-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_clause 0x2
-; GFX10-DENORM-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-DENORM-NEXT:    global_load_ushort v2, v0, s[4:5]
-; GFX10-DENORM-NEXT:    global_load_ushort v3, v0, s[6:7]
+; GFX10-DENORM-NEXT:    global_load_ushort v1, v0, s[6:7]
+; GFX10-DENORM-NEXT:    global_load_ushort v2, v0, s[8:9]
+; GFX10-DENORM-NEXT:    global_load_ushort v3, v0, s[10:11]
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-NEXT:    v_fmac_f16_e32 v3, v1, v2
-; GFX10-DENORM-NEXT:    global_store_short v0, v3, s[0:1]
+; GFX10-DENORM-NEXT:    global_store_short v0, v3, s[4:5]
 ; GFX10-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: fmul_fadd_contract_f16:
@@ -1425,49 +1425,49 @@ define amdgpu_kernel void @mad_sub_f16(ptr addrspace(1) noalias nocapture %out, 
 ;
 ; GFX10-FLUSH-LABEL: mad_sub_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: mad_sub_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: mad_sub_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fma_f16 v1, v1, v2, -v3
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: mad_sub_f16:
@@ -1600,49 +1600,49 @@ define amdgpu_kernel void @mad_sub_inv_f16(ptr addrspace(1) noalias nocapture %o
 ;
 ; GFX10-FLUSH-LABEL: mad_sub_inv_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_sub_f16_e32 v1, v3, v1
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: mad_sub_inv_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    v_sub_f16_e32 v1, v3, v1
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: mad_sub_inv_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fma_f16 v1, -v1, v2, v3
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: mad_sub_inv_f16:
@@ -1775,49 +1775,49 @@ define amdgpu_kernel void @mad_sub_fabs_f16(ptr addrspace(1) noalias nocapture %
 ;
 ; GFX10-FLUSH-LABEL: mad_sub_fabs_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_sub_f16_e64 v1, v1, |v3|
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: mad_sub_fabs_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    v_sub_f16_e64 v1, v1, |v3|
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: mad_sub_fabs_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fma_f16 v1, v1, v2, -|v3|
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: mad_sub_fabs_f16:
@@ -1951,49 +1951,49 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(ptr addrspace(1) noalias nocaptu
 ;
 ; GFX10-FLUSH-LABEL: mad_sub_fabs_inv_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_sub_f16_e64 v1, |v3|, v1
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: mad_sub_fabs_inv_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    v_sub_f16_e64 v1, |v3|, v1
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: mad_sub_fabs_inv_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fma_f16 v1, -v1, v2, |v3|
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: mad_sub_fabs_inv_f16:
@@ -2127,49 +2127,49 @@ define amdgpu_kernel void @neg_neg_mad_f16(ptr addrspace(1) noalias nocapture %o
 ;
 ; GFX10-FLUSH-LABEL: neg_neg_mad_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_add_f16_e32 v1, v3, v1
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: neg_neg_mad_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX10-DENORM-STRICT-NEXT:    v_add_f16_e32 v1, v3, v1
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: neg_neg_mad_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fmac_f16_e32 v3, v1, v2
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v3, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v3, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: neg_neg_mad_f16:
@@ -2304,49 +2304,49 @@ define amdgpu_kernel void @mad_fabs_sub_f16(ptr addrspace(1) noalias nocapture %
 ;
 ; GFX10-FLUSH-LABEL: mad_fabs_sub_f16:
 ; GFX10-FLUSH:       ; %bb.0:
-; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-FLUSH-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-FLUSH-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mul_f16_e64 v1, v1, |v2|
 ; GFX10-FLUSH-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-STRICT-LABEL: mad_fabs_sub_f16:
 ; GFX10-DENORM-STRICT:       ; %bb.0:
-; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-STRICT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-STRICT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-STRICT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-STRICT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-STRICT-NEXT:    v_mul_f16_e64 v1, v1, |v2|
 ; GFX10-DENORM-STRICT-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-STRICT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-STRICT-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-CONTRACT-LABEL: mad_fabs_sub_f16:
 ; GFX10-DENORM-CONTRACT:       ; %bb.0:
-; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX10-DENORM-CONTRACT-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX10-DENORM-CONTRACT-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v1, v0, s[6:7] glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[2:3] offset:2 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v2, v0, s[6:7] offset:2 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[2:3] offset:4 glc dlc
+; GFX10-DENORM-CONTRACT-NEXT:    global_load_ushort v3, v0, s[6:7] offset:4 glc dlc
 ; GFX10-DENORM-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-CONTRACT-NEXT:    v_fma_f16 v1, v1, |v2|, -v3
-; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX10-DENORM-CONTRACT-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DENORM-CONTRACT-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: mad_fabs_sub_f16:

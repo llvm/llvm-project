@@ -43,6 +43,59 @@ public:
   using ProfileLookupMap =
       DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
 
+  /// A class for matching binary functions in functions in the YAML profile.
+  /// First, a call graph is constructed for both profiled and binary functions.
+  /// Then functions are hashed based on the names of their callee/caller
+  /// functions. Finally, functions are matched based on these neighbor hashes.
+  class CallGraphMatcher {
+  public:
+    /// Constructs the call graphs for binary and profiled functions and
+    /// computes neighbor hashes for binary functions.
+    CallGraphMatcher(BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP,
+                     ProfileLookupMap &IdToYAMLBF);
+
+    /// Returns the YamlBFs adjacent to the parameter YamlBF in the call graph.
+    std::optional<std::set<yaml::bolt::BinaryFunctionProfile *>>
+    getAdjacentYamlBFs(yaml::bolt::BinaryFunctionProfile &YamlBF) {
+      auto It = YamlBFAdjacencyMap.find(&YamlBF);
+      return It == YamlBFAdjacencyMap.end() ? std::nullopt
+                                            : std::make_optional(It->second);
+    }
+
+    /// Returns the binary functions with the parameter neighbor hash.
+    std::optional<std::vector<BinaryFunction *>>
+    getBFsWithNeighborHash(uint64_t NeighborHash) {
+      auto It = NeighborHashToBFs.find(NeighborHash);
+      return It == NeighborHashToBFs.end() ? std::nullopt
+                                           : std::make_optional(It->second);
+    }
+
+  private:
+    /// Adds edges to the binary function call graph given the callsites of the
+    /// parameter function.
+    void constructBFCG(BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP);
+
+    /// Using the constructed binary function call graph, computes and creates
+    /// mappings from "neighbor hash" (composed of the function names of callee
+    /// and caller functions of a function) to binary functions.
+    void computeBFNeighborHashes(BinaryContext &BC);
+
+    /// Constructs the call graph for profile functions.
+    void constructYAMLFCG(yaml::bolt::BinaryProfile &YamlBP,
+                          ProfileLookupMap &IdToYAMLBF);
+
+    /// Adjacency map for binary functions in the call graph.
+    DenseMap<BinaryFunction *, std::set<BinaryFunction *>> BFAdjacencyMap;
+
+    /// Maps neighbor hashes to binary functions.
+    DenseMap<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
+
+    /// Adjacency map for profile functions in the call graph.
+    DenseMap<yaml::bolt::BinaryFunctionProfile *,
+             std::set<yaml::bolt::BinaryFunctionProfile *>>
+        YamlBFAdjacencyMap;
+  };
+
 private:
   /// Adjustments for basic samples profiles (without LBR).
   bool NormalizeByInsnCount{false};
@@ -99,6 +152,9 @@ private:
 
   /// Matches functions using exact hash.
   size_t matchWithHash(BinaryContext &BC);
+
+  /// Matches functions using the call graph.
+  size_t matchWithCallGraph(BinaryContext &BC);
 
   /// Matches functions with similarly named profiled functions.
   size_t matchWithNameSimilarity(BinaryContext &BC);

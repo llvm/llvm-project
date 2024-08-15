@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -257,7 +258,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
     if (rhs && rhs.getValue() != 0) {
       int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
       if (lhsDiv % rhs.getValue() == 0)
-        return lhsDiv / rhs.getValue();
+        return std::abs(lhsDiv / rhs.getValue());
     }
     return 1;
   }
@@ -1018,8 +1019,7 @@ AffineExpr AffineExpr::operator%(AffineExpr other) const {
 }
 
 AffineExpr AffineExpr::compose(AffineMap map) const {
-  SmallVector<AffineExpr, 8> dimReplacements(map.getResults().begin(),
-                                             map.getResults().end());
+  SmallVector<AffineExpr, 8> dimReplacements(map.getResults());
   return replaceDimsAndSymbols(dimReplacements, {});
 }
 raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr expr) {

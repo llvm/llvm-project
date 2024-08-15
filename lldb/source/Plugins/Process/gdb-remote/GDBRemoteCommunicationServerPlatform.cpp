@@ -46,11 +46,13 @@ using namespace lldb_private;
 
 GDBRemoteCommunicationServerPlatform::PortMap::PortMap(uint16_t min_port,
                                                        uint16_t max_port) {
+  assert(min_port);
   for (; min_port < max_port; ++min_port)
     m_port_map[min_port] = LLDB_INVALID_PROCESS_ID;
 }
 
 void GDBRemoteCommunicationServerPlatform::PortMap::AllowPort(uint16_t port) {
+  assert(port);
   // Do not modify existing mappings
   m_port_map.insert({port, LLDB_INVALID_PROCESS_ID});
 }

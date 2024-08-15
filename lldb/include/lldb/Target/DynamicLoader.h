@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_DYNAMICLOADER_H
 #define LLDB_TARGET_DYNAMICLOADER_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -328,6 +329,13 @@ public:
   /// the dynamic loader before it itself finished initializing and it's not
   /// safe to call certain APIs or SPIs.
   virtual bool IsFullyInitialized() { return true; }
+
+  /// Return the `start` \b address in the dynamic loader module.
+  /// This is the address the process will begin executing with
+  /// `process launch --stop-at-entry`.
+  virtual std::optional<lldb_private::Address> GetStartAddress() {
+    return std::nullopt;
+  }
 
 protected:
   // Utility methods for derived classes

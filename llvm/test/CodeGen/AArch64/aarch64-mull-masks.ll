@@ -1447,3 +1447,21 @@ define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
     %add = add i64 %a, %mul
     ret i64 %add
 }
+
+; Check which can contain multiple copies that should all be removed.
+define i32 @f(i32 %0) {
+entry:
+  %1 = sext i32 %0 to i64
+  br label %A
+
+A:
+  %2 = trunc i64 %1 to i32
+  %a69.us = sub i32 0, %2
+  %a69.us.fr = freeze i32 %a69.us
+  %3 = zext i32 %a69.us.fr to i64
+  br label %B
+
+B:
+  %t = icmp eq i64 0, %3
+  br i1 %t, label %A, label %B
+}

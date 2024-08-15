@@ -603,7 +603,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
  file = #file, isOptimized = false, emissionKind = Full>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
  file = #file, subprogramFlags = Definition>
-#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
 #ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
@@ -620,4 +620,4 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc2 = loc(fused<#sp>[#loc1])
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
-// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)

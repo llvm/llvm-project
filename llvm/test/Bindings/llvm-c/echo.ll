@@ -37,6 +37,11 @@ module asm "classical GAS"
 
 @ifunc = ifunc i32 (i32), ptr @ifunc_resolver
 
+@ptrauth_addr_disc = global i32 0
+@ptrauth_data = global i32 0
+@ptrauth_ptr_01 = global ptr ptrauth (ptr @ptrauth_data, i32 77, i64 1001, ptr @ptrauth_addr_disc)
+@ptrauth_ptr_02 = global ptr ptrauth (ptr @ptrauth_data, i32 11, i64 99, ptr null)
+
 define ptr @ifunc_resolver() {
 entry:
   ret ptr null
@@ -65,7 +70,7 @@ define void @types() {
   %9 = alloca [3 x i22], align 4
   %10 = alloca ptr addrspace(5), align 8
   %11 = alloca <5 x ptr>, align 64
-  %12 = alloca x86_mmx, align 8
+  %12 = alloca <1 x i64>, align 8
   ret void
 }
 

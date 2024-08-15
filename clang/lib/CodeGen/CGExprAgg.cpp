@@ -131,15 +131,12 @@ public:
     EnsureDest(E->getType());
 
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
-      Address StoreDest = Dest.getAddress();
-      // The emitted value is guaranteed to have the same size as the
-      // destination but can have a different type. Just do a bitcast in this
-      // case to avoid incorrect GEPs.
-      if (Result->getType() != StoreDest.getType())
-        StoreDest = StoreDest.withElementType(Result->getType());
-
-      CGF.EmitAggregateStore(Result, StoreDest,
-                             E->getType().isVolatileQualified());
+      CGF.CreateCoercedStore(
+          Result, Dest.getAddress(),
+          llvm::TypeSize::getFixed(
+              Dest.getPreferredSize(CGF.getContext(), E->getType())
+                  .getQuantity()),
+          E->getType().isVolatileQualified());
       return;
     }
     return Visit(E->getSubExpr());
@@ -2050,6 +2047,10 @@ CodeGenFunction::getOverlapForFieldInit(const FieldDecl *FD) {
   if (!FD->hasAttr<NoUniqueAddressAttr>() || !FD->getType()->isRecordType())
     return AggValueSlot::DoesNotOverlap;
 
+  // Empty fields can overlap earlier fields.
+  if (FD->getType()->getAsCXXRecordDecl()->isEmpty())
+    return AggValueSlot::MayOverlap;
+
   // If the field lies entirely within the enclosing class's nvsize, its tail
   // padding cannot overlap any already-initialized object. (The only subobjects
   // with greater addresses that might already be initialized are vbases.)
@@ -2070,6 +2071,10 @@ AggValueSlot::Overlap_t CodeGenFunction::getOverlapForBaseInit(
   // the tail padding of any virtual base could be reused for other subobjects
   // of that field's class.
   if (IsVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // Empty bases can overlap earlier bases.
+  if (BaseRD->isEmpty())
     return AggValueSlot::MayOverlap;
 
   // If the base class is laid out entirely within the nvsize of the derived

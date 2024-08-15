@@ -52,6 +52,8 @@
 // | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
+// |   <hazard padding>                |
+// |-----------------------------------|
 // |                                   |
 // | callee-saved fp/simd/SVE regs     |
 // |                                   |
@@ -64,9 +66,11 @@
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
 // |.the.standard.16-byte.alignment....|  compile time; if present)
 // |-----------------------------------|
-// |                                   |
 // | local variables of fixed size     |
 // | including spill slots             |
+// |   <FPR>                           |
+// |   <hazard padding>                |
+// |   <GPR>                           |
 // |-----------------------------------| <- bp(not defined by ABI,
 // |.variable-sized.local.variables....|       LLVM chooses X19)
 // |.(VLAs)............................| (size of this area is unknown at
@@ -116,6 +120,20 @@
 // make space for the arguments below the VLAs.
 //
 // FIXME: also explain the redzone concept.
+//
+// About stack hazards: Under some SME contexts, a coprocessor with its own
+// separate cache can used for FP operations. This can create hazards if the CPU
+// and the SME unit try to access the same area of memory, including if the
+// access is to an area of the stack. To try to alleviate this we attempt to
+// introduce extra padding into the stack frame between FP and GPR accesses,
+// controlled by the StackHazardSize option. Without changing the layout of the
+// stack frame in the diagram above, a stack object of size StackHazardSize is
+// added between GPR and FPR CSRs. Another is added to the stack objects
+// section, and stack objects are sorted so that FPR > Hazard padding slot >
+// GPRs (where possible). Unfortunately some things are not handled well (VLA
+// area, arguments on the stack, object with both GPR and FPR accesses), but if
+// those are controlled by the user then the entire stack frame becomes GPR at
+// the start/end with FPR in the middle, surrounded by Hazard padding.
 //
 // An example of the prologue:
 //
@@ -196,6 +214,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -221,6 +240,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -252,6 +272,18 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
     "homogeneous-prolog-epilog", cl::Hidden,
     cl::desc("Emit homogeneous prologue and epilogue for the size "
              "optimization (default = off)"));
+
+// Stack hazard padding size. 0 = disabled.
+static cl::opt<unsigned> StackHazardSize("aarch64-stack-hazard-size",
+                                         cl::init(0), cl::Hidden);
+// Stack hazard size for analysis remarks. StackHazardSize takes precedence.
+static cl::opt<unsigned>
+    StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
+                          cl::Hidden);
+// Whether to insert padding into non-streaming functions (for testing).
+static cl::opt<bool>
+    StackHazardInNonStreaming("aarch64-stack-hazard-in-non-streaming",
+                              cl::init(false), cl::Hidden);
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
@@ -1362,6 +1394,18 @@ bool requiresGetVGCall(MachineFunction &MF) {
          !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
+static bool requiresSaveVG(MachineFunction &MF) {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  // For Darwin platforms we don't save VG for non-SVE functions, even if SME
+  // is enabled with streaming mode changes.
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (ST.isTargetDarwin())
+    return ST.hasSVE();
+  return true;
+}
+
 bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
@@ -1398,8 +1442,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
   MachineFunction &MF = *MBB.getParent();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasStreamingModeChanges())
+  if (requiresSaveVG(MF))
     while (isVGInstruction(MBBI))
       ++MBBI;
 
@@ -1460,7 +1503,12 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
-      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
+      CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
+    // If we are destroying the frame, make sure we add the increment after the
+    // last frame operation.
+    if (FrameFlag == MachineInstr::FrameDestroy)
+      ++MBBI;
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII, FrameFlag,
                     false, false, nullptr, EmitCFI,
@@ -1683,7 +1731,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
 
-  MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool EmitCFI = AFI->needsDwarfUnwindInfo(MF);
   bool EmitAsyncCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
@@ -1851,7 +1898,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                       MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
       if (EmitCFI) {
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
-        MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+        MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
         // Encode the stack size of the leaf function.
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::cfiDefCfaOffset(FrameLabel, NumBytes));
@@ -1870,8 +1917,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
@@ -1903,7 +1949,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     // Move past instructions generated to calculate VG
-    if (AFI->hasStreamingModeChanges())
+    if (requiresSaveVG(MF))
       while (isVGInstruction(MBBI))
         ++MBBI;
 
@@ -2277,8 +2323,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
   int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                              MF.getFunction().isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   int64_t AfterCSRPopSize = ArgumentStackToRestore;
@@ -2575,6 +2621,48 @@ AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 }
 
 StackOffset
+AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const {
+  // This function serves to provide a comparable offset from a single reference
+  // point (the value of SP at function entry) that can be used for analysis,
+  // e.g. the stack-frame-layout analysis pass. It is not guaranteed to be
+  // correct for all objects in the presence of VLA-area objects or dynamic
+  // stack re-alignment.
+
+  const auto &MFI = MF.getFrameInfo();
+
+  int64_t ObjectOffset = MFI.getObjectOffset(FI);
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+
+  // For VLA-area objects, just emit an offset at the end of the stack frame.
+  // Whilst not quite correct, these objects do live at the end of the frame and
+  // so it is more useful for analysis for the offset to reflect this.
+  if (MFI.isVariableSizedObjectIndex(FI)) {
+    return StackOffset::getFixed(-((int64_t)MFI.getStackSize())) - SVEStackSize;
+  }
+
+  // This is correct in the absence of any SVE stack objects.
+  if (!SVEStackSize)
+    return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
+
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
+                            ObjectOffset);
+  }
+
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
+  bool IsCSR =
+      !IsFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+
+  StackOffset ScalableOffset = {};
+  if (!IsFixed && !IsCSR)
+    ScalableOffset = -SVEStackSize;
+
+  return StackOffset::getFixed(ObjectOffset) + ScalableOffset;
+}
+
+StackOffset
 AArch64FrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
                                                      int FI) const {
   return StackOffset::getFixed(getSEHFrameIndexOffset(MF, FI));
@@ -2584,8 +2672,8 @@ static StackOffset getFPOffset(const MachineFunction &MF,
                                int64_t ObjectOffset) {
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  const Function &F = MF.getFunction();
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject =
       getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
   int64_t CalleeSaveSize = AFI->getCalleeSavedStackSize(MF.getFrameInfo());
@@ -2691,9 +2779,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // via the frame pointer, so we have to use the FP in the parent
         // function.
         (void) Subtarget;
-        assert(
-            Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()) &&
-            "Funclets should only be present on Win64");
+        assert(Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                            MF.getFunction().isVarArg()) &&
+               "Funclets should only be present on Win64");
         UseFP = true;
       } else {
         // We have the choice between FP and (SP or BP).
@@ -2901,6 +2989,7 @@ static void computeCalleeSaveRegisterPairs(
   }
   int ScalableByteOffset = AFI->getSVECalleeSavedStackSize();
   bool NeedGapToAlignStack = AFI->hasCalleeSaveStackFreeSpace();
+  Register LastReg = 0;
 
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
@@ -2922,8 +3011,15 @@ static void computeCalleeSaveRegisterPairs(
     else
       llvm_unreachable("Unsupported register class.");
 
+    // Add the stack hazard size as we transition from GPR->FPR CSRs.
+    if (AFI->hasStackHazardSlotIndex() &&
+        (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
+        AArch64InstrInfo::isFpOrNEON(RPI.Reg1))
+      ByteOffset += StackFillDir * StackHazardSize;
+    LastReg = RPI.Reg1;
+
     // Add the next reg to the pair if it is in the same register class.
-    if (unsigned(i + RegInc) < Count) {
+    if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
       Register NextReg = CSI[i + RegInc].getReg();
       bool IsFirst = i == FirstReg;
       switch (RPI.Type) {
@@ -3034,7 +3130,8 @@ static void computeCalleeSaveRegisterPairs(
       Offset += 8;
     RPI.Offset = Offset / Scale;
 
-    assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
+    assert((!RPI.isPaired() ||
+            (!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
 
@@ -3455,6 +3552,86 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
+// Return the FrameID for a MMO.
+static std::optional<int> getMMOFrameID(MachineMemOperand *MMO,
+                                        const MachineFrameInfo &MFI) {
+  auto *PSV =
+      dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
+  if (PSV)
+    return std::optional<int>(PSV->getFrameIndex());
+
+  if (MMO->getValue()) {
+    if (auto *Al = dyn_cast<AllocaInst>(getUnderlyingObject(MMO->getValue()))) {
+      for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd();
+           FI++)
+        if (MFI.getObjectAllocation(FI) == Al)
+          return FI;
+    }
+  }
+
+  return std::nullopt;
+}
+
+// Return the FrameID for a Load/Store instruction by looking at the first MMO.
+static std::optional<int> getLdStFrameID(const MachineInstr &MI,
+                                         const MachineFrameInfo &MFI) {
+  if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+    return std::nullopt;
+
+  return getMMOFrameID(*MI.memoperands_begin(), MFI);
+}
+
+// Check if a Hazard slot is needed for the current function, and if so create
+// one for it. The index is stored in AArch64FunctionInfo->StackHazardSlotIndex,
+// which can be used to determine if any hazard padding is needed.
+void AArch64FrameLowering::determineStackHazardSlot(
+    MachineFunction &MF, BitVector &SavedRegs) const {
+  if (StackHazardSize == 0 || StackHazardSize % 16 != 0 ||
+      MF.getInfo<AArch64FunctionInfo>()->hasStackHazardSlotIndex())
+    return;
+
+  // Stack hazards are only needed in streaming functions.
+  SMEAttrs Attrs(MF.getFunction());
+  if (!StackHazardInNonStreaming && Attrs.hasNonStreamingInterfaceAndBody())
+    return;
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Add a hazard slot if there are any CSR FPR registers, or are any fp-only
+  // stack objects.
+  bool HasFPRCSRs = any_of(SavedRegs.set_bits(), [](unsigned Reg) {
+    return AArch64::FPR64RegClass.contains(Reg) ||
+           AArch64::FPR128RegClass.contains(Reg) ||
+           AArch64::ZPRRegClass.contains(Reg) ||
+           AArch64::PPRRegClass.contains(Reg);
+  });
+  bool HasFPRStackObjects = false;
+  if (!HasFPRCSRs) {
+    std::vector<unsigned> FrameObjects(MFI.getObjectIndexEnd());
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB) {
+        std::optional<int> FI = getLdStFrameID(MI, MFI);
+        if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
+            FrameObjects[*FI] |= 2;
+          else
+            FrameObjects[*FI] |= 1;
+        }
+      }
+    }
+    HasFPRStackObjects =
+        any_of(FrameObjects, [](unsigned B) { return (B & 3) == 2; });
+  }
+
+  if (HasFPRCSRs || HasFPRStackObjects) {
+    int ID = MFI.CreateStackObject(StackHazardSize, Align(16), false);
+    LLVM_DEBUG(dbgs() << "Created Hazard slot at " << ID << " size "
+                      << StackHazardSize << "\n");
+    MF.getInfo<AArch64FunctionInfo>()->setStackHazardSlotIndex(ID);
+  }
+}
+
 void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 BitVector &SavedRegs,
                                                 RegScavenger *RS) const {
@@ -3588,12 +3765,18 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
       CSStackSize += 8;
   }
+
+  // Determine if a Hazard slot should be used, and increase the CSStackSize by
+  // StackHazardSize if so.
+  determineStackHazardSlot(MF, SavedRegs);
+  if (AFI->hasStackHazardSlotIndex())
+    CSStackSize += StackHazardSize;
 
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
@@ -3735,7 +3918,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 
@@ -3761,9 +3944,27 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       CSI.insert(CSI.end(), VGSaves.begin(), VGSaves.end());
   }
 
+  Register LastReg = 0;
+  int HazardSlotIndex = std::numeric_limits<int>::max();
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+
+    // Create a hazard slot as we switch between GPR and FPR CSRs.
+    if (AFI->hasStackHazardSlotIndex() &&
+        (!LastReg || !AArch64InstrInfo::isFpOrNEON(LastReg)) &&
+        AArch64InstrInfo::isFpOrNEON(Reg)) {
+      assert(HazardSlotIndex == std::numeric_limits<int>::max() &&
+             "Unexpected register order for hazard slot");
+      HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
+      LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
+                        << "\n");
+      AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
+      if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
+        MinCSFrameIndex = HazardSlotIndex;
+      if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
+        MaxCSFrameIndex = HazardSlotIndex;
+    }
 
     unsigned Size = RegInfo->getSpillSize(*RC);
     Align Alignment(RegInfo->getSpillAlign(*RC));
@@ -3785,7 +3986,22 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       if ((unsigned)FrameIdx > MaxCSFrameIndex)
         MaxCSFrameIndex = FrameIdx;
     }
+    LastReg = Reg;
   }
+
+  // Add hazard slot in the case where no FPR CSRs are present.
+  if (AFI->hasStackHazardSlotIndex() &&
+      HazardSlotIndex == std::numeric_limits<int>::max()) {
+    HazardSlotIndex = MFI.CreateStackObject(StackHazardSize, Align(8), true);
+    LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
+                      << "\n");
+    AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
+    if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
+      MinCSFrameIndex = HazardSlotIndex;
+    if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
+      MaxCSFrameIndex = HazardSlotIndex;
+  }
+
   return true;
 }
 
@@ -3797,6 +4013,10 @@ bool AArch64FrameLowering::enableStackSlotScavenging(
   // 'addvl' in the streaming-mode-changing call-sequence when the
   // function doesn't use a FP.
   if (AFI->hasStreamingModeChanges() && !hasFP(MF))
+    return false;
+  // Don't allow register salvaging with hazard slots, in case it moves objects
+  // into the wrong place.
+  if (AFI->hasStackHazardSlotIndex())
     return false;
   return AFI->hasCalleeSaveStackFreeSpace();
 }
@@ -4427,10 +4647,9 @@ MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (AFI->hasStreamingModeChanges())
+      if (requiresSaveVG(MF))
         II = emitVGSaveRestore(II, this);
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
@@ -4492,6 +4711,11 @@ struct FrameObject {
   // This object's group (which always contains the object with
   // ObjectFirst==true) should be placed first.
   bool GroupFirst = false;
+
+  // Used to distinguish between FP and GPR accesses. The values are decided so
+  // that they sort FPR < Hazard < GPR and they can be or'd together.
+  unsigned Accesses = 0;
+  enum { AccessFPR = 1, AccessHazard = 2, AccessGPR = 4 };
 };
 
 class GroupBuilder {
@@ -4527,8 +4751,12 @@ bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
   // at the end. This also allows us to stop walking when we hit the
   // first invalid item after it's all sorted.
   //
-  // The "first" object goes first (closest to SP), followed by the members of
-  // the "first" group.
+  // If we want to include a stack hazard region, order FPR accesses < the
+  // hazard object < GPRs accesses in order to create a separation between the
+  // two. For the Accesses field 1 = FPR, 2 = Hazard Object, 4 = GPR.
+  //
+  // Otherwise the "first" object goes first (closest to SP), followed by the
+  // members of the "first" group.
   //
   // The rest are sorted by the group index to keep the groups together.
   // Higher numbered groups are more likely to be around longer (i.e. untagged
@@ -4537,10 +4765,10 @@ bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
   //
   // If all else equal, sort by the object index to keep the objects in the
   // original order.
-  return std::make_tuple(!A.IsValid, A.ObjectFirst, A.GroupFirst, A.GroupIndex,
-                         A.ObjectIndex) <
-         std::make_tuple(!B.IsValid, B.ObjectFirst, B.GroupFirst, B.GroupIndex,
-                         B.ObjectIndex);
+  return std::make_tuple(!A.IsValid, A.Accesses, A.ObjectFirst, A.GroupFirst,
+                         A.GroupIndex, A.ObjectIndex) <
+         std::make_tuple(!B.IsValid, B.Accesses, B.ObjectFirst, B.GroupFirst,
+                         B.GroupIndex, B.ObjectIndex);
 }
 } // namespace
 
@@ -4549,6 +4777,7 @@ void AArch64FrameLowering::orderFrameObjects(
   if (!OrderFrameObjects || ObjectsToAllocate.empty())
     return;
 
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
   for (auto &Obj : ObjectsToAllocate) {
@@ -4556,12 +4785,25 @@ void AArch64FrameLowering::orderFrameObjects(
     FrameObjects[Obj].ObjectIndex = Obj;
   }
 
-  // Identify stack slots that are tagged at the same time.
+  // Identify FPR vs GPR slots for hazards, and stack slots that are tagged at
+  // the same time.
   GroupBuilder GB(FrameObjects);
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
         continue;
+
+      if (AFI.hasStackHazardSlotIndex()) {
+        std::optional<int> FI = getLdStFrameID(MI, MFI);
+        if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
+          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+              AArch64InstrInfo::isFpOrNEON(MI))
+            FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
+          else
+            FrameObjects[*FI].Accesses |= FrameObject::AccessGPR;
+        }
+      }
+
       int OpIndex;
       switch (MI.getOpcode()) {
       case AArch64::STGloop:
@@ -4600,11 +4842,20 @@ void AArch64FrameLowering::orderFrameObjects(
     GB.EndCurrentGroup();
   }
 
+  if (AFI.hasStackHazardSlotIndex()) {
+    FrameObjects[AFI.getStackHazardSlotIndex()].Accesses =
+        FrameObject::AccessHazard;
+    // If a stack object is unknown or both GPR and FPR, sort it into GPR.
+    for (auto &Obj : FrameObjects)
+      if (!Obj.Accesses ||
+          Obj.Accesses == (FrameObject::AccessGPR | FrameObject::AccessFPR))
+        Obj.Accesses = FrameObject::AccessGPR;
+  }
+
   // If the function's tagged base pointer is pinned to a stack slot, we want to
   // put that slot first when possible. This will likely place it at SP + 0,
   // and save one instruction when generating the base pointer because IRG does
   // not allow an immediate offset.
-  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
   std::optional<int> TBPI = AFI.getTaggedBasePointerIndex();
   if (TBPI) {
     FrameObjects[*TBPI].ObjectFirst = true;
@@ -4805,4 +5056,175 @@ void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
     }
     MI->eraseFromParent();
   }
+}
+
+struct StackAccess {
+  enum AccessType {
+    NotAccessed = 0, // Stack object not accessed by load/store instructions.
+    GPR = 1 << 0,    // A general purpose register.
+    PPR = 1 << 1,    // A predicate register.
+    FPR = 1 << 2,    // A floating point/Neon/SVE register.
+  };
+
+  int Idx;
+  StackOffset Offset;
+  int64_t Size;
+  unsigned AccessTypes;
+
+  StackAccess() : Idx(0), Offset(), Size(0), AccessTypes(NotAccessed) {}
+
+  bool operator<(const StackAccess &Rhs) const {
+    return std::make_tuple(start(), Idx) <
+           std::make_tuple(Rhs.start(), Rhs.Idx);
+  }
+
+  bool isCPU() const {
+    // Predicate register load and store instructions execute on the CPU.
+    return AccessTypes & (AccessType::GPR | AccessType::PPR);
+  }
+  bool isSME() const { return AccessTypes & AccessType::FPR; }
+  bool isMixed() const { return isCPU() && isSME(); }
+
+  int64_t start() const { return Offset.getFixed() + Offset.getScalable(); }
+  int64_t end() const { return start() + Size; }
+
+  std::string getTypeString() const {
+    switch (AccessTypes) {
+    case AccessType::FPR:
+      return "FPR";
+    case AccessType::PPR:
+      return "PPR";
+    case AccessType::GPR:
+      return "GPR";
+    case AccessType::NotAccessed:
+      return "NA";
+    default:
+      return "Mixed";
+    }
+  }
+
+  void print(raw_ostream &OS) const {
+    OS << getTypeString() << " stack object at [SP"
+       << (Offset.getFixed() < 0 ? "" : "+") << Offset.getFixed();
+    if (Offset.getScalable())
+      OS << (Offset.getScalable() < 0 ? "" : "+") << Offset.getScalable()
+         << " * vscale";
+    OS << "]";
+  }
+};
+
+static inline raw_ostream &operator<<(raw_ostream &OS, const StackAccess &SA) {
+  SA.print(OS);
+  return OS;
+}
+
+void AArch64FrameLowering::emitRemarks(
+    const MachineFunction &MF, MachineOptimizationRemarkEmitter *ORE) const {
+
+  SMEAttrs Attrs(MF.getFunction());
+  if (Attrs.hasNonStreamingInterfaceAndBody())
+    return;
+
+  const uint64_t HazardSize =
+      (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
+
+  if (HazardSize == 0)
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  // Bail if function has no stack objects.
+  if (!MFI.hasStackObjects())
+    return;
+
+  std::vector<StackAccess> StackAccesses(MFI.getNumObjects());
+
+  size_t NumFPLdSt = 0;
+  size_t NumNonFPLdSt = 0;
+
+  // Collect stack accesses via Load/Store instructions.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+        continue;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
+        std::optional<int> FI = getMMOFrameID(MMO, MFI);
+        if (FI && !MFI.isDeadObjectIndex(*FI)) {
+          int FrameIdx = *FI;
+
+          size_t ArrIdx = FrameIdx + MFI.getNumFixedObjects();
+          if (StackAccesses[ArrIdx].AccessTypes == StackAccess::NotAccessed) {
+            StackAccesses[ArrIdx].Idx = FrameIdx;
+            StackAccesses[ArrIdx].Offset =
+                getFrameIndexReferenceFromSP(MF, FrameIdx);
+            StackAccesses[ArrIdx].Size = MFI.getObjectSize(FrameIdx);
+          }
+
+          unsigned RegTy = StackAccess::AccessType::GPR;
+          if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
+            if (AArch64::PPRRegClass.contains(MI.getOperand(0).getReg()))
+              RegTy = StackAccess::PPR;
+            else
+              RegTy = StackAccess::FPR;
+          } else if (AArch64InstrInfo::isFpOrNEON(MI)) {
+            RegTy = StackAccess::FPR;
+          }
+
+          StackAccesses[ArrIdx].AccessTypes |= RegTy;
+
+          if (RegTy == StackAccess::FPR)
+            ++NumFPLdSt;
+          else
+            ++NumNonFPLdSt;
+        }
+      }
+    }
+  }
+
+  if (NumFPLdSt == 0 || NumNonFPLdSt == 0)
+    return;
+
+  llvm::sort(StackAccesses);
+  StackAccesses.erase(llvm::remove_if(StackAccesses,
+                                      [](const StackAccess &S) {
+                                        return S.AccessTypes ==
+                                               StackAccess::NotAccessed;
+                                      }),
+                      StackAccesses.end());
+
+  SmallVector<const StackAccess *> MixedObjects;
+  SmallVector<std::pair<const StackAccess *, const StackAccess *>> HazardPairs;
+
+  if (StackAccesses.front().isMixed())
+    MixedObjects.push_back(&StackAccesses.front());
+
+  for (auto It = StackAccesses.begin(), End = std::prev(StackAccesses.end());
+       It != End; ++It) {
+    const auto &First = *It;
+    const auto &Second = *(It + 1);
+
+    if (Second.isMixed())
+      MixedObjects.push_back(&Second);
+
+    if ((First.isSME() && Second.isCPU()) ||
+        (First.isCPU() && Second.isSME())) {
+      uint64_t Distance = static_cast<uint64_t>(Second.start() - First.end());
+      if (Distance < HazardSize)
+        HazardPairs.emplace_back(&First, &Second);
+    }
+  }
+
+  auto EmitRemark = [&](llvm::StringRef Str) {
+    ORE->emit([&]() {
+      auto R = MachineOptimizationRemarkAnalysis(
+          "sme", "StackHazard", MF.getFunction().getSubprogram(), &MF.front());
+      return R << formatv("stack hazard in '{0}': ", MF.getName()).str() << Str;
+    });
+  };
+
+  for (const auto &P : HazardPairs)
+    EmitRemark(formatv("{0} is too close to {1}", *P.first, *P.second).str());
+
+  for (const auto *Obj : MixedObjects)
+    EmitRemark(
+        formatv("{0} accessed by both GP and FP instructions", *Obj).str());
 }

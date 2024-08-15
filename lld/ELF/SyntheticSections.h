@@ -523,7 +523,8 @@ public:
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
-  void addAddendOnlyRelocIfNonPreemptible(RelType dynType, GotSection &sec,
+  void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
+                                          InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
@@ -916,8 +917,9 @@ public:
   void writeTo(uint8_t *buf) override;
 
   template <class RelTy>
-  void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
-                     llvm::DenseMap<uint32_t, uint32_t> &relocs);
+  void getNameRelocs(const InputFile &file,
+                     llvm::DenseMap<uint32_t, uint32_t> &relocs,
+                     Relocs<RelTy> rels);
 
 private:
   static void readOffsets(InputChunk &inputChunk, OutputChunk &chunk,

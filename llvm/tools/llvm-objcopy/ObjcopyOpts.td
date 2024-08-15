@@ -267,6 +267,13 @@ defm change_section_lma
     : Eq<"change-section-lma", "Shift LMA of non-zero-sized sections in the program header by <val>">,
       MetaVarName<"*{+|-}val">;
 
+defm change_section_address
+    : Eq<"change-section-address", "Set the address of the <section> to, or adjust it by, <val>">,
+      MetaVarName<"sectionpattern{=|+|-}val">;
+def adjust_section_vma : JoinedOrSeparate<["--"], "adjust-section-vma">,
+                   Alias<change_section_address>,
+                   HelpText<"Alias for --change-section-address">;
+
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
          "global, local, weak, default, hidden, protected, file, section, object, "

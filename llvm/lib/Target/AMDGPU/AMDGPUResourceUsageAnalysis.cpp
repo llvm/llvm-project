@@ -65,9 +65,7 @@ static const Function *getCalleeFunction(const MachineOperand &Op) {
     assert(Op.getImm() == 0);
     return nullptr;
   }
-  if (auto *GA = dyn_cast<GlobalAlias>(Op.getGlobal()))
-    return cast<Function>(GA->getOperand(0));
-  return cast<Function>(Op.getGlobal());
+  return cast<Function>(Op.getGlobal()->stripPointerCastsAndAliases());
 }
 
 static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
@@ -88,13 +86,8 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
-    const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
-  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), ArgNumAGPR, ArgNumVGPR);
-}
-
-int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
     const GCNSubtarget &ST) const {
-  return getTotalNumVGPRs(ST, NumAGPR, NumVGPR);
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPR, NumVGPR);
 }
 
 bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {

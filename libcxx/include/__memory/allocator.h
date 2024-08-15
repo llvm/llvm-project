@@ -110,6 +110,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
 
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
+    static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
       __throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
@@ -121,6 +122,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
+    static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     return {allocate(__n), __n};
   }
 #endif

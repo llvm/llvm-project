@@ -1,5 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
+
+// CHECK-LABEL: func @baz
+// something to call
+llvm.func @baz()
+
 // CHECK-LABEL: func @ops
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: !llvm.vec<2 x ptr>)
 func.func @ops(%arg0: i32, %arg1: f32,
@@ -92,6 +97,19 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
   llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+
+// Function call attributes
+// CHECK: llvm.call @baz() {convergent} : () -> ()
+  llvm.call @baz() {convergent} : () -> ()
+
+// CHECK: llvm.call @baz() {no_unwind} : () -> ()
+  llvm.call @baz() {no_unwind} : () -> ()
+
+// CHECK: llvm.call @baz() {will_return} : () -> ()
+  llvm.call @baz() {will_return} : () -> ()
+
+// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
+  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
 
 // Terminator operations and their successors.
 //

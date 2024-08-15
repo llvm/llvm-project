@@ -16,7 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 
 using namespace llvm;
 
@@ -37,7 +37,7 @@ MCELFStreamer &LoongArchTargetELFStreamer::getStreamer() {
 
 void LoongArchTargetELFStreamer::finish() {
   LoongArchTargetStreamer::finish();
-  MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   LoongArchABI::ABI ABI = getTargetABI();
 
   // Figure out the e_flags.
@@ -48,7 +48,7 @@ void LoongArchTargetELFStreamer::finish() {
   // based relocs from day one.
   //
   // Refer to LoongArch ELF psABI v2.01 for details.
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
   EFlags |= ELF::EF_LOONGARCH_OBJABI_V1;
   switch (ABI) {
   case LoongArchABI::ABI_ILP32S:
@@ -66,7 +66,7 @@ void LoongArchTargetELFStreamer::finish() {
   case LoongArchABI::ABI_Unknown:
     llvm_unreachable("Improperly initialized target ABI");
   }
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 namespace {

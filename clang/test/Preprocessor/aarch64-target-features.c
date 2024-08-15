@@ -236,6 +236,15 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s
+// CHECK-SVE2p1: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p1: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p1: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p1: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p1: __ARM_NEON 1
+// CHECK-SVE2p1: __ARM_NEON_FP 0xE
+// CHECK-SVE2p1: __ARM_NEON_SVE_BRIDGE 1
+
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
@@ -694,3 +703,9 @@
 // CHECK-SME2: __ARM_FEATURE_LOCALLY_STREAMING 1
 // CHECK-SME2: __ARM_FEATURE_SME 1
 // CHECK-SME2: __ARM_FEATURE_SME2 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p1 %s
+// CHECK-SME2p1: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p1: __ARM_FEATURE_SME 1
+// CHECK-SME2p1: __ARM_FEATURE_SME2 1
+// CHECK-SME2p1: __ARM_FEATURE_SME2p1 1

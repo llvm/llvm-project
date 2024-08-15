@@ -580,6 +580,22 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
   }
 }
 
+/// Dumps \a COFF file;
+static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
+  dumpObject(*Obj, Writer);
+
+  // Dump a hybrid object when available.
+  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
+  if (!HybridView)
+    return;
+  Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
+      COFFObjectFile::create(*HybridView);
+  if (!HybridObjOrErr)
+    reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
+  DictScope D(Writer, "HybridObject");
+  dumpObject(**HybridObjOrErr, Writer);
+}
+
 /// Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes,
                                     ScopedPrinter &Printer) {
@@ -617,6 +633,8 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (MachOUniversalBinary *UBinary =
                dyn_cast<MachOUniversalBinary>(Bin.get()))
     dumpMachOUniversalBinary(UBinary, Writer);
+  else if (COFFObjectFile *Obj = dyn_cast<COFFObjectFile>(Bin.get()))
+    dumpCOFFObject(Obj, Writer);
   else if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin.get()))
     dumpObject(*Obj, Writer);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(Bin.get()))

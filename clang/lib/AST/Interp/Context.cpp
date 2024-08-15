@@ -31,6 +31,9 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func || !Func->hasBody())
     Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
+  if (!Func)
+    return false;
+
   APValue DummyResult;
   if (!Run(Parent, Func, DummyResult))
     return false;
@@ -53,6 +56,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 
   if (!Recursing) {
     assert(Stk.empty());
+    C.cleanup();
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
@@ -79,6 +83,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 
   if (!Recursing) {
     assert(Stk.empty());
+    C.cleanup();
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
@@ -108,6 +113,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 
   if (!Recursing) {
     assert(Stk.empty());
+    C.cleanup();
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
@@ -173,8 +179,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
       T->isFunctionType())
     return PT_FnPtr;
 
-  if (T->isReferenceType() || T->isPointerType() ||
-      T->isObjCObjectPointerType())
+  if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
     return PT_Ptr;
 
   if (const auto *AT = T->getAs<AtomicType>())

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 #define LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 
-#include "llvm-libc-types/struct_statvfs.h"
+#include "include/llvm-libc-types/struct_statvfs.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"

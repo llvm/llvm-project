@@ -8,15 +8,18 @@
 
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 
+#include "../GPUCommon/GPUOpsLowering.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -43,8 +46,8 @@ namespace mlir {
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
-                                              Type resultType,
-                                              bool isConvergent = false) {
+                                              Type resultType, bool isMemNone,
+                                              bool isConvergent) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (!func) {
@@ -53,6 +56,18 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
         symbolTable->getLoc(), name,
         LLVM::LLVMFunctionType::get(resultType, paramTypes));
     func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
+    func.setNoUnwind(true);
+    func.setWillReturn(true);
+
+    if (isMemNone) {
+      // no externally observable effects
+      constexpr auto noModRef = mlir::LLVM::ModRefInfo::NoModRef;
+      auto memAttr = b.getAttr<LLVM::MemoryEffectsAttr>(
+          /*other=*/noModRef,
+          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+      func.setMemoryEffectsAttr(memAttr);
+    }
+
     func.setConvergent(isConvergent);
   }
   return func;
@@ -64,6 +79,10 @@ static LLVM::CallOp createSPIRVBuiltinCall(Location loc,
                                            ValueRange args) {
   auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
   call.setCConv(func.getCConv());
+  call.setConvergentAttr(func.getConvergentAttr());
+  call.setNoUnwindAttr(func.getNoUnwindAttr());
+  call.setWillReturnAttr(func.getWillReturnAttr());
+  call.setMemoryEffectsAttr(func.getMemoryEffectsAttr());
   return call;
 }
 
@@ -91,8 +110,9 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     assert(moduleOp && "Expecting module");
     Type flagTy = rewriter.getI32Type();
     Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
-    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
-        moduleOp, funcName, flagTy, voidTy, /*isConvergent=*/true);
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(moduleOp, funcName, flagTy, voidTy,
+                              /*isMemNone=*/false, /*isConvergent=*/true);
 
     // Value used by SPIR-V backend to represent `CLK_LOCAL_MEM_FENCE`.
     // See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
@@ -134,8 +154,9 @@ struct LaunchConfigConversion : ConvertToLLVMPattern {
     assert(moduleOp && "Expecting module");
     Type dimTy = rewriter.getI32Type();
     Type indexTy = getTypeConverter()->getIndexType();
-    LLVM::LLVMFuncOp func =
-        lookupOrCreateSPIRVFn(moduleOp, funcName, dimTy, indexTy);
+    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(moduleOp, funcName, dimTy,
+                                                  indexTy, /*isMemNone=*/true,
+                                                  /*isConvergent=*/false);
 
     Location loc = op->getLoc();
     gpu::Dimension dim = getDimension(op);
@@ -268,9 +289,9 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Type valueType = adaptor.getValue().getType();
     Type offsetType = adaptor.getOffset().getType();
     Type resultType = valueType;
-    LLVM::LLVMFuncOp func =
-        lookupOrCreateSPIRVFn(moduleOp, funcName, {valueType, offsetType},
-                              resultType, /*isConvergent=*/true);
+    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
+        moduleOp, funcName, {valueType, offsetType}, resultType,
+        /*isMemNone=*/false, /*isConvergent=*/true);
 
     Location loc = op->getLoc();
     std::array<Value, 2> args{adaptor.getValue(), adaptor.getOffset()};
@@ -303,8 +324,8 @@ struct GPUToLLVMSPVConversionPass final
     LLVMConversionTarget target(*context);
 
     target.addIllegalOp<gpu::BarrierOp, gpu::BlockDimOp, gpu::BlockIdOp,
-                        gpu::GlobalIdOp, gpu::GridDimOp, gpu::ShuffleOp,
-                        gpu::ThreadIdOp>();
+                        gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,
+                        gpu::ReturnOp, gpu::ShuffleOp, gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
 
@@ -322,11 +343,27 @@ struct GPUToLLVMSPVConversionPass final
 namespace mlir {
 void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                                             RewritePatternSet &patterns) {
-  patterns.add<GPUBarrierConversion, GPUShuffleConversion,
+  patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                LaunchConfigOpConversion<gpu::BlockIdOp>,
                LaunchConfigOpConversion<gpu::GridDimOp>,
                LaunchConfigOpConversion<gpu::BlockDimOp>,
                LaunchConfigOpConversion<gpu::ThreadIdOp>,
                LaunchConfigOpConversion<gpu::GlobalIdOp>>(typeConverter);
+  constexpr spirv::ClientAPI clientAPI = spirv::ClientAPI::OpenCL;
+  MLIRContext *context = &typeConverter.getContext();
+  unsigned privateAddressSpace =
+      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Function);
+  unsigned localAddressSpace =
+      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Workgroup);
+  OperationName llvmFuncOpName(LLVM::LLVMFuncOp::getOperationName(), context);
+  StringAttr kernelBlockSizeAttributeName =
+      LLVM::LLVMFuncOp::getReqdWorkGroupSizeAttrName(llvmFuncOpName);
+  patterns.add<GPUFuncOpLowering>(
+      typeConverter,
+      GPUFuncOpLoweringOptions{
+          privateAddressSpace, localAddressSpace,
+          /*kernelAttributeName=*/{}, kernelBlockSizeAttributeName,
+          LLVM::CConv::SPIR_KERNEL, LLVM::CConv::SPIR_FUNC,
+          /*encodeWorkgroupAttributionsAsArguments=*/true});
 }
 } // namespace mlir

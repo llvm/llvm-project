@@ -49,6 +49,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
@@ -270,6 +271,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -301,6 +316,9 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -330,9 +348,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
@@ -349,7 +371,18 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-          if (!mb || !hasObjCSection(*mb))
+          if (!mb) {
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
+            continue;
+          }
+
+          if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
             error(toString(file) + ": -ObjC failed to load archive member: " +
@@ -1048,42 +1081,55 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool isRequested = arg != nullptr;
+  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (!config->isPic) {
+    if (requested)
+      error("-fixup_chains is incompatible with -no_pie");
 
-  // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
-        {PLATFORM_IOS, VersionTuple(13, 4)},
-        {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end() &&
-      it->second > config->platformInfo.target.MinDeployment) {
-    if (!isRequested)
-      return false;
-
-    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
-         it->second.getAsString() + ", which is newer than target minimum of " +
-         config->platformInfo.target.MinDeployment.getAsString());
+    return false;
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (isRequested)
+    if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
+
     return false;
   }
 
-  if (!config->isPic) {
-    if (isRequested)
-      error("-fixup_chains is incompatible with -no_pie");
+  if (args.hasArg(OPT_preload)) {
+    if (requested)
+      error("-fixup_chains is incompatible with -preload");
+
     return false;
   }
 
-  // TODO: Enable by default once stable.
-  return isRequested;
+  if (requested)
+    return true;
+
+  static const std::array<std::pair<PlatformType, VersionTuple>, 9> minVersion =
+      {{
+          {PLATFORM_IOS, VersionTuple(13, 4)},
+          {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+          {PLATFORM_MACOS, VersionTuple(13, 0)},
+          {PLATFORM_TVOS, VersionTuple(14, 0)},
+          {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+          {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+          {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+          {PLATFORM_XROS, VersionTuple(1, 0)},
+          {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
+      }};
+  PlatformType platform = config->platformInfo.target.Platform;
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
+
+  // We don't know the versions for other platforms, so default to disabled.
+  if (it == minVersion.end())
+    return false;
+
+  if (it->second > config->platformInfo.target.MinDeployment)
+    return false;
+
+  return true;
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -1247,6 +1293,9 @@ static void gatherInputSections() {
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
     }
@@ -1397,6 +1446,19 @@ static void eraseInitializerSymbols() {
   for (ConcatInputSection *isec : in.initOffsets->inputs())
     for (Defined *sym : isec->symbols)
       sym->used = false;
+}
+
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
 }
 
 namespace lld {
@@ -1639,7 +1701,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1681,7 +1745,38 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfileSortProfilePath = arg->getValue();
+    IncompatWithCGSort(arg->getSpelling());
+  }
+  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->functionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->functionOrderForCompression = true;
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(

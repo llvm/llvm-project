@@ -2252,3 +2252,53 @@ label:
   call void asm "lw zero, $0", "*A"(ptr elementtype(i32) getelementptr (i8, ptr blockaddress(@constraint_A_with_local_3, %label), i32 2000))
   ret void
 }
+
+@_ZN5repro9MY_BUFFER17hb0f674501d5980a6E = external global <{ [16 x i8] }>
+
+; Address is not used by a memory constraint.
+define void @should_not_fold() {
+; RV32I-LABEL: should_not_fold:
+; RV32I:       # %bb.0: # %start
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    lui a0, %hi(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV32I-NEXT:    addi a0, a0, %lo(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    ecall
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: should_not_fold:
+; RV64I:       # %bb.0: # %start
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    lui a0, %hi(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV64I-NEXT:    addi a0, a0, %lo(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    ecall
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: should_not_fold:
+; RV32I-MEDIUM:       # %bb.0: # %start
+; RV32I-MEDIUM-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi39:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi39)
+; RV32I-MEDIUM-NEXT:    #APP
+; RV32I-MEDIUM-NEXT:    ecall
+; RV32I-MEDIUM-NEXT:    #NO_APP
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: should_not_fold:
+; RV64I-MEDIUM:       # %bb.0: # %start
+; RV64I-MEDIUM-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi39:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi39)
+; RV64I-MEDIUM-NEXT:    #APP
+; RV64I-MEDIUM-NEXT:    ecall
+; RV64I-MEDIUM-NEXT:    #NO_APP
+; RV64I-MEDIUM-NEXT:    ret
+start:
+  %0 = tail call ptr asm sideeffect alignstack "ecall", "=&{x10},0,~{vtype},~{vl},~{vxsat},~{vxrm},~{memory}"(ptr @_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+  ret void
+}

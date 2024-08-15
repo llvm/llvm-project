@@ -93,6 +93,7 @@ public:
       const char *, std::size_t bytes, std::size_t elementBytes = 0);
   RT_API_ATTRS bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS void BackspaceRecord();
   RT_API_ATTRS void HandleRelativePosition(std::int64_t byteOffset);
@@ -132,9 +133,9 @@ public:
   RT_API_ATTRS Fortran::common::optional<char32_t> GetCurrentChar(
       std::size_t &byteCount);
 
-  // The "remaining" arguments to CueUpInput(), SkipSpaces(), & NextInField()
-  // are always in units of bytes, not characters; the distinction matters
-  // for internal input from CHARACTER(KIND=2 and 4).
+  // The result of CueUpInput() and the "remaining" arguments to SkipSpaces()
+  // and NextInField() are always in units of bytes, not characters; the
+  // distinction matters for internal input from CHARACTER(KIND=2 and 4).
 
   // For fixed-width fields, return the number of remaining bytes.
   // Skip over leading blanks.
@@ -279,6 +280,7 @@ public:
   RT_API_ATTRS bool Receive(
       char *, std::size_t bytes, std::size_t elementBytes = 0);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool AdvanceRecord(int);
   RT_API_ATTRS void BackspaceRecord();
   RT_API_ATTRS void HandleRelativePosition(std::int64_t);
@@ -448,6 +450,7 @@ public:
   RT_API_ATTRS ExternalIoStatementBase(
       ExternalFileUnit &, const char *sourceFile = nullptr, int sourceLine = 0);
   RT_API_ATTRS ExternalFileUnit &unit() { return unit_; }
+  RT_API_ATTRS const ExternalFileUnit &unit() const { return unit_; }
   RT_API_ATTRS MutableModes &mutableModes();
   RT_API_ATTRS ConnectionState &GetConnectionState();
   RT_API_ATTRS int asynchronousID() const { return asynchronousID_; }
@@ -473,6 +476,7 @@ public:
   RT_API_ATTRS bool Emit(
       const char *, std::size_t bytes, std::size_t elementBytes = 0);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS void BackspaceRecord();
   RT_API_ATTRS void HandleRelativePosition(std::int64_t);
@@ -539,6 +543,7 @@ public:
   RT_API_ATTRS bool Emit(
       const char *, std::size_t bytes, std::size_t elementBytes = 0);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS void HandleRelativePosition(std::int64_t);
   RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
 

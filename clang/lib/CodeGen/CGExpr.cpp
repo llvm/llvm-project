@@ -120,8 +120,9 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
   if (ArraySize)
     Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
   else
-    Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                                  ArraySize, Name, &*AllocaInsertPt);
+    Alloca =
+        new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+                             ArraySize, Name, AllocaInsertPt->getIterator());
   if (Allocas) {
     Allocas->Add(Alloca);
   }
@@ -1067,28 +1068,31 @@ public:
 
 } // end anonymous namespace
 
-using RecIndicesTy =
-    SmallVector<std::pair<const RecordDecl *, llvm::Value *>, 8>;
+using RecIndicesTy = SmallVector<llvm::Value *, 8>;
 
 static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *FD, RecIndicesTy &Indices) {
+                                 const FieldDecl *Field,
+                                 RecIndicesTy &Indices) {
   const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
   int64_t FieldNo = -1;
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D)) {
-      FieldNo = Layout.getLLVMFieldNo(Field);
-      if (FD == Field) {
-        Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
-        return true;
-      }
+  for (const FieldDecl *FD : RD->fields()) {
+    if (!Layout.containsFieldDecl(FD))
+      // This could happen if the field has a struct type that's empty. I don't
+      // know why either.
+      continue;
+
+    FieldNo = Layout.getLLVMFieldNo(FD);
+    if (FD == Field) {
+      Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
+      return true;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D)) {
-      ++FieldNo;
-      if (getGEPIndicesToField(CGF, Record, FD, Indices)) {
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType()) {
+      if (getGEPIndicesToField(CGF, Ty->getAsRecordDecl(), Field, Indices)) {
         if (RD->isUnion())
           FieldNo = 0;
-        Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
+        Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
         return true;
       }
     }
@@ -1105,7 +1109,7 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 /// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
 ///   within the top-level struct.
 /// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
-llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
+llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
 
@@ -1132,34 +1136,18 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
     return nullptr;
   }
 
-  llvm::Value *Zero = Builder.getInt32(0);
   RecIndicesTy Indices;
-
   getGEPIndicesToField(*this, RD, CountDecl, Indices);
+  if (Indices.empty())
+    return nullptr;
 
-  for (auto I = Indices.rbegin(), E = Indices.rend(); I != E; ++I)
-    Res = Builder.CreateInBoundsGEP(
-        ConvertType(QualType(I->first->getTypeForDecl(), 0)), Res,
-        {Zero, I->second}, "..counted_by.gep");
+  Indices.push_back(Builder.getInt32(0));
+  Res = Builder.CreateInBoundsGEP(
+      ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
+      RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
 
   return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
                                    getIntAlign(), "..counted_by.load");
-}
-
-const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
-  if (!FD)
-    return nullptr;
-
-  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
-  if (!CAT)
-    return nullptr;
-
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
-  const auto *CountDecl = CountDRE->getDecl();
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
-    CountDecl = IFD->getAnonField();
-
-  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -1312,7 +1300,8 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
-        return Addr;
+        return CGF.authPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
+                                            CE->getType());
       }
       break;
 
@@ -3878,6 +3867,8 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
     TrapCall->addFnAttr(A);
   }
 
+  if (InNoMergeAttributedStmt)
+    TrapCall->addFnAttr(llvm::Attribute::NoMerge);
   return TrapCall;
 }
 
@@ -4103,25 +4094,25 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
 
 /// The offset of a field from the beginning of the record.
 static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *FD, int64_t &Offset) {
+                                 const FieldDecl *Field, int64_t &Offset) {
   ASTContext &Ctx = CGF.getContext();
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
   unsigned FieldNo = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (getFieldOffsetInBits(CGF, Record, FD, Offset)) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD == Field) {
+      Offset += Layout.getFieldOffset(FieldNo);
+      return true;
+    }
+
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
         Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }
 
-    if (const auto *Field = dyn_cast<FieldDecl>(D))
-      if (FD == Field) {
-        Offset += Layout.getFieldOffset(FieldNo);
-        return true;
-      }
-
-    if (isa<FieldDecl>(D))
+    if (!RD->isUnion())
       ++FieldNo;
   }
 
@@ -4298,7 +4289,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
           if (std::optional<int64_t> Diff =
                   getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
             CharUnits OffsetDiff = CGM.getContext().toCharUnitsFromBits(*Diff);
@@ -5837,6 +5828,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
           CGM.getLLVMContext(), {PrefixSigType, Int32Ty}, /*isPacked=*/true);
 
       llvm::Value *CalleePtr = Callee.getFunctionPointer();
+      if (CGM.getCodeGenOpts().PointerAuth.FunctionPointers) {
+        // Use raw pointer since we are using the callee pointer as data here.
+        Address Addr =
+            Address(CalleePtr, CalleePtr->getType(),
+                    CharUnits::fromQuantity(
+                        CalleePtr->getPointerAlignment(CGM.getDataLayout())),
+                    Callee.getPointerAuthInfo(), nullptr);
+        CalleePtr = Addr.emitRawPointer(*this);
+      }
 
       // On 32-bit Arm, the low bit of a function pointer indicates whether
       // it's using the Arm or Thumb instruction set. The actual first

@@ -580,6 +580,11 @@ public:
   /// Minimum time granularity (in microseconds) traced by time profiler.
   unsigned TimeTraceGranularity;
 
+  /// Make time trace capture verbose event details (e.g. source filenames).
+  /// This can increase the size of the output by 2-3 times.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned TimeTraceVerbose : 1;
+
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
@@ -601,7 +606,8 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), TimeTraceGranularity(500) {}
+        UseClangIRPipeline(false), TimeTraceGranularity(500),
+        TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

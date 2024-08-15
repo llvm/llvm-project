@@ -76,6 +76,8 @@ public:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum:
     case Intrinsic::smax:
     case Intrinsic::smin:
     case Intrinsic::umax:
@@ -568,6 +570,10 @@ public:
 
   /// The llvm.vp.* intrinsics for this instruction Opcode
   static Intrinsic::ID getForOpcode(unsigned OC);
+
+  /// The llvm.vp.* intrinsics for this intrinsic ID \p Id. Return \p Id if it
+  /// is already a VP intrinsic.
+  static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id);
 
   // Whether \p ID is a VP intrinsic ID.
   static bool isVPIntrinsic(Intrinsic::ID);
@@ -1296,9 +1302,6 @@ public:
 /// This class wraps the llvm.memcpy.inline intrinsic.
 class MemCpyInlineInst : public MemCpyInst {
 public:
-  ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemCpyInst::getLength());
-  }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memcpy_inline;

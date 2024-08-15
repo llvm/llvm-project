@@ -525,6 +525,7 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeaturePredictableSelectIsExpensive]>;
 
 def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
@@ -862,22 +863,25 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
-                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS,
+                                     FeatureLSE, FeaturePAuth, FeatureFPAC,
+                                     FeatureRAS, FeatureRCPC, FeatureRDM,
                                      FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX,
-                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
-                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS,
+                                     FeatureLSE, FeaturePAuth, FeatureFPAC,
+                                     FeatureRAS, FeatureRCPC, FeatureRDM,
                                      FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX,
-                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
-                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS,
+                                     FeatureLSE, FeaturePAuth, FeatureFPAC,
+                                     FeatureRAS, FeatureRCPC, FeatureRDM,
                                      FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> AppleM4 = [HasV9_2aOps, FeatureSHA2, FeatureFPARMv8,
                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
@@ -885,8 +889,9 @@ def ProcessorFeatures {
                                     FeatureAES, FeatureBF16,
                                     FeatureSME, FeatureSME2,
                                     FeatureSMEF64F64, FeatureSMEI16I64,
-                                    FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
-                                    FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                    FeatureComplxNum, FeatureCRC, FeatureJS,
+                                    FeatureLSE, FeaturePAuth, FeatureFPAC,
+                                    FeatureRAS, FeatureRCPC, FeatureRDM,
                                     FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeaturePerfMon, FeatureNEON, FeatureFPARMv8];

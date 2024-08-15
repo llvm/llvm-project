@@ -536,7 +536,10 @@ def gen_instr_coverage_report(path, instructions):
 
     content = content.split(AUTOGEN_OPCODE_SECTION_MARKER)
 
-    existing_opcodes = [k[11:] for k in re.findall("def SPIRV_OC_\w+", content[1])]
+    prefix = "def SPIRV_OC_"
+    existing_opcodes = [
+        k[len(prefix) :] for k in re.findall(prefix + "\w+", content[1])
+    ]
     existing_instructions = list(
         filter(lambda inst: (inst["opname"] in existing_opcodes), instructions)
     )
@@ -637,7 +640,12 @@ def update_td_enum_attrs(path, operand_kinds, filter_list):
     assert len(content) == 3
 
     # Extend filter list with existing enum definitions
-    existing_kinds = [k[8:-4] for k in re.findall("def SPIRV_\w+Attr", content[1])]
+    prefix = "def SPIRV_"
+    suffix = "Attr"
+    existing_kinds = [
+        k[len(prefix) : -len(suffix)]
+        for k in re.findall(prefix + "\w+" + suffix, content[1])
+    ]
     filter_list.extend(existing_kinds)
 
     capability_mapping = get_capability_mapping(operand_kinds)
@@ -959,12 +967,20 @@ def extract_td_op_info(op_def):
       - A dict containing potential manually specified sections
     """
     # Get opname
-    opname = [o[8:-2] for o in re.findall("def SPIRV_\w+Op", op_def)]
+    prefix = "def SPIRV_"
+    suffix = "Op"
+    opname = [
+        o[len(prefix) : -len(suffix)]
+        for o in re.findall(prefix + "\w+" + suffix, op_def)
+    ]
     assert len(opname) == 1, "more than one ops in the same section!"
     opname = opname[0]
 
     # Get instruction category
-    inst_category = [o[4:] for o in re.findall("SPIRV_\w+Op", op_def.split(":", 1)[1])]
+    prefix = "SPIRV_"
+    inst_category = [
+        o[len(prefix) :] for o in re.findall(prefix + "\w+Op", op_def.split(":", 1)[1])
+    ]
     assert len(inst_category) <= 1, "more than one ops in the same section!"
     inst_category = inst_category[0] if len(inst_category) == 1 else "Op"
 

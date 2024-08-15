@@ -6,24 +6,22 @@
 ; same indices could be loaded in later iterations.
 ; FIXME: currently this is incorrectly considered safe for vectorization with
 ; runtime checks
-define void @B_indices_loaded_in_loop_A_stored(ptr %A, ptr noalias %B, i64 %N) {
+define void @B_indices_loaded_in_loop_A_stored(ptr %A, ptr noalias %B, i64 %N, i64 %off) {
 ; CHECK-LABEL: 'B_indices_loaded_in_loop_A_stored'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %gep.B, align 4 ->
+; CHECK-NEXT:            store i32 %inc, ptr %gep.B, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %indices = load i8, ptr %gep.A, align 1 ->
+; CHECK-NEXT:            store i32 %l, ptr %gep.C, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.A.1 = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.A.0 = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
-; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: %A High: (%N + %A))
-; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -35,15 +33,16 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.A.0 = getelementptr inbounds i8, ptr %A, i64 %iv
-  %indices = load i8, ptr %gep.A.0, align 1
+  %iv.off = add nuw nsw i64 %iv, %off
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv.off
+  %indices = load i8, ptr %gep.A, align 1
   %indices.ext = zext i8 %indices to i64
   %gep.B = getelementptr inbounds i32, ptr %B, i64 %indices.ext
   %l = load i32, ptr %gep.B, align 4
   %inc = add i32 %l, 1
   store i32 %inc, ptr %gep.B, align 4
-  %gep.A.1 = getelementptr inbounds i32, ptr %A, i64 %iv
-  store i32 %l, ptr %gep.A.1, align 4
+  %gep.C = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %l, ptr %gep.C, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %N
   br i1 %ec, label %exit, label %loop
@@ -58,9 +57,9 @@ define void @B_indices_loaded_in_loop_A_not_stored(ptr %A, ptr noalias %B, i64 %
 ; CHECK-LABEL: 'B_indices_loaded_in_loop_A_not_stored'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.B, align 4 ->
 ; CHECK-NEXT:            store i32 %inc, ptr %gep.B, align 4
 ; CHECK-EMPTY:
@@ -77,8 +76,8 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.A.0 = getelementptr inbounds i8, ptr %A, i64 %iv
-  %indices = load i8, ptr %gep.A.0, align 1
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+  %indices = load i8, ptr %gep.A, align 1
   %indices.ext = zext i8 %indices to i64
   %gep.B = getelementptr inbounds i32, ptr %B, i64 %indices.ext
   %l = load i32, ptr %gep.B, align 4
