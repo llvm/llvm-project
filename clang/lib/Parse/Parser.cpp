@@ -514,8 +514,6 @@ void Parser::Initialize() {
   Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
-  Ident_import = nullptr;
-  Ident_module = nullptr;
 
   Ident_super = &PP.getIdentifierTable().get("super");
 
@@ -569,11 +567,6 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident__abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident___abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
-  }
-
-  if (getLangOpts().CPlusPlusModules) {
-    Ident_import = PP.getIdentifierInfo("import");
-    Ident_module = PP.getIdentifierInfo("module");
   }
 
   Actions.Initialize();
@@ -732,22 +725,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
-
-  case tok::identifier:
-    // C++2a [basic.link]p3:
-    //   A token sequence beginning with 'export[opt] module' or
-    //   'export[opt] import' and not immediately followed by '::'
-    //   is never interpreted as the declaration of a top-level-declaration.
-    // if ((Tok.getIdentifierInfo() == Ident_module ||
-    //      Tok.getIdentifierInfo() == Ident_import) &&
-    //     NextToken().isNot(tok::coloncolon)) {
-    //   if (Tok.getIdentifierInfo() == Ident_module)
-    //     goto module_decl;
-    //   else
-    //     goto import_decl;
-    // }
-    break;
-
   default:
     break;
   }

@@ -165,10 +165,6 @@ class Parser : public CodeCompletionHandler {
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
-  // C++2a contextual keywords.
-  mutable IdentifierInfo *Ident_import;
-  mutable IdentifierInfo *Ident_module;
-
   // C++ type trait keywords that can be reverted to identifiers and still be
   // used as type traits.
   llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind> RevertibleTypeTraits;

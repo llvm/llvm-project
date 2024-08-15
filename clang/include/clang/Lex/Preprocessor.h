@@ -617,8 +617,8 @@ private:
     void handleModuleName(Token ModuleName) {
       assert(ModuleName.is(tok::annot_module_name) && "Expect a module name");
       if (isModuleCandidate()) {
-        Name = ModuleName.getAnnotationValueAs<ModuleNameInfo *>()
-                   ->getFlatName();
+        Name =
+            ModuleName.getAnnotationValueAs<ModuleNameInfo *>()->getFlatName();
       } else if (!isNamedModule())
         reset();
     }

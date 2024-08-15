@@ -48,7 +48,8 @@ import x [[blarg::noreturn]]; // expected-warning {{unknown attribute 'noreturn'
 
 import x.y;
 import x.; // expected-error {{expected a module name after 'import'}}
-import .x; // expected-error {{expected a module name after 'import'}}
+import .x; // expected-error {{unknown type name 'import'}} \
+           // expected-error {{cannot use dot operator on a type}}
 
 int use_4 = c; // ok
 
@@ -66,7 +67,8 @@ import x [[blarg::noreturn]]; // expected-warning {{unknown attribute 'noreturn'
 
 import x.y;
 import x.; // expected-error {{expected a module name after 'import'}}
-import .x; // expected-error {{expected a module name after 'import'}}
+import .x; // expected-error {{unknown type name 'import'}} \
+           // expected-error {{cannot use dot operator on a type}}
 
 int use_4 = c; // ok
 
