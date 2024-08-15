@@ -763,6 +763,57 @@ catch2:
   EXPECT_EQ(CR->getSuccessor(), OrigSucc);
 }
 
+TEST_F(TrackerTest, CleanupReturnInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  invoke void @foo()
+              to label %throw unwind label %cleanup
+throw:
+  ret void
+cleanup:
+  %cleanuppad = cleanuppad within none []
+  cleanupret from %cleanuppad unwind label %cleanup2
+cleanup2:
+  %cleanuppad2 = cleanuppad within none []
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCleanup = getBasicBlockByName(LLVMF, "cleanup");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Throw = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "throw")));
+  auto *Cleanup = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCleanup));
+  auto *Cleanup2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "cleanup2")));
+  auto It = Cleanup->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CleanupPadInst>(&*It++);
+  auto *CRI = cast<sandboxir::CleanupReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CleanupPadInst>(&*Cleanup2->begin());
+
+  // Check setCleanupPad().
+  auto *OrigCleanupPad = CRI->getCleanupPad();
+  auto *NewCleanupPad = CP2;
+  EXPECT_NE(NewCleanupPad, OrigCleanupPad);
+  Ctx.save();
+  CRI->setCleanupPad(NewCleanupPad);
+  EXPECT_EQ(CRI->getCleanupPad(), NewCleanupPad);
+  Ctx.revert();
+  EXPECT_EQ(CRI->getCleanupPad(), OrigCleanupPad);
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CRI->getUnwindDest();
+  auto *NewUnwindDest = Throw;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  Ctx.save();
+  CRI->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CRI->getUnwindDest(), NewUnwindDest);
+  Ctx.revert();
+  EXPECT_EQ(CRI->getUnwindDest(), OrigUnwindDest);
+}
+
 TEST_F(TrackerTest, SwitchInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
