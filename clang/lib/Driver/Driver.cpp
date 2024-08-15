@@ -377,6 +377,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   // -S only runs up to the backend.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_S))) {
     FinalPhase = phases::Backend;
+    // Avoid unused argument warnings when combining -S and -c.
     DAL.ClaimAllArgs(options::OPT_c);
 
   // -c compilation only runs up to the assembler.
