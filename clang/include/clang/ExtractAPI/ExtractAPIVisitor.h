@@ -38,6 +38,8 @@ namespace impl {
 
 template <typename Derived>
 class ExtractAPIVisitorBase : public RecursiveASTVisitor<Derived> {
+  using Base = RecursiveASTVisitor<Derived>;
+
 protected:
   ExtractAPIVisitorBase(ASTContext &Context, APISet &API)
       : Context(Context), API(API) {}
@@ -79,8 +81,10 @@ public:
 
   bool VisitNamespaceDecl(const NamespaceDecl *Decl);
 
+  bool TraverseRecordDecl(RecordDecl *Decl);
   bool VisitRecordDecl(const RecordDecl *Decl);
 
+  bool TraverseCXXRecordDecl(CXXRecordDecl *Decl);
   bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
 
   bool VisitCXXMethodDecl(const CXXMethodDecl *Decl);
@@ -549,6 +553,19 @@ bool ExtractAPIVisitorBase<Derived>::VisitNamespaceDecl(
 }
 
 template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseRecordDecl(RecordDecl *Decl) {
+  bool Ret = Base::TraverseRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
@@ -586,6 +603,19 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
         SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
 
   return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(CXXRecordDecl *Decl) {
+  bool Ret = Base::TraverseCXXRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
 }
 
 template <typename Derived>
