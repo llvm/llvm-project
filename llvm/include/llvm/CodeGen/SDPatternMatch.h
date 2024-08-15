@@ -587,7 +587,7 @@ inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
                                                     const RHS &R) {
-  SDNodeFlags Flags{};
+  SDNodeFlags Flags;
   Flags.setDisjoint(true);
   return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, Flags);
 }
@@ -728,7 +728,7 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
 
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_NNegZExt(const Opnd &Op) {
-  SDNodeFlags Flags{};
+  SDNodeFlags Flags;
   Flags.setNonNeg(true);
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, Flags);
 }

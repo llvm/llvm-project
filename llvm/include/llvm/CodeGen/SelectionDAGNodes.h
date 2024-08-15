@@ -452,18 +452,18 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
-  bool operator==(const SDNodeFlags &other) const {
-    return NoUnsignedWrap == other.NoUnsignedWrap &&
-           NoSignedWrap == other.NoSignedWrap && Exact == other.Exact &&
-           Disjoint == other.Disjoint && NonNeg == other.NonNeg &&
-           NoNaNs == other.NoNaNs && NoInfs == other.NoInfs &&
-           NoSignedZeros == other.NoSignedZeros &&
-           AllowReciprocal == other.AllowReciprocal &&
-           AllowContract == other.AllowContract &&
-           ApproximateFuncs == other.ApproximateFuncs &&
-           AllowReassociation == other.AllowReassociation &&
-           NoFPExcept == other.NoFPExcept &&
-           Unpredictable == other.Unpredictable;
+  bool operator==(const SDNodeFlags &Other) const {
+    return NoUnsignedWrap == Other.NoUnsignedWrap &&
+           NoSignedWrap == Other.NoSignedWrap && Exact == Other.Exact &&
+           Disjoint == Other.Disjoint && NonNeg == Other.NonNeg &&
+           NoNaNs == Other.NoNaNs && NoInfs == Other.NoInfs &&
+           NoSignedZeros == Other.NoSignedZeros &&
+           AllowReciprocal == Other.AllowReciprocal &&
+           AllowContract == Other.AllowContract &&
+           ApproximateFuncs == Other.ApproximateFuncs &&
+           AllowReassociation == Other.AllowReassociation &&
+           NoFPExcept == Other.NoFPExcept &&
+           Unpredictable == Other.Unpredictable;
   }
 
   /// Clear any flags in this flag set that aren't also set in Flags. All
