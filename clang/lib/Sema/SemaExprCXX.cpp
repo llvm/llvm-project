@@ -8113,6 +8113,10 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
   }
 
+  // We can't implicitly declare the destructor for a templated class.
+  if (BaseType->isDependentType())
+    MayBePseudoDestructor = true;
+
   // C++ [basic.lookup.classref]p2:
   //   If the id-expression in a class member access (5.2.5) is an
   //   unqualified-id, and the type of the object expression is of a class
