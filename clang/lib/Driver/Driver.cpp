@@ -380,7 +380,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // Avoid unused argument warnings when combining -S and -c.
     DAL.ClaimAllArgs(options::OPT_c);
 
-  // -c compilation only runs up to the assembler.
+    // -c compilation only runs up to the assembler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_c))) {
     FinalPhase = phases::Assemble;
 
