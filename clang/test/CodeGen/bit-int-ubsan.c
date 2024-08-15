@@ -3,9 +3,7 @@
 
 // The runtime test checking the _BitInt ubsan feature is located in compiler-rt/test/ubsan/TestCases/Integer/bit-int.c
 
-#include <stdint.h>
-#include <stdio.h>
-
+typedef unsigned int uint32_t;
 uint32_t float_divide_by_zero() {
   float f = 1.0f / 0.0f;
   // CHECK: constant { i16, i16, [8 x i8] } { i16 1, i16 32, [8 x i8] c"'float'\00" }
@@ -77,20 +75,4 @@ uint32_t negative_shift5(unsigned _BitInt(37) x)
   _BitInt(68) c = -2;
   return x >> c;
   // CHECK: constant { i16, i16, [20 x i8] } { i16 2, i16 {{([[:xdigit:]]{2})}}, [20 x i8] c"'_BitInt(68)'\00D\00\00\00\00\00" }
-}
-
-int main(int argc, char **argv) {
-  // clang-format off
-  uint64_t result =
-      1ULL +
-      implicit_unsigned_integer_truncation() +
-      (uint32_t)array_bounds() +
-      float_cast_overflow() +
-      (uint64_t)implicit_signed_integer_truncation() +
-      negative_shift1(5) +
-      negative_shift2(5) +
-      negative_shift3(5) +
-      negative_shift5(5);
-  // clang-format on
-  printf("%u\n", (uint32_t)(result & 0xFFFFFFFF));
 }
