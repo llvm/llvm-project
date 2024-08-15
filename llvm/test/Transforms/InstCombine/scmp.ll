@@ -157,6 +157,33 @@ define i1 @scmp_sle_neg_1(i32 %x, i32 %y) {
   ret i1 %2
 }
 
+; scmp(x, y) u< C => x s>= y when C u> 1 and C != -1
+define i1 @scmp_ult_positive_const_gt_than_1_lt_than_umax(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @scmp_ult_positive_const_gt_than_1_lt_than_umax(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[TMP2]], 4
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %2 = icmp ult i8 %1, 4
+  ret i1 %2
+}
+
+; scmp(x, y) s> C => x s< y when C != 0 and C != -1
+define i1 @ucmp_ugt_const_not_0_or_neg1(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @ucmp_ugt_const_not_0_or_neg1(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8 [[TMP1]], 12
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %2 = icmp ugt i8 %1, 12
+  ret i1 %2
+}
+
+
 ; ========== Fold -scmp(x, y) => scmp(y, x) ==========
 define i8 @scmp_negated(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_negated(
