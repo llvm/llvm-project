@@ -29,9 +29,11 @@ namespace orc {
 
 /// Check that the given buffer contains a MachO object file compatible with the
 /// given triple.
+/// ObjIsSlice should be set to true if Obj is a slice of a universal binary
+/// (that fact will then be reported in the error messages).
 Expected<std::unique_ptr<MemoryBuffer>>
-checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj,
-                            const Triple &TT);
+checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
+                            bool ObjIsSlice);
 
 /// Load a relocatable object compatible with TT from Path.
 /// If Path is a universal binary, this function will return a buffer for the

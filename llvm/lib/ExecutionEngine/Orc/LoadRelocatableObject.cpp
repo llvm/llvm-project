@@ -49,7 +49,7 @@ loadRelocatableObject(StringRef Path, const Triple &TT) {
     break;
   case file_magic::macho_object:
     if (!RequireFormat || *RequireFormat == Triple::MachO)
-      return checkMachORelocatableObject(std::move(*Buf), TT);
+      return checkMachORelocatableObject(std::move(*Buf), TT, false);
     break;
   case file_magic::macho_universal_binary:
     if (!RequireFormat || *RequireFormat == Triple::MachO)
