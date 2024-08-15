@@ -524,6 +524,9 @@ protected:
   /// Preserve Comments in assembly
   bool PreserveAsmComments;
 
+  /// The column (zero-based) at which asm comments should be printed.
+  unsigned CommentColumn = 40;
+
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
@@ -638,9 +641,8 @@ public:
   bool getStarIsPC() const { return StarIsPC; }
   const char *getSeparatorString() const { return SeparatorString; }
 
-  /// This indicates the column (zero-based) at which asm comments should be
-  /// printed.
-  unsigned getCommentColumn() const { return 40; }
+  unsigned getCommentColumn() const { return CommentColumn; }
+  void setCommentColumn(unsigned Col) { CommentColumn = Col; }
 
   StringRef getCommentString() const { return CommentString; }
   bool getRestrictCommentStringToStartOfStatement() const {
