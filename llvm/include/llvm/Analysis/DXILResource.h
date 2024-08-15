@@ -18,20 +18,19 @@
 namespace llvm {
 class CallInst;
 class MDTuple;
-class TargetExtType;
 
 namespace dxil {
 
 class ResourceInfo {
   struct ResourceBinding {
-    uint32_t RecordID;
+    uint32_t UniqueID;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
 
     bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) ==
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      return std::tie(UniqueID, Space, LowerBound, Size) ==
+             std::tie(RHS.UniqueID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
@@ -129,9 +128,9 @@ public:
   bool isFeedback() const;
   bool isMultiSample() const;
 
-  void bind(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
+  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
             uint32_t Size) {
-    Binding.RecordID = RecordID;
+    Binding.UniqueID = UniqueID;
     Binding.Space = Space;
     Binding.LowerBound = LowerBound;
     Binding.Size = Size;
@@ -216,8 +215,6 @@ public:
 
   ResourceBinding getBinding() const { return Binding; }
   std::pair<uint32_t, uint32_t> getAnnotateProps() const;
-
-  void print(raw_ostream &OS) const;
 };
 
 } // namespace dxil
