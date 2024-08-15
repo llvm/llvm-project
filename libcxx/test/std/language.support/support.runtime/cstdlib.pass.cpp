@@ -102,6 +102,24 @@ void test_div() {
     static_assert((std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value), "");
     // clang-format on
   }
+
+  {  // check one basic input for correctness.
+    // (42 // 5 == 8) AND (42 % 5 == 2)
+    const auto check = [](const auto callable_div) -> void {
+      // fixme: change to static_assert() when constexpr-ready
+      const auto div = callable_div(42, 5);
+      assert(div.quot == 8);
+      assert(div.rem == 2);
+    };
+
+    // clang-format off
+    check([](int       n, int       k) { return std::div(  n, k); });
+    check([](long      n, long      k) { return std::div(  n, k); });
+    check([](long long n, long long k) { return std::div(  n, k); });
+    check([](long      n, long      k) { return std::ldiv( n, k); });
+    check([](long long n, long long k) { return std::lldiv(n, k); });
+    // clang-format on
+  }
 }
 
 int main(int, char**)
