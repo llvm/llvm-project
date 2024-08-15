@@ -258,7 +258,10 @@ public:
 
   virtual std::string GetDescription() = 0;
 
+  /// Get the name of the Type Summary Provider
   virtual std::string GetName() = 0;
+
+  /// Get the name of the kind of Summary Provider
   virtual std::string GetSummaryKindName() = 0;
 
   uint32_t &GetRevision() { return m_my_revision; }

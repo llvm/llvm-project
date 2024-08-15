@@ -436,7 +436,7 @@ json::Value SummaryStatisticsCache::ToJSON() {
   std::lock_guard<std::mutex> guard(m_map_mutex);
   json::Array json_summary_stats;
   for (const auto &summary_stat : m_summary_stats_map)
-    json_summary_stats.emplace_back(summary_stat.second.ToJSON());
+    json_summary_stats.emplace_back(summary_stat.second->ToJSON());
 
   return json_summary_stats;
 }
