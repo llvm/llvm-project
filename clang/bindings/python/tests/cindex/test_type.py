@@ -167,7 +167,7 @@ class TestType(unittest.TestCase):
         self.assertNotEqual(a.type, v.type)
 
         self.assertNotEqual(a.type, None)
-        self.assertNotEqual(a.type, "foo")
+        self.assertNotEqual(a.type.spelling, "foo")
 
     def test_type_spelling(self):
         """Ensure Type.spelling works."""
