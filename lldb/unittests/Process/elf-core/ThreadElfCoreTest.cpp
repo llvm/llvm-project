@@ -131,6 +131,19 @@ TEST_F(ElfCoreTest, PopulatePrpsInfoTest) {
   ASSERT_EQ(prpsinfo_opt->pr_sid, getsid(getpid()));
   ASSERT_EQ(std::string{prpsinfo_opt->pr_fname}, "ProcessElfCoreT");
   ASSERT_TRUE(std::string{prpsinfo_opt->pr_psargs}.empty());
+  lldb_private::ProcessInstanceInfo info;
+  ASSERT_TRUE(process_sp->GetProcessInfo(info));
+  const char *args[] = {"a.out", "--foo=bar", "--baz=boo", nullptr};
+  info.SetArguments(args, true);
+  prpsinfo_opt =
+      ELFLinuxPrPsInfo::Populate(info, lldb::StateType::eStateStopped);
+  ASSERT_TRUE(prpsinfo_opt.has_value());
+  ASSERT_EQ(prpsinfo_opt->pr_pid, getpid());
+  ASSERT_EQ(prpsinfo_opt->pr_state, 3);
+  ASSERT_EQ(prpsinfo_opt->pr_sname, 'T');
+  ASSERT_EQ(std::string{prpsinfo_opt->pr_fname}, "a.out");
+  ASSERT_FALSE(std::string{prpsinfo_opt->pr_psargs}.empty());
+  ASSERT_EQ(std::string{prpsinfo_opt->pr_psargs}, "a.out --foo=bar --baz=boo");
 }
 
 TEST_F(ElfCoreTest, PopulatePrStatusTest) {

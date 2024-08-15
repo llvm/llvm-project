@@ -21,6 +21,10 @@ struct compat_timeval {
   alignas(8) uint64_t tv_usec;
 };
 
+namespace lldb_private {
+class ProcessInstanceInfo;
+}
+
 // PRSTATUS structure's size differs based on architecture.
 // This is the layout in the x86-64 arch.
 // In the i386 case we parse it manually and fill it again
@@ -118,6 +122,10 @@ struct ELFLinuxPrPsInfo {
 
   static std::optional<ELFLinuxPrPsInfo>
   Populate(const lldb::ProcessSP &process_sp);
+
+  static std::optional<ELFLinuxPrPsInfo>
+  Populate(const lldb_private::ProcessInstanceInfo &info,
+           lldb::StateType state);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof

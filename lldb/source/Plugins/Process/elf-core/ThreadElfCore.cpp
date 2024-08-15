@@ -13,6 +13,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
@@ -422,12 +423,18 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
 
 std::optional<ELFLinuxPrPsInfo>
 ELFLinuxPrPsInfo::Populate(const lldb::ProcessSP &process_sp) {
-  ELFLinuxPrPsInfo prpsinfo{};
-  prpsinfo.pr_pid = process_sp->GetID();
   ProcessInstanceInfo info;
   if (!process_sp->GetProcessInfo(info)) {
     return std::nullopt;
   }
+  return Populate(info, process_sp->GetState());
+}
+
+std::optional<ELFLinuxPrPsInfo>
+ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
+                           lldb::StateType process_state) {
+  ELFLinuxPrPsInfo prpsinfo{};
+  prpsinfo.pr_pid = info.GetProcessID();
   prpsinfo.pr_nice = info.GetPriorityValue().value_or(0);
   prpsinfo.pr_zomb = 0;
   if (auto zombie_opt = info.IsZombie(); zombie_opt.value_or(false)) {
@@ -447,7 +454,6 @@ ELFLinuxPrPsInfo::Populate(const lldb::ProcessSP &process_sp) {
    * Z = Zombie
    * W = Paging
    */
-  lldb::StateType process_state = process_sp->GetState();
   switch (process_state) {
   case lldb::StateType::eStateSuspended:
     prpsinfo.pr_sname = 'S';
@@ -517,7 +523,7 @@ ELFLinuxPrPsInfo::Populate(const lldb::ProcessSP &process_sp) {
     }
     ++argentry_iterator;
   }
-  *(psargs_end - 1) = '\0';
+  *(psargs - 1) = '\0';
   return prpsinfo;
 }
 
