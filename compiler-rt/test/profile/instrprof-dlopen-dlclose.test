@@ -1,10 +1,8 @@
 RUN: rm -rf %t && split-file %s %t && cd %t
 RUN: %clang_pgogen foo.c -c -Xclang -fprofile-instrument-path="default_foo_%m.profraw"
 RUN: %clang_pgogen foo2.c -c -Xclang -fprofile-instrument-path="default_foo2_%m.profraw"
-RUN: %clang_pgogen -shared foo.o -o shr.o -bcdtors:mbr
-RUN: ar -X32_64 r libfoo.a shr.o
-RUN: %clang_pgogen -shared foo2.o -o shr.o
-RUN: ar -X32_64 r libfoo2.a shr.o
+RUN: %clang_pgogen -shared foo.o -o shr_foo.o %if target={{.*aix.*}} %{ -bcdtors:mbr %}
+RUN: %clang_pgogen -shared foo2.o -o shr_foo2.o
 
 RUN: %clang_pgogen common.c -c
 
@@ -57,7 +55,7 @@ void foo2() {}
 typedef void (*FN_PTR)();
 int perform_check = 1;
 
-/* This function dlopen/dlclose libfoo.a twice and libfoo2.a once. Each time it
+/* This function dlopen/dlclose shr_foo.a twice and shr_foo2.a once. Each time it
  * dlopens a library, it runs the singleton function from that library. So the
  * final counter value for foo and foo2 in each profile file is 2 and 1, resp.
  */
@@ -66,7 +64,7 @@ int open_close_libs() {
   FN_PTR foo, foo2;
 
 #define OPEN_AND_RUN(HANDLE, SUF)                                            \
-  HANDLE = dlopen("./lib" #SUF ".a(shr.o)",RTLD_NOW|RTLD_MEMBER);            \
+  HANDLE = dlopen("./shr_" #SUF ".o", RTLD_NOW);                             \
   SUF = (void (*)())dlsym(HANDLE, #SUF);                                     \
   if (SUF == NULL) {                                                         \
     fprintf(stderr, "unable to lookup symbol '%s': %s\n", #SUF, dlerror());  \
