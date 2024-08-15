@@ -12,9 +12,8 @@
 # TWO-CMDS: bar
 
 ## Test nested curly brace.
-# RUN: { echo foo; { echo bar; echo baz; }; } | FileCheck --check-prefix=NESTED %s
-# RUN: { { echo foo; echo bar; }; echo baz; } | FileCheck --check-prefix=NESTED %s
+# RUN: { echo foo > %t/temp.txt; { echo bar; echo baz; }; cat %t/temp.txt; } | FileCheck --check-prefix=NESTED %s
 
-# NESTED: foo
 # NESTED: bar
 # NESTED: baz
+# NESTED: foo
