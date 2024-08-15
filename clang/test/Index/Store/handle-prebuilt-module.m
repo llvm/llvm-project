@@ -1,4 +1,4 @@
-// XFAIL: !rdar131321616
+// XFAIL: !rdar131321616 && asserts
 // REQUIRES: x86-registered-target
 // RUN: rm -rf %t
 // RUN: mkdir %t

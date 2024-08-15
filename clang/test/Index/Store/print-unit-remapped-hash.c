@@ -1,4 +1,4 @@
-// XFAIL: !rdar131321616
+// XFAIL: !rdar131321616 && asserts
 // UNSUPPORTED: system-windows
 
 #include "print-unit.h"

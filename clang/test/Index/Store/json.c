@@ -1,4 +1,4 @@
-// XFAIL: !rdar131321616
+// XFAIL: !rdar131321616 && asserts
 // RUN: rm -rf %t.idx
 // RUN: mkdir -p %t.o
 // RUN: env CLANG_PROJECT_INDEX_PATH=%t.idx %clang -target x86_64-apple-macosx10.7 -arch x86_64 -mmacosx-version-min=10.7 -c %S/Inputs/test1.c -o %t.o/test1.o
