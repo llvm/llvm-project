@@ -14,12 +14,14 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 
 #define DEBUG_TYPE "ctx_prof"
 
@@ -64,10 +66,39 @@ Value toJSON(const PGOCtxProfContext::CallTargetMapTy &P) {
 } // namespace json
 } // namespace llvm
 
+const char *AssignGUIDPass::GUIDMetadataName = "guid";
+
+PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+    if (F.getMetadata(GUIDMetadataName))
+      continue;
+    const GlobalValue::GUID GUID = F.getGUID();
+    F.setMetadata(GUIDMetadataName,
+                  MDNode::get(M.getContext(),
+                              {ConstantAsMetadata::get(ConstantInt::get(
+                                  Type::getInt64Ty(M.getContext()), GUID))}));
+  }
+  return PreservedAnalyses::none();
+}
+
+GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
+  if (F.isDeclaration()) {
+    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
+    return GlobalValue::getGUID(F.getGlobalIdentifier());
+  }
+  auto *MD = F.getMetadata(GUIDMetadataName);
+  assert(MD && "guid not found for defined function");
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
+}
 AnalysisKey CtxProfAnalysis::Key;
 
-CtxProfAnalysis::Result CtxProfAnalysis::run(Module &M,
-                                             ModuleAnalysisManager &MAM) {
+PGOContextualProfile CtxProfAnalysis::run(Module &M,
+                                          ModuleAnalysisManager &MAM) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Profile);
   if (auto EC = MB.getError()) {
     M.getContext().emitError("could not open contextual profile file: " +
@@ -81,7 +112,55 @@ CtxProfAnalysis::Result CtxProfAnalysis::run(Module &M,
                              toString(MaybeCtx.takeError()));
     return {};
   }
-  return Result(std::move(*MaybeCtx));
+
+  PGOContextualProfile Result;
+
+  for (const auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    auto GUID = AssignGUIDPass::getGUID(F);
+    assert(GUID && "guid not found for defined function");
+    const auto &Entry = F.begin();
+    uint32_t MaxCounters = 0; // we expect at least a counter.
+    for (const auto &I : *Entry)
+      if (auto *C = dyn_cast<InstrProfIncrementInst>(&I)) {
+        MaxCounters =
+            static_cast<uint32_t>(C->getNumCounters()->getZExtValue());
+        break;
+      }
+    if (!MaxCounters)
+      continue;
+    uint32_t MaxCallsites = 0;
+    for (const auto &BB : F)
+      for (const auto &I : BB)
+        if (auto *C = dyn_cast<InstrProfCallsite>(&I)) {
+          MaxCallsites =
+              static_cast<uint32_t>(C->getNumCounters()->getZExtValue());
+          break;
+        }
+    auto [It, Ins] = Result.FuncInfo.insert(
+        {GUID, PGOContextualProfile::FunctionInfo(F.getName())});
+    (void)Ins;
+    assert(Ins);
+    It->second.NextCallsiteIndex = MaxCallsites;
+    It->second.NextCounterIndex = MaxCounters;
+  }
+  // If we made it this far, the Result is valid - which we mark by setting
+  // .Profiles.
+  // Trim first the roots that aren't in this module.
+  DenseSet<GlobalValue::GUID> ProfiledGUIDs;
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
+    if (!Result.FuncInfo.contains(RootGuid))
+      MaybeCtx->erase(RootGuid);
+  Result.Profiles = std::move(*MaybeCtx);
+  return Result;
+}
+
+GlobalValue::GUID
+PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
+  if (auto It = FuncInfo.find(AssignGUIDPass::getGUID(F)); It != FuncInfo.end())
+    return It->first;
+  return 0;
 }
 
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
@@ -91,8 +170,16 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
     M.getContext().emitError("Invalid CtxProfAnalysis");
     return PreservedAnalyses::all();
   }
+
+  OS << "Function Info:\n";
+  for (const auto &[Guid, FuncInfo] : C.FuncInfo)
+    OS << Guid << " : " << FuncInfo.Name
+       << ". MaxCounterID: " << FuncInfo.NextCounterIndex
+       << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
+
   const auto JSONed = ::llvm::json::toJSON(C.profiles());
 
+  OS << "\nCurrent Profile:\n";
   OS << formatv("{0:2}", JSONed);
   OS << "\n";
   return PreservedAnalyses::all();
