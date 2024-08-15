@@ -29,8 +29,10 @@ add_llvm_component_library(LLVMOrcJIT
   JITTargetMachineBuilder.cpp
   LazyReexports.cpp
   Layer.cpp
+  LoadRelocatableObject.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
+  MachO.cpp
   MachOPlatform.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
