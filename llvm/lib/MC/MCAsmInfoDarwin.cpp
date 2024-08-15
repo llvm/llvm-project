@@ -76,9 +76,6 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   HasMachoZeroFillDirective = true;  // Uses .zerofill
   HasMachoTBSSDirective = true; // Uses .tbss
 
-  // FIXME: Change this once MC is the system assembler.
-  HasAggressiveSymbolFolding = false;
-
   HiddenVisibilityAttr = MCSA_PrivateExtern;
   HiddenDeclarationVisibilityAttr = MCSA_Invalid;
 
