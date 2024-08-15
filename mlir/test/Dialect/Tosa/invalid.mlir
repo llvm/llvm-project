@@ -448,3 +448,30 @@ func.func @test_large_constant_permutation() {
   %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
   return
 }
+
+// -----
+
+// CHECK-LABEL: test_table_rank0_table
+func.func @test_table_rank0_table(%arg0: tensor<64xi16>, %arg1: tensor<i16>) {
+  // expected-error@+1 {{'tosa.table' op operand #1 must be 1-d tensor, but got 'tensor<i16>'}}
+  %0 = tosa.table %arg0, %arg1 : (tensor<64xi16>, tensor<i16>) -> tensor<64xi16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_table_io_rank_mismatch
+func.func @test_table_io_rank_mismatch(%arg0: tensor<64xi16>, %arg1: tensor<6xi16>) {
+  // expected-error@+1 {{'tosa.table' op expected input tensor rank to equal result tensor rank}}
+  %0 = tosa.table %arg0, %arg1 : (tensor<64xi16>, tensor<6xi16>) -> tensor<64x?xi16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_table_io_shape_mismatch
+func.func @test_table_io_shape_mismatch(%arg0: tensor<?x16xi16>, %arg1: tensor<6xi16>) {
+  // expected-error@+1 {{'tosa.table' op dim(result, 1) = 15 doesn't match dim(input, 1) = 16}}
+  %0 = tosa.table %arg0, %arg1 : (tensor<?x16xi16>, tensor<6xi16>) -> tensor<?x15xi16>
+  return
+}
