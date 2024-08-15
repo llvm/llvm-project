@@ -5776,7 +5776,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           return false;
       }
     }
-  } else if (isVOP3(MI) && ST.hasNoF16PseudoScalarTransInlineConstants() &&
+  } else if (ST.hasNoF16PseudoScalarTransInlineConstants() && isVOP3(MI) &&
              !MO->isReg() && isInlineConstant(*MO, OpInfo)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_S_EXP_F16_e64:
