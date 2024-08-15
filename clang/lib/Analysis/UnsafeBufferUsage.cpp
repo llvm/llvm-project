@@ -16,6 +16,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
@@ -23,11 +24,11 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
-#include <functional>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -448,151 +449,54 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   return false;
 }
 
-namespace libc_fun_disjoint_inner_matchers {
-// `libc_fun_disjoint_inner_matchers` covers a set of matchers that match
-// disjoint node sets.   They all take a `CoreName`, which is the substring of a
-// function name after `ignoreLibcPrefixAndSuffix`.  They are suppose to be used
-// as an inner matcher of `ignoreLibcPrefixAndSuffix` to deal with different
-// libc function calls.
+AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
+  return Node.getNumArgs() == Num;
+}
 
-// Matches a function call node such that
-//  1. It's name, after stripping off predefined prefix and suffix, is
-//     `CoreName`; and
-//  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
-//     is a set of libc function names.
+namespace libc_func_matchers {
+// Under `libc_func_matchers`, define a set of matchers that match unsafe
+// functions in libc and unsafe calls to them.
+
+//  A tiny parser to strip off common prefix and suffix of libc function names
+//  in real code.
 //
-//  Note: For predefined prefix and suffix, see `ignoreLibcPrefixAndSuffix`.
-//  And, the notation `CoreName[str/wcs]` means a new name obtained from replace
-//  string "wcs" with "str" in `CoreName`.
+//  Given a function name, `matchName` returns `CoreName` according to the
+//  following grammar:
 //
-//  Also note, the set of predefined function names does not include `printf`
-//  functions, they are checked exclusively with other matchers below.
-//  Maintaining the invariant that all matchers under
-//  `libc_fun_disjoint_inner_matchers` are disjoint.
-AST_MATCHER_P(CallExpr, predefinedUnsafeLibcFunCall, StringRef, CoreName) {
-  static const std::set<StringRef> PredefinedNames{
-      // numeric conversion:
-      "atof",
-      "atoi",
-      "atol",
-      "atoll",
-      "strtol",
-      "strtoll",
-      "strtoul",
-      "strtoull",
-      "strtof",
-      "strtod",
-      "strtold",
-      "strtoimax",
-      "strtoumax",
-      // "strfromf",  "strfromd", "strfroml", // C23?
-      // string manipulation:
-      "strcpy",
-      "strncpy",
-      "strlcpy",
-      "strcat",
-      "strncat",
-      "strlcat",
-      "strxfrm",
-      "strdup",
-      "strndup",
-      // string examination:
-      "strlen",
-      "strnlen",
-      "strcmp",
-      "strncmp",
-      "stricmp",
-      "strcasecmp",
-      "strcoll",
-      "strchr",
-      "strrchr",
-      "strspn",
-      "strcspn",
-      "strpbrk",
-      "strstr",
-      "strtok",
-      // "mem-" functions
-      "memchr",
-      "wmemchr",
-      "memcmp",
-      "wmemcmp",
-      "memcpy",
-      "memccpy",
-      "mempcpy",
-      "wmemcpy",
-      "memmove",
-      "wmemmove",
-      "memset",
-      "wmemset",
-      // IO:
-      "fread",
-      "fwrite",
-      "fgets",
-      "fgetws",
-      "gets",
-      "fputs",
-      "fputws",
-      "puts",
-      // others
-      "strerror_s",
-      "strerror_r",
-      "bcopy",
-      "bzero",
-      "bsearch",
-      "qsort",
-  };
-  // This is safe: strlen("hello").  We don't want to be noisy on this case.
-  auto isSafeStrlen = [&Node](StringRef Name) -> bool {
-    return Name == "strlen" && Node.getNumArgs() == 1 &&
-           isa<StringLiteral>(Node.getArg(0)->IgnoreParenImpCasts());
-  };
-
-  // Match predefined names:
-  if (PredefinedNames.find(CoreName.str()) != PredefinedNames.end())
-    return !isSafeStrlen(CoreName);
-
-  std::string NameWCS = CoreName.str();
-  size_t WcsPos = NameWCS.find("wcs");
-
-  while (WcsPos != std::string::npos) {
-    NameWCS[WcsPos++] = 's';
-    NameWCS[WcsPos++] = 't';
-    NameWCS[WcsPos++] = 'r';
-    WcsPos = NameWCS.find("wcs", WcsPos);
+//  LibcName     := CoreName | CoreName + "_s"
+//  MatchingName := "__builtin_" + LibcName              |
+//                  "__builtin___" + LibcName + "_chk"   |
+//                  "__asan_" + LibcName
+//
+struct LibcFunNamePrefixSuffixParser {
+  StringRef matchName(StringRef FunName, bool isBuiltin) {
+    // Try to match __builtin_:
+    if (isBuiltin && FunName.starts_with("__builtin_"))
+      // Then either it is __builtin_LibcName or __builtin___LibcName_chk or
+      // no match:
+      return matchLibcNameOrBuiltinChk(
+          FunName.drop_front(10 /* truncate "__builtin_" */));
+    // Try to match __asan_:
+    if (FunName.starts_with("__asan_"))
+      return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
+    return matchLibcName(FunName);
   }
-  if (PredefinedNames.find(NameWCS) != PredefinedNames.end())
-    return !isSafeStrlen(NameWCS);
-  // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
-  // all should end with "scanf"):
-  return CoreName.ends_with("scanf");
-}
 
-// Match a call to one of the `-printf` functions taking `va_list`.  We cannot
-// check safety for these functions so they should be changed to their
-// non-va_list versions.
-AST_MATCHER_P(CallExpr, unsafeVaListPrintfs, StringRef, CoreName) {
-  StringRef Name = CoreName;
+  // Parameter `Name` is the substring after stripping off the prefix
+  // "__builtin_".
+  StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
+    if (Name.starts_with("__") && Name.ends_with("_chk"))
+      return matchLibcName(
+          Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
+    return matchLibcName(Name);
+  }
 
-  if (!Name.ends_with("printf"))
-    return false; // neither printf nor scanf
-  return Name.starts_with("v");
-}
-
-// Matches a call to one of the `-sprintf` functions (excluding the ones with
-// va_list) as they are always unsafe and should be changed to corresponding
-// `-snprintf`s.
-AST_MATCHER_P(CallExpr, unsafeSprintfs, StringRef, CoreName) {
-  StringRef Name = CoreName;
-
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
-    return false;
-
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-  return Prefix == "s";
-}
+  StringRef matchLibcName(StringRef Name) {
+    if (Name.ends_with("_s"))
+      return Name.drop_back(2 /* truncate "_s" */);
+    return Name;
+  }
+};
 
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
@@ -617,22 +521,42 @@ static bool isNullTermPointer(const Expr *Ptr) {
 //     corresponding to an `s` specifier;
 //  2. Format string is not a literal and there is least an unsafe pointer
 //     argument (including the formatter argument).
-static bool hasUnsafeFormatOrSArg(const Expr *Fmt, unsigned FmtArgIdx,
-                                  const CallExpr *Call, ASTContext &Ctx) {
+static bool hasUnsafeFormatOrSArg(const CallExpr *Call, unsigned FmtArgIdx,
+                                  ASTContext &Ctx, bool isKprintf = false) {
+  class StringFormatStringHandler
+      : public analyze_format_string::FormatStringHandler {
+    const CallExpr *Call;
+    unsigned FmtArgIdx;
+
+  public:
+    StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx)
+        : Call(Call), FmtArgIdx(FmtArgIdx) {}
+
+    bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
+                               const char *startSpecifier,
+                               unsigned specifierLen,
+                               const TargetInfo &Target) override {
+      if (FS.getConversionSpecifier().getKind() ==
+          analyze_printf::PrintfConversionSpecifier::sArg) {
+        unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+
+        if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
+          if (!isNullTermPointer(Call->getArg(ArgIdx)))
+            return false; // stop parsing
+      }
+      return true; // continue parsing
+    }
+  };
+
+  const Expr *Fmt = Call->getArg(FmtArgIdx);
+
   if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
     StringRef FmtStr = SL->getString();
-    auto I = FmtStr.begin();
-    auto E = FmtStr.end();
-    unsigned ArgIdx = FmtArgIdx;
+    StringFormatStringHandler Handler(Call, FmtArgIdx);
 
-    do {
-      ArgIdx = analyze_format_string::ParseFormatStringFirstSArgIndex(
-          I, E, ArgIdx, Ctx.getLangOpts(), Ctx.getTargetInfo());
-      if (ArgIdx && Call->getNumArgs() > ArgIdx &&
-          !isNullTermPointer(Call->getArg(ArgIdx)))
-        return true;
-    } while (ArgIdx);
-    return false;
+    return analyze_format_string::ParsePrintfString(
+        Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+        Ctx.getTargetInfo(), isKprintf);
   }
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
@@ -644,12 +568,170 @@ static bool hasUnsafeFormatOrSArg(const Expr *Fmt, unsigned FmtArgIdx,
       });
 }
 
-// Matches a call to one of the `-printf" functions (excluding the ones with
-// va_list, or `-sprintf`s) that taking pointer-to-char-as-string arguments but
-// fail to guarantee their null-termination.  In other words, these calls are
-// safe if they use null-termination guaranteed string pointers.
-AST_MATCHER_P(CallExpr, unsafeStringInPrintfs, StringRef, CoreName) {
-  StringRef Name = CoreName;
+// Matches a FunctionDecl node such that
+//  1. It's name, after stripping off predefined prefix and suffix, is
+//     `CoreName`; and
+//  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
+//     is a set of libc function names.
+//
+//  Note: For predefined prefix and suffix, see `LibcFunNamePrefixSuffixParser`.
+//  The notation `CoreName[str/wcs]` means a new name obtained from replace
+//  string "wcs" with "str" in `CoreName`.
+AST_MATCHER(FunctionDecl, isPredefinedUnsafeLibcFunc) {
+  static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
+  if (!PredefinedNames)
+    PredefinedNames =
+        std::make_unique<std::set<StringRef>, std::set<StringRef>>({
+            // numeric conversion:
+            "atof",
+            "atoi",
+            "atol",
+            "atoll",
+            "strtol",
+            "strtoll",
+            "strtoul",
+            "strtoull",
+            "strtof",
+            "strtod",
+            "strtold",
+            "strtoimax",
+            "strtoumax",
+            // "strfromf",  "strfromd", "strfroml", // C23?
+            // string manipulation:
+            "strcpy",
+            "strncpy",
+            "strlcpy",
+            "strcat",
+            "strncat",
+            "strlcat",
+            "strxfrm",
+            "strdup",
+            "strndup",
+            // string examination:
+            "strlen",
+            "strnlen",
+            "strcmp",
+            "strncmp",
+            "stricmp",
+            "strcasecmp",
+            "strcoll",
+            "strchr",
+            "strrchr",
+            "strspn",
+            "strcspn",
+            "strpbrk",
+            "strstr",
+            "strtok",
+            // "mem-" functions
+            "memchr",
+            "wmemchr",
+            "memcmp",
+            "wmemcmp",
+            "memcpy",
+            "memccpy",
+            "mempcpy",
+            "wmemcpy",
+            "memmove",
+            "wmemmove",
+            "memset",
+            "wmemset",
+            // IO:
+            "fread",
+            "fwrite",
+            "fgets",
+            "fgetws",
+            "gets",
+            "fputs",
+            "fputws",
+            "puts",
+            // others
+            "strerror_s",
+            "strerror_r",
+            "bcopy",
+            "bzero",
+            "bsearch",
+            "qsort",
+        });
+
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  // Match predefined names:
+  if (PredefinedNames->find(Name) != PredefinedNames->end())
+    return true;
+
+  std::string NameWCS = Name.str();
+  size_t WcsPos = NameWCS.find("wcs");
+
+  while (WcsPos != std::string::npos) {
+    NameWCS[WcsPos++] = 's';
+    NameWCS[WcsPos++] = 't';
+    NameWCS[WcsPos++] = 'r';
+    WcsPos = NameWCS.find("wcs", WcsPos);
+  }
+  if (PredefinedNames->find(NameWCS) != PredefinedNames->end())
+    return true;
+  // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
+  // all should end with "scanf"):
+  return Name.ends_with("scanf");
+}
+
+// Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
+// check safety for these functions so they should be changed to their
+// non-va_list versions.
+AST_MATCHER(FunctionDecl, isUnsafeVaListPrintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  if (!Name.ends_with("printf"))
+    return false; // neither printf nor scanf
+  return Name.starts_with("v");
+}
+
+// Matches a call to one of the `sprintf` functions as they are always unsafe
+// and should be changed to `snprintf`.
+AST_MATCHER(FunctionDecl, isUnsafeSprintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
+
+  if (!Name.ends_with("printf") ||
+      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
+      Name.starts_with("v"))
+    return false;
+
+  StringRef Prefix = Name.drop_back(6);
+
+  if (Prefix.ends_with("w"))
+    Prefix = Prefix.drop_back(1);
+  return Prefix == "s";
+}
+
+// Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
+// character versions.  Calls to these functions can be safe if their arguments
+// are carefully made safe.
+AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
+  auto *II = Node.getIdentifier();
+
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), Node.getBuiltinID());
 
   if (!Name.ends_with("printf") || Name.starts_with("v"))
     return false;
@@ -659,50 +741,76 @@ AST_MATCHER_P(CallExpr, unsafeStringInPrintfs, StringRef, CoreName) {
   if (Prefix.ends_with("w"))
     Prefix = Prefix.drop_back(1);
 
-  if (Prefix.empty() ||
-      Prefix == "k") // printf: all pointer args should be null-terminated
-    return hasUnsafeFormatOrSArg(Node.getArg(0), 0, &Node,
-                                 Finder->getASTContext());
-  if (Prefix == "f")
-    return hasUnsafeFormatOrSArg(Node.getArg(1), 1, &Node,
-                                 Finder->getASTContext());
-  if (Prefix == "sn") {
-    // The first two arguments need to be in safe patterns, which is checked
-    // by `isSafeSizedby`:
-    return hasUnsafeFormatOrSArg(Node.getArg(2), 2, &Node,
-                                 Finder->getASTContext());
-  }
-  return false; // A call to a "-printf" falls into another category.
+  return Prefix.empty() || Prefix == "k" || Prefix == "f" || Prefix == "sn";
 }
 
-// Matches a call to one of the `snprintf` functions (excluding the ones with
-// va_list) such that the first two arguments fail to conform to safe patterns.
+// This matcher requires that it is known that the callee `isNormalPrintf`.
+// Then if the format string is a string literal, this matcher matches when at
+// least one string argument is unsafe. If the format is not a string literal,
+// this matcher matches when at least one pointer type argument is unsafe.
+AST_MATCHER(CallExpr, hasUnsafePrintfStringArg) {
+  // Determine what printf it is:
+  const Expr *FirstArg = Node.getArg(0);
+  ASTContext &Ctx = Finder->getASTContext();
+
+  if (isa<StringLiteral>(FirstArg->IgnoreParenImpCasts())) {
+    // It is a printf/kprintf. And, the format is a string literal:
+    bool isKprintf = false;
+    if (auto *Callee = Node.getDirectCallee())
+      if (auto *II = Node.getDirectCallee()->getIdentifier())
+        isKprintf = II->getName() == "kprintf";
+    return hasUnsafeFormatOrSArg(&Node, 0, Ctx, isKprintf);
+  }
+
+  QualType PtrTy = FirstArg->getType();
+
+  assert(PtrTy->isPointerType());
+
+  QualType PteTy = (cast<PointerType>(PtrTy))->getPointeeType();
+
+  if (!Ctx.getFILEType().isNull() /* If `FILE *` is not ever in the ASTContext,
+                                     there can't be any file pointer then */
+      && PteTy.getCanonicalType() == Ctx.getFILEType().getCanonicalType()) {
+    // It is a fprintf:
+    return hasUnsafeFormatOrSArg(&Node, 1, Ctx, false);
+  }
+
+  const Expr *SecondArg = Node.getArg(1);
+
+  if (SecondArg->getType()->isIntegerType()) {
+    // It is a snprintf:
+    return hasUnsafeFormatOrSArg(&Node, 2, Ctx, false);
+  }
+  // It is printf but the format string is passed by pointer. The only thing we
+  // can do is to require all pointers to be null-terminated:
+  return llvm::any_of(Node.arguments(), [](const Expr *Arg) -> bool {
+    return Arg->getType()->isPointerType() && !isNullTermPointer(Arg);
+  });
+}
+
+// This matcher requires that it is known that the callee `isNormalPrintf`.
+// Then it matches if the first two arguments of the call is a pointer and an
+// integer and they are not in a safe pattern.
 //
 // For the first two arguments: `ptr` and `size`, they are safe if in the
 // following patterns:
 //    ptr := DRE.data();
 //    size:= DRE.size()/DRE.size_bytes()
 // And DRE is a hardened container or view.
-AST_MATCHER_P(CallExpr, unsafeSizedByInSnprintfs, StringRef, CoreName) {
-  StringRef Name = CoreName;
+AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
+  if (Node.getNumArgs() < 3)
+    return false; // not an snprintf call
 
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
-    return false; // not snprint or use va_list
+  const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-
-  if (Prefix != "sn")
-    return false; // not snprint
+  if (!Buf->getType()->isPointerType() || !Size->getType()->isIntegerType())
+    return false; // not an snprintf call
 
   static StringRef SizedObjs[] = {"span", "array", "vector",
                                   "basic_string_view", "basic_string"};
-  const Expr *CharPtr = (*Node.arg_begin())->IgnoreParenImpCasts();
-  const Expr *Size = (*(Node.arg_begin() + 1))->IgnoreParenImpCasts();
-
-  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(CharPtr))
+  Buf = Buf->IgnoreParenImpCasts();
+  Size = Size->IgnoreParenImpCasts();
+  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
     if (auto *MCESize = dyn_cast<CXXMemberCallExpr>(Size)) {
       auto *DREOfPtr = dyn_cast<DeclRefExpr>(
           MCEPtr->getImplicitObjectArgument()->IgnoreParenImpCasts());
@@ -730,86 +838,7 @@ AST_MATCHER_P(CallExpr, unsafeSizedByInSnprintfs, StringRef, CoreName) {
     }
   return true; // ptr and size are not in safe pattern
 }
-} // namespace libc_fun_disjoint_inner_matchers
-
-// Match call to a function whose name may have prefixes like "__builtin_" or
-// "__asan_" and suffixes like "_s" or "_chk".  This matcher takes an argument,
-// which should be applied to the core name---the subtring after stripping off
-// prefix and suffix of the function name.
-// The application results in an inner matcher that matches the call node with
-// respect to the core name of the callee.
-AST_MATCHER_P(CallExpr, ignoreLibcPrefixAndSuffix,
-              std::function<internal::Matcher<CallExpr>(StringRef)>,
-              InnerMatcher) {
-  //  Given a function name, returns its core name `CoreName` according to the
-  //  following grammar.
-  //
-  //  LibcName     := CoreName | CoreName + "_s"
-  //  MatchingName := "__builtin_" + LibcName              |
-  //                  "__builtin___" + LibcName + "_chk"   |
-  //                  "__asan_" + LibcName
-  //
-  struct NameParser {
-    StringRef matchName(StringRef FunName, bool isBuiltin) {
-      // Try to match __builtin_:
-      if (isBuiltin && FunName.starts_with("__builtin_"))
-        // Then either it is __builtin_LibcName or __builtin___LibcName_chk or
-        // no match:
-        return matchLibcNameOrBuiltinChk(
-            FunName.drop_front(10 /* truncate "__builtin_" */));
-      // Try to match __asan_:
-      if (FunName.starts_with("__asan_"))
-        return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
-      return matchLibcName(FunName);
-    }
-
-    // Parameter `Name` is the substring after stripping off the prefix
-    // "__builtin_".
-    StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
-      if (Name.starts_with("__") && Name.ends_with("_chk"))
-        return matchLibcName(
-            Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
-      return matchLibcName(Name);
-    }
-
-    StringRef matchLibcName(StringRef Name) {
-      if (Name.ends_with("_s"))
-        return Name.drop_back(2 /* truncate "_s" */);
-      return Name;
-    }
-  } TheLittleParser;
-
-  const FunctionDecl *FD = Node.getDirectCallee();
-  const IdentifierInfo *II;
-
-  if (!FD)
-    return false;
-  II = FD->getIdentifier();
-  // If this is a special C++ name without IdentifierInfo, it can't be a
-  // C library function.
-  if (!II)
-    return false;
-
-  // Look through 'extern "C"' and anything similar invented in the future.
-  // In general, C library functions will be in the TU directly.
-  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-    // If that's not the case, we also consider "C functions" re-declared in
-    // `std` namespace.
-    if (!FD->getDeclContext()->getRedeclContext()->isStdNamespace())
-      return false;
-  }
-
-  // If this function is not externally visible, it is not a C library function.
-  // Note that we make an exception for inline functions, which may be
-  // declared in header files without external linkage.
-  if (!FD->isInlined() && !FD->isExternallyVisible())
-    return false;
-
-  StringRef CoreName =
-      TheLittleParser.matchName(II->getName(), FD->getBuiltinID());
-
-  return InnerMatcher(CoreName).matches(Node, Finder, Builder);
-}
+} // namespace libc_func_matchers
 } // namespace clang::ast_matchers
 
 namespace {
@@ -1420,34 +1449,49 @@ public:
   UnsafeLibcFunctionCallGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
         Call(Result.Nodes.getNodeAs<CallExpr>(Tag)) {
-    if (Result.Nodes.getNodeAs<CallExpr>("UnsafeLibcFunctionCall_sprintf"))
+    if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSprintfTag))
       WarnedFunKind = SPRINTF;
-    else if (Result.Nodes.getNodeAs<CallExpr>("UnsafeLibcFunctionCall_string"))
+    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeStringTag))
       WarnedFunKind = STRING;
-    else if (Result.Nodes.getNodeAs<CallExpr>(
-                 "UnsafeLibcFunctionCall_sized_by"))
+    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSizedByTag))
       WarnedFunKind = SIZED_BY;
-    else if (Result.Nodes.getNodeAs<CallExpr>("UnsafeLibcFunctionCall_va_list"))
+    else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeVaListTag))
       WarnedFunKind = VA_LIST;
   }
 
   static Matcher matcher() {
-    auto anyOfLibcInnerMatcher = [](StringRef S) {
-      return anyOf(
-          libc_fun_disjoint_inner_matchers::predefinedUnsafeLibcFunCall(S),
-          callExpr(libc_fun_disjoint_inner_matchers::unsafeStringInPrintfs(S))
-              .bind(UnsafeStringTag),
-          callExpr(
-              libc_fun_disjoint_inner_matchers::unsafeSizedByInSnprintfs(S))
-              .bind(UnsafeSizedByTag),
-          callExpr(libc_fun_disjoint_inner_matchers::unsafeSprintfs(S))
-              .bind(UnsafeSprintfTag),
-          callExpr(libc_fun_disjoint_inner_matchers::unsafeVaListPrintfs(S))
-              .bind(UnsafeVaListTag));
-    };
-
     return stmt(
-        callExpr(ignoreLibcPrefixAndSuffix(anyOfLibcInnerMatcher)).bind(Tag));
+        stmt(
+            anyOf(
+                // Match a call to a predefined unsafe libc function (unless the
+                // call has a sole string literal argument):
+                callExpr(callee(functionDecl(
+                             libc_func_matchers::isPredefinedUnsafeLibcFunc())),
+                         unless(allOf(hasArgument(0, expr(stringLiteral())),
+                                      hasNumArgs(1)))),
+                // Match a call to one of the `v*printf` functions taking
+                // va-list, which cannot be checked at compile-time:
+                callExpr(callee(functionDecl(
+                             libc_func_matchers::isUnsafeVaListPrintfFunc())))
+                    .bind(UnsafeVaListTag),
+                // Match a call to a `sprintf` function, which is never safe:
+                callExpr(callee(functionDecl(
+                             libc_func_matchers::isUnsafeSprintfFunc())))
+                    .bind(UnsafeSprintfTag),
+                // Match a call to an `snprintf` function. And first two
+                // arguments of the call (that describe a buffer) are not in
+                // safe patterns:
+                callExpr(callee(functionDecl(
+                             libc_func_matchers::isNormalPrintfFunc())),
+                         libc_func_matchers::hasUnsafeSnprintfBuffer())
+                    .bind(UnsafeSizedByTag),
+                // Match a call to a `printf` function, which can be safe if all
+                // arguments are null-terminated:
+                callExpr(callee(functionDecl(
+                             libc_func_matchers::isNormalPrintfFunc())),
+                         libc_func_matchers::hasUnsafePrintfStringArg())
+                    .bind(UnsafeStringTag)))
+            .bind(Tag));
   }
 
   const Stmt *getBaseStmt() const { return Call; }

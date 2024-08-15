@@ -37,14 +37,14 @@ namespace std {
 }
 
 void f(char * p, char * q, std::span<char> s) {
-  std::memcpy();              // expected-warning{{function memcpy introduces unsafe buffer access}}
-  std::strcpy();              // expected-warning{{function strcpy introduces unsafe buffer access}}
-  std::__1::memcpy();              // expected-warning{{function memcpy introduces unsafe buffer access}}
-  std::__1::strcpy();              // expected-warning{{function strcpy introduces unsafe buffer access}}
+  std::memcpy();              // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
+  std::strcpy();              // expected-warning{{function 'strcpy' introduces unsafe buffer access}}
+  std::__1::memcpy();              // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
+  std::__1::strcpy();              // expected-warning{{function 'strcpy' introduces unsafe buffer access}}
 
   /* Test printfs */
-  std::snprintf(s.data(), 10, "%s%d", "hello", *p); // expected-warning{{function snprintf introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
-  std::__1::snprintf(s.data(), 10, "%s%d", "hello", *p); // expected-warning{{function snprintf introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
+  std::snprintf(s.data(), 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
+  std::__1::snprintf(s.data(), 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' introduces unsafe buffer access}} expected-note{{buffer pointer and size may not match}}
   std::snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn
   std::__1::snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn
 }

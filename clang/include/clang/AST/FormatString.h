@@ -783,18 +783,6 @@ bool ParsePrintfString(FormatStringHandler &H,
 bool ParseFormatStringHasSArg(const char *beg, const char *end,
                               const LangOptions &LO, const TargetInfo &Target);
 
-/// Parse C format string and return index (relative to `ArgIndex`) of the first
-/// found `s` specifier.  Return 0 if not found.
-/// \param I The start of the C format string; Updated to the first unparsed
-/// position upon return.
-/// \param E The end of the C format string;
-/// \param ArgIndex The argument index of the last found `s` specifier; Or the
-/// argument index of the formatter in initial case.
-unsigned ParseFormatStringFirstSArgIndex(const char *&I, const char *E,
-                                         unsigned ArgIndex,
-                                         const LangOptions &LO,
-                                         const TargetInfo &Target);
-
 bool ParseScanfString(FormatStringHandler &H,
                       const char *beg, const char *end, const LangOptions &LO,
                       const TargetInfo &Target);
