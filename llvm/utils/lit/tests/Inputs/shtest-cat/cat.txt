@@ -24,7 +24,7 @@
 # RUN: FileCheck --check-prefix=MULTI-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace < %t/tempmulticat.write %s
 # MULTI-FILE-EXISTS: True
-# MULTI-CAT-OUTPUT:abcdefgh
+#      MULTI-CAT-OUTPUT:abcdefgh
 # MULTI-CAT-OUTPUT-NEXT:efghijkl
 # MULTI-CAT-OUTPUT-NEXT:mnopqrst
 #
@@ -37,7 +37,7 @@
 # RUN: cat %t/temp1.write %t/temp2.write \
 # RUN:      | FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
-# PIPED-CAT-OUTPUT:abcdefgh
+#      PIPED-CAT-OUTPUT:abcdefgh
 # PIPED-CAT-OUTPUT-NEXT:efghijkl
 #
 ## Test cat command with multiple files and glob expressions.
@@ -49,7 +49,7 @@
 # RUN: cat %t/*.write \
 # RUN:      | FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
-# GLOB-CAT-OUTPUT:cvbnm
+#      GLOB-CAT-OUTPUT:cvbnm
 # GLOB-CAT-OUTPUT-NEXT:qwerty
 #
 ## Test cat command with -v and --show-nonprinting option.
@@ -61,7 +61,7 @@
 # RUN: cat --show-nonprinting %S/cat_nonprinting.bin \
 # RUN:      | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
-# NP-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H
+#      NP-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H
 # NP-CAT-OUTPUT-NEXT:^K^L^M^N^O^P^Q^R^S
 # NP-CAT-OUTPUT-NEXT:^T^U^V^W^X^Y^Z^[^\^]^^^_ !"#$%&'
 # NP-CAT-OUTPUT-NEXT:()*+,-./0123456789:;
