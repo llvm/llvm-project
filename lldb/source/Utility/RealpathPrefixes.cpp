@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RealpathPrefixes.h"
 
+#include "lldb/lldb-private-types.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -53,7 +54,7 @@ RealpathPrefixes::ResolveSymlinks(const FileSpec &file_spec) {
       LLDB_LOGF(log, "Realpath'ing support file %s", file_spec_path.c_str());
 
       // One prefix matched. Try to realpath.
-      llvm::SmallString<1024> buff;
+      PathSmallString buff;
       std::error_code ec = m_fs->getRealPath(file_spec_path, buff);
       if (ec)
         return std::nullopt;
