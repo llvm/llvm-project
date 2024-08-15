@@ -4018,10 +4018,6 @@ public:
     return isShiftAssignOp(getOpcode());
   }
 
-  bool hasExcludedOverflowPattern() const {
-    return BinaryOperatorBits.ExcludedOverflowPattern;
-  }
-
   /// Return true if a binary operator using the specified opcode and operands
   /// would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
   /// integer to a pointer.
@@ -4047,8 +4043,13 @@ public:
   void setHasStoredFPFeatures(bool B) { BinaryOperatorBits.HasFPFeatures = B; }
   bool hasStoredFPFeatures() const { return BinaryOperatorBits.HasFPFeatures; }
 
+  /// Set and get the bit that informs arithmetic overflow sanitizers whether
+  /// or not they should exclude certain BinaryOperators from instrumentation
   void setExcludedOverflowPattern(bool B) {
     BinaryOperatorBits.ExcludedOverflowPattern = B;
+  }
+  bool hasExcludedOverflowPattern() const {
+    return BinaryOperatorBits.ExcludedOverflowPattern;
   }
 
   /// Get FPFeatures from trailing storage
