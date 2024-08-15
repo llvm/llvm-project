@@ -7999,18 +7999,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
 
   QualType BaseType = Base->getType();
   MayBePseudoDestructor = false;
-  if (BaseType->isDependentType()) {
-    // If we have a pointer to a dependent type and are using the -> operator,
-    // the object type is the type that the pointer points to. We might still
-    // have enough information about that type to do something useful.
-    if (OpKind == tok::arrow)
-      if (const PointerType *Ptr = BaseType->getAs<PointerType>())
-        BaseType = Ptr->getPointeeType();
-
-    ObjectType = ParsedType::make(BaseType);
-    MayBePseudoDestructor = true;
-    return Base;
-  }
 
   // C++ [over.match.oper]p8:
   //   [...] When operator->returns, the operator-> is applied  to the value
@@ -8025,7 +8013,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     SmallVector<FunctionDecl*, 8> OperatorArrows;
     CTypes.insert(Context.getCanonicalType(BaseType));
 
-    while (BaseType->isRecordType()) {
+    while (BaseType->getAsRecordDecl()) {
       if (OperatorArrows.size() >= getLangOpts().ArrowDepth) {
         Diag(OpLoc, diag::err_operator_arrow_depth_exceeded)
           << StartingType << getLangOpts().ArrowDepth << Base->getSourceRange();
@@ -8036,7 +8024,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
       }
 
       Result = BuildOverloadedArrowExpr(
-          S, Base, OpLoc,
+          Base, OpLoc,
           // When in a template specialization and on the first loop iteration,
           // potentially give the default diagnostic (with the fixit in a
           // separate note) instead of having the error reported back to here
@@ -8062,7 +8050,14 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
           }
         }
         return ExprError();
+      } else if (Result.isUnset()) {
+        // BuildOverloadedArrowExpr returns an empty expression to indicate
+        // that we need to build a dependent overloaded arrow expression.
+        assert(BaseType->isDependentType());
+        BaseType = Context.DependentTy;
+        break;
       }
+
       Base = Result.get();
       if (CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(Base))
         OperatorArrows.push_back(OpCall->getDirectCallee());
@@ -8100,7 +8095,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (!BaseType->isRecordType()) {
+  if (!BaseType->getAsRecordDecl()) {
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
