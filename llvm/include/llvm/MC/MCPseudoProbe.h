@@ -235,7 +235,6 @@ public:
   bool isRoot() const { return Guid == 0; }
   InlinedProbeTreeMap &getChildren() { return Children; }
   const InlinedProbeTreeMap &getChildren() const { return Children; }
-  ProbesType &getProbes() { return Probes; }
   const ProbesType &getProbes() const { return Probes; }
   // Caller node of the inline site
   MCPseudoProbeInlineTreeBase<ProbesType, DerivedProbeInlineTreeType,
