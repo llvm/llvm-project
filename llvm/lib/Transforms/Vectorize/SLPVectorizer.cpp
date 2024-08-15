@@ -13772,9 +13772,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                  "Cannot expand getelementptr.");
           unsigned VF = VecTyNumElements / ScalarTyNumElements;
           SmallVector<Constant *> Indices(VecTyNumElements);
-          transform(seq(VecTyNumElements), Indices.begin(), [=](unsigned I) {
-            return Builder.getInt64(I % ScalarTyNumElements);
-          });
+          transform(seq(ScalarTyNumElements), Indices.begin(),
+                    [=](unsigned I) { return Builder.getInt64(I); });
+          for (int Pos : createStrideMask(ScalarTyNumElements,
+                                          ScalarTyNumElements, VF - 1))
+            std::copy_n(Indices.begin(), ScalarTyNumElements,
+                        Indices.begin() + Pos);
           VecPtr = Builder.CreateGEP(
               VecTy->getElementType(),
               Builder.CreateShuffleVector(
