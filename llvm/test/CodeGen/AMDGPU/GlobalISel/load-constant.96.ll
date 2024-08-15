@@ -962,7 +962,6 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ; GFX1210-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1]
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
@@ -1206,7 +1205,6 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ; GFX1210-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1]
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1210-UNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2

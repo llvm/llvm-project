@@ -1242,12 +1242,17 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
+  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
+    return applyWaitcnt(X_CNT, 0);
 
-  // The same optimization is not done for VMEM because we are not tracking
-  // stores, so having a wait on LOADCnt does not guarantee all translations are
-  // done.
-  applyWaitcnt(
-      X_CNT, (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) ? 0 : Wait.XCnt);
+  // If we have pending store we cannot optimize XCnt because we do not wait for
+  // stores. VMEM loads retun in order, so if we only have loads XCnt is
+  // decremented to the same number as LOADCnt.
+  if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+      !hasPendingEvent(STORE_CNT))
+    return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+
+  applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
 // Where there are multiple types of event in the bracket of a counter,
@@ -2149,6 +2154,10 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   // XCnt may be already consumed by a load wait
   if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
       !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
+    Wait.XCnt = ~0u;
+
+  if (Wait.LoadCnt == 0 && Wait.XCnt != ~0u &&
+      !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
     Wait.XCnt = ~0u;
 
   if (WCG->createNewWaitcnt(Block, It, Wait))

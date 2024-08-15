@@ -3023,7 +3023,6 @@ define amdgpu_ps void @s_mul_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mad_nc_u64_u32 v[2:3], 0x50, v2, 0
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -3227,7 +3226,6 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mad_nc_i64_i32 v[2:3], 0x50, v2, 0
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

@@ -102,7 +102,6 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[18:19], 10
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[20:21], 12
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GCN-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v2, v6, v2
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 0
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v4, v4, v0
@@ -433,7 +432,6 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v2, v2, v6
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v1, v1, v5
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v0, v0, v4
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-SDAG-NEXT:    s_clause 0x2
 ; GCN-SDAG-NEXT:    global_store_b16 v[8:9], v3, off
@@ -462,7 +460,6 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    global_load_b128 v[4:7], v4, s[6:7] scale_offset
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v0, v0, v4
-; GCN-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v1, v1, v5
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v2, v2, v6

@@ -109,7 +109,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -188,7 +187,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -309,7 +307,6 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX1210-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX1210-NEXT:    s_cbranch_execnz .LBB4_1
