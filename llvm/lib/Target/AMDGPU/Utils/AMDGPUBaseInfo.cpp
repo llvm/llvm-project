@@ -2564,8 +2564,8 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
-  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI;
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
 
 #define MAP_REG2REG \
@@ -2655,6 +2655,8 @@ bool isInlineValue(unsigned Reg) {
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_LO:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_HI:
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return true;
   case AMDGPU::SRC_VCCZ:

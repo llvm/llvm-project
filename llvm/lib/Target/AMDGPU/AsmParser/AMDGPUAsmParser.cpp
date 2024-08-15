@@ -2790,48 +2790,48 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
 
 static unsigned getSpecialRegForName(StringRef RegName) {
   return StringSwitch<unsigned>(RegName)
-      .Case("exec", AMDGPU::EXEC)
-      .Case("vcc", AMDGPU::VCC)
-      .Case("flat_scratch", AMDGPU::FLAT_SCR)
-      .Case("xnack_mask", AMDGPU::XNACK_MASK)
-      .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
-      .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
-      .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-      .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-      .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
-      .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
-      .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-      .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-      .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-      .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-      .Case("lds_direct", AMDGPU::LDS_DIRECT)
-      .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
-      .Case("m0", AMDGPU::M0)
-      .Case("vccz", AMDGPU::SRC_VCCZ)
-      .Case("src_vccz", AMDGPU::SRC_VCCZ)
-      .Case("execz", AMDGPU::SRC_EXECZ)
-      .Case("src_execz", AMDGPU::SRC_EXECZ)
-      .Case("scc", AMDGPU::SRC_SCC)
-      .Case("src_scc", AMDGPU::SRC_SCC)
-      .Case("tba", AMDGPU::TBA)
-      .Case("tma", AMDGPU::TMA)
-      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
-      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
-      .Case("src_flat_scratch_base_lo", SRC_FLAT_SCRATCH_BASE_LO)
-      .Case("src_flat_scratch_base_hi", SRC_FLAT_SCRATCH_BASE_HI)
-      .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
-      .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
-      .Case("vcc_lo", AMDGPU::VCC_LO)
-      .Case("vcc_hi", AMDGPU::VCC_HI)
-      .Case("exec_lo", AMDGPU::EXEC_LO)
-      .Case("exec_hi", AMDGPU::EXEC_HI)
-      .Case("tma_lo", AMDGPU::TMA_LO)
-      .Case("tma_hi", AMDGPU::TMA_HI)
-      .Case("tba_lo", AMDGPU::TBA_LO)
-      .Case("tba_hi", AMDGPU::TBA_HI)
-      .Case("pc", AMDGPU::PC_REG)
-      .Case("null", AMDGPU::SGPR_NULL)
-      .Default(AMDGPU::NoRegister);
+    .Case("exec", AMDGPU::EXEC)
+    .Case("vcc", AMDGPU::VCC)
+    .Case("flat_scratch", AMDGPU::FLAT_SCR)
+    .Case("xnack_mask", AMDGPU::XNACK_MASK)
+    .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
+    .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
+    .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+    .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+    .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
+    .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
+    .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+    .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+    .Case("src_flat_scratch_base_lo", AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)
+    .Case("src_flat_scratch_base_hi", AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)
+    .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+    .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+    .Case("lds_direct", AMDGPU::LDS_DIRECT)
+    .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
+    .Case("m0", AMDGPU::M0)
+    .Case("vccz", AMDGPU::SRC_VCCZ)
+    .Case("src_vccz", AMDGPU::SRC_VCCZ)
+    .Case("execz", AMDGPU::SRC_EXECZ)
+    .Case("src_execz", AMDGPU::SRC_EXECZ)
+    .Case("scc", AMDGPU::SRC_SCC)
+    .Case("src_scc", AMDGPU::SRC_SCC)
+    .Case("tba", AMDGPU::TBA)
+    .Case("tma", AMDGPU::TMA)
+    .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
+    .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+    .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
+    .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
+    .Case("vcc_lo", AMDGPU::VCC_LO)
+    .Case("vcc_hi", AMDGPU::VCC_HI)
+    .Case("exec_lo", AMDGPU::EXEC_LO)
+    .Case("exec_hi", AMDGPU::EXEC_HI)
+    .Case("tma_lo", AMDGPU::TMA_LO)
+    .Case("tma_hi", AMDGPU::TMA_HI)
+    .Case("tba_lo", AMDGPU::TBA_LO)
+    .Case("tba_hi", AMDGPU::TBA_HI)
+    .Case("pc", AMDGPU::PC_REG)
+    .Case("null", AMDGPU::SGPR_NULL)
+    .Default(AMDGPU::NoRegister);
 }
 
 bool AMDGPUAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -6769,6 +6769,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
     return isGFX9Plus() && !isGFX13Plus();
+  case SRC_FLAT_SCRATCH_BASE_LO:
+  case SRC_FLAT_SCRATCH_BASE_HI:
+    return isGFX1210Plus();
   case SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
   case TBA:
@@ -6787,9 +6790,6 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_EXECZ:
   case SRC_VCCZ:
     return !isGFX11Plus();
-  case SRC_FLAT_SCRATCH_BASE_LO:
-  case SRC_FLAT_SCRATCH_BASE_HI:
-    return isGFX13Plus();
   default:
     break;
   }
@@ -9147,7 +9147,7 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
   uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
   if (DstOp.isReg() &&
       MRI.getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg())) {
-    if (AMDGPU::isHi(DstOp.getReg(), MRI))
+    if (AMDGPU::isHi16Reg(DstOp.getReg(), MRI))
       ModVal |= SISrcMods::DST_OP_SEL;
   } else {
     if ((OpSel & (1 << SrcNum)) != 0)
@@ -9491,7 +9491,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (SrcOp.isReg() && getMRI()
                              ->getRegClass(AMDGPU::VGPR_16RegClassID)
                              .contains(SrcOp.getReg())) {
-      bool VGPRSuffixIsHi = AMDGPU::isHi(SrcOp.getReg(), *getMRI());
+      bool VGPRSuffixIsHi = AMDGPU::isHi16Reg(SrcOp.getReg(), *getMRI());
       if (VGPRSuffixIsHi)
         ModVal |= SISrcMods::OP_SEL_0;
     } else {
