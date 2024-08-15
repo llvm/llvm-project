@@ -397,7 +397,7 @@ public:
 
   /// Connect to module build daemon
   unsigned ModuleBuildDaemon : 1;
-  
+
   /// Whether to emit symbol graph files as a side effect of compilation.
   LLVM_PREFERRED_TYPE(bool)
   unsigned EmitSymbolGraph : 1;
