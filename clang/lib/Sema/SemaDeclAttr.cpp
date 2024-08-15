@@ -7123,6 +7123,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   }
 }
 
+static bool isKernelDecl(Decl *D) {
+  const FunctionType *FnTy = D->getFunctionType();
+  return D->hasAttr<OpenCLKernelAttr>() ||
+         (FnTy && FnTy->getCallConv() == CallingConv::CC_AMDGPUKernelCall) ||
+         D->hasAttr<CUDAGlobalAttr>() || D->getAttr<NVPTXKernelAttr>();
+}
+
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -7165,9 +7172,7 @@ void Sema::ProcessDeclAttributeList(
       D->setInvalidDecl();
     }
   }
-  const FunctionType *FnTy = D->getFunctionType();
-  if (!D->hasAttr<CUDAGlobalAttr>() && !D->hasAttr<OpenCLKernelAttr>() &&
-      FnTy && FnTy->getCallConv() != CallingConv::CC_AMDGPUKernelCall) {
+  if (!isKernelDecl(D)) {
     if (const auto *A = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
       Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
