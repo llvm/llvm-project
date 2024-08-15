@@ -8,11 +8,11 @@
 
 #include "lldb/Utility/RealpathPrefixes.h"
 
-#include "lldb/lldb-private-types.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-private-types.h"
 
 using namespace lldb_private;
 

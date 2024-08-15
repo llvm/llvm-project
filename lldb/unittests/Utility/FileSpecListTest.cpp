@@ -233,7 +233,7 @@ TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
   file_spec_list.Append(PosixSpec("symlink")); // This is a string prefix of the
-                                         // symlink but not a path prefix.
+                                               // symlink but not a path prefix.
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list

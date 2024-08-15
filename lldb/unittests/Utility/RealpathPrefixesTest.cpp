@@ -23,7 +23,6 @@ static FileSpec WindowsSpec(llvm::StringRef path) {
   return FileSpec(path, FileSpec::Style::windows);
 }
 
-
 // Should resolve a symlink which match an absolute prefix
 TEST(RealpathPrefixesTest, MatchingAbsolutePrefix) {
   // Prepare FS
@@ -62,8 +61,7 @@ TEST(RealpathPrefixesTest, MatchingRelativePrefix) {
 TEST(RealpathPrefixesTest, WindowsAndCaseInsensitive) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      WindowsSpec("f:\\dir1\\link.h"),
-      WindowsSpec("f:\\dir2\\real.h"),
+      WindowsSpec("f:\\dir1\\link.h"), WindowsSpec("f:\\dir2\\real.h"),
       FileSpec::Style::windows));
 
   // Prepare RealpathPrefixes
@@ -72,8 +70,8 @@ TEST(RealpathPrefixesTest, WindowsAndCaseInsensitive) {
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
-  std::optional<FileSpec> ret = prefixes.ResolveSymlinks(
-      WindowsSpec("F:\\DIR1\\LINK.H"));
+  std::optional<FileSpec> ret =
+      prefixes.ResolveSymlinks(WindowsSpec("F:\\DIR1\\LINK.H"));
   EXPECT_EQ(ret, WindowsSpec("f:\\dir2\\real.h"));
 }
 
@@ -105,7 +103,8 @@ TEST(RealpathPrefixesTest, ComplexPrefixes) {
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.Append(PosixSpec("./dir1/foo/../bar/..")); // Equivalent to "/dir1"
+  file_spec_list.Append(
+      PosixSpec("./dir1/foo/../bar/..")); // Equivalent to "/dir1"
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Test
