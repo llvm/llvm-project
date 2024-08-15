@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -S -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -S -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -S -o - %s | FileCheck %s --check-prefix=ADD
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -S -o - %s | FileCheck %s --check-prefix=NEGATE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -S -o - %s | FileCheck %s --check-prefix=WHILE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=all -fwrapv -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test -emit-llvm -o - %s | FileCheck %s --check-prefix=ADD
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const -emit-llvm -o - %s | FileCheck %s --check-prefix=NEGATE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while -emit-llvm -o - %s | FileCheck %s --check-prefix=WHILE
 
 // Ensure some common overflow-dependent or overflow-prone code patterns don't
 // trigger the overflow sanitizers. In many cases, overflow warnings caused by
@@ -32,6 +32,7 @@
 // NEGATE: usub.with.overflow
 // NEGATE-NOT: negate_overflow
 
+// WHILE-LABEL: @basic_commutativity
 // WHILE: handler.add_overflow
 // WHILE: negate_overflow
 // WHILE-NOT: usub.with.overflow
@@ -57,6 +58,7 @@ void basic_commutativity(void) {
     c = 9;
 }
 
+// WHILE-LABEL: @arguments_and_commutativity
 void arguments_and_commutativity(unsigned V1, unsigned V2) {
   if (V1 + V2 < V1)
     c = 9;
