@@ -38,14 +38,11 @@ protected:
 };
 
 class LLVM_LIBRARY_VISIBILITY ErrataWorkaround : public MachineFunctionPass {
-public:
+protected:
   const SparcSubtarget *ST;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
-  static char ID;
 
-  ErrataWorkaround();
-  bool runOnMachineFunction(MachineFunction &MF) override;
   bool checkSeqTN0009A(MachineBasicBlock::iterator I);
   bool checkSeqTN0009B(MachineBasicBlock::iterator I);
   bool checkSeqTN0010First(MachineBasicBlock &MBB);
@@ -57,6 +54,13 @@ public:
   bool isFloat(MachineBasicBlock::iterator I);
   bool isDivSqrt(MachineBasicBlock::iterator I);
   void insertNop(MachineBasicBlock::iterator I);
+
+public:
+  static char ID;
+
+  ErrataWorkaround();
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
   StringRef getPassName() const override { return "Errata workaround pass"; };
 };
 
