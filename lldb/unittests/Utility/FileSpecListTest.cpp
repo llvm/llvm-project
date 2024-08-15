@@ -133,7 +133,8 @@ TEST(SupportFileListTest, RelativePathMatchesWindows) {
 TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -157,7 +158,8 @@ TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
 TEST(SupportFileListTest, RootDirectory) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -181,7 +183,8 @@ TEST(SupportFileListTest, RootDirectory) {
 TEST(SupportFileListTest, SymlinkedRelativePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -205,7 +208,8 @@ TEST(SupportFileListTest, SymlinkedRelativePaths) {
 TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -228,7 +232,8 @@ TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
 TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -253,7 +258,8 @@ TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
 TEST(SupportFileListTest, PartialBreakpointPath) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -277,7 +283,8 @@ TEST(SupportFileListTest, PartialBreakpointPath) {
 TEST(SupportFileListTest, DifferentBasename) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/bar.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/bar.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;

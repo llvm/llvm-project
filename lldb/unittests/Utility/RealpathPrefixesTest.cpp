@@ -27,7 +27,8 @@ static FileSpec WindowsSpec(llvm::StringRef path) {
 TEST(RealpathPrefixesTest, MatchingAbsolutePrefix) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h")));
+      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -44,7 +45,8 @@ TEST(RealpathPrefixesTest, MatchingAbsolutePrefix) {
 TEST(RealpathPrefixesTest, MatchingRelativePrefix) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("dir1/link.h"), PosixSpec("dir2/real.h")));
+      PosixSpec("dir1/link.h"), PosixSpec("dir2/real.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -80,7 +82,8 @@ TEST(RealpathPrefixesTest, WindowsAndCaseInsensitive) {
 TEST(RealpathPrefixesTest, MatchingAndMismatchingPrefix) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h")));
+      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -99,7 +102,8 @@ TEST(RealpathPrefixesTest, MatchingAndMismatchingPrefix) {
 TEST(RealpathPrefixesTest, ComplexPrefixes) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("dir1/link.h"), PosixSpec("dir2/real.h")));
+      PosixSpec("dir1/link.h"), PosixSpec("dir2/real.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
@@ -117,7 +121,8 @@ TEST(RealpathPrefixesTest, ComplexPrefixes) {
 TEST(RealpathPrefixesTest, MismatchingPrefixes) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h")));
+      PosixSpec("/dir1/link.h"), PosixSpec("/dir2/real.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
