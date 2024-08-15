@@ -849,14 +849,14 @@ parseTwoOperandConstraint(StringRef S, ArrayRef<SMLoc> Loc) {
   size_t start = Ops.first.find_first_of('$');
   if (start == std::string::npos)
     PrintFatalError(Loc, "expected '$' prefix on asm operand name");
-  Ops.first = Ops.first.slice(start + 1, std::string::npos);
+  Ops.first = Ops.first.substr(start + 1);
   size_t end = Ops.first.find_last_of(" \t");
   Ops.first = Ops.first.slice(0, end);
   // Now the second operand.
   start = Ops.second.find_first_of('$');
   if (start == std::string::npos)
     PrintFatalError(Loc, "expected '$' prefix on asm operand name");
-  Ops.second = Ops.second.slice(start + 1, std::string::npos);
+  Ops.second = Ops.second.substr(start + 1);
   end = Ops.second.find_last_of(" \t");
   Ops.first = Ops.first.slice(0, end);
   return Ops;
