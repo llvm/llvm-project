@@ -517,6 +517,10 @@ def fminimum   : SDNode<"ISD::FMINIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximum   : SDNode<"ISD::FMAXIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
+def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;

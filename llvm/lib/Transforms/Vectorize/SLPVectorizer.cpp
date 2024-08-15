@@ -12554,9 +12554,13 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
                              : ScalarTy,
             Builder, *this);
         ShuffleBuilder.add(V, Mask);
-        SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors;
-        for (const auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
-          SubVectors.emplace_back(VectorizableTree[EIdx].get(), Idx);
+        SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
+            E->CombinedEntriesWithIndices.size());
+        transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
+                  [&](const auto &P) {
+                    return std::make_pair(VectorizableTree[P.first].get(),
+                                          P.second);
+                  });
         return ShuffleBuilder.finalize(std::nullopt, SubVectors);
       };
       Value *V = vectorizeTree(VE, PostponedPHIs);
@@ -12645,9 +12649,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     for_each(MutableArrayRef(GatheredScalars)
                  .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
              [&](Value *&V) { V = PoisonValue::get(V->getType()); });
-  SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors;
-  for (const auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
-    SubVectors.emplace_back(VectorizableTree[EIdx].get(), Idx);
+  SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
+      E->CombinedEntriesWithIndices.size());
+  transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
+            [&](const auto &P) {
+              return std::make_pair(VectorizableTree[P.first].get(), P.second);
+            });
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
   SmallVector<int> ReorderMask;
@@ -13128,9 +13135,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     } else {
       ShuffleBuilder.addOrdered(V, E->ReorderIndices);
     }
-    SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors;
-    for (const auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
-      SubVectors.emplace_back(VectorizableTree[EIdx].get(), Idx);
+    SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
+        E->CombinedEntriesWithIndices.size());
+    transform(
+        E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
+          return std::make_pair(VectorizableTree[P.first].get(), P.second);
+        });
     return ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors);
   };
 
@@ -15638,7 +15648,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (any_of(E.Scalars, [&](Value *V) {
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
-                 (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                 (E.Idx == 0 && UserIgnoreList &&
+                  UserIgnoreList->contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
                   !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);

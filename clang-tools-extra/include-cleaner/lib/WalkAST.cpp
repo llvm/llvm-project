@@ -271,7 +271,6 @@ public:
   // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    // if (CTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
@@ -279,7 +278,6 @@ public:
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    // if (VTSD->isExplicitSpecialization())
     if (clang::isTemplateExplicitInstantiationOrSpecialization(
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),

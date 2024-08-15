@@ -4322,7 +4322,7 @@ struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
 
     rewriter.inlineBlockBefore(&source, op);
     rewriter.eraseOp(terminator);
-    // Repalce the operation with a potentially empty list of results.
+    // Replace the operation with a potentially empty list of results.
     // Fold mechanism doesn't support the case where the result list is empty.
     rewriter.replaceOp(op, results);
 

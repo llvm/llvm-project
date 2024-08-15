@@ -6144,6 +6144,10 @@ def mvis3 : Flag<["-"], "mvis3">, Group<m_sparc_Features_Group>;
 def mno_vis3 : Flag<["-"], "mno-vis3">, Group<m_sparc_Features_Group>;
 def mhard_quad_float : Flag<["-"], "mhard-quad-float">, Group<m_sparc_Features_Group>;
 def msoft_quad_float : Flag<["-"], "msoft-quad-float">, Group<m_sparc_Features_Group>;
+def mv8plus : Flag<["-"], "mv8plus">, Group<m_sparc_Features_Group>,
+  HelpText<"Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;
+def mno_v8plus : Flag<["-"], "mno-v8plus">, Group<m_sparc_Features_Group>,
+  HelpText<"Disable V8+ mode">;
 foreach i = 1 ... 7 in
   def ffixed_g#i : Flag<["-"], "ffixed-g"#i>, Group<m_sparc_Features_Group>,
     HelpText<"Reserve the G"#i#" register (SPARC only)">;
