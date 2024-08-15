@@ -8,12 +8,12 @@
 ## Test two commands inside curly brace.
 # RUN: { echo foo; echo bar; } | FileCheck --check-prefix=TWO-CMDS %s
 
-# TWO-CMDS: foo
-# TWO-CMDS: bar
+#      TWO-CMDS: foo
+# TWO-CMDS-NEXT: bar
 
 ## Test nested curly brace.
-# RUN: { echo foo > %t/temp.txt; { echo bar; echo baz; }; cat %t/temp.txt; } | FileCheck --check-prefix=NESTED %s
+# RUN: { echo foo > %t; { echo bar; echo baz; }; cat %t; } | FileCheck --check-prefix=NESTED %s
 
-# NESTED: bar
-# NESTED: baz
-# NESTED: foo
+#      NESTED: bar
+# NESTED-NEXT: baz
+# NESTED-NEXT: foo
