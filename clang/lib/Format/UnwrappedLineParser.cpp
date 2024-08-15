@@ -507,6 +507,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     if (!Line->InMacroBody && !Style.isTableGen()) {
       // Skip PPDirective lines and comments.
       while (NextTok->is(tok::hash)) {
+        NextTok = Tokens->getNextToken();
+        if (NextTok->is(tok::pp_not_keyword))
+          break;
         do {
           NextTok = Tokens->getNextToken();
         } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
