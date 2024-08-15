@@ -29,7 +29,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   explicit DXILTranslateMetadata() : ModulePass(ID) {}
 
-  StringRef getPassName() const override { return "DXIL Metadata Emit"; }
+  StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -67,9 +67,9 @@ ModulePass *llvm::createDXILTranslateMetadataPass() {
   return new DXILTranslateMetadata();
 }
 
-INITIALIZE_PASS_BEGIN(DXILTranslateMetadata, "dxil-metadata-emit",
-                      "DXIL Metadata Emit", false, false)
+INITIALIZE_PASS_BEGIN(DXILTranslateMetadata, "dxil-translate-metadata",
+                      "DXIL Translate Metadata", false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
-INITIALIZE_PASS_END(DXILTranslateMetadata, "dxil-metadata-emit",
-                    "DXIL Metadata Emit", false, false)
+INITIALIZE_PASS_END(DXILTranslateMetadata, "dxil-translate-metadata",
+                    "DXIL Translate Metadata", false, false)

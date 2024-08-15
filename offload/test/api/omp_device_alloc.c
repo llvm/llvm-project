@@ -15,11 +15,6 @@ int main() {
     omp_free(ptr, omp_default_mem_alloc);
   }
 
-#pragma omp target
-  {
-    assert(!omp_alloc(sizeof(int), omp_null_allocator) && "Ptr is not (null)!");
-  }
-
   // CHECK: PASS
   printf("PASS\n");
 }

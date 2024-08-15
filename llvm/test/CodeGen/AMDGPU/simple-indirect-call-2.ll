@@ -37,8 +37,7 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; CHECK-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
-; CHECK-NEXT:    call void [[LOAD]]()
+; CHECK-NEXT:    call void [[FP]]()
 ; CHECK-NEXT:    ret void
 ;
 entry:
