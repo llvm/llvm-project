@@ -23,6 +23,7 @@ class TargetExtType;
 namespace dxil {
 
 class ResourceInfo {
+public:
   struct ResourceBinding {
     uint32_t RecordID;
     uint32_t Space;
@@ -89,6 +90,7 @@ class ResourceInfo {
     bool operator!=(const FeedbackInfo &RHS) const { return !(*this == RHS); }
   };
 
+private:
   // Universal properties.
   Value *Symbol;
   StringRef Name;
@@ -114,6 +116,10 @@ class ResourceInfo {
   };
 
   MSInfo MultiSample;
+
+  // We need a default constructor if we want to insert this in a MapVector.
+  ResourceInfo() {}
+  friend class MapVector<CallInst *, ResourceInfo>;
 
 public:
   ResourceInfo(dxil::ResourceClass RC, dxil::ResourceKind Kind, Value *Symbol,
@@ -165,6 +171,8 @@ public:
     assert(isMultiSample() && "Not MultiSampled");
     MultiSample.Count = Count;
   }
+
+  dxil::ResourceClass getResourceClass() const { return RC; }
 
   bool operator==(const ResourceInfo &RHS) const;
 
