@@ -10,4 +10,13 @@ int getExt() {
 
 int __attribute__((section(".shared"))) glob = 42;
 // CIR:   cir.global external @glob = #cir.int<42> : !s32i {section = ".shared"}
-// LLVM   @glob = global i32 42, section ".shared"
+// LLVM:   @glob = global i32 42, section ".shared"
+
+
+void __attribute__((__visibility__("hidden"))) foo();
+// CIR: cir.func no_proto private hidden @foo(...) extra(#fn_attr)
+int bah()
+{
+  foo();
+  return 1;
+}

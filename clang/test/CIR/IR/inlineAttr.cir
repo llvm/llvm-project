@@ -12,4 +12,4 @@ module {
 // CIR: #fn_attr = #cir<extra({inline = #cir.inline<no>})>
 // CIR: cir.func @l0() extra(#fn_attr) {
 
-// MLIR: llvm.func @l0() attributes {cir.extra_attrs = #fn_attr}
+// MLIR: llvm.func @l0() attributes {cir.extra_attrs = #fn_attr, global_visibility = #cir<visibility default>}

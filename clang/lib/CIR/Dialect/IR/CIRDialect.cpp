@@ -233,6 +233,36 @@ bool omitRegionTerm(mlir::Region &r) {
   return singleNonEmptyBlock && yieldsNothing();
 }
 
+void printVisibilityAttr(OpAsmPrinter &printer,
+                         mlir::cir::VisibilityAttr &visibility) {
+  switch (visibility.getValue()) {
+  case VisibilityKind::Hidden:
+    printer << "hidden";
+    break;
+  case VisibilityKind::Protected:
+    printer << "protected";
+    break;
+  default:
+    break;
+  }
+}
+
+void parseVisibilityAttr(OpAsmParser &parser,
+                         mlir::cir::VisibilityAttr &visibility) {
+  VisibilityKind visibilityKind;
+
+  if (parser.parseOptionalKeyword("hidden").succeeded()) {
+    visibilityKind = VisibilityKind::Hidden;
+  } else if (parser.parseOptionalKeyword("protected").succeeded()) {
+    visibilityKind = VisibilityKind::Protected;
+  } else {
+    visibilityKind = VisibilityKind::Default;
+  }
+
+  visibility =
+      mlir::cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
@@ -253,6 +283,19 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
   printer.printRegion(region,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
+}
+
+static mlir::ParseResult
+parseOmitDefaultVisibility(mlir::OpAsmParser &parser,
+                           mlir::cir::VisibilityAttr &visibility) {
+  parseVisibilityAttr(parser, visibility);
+  return success();
+}
+
+static void printOmitDefaultVisibility(mlir::OpAsmPrinter &printer,
+                                       mlir::cir::GlobalOp &op,
+                                       mlir::cir::VisibilityAttr visibility) {
+  printVisibilityAttr(printer, visibility);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1997,6 +2040,10 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
     odsBuilder.createBlock(dtorRegion);
     dtorBuilder(odsBuilder, odsState.location);
   }
+
+  odsState.addAttribute(
+      getGlobalVisibilityAttrName(odsState.name),
+      mlir::cir::VisibilityAttr::get(odsBuilder.getContext()));
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -2145,6 +2192,9 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
   result.addAttribute(getCallingConvAttrName(result.name),
                       CallingConvAttr::get(builder.getContext(), callingConv));
+  result.addAttribute(getGlobalVisibilityAttrName(result.name),
+                      mlir::cir::VisibilityAttr::get(builder.getContext()));
+
   result.attributes.append(attrs.begin(), attrs.end());
   if (argAttrs.empty())
     return;
@@ -2163,6 +2213,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   auto lambdaNameAttr = getLambdaAttrName(state.name);
   auto visNameAttr = getSymVisibilityAttrName(state.name);
   auto noProtoNameAttr = getNoProtoAttrName(state.name);
+  auto visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   auto dsolocalNameAttr = getDsolocalAttrName(state.name);
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -2187,6 +2238,11 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(visNameAttr,
                        parser.getBuilder().getStringAttr(visAttrStr));
   }
+
+  mlir::cir::VisibilityAttr cirVisibilityAttr;
+  parseVisibilityAttr(parser, cirVisibilityAttr);
+  state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
+
   if (parser.parseOptionalKeyword(dsolocalNameAttr).succeeded())
     state.addAttribute(dsolocalNameAttr, parser.getBuilder().getUnitAttr());
 
@@ -2393,6 +2449,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (vis != mlir::SymbolTable::Visibility::Public)
     p << vis << " ";
 
+  auto cirVisibilityAttr = getGlobalVisibilityAttr();
+  printVisibilityAttr(p, cirVisibilityAttr);
+  p << " ";
+
   // Print function name, signature, and control.
   p.printSymbolName(getSymName());
   auto fnType = getFunctionType();
@@ -2407,24 +2467,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionAttributes(
       p, *this,
       // These are all omitted since they are custom printed already.
-      {
-          getAliaseeAttrName(),
-          getBuiltinAttrName(),
-          getCoroutineAttrName(),
-          getDsolocalAttrName(),
-          getExtraAttrsAttrName(),
-          getFunctionTypeAttrName(),
-          getGlobalCtorAttrName(),
-          getGlobalDtorAttrName(),
-          getLambdaAttrName(),
-          getLinkageAttrName(),
-          getCallingConvAttrName(),
-          getNoProtoAttrName(),
-          getSymVisibilityAttrName(),
-          getArgAttrsAttrName(),
-          getResAttrsAttrName(),
-          getComdatAttrName(),
-      });
+      {getAliaseeAttrName(), getBuiltinAttrName(), getCoroutineAttrName(),
+       getDsolocalAttrName(), getExtraAttrsAttrName(),
+       getFunctionTypeAttrName(), getGlobalCtorAttrName(),
+       getGlobalDtorAttrName(), getLambdaAttrName(), getLinkageAttrName(),
+       getCallingConvAttrName(), getNoProtoAttrName(),
+       getSymVisibilityAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
+       getComdatAttrName(), getGlobalVisibilityAttrName()});
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
