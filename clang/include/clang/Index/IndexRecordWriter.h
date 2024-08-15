@@ -75,7 +75,7 @@ public:
   /// \returns Success if we should continue writing this record, AlreadyExists
   /// if the record file has already been written, or Failure if there was an
   /// error, in which case \p Error will be set.
-  Result beginRecord(StringRef Filename, llvm::hash_code RecordHash,
+  Result beginRecord(StringRef Filename, uint64_t RecordHash,
                      std::string &Error, std::string *RecordFile = nullptr);
 
   /// Finish writing the record file.

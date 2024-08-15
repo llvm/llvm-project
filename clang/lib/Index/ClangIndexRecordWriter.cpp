@@ -63,8 +63,7 @@ StringRef ClangIndexRecordWriter::getUSRNonCached(const IdentifierInfo *Name,
 
 ClangIndexRecordWriter::ClangIndexRecordWriter(ASTContext &Ctx,
                                                RecordingOptions Opts)
-    : Impl(Opts.DataDirPath), Ctx(Ctx), RecordOpts(std::move(Opts)),
-      Hasher(Ctx) {
+    : Impl(Opts.DataDirPath), Ctx(Ctx), RecordOpts(std::move(Opts)) {
   if (Opts.RecordSymbolCodeGenName)
     ASTNameGen.reset(new ASTNameGenerator(Ctx));
 }
@@ -76,7 +75,9 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
                                          std::string &Error,
                                          std::string *OutRecordFile) {
 
-  auto RecordHash = Hasher.hashRecord(IdxRecord);
+  std::array<uint8_t, 8> RecordHashArr = index::hashRecord(IdxRecord, Ctx);
+  uint64_t RecordHash = 0;
+  std::memcpy(&RecordHash, RecordHashArr.data(), RecordHashArr.size());
 
   switch (Impl.beginRecord(Filename, RecordHash, Error, OutRecordFile)) {
   case IndexRecordWriter::Result::Success:
