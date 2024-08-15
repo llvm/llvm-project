@@ -1306,6 +1306,10 @@ public:
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
+  bool hasGloballyAddressableScratch() const {
+    return HasGloballyAddressableScratch;
+  }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
