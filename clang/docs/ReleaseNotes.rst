@@ -90,6 +90,9 @@ Clang Python Bindings Potentially Breaking Changes
 - Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
   statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
+- For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
+  but after the end of the ``SourceRange``, ``SourceRange.__contains__``
+  used to incorrectly return ``True``. (#GH22617), (#GH52827)
 
 What's New in Clang |release|?
 ==============================
@@ -364,6 +367,8 @@ clang-format
 
 libclang
 --------
+- Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
+  whether the first one comes strictly before the second in the source code.
 
 Static Analyzer
 ---------------
