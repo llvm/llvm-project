@@ -10319,17 +10319,19 @@ class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
   let Uses = [FPMR, FPCR];
 }
 
-class sve_fp8_dot_indexed<bit bf, ZPRRegOp dst_ty, Operand iop_ty, string mnemonic>
+class sve_fp8_dot_indexed<bits<4> opc, ZPRRegOp dst_ty, Operand iop_ty, string mnemonic>
 : I<(outs dst_ty:$Zda), (ins dst_ty:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, iop_ty:$iop),
     mnemonic, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
   bits<3> Zm;
   let Inst{31-23} = 0b011001000;
-  let Inst{22}    = bf;
+  let Inst{22}    = opc{3};
   let Inst{21}    = 0b1;
+  let Inst{20-19} = opc{2-1};
   let Inst{18-16} = Zm;
   let Inst{15-12} = 0b0100;
+  let Inst{11}    = opc{0};
   let Inst{10}    = 0b1;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zda;
@@ -10343,7 +10345,7 @@ class sve_fp8_dot_indexed<bit bf, ZPRRegOp dst_ty, Operand iop_ty, string mnemon
 
 // FP8 Widening Dot-Product - Indexed Group
 multiclass sve2_fp8_dot_indexed_h<string asm>{
-  def NAME : sve_fp8_dot_indexed<0b0, ZPR16, VectorIndexH, asm> {
+  def NAME : sve_fp8_dot_indexed<{0, ?, ?, ?}, ZPR16, VectorIndexH, asm> {
     bits<3> iop;
 
     let Inst{20-19} = iop{2-1};
@@ -10352,11 +10354,10 @@ multiclass sve2_fp8_dot_indexed_h<string asm>{
 }
 
 multiclass sve2_fp8_dot_indexed_s<string asm>{
-  def NAME : sve_fp8_dot_indexed<0b1, ZPR32, VectorIndexS32b, asm> {
-    bits<3> iop;
+  def NAME : sve_fp8_dot_indexed<{1, ?, ?, 0}, ZPR32, VectorIndexS32b, asm> {
+    bits<2> iop;
 
     let Inst{20-19} = iop{1-0};
-    let Inst{11}    = 0b0;
   }
 }
 
