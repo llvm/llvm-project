@@ -13,9 +13,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/Support/Error.h"
 
 #define MAX_BUFFER 4096
 #define SOCKET_FILE_NAME "mbd.sock"
@@ -32,7 +32,8 @@ llvm::Error attemptHandshake(int SocketFD);
 
 llvm::Error spawnModuleBuildDaemon(llvm::StringRef BasePath, const char *Argv0);
 
-llvm::Expected<int> getModuleBuildDaemon(const char *Argv0, llvm::StringRef BasePath);
+llvm::Expected<int> getModuleBuildDaemon(const char *Argv0,
+                                         llvm::StringRef BasePath);
 
 // Sends request to module build daemon
 llvm::Error registerTranslationUnit(llvm::ArrayRef<const char *> CC1Cmd,
@@ -46,8 +47,8 @@ llvm::Expected<std::vector<std::string>> getUpdatedCC1(int ServerFD);
 // path to modules already built by the daemon
 llvm::Expected<std::vector<std::string>>
 updateCC1WithModuleBuildDaemon(const clang::CompilerInvocation &Clang,
-                               llvm::ArrayRef<const char *> CC1Cmd, const char *Argv0,
-                               llvm::StringRef CWD);
+                               llvm::ArrayRef<const char *> CC1Cmd,
+                               const char *Argv0, llvm::StringRef CWD);
 
 } // namespace cc1modbuildd
 

@@ -266,7 +266,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
     if (MaybeCWD.getError()) {
       llvm::errs() << "Could not get working directory: "
-             << MaybeCWD.getError().message() << "\n";
+                   << MaybeCWD.getError().message() << "\n";
       return 1;
     }
 

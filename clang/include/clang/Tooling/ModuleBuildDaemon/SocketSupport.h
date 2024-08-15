@@ -19,7 +19,8 @@ namespace cc1modbuildd {
 
 llvm::Expected<int> createSocket();
 llvm::Expected<int> connectToSocket(llvm::StringRef SocketPath);
-llvm::Expected<int> connectAndWriteToSocket(std::string Buffer, llvm::StringRef SocketPath);
+llvm::Expected<int> connectAndWriteToSocket(std::string Buffer,
+                                            llvm::StringRef SocketPath);
 llvm::Expected<std::string> readFromSocket(int FD);
 llvm::Error writeToSocket(std::string Buffer, int WriteFD);
 

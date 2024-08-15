@@ -65,7 +65,8 @@ template <typename T> std::string getBufferFromSocketMsg(T Msg) {
   return Buffer;
 }
 
-template <typename T> llvm::Expected<T> getSocketMsgFromBuffer(const char *Buffer) {
+template <typename T>
+llvm::Expected<T> getSocketMsgFromBuffer(const char *Buffer) {
   static_assert(std::is_base_of<cc1modbuildd::BaseMsg, T>::value,
                 "T must inherit from cc1modbuildd::BaseMsg");
 
@@ -75,7 +76,8 @@ template <typename T> llvm::Expected<T> getSocketMsgFromBuffer(const char *Buffe
 
   if (YamlIn.error()) {
     std::string Msg = "Syntax or semantic error during YAML parsing";
-    return llvm::make_error<llvm::StringError>(Msg, llvm::inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(Msg,
+                                               llvm::inconvertibleErrorCode());
   }
 
   return ClientRequest;
@@ -109,7 +111,8 @@ template <typename T> llvm::Error writeSocketMsgToSocket(T Msg, int FD) {
 }
 
 template <typename T>
-llvm::Expected<int> connectAndWriteSocketMsgToSocket(T Msg, llvm::StringRef SocketPath) {
+llvm::Expected<int>
+connectAndWriteSocketMsgToSocket(T Msg, llvm::StringRef SocketPath) {
   static_assert(std::is_base_of<cc1modbuildd::BaseMsg, T>::value,
                 "T must inherit from cc1modbuildd::BaseMsg");
 
