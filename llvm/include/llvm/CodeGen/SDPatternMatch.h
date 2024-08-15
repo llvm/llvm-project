@@ -737,6 +737,14 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToUI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_UINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
