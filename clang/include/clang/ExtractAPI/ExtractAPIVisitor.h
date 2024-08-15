@@ -23,13 +23,11 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <type_traits>
@@ -240,7 +238,7 @@ protected:
 
   bool isEmbeddedInVarDeclarator(const TagDecl &D) {
     return D.getName().empty() && getTypedefName(&D).empty() &&
-           D.isEmbeddedInDeclarator();
+           D.isEmbeddedInDeclarator() && !D.isFreeStanding();
   }
 
   void maybeMergeWithAnonymousTag(const DeclaratorDecl &D,
@@ -252,8 +250,10 @@ protected:
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
             API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator)
+      if (Record->IsEmbeddedInVarDeclarator) {
         NewRecordContext->stealRecordChain(*Record);
+        API.removeRecord(Record);
+      }
     }
   }
 };
