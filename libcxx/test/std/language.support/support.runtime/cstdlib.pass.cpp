@@ -34,15 +34,6 @@
 #error RAND_MAX not defined
 #endif
 
-template <class TestType, class IntType>
-void test_div_struct() {
-    TestType obj;
-    static_assert(sizeof(obj) >= sizeof(IntType) * 2, ""); // >= to account for alignment.
-    static_assert((std::is_same<decltype(obj.quot), IntType>::value), "");
-    static_assert((std::is_same<decltype(obj.rem), IntType>::value), "");
-    ((void) obj);
-};
-
 template <class T, class = decltype(std::abs(std::declval<T>()))>
 std::true_type has_abs_imp(int);
 template <class T>
@@ -85,14 +76,39 @@ void test_abs() {
     assert(std::abs(-1.) == 1);
 }
 
+template <class TestType, class IntType>
+void test_div_struct() {
+  TestType obj;
+  static_assert(sizeof(obj) >= sizeof(IntType) * 2,
+                "");  // >= to account for alignment.
+  static_assert((std::is_same<decltype(obj.quot), IntType>::value), "");
+  static_assert((std::is_same<decltype(obj.rem), IntType>::value), "");
+  ((void)obj);
+}
+
+void test_div() {
+  {  // tests member types of std::div_t, etc.
+    test_div_struct<std::div_t, int>();
+    test_div_struct<std::ldiv_t, long>();
+    test_div_struct<std::lldiv_t, long long>();
+  }
+
+  {  // tests return type of std::div
+    // clang-format off
+    static_assert((std::is_same<decltype(std::div(  0,   0  )), std::div_t  >::value), "");
+    static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
+    static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
+    static_assert((std::is_same<decltype(std::ldiv( 0L,  0L )), std::ldiv_t >::value), "");
+    static_assert((std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value), "");
+    // clang-format on
+  }
+}
+
 int main(int, char**)
 {
     std::size_t s = 0;
     ((void)s);
     static_assert((std::is_same<std::size_t, decltype(sizeof(int))>::value), "");
-    test_div_struct<std::div_t, int>();
-    test_div_struct<std::ldiv_t, long>();
-    test_div_struct<std::lldiv_t, long long>();
     char** endptr = 0;
     static_assert((std::is_same<decltype(std::atof("")), double>::value), "");
     static_assert((std::is_same<decltype(std::atoi("")), int>::value), "");
@@ -131,11 +147,6 @@ int main(int, char**)
     static_assert((std::is_same<decltype(std::abs((long long)0)), long long>::value), "");
     static_assert((std::is_same<decltype(std::labs((long)0)), long>::value), "");
     static_assert((std::is_same<decltype(std::llabs((long long)0)), long long>::value), "");
-    static_assert((std::is_same<decltype(std::div(0,0)), std::div_t>::value), "");
-    static_assert((std::is_same<decltype(std::div(0L,0L)), std::ldiv_t>::value), "");
-    static_assert((std::is_same<decltype(std::div(0LL,0LL)), std::lldiv_t>::value), "");
-    static_assert((std::is_same<decltype(std::ldiv(0L,0L)), std::ldiv_t>::value), "");
-    static_assert((std::is_same<decltype(std::lldiv(0LL,0LL)), std::lldiv_t>::value), "");
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     wchar_t* pw = 0;
     const wchar_t* pwc = 0;
@@ -148,6 +159,5 @@ int main(int, char**)
 #endif
 
     test_abs();
-
-    return 0;
+    test_div();
 }
