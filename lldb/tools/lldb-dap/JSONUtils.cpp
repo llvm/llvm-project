@@ -690,8 +690,7 @@ std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
 //     "instructionPointerReference": {
 // 	     "type": "string",
 // 	     "description": "A memory reference for the current instruction
-// pointer
-//                       in this frame."
+//                         pointer in this frame."
 //     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
@@ -1180,17 +1179,15 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
   return description.trim().str();
 }
 
-lldb::addr_t GetMemoryReference(lldb::SBValue v) {
-  if (!v.GetType().IsPointerType() && !v.GetType().IsArrayType()) {
-    return LLDB_INVALID_ADDRESS;
-  }
+std::optional<lldb::addr_t> GetMemoryReference(lldb::SBValue v) {
+  if (!v.GetType().IsPointerType() && !v.GetType().IsArrayType())
+    return std::nullopt;
 
   lldb::SBValue deref = v.Dereference();
-  if (!deref.IsValid()) {
-    return LLDB_INVALID_ADDRESS;
-  }
-
-  return deref.GetLoadAddress();
+  lldb::addr_t load_addr = deref.GetLoadAddress();
+  if (load_addr != LLDB_INVALID_ADDRESS)
+    return load_addr;
+  return std::nullopt;
 }
 
 // "Variable": {
@@ -1369,9 +1366,8 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   else
     object.try_emplace("variablesReference", (int64_t)0);
 
-  if (lldb::addr_t addr = GetMemoryReference(v); addr != LLDB_INVALID_ADDRESS) {
-    object.try_emplace("memoryReference", "0x" + llvm::utohexstr(addr));
-  }
+  if (std::optional<lldb::addr_t> addr = GetMemoryReference(v))
+    object.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
 
   object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));

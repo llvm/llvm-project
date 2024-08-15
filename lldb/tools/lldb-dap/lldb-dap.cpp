@@ -1617,10 +1617,8 @@ void request_evaluate(const llvm::json::Object &request) {
       } else {
         body.try_emplace("variablesReference", (int64_t)0);
       }
-      if (lldb::addr_t addr = GetMemoryReference(value);
-          addr != LLDB_INVALID_ADDRESS) {
-        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(addr));
-      }
+      if (std::optional<lldb::addr_t> addr = GetMemoryReference(value))
+        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
     }
   }
   response.try_emplace("body", std::move(body));
@@ -3794,10 +3792,8 @@ void request_setVariable(const llvm::json::Object &request) {
             variable, /*is_permanent=*/false);
       body.try_emplace("variablesReference", newVariablesReference);
 
-      if (lldb::addr_t addr = GetMemoryReference(variable);
-          addr != LLDB_INVALID_ADDRESS) {
-        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(addr));
-      }
+      if (std::optional<lldb::addr_t> addr = GetMemoryReference(variable))
+        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -4324,7 +4320,7 @@ void request_readMemory(const llvm::json::Object &request) {
   }
 
   addr += GetSigned(arguments, "offset", 0);
-  const auto requested_count = GetUnsigned(arguments, "count", 0);
+  const uint64_t requested_count = GetUnsigned(arguments, "count", 0);
   lldb::SBMemoryRegionInfo region_info;
   lldb::SBError memRegError = process.GetMemoryRegionInfo(addr, region_info);
   if (memRegError.Fail()) {
@@ -4335,15 +4331,15 @@ void request_readMemory(const llvm::json::Object &request) {
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
-  const auto available_count =
+  const uint64_t available_count =
       std::min(requested_count, region_info.GetRegionEnd() - addr);
-  const auto unavailable_count = requested_count - available_count;
+  const uint64_t unavailable_count = requested_count - available_count;
 
   std::vector<uint8_t> buf;
   buf.resize(available_count);
   if (available_count > 0) {
     lldb::SBError memReadError;
-    auto bytes_read =
+    uint64_t bytes_read =
         process.ReadMemory(addr, buf.data(), available_count, memReadError);
     if (memReadError.Fail()) {
       response["success"] = false;
