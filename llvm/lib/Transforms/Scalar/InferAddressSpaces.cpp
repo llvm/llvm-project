@@ -241,7 +241,7 @@ class InferAddressSpacesImpl {
   unsigned joinAddressSpaces(unsigned AS1, unsigned AS2) const;
 
   unsigned getPredicatedAddrSpace(const Value &PtrV,
-                                  const Instruction *UserCtxI) const;
+                                  const Value *UserCtx) const;
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
@@ -910,8 +910,13 @@ void InferAddressSpacesImpl::inferAddressSpaces(
   }
 }
 
-unsigned InferAddressSpacesImpl::getPredicatedAddrSpace(
-    const Value &Ptr, const Instruction *UserCtxI) const {
+unsigned
+InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &Ptr,
+                                               const Value *UserCtx) const {
+  const Instruction *UserCtxI = dyn_cast<Instruction>(UserCtx);
+  if (!UserCtxI)
+    return UninitializedAddressSpace;
+
   const Value *StrippedPtr = Ptr.stripInBoundsOffsets();
   for (auto &AssumeVH : AC.assumptionsFor(StrippedPtr)) {
     if (!AssumeVH)
@@ -986,8 +991,7 @@ bool InferAddressSpacesImpl::updateAddressSpace(
           OperandAS = PtrOperand->getType()->getPointerAddressSpace();
           if (OperandAS == FlatAddrSpace) {
             // Check AC for assumption dominating V.
-            unsigned AS =
-                getPredicatedAddrSpace(*PtrOperand, &cast<Instruction>(V));
+            unsigned AS = getPredicatedAddrSpace(*PtrOperand, &V);
             if (AS != UninitializedAddressSpace) {
               LLVM_DEBUG(dbgs()
                          << "  deduce operand AS from the predicate addrspace "
