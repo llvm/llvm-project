@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RealpathPrefixes.h"
 
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
