@@ -5596,9 +5596,9 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
                 diag::err_builtin_get_counted_by_has_side_effects)
            << Arg->getSourceRange();
 
-  // Use 'void *' as the default return type. If the argument doesn't have the
-  // 'counted_by' attribute, it'll return a "nullptr."
-  TheCall->setType(Context.VoidPtrTy);
+  // Use 'size_t *' as the default return type. If the argument doesn't have
+  // the 'counted_by' attribute, it'll return a "nullptr."
+  TheCall->setType(Context.getPointerType(Context.getSizeType()));
 
   if (const MemberExpr *ME = Arg->getMemberExpr();
       ME &&
