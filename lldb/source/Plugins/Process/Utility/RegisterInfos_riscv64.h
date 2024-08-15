@@ -79,7 +79,7 @@ using namespace riscv_dwarf;
 
 // clang-format on
 
-static lldb_private::RegisterInfo g_register_infos_riscv64_le[] = {
+static lldb_private::RegisterInfo g_register_infos_riscv64_gpr[] = {
     // DEFINE_GPR64(name, GENERIC KIND)
     DEFINE_GPR64(pc, LLDB_REGNUM_GENERIC_PC),
     DEFINE_GPR64_ALT(ra, x1, LLDB_REGNUM_GENERIC_RA),
@@ -114,7 +114,9 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_le[] = {
     DEFINE_GPR64_ALT(t5, x30, LLDB_INVALID_REGNUM),
     DEFINE_GPR64_ALT(t6, x31, LLDB_INVALID_REGNUM),
     DEFINE_GPR64_ALT(zero, x0, LLDB_INVALID_REGNUM),
+};
 
+static lldb_private::RegisterInfo g_register_infos_riscv64_fpr[] = {
     DEFINE_FPR64_ALT(ft0, f0, LLDB_INVALID_REGNUM),
     DEFINE_FPR64_ALT(ft1, f1, LLDB_INVALID_REGNUM),
     DEFINE_FPR64_ALT(ft2, f2, LLDB_INVALID_REGNUM),
@@ -148,7 +150,9 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_le[] = {
     DEFINE_FPR64_ALT(ft10, f30, LLDB_INVALID_REGNUM),
     DEFINE_FPR64_ALT(ft11, f31, LLDB_INVALID_REGNUM),
     DEFINE_FPR_ALT(fcsr, nullptr, 4, LLDB_INVALID_REGNUM),
+};
 
+static lldb_private::RegisterInfo g_register_infos_riscv64_vpr[] = {
     DEFINE_VPR(v0, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v1, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v2, LLDB_INVALID_REGNUM),

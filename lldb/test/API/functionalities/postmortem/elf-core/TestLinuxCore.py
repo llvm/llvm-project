@@ -22,6 +22,7 @@ class LinuxCoreTestCase(TestBase):
     _s390x_pid = 1045
     _ppc64le_pid = 28147
     _riscv64_pid = 89328
+    _riscv64_no_fpr_pid = 97
 
     _aarch64_regions = 4
     _i386_regions = 4
@@ -64,6 +65,17 @@ class LinuxCoreTestCase(TestBase):
     def test_riscv64(self):
         """Test that lldb can read the process information from an riscv64 linux core file."""
         self.do_test("linux-riscv64", self._riscv64_pid, self._riscv64_regions, "a.out")
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_no_fpr(self):
+        """Test that lldb can read the process information from an riscv64 linux core file
+        made for a RV64IMAC target, having no FP-registers."""
+        self.do_test(
+            "linux-riscv64.no_fpr",
+            self._riscv64_no_fpr_pid,
+            self._riscv64_regions,
+            "a.out",
+        )
 
     @skipIfLLVMTargetMissing("X86")
     def test_same_pid_running(self):
@@ -759,6 +771,61 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_no_fpr_regs(self):
+        # check registers using 64 bit RISC-V core file containing GP-registers only
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-riscv64.no_fpr.core")
+
+        values = {}
+        values["pc"] = "0x0000000000010164"
+        values["ra"] = "0x0000000000010194"
+        values["sp"] = "0x00fffffff4d5fcc0"
+        values["gp"] = "0x0000000000157678"
+        values["tp"] = "0x00ffffff99c43400"
+        values["t0"] = "0x00ffffff99c6b260"
+        values["t1"] = "0x00ffffff99b7bd54"
+        values["t2"] = "0x0000000003f0b27f"
+        values["fp"] = "0x00fffffff4d5fcf0"
+        values["s1"] = "0x0000000000000003"
+        values["a0"] = "0x0"
+        values["a1"] = "0x0000000000010144"
+        values["a2"] = "0x0000000000176460"
+        values["a3"] = "0x000000000015ee38"
+        values["a4"] = "0x00000000423c0000"
+        values["a5"] = "0x0"
+        values["a6"] = "0x0"
+        values["a7"] = "0x00000000000000dd"
+        values["s2"] = "0x0"
+        values["s3"] = "0x000000000014ddf8"
+        values["s4"] = "0x000000000003651c"
+        values["s5"] = "0x00fffffffccd8d28"
+        values["s6"] = "0x000000000014ddf8"
+        values["s7"] = "0x00ffffff99c69d48"
+        values["s8"] = "0x00ffffff99c6a008"
+        values["s9"] = "0x0"
+        values["s10"] = "0x0"
+        values["s11"] = "0x0"
+        values["t3"] = "0x00ffffff99c42000"
+        values["t4"] = "0x00ffffff99af8e20"
+        values["t5"] = "0x0000000000000005"
+        values["t6"] = "0x44760bdd8d5f6381"
+        values["zero"] = "0x0"
+
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        # Check that LLDB does not try to read other registers from core file
+        self.expect(
+            "register read --all",
+            matching=False,
+            substrs=["registers were unavailable"],
+        )
 
     def test_get_core_file_api(self):
         """
