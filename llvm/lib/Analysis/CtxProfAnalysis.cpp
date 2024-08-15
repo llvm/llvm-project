@@ -24,6 +24,12 @@
 
 #define DEBUG_TYPE "ctx_prof"
 
+using namespace llvm;
+cl::opt<std::string>
+    UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
+                  cl::desc("Use the specified contextual profile file"));
+
+
 namespace llvm {
 namespace json {
 Value toJSON(const PGOCtxProfContext &P) {
@@ -92,6 +98,9 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
       ->getZExtValue();
 }
 AnalysisKey CtxProfAnalysis::Key;
+
+CtxProfAnalysis::CtxProfAnalysis(StringRef Profile)
+    : Profile(Profile.empty() ? UseCtxProfile : Profile) {}
 
 PGOContextualProfile CtxProfAnalysis::run(Module &M,
                                           ModuleAnalysisManager &MAM) {

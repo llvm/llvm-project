@@ -79,7 +79,7 @@ class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
 
 public:
   static AnalysisKey Key;
-  explicit CtxProfAnalysis(StringRef Profile) : Profile(Profile) {};
+  explicit CtxProfAnalysis(StringRef Profile = "");
 
   using Result = PGOContextualProfile;
 
