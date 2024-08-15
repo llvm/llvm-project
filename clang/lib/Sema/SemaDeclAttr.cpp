@@ -7147,7 +7147,9 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!D->hasAttr<OpenCLKernelAttr>()) {
+  const FunctionType *FnTy = D->getFunctionType();
+  if (!D->hasAttr<OpenCLKernelAttr>() && FnTy &&
+      FnTy->getCallConv() != CallingConv::CC_AMDGPUKernelCall) {
     // These attributes cannot be applied to a non-kernel function.
     if (const auto *A = D->getAttr<ReqdWorkGroupSizeAttr>()) {
       // FIXME: This emits a different error message than
@@ -7163,7 +7165,8 @@ void Sema::ProcessDeclAttributeList(
     } else if (const auto *A = D->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
       Diag(D->getLocation(), diag::err_opencl_kernel_attr) << A;
       D->setInvalidDecl();
-    } else if (!D->hasAttr<CUDAGlobalAttr>()) {
+    } else if (!D->hasAttr<CUDAGlobalAttr>() &&
+               !D->hasAttr<NVPTXKernelAttr>()) {
       if (const auto *A = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
         Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
             << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
