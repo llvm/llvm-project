@@ -948,7 +948,7 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
     return false;
 
   bool SeenStore = true;
-  if (!MI->isSafeToMove(AA, SeenStore))
+  if (!MI->isSafeToMove(SeenStore))
     return false;
 
   if (TII->getInstrLatency(InstrItins, *MI) > 1)
@@ -1131,7 +1131,7 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
     return false;
 
   bool SeenStore = true;
-  if (!KillMI->isSafeToMove(AA, SeenStore))
+  if (!KillMI->isSafeToMove(SeenStore))
     return false;
 
   SmallVector<Register, 2> Uses;

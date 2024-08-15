@@ -36,6 +36,9 @@ namespace polly {
 class Scop;
 class ScopStmt;
 
+/// Same as llvm/Analysis/ScalarEvolutionExpressions.h
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
   ALIASING,
@@ -383,20 +386,24 @@ void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock,
 /// as the call to SCEVExpander::expandCodeFor:
 ///
 /// @param S     The current Scop.
-/// @param SE    The Scalar Evolution pass.
+/// @param SE    The Scalar Evolution pass used by @p S.
+/// @param GenFn The function to generate code in. Can be the same as @p SE.
+/// @param GenSE The Scalar Evolution pass for @p GenFn.
 /// @param DL    The module data layout.
 /// @param Name  The suffix added to the new instruction names.
 /// @param E     The expression for which code is actually generated.
 /// @param Ty    The type of the resulting code.
 /// @param IP    The insertion point for the new code.
 /// @param VMap  A remapping of values used in @p E.
+/// @param LoopMap A remapping of loops used in @p E.
 /// @param RTCBB The last block of the RTC. Used to insert loop-invariant
 ///              instructions in rare cases.
 llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
+                           llvm::Function *GenFn, llvm::ScalarEvolution &GenSE,
                            const llvm::DataLayout &DL, const char *Name,
                            const llvm::SCEV *E, llvm::Type *Ty,
                            llvm::Instruction *IP, ValueMapT *VMap,
-                           llvm::BasicBlock *RTCBB);
+                           LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
 
 /// Return the condition for the terminator @p TI.
 ///

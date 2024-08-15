@@ -71,12 +71,16 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
-  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
    provided, this header will be included by the library, replacing the
-   default assertion handler.")
+   default assertion handler. If this is specified as a relative path, it
+   is assumed to be relative to '<monorepo>/libcxx'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_ASSERTION_HANDLER_FILE}")
+  set(LIBCXX_ASSERTION_HANDLER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${LIBCXX_ASSERTION_HANDLER_FILE}")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -306,17 +310,6 @@ endif()
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 
-option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
-set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
-    "The Profile-rt library used to build with code coverage")
-
-set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
-if (XCODE OR MSVC_IDE)
-  set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
-endif()
-option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
-      ${LIBCXX_CONFIGURE_IDE_DEFAULT})
-
 set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
   set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
@@ -377,12 +370,6 @@ if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
                       " disabled, since that configuration is broken. See"
                       " https://github.com/llvm/llvm-project/issues/66117"
                       " for details.")
-endif()
-
-# Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
-# is ON.
-if (LLVM_USE_SANITIZER AND LIBCXX_GENERATE_COVERAGE)
-  message(FATAL_ERROR "LLVM_USE_SANITIZER cannot be used with LIBCXX_GENERATE_COVERAGE")
 endif()
 
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
@@ -492,12 +479,6 @@ endif()
 
 # Configure compiler.
 include(config-ix)
-
-# Configure coverage options.
-if (LIBCXX_GENERATE_COVERAGE)
-  include(CodeCoverage)
-  set(CMAKE_BUILD_TYPE "COVERAGE" CACHE STRING "" FORCE)
-endif()
 
 #===============================================================================
 # Setup Compiler Flags
@@ -863,10 +844,6 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-if (LIBCXX_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
 
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)

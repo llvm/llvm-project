@@ -221,6 +221,17 @@ namespace Comparison {
   static_assert(pg == &g, "");
 }
 
+  constexpr int Double(int n) { return 2 * n; }
+  constexpr int Triple(int n) { return 3 * n; }
+  constexpr int Twice(int (*F)(int), int n) { return F(F(n)); }
+  constexpr int Quadruple(int n) { return Twice(Double, n); }
+  constexpr auto Select(int n) -> int (*)(int) {
+    return n == 2 ? &Double : n == 3 ? &Triple : n == 4 ? &Quadruple : 0;
+  }
+  constexpr int Apply(int (*F)(int), int n) { return F(n); } // both-note {{'F' evaluates to a null function pointer}}
+
+  constexpr int Invalid = Apply(Select(0), 0); // both-error {{must be initialized by a constant expression}} \
+                                               // both-note {{in call to 'Apply(nullptr, 0)'}}
 }
 
 struct F {

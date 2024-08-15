@@ -1,0 +1,28 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-input-lowpc-ranges-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-input-lowpc-ranges-other.s \
+; RUN: -split-dwarf-file=mainOther.dwo -o other.o
+; RUN: %clang %cflags main.o other.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --cu-processing-batch-size=1
+; RUN: llvm-bolt main.exe -o main-batch.exe.bolt --update-debug-sections --cu-processing-batch-size=2
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo-batch.txt
+; RUN: cat %t/foo-batch.txt | FileCheck -check-prefix=BOLT-BATCH %s
+
+;; Tests that BOLT correctly handles DWO name strings with larger batch sizes.
+
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "main.dwo.dwo")
+
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "mainOther.dwo.dwo")
+
+; BOLT-BATCH: DW_TAG_skeleton_unit
+; BOLT-BATCH: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "main.dwo.dwo")
+
+; BOLT-BATCH: DW_TAG_skeleton_unit
+; BOLT-BATCH: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "mainOther.dwo.dwo")

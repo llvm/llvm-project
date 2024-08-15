@@ -39,12 +39,6 @@ static constexpr const char ArgName[] = "ArgName";
 
 namespace clang::tidy::utils {
 
-static bool operator==(const UseRangesCheck::Indexes &L,
-                       const UseRangesCheck::Indexes &R) {
-  return std::tie(L.BeginArg, L.EndArg, L.ReplaceArg) ==
-         std::tie(R.BeginArg, R.EndArg, R.ReplaceArg);
-}
-
 static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
   std::string Output;
   llvm::raw_string_ostream OS(Output);
@@ -52,15 +46,6 @@ static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
     OS << Item.BeginArg << ":" << Item.EndArg << ":"
        << (Item.ReplaceArg == Item.First ? '0' : '1');
   return Output;
-}
-
-static llvm::hash_code hash_value(const UseRangesCheck::Indexes &Indexes) {
-  return llvm::hash_combine(Indexes.BeginArg, Indexes.EndArg,
-                            Indexes.ReplaceArg);
-}
-
-static llvm::hash_code hash_value(const UseRangesCheck::Signature &Sig) {
-  return llvm::hash_combine_range(Sig.begin(), Sig.end());
 }
 
 namespace {
@@ -123,24 +108,26 @@ makeMatcherPair(StringRef State, const UseRangesCheck::Indexes &Indexes,
 }
 
 void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
-  Replaces = getReplacerMap();
+  auto Replaces = getReplacerMap();
   ReverseDescriptor = getReverseDescriptor();
   auto BeginEndNames = getFreeBeginEndMethods();
   llvm::SmallVector<StringRef, 4> BeginNames{
       llvm::make_first_range(BeginEndNames)};
   llvm::SmallVector<StringRef, 4> EndNames{
       llvm::make_second_range(BeginEndNames)};
-  llvm::DenseSet<ArrayRef<Signature>> Seen;
+  Replacers.clear();
+  llvm::DenseSet<Replacer *> SeenRepl;
   for (auto I = Replaces.begin(), E = Replaces.end(); I != E; ++I) {
-    const ArrayRef<Signature> &Signatures =
-        I->getValue()->getReplacementSignatures();
-    if (!Seen.insert(Signatures).second)
+    auto Replacer = I->getValue();
+    if (!SeenRepl.insert(Replacer.get()).second)
       continue;
-    assert(!Signatures.empty() &&
-           llvm::all_of(Signatures, [](auto Index) { return !Index.empty(); }));
+    Replacers.push_back(Replacer);
+    assert(!Replacer->getReplacementSignatures().empty() &&
+           llvm::all_of(Replacer->getReplacementSignatures(),
+                        [](auto Index) { return !Index.empty(); }));
     std::vector<StringRef> Names(1, I->getKey());
     for (auto J = std::next(I); J != E; ++J)
-      if (J->getValue()->getReplacementSignatures() == Signatures)
+      if (J->getValue() == Replacer)
         Names.push_back(J->getKey());
 
     std::vector<ast_matchers::internal::DynTypedMatcher> TotalMatchers;
@@ -148,7 +135,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     // signatures in order of length(longest to shortest). This way any
     // signature that is a subset of another signature will be matched after the
     // other.
-    SmallVector<Signature> SigVec(Signatures);
+    SmallVector<Signature> SigVec(Replacer->getReplacementSignatures());
     llvm::sort(SigVec, [](auto &L, auto &R) { return R.size() < L.size(); });
     for (const auto &Signature : SigVec) {
       std::vector<ast_matchers::internal::DynTypedMatcher> Matchers;
@@ -163,7 +150,8 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     }
     Finder->addMatcher(
         callExpr(
-            callee(functionDecl(hasAnyName(std::move(Names))).bind(FuncDecl)),
+            callee(functionDecl(hasAnyName(std::move(Names)))
+                       .bind((FuncDecl + Twine(Replacers.size() - 1).str()))),
             ast_matchers::internal::DynTypedMatcher::constructVariadic(
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
                 ASTNodeKind::getFromNodeKind<CallExpr>(),
@@ -205,21 +193,33 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
 }
 
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>(FuncDecl);
-  std::string Qualified = "::" + Function->getQualifiedNameAsString();
-  auto Iter = Replaces.find(Qualified);
-  assert(Iter != Replaces.end());
+  Replacer *Replacer = nullptr;
+  const FunctionDecl *Function = nullptr;
+  for (auto [Node, Value] : Result.Nodes.getMap()) {
+    StringRef NodeStr(Node);
+    if (!NodeStr.consume_front(FuncDecl))
+      continue;
+    Function = Value.get<FunctionDecl>();
+    size_t Index;
+    if (NodeStr.getAsInteger(10, Index)) {
+      llvm_unreachable("Unable to extract replacer index");
+    }
+    assert(Index < Replacers.size());
+    Replacer = Replacers[Index].get();
+    break;
+  }
+  assert(Replacer && Function);
   SmallString<64> Buffer;
-  for (const Signature &Sig : Iter->getValue()->getReplacementSignatures()) {
+  for (const Signature &Sig : Replacer->getReplacementSignatures()) {
     Buffer.assign({BoundCall, getFullPrefix(Sig)});
     const auto *Call = Result.Nodes.getNodeAs<CallExpr>(Buffer);
     if (!Call)
       continue;
     auto Diag = createDiag(*Call);
-    if (auto ReplaceName = Iter->getValue()->getReplaceName(*Function))
+    if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
                                            *ReplaceName);
-    if (auto Include = Iter->getValue()->getHeaderInclusion(*Function))
+    if (auto Include = Replacer->getHeaderInclusion(*Function))
       Diag << Inserter.createIncludeInsertion(
           Result.SourceManager->getFileID(Call->getBeginLoc()), *Include);
     llvm::SmallVector<unsigned, 3> ToRemove;

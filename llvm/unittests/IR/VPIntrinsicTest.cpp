@@ -367,6 +367,59 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
   ASSERT_NE(FullTripCounts, 0u);
 }
 
+/// Check that going from intrinsic to VP intrinsic and back results in the same
+/// intrinsic.
+TEST_F(VPIntrinsicTest, IntrinsicToVPRoundTrip) {
+  bool IsFullTrip = false;
+  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic + 1;
+  for (; IntrinsicID < Intrinsic::num_intrinsics; IntrinsicID++) {
+    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(IntrinsicID);
+    // No equivalent VP intrinsic available.
+    if (VPID == Intrinsic::not_intrinsic)
+      continue;
+
+    // Return itself if passed intrinsic ID is VP intrinsic.
+    if (VPIntrinsic::isVPIntrinsic(IntrinsicID)) {
+      ASSERT_EQ(IntrinsicID, VPID);
+      continue;
+    }
+
+    std::optional<Intrinsic::ID> RoundTripIntrinsicID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+    // No equivalent non-predicated intrinsic available.
+    if (!RoundTripIntrinsicID)
+      continue;
+
+    ASSERT_EQ(*RoundTripIntrinsicID, IntrinsicID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
+}
+
+/// Check that going from VP intrinsic to equivalent non-predicated intrinsic
+/// and back results in the same intrinsic.
+TEST_F(VPIntrinsicTest, VPToNonPredIntrinsicRoundTrip) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  bool IsFullTrip = false;
+  for (const auto &VPDecl : *M) {
+    auto VPID = VPDecl.getIntrinsicID();
+    std::optional<Intrinsic::ID> NonPredID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+
+    // No equivalent non-predicated intrinsic available
+    if (!NonPredID)
+      continue;
+
+    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForIntrinsic(*NonPredID);
+
+    ASSERT_EQ(RoundTripVPID, VPID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
+}
+
 /// Check that VPIntrinsic::getDeclarationForParams works.
 TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
   std::unique_ptr<Module> M = createVPDeclarationModule();

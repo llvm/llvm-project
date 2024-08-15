@@ -241,6 +241,7 @@ public:
   InlinedProbeTreeMap &getChildren() { return Children; }
   const InlinedProbeTreeMap &getChildren() const { return Children; }
   std::vector<ProbeType> &getProbes() { return Probes; }
+  const std::vector<ProbeType> &getProbes() const { return Probes; }
   void addProbes(ProbeType Probe) { Probes.push_back(Probe); }
   // Caller node of the inline site
   MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent =
@@ -280,8 +281,6 @@ class MCDecodedPseudoProbeInlineTree
                                          MCDecodedPseudoProbeInlineTree> {
 public:
   InlineSite ISite;
-  // Used for decoding
-  uint32_t ChildrenToProcess = 0;
 
   MCDecodedPseudoProbeInlineTree() = default;
   MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};

@@ -132,9 +132,8 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
   // convert modifies in place, so make a copy.
   APFloat Val2 = APFloat(Val);
   bool losesInfo;
-  (void) Val2.convert(SelectionDAG::EVTToAPFloatSemantics(VT),
-                      APFloat::rmNearestTiesToEven,
-                      &losesInfo);
+  (void)Val2.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                     &losesInfo);
   return !losesInfo;
 }
 
@@ -1748,6 +1747,12 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   return Result;
 }
 
+SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
+                                         bool IsOpaque) {
+  return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
+                     IsTarget, IsOpaque);
+}
+
 SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                                         bool isTarget) {
   return getConstant(Val, DL, TLI->getPointerTy(getDataLayout()), isTarget);
@@ -1820,7 +1825,7 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
       EltVT == MVT::f16 || EltVT == MVT::bf16) {
     bool Ignored;
     APFloat APF = APFloat(Val);
-    APF.convert(EVTToAPFloatSemantics(EltVT), APFloat::rmNearestTiesToEven,
+    APF.convert(EltVT.getFltSemantics(), APFloat::rmNearestTiesToEven,
                 &Ignored);
     return getConstantFP(APF, DL, VT, isTarget);
   }
@@ -2483,6 +2488,11 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
     Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
     if (RedAlign2 < RedAlign)
       RedAlign = RedAlign2;
+
+    if (!getMachineFunction().getFrameInfo().isStackRealignable())
+      // If the stack is not realignable, the alignment should be limited to the
+      // StackAlignment
+      RedAlign = std::min(RedAlign, StackAlign);
   }
 
   return RedAlign;
@@ -5135,12 +5145,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
   if (Op.getOpcode() == ISD::FREEZE)
     return true;
 
-  // TODO: Assume we don't know anything for now.
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
-    return false;
-
-  APInt DemandedElts = VT.isVector()
+  APInt DemandedElts = VT.isFixedLengthVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
   return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, PoisonOnly, Depth);
@@ -5184,6 +5190,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
         return false;
     }
     return true;
+
+  case ISD::SPLAT_VECTOR:
+    return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), PoisonOnly,
+                                            Depth + 1);
 
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
@@ -5231,12 +5241,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
-  // TODO: Assume we don't know anything for now.
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
-    return true;
-
-  APInt DemandedElts = VT.isVector()
+  APInt DemandedElts = VT.isFixedLengthVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
   return canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly, ConsiderFlags,
@@ -5246,11 +5252,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
 bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
                                           bool PoisonOnly, bool ConsiderFlags,
                                           unsigned Depth) const {
-  // TODO: Assume we don't know anything for now.
-  EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
-    return true;
-
   if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
     return true;
 
@@ -5287,6 +5288,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BITCAST:
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
+  case ISD::SPLAT_VECTOR:
     return false;
 
   case ISD::SELECT_CC:
@@ -5463,7 +5465,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return false;
   }
   case ISD::FMINNUM:
-  case ISD::FMAXNUM: {
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
     // other ends up being one.
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) ||
@@ -6444,11 +6448,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP: {
-        APFloat apf(EVTToAPFloatSemantics(VT),
-                    APInt::getZero(VT.getSizeInBits()));
-        (void)apf.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
+        APFloat FPV(VT.getFltSemantics(), APInt::getZero(VT.getSizeInBits()));
+        (void)FPV.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
                                    APFloat::rmNearestTiesToEven);
-        return getConstantFP(apf, DL, VT);
+        return getConstantFP(FPV, DL, VT);
       }
       case ISD::FP16_TO_FP:
       case ISD::BF16_TO_FP: {
@@ -6459,8 +6462,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
         // This can return overflow, underflow, or inexact; we don't care.
         // FIXME need to be more flexible about rounding mode.
-        (void)FPV.convert(EVTToAPFloatSemantics(VT),
-                          APFloat::rmNearestTiesToEven, &Ignored);
+        (void)FPV.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                          &Ignored);
         return getConstantFP(FPV, DL, VT);
       }
       case ISD::STEP_VECTOR:
@@ -6512,7 +6515,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         bool ignored;
         // This can return overflow, underflow, or inexact; we don't care.
         // FIXME need to be more flexible about rounding mode.
-        (void)V.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
+        (void)V.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
                         &ignored);
         return getConstantFP(V, DL, VT);
       }
@@ -6803,6 +6806,10 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       return getConstantFP(minimum(C1, C2), DL, VT);
     case ISD::FMAXIMUM:
       return getConstantFP(maximum(C1, C2), DL, VT);
+    case ISD::FMINIMUMNUM:
+      return getConstantFP(minimumnum(C1, C2), DL, VT);
+    case ISD::FMAXIMUMNUM:
+      return getConstantFP(maximumnum(C1, C2), DL, VT);
     default: break;
     }
   }
@@ -6811,8 +6818,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     bool Unused;
     // This can return overflow, underflow, or inexact; we don't care.
     // FIXME need to be more flexible about rounding mode.
-    (void) C1.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
-                      &Unused);
+    (void)C1.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                     &Unused);
     return getConstantFP(C1, DL, VT);
   }
 
@@ -6833,7 +6840,7 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
     if (N1.isUndef() || N2.isUndef())
-      return getConstantFP(APFloat::getNaN(EVTToAPFloatSemantics(VT)), DL, VT);
+      return getConstantFP(APFloat::getNaN(VT.getFltSemantics()), DL, VT);
   }
   return SDValue();
 }
@@ -7019,6 +7026,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      return getNode(ISD::XOR, DL, VT, N1, N2);
     break;
   case ISD::SMIN:
   case ISD::UMAX:
@@ -7656,8 +7665,7 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
           !DAG.getTargetLoweringInfo().isLegalStoreImmediate(C->getSExtValue());
       return DAG.getConstant(Val, dl, VT, false, IsOpaque);
     }
-    return DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(VT), Val), dl,
-                             VT);
+    return DAG.getConstantFP(APFloat(VT.getFltSemantics(), Val), dl, VT);
   }
 
   assert(Value.getValueType() == MVT::i8 && "memset with non-byte fill value?");
@@ -9919,15 +9927,8 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
-    return CondC->isZero() ? F : T;
-
-  // TODO: This should simplify VSELECT with non-zero constant condition using
-  // something like this (but check boolean contents to be complete?):
-  if (ConstantSDNode *CondC = isConstOrConstSplat(Cond, /*AllowUndefs*/ false,
-                                                  /*AllowTruncation*/ true))
-    if (CondC->isZero())
-      return F;
+  if (auto C = isBoolConstant(Cond, /*AllowTruncation=*/true))
+    return *C ? T : F;
 
   // select ?, T, T --> T
   if (T == F)
@@ -10027,7 +10028,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   // Copy from an SDUse array into an SDValue array for use with
   // the regular getNode logic.
-  SmallVector<SDValue, 8> NewOps(Ops.begin(), Ops.end());
+  SmallVector<SDValue, 8> NewOps(Ops);
   return getNode(Opcode, DL, VT, NewOps);
 }
 
@@ -11582,6 +11583,19 @@ public:
 
 } // end anonymous namespace
 
+/// Return true if a glue output should propagate divergence information.
+static bool gluePropagatesDivergence(const SDNode *Node) {
+  switch (Node->getOpcode()) {
+  case ISD::CopyFromReg:
+  case ISD::CopyToReg:
+    return false;
+  default:
+    return true;
+  }
+
+  llvm_unreachable("covered opcode switch");
+}
+
 bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeAlwaysUniform(N)) {
     assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
@@ -11591,7 +11605,11 @@ bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeSourceOfDivergence(N, FLI, UA))
     return true;
   for (const auto &Op : N->ops()) {
-    if (Op.Val.getValueType() != MVT::Other && Op.getNode()->isDivergent())
+    EVT VT = Op.getValueType();
+
+    // Skip Chain. It does not carry divergence.
+    if (VT != MVT::Other && Op.getNode()->isDivergent() &&
+        (VT != MVT::Glue || gluePropagatesDivergence(Op.getNode())))
       return true;
   }
   return false;
@@ -11937,7 +11955,7 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
     case ISD::FMAXNUM: {
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
       EVT VT = V.getValueType();
-      const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+      const fltSemantics &Semantics = VT.getFltSemantics();
       APFloat NeutralAF = !Flags.hasNoNaNs()
                               ? APFloat::getQNaN(Semantics)
                               : !Flags.hasNoInfs()
@@ -13119,6 +13137,32 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   return nullptr;
 }
 
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
+                                                 bool AllowTruncation) const {
+  ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
+  if (!Const)
+    return std::nullopt;
+
+  const APInt &CVal = Const->getAPIntValue();
+  switch (TLI->getBooleanContents(N.getValueType())) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+    if (CVal.isOne())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    if (CVal.isAllOnes())
+      return true;
+    if (CVal.isZero())
+      return false;
+    return std::nullopt;
+  case TargetLowering::UndefinedBooleanContent:
+    return CVal[0];
+  }
+  llvm_unreachable("Unknown BooleanContent enum");
+}
+
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   assert(!Node->OperandList && "Node already has operands");
   assert(SDNode::getMaxNumOperands() >= Vals.size() &&
@@ -13130,8 +13174,14 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   for (unsigned I = 0; I != Vals.size(); ++I) {
     Ops[I].setUser(Node);
     Ops[I].setInitial(Vals[I]);
-    if (Ops[I].Val.getValueType() != MVT::Other) // Skip Chain. It does not carry divergence.
-      IsDivergent |= Ops[I].getNode()->isDivergent();
+    EVT VT = Ops[I].getValueType();
+
+    // Skip Chain. It does not carry divergence.
+    if (VT != MVT::Other &&
+        (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
+        Ops[I].getNode()->isDivergent()) {
+      IsDivergent = true;
+    }
   }
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
@@ -13181,7 +13231,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMINNUM:
   case ISD::FMAXNUM: {
     // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
-    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
                         !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
                         APFloat::getLargest(Semantics);
@@ -13193,7 +13243,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM: {
     // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
-    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
                                            : APFloat::getLargest(Semantics);
     if (Opcode == ISD::FMAXIMUM)

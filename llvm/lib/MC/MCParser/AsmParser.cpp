@@ -3462,17 +3462,6 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     }
   }
 
-  if (HasFillExpr && FillExpr != 0) {
-    MCSection *Sec = getStreamer().getCurrentSectionOnly();
-    if (Sec && Sec->isVirtualSection()) {
-      ReturnVal |=
-          Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                   Sec->getVirtualSectionKind() + " section '" +
-                                   Sec->getName() + "'");
-      FillExpr = 0;
-    }
-  }
-
   // Diagnose non-sensical max bytes to align.
   if (MaxBytesLoc.isValid()) {
     if (MaxBytesToFill < 1) {
@@ -3489,13 +3478,20 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     }
   }
 
-  // Check whether we should use optimal code alignment for this .align
-  // directive.
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
-  bool useCodeAlign = Section->useCodeAlign();
-  if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
-      ValueSize == 1 && useCodeAlign) {
+
+  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+    ReturnVal |=
+        Warning(FillExprLoc, "ignoring non-zero fill value in " +
+                                 Section->getVirtualSectionKind() +
+                                 " section '" + Section->getName() + "'");
+    FillExpr = 0;
+  }
+
+  // Check whether we should use optimal code alignment for this .align
+  // directive.
+  if (Section->useCodeAlign() && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -5784,7 +5780,8 @@ bool AsmParser::parseDirectiveIrpc(SMLoc DirectiveLoc) {
   SmallString<256> Buf;
   raw_svector_ostream OS(Buf);
 
-  StringRef Values = A.front().front().getString();
+  StringRef Values = A[0][0].is(AsmToken::String) ? A[0][0].getStringContents()
+                                                  : A[0][0].getString();
   for (std::size_t I = 0, End = Values.size(); I != End; ++I) {
     MCAsmMacroArgument Arg;
     Arg.emplace_back(AsmToken::Identifier, Values.slice(I, I + 1));

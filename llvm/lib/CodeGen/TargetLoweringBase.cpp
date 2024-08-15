@@ -713,6 +713,7 @@ void TargetLoweringBase::initActions() {
                         ISD::FMINNUM,        ISD::FMAXNUM,
                         ISD::FMINNUM_IEEE,   ISD::FMAXNUM_IEEE,
                         ISD::FMINIMUM,       ISD::FMAXIMUM,
+                        ISD::FMINIMUMNUM,    ISD::FMAXIMUMNUM,
                         ISD::FMAD,           ISD::SMIN,
                         ISD::SMAX,           ISD::UMIN,
                         ISD::UMAX,           ISD::ABS,
@@ -752,6 +753,11 @@ void TargetLoweringBase::initActions() {
 
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
+
+    // Saturated trunc
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
@@ -824,15 +830,15 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction(
-      {ISD::FCBRT, ISD::FLOG,   ISD::FLOG2,  ISD::FLOG10,     ISD::FEXP,
-       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
-       ISD::FRINT, ISD::FTRUNC, ISD::LRINT,  ISD::LLRINT,     ISD::FROUNDEVEN,
-       ISD::FTAN,  ISD::FACOS,  ISD::FASIN,  ISD::FATAN,      ISD::FCOSH,
-       ISD::FSINH, ISD::FTANH},
-      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
+                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
+                     {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
-  setOperationAction({ISD::LROUND, ISD::LLROUND},
+  // FIXME: Query RuntimeLibCalls to make the decision.
+  setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,

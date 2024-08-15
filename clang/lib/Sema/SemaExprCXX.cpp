@@ -711,7 +711,7 @@ getUuidAttrOfType(Sema &SemaRef, QualType QT,
                   llvm::SmallSetVector<const UuidAttr *, 1> &UuidAttrs) {
   // Optionally remove one level of pointer, reference or array indirection.
   const Type *Ty = QT.getTypePtr();
-  if (QT->isPointerType() || QT->isReferenceType())
+  if (QT->isPointerOrReferenceType())
     Ty = QT->getPointeeType().getTypePtr();
   else if (QT->isArrayType())
     Ty = Ty->getBaseElementTypeUnsafe();
@@ -3806,6 +3806,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                                      Overaligned, DeleteName);
     }
 
+    if (OperatorDelete->isInvalidDecl())
+      return ExprError();
+
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
     // Check access and ambiguity of destructor if we're going to call it.
@@ -4945,6 +4948,20 @@ static bool DiagnoseVLAInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
   return true;
 }
 
+/// Checks that type T is not an atomic type (_Atomic).
+///
+/// @returns @c true if @p T is VLA and a diagnostic was emitted,
+/// @c false otherwise.
+static bool DiagnoseAtomicInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
+                                         clang::tok::TokenKind TypeTraitID) {
+  if (!T->getType()->isAtomicType())
+    return false;
+
+  S.Diag(T->getTypeLoc().getBeginLoc(), diag::err_atomic_unsupported)
+      << TypeTraitID;
+  return true;
+}
+
 /// Check the completeness of a type in a unary type trait.
 ///
 /// If the particular type trait requires a complete type, tries to complete
@@ -4979,7 +4996,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
-  case UTT_IsNullPointer:
   case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
@@ -5036,6 +5052,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
 
   // LWG3823: T shall be an array type, a complete type, or cv void.
   case UTT_IsAggregate:
+  case UTT_IsImplicitLifetime:
     if (ArgTy->isArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5238,8 +5255,6 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isIncompleteArrayType();
   case UTT_IsPointer:
     return T->isAnyPointerType();
-  case UTT_IsNullPointer:
-    return T->isNullPtrType();
   case UTT_IsLvalueReference:
     return T->isLValueReferenceType();
   case UTT_IsRvalueReference:
@@ -5634,6 +5649,40 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   case UTT_IsTriviallyEqualityComparable:
     return isTriviallyEqualityComparableType(Self, T, KeyLoc);
+  case UTT_IsImplicitLifetime: {
+    DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                              tok::kw___builtin_is_implicit_lifetime);
+    DiagnoseAtomicInCXXTypeTrait(Self, TInfo,
+                                 tok::kw___builtin_is_implicit_lifetime);
+
+    // [basic.types.general] p9
+    // Scalar types, implicit-lifetime class types ([class.prop]),
+    // array types, and cv-qualified versions of these types
+    // are collectively called implicit-lifetime types.
+    QualType UnqualT = T->getCanonicalTypeUnqualified();
+    if (UnqualT->isScalarType())
+      return true;
+    if (UnqualT->isArrayType() || UnqualT->isVectorType())
+      return true;
+    const CXXRecordDecl *RD = UnqualT->getAsCXXRecordDecl();
+    if (!RD)
+      return false;
+
+    // [class.prop] p9
+    // A class S is an implicit-lifetime class if
+    //   - it is an aggregate whose destructor is not user-provided or
+    //   - it has at least one trivial eligible constructor and a trivial,
+    //     non-deleted destructor.
+    const CXXDestructorDecl *Dtor = RD->getDestructor();
+    if (UnqualT->isAggregateType())
+      if (Dtor && !Dtor->isUserProvided())
+        return true;
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
+      if (RD->hasTrivialDefaultConstructor() ||
+          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
+        return true;
+    return false;
+  }
   }
 }
 
@@ -6026,6 +6075,32 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
       ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+  }
+  case BTT_IsVirtualBaseOf: {
+    const RecordType *BaseRecord = LhsT->getAs<RecordType>();
+    const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
+
+    if (!BaseRecord || !DerivedRecord) {
+      DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      return false;
+    }
+
+    if (BaseRecord->isUnionType() || DerivedRecord->isUnionType())
+      return false;
+
+    if (!BaseRecord->isStructureOrClassType() ||
+        !DerivedRecord->isStructureOrClassType())
+      return false;
+
+    if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
+      return false;
+
+    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
+        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);

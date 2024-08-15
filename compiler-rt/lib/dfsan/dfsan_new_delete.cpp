@@ -30,14 +30,14 @@ enum class align_val_t : size_t {};
 #define OPERATOR_NEW_BODY(nothrow)   \
   void *res = dfsan_malloc(size);    \
   if (!nothrow && UNLIKELY(!res)) {  \
-    BufferedStackTrace stack;        \
+    UNINITIALIZED BufferedStackTrace stack;        \
     ReportOutOfMemory(size, &stack); \
   }                                  \
   return res
 #define OPERATOR_NEW_BODY_ALIGN(nothrow)         \
   void *res = dfsan_memalign((uptr)align, size); \
   if (!nothrow && UNLIKELY(!res)) {              \
-    BufferedStackTrace stack;                    \
+    UNINITIALIZED BufferedStackTrace stack;                    \
     ReportOutOfMemory(size, &stack);             \
   }                                              \
   return res;

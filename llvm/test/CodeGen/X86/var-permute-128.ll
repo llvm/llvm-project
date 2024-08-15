@@ -309,9 +309,8 @@ define <4 x i32> @var_shuffle_zero_v4i32(<4 x i32> %v, <4 x i32> %indices) nounw
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[0,2,2,3]
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSSE3-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
-; SSSE3-NEXT:    pandn %xmm0, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_zero_v4i32:
@@ -322,9 +321,8 @@ define <4 x i32> @var_shuffle_zero_v4i32(<4 x i32> %v, <4 x i32> %indices) nounw
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pandn %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; XOP-LABEL: var_shuffle_zero_v4i32:
@@ -545,16 +543,15 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ;
 ; SSSE3-LABEL: var_shuffle_zero_v8i16:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8]
-; SSSE3-NEXT:    psubusw %xmm1, %xmm3
-; SSSE3-NEXT:    pxor %xmm2, %xmm2
-; SSSE3-NEXT:    pcmpeqw %xmm3, %xmm2
-; SSSE3-NEXT:    por %xmm2, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8]
+; SSSE3-NEXT:    psubusw %xmm1, %xmm2
+; SSSE3-NEXT:    pxor %xmm3, %xmm3
+; SSSE3-NEXT:    pcmpeqw %xmm2, %xmm3
+; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [514,514,514,514,514,514,514,514]
 ; SSSE3-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
-; SSSE3-NEXT:    pandn %xmm0, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_zero_v8i16:
@@ -565,9 +562,8 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [514,514,514,514,514,514,514,514]
 ; SSE41-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pandn %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; XOP-LABEL: var_shuffle_zero_v8i16:
@@ -576,8 +572,8 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; XOP-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [514,514,514,514,514,514,514,514]
 ; XOP-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; XOP-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_zero_v8i16:
@@ -587,8 +583,8 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; AVX1-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [514,514,514,514,514,514,514,514]
 ; AVX1-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: var_shuffle_zero_v8i16:
@@ -598,8 +594,8 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; AVX2-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [514,514,514,514,514,514,514,514]
 ; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v8i16:
@@ -889,10 +885,8 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; SSSE3-NEXT:    pmaxub %xmm1, %xmm2
 ; SSSE3-NEXT:    pcmpeqb %xmm1, %xmm2
-; SSSE3-NEXT:    por %xmm2, %xmm1
-; SSSE3-NEXT:    pshufb %xmm1, %xmm0
-; SSSE3-NEXT:    pandn %xmm0, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    por %xmm1, %xmm2
+; SSSE3-NEXT:    pshufb %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_zero_v16i8:
@@ -900,10 +894,8 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; SSE41-NEXT:    pmaxub %xmm1, %xmm2
 ; SSE41-NEXT:    pcmpeqb %xmm1, %xmm2
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pandn %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm2
+; SSE41-NEXT:    pshufb %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; XOP-LABEL: var_shuffle_zero_v16i8:
@@ -911,7 +903,6 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; XOP-NEXT:    vpcomgtub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
 ; XOP-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; XOP-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_zero_v16i8:
@@ -920,7 +911,6 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm2
 ; AVX1-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: var_shuffle_zero_v16i8:
@@ -929,7 +919,6 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm2
 ; AVX2-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shuffle_zero_v16i8:
@@ -1289,9 +1278,8 @@ define <4 x float> @var_shuffle_zero_v4f32(<4 x float> %v, <4 x i32> %indices) n
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[0,2,2,3]
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSSE3-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
-; SSSE3-NEXT:    pandn %xmm0, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_zero_v4f32:
@@ -1302,9 +1290,8 @@ define <4 x float> @var_shuffle_zero_v4f32(<4 x float> %v, <4 x i32> %indices) n
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pshufb %xmm1, %xmm0
-; SSE41-NEXT:    pandn %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; XOP-LABEL: var_shuffle_zero_v4f32:

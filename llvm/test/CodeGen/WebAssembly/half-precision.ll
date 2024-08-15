@@ -36,6 +36,14 @@ define float @extract_lane_v8f16(<8 x half> %v) {
   ret float %r
 }
 
+; CHECK-LABEL: replace_lane_v8f16:
+; CHECK:       f16x8.replace_lane $push0=, $0, 1, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @replace_lane_v8f16(<8 x half> %v, float %f) {
+  %r = call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %v, i32 1, float %f)
+  ret <8 x half> %r
+}
+
 ; CHECK-LABEL: add_v8f16:
 ; CHECK:       f16x8.add $push0=, $0, $1
 ; CHECK-NEXT:  return $pop0

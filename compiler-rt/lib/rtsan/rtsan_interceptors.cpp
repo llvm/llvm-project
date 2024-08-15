@@ -21,6 +21,18 @@
 #include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
+
+#if TARGET_OS_MAC
+// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
+// but the symbol still exists on the system. Forward declare here so we
+// don't get compilation errors.
+#include <stdint.h>
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+}
+#endif
+
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif
@@ -39,16 +51,15 @@
 
 using namespace __sanitizer;
 
-using __rtsan::rtsan_init_is_running;
-using __rtsan::rtsan_initialized;
-
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
-  static bool UseImpl() { return !rtsan_initialized; }
+  static bool UseImpl() { return !__rtsan_is_initialized(); }
 };
 } // namespace
 
 void ExpectNotRealtime(const char *intercepted_function_name) {
+  __rtsan_ensure_initialized();
+
   __rtsan::GetContextForThisThread().ExpectNotRealtime(
       intercepted_function_name);
 }

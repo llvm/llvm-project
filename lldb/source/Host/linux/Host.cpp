@@ -51,11 +51,9 @@ enum class ProcessState {
   Zombie,
 };
 
-constexpr int task_comm_len = 16;
-
 struct StatFields {
   ::pid_t pid = LLDB_INVALID_PROCESS_ID;
-  char comm[task_comm_len];
+  // comm
   char state;
   ::pid_t ppid = LLDB_INVALID_PROCESS_ID;
   ::pid_t pgrp = LLDB_INVALID_PROCESS_ID;
@@ -100,8 +98,8 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   StatFields stat_fields;
   if (sscanf(
           Rest.data(),
-          "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
-          &stat_fields.pid, stat_fields.comm, &stat_fields.state,
+          "%d %*s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
+          &stat_fields.pid, /* comm, */ &stat_fields.state,
           &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
           &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
           &stat_fields.minflt, &stat_fields.cminflt, &stat_fields.majflt,

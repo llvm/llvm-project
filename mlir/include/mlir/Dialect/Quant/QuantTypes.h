@@ -54,10 +54,10 @@ public:
   /// The maximum number of bits supported for storage types.
   static constexpr unsigned MaxStorageBits = 32;
 
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              unsigned flags, Type storageType,
-                              Type expressedType, int64_t storageTypeMin,
-                              int64_t storageTypeMax);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+                   Type storageType, Type expressedType, int64_t storageTypeMin,
+                   int64_t storageTypeMax);
 
   /// Support method to enable LLVM-style type casting.
   static bool classof(Type type);
@@ -214,10 +214,10 @@ public:
              int64_t storageTypeMax);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              unsigned flags, Type storageType,
-                              Type expressedType, int64_t storageTypeMin,
-                              int64_t storageTypeMax);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+                   Type storageType, Type expressedType, int64_t storageTypeMin,
+                   int64_t storageTypeMax);
 };
 
 /// Represents a family of uniform, quantized types.
@@ -276,11 +276,11 @@ public:
              int64_t zeroPoint, int64_t storageTypeMin, int64_t storageTypeMax);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              unsigned flags, Type storageType,
-                              Type expressedType, double scale,
-                              int64_t zeroPoint, int64_t storageTypeMin,
-                              int64_t storageTypeMax);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+                   Type storageType, Type expressedType, double scale,
+                   int64_t zeroPoint, int64_t storageTypeMin,
+                   int64_t storageTypeMax);
 
   /// Gets the scale term. The scale designates the difference between the real
   /// values corresponding to consecutive quantized values differing by 1.
@@ -338,12 +338,12 @@ public:
              int64_t storageTypeMin, int64_t storageTypeMax);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              unsigned flags, Type storageType,
-                              Type expressedType, ArrayRef<double> scales,
-                              ArrayRef<int64_t> zeroPoints,
-                              int32_t quantizedDimension,
-                              int64_t storageTypeMin, int64_t storageTypeMax);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+                   Type storageType, Type expressedType,
+                   ArrayRef<double> scales, ArrayRef<int64_t> zeroPoints,
+                   int32_t quantizedDimension, int64_t storageTypeMin,
+                   int64_t storageTypeMax);
 
   /// Gets the quantization scales. The scales designate the difference between
   /// the real values corresponding to consecutive quantized values differing
@@ -403,8 +403,9 @@ public:
              double min, double max);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type expressedType, double min, double max);
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type expressedType, double min, double max);
   double getMin() const;
   double getMax() const;
 };
