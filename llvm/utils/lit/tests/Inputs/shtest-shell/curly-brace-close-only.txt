@@ -1,0 +1,2 @@
+## Test closing brace without open brace.
+# RUN: echo foo; }

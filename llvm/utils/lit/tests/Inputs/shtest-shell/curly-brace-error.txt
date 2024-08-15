@@ -1,7 +1,0 @@
-## Test errors on curly brace syntax.
-
-## Test open brace without closing brace.
-# RUN: { echo foo
-
-## Test closing brace without open brace.
-# RUN: echo foo; }
