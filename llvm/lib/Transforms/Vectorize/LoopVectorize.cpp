@@ -7843,7 +7843,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    VPlans.push_back(buildVPlan(SubRange));
+    auto Plan = buildVPlan(SubRange);
+    VPlanTransforms::optimize(*Plan, *PSE.getSE());
+    VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }
 }
