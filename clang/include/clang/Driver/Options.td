@@ -5291,7 +5291,7 @@ let Flags = [TargetSpecific] in {
 def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"Specify that the assembler should encode SSE instructions with VEX prefix">,
-  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
+  MarshallingInfoFlag<CodeGenOpts<"X86Sse2Avx">>;
 } // let Flags = [TargetSpecific]
 
 defm zvector : BoolFOption<"zvector",
@@ -7193,7 +7193,7 @@ def crel : Flag<["--"], "crel">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
 def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
     HelpText<"Disable x86 relax relocations">,
-    MarshallingInfoNegativeFlag<CodeGenOpts<"RelaxELFRelocations">>;
+    MarshallingInfoNegativeFlag<CodeGenOpts<"X86RelaxRelocations">>;
 def msave_temp_labels : Flag<["-"], "msave-temp-labels">,
   HelpText<"Save temporary labels in the symbol table. "
            "Note this may change .s semantics and shouldn't generally be used "
