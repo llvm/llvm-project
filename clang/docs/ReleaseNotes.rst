@@ -256,10 +256,8 @@ Bug Fixes to C++ Support
   specialization of a conversion function template.
 - Correctly diagnose attempts to use a concept name in its own definition;
   A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
-
 - Properly reject defaulted relational operators with invalid types for explicit object parameters,
   e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
-
 - Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
 
 Bug Fixes to AST Handling

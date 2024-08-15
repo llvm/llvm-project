@@ -996,6 +996,18 @@ namespace defaulted_compare {
 struct A {
   bool operator==(this A&, const A&) = default;
   // expected-error@-1 {{defaulted member equality comparison operator must be const-qualified}}
+  bool operator==(this const A, const A&) = default;
+  // expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const A', expected 'const defaulted_compare::A &'}}
   bool operator==(this A, A) = default;
 };
+struct B {
+  int a;
+  bool operator==(this B, B) = default;
+};
+static_assert(B{0} == B{0});
+static_assert(B{0} != B{1});
+template<B b>
+struct X;
+static_assert(__is_same(X<B{0}>, X<B{0}>));
+static_assert(!__is_same(X<B{0}>, X<B{1}>));
 } // namespace defaulted_compare
