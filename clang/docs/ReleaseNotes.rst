@@ -65,8 +65,19 @@ C++ Specific Potentially Breaking Changes
   `-Wno-enum-constexpr-conversion`, to allow for a transition period for users.
   Now, in Clang 20, **it is no longer possible to suppress the diagnostic**.
 
+- Extraneous template headers are now ill-formed by default.
+  This error can be disable with ``-Wno-error=extraneous-template-head``.
+
+  .. code-block:: c++
+
+    template <> // error: extraneous template head
+    template <typename T>
+    void f();
+    
 ABI Changes in This Version
 ---------------------------
+
+- Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -382,6 +393,36 @@ Moved checkers
 
 Sanitizers
 ----------
+
+- Added the ``-fsanitize-overflow-pattern-exclusion=`` flag which can be used
+  to disable specific overflow-dependent code patterns. The supported patterns
+  are: ``add-overflow-test``, ``negated-unsigned-const``, and
+  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
+  available patterns by specifying ``all``. Conversely, you can disable all
+  exclusions with ``none``.
+
+  .. code-block:: c++
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=add-overflow-test``
+     int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=negated-unsigned-const``
+     void negation_overflow() {
+       unsigned long foo = -1UL; // No longer causes a negation overflow warning
+       unsigned long bar = -2UL; // and so on...
+     }
+
+     /// specified with ``-fsanitize-overflow-pattern-exclusion=post-decr-while``
+     void while_post_decrement() {
+       unsigned char count = 16;
+       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+     }
+
+  Many existing projects have a large amount of these code patterns present.
+  This new flag should allow those projects to enable integer sanitizers with
+  less noise.
 
 Python Binding Changes
 ----------------------
