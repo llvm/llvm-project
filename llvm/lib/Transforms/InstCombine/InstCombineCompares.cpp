@@ -4019,7 +4019,7 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
     break;
 
   case ICmpInst::ICMP_ULT:
-    if (C.ugt(1) && !C.isAllOnes())
+    if (C.ugt(1))
       NewPredicate = ICmpInst::ICMP_UGE;
     break;
 
