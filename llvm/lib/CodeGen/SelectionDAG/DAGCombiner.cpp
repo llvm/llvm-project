@@ -27141,8 +27141,7 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // FIXME: Type legalization can't handle illegal MULHS/MULHU.
-  if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) &&
-      !TLI.isTypeLegal(EltVT))
+  if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
