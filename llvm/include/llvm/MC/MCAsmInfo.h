@@ -85,14 +85,6 @@ protected:
   /// Default is false.
   bool HasSubsectionsViaSymbols = false;
 
-  /// True if this is a MachO target that supports the macho-specific .zerofill
-  /// directive for emitting BSS Symbols.  Default is false.
-  bool HasMachoZeroFillDirective = false;
-
-  /// True if this is a MachO target that supports the macho-specific .tbss
-  /// directive for emitting thread local BSS Symbols.  Default is false.
-  bool HasMachoTBSSDirective = false;
-
   /// True if this is a non-GNU COFF target. The COFF port of the GNU linker
   /// doesn't handle associative comdats in the way that we would like to use
   /// them.
@@ -402,10 +394,6 @@ protected:
   const char *WeakRefDirective = nullptr;
 
   /// True if we have a directive to declare a global as being a weak defined
-  /// symbol.  Defaults to false.
-  bool HasWeakDefDirective = false;
-
-  /// True if we have a directive to declare a global as being a weak defined
   /// symbol that can be hidden (unexported).  Defaults to false.
   bool HasWeakDefCanBeHiddenDirective = false;
 
@@ -603,8 +591,7 @@ public:
 
   // Accessors.
 
-  bool hasMachoZeroFillDirective() const { return HasMachoZeroFillDirective; }
-  bool hasMachoTBSSDirective() const { return HasMachoTBSSDirective; }
+  bool isMachO() const { return HasSubsectionsViaSymbols; }
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
   bool hasVisibilityOnlyWithLinkage() const {
@@ -730,7 +717,6 @@ public:
   bool hasAltEntry() const { return HasAltEntry; }
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
-  bool hasWeakDefDirective() const { return HasWeakDefDirective; }
 
   bool hasWeakDefCanBeHiddenDirective() const {
     return HasWeakDefCanBeHiddenDirective;

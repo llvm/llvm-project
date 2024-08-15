@@ -69,12 +69,9 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   InlineAsmEnd = " InlineAsm End";
 
   // Directives:
-  HasWeakDefDirective = true;
   HasWeakDefCanBeHiddenDirective = true;
   WeakRefDirective = "\t.weak_reference ";
   ZeroDirective = "\t.space\t";  // ".space N" emits N zeros.
-  HasMachoZeroFillDirective = true;  // Uses .zerofill
-  HasMachoTBSSDirective = true; // Uses .tbss
 
   HiddenVisibilityAttr = MCSA_PrivateExtern;
   HiddenDeclarationVisibilityAttr = MCSA_Invalid;
