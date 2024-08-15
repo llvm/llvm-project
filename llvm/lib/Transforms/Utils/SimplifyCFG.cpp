@@ -3315,11 +3315,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // Construct the condition if needed.
   if (!SpeculatedConditionalLoadsStores.empty()) {
     IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
-    if (Invert)
-      Mask = Builder.CreateBitCast(
-          Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
-    else
-      Mask = Builder.CreateBitCast(Cond, VCondTy);
+    Mask = Builder.CreateBitCast(
+        Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
+        VCondTy);
   }
   for (auto *I : SpeculatedConditionalLoadsStores) {
     IRBuilder<> Builder(I);
