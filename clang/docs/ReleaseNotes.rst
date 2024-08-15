@@ -65,6 +65,15 @@ C++ Specific Potentially Breaking Changes
   `-Wno-enum-constexpr-conversion`, to allow for a transition period for users.
   Now, in Clang 20, **it is no longer possible to suppress the diagnostic**.
 
+- Extraneous template headers are now ill-formed by default.
+  This error can be disable with ``-Wno-error=extraneous-template-head``.
+
+  .. code-block:: c++
+
+    template <> // error: extraneous template head
+    template <typename T>
+    void f();
+    
 ABI Changes in This Version
 ---------------------------
 
