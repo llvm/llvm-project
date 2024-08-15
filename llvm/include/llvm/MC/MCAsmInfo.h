@@ -382,10 +382,6 @@ protected:
   /// to false.
   bool HasNoDeadStrip = false;
 
-  /// True if this target supports the MachO .alt_entry directive.  Defaults to
-  /// false.
-  bool HasAltEntry = false;
-
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
   const char *WeakDirective;
 
@@ -714,7 +710,6 @@ public:
   bool hasFourStringsDotFile() const { return HasFourStringsDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
-  bool hasAltEntry() const { return HasAltEntry; }
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
 
