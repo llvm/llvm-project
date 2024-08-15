@@ -972,8 +972,8 @@ void InvokeInst::setUnwindDest(BasicBlock *BB) {
   setOperand(2, BB);
   assert(getUnwindDest() == BB && "LLVM IR uses a different operan index!");
 }
-Instruction *InvokeInst::getLandingPadInst() const {
-  return cast<Instruction>(
+LandingPadInst *InvokeInst::getLandingPadInst() const {
+  return cast<LandingPadInst>(
       Ctx.getValue(cast<llvm::InvokeInst>(Val)->getLandingPadInst()));
   ;
 }
@@ -1068,6 +1068,31 @@ void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
 BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
   return cast<BasicBlock>(
       Ctx.getValue(cast<llvm::CallBrInst>(Val)->getSuccessor(Idx)));
+}
+
+LandingPadInst *LandingPadInst::create(Type *RetTy, unsigned NumReservedClauses,
+                                       BBIterator WhereIt, BasicBlock *WhereBB,
+                                       Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::LandingPadInst *LLVMI =
+      Builder.CreateLandingPad(RetTy, NumReservedClauses, Name);
+  return Ctx.createLandingPadInst(LLVMI);
+}
+
+void LandingPadInst::setCleanup(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&LandingPadInst::isCleanup,
+                                       &LandingPadInst::setCleanup>>(this);
+  cast<llvm::LandingPadInst>(Val)->setCleanup(V);
+}
+
+Constant *LandingPadInst::getClause(unsigned Idx) const {
+  return cast<Constant>(
+      Ctx.getValue(cast<llvm::LandingPadInst>(Val)->getClause(Idx)));
 }
 
 Value *FuncletPadInst::getParentPad() const {
@@ -2247,6 +2272,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
     return It->second.get();
   }
+  case llvm::Instruction::LandingPad: {
+    auto *LLVMLPad = cast<llvm::LandingPadInst>(LLVMV);
+    It->second =
+        std::unique_ptr<LandingPadInst>(new LandingPadInst(LLVMLPad, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::CatchPad: {
     auto *LLVMCPI = cast<llvm::CatchPadInst>(LLVMV);
     It->second =
@@ -2451,6 +2482,10 @@ UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
   auto NewPtr =
       std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
   return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
+}
+LandingPadInst *Context::createLandingPadInst(llvm::LandingPadInst *I) {
+  auto NewPtr = std::unique_ptr<LandingPadInst>(new LandingPadInst(I, *this));
+  return cast<LandingPadInst>(registerValue(std::move(NewPtr)));
 }
 CatchPadInst *Context::createCatchPadInst(llvm::CatchPadInst *I) {
   auto NewPtr = std::unique_ptr<CatchPadInst>(new CatchPadInst(I, *this));
