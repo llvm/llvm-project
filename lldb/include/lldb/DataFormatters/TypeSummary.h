@@ -258,10 +258,12 @@ public:
 
   virtual std::string GetDescription() = 0;
 
-  /// Get the name of the Type Summary Provider
+  /// Get the name of the Type Summary Provider, either a C++ class, a summary
+  /// string, or a script function name.
   virtual std::string GetName() = 0;
 
-  /// Get the name of the kind of Summary Provider
+  /// Get the name of the kind of Summary Provider, either c++, summary string,
+  /// script or python.
   virtual std::string GetSummaryKindName() = 0;
 
   uint32_t &GetRevision() { return m_my_revision; }

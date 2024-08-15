@@ -28,7 +28,6 @@ namespace lldb_private {
 
 using StatsClock = std::chrono::high_resolution_clock;
 using StatsTimepoint = std::chrono::time_point<StatsClock>;
-using Duration = std::chrono::duration<double>;
 
 class StatsDuration {
 public:
@@ -200,8 +199,6 @@ public:
 
 
   /// Basic RAII class to increment the summary count when the call is complete.
-  /// In the future this can be extended to collect information about the
-  /// elapsed time for a single request.
   class SummaryInvocation{
   public:
     SummaryInvocation(std::shared_ptr<SummaryStatistics> summary_stats)
@@ -222,12 +219,12 @@ public:
   };
 
 private:
-  void OnInvoked() {
+  void OnInvoked() noexcept {
     m_count.fetch_add(1, std::memory_order_relaxed);
   }
   lldb_private::StatsDuration m_total_time;
-  std::string m_impl_type;
-  std::string m_name;
+  const std::string m_impl_type;
+  const std::string m_name;
   std::atomic<uint64_t> m_count;
 };
 
@@ -242,10 +239,14 @@ public:
   SummaryStatisticsSP
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
-    auto pair = m_summary_stats_map.try_emplace(
-        provider.GetName(), std::make_shared<SummaryStatistics>(provider.GetName(), provider.GetSummaryKindName()));
-
-    return pair.first->second;
+    auto iterator = m_summary_stats_map.find(provider.GetName());
+    if (iterator != m_summary_stats_map.end()) 
+        return iterator->second;
+    else {
+      auto it = m_summary_stats_map.try_emplace(provider.GetName(), 
+                                                std::make_shared<SummaryStatistics>(provider.GetName(), provider.GetSummaryKindName()));
+      return it.first->second;
+    }
   }
 
   llvm::json::Value ToJSON();

@@ -616,11 +616,11 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
                                                 // the synthetic children being
                                                 // up-to-date (e.g. ${svar%#})
 
-    TargetSP target = GetExecutionContextRef().GetTargetSP();
-    if (target) {
+    TargetSP target_sp = GetExecutionContextRef().GetTargetSP();
+    if (target_sp) {
       // Get Shared pointer to the summary statistics container
       SummaryStatisticsSP stats_sp =
-          target->GetSummaryStatisticsCache()
+          target_sp->GetSummaryStatisticsCache()
               .GetSummaryStatisticsForProviderName(*summary_ptr);
               
       // Construct RAII types to time and collect data on summary creation.

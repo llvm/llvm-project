@@ -427,7 +427,7 @@ llvm::json::Value SummaryStatistics::ToJSON() const {
   return json::Object{{
       {"name", GetName()},
       {"type", GetSummaryKindName()},
-      {"invocationCount", GetSummaryCount()},
+      {"count", GetSummaryCount()},
       {"totalTime", GetTotalTime()},
   }};
 }
