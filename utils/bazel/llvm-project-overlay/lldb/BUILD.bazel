@@ -564,7 +564,7 @@ cc_library(
     strip_include_prefix = "include",
     deps = [
         ":Headers",
-        ":Utility",
+        ":UtilityHeaders",
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -617,7 +617,6 @@ cc_library(
         ":InterpreterHeaders",
         ":SymbolHeaders",
         ":TargetHeaders",
-        ":Utility",
         "//clang:driver",
         "//llvm:Demangle",
         "//llvm:Support",
@@ -679,7 +678,10 @@ cc_library(
     name = "TargetHeaders",
     hdrs = glob(["include/lldb/Target/**/*.h"]),
     strip_include_prefix = "include",
-    deps = [":AppleArm64ExceptionClass"],
+    deps = [
+        ":AppleArm64ExceptionClass",
+        ":BreakpointHeaders",
+    ],
 )
 
 cc_library(
@@ -722,12 +724,20 @@ cc_library(
 )
 
 cc_library(
+    name = "UtilityHeaders",
+    hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
     name = "Utility",
     srcs = glob(["source/Utility/**/*.cpp"]),
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
     strip_include_prefix = "include",
     deps = [
+        ":CoreHeaders",
         ":Headers",
+        ":TargetHeaders",
         ":UtilityPrivateHeaders",
         "//llvm:BinaryFormat",
         "//llvm:Support",

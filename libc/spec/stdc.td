@@ -715,6 +715,7 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"atan2", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"atan2f", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"atan2l", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"acoshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"asinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
