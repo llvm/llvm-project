@@ -4429,11 +4429,14 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   auto FriendLocOrErr = import(D->getFriendLoc());
   if (!FriendLocOrErr)
     return FriendLocOrErr.takeError();
+  auto EllipsisLocOrErr = import(D->getEllipsisLoc());
+  if (!EllipsisLocOrErr)
+    return EllipsisLocOrErr.takeError();
 
   FriendDecl *FrD;
   if (GetImportedOrCreateDecl(FrD, D, Importer.getToContext(), DC,
-                              *LocationOrErr, ToFU,
-                              *FriendLocOrErr, ToTPLists))
+                              *LocationOrErr, ToFU, *FriendLocOrErr,
+                              *EllipsisLocOrErr, ToTPLists))
     return FrD;
 
   FrD->setAccess(D->getAccess());
