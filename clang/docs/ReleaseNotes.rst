@@ -90,6 +90,9 @@ Clang Python Bindings Potentially Breaking Changes
 - Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
   statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
+- ``TranslationUnitLoadError`` now contains an error code in ``error_code``
+  attribute. Also, ``TranslationUnit.reparse`` will throw ``TranslationUnitLoadError``
+  when operation fails.
 
 What's New in Clang |release|?
 ==============================
