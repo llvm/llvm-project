@@ -104,7 +104,7 @@ static Type *getPromotedType(Type *Ty) {
 /// requires a deeper change to allow either unread or unwritten objects.
 static bool hasUndefSource(AnyMemTransferInst *MI) {
   auto *Src = MI->getRawSource();
-  while (isa<GetElementPtrInst>(Src) || isa<BitCastInst>(Src)) {
+  while (isa<GetElementPtrInst>(Src)) {
     if (!Src->hasOneUse())
       return false;
     Src = cast<Instruction>(Src)->getOperand(0);
@@ -260,13 +260,11 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
 
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
-    Type *ITy = IntegerType::get(MI->getContext(), Len*8);  // n=1 -> i8.
-
     Value *Dest = MI->getDest();
 
     // Extract the fill value and store.
-    const uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;
-    Constant *FillVal = ConstantInt::get(ITy, Fill);
+    Constant *FillVal = ConstantInt::get(
+        MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
@@ -4106,6 +4104,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   assert(!isa<CallBrInst>(Call) &&
          "CallBr's don't have a single point after a def to insert at");
 
+  // Don't perform the transform for declarations, which may not be fully
+  // accurate. For example, void @foo() is commonly used as a placeholder for
+  // unknown prototypes.
+  if (Callee->isDeclaration())
+    return false;
+
   // If this is a call to a thunk function, don't remove the cast. Thunks are
   // used to transparently forward all incoming parameters and outgoing return
   // values, so it's important to leave the cast in place.
@@ -4142,9 +4146,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       return false; // TODO: Handle multiple return values.
 
     if (!CastInst::isBitOrNoopPointerCastable(NewRetTy, OldRetTy, DL)) {
-      if (Callee->isDeclaration())
-        return false;   // Cannot transform this return value.
-
       if (!Caller->use_empty())
         return false;   // Cannot transform this return value.
     }
@@ -4210,25 +4211,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (CallerPAL.hasParamAttr(i, Attribute::ByVal) !=
         Callee->getAttributes().hasParamAttr(i, Attribute::ByVal))
       return false; // Cannot transform to or from byval.
-  }
-
-  if (Callee->isDeclaration()) {
-    // Do not delete arguments unless we have a function body.
-    if (FT->getNumParams() < NumActualArgs && !FT->isVarArg())
-      return false;
-
-    // If the callee is just a declaration, don't change the varargsness of the
-    // call.  We don't want to introduce a varargs call where one doesn't
-    // already exist.
-    if (FT->isVarArg() != Call.getFunctionType()->isVarArg())
-      return false;
-
-    // If both the callee and the cast type are varargs, we still have to make
-    // sure the number of fixed parameters are the same or we have the same
-    // ABI issues as if we introduce a varargs call.
-    if (FT->isVarArg() && Call.getFunctionType()->isVarArg() &&
-        FT->getNumParams() != Call.getFunctionType()->getNumParams())
-      return false;
   }
 
   if (FT->getNumParams() < NumActualArgs && FT->isVarArg() &&

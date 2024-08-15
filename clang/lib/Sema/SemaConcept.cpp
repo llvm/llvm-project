@@ -716,8 +716,8 @@ bool Sema::addInstantiatedCapturesToScope(
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
     ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
-    if (CapturedVar->isInitCapture())
-      Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+    assert(CapturedVar->isInitCapture());
+    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
 
   for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
@@ -725,13 +725,21 @@ bool Sema::addInstantiatedCapturesToScope(
       Instantiated++;
       continue;
     }
-    const ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+
+    if (!CapturedPattern->isInitCapture()) {
+      continue;
+    }
+
     if (!CapturedPattern->isParameterPack()) {
       AddSingleCapture(CapturedPattern, Instantiated++);
     } else {
       Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
-      std::optional<unsigned> NumArgumentsInExpansion =
-          getNumArgumentsInExpansion(CapturedPattern->getType(), TemplateArgs);
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      SemaRef.collectUnexpandedParameterPacks(
+          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
+      auto NumArgumentsInExpansion =
+          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
       if (!NumArgumentsInExpansion)
         continue;
       for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)

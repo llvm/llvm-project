@@ -477,6 +477,9 @@ def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
 def zext       : SDNode<"ISD::ZERO_EXTEND", SDTIntExtendOp>;
 def anyext     : SDNode<"ISD::ANY_EXTEND" , SDTIntExtendOp>;
 def trunc      : SDNode<"ISD::TRUNCATE"   , SDTIntTruncOp>;
+def truncssat_s : SDNode<"ISD::TRUNCATE_SSAT_S", SDTIntTruncOp>;
+def truncssat_u : SDNode<"ISD::TRUNCATE_SSAT_U", SDTIntTruncOp>;
+def truncusat_u : SDNode<"ISD::TRUNCATE_USAT_U", SDTIntTruncOp>;
 def bitconvert : SDNode<"ISD::BITCAST"    , SDTUnaryOp>;
 def addrspacecast : SDNode<"ISD::ADDRSPACECAST", SDTUnaryOp>;
 def freeze     : SDNode<"ISD::FREEZE"     , SDTFreeze>;
@@ -513,6 +516,10 @@ def fmaxnum_ieee  : SDNode<"ISD::FMAXNUM_IEEE", SDTFPBinOp,
 def fminimum   : SDNode<"ISD::FMINIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximum   : SDNode<"ISD::FMAXIMUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
@@ -1078,6 +1085,13 @@ def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
                         (anyext node:$op)]>;
+
+def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
+  return N->getFlags().hasNonNeg();
+}]>;
+def sext_like : PatFrags<(ops node:$src),
+                         [(zext_nneg node:$src),
+                          (sext node:$src)]>;
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal

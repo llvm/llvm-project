@@ -926,22 +926,27 @@ public:
 /// A call of a function or method that performs unchecked buffer operations
 /// over one of its pointer parameters.
 class UnsafeBufferUsageAttrGadget : public WarningGadget {
-  constexpr static const char *const OpTag = "call_expr";
-  const CallExpr *Op;
+  constexpr static const char *const OpTag = "attr_expr";
+  const Expr *Op;
 
 public:
   UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageAttr),
-        Op(Result.Nodes.getNodeAs<CallExpr>(OpTag)) {}
+        Op(Result.Nodes.getNodeAs<Expr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::UnsafeBufferUsageAttr;
   }
 
   static Matcher matcher() {
+    auto HasUnsafeFieldDecl =
+        member(fieldDecl(hasAttr(attr::UnsafeBufferUsage)));
+
     auto HasUnsafeFnDecl =
         callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)));
-    return stmt(callExpr(HasUnsafeFnDecl).bind(OpTag));
+
+    return stmt(anyOf(callExpr(HasUnsafeFnDecl).bind(OpTag),
+                      memberExpr(HasUnsafeFieldDecl).bind(OpTag)));
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,

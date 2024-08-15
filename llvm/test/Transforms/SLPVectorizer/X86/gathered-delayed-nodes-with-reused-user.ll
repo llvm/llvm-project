@@ -25,6 +25,7 @@ define i64 @foo() {
 ;
 ; FORCED-LABEL: define i64 @foo() {
 ; FORCED-NEXT:  bb:
+; FORCED-NEXT:    [[TMP8:%.*]] = add i64 0, 0
 ; FORCED-NEXT:    br label [[BB3:%.*]]
 ; FORCED:       bb1:
 ; FORCED-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ [[TMP5:%.*]], [[BB3]] ]
@@ -38,7 +39,6 @@ define i64 @foo() {
 ; FORCED-NEXT:    [[TMP5]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
 ; FORCED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> <i64 poison, i64 0>, <2 x i32> <i32 0, i32 3>
 ; FORCED-NEXT:    [[TMP7]] = add <2 x i64> [[TMP6]], [[TMP2]]
-; FORCED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
 ; FORCED-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[TMP8]]
 ; FORCED-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
 ; FORCED-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
