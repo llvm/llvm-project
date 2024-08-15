@@ -181,8 +181,7 @@ private:
 class SummaryStatistics {
 public:
   explicit SummaryStatistics(std::string name, std::string impl_type)
-      : m_total_time(), m_impl_type(impl_type), m_name(name),
-        m_count(0) {}
+      : m_total_time(), m_impl_type(impl_type), m_name(name), m_count(0) {}
 
   std::string GetName() const { return m_name; };
   double GetTotalTime() const { return m_total_time.get().count(); }
@@ -197,9 +196,8 @@ public:
 
   llvm::json::Value ToJSON() const;
 
-
   /// Basic RAII class to increment the summary count when the call is complete.
-  class SummaryInvocation{
+  class SummaryInvocation {
   public:
     SummaryInvocation(std::shared_ptr<SummaryStatistics> summary_stats)
         : m_stats(summary_stats),
@@ -219,9 +217,7 @@ public:
   };
 
 private:
-  void OnInvoked() noexcept {
-    m_count.fetch_add(1, std::memory_order_relaxed);
-  }
+  void OnInvoked() noexcept { m_count.fetch_add(1, std::memory_order_relaxed); }
   lldb_private::StatsDuration m_total_time;
   const std::string m_impl_type;
   const std::string m_name;
@@ -233,18 +229,19 @@ typedef std::shared_ptr<SummaryStatistics> SummaryStatisticsSP;
 /// A class that wraps a std::map of SummaryStatistics objects behind a mutex.
 class SummaryStatisticsCache {
 public:
-
   /// Get the SummaryStatistics object for a given provider name, or insert
   /// if statistics for that provider is not in the map.
   SummaryStatisticsSP
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
     auto iterator = m_summary_stats_map.find(provider.GetName());
-    if (iterator != m_summary_stats_map.end()) 
-        return iterator->second;
+    if (iterator != m_summary_stats_map.end())
+      return iterator->second;
     else {
-      auto it = m_summary_stats_map.try_emplace(provider.GetName(), 
-                                                std::make_shared<SummaryStatistics>(provider.GetName(), provider.GetSummaryKindName()));
+      auto it = m_summary_stats_map.try_emplace(
+          provider.GetName(),
+          std::make_shared<SummaryStatistics>(provider.GetName(),
+                                              provider.GetSummaryKindName()));
       return it.first->second;
     }
   }

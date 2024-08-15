@@ -1224,7 +1224,8 @@ public:
 
   void ClearAllLoadedSections();
 
-  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(lldb_private::TypeSummaryImpl &summary_provider);
+  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(
+      lldb_private::TypeSummaryImpl &summary_provider);
   lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
