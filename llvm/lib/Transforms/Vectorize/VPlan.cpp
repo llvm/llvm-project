@@ -930,13 +930,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   if (VF.getNumUsers()) {
-    Value *RuntimeVF = createStepForVF(Builder, TripCountV->getType(), State.VF, 1);
+    Value *RuntimeVF =
+        createStepForVF(Builder, TripCountV->getType(), State.VF, 1);
     VF.setUnderlyingValue(RuntimeVF);
     VFxUF.setUnderlyingValue(
-        State.UF > 1 ? Builder.CreateMul(
-                           RuntimeVF,
-                           ConstantInt::get(TripCountV->getType(), State.UF))
-                     : RuntimeVF);
+        State.UF > 1
+            ? Builder.CreateMul(
+                  RuntimeVF, ConstantInt::get(TripCountV->getType(), State.UF))
+            : RuntimeVF);
   } else {
     VFxUF.setUnderlyingValue(
         createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
