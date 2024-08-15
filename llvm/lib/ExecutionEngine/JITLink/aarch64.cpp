@@ -57,10 +57,14 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "Page21";
   case PageOffset12:
     return "PageOffset12";
+  case GotPageOffset15:
+    return "GotPageOffset15";
   case RequestGOTAndTransformToPage21:
     return "RequestGOTAndTransformToPage21";
   case RequestGOTAndTransformToPageOffset12:
     return "RequestGOTAndTransformToPageOffset12";
+  case RequestGOTAndTransformToPageOffset15:
+    return "RequestGOTAndTransformToPageOffset15";
   case RequestGOTAndTransformToDelta32:
     return "RequestGOTAndTransformToDelta32";
   case RequestTLVPAndTransformToPage21:

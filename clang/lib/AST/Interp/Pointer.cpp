@@ -388,12 +388,37 @@ void Pointer::initialize() const {
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
-         "Only composite fields can be initialised");
+         "Only composite fields can be activated");
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
     return;
+  if (!getInlineDesc()->InUnion)
+    return;
 
   getInlineDesc()->IsActive = true;
+
+  // Get the union, iterate over its fields and DEactivate all others.
+  Pointer UnionPtr = getBase();
+  while (!UnionPtr.getFieldDesc()->isUnion())
+    UnionPtr = UnionPtr.getBase();
+
+  const Record *UnionRecord = UnionPtr.getRecord();
+  for (const Record::Field &F : UnionRecord->fields()) {
+    Pointer FieldPtr = UnionPtr.atField(F.Offset);
+    if (FieldPtr == *this) {
+    } else {
+      FieldPtr.getInlineDesc()->IsActive = false;
+      // FIXME: Recurse.
+    }
+  }
+
+  Pointer B = getBase();
+  while (!B.isRoot() && B.inUnion()) {
+    // FIXME: Need to de-activate other fields of parent records.
+    B.getInlineDesc()->IsActive = true;
+    assert(B.isActive());
+    B = B.getBase();
+  }
 }
 
 void Pointer::deactivate() const {
@@ -596,4 +621,31 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   if (!Composite(getType(), *this, Result))
     return std::nullopt;
   return Result;
+}
+
+IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
+                                unsigned Offset) const {
+  if (!this->Desc)
+    return *this;
+  const Record *R = this->Desc->ElemRecord;
+  if (!R)
+    return *this;
+
+  const Record::Field *F = nullptr;
+  for (auto &It : R->fields()) {
+    if (It.Offset == Offset) {
+      F = &It;
+      break;
+    }
+  }
+  if (!F)
+    return *this;
+
+  const FieldDecl *FD = F->Decl;
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
+  unsigned FieldIndex = FD->getFieldIndex();
+  uint64_t FieldOffset =
+      ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+          .getQuantity();
+  return IntPointer{this->Desc, FieldOffset};
 }

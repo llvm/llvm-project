@@ -1890,19 +1890,11 @@ define void @splat4_v4i64_load_store(ptr %s, ptr %d) nounwind {
 }
 
 define <2 x i64> @PR37616(ptr %a0) nounwind {
-; AVX1-LABEL: PR37616:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX1-NEXT:    vunpcklpd 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[0],mem[0]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512-LABEL: PR37616:
-; AVX2OR512:       # %bb.0:
-; AVX2OR512-NEXT:    vmovaps (%rdi), %ymm0
-; AVX2OR512-NEXT:    vunpcklpd 32(%rdi), %ymm0, %ymm0 # ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
-; AVX2OR512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2OR512-NEXT:    vzeroupper
-; AVX2OR512-NEXT:    retq
+; AVX-LABEL: PR37616:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX-NEXT:    vunpcklpd 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    retq
   %load = load <16 x i64>, ptr %a0, align 128
   %shuffle = shufflevector <16 x i64> %load, <16 x i64> undef, <2 x i32> <i32 2, i32 6>
   ret <2 x i64> %shuffle

@@ -18,8 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 
-using namespace llvm;
-
+namespace llvm {
 class AMDGPUCombinerHelper : public CombinerHelper {
 public:
   using CombinerHelper::CombinerHelper;
@@ -32,5 +31,7 @@ public:
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2);
 };
+
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H

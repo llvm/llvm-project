@@ -131,7 +131,8 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
 // Returns \c true if \c Current starts a new parameter.
 static bool startsNextParameter(const FormatToken &Current,
                                 const FormatStyle &Style) {
-  const FormatToken &Previous = *Current.Previous;
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
   if (Current.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
     return true;
@@ -144,6 +145,31 @@ static bool startsNextParameter(const FormatToken &Current,
                FormatStyle::BCIS_BeforeComma) &&
           (Previous.isNot(TT_InheritanceComma) ||
            Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
+}
+
+// Returns \c true if \c Token in an alignable binary operator
+static bool isAlignableBinaryOperator(const FormatToken &Token) {
+  // No need to align binary operators that only have two operands.
+  bool HasTwoOperands = Token.OperatorIndex == 0 && !Token.NextOperator;
+  return Token.is(TT_BinaryOperator) && !HasTwoOperands &&
+         Token.getPrecedence() > prec::Conditional &&
+         Token.getPrecedence() < prec::PointerToMember;
+}
+
+// Returns \c true if \c Current starts the next operand in a binary operation.
+static bool startsNextOperand(const FormatToken &Current) {
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
+  return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
+}
+
+// Returns \c true if \c Current is a binary operation that must break.
+static bool mustBreakBinaryOperation(const FormatToken &Current,
+                                     const FormatStyle &Style) {
+  return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+         (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
+              ? startsNextOperand
+              : isAlignableBinaryOperator)(Current);
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
@@ -869,6 +895,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
+  if (mustBreakBinaryOperation(Current, Style))
+    CurrentState.NoLineBreak = true;
+
   if (startsSegmentOfBuilderTypeCall(Current) &&
       State.Column > getNewLineColumn(State)) {
     CurrentState.ContainsUnwrappedBuilder = true;
@@ -1234,6 +1263,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       CurrentState.BreakBeforeParameter = false;
     }
   }
+
+  if (mustBreakBinaryOperation(Current, Style))
+    CurrentState.BreakBeforeParameter = true;
 
   return Penalty;
 }

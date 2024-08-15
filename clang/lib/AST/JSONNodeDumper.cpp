@@ -737,6 +737,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     JOS.attribute("vectorKind", "fixed-length rvv mask vector");
     break;
   }

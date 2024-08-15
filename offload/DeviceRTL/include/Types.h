@@ -188,7 +188,7 @@ typedef enum omp_allocator_handle_t {
   omp_cgroup_mem_alloc = 6,
   omp_pteam_mem_alloc = 7,
   omp_thread_mem_alloc = 8,
-  KMP_ALLOCATOR_MAX_HANDLE = ~(0U)
+  KMP_ALLOCATOR_MAX_HANDLE = ~(0LU)
 } omp_allocator_handle_t;
 
 #define __PRAGMA(STR) _Pragma(#STR)

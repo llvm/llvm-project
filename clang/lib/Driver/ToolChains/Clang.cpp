@@ -1095,6 +1095,18 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
 
+  if (Args.hasArg(options::OPT_foffload_via_llvm)) {
+    // Add llvm_wrappers/* to our system include path.  This lets us wrap
+    // standard library headers and other headers.
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
+    CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
+    if (JA.isDeviceOffloading(Action::OFK_OpenMP))
+      CmdArgs.push_back("__llvm_offload_device.h");
+    else
+      CmdArgs.push_back("__llvm_offload_host.h");
+  }
+
   // Add -i* options, and automatically translate to
   // -include-pch/-include-pth for transparent PCH support. It's
   // wonky, but we include looking for .gch so we can support seamless
@@ -1847,14 +1859,17 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(
       CmdArgs, options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
       options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination);
-  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
-                    options::OPT_fno_ptrauth_init_fini);
   Args.addOptInFlag(
       CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
       options::OPT_fno_ptrauth_function_pointer_type_discrimination);
 
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_indirect_gotos,
                     options::OPT_fno_ptrauth_indirect_gotos);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
+                    options::OPT_fno_ptrauth_init_fini);
+  Args.addOptInFlag(CmdArgs,
+                    options::OPT_fptrauth_init_fini_address_discrimination,
+                    options::OPT_fno_ptrauth_init_fini_address_discrimination);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3925,12 +3940,6 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     if (UseBuiltins)
       A->render(Args, CmdArgs);
   }
-
-  // le32-specific flags:
-  //  -fno-math-builtin: clang should not convert math builtins to intrinsics
-  //                     by default.
-  if (TC.getArch() == llvm::Triple::le32)
-    CmdArgs.push_back("-fno-math-builtin");
 }
 
 bool Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
@@ -4959,8 +4968,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool IsRDCMode =
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
-  bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
-  auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
+
+  auto LTOMode = IsDeviceOffloadAction ? D.getOffloadLTOMode() : D.getLTOMode();
+  bool IsUsingLTO = LTOMode != LTOK_None;
 
   // Extract API doesn't have a main input file, so invent a fake one as a
   // placeholder.
@@ -6667,6 +6677,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false) &&
+      !Args.hasFlag(options::OPT_foffload_via_llvm,
+                    options::OPT_fno_offload_via_llvm, false) &&
       (JA.isDeviceOffloading(Action::OFK_None) ||
        JA.isDeviceOffloading(Action::OFK_OpenMP))) {
     switch (D.getOpenMPRuntime(Args)) {
@@ -6744,11 +6756,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.addOptOutFlag(CmdArgs, options::OPT_fopenmp_extensions,
                        options::OPT_fno_openmp_extensions);
   }
-
-  // Forward the new driver to change offloading code generation.
-  if (Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false))
+  // Forward the offload runtime change to code generation, liboffload implies
+  // new driver. Otherwise, check if we should forward the new driver to change
+  // offloading code generation.
+  if (Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false)) {
+    CmdArgs.append({"--offload-new-driver", "-foffload-via-llvm"});
+  } else if (Args.hasFlag(options::OPT_offload_new_driver,
+                          options::OPT_no_offload_new_driver, false)) {
     CmdArgs.push_back("--offload-new-driver");
+  }
 
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
@@ -7516,6 +7533,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       (C.isForDiagnostics() && !HaveModules))
     CmdArgs.push_back("-frewrite-includes");
 
+  if (Args.hasFlag(options::OPT_fzos_extensions,
+                   options::OPT_fno_zos_extensions, false))
+    CmdArgs.push_back("-fzos-extensions");
+  else if (Args.hasArg(options::OPT_fno_zos_extensions))
+    CmdArgs.push_back("-fno-zos-extensions");
+
   // Only allow -traditional or -traditional-cpp outside in preprocessing modes.
   if (Arg *A = Args.getLastArg(options::OPT_traditional,
                                options::OPT_traditional_cpp)) {
@@ -7746,6 +7769,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
 
+  Args.AddAllArgs(CmdArgs,
+                  options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+
   Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
                   options::OPT_fno_offload_uniform_block);
 
@@ -7774,6 +7800,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // so that only the relevant declarations are emitted.
   if (IsOpenMPDevice) {
     CmdArgs.push_back("-fopenmp-is-target-device");
+    // If we are offloading cuda/hip via llvm, it's also "cuda device code".
+    if (Args.hasArg(options::OPT_foffload_via_llvm))
+      CmdArgs.push_back("-fcuda-is-device");
+
     if (OpenMPDeviceInput) {
       CmdArgs.push_back("-fopenmp-host-ir-file-path");
       CmdArgs.push_back(Args.MakeArgString(OpenMPDeviceInput->getFilename()));
@@ -7825,7 +7855,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // were suppressed because this is not the device offload action.
     // Check if we are using PS4 in regular LTO mode.
     // Otherwise, issue an error.
-    if ((!IsUsingLTO && !D.isUsingLTO(!IsDeviceOffloadAction)) ||
+
+    auto OtherLTOMode =
+        IsDeviceOffloadAction ? D.getLTOMode() : D.getOffloadLTOMode();
+    auto OtherIsUsingLTO = OtherLTOMode != LTOK_None;
+
+    if ((!IsUsingLTO && !OtherIsUsingLTO) ||
         (IsPS4 && !UnifiedLTO && (D.getLTOMode() != LTOK_Full)))
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-fwhole-program-vtables"
@@ -9022,8 +9057,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    if (TC->getDriver().isUsingLTO(/* IsOffload */ true) ||
-        TC->getTriple().isAMDGPU())
+    if (TC->getDriver().isUsingOffloadLTO() || TC->getTriple().isAMDGPU())
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
 

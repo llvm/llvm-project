@@ -1391,6 +1391,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   const Pointer &Field = This.atField(I);
   Field.deref<T>() = S.Stk.pop<T>();
+  Field.activate();
   Field.initialize();
   return true;
 }
@@ -1409,20 +1410,6 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
   const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
-  Field.initialize();
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression())
-    return false;
-  const Pointer &This = S.Current->getThis();
-  if (!CheckThis(S, OpPC, This))
-    return false;
-  const Pointer &Field = This.atField(I);
-  Field.deref<T>() = S.Stk.pop<T>();
-  Field.activate();
   Field.initialize();
   return true;
 }
@@ -1446,17 +1433,6 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
-  Field.activate();
-  Field.initialize();
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  const Pointer &Field = Ptr.atField(I);
-  Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
   return true;
@@ -1504,6 +1480,12 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1526,6 +1508,11 @@ inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getCtx(), Off));
+    return true;
+  }
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -1708,8 +1695,10 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1720,8 +1709,10 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1995,6 +1986,22 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  for (const Pointer &P : {LHS, RHS}) {
+    if (P.isZeroSizeArray()) {
+      QualType PtrT = P.getType();
+      while (auto *AT = dyn_cast<ArrayType>(PtrT))
+        PtrT = AT->getElementType();
+
+      QualType ArrayTy = S.getCtx().getConstantArrayType(
+          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_pointer_subtraction_zero_size)
+          << ArrayTy;
+
+      return false;
+    }
+  }
 
   if (RHS.isZero()) {
     S.Stk.push<T>(T::from(LHS.getIndex()));
@@ -2410,7 +2417,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!Ptr.isZero()) {
+  if (!Ptr.isZero() && !Offset.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
   }
@@ -2426,7 +2433,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!Ptr.isZero()) {
+  if (!Ptr.isZero() && !Offset.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
   }
@@ -2642,9 +2649,10 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
-      // FieldDesc of our pointer, just get the DeclDesc instead, which
-      // is the furthest we might go up in the hierarchy.
-      ThisPtr = ThisPtr.getDeclPtr();
+      // FieldDesc of our pointer, just go up the hierarchy of this field
+      // the furthest we can go.
+      while (ThisPtr.isBaseClass())
+        ThisPtr = ThisPtr.getBase();
     }
   }
 
@@ -2694,14 +2702,14 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   const Function *F = FuncPtr.getFunction();
   if (!F) {
-    const Expr *E = S.Current->getExpr(OpPC);
+    const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
     S.FFDiag(E, diag::note_constexpr_null_callee)
-        << const_cast<Expr *>(E) << E->getSourceRange();
+        << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
     return false;
   }
 
   if (!FuncPtr.isValid())
-    return false;
+    return Invalid(S, OpPC);
 
   assert(F);
 

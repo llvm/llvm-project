@@ -22,8 +22,8 @@
 // 64BIT-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 64BIT-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 64BIT-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 64BIT-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 8
 // 64BIT-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 8
 // 64BIT-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
@@ -38,8 +38,8 @@
 // 64BITLE-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 64BITLE-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 64BITLE-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITLE-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 8
 // 64BITLE-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 8
 // 64BITLE-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
@@ -54,8 +54,8 @@
 // 64BITAIX-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 64BITAIX-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 64BITAIX-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITAIX-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 64BITAIX-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4
@@ -69,16 +69,16 @@
 // 32BIT-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 32BIT-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 32BIT-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
 // 32BIT-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
 // 32BIT-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
 // 32BIT-NEXT:    ret void
@@ -91,16 +91,16 @@
 // 32BITLE-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 32BITLE-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 32BITLE-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
 // 32BITLE-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
 // 32BITLE-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
 // 32BITLE-NEXT:    ret void
@@ -114,8 +114,8 @@
 // 32BITAIX-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
 // 32BITAIX-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
 // 32BITAIX-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 32BITAIX-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 32BITAIX-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 32BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4
@@ -134,8 +134,8 @@ double _Complex testcmplx(double real, double imag) {
 // 64BIT-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 64BIT-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 64BIT-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 0
-// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // 64BIT-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 64BIT-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 64BIT-NEXT:    [[TMP2:%.*]] = load { float, float }, ptr [[RETVAL]], align 4
@@ -150,8 +150,8 @@ double _Complex testcmplx(double real, double imag) {
 // 64BITLE-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 64BITLE-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 64BITLE-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITLE-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 64BITLE-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 64BITLE-NEXT:    [[TMP2:%.*]] = load { float, float }, ptr [[RETVAL]], align 4
@@ -166,8 +166,8 @@ double _Complex testcmplx(double real, double imag) {
 // 64BITAIX-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 64BITAIX-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 64BITAIX-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITAIX-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 64BITAIX-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { float, float }, ptr [[RETVAL]], align 4
@@ -181,16 +181,16 @@ double _Complex testcmplx(double real, double imag) {
 // 32BIT-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 32BIT-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 32BIT-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
 // 32BIT-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
 // 32BIT-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
 // 32BIT-NEXT:    ret void
@@ -203,16 +203,16 @@ double _Complex testcmplx(double real, double imag) {
 // 32BITLE-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 32BITLE-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 32BITLE-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
 // 32BITLE-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
 // 32BITLE-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
 // 32BITLE-NEXT:    ret void
@@ -226,8 +226,8 @@ double _Complex testcmplx(double real, double imag) {
 // 32BITAIX-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
 // 32BITAIX-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
 // 32BITAIX-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 0
-// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // 32BITAIX-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 32BITAIX-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 32BITAIX-NEXT:    [[TMP2:%.*]] = load { float, float }, ptr [[RETVAL]], align 4
@@ -246,8 +246,8 @@ float _Complex testcmplxf(float real, float imag) {
 // 64BIT-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
 // 64BIT-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
 // 64BIT-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
-// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
+// 64BIT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
+// 64BIT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
 // 64BIT-NEXT:    store ppc_fp128 [[TMP0]], ptr [[RETVAL_REALP]], align 16
 // 64BIT-NEXT:    store ppc_fp128 [[TMP1]], ptr [[RETVAL_IMAGP]], align 16
 // 64BIT-NEXT:    [[TMP2:%.*]] = load { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], align 16
@@ -262,8 +262,8 @@ float _Complex testcmplxf(float real, float imag) {
 // 64BITLE-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
 // 64BITLE-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
 // 64BITLE-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITLE-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITLE-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITLE-NEXT:    store ppc_fp128 [[TMP0]], ptr [[RETVAL_REALP]], align 16
 // 64BITLE-NEXT:    store ppc_fp128 [[TMP1]], ptr [[RETVAL_IMAGP]], align 16
 // 64BITLE-NEXT:    [[TMP2:%.*]] = load { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], align 16
@@ -278,8 +278,8 @@ float _Complex testcmplxf(float real, float imag) {
 // 64BITAIX-NEXT:    store double [[LDB:%.*]], ptr [[LDB_ADDR]], align 8
 // 64BITAIX-NEXT:    [[TMP0:%.*]] = load double, ptr [[LDA_ADDR]], align 8
 // 64BITAIX-NEXT:    [[TMP1:%.*]] = load double, ptr [[LDB_ADDR]], align 8
-// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 64BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 64BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 64BITAIX-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 64BITAIX-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4
@@ -293,16 +293,16 @@ float _Complex testcmplxf(float real, float imag) {
 // 32BIT-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
 // 32BIT-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
 // 32BIT-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
 // 32BIT-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BIT-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
 // 32BIT-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
 // 32BIT-NEXT:    ret void
@@ -315,16 +315,16 @@ float _Complex testcmplxf(float real, float imag) {
 // 32BITLE-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
 // 32BITLE-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
 // 32BITLE-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
 // 32BITLE-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
 // 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
 // 32BITLE-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
 // 32BITLE-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
 // 32BITLE-NEXT:    ret void
@@ -338,8 +338,8 @@ float _Complex testcmplxf(float real, float imag) {
 // 32BITAIX-NEXT:    store double [[LDB:%.*]], ptr [[LDB_ADDR]], align 8
 // 32BITAIX-NEXT:    [[TMP0:%.*]] = load double, ptr [[LDA_ADDR]], align 8
 // 32BITAIX-NEXT:    [[TMP1:%.*]] = load double, ptr [[LDB_ADDR]], align 8
-// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 0
-// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITAIX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITAIX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // 32BITAIX-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 4
 // 32BITAIX-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
 // 32BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4

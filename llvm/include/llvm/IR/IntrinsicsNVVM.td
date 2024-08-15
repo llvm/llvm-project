@@ -1053,6 +1053,22 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
 //
+// Dot Product
+//
+  foreach a_type = ["s", "u"] in {
+    foreach b_type = ["s", "u"] in {
+      def int_nvvm_idp4a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable]>;
+      def int_nvvm_idp2a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+    }
+  }
+
+//
 // Convert
 //
 
@@ -1417,6 +1433,20 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
+
+// Proxy fence (uni-directional)
+foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+
+  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope:
+        Intrinsic<[], [], [IntrNoCallback],
+        "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
+
+  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope:
+        Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+
+}
 
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive :
