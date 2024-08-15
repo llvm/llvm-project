@@ -1,57 +1,57 @@
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
 // RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
+// RUN:     optin.taint.TaintPropagation:Config=justguessit \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
 
 // CHECK-INVALID-FILE: (frontend): invalid input for checker option
-// CHECK-INVALID-FILE-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-FILE-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
 // RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
 // RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
 // RUN:   2>&1 | FileCheck -DMSG=%errc_EINVAL %s -check-prefix=CHECK-ILL-FORMED
 
 // CHECK-ILL-FORMED: (frontend): invalid input for checker option
-// CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-ILL-FORMED-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
 // RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
 // RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
 
 // CHECK-INVALID-ARG: (frontend): invalid input for checker option
-// CHECK-INVALID-ARG-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-ARG-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 

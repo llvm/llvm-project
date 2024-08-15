@@ -74,7 +74,6 @@ def Performance : Package<"performance">, ParentPackage<OptIn>;
 def Security : Package <"security">;
 def InsecureAPI : Package<"insecureAPI">, ParentPackage<Security>;
 def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
-def Taint : Package<"taint">, ParentPackage<SecurityAlpha>;
 
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
@@ -1049,30 +1048,6 @@ def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
 
 } // end "alpha.security"
 
-//===----------------------------------------------------------------------===//
-// Taint checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = Taint in {
-
-def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
-  HelpText<"Generate taint information used by other checkers">,
-  CheckerOptions<[
-    CmdLineOption<String,
-                  "Config",
-                  "Specifies the name of the configuration file.",
-                  "",
-                  InAlpha>,
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def GenericTaintChecker : Checker<"GenericTaint">,
-  HelpText<"Reports potential injection vulnerabilities">,
-  Dependencies<[TaintPropagationChecker]>,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.security.taint"
 
 //===----------------------------------------------------------------------===//
 // Mac OS X, Cocoa, and Core Foundation checkers.
@@ -1703,6 +1678,24 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = TaintOptIn in {
+
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
+  HelpText<"Generate taint information used by other checkers">,
+  CheckerOptions<[
+    CmdLineOption<String,
+                  "Config",
+                  "Specifies the name of the configuration file.",
+                  "",
+                  Released>
+  ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
 
 def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
