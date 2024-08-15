@@ -3813,16 +3813,14 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
   if (EltBitSize > 8 && VT.isInteger() &&
-      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
-    unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (EltBitSize - SignBits < 8) {
-      SDValue Source = DAG.getBuildVector(VT.changeVectorElementType(MVT::i8),
-                                          DL, Op->ops());
-      Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
-                                       Source, DAG, Subtarget);
-      SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
-      return convertFromScalableVector(VT, Res, DAG, Subtarget);
-    }
+      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen()) &&
+      DAG.ComputeMaxSignificantBits(Op) <= 8) {
+    SDValue Source = DAG.getBuildVector(VT.changeVectorElementType(MVT::i8),
+                                        DL, Op->ops());
+    Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
+                                     Source, DAG, Subtarget);
+    SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
 
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
