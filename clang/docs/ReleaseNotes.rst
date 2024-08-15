@@ -257,6 +257,7 @@ Bug Fixes to C++ Support
 - Properly reject defaulted relational operators with invalid types for explicit object parameters,
   e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
 - Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
+- Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
