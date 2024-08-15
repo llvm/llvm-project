@@ -205,6 +205,7 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
 
 CSV_FILES_TO_SYNC = [
     'Cxx14Issues.csv',
+    'Cxx14Papers.csv',
     'Cxx17Issues.csv',
     'Cxx17Papers.csv',
     'Cxx20Issues.csv',
