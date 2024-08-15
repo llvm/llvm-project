@@ -2022,8 +2022,8 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
 
   addOutlineInfo(std::move(OI));
@@ -7049,8 +7049,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
     }
 
     StaleCI->eraseFromParent();
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
   addOutlineInfo(std::move(OI));
 
@@ -8345,9 +8345,8 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
 
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
-
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
 
   if (!Config.isTargetDevice())

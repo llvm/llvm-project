@@ -1047,6 +1047,11 @@ enum NodeType {
   FMINIMUM,
   FMAXIMUM,
 
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
+
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
