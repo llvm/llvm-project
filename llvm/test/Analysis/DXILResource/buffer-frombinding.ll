@@ -46,14 +46,14 @@ define void @test_typedbuffer() {
   ; Buffer<uint4> Buf[24] : register(t3, space5)
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
-          i32 2, i32 7, i32 24, i32 0, i1 false)
+          i32 5, i32 3, i32 24, i32 0, i1 false)
   ; CHECK: Binding for %typed2
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
-  ; CHECK:     Space: 2
-  ; CHECK:     Lower Bound: 7
+  ; CHECK:     Space: 5
+  ; CHECK:     Lower Bound: 3
   ; CHECK:     Size: 24
   ; CHECK:   Class: SRV
   ; CHECK:   Kind: TypedBuffer
