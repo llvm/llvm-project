@@ -19,7 +19,6 @@ add_clang_library(clangSema
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
-  EffectAnalysis.cpp
   HLSLExternalSemaSource.cpp
   IdentifierResolver.cpp
   JumpDiagnostics.cpp
@@ -56,6 +55,7 @@ add_clang_library(clangSema
   SemaExprMember.cpp
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
+  SemaFunctionEffects.cpp
   SemaHLSL.cpp
   SemaHexagon.cpp
   SemaInit.cpp
