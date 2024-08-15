@@ -2147,7 +2147,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 
   const MCExpr *Expr = lowerConstant(GA.getAliasee());
 
-  if (MAI->hasAltEntry() && isa<MCBinaryExpr>(Expr))
+  if (MAI->isMachO() && isa<MCBinaryExpr>(Expr))
     OutStreamer->emitSymbolAttribute(Name, MCSA_AltEntry);
 
   // Emit the directives as assignments aka .set:
