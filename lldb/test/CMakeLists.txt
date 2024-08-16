@@ -235,6 +235,8 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+set(LLDB_SHELL_TESTS_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
+
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
