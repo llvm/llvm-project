@@ -327,6 +327,31 @@ static inline uint32_t getBlockSizeAsPowerOfTwo(uint32_t BlockSize) {
   return BlockSize;
 }
 
+/// AMD GPU specs for computing kernel occupancy
+namespace amdgpu_arch {
+// Local memory size
+constexpr unsigned LocalMemorySize = 32768;
+// SIMD unit per CU
+constexpr unsigned SIMDPerCU = 4;
+// Max waves each SIMD supports
+constexpr unsigned MaxWavesPerEU8 = 8;
+constexpr unsigned MaxWavesPerEU10 = 10;
+// Wavefront size
+constexpr unsigned WaveFrontSize32 = 32;
+constexpr unsigned WaveFrontSize64 = 64;
+// Number of VGPR for each thread
+constexpr unsigned VGPRNumPerThread = 512;
+// flat work group size
+constexpr unsigned FlatWorkgroupSize = 1024;
+// Max number of workgroup per CU
+constexpr unsigned MaxWorkgroupNumPerCU = 16;
+// Occupancy computation conditions by SGPRs
+constexpr unsigned SGPRCountOccupancy10 = 80;
+constexpr unsigned SGPRCountOccupancy9 = 88;
+constexpr unsigned SGPRCountOccupancy8 = 100;
+
+} // end namespace amdgpu_arch
+
 } // end namespace omp
 
 } // end namespace llvm
