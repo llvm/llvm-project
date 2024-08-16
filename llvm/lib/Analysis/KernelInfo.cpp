@@ -152,7 +152,7 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
     identifyFunction(R, Caller);
     R << ", " << CallKind << ", callee is";
     Value *Callee = Call.getCalledOperand();
-    std::string Name;
+    SmallString<100> Name; // might be function name or asm expression
     if (const Function *FnCallee = dyn_cast<Function>(Callee)) {
       if (auto *SubProgram = FnCallee->getSubprogram()) {
         if (SubProgram->isArtificial())
@@ -161,7 +161,7 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
       Name = FnCallee->getName();
     }
     if (Name.empty()) {
-      raw_string_ostream OS(Name);
+      raw_svector_ostream OS(Name);
       Callee->printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
     }
     R << " '" << Name << "'";
