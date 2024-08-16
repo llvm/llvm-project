@@ -1164,6 +1164,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
 
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
+    if (Subtarget->hasVendorXTHeadBb()) {
+      SDNode *THEXTU = CurDAG->getMachineNode(
+          RISCV::TH_EXTU, DL, VT, N0->getOperand(0),
+          CurDAG->getTargetConstant(TrailingOnes - 1, DL, VT),
+          CurDAG->getTargetConstant(ShAmt, DL, VT));
+      ReplaceNode(Node, THEXTU);
+      return;
+    }
+
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
