@@ -232,8 +232,6 @@ the function `buffer-file-name'."
 (defalias 'clang-format 'clang-format-region)
 
 ;; Format on save minor mode.
-;;
-;; Optional minor mode for formatting on save.
 
 (defun clang-format--on-save-buffer-hook ()
   "The hook to run on buffer saving to format the buffer."
@@ -259,7 +257,7 @@ the function `buffer-file-name'."
   (let ((filepath buffer-file-name))
     (cond
      (filepath
-      (null (null (locate-dominating-file (file-name-directory filepath) ".clang-format"))))
+      (not (null (locate-dominating-file (file-name-directory filepath) ".clang-format"))))
      (t
       nil))))
 
