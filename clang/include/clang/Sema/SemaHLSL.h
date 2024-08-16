@@ -62,6 +62,9 @@ public:
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  // HLSL Type trait implementations
+  bool IsIntangibleType(QualType T1) const;
 };
 
 } // namespace clang

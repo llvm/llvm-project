@@ -39,6 +39,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
@@ -5683,6 +5684,13 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return true;
     return false;
   }
+  case UTT_IsIntangibleType:
+    if (!T->isVoidType() && !T->isIncompleteArrayType())
+      if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                   diag::err_incomplete_type))
+        return true;
+    DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___builtin_is_intangible);
+    return Self.HLSL().IsIntangibleType(T);
   }
 }
 

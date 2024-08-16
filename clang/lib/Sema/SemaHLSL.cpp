@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1151,6 +1152,54 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  }
+  return false;
+}
+
+bool SemaHLSL::IsIntangibleType(QualType Ty) const {
+  if (Ty.isNull())
+    return false;
+
+  Ty = Ty.getCanonicalType().getUnqualifiedType();
+  if (Ty->isBuiltinType())
+    return Ty->isHLSLSpecificType();
+
+  llvm::SmallVector<QualType, 8> TypesToScan;
+  TypesToScan.push_back(Ty);
+  while (!TypesToScan.empty()) {
+    QualType T = TypesToScan.pop_back_val();
+    assert(T == T.getCanonicalType().getUnqualifiedType() && "expected sugar-free type");
+    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+
+    if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
+      QualType ElTy = AT->getElementType().getCanonicalType().getUnqualifiedType();
+      if (ElTy->isBuiltinType())
+        return ElTy->isHLSLSpecificType();
+      TypesToScan.push_back(ElTy);
+      continue; 
+    }
+
+    if (const auto *VT = dyn_cast<VectorType>(T)) {
+      QualType ElTy = VT->getElementType().getCanonicalType().getUnqualifiedType();
+      assert(ElTy->isBuiltinType() && "vectors can only contain builtin types");
+      if (ElTy->isHLSLSpecificType())
+        return true;
+      continue;
+    }
+
+    if (const auto *RT = dyn_cast<RecordType>(T)) {
+      const RecordDecl *RD = RT->getDecl();
+      for (const auto *FD : RD->fields()) {
+        QualType FieldTy = FD->getType().getCanonicalType().getUnqualifiedType();
+        if (FieldTy->isBuiltinType()) {
+          if (FieldTy->isHLSLSpecificType())
+            return true;
+        } else {
+          TypesToScan.push_back(FieldTy); 
+        }
+      }
+      continue;
+    }
   }
   return false;
 }
