@@ -9837,6 +9837,37 @@ protected:
     checkTemplateParams(ToD);
   }
 
+  // In these tests the ASTImporter visit function for second template parameter
+  // (called 'T2') is called recursively from visit function of the first
+  // parameter (called 'T1') (look at the codes). The default value is specified
+  // at 'T1' and inherited at 'T2'. But because during the import the second
+  // template is created first, it is added to the "To" AST first. This way the
+  // declaration chain is reversed with the import. The import ensures currently
+  // that the first occurrence will have the default template argument in place
+  // and the second will have it inherited from the first. This is reversed
+  // compared to the original.
+  // FIXME: This reversal is probably an unexpected property of the new "To"
+  // AST. Source locations can become wrong, for example default argument that
+  // was specified at 'T2' appears at 'T1' after the import but with the
+  // original source location. This can affect source ranges of parent
+  // declarations.
+  template <class TemplateParmDeclT>
+  void testImportTemplateParmDeclReversed(TemplateParmDeclT *FromD,
+                                          TemplateParmDeclT *FromDInherited) {
+    ASSERT_FALSE(FromD->getDefaultArgStorage().isInherited());
+    ASSERT_TRUE(FromDInherited->getDefaultArgStorage().isInherited());
+
+    auto *ToD = Import(FromD, Lang_CXX14);
+    EXPECT_TRUE(ToD);
+
+    auto *ToDInherited = Import(FromDInherited, Lang_CXX14);
+    EXPECT_TRUE(ToDInherited);
+
+    EXPECT_TRUE(ToD->getDefaultArgStorage().isInherited());
+    EXPECT_FALSE(ToDInherited->getDefaultArgStorage().isInherited());
+    EXPECT_EQ(ToD->getDefaultArgStorage().getInheritedFrom(), ToDInherited);
+  }
+
   const char *CodeFunction =
       R"(
       template <class> struct X;
@@ -9920,9 +9951,7 @@ TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingVarTemplate) {
 }
 
 TEST_P(ImportTemplateParmDeclDefaultValue,
-       ImportParentTemplateDuringNonTypeTemplateParmDecl) {
-  // This wants to provoke that during import of 'Y' in "typename T = Y"
-  // (before this import returns) the later definition of 'X' is imported fully.
+       ImportNonTypeTemplateParmDeclReversed) {
   const char *Code =
       R"(
       struct Z;
@@ -9932,10 +9961,10 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
         static const int x = 1;
       };
 
-      template <int P = Y::x>
+      template <int P1 = Y::x>
       struct X;
 
-      template <int P>
+      template <int P2>
       struct X {
         static const int A = 1;
       };
@@ -9948,13 +9977,14 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
 
   Decl *FromTU = getTuDecl(Code, Lang_CXX14);
   auto *FromD = FirstDeclMatcher<NonTypeTemplateParmDecl>().match(
-      FromTU, nonTypeTemplateParmDecl(hasName("P")));
-  auto *ToD = Import(FromD, Lang_CXX14);
-  EXPECT_TRUE(ToD);
+      FromTU, nonTypeTemplateParmDecl(hasName("P1")));
+  auto *FromDInherited = FirstDeclMatcher<NonTypeTemplateParmDecl>().match(
+      FromTU, nonTypeTemplateParmDecl(hasName("P2")));
+
+  testImportTemplateParmDeclReversed(FromD, FromDInherited);
 }
 
-TEST_P(ImportTemplateParmDeclDefaultValue,
-       ImportParentTemplateDuringTemplateTypeParmDecl) {
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportTemplateTypeParmDeclReversed) {
   const char *Code =
       R"(
       struct Z;
@@ -9963,10 +9993,10 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
         Z *z;
       };
 
-      template <typename T = Y>
+      template <typename T1 = Y>
       struct X;
 
-      template <typename T>
+      template <typename T2>
       struct X {
         static const int A = 1;
       };
@@ -9979,13 +10009,15 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
 
   Decl *FromTU = getTuDecl(Code, Lang_CXX14);
   auto *FromD = FirstDeclMatcher<TemplateTypeParmDecl>().match(
-      FromTU, templateTypeParmDecl(hasName("T")));
-  auto *ToD = Import(FromD, Lang_CXX14);
-  EXPECT_TRUE(ToD);
+      FromTU, templateTypeParmDecl(hasName("T1")));
+  auto *FromDInherited = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T2")));
+
+  testImportTemplateParmDeclReversed(FromD, FromDInherited);
 }
 
 TEST_P(ImportTemplateParmDeclDefaultValue,
-       ImportParentTemplateDuringTemplateTemplateParmDecl) {
+       ImportTemplateTemplateParmDeclReversed) {
   const char *Code =
       R"(
       struct Z;
@@ -9995,10 +10027,10 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
         Z *z;
       };
 
-      template <template <int> class T = Y>
+      template <template <int> class T1 = Y>
       struct X;
 
-      template <template <int> class T>
+      template <template <int> class T2>
       struct X {
         static const int A = 1;
       };
@@ -10011,9 +10043,11 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
 
   Decl *FromTU = getTuDecl(Code, Lang_CXX14);
   auto *FromD = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
-      FromTU, templateTemplateParmDecl(hasName("T")));
-  auto *ToD = Import(FromD, Lang_CXX14);
-  EXPECT_TRUE(ToD);
+      FromTU, templateTemplateParmDecl(hasName("T1")));
+  auto *FromDInherited = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("T2")));
+
+  testImportTemplateParmDeclReversed(FromD, FromDInherited);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

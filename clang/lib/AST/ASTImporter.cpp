@@ -384,16 +384,10 @@ namespace clang {
     // following declarations have a reference to the original default value
     // through the "inherited" value. This value should be set for all imported
     // template parameters that have a previous declaration (also a previous
-    // template declaration).
-    //
-    // In the `Visit*ParmDecl` functions the default value of these template
-    // arguments is always imported. At that location the previous declaration
-    // is not easily accessible, it is not possible to call
-    // `setInheritedDefaultArgument` at that place.
-    // `updateTemplateParametersInheritedFrom` is called later when the already
-    // imported default value is erased and changed to "inherited".
-    // It is important to change the mode to "inherited" otherwise false
-    // structural in-equivalences could be detected.
+    // template declaration). The chain of parameter default value inheritances
+    // will have the same order as the chain of previous declarations, in the
+    // "To" AST. The "From" AST may have a different order because import does
+    // not happen sequentially.
     void updateTemplateParametersInheritedFrom(
         const TemplateParameterList &RecentParams,
         TemplateParameterList &NewParams) {
@@ -5934,8 +5928,8 @@ ASTNodeImporter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
 ExpectedDecl
 ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   // For template arguments, we adopt the translation unit as our declaration
-  // context. This context will be fixed when the actual template declaration
-  // is created.
+  // context. This context will be fixed when (during) the actual template
+  // declaration is created.
 
   ExpectedSLoc BeginLocOrErr = import(D->getBeginLoc());
   if (!BeginLocOrErr)
@@ -5968,13 +5962,19 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (D->hasDefaultArgument()) {
+    // Default argument can be "inherited" when it has a reference to the
+    // previous declaration (of the default argument) which is stored only once.
+    // Here we import the default argument in any case, and the inherited state
+    // is updated later after the parent template was created. If the
+    // inherited-from object would be imported here it causes more difficulties
+    // (parent template may not be created yet and import loops can occur).
     Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
         import(D->getDefaultArgument());
     if (!ToDefaultArgOrErr)
       return ToDefaultArgOrErr.takeError();
-    // The import process can trigger import of the parent template which can
-    // set the default argument value (to "inherited").
-    // In this case do nothing here.
+    // The just called import process can trigger import of the parent template
+    // which can update the default argument value to "inherited". This should
+    // not be changed.
     if (!ToD->hasDefaultArgument())
       ToD->setDefaultArgument(ToD->getASTContext(), *ToDefaultArgOrErr);
   }
