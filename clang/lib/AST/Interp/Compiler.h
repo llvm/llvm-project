@@ -297,6 +297,7 @@ protected:
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  unsigned allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;

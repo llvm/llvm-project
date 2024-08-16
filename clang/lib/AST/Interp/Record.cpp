@@ -37,7 +37,7 @@ const std::string Record::getName() const {
 }
 
 const Record::Field *Record::getField(const FieldDecl *FD) const {
-  auto It = FieldMap.find(FD);
+  auto It = FieldMap.find(FD->getFirstDecl());
   assert(It != FieldMap.end() && "Missing field");
   return It->second;
 }

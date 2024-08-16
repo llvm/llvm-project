@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -1958,6 +1959,56 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 
   if (const auto *F =
           dyn_cast<Function>(Calloc.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                         const TargetLibraryInfo *TLI,
+                                         LibFunc SizeFeedbackNewFunc,
+                                         uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                                IRBuilderBase &B,
+                                                const TargetLibraryInfo *TLI,
+                                                LibFunc SizeFeedbackNewFunc,
+                                                uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
+                                               Align->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI =
+      B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;
