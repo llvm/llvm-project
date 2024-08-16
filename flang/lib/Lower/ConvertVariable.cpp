@@ -1698,7 +1698,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       mlir::Type ptrBoxType =
           Fortran::lower::getCrayPointeeBoxType(base.getType());
-      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+      mlir::Value boxAlloc = builder.createTemporary(
+          loc, ptrBoxType,
+          /*name=*/{}, /*shape=*/{}, /*lenParams=*/{}, /*attrs=*/{},
+          Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate()));
 
       // Declare a local pointer variable.
       auto newBase = builder.create<hlfir::DeclareOp>(
@@ -1860,9 +1863,10 @@ static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
       return kPinnedAllocatorPos;
     if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
       return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed ||
-        *cudaAttr == Fortran::common::CUDADataAttr::Unified)
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
       return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
   }
   return kDefaultAllocator;
 }

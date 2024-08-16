@@ -24,14 +24,11 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    cwtl
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %eax, %eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_1:
-; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    movswq %ax, %rax
+; X64-NEXT:    movabsq $4294967296, %rcx # imm = 0x100000000
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    rep bsfq %rcx, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %x = shl i16 256, %xx
   %z = sext i16 %x to i32

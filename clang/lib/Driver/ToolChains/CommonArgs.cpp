@@ -1143,8 +1143,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true, PluginOptPrefix);
 
+  bool Crel = false;
   for (const Arg *A : Args.filtered(options::OPT_Wa_COMMA)) {
-    bool Crel = false;
     for (StringRef V : A->getValues()) {
       if (V == "--crel")
         Crel = true;
@@ -1154,13 +1154,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         continue;
       A->claim();
     }
-    if (Crel) {
-      if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
-        CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
-      } else {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << "-Wa,--crel" << D.getTargetTriple();
-      }
+  }
+  if (Crel) {
+    if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--crel" << D.getTargetTriple();
     }
   }
 }
@@ -1199,8 +1199,13 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                              bool ForceStaticHostRuntime, bool IsOffloadingHost,
                              bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                    options::OPT_fno_openmp, false))
+                    options::OPT_fno_openmp, false)) {
+    // We need libomptarget (liboffload) if it's the choosen offloading runtime.
+    if (Args.hasFlag(options::OPT_foffload_via_llvm,
+                     options::OPT_fno_offload_via_llvm, false))
+      CmdArgs.push_back("-lomptarget");
     return false;
+  }
 
   Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
 

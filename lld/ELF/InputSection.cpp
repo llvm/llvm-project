@@ -682,6 +682,8 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
   PhdrEntry *tls = ctx.tlsPhdr;
+  if (!tls) // Reported an error in getSymVA
+    return 0;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:

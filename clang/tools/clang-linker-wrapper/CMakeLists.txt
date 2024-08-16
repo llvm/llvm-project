@@ -31,7 +31,6 @@ add_clang_tool(clang-linker-wrapper
 
   DEPENDS
   ${tablegen_deps}
-  EXPORT_SYMBOLS_FOR_PLUGINS
   )
 
 set(CLANG_LINKER_WRAPPER_LIB_DEPS
@@ -42,3 +41,5 @@ target_link_libraries(clang-linker-wrapper
   PRIVATE
   ${CLANG_LINKER_WRAPPER_LIB_DEPS}
   )
+
+export_executable_symbols_for_plugins(clang-linker-wrapper)

@@ -8,8 +8,8 @@ add_lld_tool(lld
 
   SUPPORT_PLUGINS
   GENERATE_DRIVER
-  EXPORT_SYMBOLS_FOR_PLUGINS
   )
+export_executable_symbols_for_plugins(lld)
 
 function(lld_target_link_libraries target type)
   if (TARGET obj.${target})

@@ -297,6 +297,7 @@ protected:
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  unsigned allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -357,6 +358,8 @@ private:
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool compileConstructor(const CXXConstructorDecl *Ctor);
+  bool compileDestructor(const CXXDestructorDecl *Dtor);
 
   bool checkLiteralType(const Expr *E);
 

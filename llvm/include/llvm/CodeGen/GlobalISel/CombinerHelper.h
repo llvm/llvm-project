@@ -892,6 +892,16 @@ public:
 
   bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
                          BuildFnTy &MatchInfo);
+  bool matchFoldAPlusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC2MinusAPlusC1(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldAMinusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC1Minus2MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // fold ((A-C1)+C2) -> (A+(C2-C1))
+  bool matchFoldAMinusC1PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
