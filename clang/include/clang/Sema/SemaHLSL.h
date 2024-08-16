@@ -64,7 +64,10 @@ public:
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
   // HLSL Type trait implementations
-  bool IsIntangibleType(QualType T1) const;
+  bool IsIntangibleType(const QualType T1);
+
+private:
+  llvm::DenseMap<const Type *, bool> IsIntangibleTypeCache;
 };
 
 } // namespace clang

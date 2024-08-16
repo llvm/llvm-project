@@ -28,7 +28,7 @@
 
 using namespace clang;
 
-SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S), IsIntangibleTypeCache(8) {}
 
 Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                                  SourceLocation KwLoc, IdentifierInfo *Ident,
@@ -1156,10 +1156,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-bool SemaHLSL::IsIntangibleType(QualType Ty) const {
-  if (Ty.isNull())
-    return false;
-
+static bool calculateIsIntangibleType(QualType Ty) {
   Ty = Ty.getCanonicalType().getUnqualifiedType();
   if (Ty->isBuiltinType())
     return Ty->isHLSLSpecificType();
@@ -1202,4 +1199,19 @@ bool SemaHLSL::IsIntangibleType(QualType Ty) const {
     }
   }
   return false;
+}
+
+bool SemaHLSL::IsIntangibleType(const clang::QualType Ty) {
+  if (Ty.isNull())
+    return false;
+
+  const auto CachedEntry = IsIntangibleTypeCache.find(Ty.getTypePtr());
+  if (CachedEntry != IsIntangibleTypeCache.end()) {
+    assert(CachedEntry->second == calculateIsIntangibleType(Ty) && "IsIntangibleType mismatch");
+    return CachedEntry->second;
+  }
+
+  bool IsIntangible = calculateIsIntangibleType(Ty);
+  IsIntangibleTypeCache[Ty.getTypePtr()] = IsIntangible;
+  return IsIntangible;
 }
