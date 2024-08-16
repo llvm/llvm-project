@@ -80,30 +80,30 @@ template <class TestType, class IntType>
 void test_div_struct() {
   TestType obj;
   static_assert(sizeof(obj) >= sizeof(IntType) * 2,
-                "");  // >= to account for alignment.
+                ""); // >= to account for alignment.
   static_assert((std::is_same<decltype(obj.quot), IntType>::value), "");
   static_assert((std::is_same<decltype(obj.rem), IntType>::value), "");
   ((void)obj);
 }
 
 void test_div() {
-  {  // tests member types of std::div_t, etc.
+  { // tests member types of std::div_t, etc.
     test_div_struct<std::div_t, int>();
     test_div_struct<std::ldiv_t, long>();
     test_div_struct<std::lldiv_t, long long>();
   }
 
-  {  // tests return type of std::div
+  { // tests return type of std::div
     // clang-format off
-    static_assert((std::is_same<decltype(std::div(  0,   0  )), std::div_t  >::value), "");
-    static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
-    static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
-    static_assert((std::is_same<decltype(std::ldiv( 0L,  0L )), std::ldiv_t >::value), "");
-    static_assert((std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value), "");
+    static_assert(std::is_same<decltype(std::div(  0,   0  )), std::div_t  >::value, "");
+    static_assert(std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value, "");
+    static_assert(std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value, "");
+    static_assert(std::is_same<decltype(std::ldiv( 0L,  0L )), std::ldiv_t >::value, "");
+    static_assert(std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value, "");
     // clang-format on
   }
 
-  {  // check one basic input for correctness.
+  { // check one basic input for correctness.
     // (42 // 5 == 8) AND (42 % 5 == 2)
     const auto check = [](const auto callable_div) -> void {
       const auto div = callable_div(42, 5);
@@ -183,4 +183,6 @@ int main(int, char**)
 
     test_abs();
     test_div();
+
+    return 0;
 }
