@@ -5776,18 +5776,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           return false;
       }
     }
-  } else if (ST.hasNoF16PseudoScalarTransInlineConstants() && isVOP3(MI) &&
-             !MO->isReg() && isInlineConstant(*MO, OpInfo)) {
-    switch (MI.getOpcode()) {
-    case AMDGPU::V_S_EXP_F16_e64:
-    case AMDGPU::V_S_LOG_F16_e64:
-    case AMDGPU::V_S_RCP_F16_e64:
-    case AMDGPU::V_S_RSQ_F16_e64:
-    case AMDGPU::V_S_SQRT_F16_e64:
-      return false;
-    default:
-      break;
-    }
+  } else if (ST.hasNoF16PseudoScalarTransInlineConstants() &&
+             isF16PseudoScalarTrans(MI.getOpcode()) && !MO->isReg() &&
+             isInlineConstant(*MO, OpInfo)) {
+    return false;
   }
 
   if (MO->isReg()) {
