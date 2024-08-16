@@ -1846,6 +1846,339 @@ join:
   ret i64 %phi1
 }
 
+define i64 @load_with_sunk_gep(i1 %cond, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: @load_with_sunk_gep(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i64 [ [[A:%.*]], [[IF]] ], [ [[B:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[B_SINK]]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[GEP_B]], align 8
+; CHECK-NEXT:    ret i64 [[V_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep.a = getelementptr i8, ptr %p, i64 %a
+  %v.a = load i64, ptr %gep.a
+  br label %join
+
+else:
+  %gep.b = getelementptr i8, ptr %p, i64 %b
+  %v.b = load i64, ptr %gep.b
+  br label %join
+
+join:
+  %v = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  ret i64 %v
+}
+
+define i64 @load_with_non_sunk_gep_both(i1 %cond, ptr %p.a, ptr %p.b, i64 %a, i64 %b) {
+; CHECK-LABEL: @load_with_non_sunk_gep_both(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[P_A:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[P_B:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP_B_SINK:%.*]] = phi ptr [ [[GEP_B]], [[ELSE]] ], [ [[GEP_A]], [[IF]] ]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[GEP_B_SINK]], align 8
+; CHECK-NEXT:    ret i64 [[V_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep.a = getelementptr i8, ptr %p.a, i64 %a
+  %v.a = load i64, ptr %gep.a
+  br label %join
+
+else:
+  %gep.b = getelementptr i8, ptr %p.b, i64 %b
+  %v.b = load i64, ptr %gep.b
+  br label %join
+
+join:
+  %v = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  ret i64 %v
+}
+
+define i64 @load_with_non_sunk_gep_left(i1 %cond, ptr %p.a, ptr %p.b, i64 %b) {
+; CHECK-LABEL: @load_with_non_sunk_gep_left(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[P_B:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP_B_SINK:%.*]] = phi ptr [ [[GEP_B]], [[ELSE]] ], [ [[P_A:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[GEP_B_SINK]], align 8
+; CHECK-NEXT:    ret i64 [[V_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %v.a = load i64, ptr %p.a
+  br label %join
+
+else:
+  %gep.b = getelementptr i8, ptr %p.b, i64 %b
+  %v.b = load i64, ptr %gep.b
+  br label %join
+
+join:
+  %v = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  ret i64 %v
+}
+
+define i64 @load_with_non_sunk_gep_right(i1 %cond, ptr %p.a, ptr %p.b, i64 %a) {
+; CHECK-LABEL: @load_with_non_sunk_gep_right(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[P_A:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[P_B_SINK:%.*]] = phi ptr [ [[GEP_A]], [[IF]] ], [ [[P_B:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[P_B_SINK]], align 8
+; CHECK-NEXT:    ret i64 [[V_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep.a = getelementptr i8, ptr %p.a, i64 %a
+  %v.a = load i64, ptr %gep.a
+  br label %join
+
+else:
+  %v.b = load i64, ptr %p.b
+  br label %join
+
+join:
+  %v = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  ret i64 %v
+}
+
+define void @store_with_non_sunk_gep(i1 %cond, ptr %p.a, ptr %p.b, i64 %a, i64 %b) {
+; CHECK-LABEL: @store_with_non_sunk_gep(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[P_A:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[P_B:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP_B_SINK:%.*]] = phi ptr [ [[GEP_B]], [[ELSE]] ], [ [[GEP_A]], [[IF]] ]
+; CHECK-NEXT:    store i64 0, ptr [[GEP_B_SINK]], align 8
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep.a = getelementptr i8, ptr %p.a, i64 %a
+  store i64 0, ptr %gep.a
+  br label %join
+
+else:
+  %gep.b = getelementptr i8, ptr %p.b, i64 %b
+  store i64 0, ptr %gep.b
+  br label %join
+
+join:
+  ret void
+}
+
+define void @store_with_non_sunk_gep_as_value(i1 %cond, ptr %p, ptr %p.a, ptr %p.b, i64 %a, i64 %b) {
+; CHECK-LABEL: @store_with_non_sunk_gep_as_value(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[P_A:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[P_B:%.*]], i64 [[B:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP_B_SINK:%.*]] = phi ptr [ [[GEP_B]], [[ELSE]] ], [ [[GEP_A]], [[IF]] ]
+; CHECK-NEXT:    store ptr [[GEP_B_SINK]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep.a = getelementptr i8, ptr %p.a, i64 %a
+  store ptr %gep.a, ptr %p
+  br label %join
+
+else:
+  %gep.b = getelementptr i8, ptr %p.b, i64 %b
+  store ptr %gep.b, ptr %p
+  br label %join
+
+join:
+  ret void
+}
+
+define i32 @many_indirect_phis(i1 %cond, i32 %a, i32 %b) {
+; CHECK-LABEL: @many_indirect_phis(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i32 [ [[A:%.*]], [[IF]] ], [ [[B:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK3:%.*]] = phi i32 [ 10, [[IF]] ], [ 11, [[TMP0]] ]
+; CHECK-NEXT:    [[DOTSINK2:%.*]] = phi i32 [ 20, [[IF]] ], [ 21, [[TMP0]] ]
+; CHECK-NEXT:    [[DOTSINK1:%.*]] = phi i32 [ 30, [[IF]] ], [ 31, [[TMP0]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ 40, [[IF]] ], [ 41, [[TMP0]] ]
+; CHECK-NEXT:    [[ADD_0_B:%.*]] = add i32 [[B_SINK]], 1
+; CHECK-NEXT:    [[ADD_1_B:%.*]] = add i32 [[ADD_0_B]], [[DOTSINK3]]
+; CHECK-NEXT:    [[ADD_2_B:%.*]] = add i32 [[ADD_1_B]], [[DOTSINK2]]
+; CHECK-NEXT:    [[ADD_3_B:%.*]] = add i32 [[ADD_2_B]], [[DOTSINK1]]
+; CHECK-NEXT:    [[ADD_4_B:%.*]] = add i32 [[ADD_3_B]], [[DOTSINK]]
+; CHECK-NEXT:    ret i32 [[ADD_4_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %add.0.a = add i32 %a, 1
+  %add.1.a = add i32 %add.0.a, 10
+  %add.2.a = add i32 %add.1.a, 20
+  %add.3.a = add i32 %add.2.a, 30
+  %add.4.a = add i32 %add.3.a, 40
+  br label %join
+
+else:
+  %add.0.b = add i32 %b, 1
+  %add.1.b = add i32 %add.0.b, 11
+  %add.2.b = add i32 %add.1.b, 21
+  %add.3.b = add i32 %add.2.b, 31
+  %add.4.b = add i32 %add.3.b, 41
+  br label %join
+
+join:
+  %phi = phi i32 [ %add.4.a, %if ], [ %add.4.b, %else ]
+  ret i32 %phi
+}
+
+define i32 @store_and_unrelated_many_phi_add(i1 %cond, ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @store_and_unrelated_many_phi_add(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[A:%.*]], 2
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B:%.*]], 3
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_1]], [[IF]] ], [ [[ADD_2]], [[ELSE]] ]
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %add.1 = add i32 %a, 2
+  store i32 1, ptr %p
+  br label %join
+
+else:
+  %add.2 = add i32 %b, 3
+  store i32 1, ptr %p
+  br label %join
+
+join:
+  %phi = phi i32 [ %add.1, %if ], [ %add.2, %else ]
+  ret i32 %phi
+}
+
+define i32 @store_and_related_many_phi_add(i1 %cond, ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @store_and_related_many_phi_add(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[A:%.*]], 2
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B:%.*]], 3
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[ADD_2_SINK:%.*]] = phi i32 [ [[ADD_2]], [[ELSE]] ], [ [[ADD_1]], [[IF]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_1]], [[IF]] ], [ [[ADD_2]], [[ELSE]] ]
+; CHECK-NEXT:    store i32 [[ADD_2_SINK]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %add.1 = add i32 %a, 2
+  store i32 %add.1, ptr %p
+  br label %join
+
+else:
+  %add.2 = add i32 %b, 3
+  store i32 %add.2, ptr %p
+  br label %join
+
+join:
+  %phi = phi i32 [ %add.1, %if ], [ %add.2, %else ]
+  ret i32 %phi
+}
+
+define i32 @store_and_unrelated_many_phi_add2(i1 %cond, ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @store_and_unrelated_many_phi_add2(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[A:%.*]], 2
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[B:%.*]], 3
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD_1]], [[IF]] ], [ [[ADD_2]], [[ELSE]] ]
+; CHECK-NEXT:    [[ADD_A_2:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    store i32 [[ADD_A_2]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %add.1 = add i32 %a, 2
+  %add.a.1 = add i32 %a, 1
+  store i32 %add.a.1, ptr %p
+  br label %join
+
+else:
+  %add.2 = add i32 %b, 3
+  %add.a.2 = add i32 %a, 1
+  store i32 %add.a.2, ptr %p
+  br label %join
+
+join:
+  %phi = phi i32 [ %add.1, %if ], [ %add.2, %else ]
+  ret i32 %phi
+}
+
 declare void @dummy()
 declare void @use.ptr(ptr)
 

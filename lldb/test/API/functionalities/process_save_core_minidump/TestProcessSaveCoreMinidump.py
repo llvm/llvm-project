@@ -254,3 +254,49 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_mini_dump_default_options(self):
+        """Test that we can save a Linux mini dump with default SBSaveCoreOptions"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        default_value_file = self.getBuildArtifact("core.defaults.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            process_info = process.GetProcessInfo()
+            expected_pid = process_info.GetProcessID() if process_info.IsValid() else -1
+            expected_modules = target.modules
+            expected_threads = []
+            stacks_to_sp_map = {}
+            expected_pid = process.GetProcessInfo().GetProcessID()
+
+            for thread_idx in range(process.GetNumThreads()):
+                thread = process.GetThreadAtIndex(thread_idx)
+                thread_id = thread.GetThreadID()
+                expected_threads.append(thread_id)
+                stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
+
+
+            # This is almost identical to the single thread test case because
+            # minidump defaults to stacks only, so we want to see if the
+            # default options work as expected.
+            options = lldb.SBSaveCoreOptions()
+            default_value_spec = lldb.SBFileSpec(default_value_file)
+            options.SetOutputFile(default_value_spec)
+            options.SetPluginName("minidump")
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+
+            self.verify_core_file(default_value_file, expected_pid, expected_modules, expected_threads, stacks_to_sp_map)
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(default_value_file):
+                os.unlink(default_value_file)

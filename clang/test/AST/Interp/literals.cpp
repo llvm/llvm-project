@@ -1196,13 +1196,15 @@ namespace incdecbool {
 }
 
 #if __cplusplus >= 201402L
-/// NOTE: The diagnostics of the two interpreters are a little
-/// different here, but they both make sense.
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
-  extern char arr[]; // ref-note {{declared here}}
-   return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{indexing of array without known bound}}
+  extern char arr[]; // both-note {{declared here}}
+   return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
 }
+namespace externarr {
+  extern int arr[];
+  constexpr int *externarrindex = &arr[0]; /// No diagnostic.
+}
+
 
 namespace StmtExprs {
   constexpr int foo() {

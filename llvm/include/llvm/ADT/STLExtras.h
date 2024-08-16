@@ -2366,7 +2366,7 @@ public:
   detail::index_iterator end() const { return {End}; }
 };
 
-/// Given two or more input ranges, returns a new range whose values are are
+/// Given two or more input ranges, returns a new range whose values are
 /// tuples (A, B, C, ...), such that A is the 0-based index of the item in the
 /// sequence, and B, C, ..., are the values from the original input ranges. All
 /// input ranges are required to have equal lengths. Note that the returned

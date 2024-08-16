@@ -56,4 +56,37 @@ define void @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %data) {
   ret void
 }
 
+; To be fixed: If the mask is the splat/broadcast of a non-constant value, use a
+; vector store
+define void @scalarize_v2i64_splat_mask(ptr %p, <2 x i64> %data, i1 %mask) {
+; CHECK-LABEL: @scalarize_v2i64_splat_mask(
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK:%.*]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK_SPLAT]] to i2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK:       cond.store:
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[DATA:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0
+; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    br label [[ELSE]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK:       cond.store1:
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 1
+; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    br label [[ELSE2]]
+; CHECK:       else2:
+; CHECK-NEXT:    ret void
+;
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %data, ptr %p, i32 8, <2 x i1> %mask.splat)
+  ret void
+}
+
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)

@@ -10,7 +10,7 @@ struct S {
 
 // CHECK-LABEL: @_Z23get_offset_of_y_naivelyv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively() {
   return ((uintptr_t)(&(((S *)nullptr)->y)));

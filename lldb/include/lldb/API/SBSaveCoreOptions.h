@@ -21,7 +21,7 @@ class LLDB_API SBSaveCoreOptions {
 public:
   SBSaveCoreOptions();
   SBSaveCoreOptions(const lldb::SBSaveCoreOptions &rhs);
-  ~SBSaveCoreOptions() = default;
+  ~SBSaveCoreOptions();
 
   const SBSaveCoreOptions &operator=(const lldb::SBSaveCoreOptions &rhs);
 

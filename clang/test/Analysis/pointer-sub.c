@@ -9,13 +9,7 @@ void f1(void) {
   d = (&x + 1) - &x; // no-warning ('&x' is like a single-element array)
   d = &x - (&x + 1); // no-warning
   d = (&x + 0) - &x; // no-warning
-  d = (&x - 1) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
-  d = (&x + 2) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
-
-  d = (z + 9) - z; // no-warning (pointers to same array)
-  d = (z + 10) - z; // no-warning (pointer to "one after the end")
-  d = (z + 11) - z; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
-  d = (z - 1) - z; // expected-warning{{Using a negative array index at pointer subtraction is undefined behavior}}
+  d = (z + 10) - z; // no-warning
 }
 
 void f2(void) {
@@ -27,11 +21,6 @@ void f2(void) {
 
   q = &b[3];
   d = q - p; // expected-warning{{Subtraction of two pointers that}}
-
-  q = a + 10;
-  d = q - p; // no warning (use of pointer to one after the end is allowed)
-  q = a + 11;
-  d = q - a; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
 
   d = &a[4] - a; // no-warning
   d = &a[2] - p; // no-warning
