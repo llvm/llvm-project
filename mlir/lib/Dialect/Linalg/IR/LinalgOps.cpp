@@ -2999,14 +2999,16 @@ LogicalResult WinogradInputTransformOp::verify() {
     expectedOutputShape[getOutputTileHDim()] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
-    expectedOutputShape[getOutputTileHDim()] = leftTransform ? (inputH - (r - 1)) / m : 1;
+    expectedOutputShape[getOutputTileHDim()] =
+        leftTransform ? (inputH - (r - 1)) / m : 1;
   }
   if (ShapedType::isDynamic(inputW)) {
     expectedOutputShape[getOutputAlphaWDim()] = tileSize;
     expectedOutputShape[getOutputTileWDim()] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
-    expectedOutputShape[getOutputTileWDim()] = rightTransform ? (inputW - (r - 1)) / m : 1;
+    expectedOutputShape[getOutputTileWDim()] =
+        rightTransform ? (inputW - (r - 1)) / m : 1;
   }
   expectedOutputShape[getOutputNDim()] = inputShape[getInputNDim()];
   expectedOutputShape[getOutputCDim()] = inputShape[getInputCDim()];
@@ -3173,7 +3175,8 @@ LogicalResult WinogradOutputTransformOp::verify() {
   } else {
     if (valueW != (rightTransform ? m + r - 1 : 1))
       return emitOpError("expect input width equals to input tile size");
-    expectedOutputShape[getOutputWDim()] = (rightTransform ? m : 1) * valueTileW;
+    expectedOutputShape[getOutputWDim()] =
+        (rightTransform ? m : 1) * valueTileW;
   }
   expectedOutputShape[getOutputNDim()] = valueShape[getValueNDim()];
   expectedOutputShape[getOutputFDim()] = valueShape[getValueFDim()];
