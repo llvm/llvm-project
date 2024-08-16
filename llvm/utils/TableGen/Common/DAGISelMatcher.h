@@ -836,7 +836,8 @@ class EmitIntegerMatcher : public Matcher {
 
 public:
   EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt)
-      : Matcher(EmitInteger), Val(val), VT(vt) {}
+      : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
+        VT(vt) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
