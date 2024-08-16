@@ -192,6 +192,9 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonSignal:
           return 1;
 
+        case eStopReasonInterrupt:
+          return 1;
+
         case eStopReasonException:
           return 1;
 
@@ -259,6 +262,9 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
           return stop_info_sp->GetValue();
 
         case eStopReasonSignal:
+          return stop_info_sp->GetValue();
+
+        case eStopReasonInterrupt:
           return stop_info_sp->GetValue();
 
         case eStopReasonException:

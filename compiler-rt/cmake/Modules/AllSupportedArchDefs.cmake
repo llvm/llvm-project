@@ -24,6 +24,10 @@ if(APPLE)
   set(X86_64 x86_64 x86_64h)
 endif()
 
+if(WIN32)
+  set(ARM32 ${ARM32} armv7)
+endif()
+
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64} ${RISCV64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9}
     ${HEXAGON} ${LOONGARCH64})

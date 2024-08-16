@@ -536,38 +536,40 @@ class Sema final : public SemaBase {
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
-  // 2. C++ Access Control (SemaAccess.cpp)
-  // 3. Attributes (SemaAttr.cpp)
-  // 4. Availability Attribute Handling (SemaAvailability.cpp)
-  // 5. Casts (SemaCast.cpp)
-  // 6. Extra Semantic Checking (SemaChecking.cpp)
-  // 7. C++ Coroutines (SemaCoroutine.cpp)
-  // 8. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
-  // 9. Declarations (SemaDecl.cpp)
-  // 10. Declaration Attribute Handling (SemaDeclAttr.cpp)
-  // 11. C++ Declarations (SemaDeclCXX.cpp)
-  // 12. C++ Exception Specifications (SemaExceptionSpec.cpp)
-  // 13. Expressions (SemaExpr.cpp)
-  // 14. C++ Expressions (SemaExprCXX.cpp)
-  // 15. Member Access Expressions (SemaExprMember.cpp)
-  // 16. Initializers (SemaInit.cpp)
-  // 17. C++ Lambda Expressions (SemaLambda.cpp)
-  // 18. Name Lookup (SemaLookup.cpp)
-  // 19. Modules (SemaModule.cpp)
-  // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Statements (SemaStmt.cpp)
-  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 24. C++ Templates (SemaTemplate.cpp)
-  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 26. C++ Template Deduction Guide (SemaTemplateDeductionGuide.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 2. API Notes (SemaAPINotes.cpp)
+  // 3. C++ Access Control (SemaAccess.cpp)
+  // 4. Attributes (SemaAttr.cpp)
+  // 5. Availability Attribute Handling (SemaAvailability.cpp)
+  // 6. Bounds Safety (SemaBoundsSafety.cpp)
+  // 7. Casts (SemaCast.cpp)
+  // 8. Extra Semantic Checking (SemaChecking.cpp)
+  // 9. C++ Coroutines (SemaCoroutine.cpp)
+  // 10. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
+  // 11. Declarations (SemaDecl.cpp)
+  // 12. Declaration Attribute Handling (SemaDeclAttr.cpp)
+  // 13. C++ Declarations (SemaDeclCXX.cpp)
+  // 14. C++ Exception Specifications (SemaExceptionSpec.cpp)
+  // 15. Expressions (SemaExpr.cpp)
+  // 16. C++ Expressions (SemaExprCXX.cpp)
+  // 17. Member Access Expressions (SemaExprMember.cpp)
+  // 18. Initializers (SemaInit.cpp)
+  // 19. C++ Lambda Expressions (SemaLambda.cpp)
+  // 20. Name Lookup (SemaLookup.cpp)
+  // 21. Modules (SemaModule.cpp)
+  // 22. C++ Overloading (SemaOverload.cpp)
+  // 23. Statements (SemaStmt.cpp)
+  // 24. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 25. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 26. C++ Templates (SemaTemplate.cpp)
+  // 27. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 28. C++ Template Deduction Guide (SemaTemplateDeductionGuide.cpp)
+  // 29. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 30. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
+  // 31. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 32. Constraints and Concepts (SemaConcept.cpp)
+  // 33. Types (SemaType.cpp)
+  // 34. FixIt Helpers (SemaFixItUtils.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1316,6 +1318,25 @@ private:
   std::unique_ptr<SemaSystemZ> SystemZPtr;
   std::unique_ptr<SemaWasm> WasmPtr;
   std::unique_ptr<SemaX86> X86Ptr;
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name API Notes
+  /// Implementations are in SemaAPINotes.cpp
+  ///@{
+
+public:
+  /// Map any API notes provided for this declaration to attributes on the
+  /// declaration.
+  ///
+  /// Triggered by declaration-attribute processing.
+  void ProcessAPINotes(Decl *D);
 
   ///@}
 
@@ -2086,6 +2107,39 @@ public:
                                   bool ObjCPropertyAccess,
                                   bool AvoidPartialAvailabilityChecks = false,
                                   ObjCInterfaceDecl *ClassReceiver = nullptr);
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Bounds Safety
+  /// Implementations are in SemaBoundsSafety.cpp
+  ///@{
+public:
+  /// Check if applying the specified attribute variant from the "counted by"
+  /// family of attributes to FieldDecl \p FD is semantically valid. If
+  /// semantically invalid diagnostics will be emitted explaining the problems.
+  ///
+  /// \param FD The FieldDecl to apply the attribute to
+  /// \param E The count expression on the attribute
+  /// \param CountInBytes If true the attribute is from the "sized_by" family of
+  ///                     attributes. If the false the attribute is from
+  ///                     "counted_by" family of attributes.
+  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
+  ///               of attributes. If false the attribute does not have the
+  ///               suffix.
+  ///
+  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
+  /// \p CountInBytes and \p OrNull both being true indicates the
+  /// `counted_by_or_null` attribute.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                 bool OrNull);
 
   ///@}
 
@@ -3800,7 +3854,8 @@ public:
                                    const ParsedAttributesView &DeclAttrs,
                                    MultiTemplateParamsArg TemplateParams,
                                    bool IsExplicitInstantiation,
-                                   RecordDecl *&AnonRecord);
+                                   RecordDecl *&AnonRecord,
+                                   SourceLocation EllipsisLoc = {});
 
   /// BuildAnonymousStructOrUnion - Handle the declaration of an
   /// anonymous structure or union. Anonymous unions are a C++ feature
@@ -5538,7 +5593,8 @@ public:
   /// parameters present at all, require proper matching, i.e.
   ///   template <> template \<class T> friend class A<int>::B;
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
-                            MultiTemplateParamsArg TemplateParams);
+                            MultiTemplateParamsArg TemplateParams,
+                            SourceLocation EllipsisLoc);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
                                      MultiTemplateParamsArg TemplateParams);
 
@@ -5852,6 +5908,7 @@ public:
                                      unsigned TagSpec, SourceLocation TagLoc,
                                      CXXScopeSpec &SS, IdentifierInfo *Name,
                                      SourceLocation NameLoc,
+                                     SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
                                      MultiTemplateParamsArg TempParamLists);
 
@@ -12033,14 +12090,17 @@ public:
 
   void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
-  Decl *ActOnConceptDefinition(Scope *S,
-                               MultiTemplateParamsArg TemplateParameterLists,
-                               const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr,
-                               const ParsedAttributesView &Attrs);
+  ConceptDecl *ActOnStartConceptDefinition(
+      Scope *S, MultiTemplateParamsArg TemplateParameterLists,
+      const IdentifierInfo *Name, SourceLocation NameLoc);
+
+  ConceptDecl *ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
+                                            Expr *ConstraintExpr,
+                                            const ParsedAttributesView &Attrs);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
+  bool CheckConceptUseInDefinition(ConceptDecl *Concept, SourceLocation Loc);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                const CXXScopeSpec &SS,
@@ -14186,6 +14246,10 @@ public:
   std::optional<unsigned> getNumArgumentsInExpansion(
       QualType T, const MultiLevelTemplateArgumentList &TemplateArgs);
 
+  std::optional<unsigned> getNumArgumentsInExpansionFromUnexpanded(
+      llvm::ArrayRef<UnexpandedParameterPack> Unexpanded,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
+
   /// Determine whether the given declarator contains any unexpanded
   /// parameter packs.
   ///
@@ -15033,63 +15097,6 @@ public:
   std::string getFixItZeroInitializerForType(QualType T,
                                              SourceLocation Loc) const;
   std::string getFixItZeroLiteralForType(QualType T, SourceLocation Loc) const;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name API Notes
-  /// Implementations are in SemaAPINotes.cpp
-  ///@{
-
-public:
-  /// Map any API notes provided for this declaration to attributes on the
-  /// declaration.
-  ///
-  /// Triggered by declaration-attribute processing.
-  void ProcessAPINotes(Decl *D);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Bounds Safety
-  /// Implementations are in SemaBoundsSafety.cpp
-  ///@{
-public:
-  /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to FieldDecl \p FD is semantically valid. If
-  /// semantically invalid diagnostics will be emitted explaining the problems.
-  ///
-  /// \param FD The FieldDecl to apply the attribute to
-  /// \param E The count expression on the attribute
-  /// \param[out] Decls If the attribute is semantically valid \p Decls
-  ///             is populated with TypeCoupledDeclRefInfo objects, each
-  ///             describing Decls referred to in \p E.
-  /// \param CountInBytes If true the attribute is from the "sized_by" family of
-  ///                     attributes. If the false the attribute is from
-  ///                     "counted_by" family of attributes.
-  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
-  ///               of attributes. If false the attribute does not have the
-  ///               suffix.
-  ///
-  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
-  /// \p CountInBytes and \p OrNull both being true indicates the
-  /// `counted_by_or_null` attribute.
-  ///
-  /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(
-      FieldDecl *FD, Expr *E,
-      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls, bool CountInBytes,
-      bool OrNull);
 
   ///@}
 };

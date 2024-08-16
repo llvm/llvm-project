@@ -122,7 +122,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Maybe expand operands to the higher rank vector shape that we'll use to
   // iterate over and extract one dimensional vectors.
-  SmallVector<int64_t> expandedShape(inputShape.begin(), inputShape.end());
+  SmallVector<int64_t> expandedShape(inputShape);
   SmallVector<Value> expandedOperands(operands);
 
   if (expansionDim > 1) {

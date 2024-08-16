@@ -335,7 +335,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
                       LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
-  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
 template <typename OpTy>
@@ -372,10 +372,11 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter,
-      /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
-      /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      rocdlDialect->getKernelAttrHelper().getName(),
-      rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName());
+      GPUFuncOpLoweringOptions{
+          /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
+          /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
+          rocdlDialect->getKernelAttrHelper().getName(),
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {

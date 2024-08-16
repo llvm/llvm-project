@@ -639,8 +639,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   // lazily and cached to avoid expensive recomputation.
   BlockIndexCache blockIndexCache;
 
-  SmallVector<PromotableAllocationOpInterface> workList(allocators.begin(),
-                                                        allocators.end());
+  SmallVector<PromotableAllocationOpInterface> workList(allocators);
 
   SmallVector<PromotableAllocationOpInterface> newWorkList;
   newWorkList.reserve(workList.size());

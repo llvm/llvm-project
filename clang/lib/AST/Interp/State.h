@@ -44,7 +44,8 @@ enum CheckSubobjectKind {
   CSK_ArrayToPointer,
   CSK_ArrayIndex,
   CSK_Real,
-  CSK_Imag
+  CSK_Imag,
+  CSK_VectorElement
 };
 
 namespace interp {

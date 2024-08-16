@@ -20,20 +20,16 @@ func.func @test_valid_arg_materialization(%arg0: i64) {
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to 'f16' that remained live after conversion}}
   %result = "test.type_producer"() : () -> f16
-
-  // expected-note@below {{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to 'f16' that remained live after conversion}}
   %result = "test.type_producer"() : () -> f16
-
-  // expected-note@below {{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 
@@ -51,9 +47,8 @@ func.func @test_transitive_use_materialization() {
 // -----
 
 func.func @test_transitive_use_invalid_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to 'f16' that remained live after conversion}}
   %result = "test.another_type_producer"() : () -> f16
-  // expected-note@below {{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 

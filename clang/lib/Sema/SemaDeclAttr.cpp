@@ -5898,8 +5898,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
-  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, Decls, CountInBytes, OrNull))
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
@@ -6901,6 +6900,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLROV:
+    handleSimpleAttribute<HLSLROVAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLResourceClass:
     S.HLSL().handleResourceClassAttr(D, AL);

@@ -399,6 +399,28 @@ public:
       OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
       OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
       Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc);
+  /// Process an OpenMP informational directive.
+  ///
+  /// \param Kind The directive kind.
+  /// \param DirName Declaration name info.
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPInformationalDirective(
+      OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc);
+  /// Process an OpenMP assume directive.
+  ///
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp parallel' after parsing
   /// of the  associated statement.
   StmtResult ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
@@ -940,6 +962,17 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
+  /// Called on well-formed 'holds' clause.
+  OMPClause *ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
+  /// Called on well-formed 'absent' or 'contains' clauses.
+  OMPClause *ActOnOpenMPDirectivePresenceClause(
+      OpenMPClauseKind CK, llvm::ArrayRef<OpenMPDirectiveKind> DKVec,
+      SourceLocation Loc, SourceLocation LLoc, SourceLocation RLoc);
+  OMPClause *ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
+                                                SourceLocation Loc,
+                                                SourceLocation RLoc);
 
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,
@@ -1226,11 +1259,12 @@ public:
       const OMPVarListLocTy &Locs, bool NoDiagnose = false,
       ArrayRef<Expr *> UnresolvedMappers = std::nullopt);
   /// Called on well-formed 'num_teams' clause.
-  OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
+  OMPClause *ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
+                                       SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
   /// Called on well-formed 'thread_limit' clause.
-  OMPClause *ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
+  OMPClause *ActOnOpenMPThreadLimitClause(ArrayRef<Expr *> VarList,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc);
