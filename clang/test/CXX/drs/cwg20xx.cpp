@@ -416,17 +416,17 @@ E EV[1] = {I};
 template<class ENUM, const ENUM* const VALUES>
 struct S
 {
-	template< class E, const E* const V>
-		friend AA& operator<<( AA& os, const S<E,V>& e );
+  template< class E, const E* const V>
+    friend AA& operator<<( AA& os, const S<E,V>& e );
 };
 
 int f()
 {
-	S< E, EV > x;
+  S< E, EV > x;
 
-	AA a;
-	a << x;
-	return 0;
+  AA a;
+  a << x;
+  return 0;
 }
 } // namespace GH42233
 } // namespace cwg2091 
