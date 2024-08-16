@@ -50,30 +50,31 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
+option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
-add_subdirectory(newhdrgen)
-
-
-if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
-  if(NOT LIBC_HDRGEN_EXE)
-    # We need to set up hdrgen first since other targets depend on it.
-    add_subdirectory(utils/LibcTableGenUtil)
-    add_subdirectory(utils/HdrGen)
-    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
-    # PARENT_SCOPE which get lost until saved in the cache.
-    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
-    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
-  else()
-    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+if(LIBC_USE_NEW_HEADER_GEN)
+  add_subdirectory(newhdrgen)
+else()
+  if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
+    if(NOT LIBC_HDRGEN_EXE)
+      # We need to set up hdrgen first since other targets depend on it.
+      add_subdirectory(utils/LibcTableGenUtil)
+      add_subdirectory(utils/HdrGen)
+      # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+      # PARENT_SCOPE which get lost until saved in the cache.
+      set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+      set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
+    else()
+      message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+    endif()
   endif()
 endif()
+
 # We will build the GPU utilities if we are not doing a runtimes build.
 option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
 if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
-
-option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
