@@ -29,13 +29,13 @@ W f5();
 void check()
 {
   u.union_member1 = true;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not access members of unions; use (boost::)variant instead [cppcoreguidelines-pro-type-union-access]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not access members of unions; consider using (boost::)variant instead [cppcoreguidelines-pro-type-union-access]
   auto b = u.union_member2;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: do not access members of unions; use (boost::)variant instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: do not access members of unions; consider using (boost::)variant instead
   auto a = &s.union_member;
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: do not access members of unions; use (boost::)variant instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: do not access members of unions; consider using (boost::)variant instead
   f(s.u.union_member2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not access members of unions; use (boost::)variant instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not access members of unions; consider using (boost::)variant instead
 
   s.non_union_member = 2; // OK
 
@@ -44,5 +44,5 @@ void check()
   f3(u); // OK
   f4(&u); // OK
   void *ret = f5();
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: do not access members of unions; use (boost::)variant instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: do not access members of unions; consider using (boost::)variant instead
 }
