@@ -76,9 +76,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   return std::move(this->EvalResult);
 }
 
-void EvalEmitter::emitLabel(LabelTy Label) {
-  CurrentLabel = Label;
-}
+void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 

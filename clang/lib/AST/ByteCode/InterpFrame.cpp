@@ -137,7 +137,7 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   if (!Ty->isReferenceType())
     OS << "&";
   llvm::SmallVector<Pointer, 2> Levels;
-  for (Pointer F = P; !F.isRoot(); ) {
+  for (Pointer F = P; !F.isRoot();) {
     Levels.push_back(F);
     F = F.isArrayElement() ? F.getArray().expand() : F.getBase();
   }

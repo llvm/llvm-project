@@ -1548,8 +1548,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // A + -B  -->  A - B
-  if (match(RHS, m_Neg(m_Value(B))))
-    return BinaryOperator::CreateSub(LHS, B);
+  if (match(RHS, m_Neg(m_Value(B)))) {
+    auto *Sub = BinaryOperator::CreateSub(LHS, B);
+    auto *OBO = cast<OverflowingBinaryOperator>(RHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO->hasNoSignedWrap());
+    return Sub;
+  }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);

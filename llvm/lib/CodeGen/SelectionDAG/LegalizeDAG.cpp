@@ -2601,7 +2601,7 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   SDValue IsDenormal =
       DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
 
-  SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
   SDValue Zero = DAG.getConstant(0, dl, ExpVT);
 
   SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);

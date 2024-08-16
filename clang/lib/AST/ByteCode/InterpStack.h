@@ -32,7 +32,7 @@ public:
   ~InterpStack();
 
   /// Constructs a value in place on the top of the stack.
-  template <typename T, typename... Tys> void push(Tys &&... Args) {
+  template <typename T, typename... Tys> void push(Tys &&...Args) {
     new (grow(aligned_size<T>())) T(std::forward<Tys>(Args)...);
 #ifndef NDEBUG
     ItemTypes.push_back(toPrimType<T>());
@@ -153,8 +153,7 @@ private:
   template <typename T> static constexpr PrimType toPrimType() {
     if constexpr (std::is_same_v<T, Pointer>)
       return PT_Ptr;
-    else if constexpr (std::is_same_v<T, bool> ||
-                       std::is_same_v<T, Boolean>)
+    else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, Boolean>)
       return PT_Bool;
     else if constexpr (std::is_same_v<T, int8_t> ||
                        std::is_same_v<T, Integral<8, true>>)
