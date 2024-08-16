@@ -131,9 +131,6 @@ using ::qsort _LIBCPP_USING_IF_EXISTS;
 using ::abs _LIBCPP_USING_IF_EXISTS;
 using ::labs _LIBCPP_USING_IF_EXISTS;
 using ::llabs _LIBCPP_USING_IF_EXISTS;
-using ::div _LIBCPP_USING_IF_EXISTS;
-using ::ldiv _LIBCPP_USING_IF_EXISTS;
-using ::lldiv _LIBCPP_USING_IF_EXISTS;
 using ::mblen _LIBCPP_USING_IF_EXISTS;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using ::mbtowc _LIBCPP_USING_IF_EXISTS;
@@ -148,6 +145,29 @@ using ::quick_exit _LIBCPP_USING_IF_EXISTS;
 #if _LIBCPP_STD_VER >= 17
 using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
 #endif
+
+using ::ldiv _LIBCPP_USING_IF_EXISTS;
+using ::lldiv _LIBCPP_USING_IF_EXISTS;
+
+#if _LIBCPP_STD_VER < 23
+// use non-constexpr versions from libc
+using ::div _LIBCPP_USING_IF_EXISTS;
+
+#else  // _LIBCPP_STD_VER >= 23
+
+template <class _Div_t, class _Int>
+_LIBCPP_HIDE_FROM_ABI constexpr _Div_t __div(_Int __x, _Int __y) {
+  _Div_t __d;
+  __d.quot = __x / __y;
+  __d.rem = __x % __y;
+  return __d;
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr div_t div(int __x, int __y) {
+  return std::__div<std::div_t>(__x, __y);
+}
+
+#endif  // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD
 

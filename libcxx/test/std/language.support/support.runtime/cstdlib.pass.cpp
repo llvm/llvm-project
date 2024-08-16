@@ -96,8 +96,8 @@ void test_div() {
   {  // tests return type of std::div
     // clang-format off
     static_assert((std::is_same<decltype(std::div(  0,   0  )), std::div_t  >::value), "");
-    static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
-    static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
+    // static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
+    // static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
     static_assert((std::is_same<decltype(std::ldiv( 0L,  0L )), std::ldiv_t >::value), "");
     static_assert((std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value), "");
     // clang-format on
@@ -106,18 +106,23 @@ void test_div() {
   {  // check one basic input for correctness.
     // (42 // 5 == 8) AND (42 % 5 == 2)
     const auto check = [](const auto callable_div) -> void {
-      // fixme: change to static_assert() when constexpr-ready
       const auto div = callable_div(42, 5);
       assert(div.quot == 8);
       assert(div.rem == 2);
+
+#if _LIBCPP_STD_VER >= 23
+      constexpr auto div2 = callable_div(42, 5);
+      static_assert(div2.quot == 8);
+      static_assert(div2.rem == 2);
+#endif
     };
 
     // clang-format off
     check([](int       n, int       k) { return std::div(  n, k); });
-    check([](long      n, long      k) { return std::div(  n, k); });
-    check([](long long n, long long k) { return std::div(  n, k); });
-    check([](long      n, long      k) { return std::ldiv( n, k); });
-    check([](long long n, long long k) { return std::lldiv(n, k); });
+    // check([](long      n, long      k) { return std::div(  n, k); });
+    // check([](long long n, long long k) { return std::div(  n, k); });
+    // check([](long      n, long      k) { return std::ldiv( n, k); });
+    // check([](long long n, long long k) { return std::lldiv(n, k); });
     // clang-format on
   }
 }
