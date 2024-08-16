@@ -1093,7 +1093,6 @@ struct AArch64CPUTestParams
   }
 };
 
-
 // Note: number of CPUs includes aliases.
 static constexpr unsigned NumAArch64CPUArchs = 81;
 
