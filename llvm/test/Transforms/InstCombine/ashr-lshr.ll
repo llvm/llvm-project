@@ -63,11 +63,8 @@ define i32 @ashr_lshr2(i32 %x, i32 %y) {
 
 define i128 @ashr_lshr2_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: @ashr_lshr2_i128(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i128 [[X:%.*]], 5
-; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i128 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i128 [[L]], i128 [[R]]
-; CHECK-NEXT:    ret i128 [[RET]]
+; CHECK-NEXT:    [[CMP1:%.*]] = ashr i128 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i128 [[CMP1]]
 ;
   %cmp = icmp sgt i128 %x, 5
   %l = lshr i128 %x, %y
