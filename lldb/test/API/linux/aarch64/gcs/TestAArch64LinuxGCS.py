@@ -61,3 +61,25 @@ class AArch64LinuxGCSTestCase(TestBase):
 
         # Note that we must let the debugee get killed here as it cannot exit
         # cleanly if GCS was manually enabled.
+
+    @skipUnlessArch("aarch64")
+    @skipUnlessPlatform(["linux"])
+    def test_gcs_fault(self):
+        if not self.isAArch64GCS():
+            self.skipTest("Target must support GCS.")
+
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        if self.process().GetState() == lldb.eStateExited:
+            self.fail("Test program failed to run.")
+
+        self.expect(
+            "thread list",
+            "Expected stopped by SIGSEGV.",
+            substrs=[
+                "stopped",
+                "stop reason = signal SIGSEGV: control protection fault",
+            ],
+        )
