@@ -859,7 +859,7 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     $res = $_builder.create<LLVM::MaskedLoadOp>($_location,
       $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
-        mlir::BoolAttr::get($_op->getContext(), intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal)));
+        mlir::BoolAttr::get($_builder.getContext(), intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal)));
   }];
   list<int> llvmArgIndices = [0, 2, 3, 1, -1];
 }
