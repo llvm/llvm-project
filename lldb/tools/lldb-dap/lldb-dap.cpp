@@ -1618,7 +1618,7 @@ void request_evaluate(const llvm::json::Object &request) {
         body.try_emplace("variablesReference", (int64_t)0);
       }
       if (std::optional<lldb::addr_t> addr = GetMemoryReference(value))
-        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
+        body.try_emplace("memoryReference", EncodeMemoryReference(*addr));
     }
   }
   response.try_emplace("body", std::move(body));
@@ -3793,7 +3793,7 @@ void request_setVariable(const llvm::json::Object &request) {
       body.try_emplace("variablesReference", newVariablesReference);
 
       if (std::optional<lldb::addr_t> addr = GetMemoryReference(variable))
-        body.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
+        body.try_emplace("memoryReference", EncodeMemoryReference(*addr));
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -4090,17 +4090,18 @@ void request_variables(const llvm::json::Object &request) {
 void request_disassemble(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
-  auto memoryReference = GetString(arguments, "memoryReference");
-  lldb::addr_t addr_ptr;
-  if (memoryReference.consumeInteger(0, addr_ptr)) {
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  auto addr_opt = DecodeMemoryReference(memoryReference);
+  if (!addr_opt.has_value()) {
     response["success"] = false;
     response["message"] =
         "Malformed memory reference: " + memoryReference.str();
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
+  lldb::addr_t addr_ptr = *addr_opt;
 
   addr_ptr += GetSigned(arguments, "instructionOffset", 0);
   lldb::SBAddress addr(addr_ptr, g_dap.target);
@@ -4299,7 +4300,7 @@ void request_disassemble(const llvm::json::Object &request) {
 void request_readMemory(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto* arguments = request.getObject("arguments");
 
   lldb::SBProcess process = g_dap.target.GetProcess();
   if (!process.IsValid()) {
@@ -4309,15 +4310,16 @@ void request_readMemory(const llvm::json::Object &request) {
     return;
   }
 
-  auto memoryReference = GetString(arguments, "memoryReference");
-  lldb::addr_t addr;
-  if (memoryReference.consumeInteger(0, addr)) {
+  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  auto addr_opt = DecodeMemoryReference(memoryReference);
+  if (!addr_opt.has_value()) {
     response["success"] = false;
     response["message"] =
         "Malformed memory reference: " + memoryReference.str();
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
+  lldb::addr_t addr = *addr_opt;
 
   addr += GetSigned(arguments, "offset", 0);
   const uint64_t requested_count = GetUnsigned(arguments, "count", 0);

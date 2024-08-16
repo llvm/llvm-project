@@ -112,6 +112,22 @@ bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
   return obj.find(key) != obj.end();
 }
 
+std::string EncodeMemoryReference(lldb::addr_t addr) {
+  return "0x" + llvm::utohexstr(addr);
+}
+
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference) {
+  if (!memoryReference.starts_with("0x"))
+     return std::nullopt;
+
+  lldb::addr_t addr;
+  if (memoryReference.consumeInteger(0, addr))
+     return std::nullopt;
+
+  return addr;
+}
+
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key) {
   std::vector<std::string> strs;
@@ -1367,7 +1383,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     object.try_emplace("variablesReference", (int64_t)0);
 
   if (std::optional<lldb::addr_t> addr = GetMemoryReference(v))
-    object.try_emplace("memoryReference", "0x" + llvm::utohexstr(*addr));
+    object.try_emplace("memoryReference", EncodeMemoryReference(*addr));
 
   object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));
