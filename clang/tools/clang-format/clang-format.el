@@ -236,7 +236,7 @@ the function `buffer-file-name'."
 (defun clang-format--on-save-buffer-hook ()
   "The hook to run on buffer saving to format the buffer."
   ;; Demote errors as this is user configurable, we can't be sure it wont error.
-  (when (with-demoted-errors "clang-format-on-save: Error %S"
+  (when (with-demoted-errors "clang-format: Error %S"
           (funcall clang-format-on-save-p))
     (clang-format-buffer))
   ;; Continue to save.
