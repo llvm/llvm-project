@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify %s
 //
 
-typedef unsigned long size_t;
+typedef __SIZE_TYPE__ size_t;
 
 typedef enum memory_order {
   memory_order_relaxed = __ATOMIC_RELAXED,
