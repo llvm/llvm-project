@@ -659,6 +659,12 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C/C++ record field.
+class FieldInfo : public VariableInfo {
+public:
+  FieldInfo() {}
+};
+
 /// Describes API notes data for a C++ method.
 class CXXMethodInfo : public FunctionInfo {
 public:
