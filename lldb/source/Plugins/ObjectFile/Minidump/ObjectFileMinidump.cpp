@@ -56,11 +56,15 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  const lldb_private::SaveCoreOptions &options,
+                                  lldb_private::SaveCoreOptions &options,
                                   lldb_private::Status &error) {
   // Output file and process_sp are both checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   assert(process_sp);
+
+  // Minidump defaults to stacks only.
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(SaveCoreStyle::eSaveCoreStackOnly);
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
       options.GetOutputFile().value(),
@@ -69,7 +73,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     error = maybe_core_file.takeError();
     return false;
   }
-  MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp, options);
+  MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
+                              options);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
@@ -78,41 +83,41 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
               error.AsCString());
     return false;
   };
-  // error = builder.AddSystemInfo();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
-  //   return false;
-  // }
+  error = builder.AddSystemInfo();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
+    return false;
+  }
 
-  // error = builder.AddModuleList();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddModuleList failed: %s", error.AsCString());
-  //   return false;
-  // }
-  // error = builder.AddMiscInfo();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddMiscInfo failed: %s", error.AsCString());
-  //   return false;
-  // }
+  error = builder.AddModuleList();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddModuleList failed: %s", error.AsCString());
+    return false;
+  }
+  error = builder.AddMiscInfo();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddMiscInfo failed: %s", error.AsCString());
+    return false;
+  }
 
-  // error = builder.AddThreadList();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
-  //   return false;
-  // }
+  error = builder.AddThreadList();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
+    return false;
+  }
 
-  // error = builder.AddLinuxFileStreams();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddLinuxFileStreams failed: %s", error.AsCString());
-  //   return false;
-  // }
+  error = builder.AddLinuxFileStreams();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddLinuxFileStreams failed: %s", error.AsCString());
+    return false;
+  }
 
-  // // Add any exceptions but only if there are any in any threads.
-  // error = builder.AddExceptions();
-  // if (error.Fail()) {
-  //   LLDB_LOGF(log, "AddExceptions failed: %s", error.AsCString());
-  //   return false;
-  // }
+  // Add any exceptions but only if there are any in any threads.
+  error = builder.AddExceptions();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "AddExceptions failed: %s", error.AsCString());
+    return false;
+  }
 
   // Note: add memory HAS to be the last thing we do. It can overflow into 64b
   // land and many RVA's only support 32b

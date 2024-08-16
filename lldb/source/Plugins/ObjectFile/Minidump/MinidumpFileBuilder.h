@@ -76,9 +76,9 @@ class MinidumpFileBuilder {
 public:
   MinidumpFileBuilder(lldb::FileUP &&core_file,
                       const lldb::ProcessSP &process_sp,
-                      const lldb_private::SaveCoreOptions &options)
-      : m_process_sp(process_sp), m_options(std::move(options)),
-      m_core_file(std::move(core_file)) {};
+                      lldb_private::SaveCoreOptions &save_core_options)
+      : m_process_sp(process_sp), m_core_file(std::move(core_file)),
+        m_save_core_options(save_core_options){}
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -165,8 +165,9 @@ private:
   // to duplicate it in the exception data.
   std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
       m_tid_to_reg_ctx;
-  lldb_private::SaveCoreOptions m_options;
+  std::unordered_set<lldb::addr_t> m_saved_stack_ranges;
   lldb::FileUP m_core_file;
+  lldb_private::SaveCoreOptions m_save_core_options;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H
