@@ -904,16 +904,16 @@ protected:
   // A symbol from when the primary region should have been reallocated.
   SymbolRef FailedReallocSymbol;
 
-  // A C++ destructor stack frame in which memory was released. Used for
+  // A release function stack frame in which memory was released. Used for
   // miscellaneous false positive suppression.
-  const StackFrameContext *ReleaseDestructorLC;
+  const StackFrameContext *ReleaseFunctionLC;
 
   bool IsLeak;
 
 public:
   MallocBugVisitor(SymbolRef S, bool isLeak = false)
       : Sym(S), Mode(Normal), FailedReallocSymbol(nullptr),
-        ReleaseDestructorLC(nullptr), IsLeak(isLeak) {}
+        ReleaseFunctionLC(nullptr), IsLeak(isLeak) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -3558,8 +3558,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // original reference count is positive, we should not report use-after-frees
   // on objects deleted in such destructors. This can probably be improved
   // through better shared pointer modeling.
-  if (ReleaseDestructorLC && (ReleaseDestructorLC == CurrentLC ||
-                              ReleaseDestructorLC->isParentOf(CurrentLC))) {
+  if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentLC ||
+                            ReleaseFunctionLC->isParentOf(CurrentLC))) {
     if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
       // Check for manual use of atomic builtins.
       AtomicExpr::AtomicOp Op = AE->getOp();
@@ -3648,35 +3648,38 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           return nullptr;
         }
 
-      // See if we're releasing memory while inlining a destructor
-      // (or one of its callees). This turns on various common
-      // false positive suppressions.
-      bool FoundAnyDestructor = false;
-      for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-        if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
-          if (isReferenceCountingPointerDestructor(DD)) {
-            // This immediately looks like a reference-counting destructor.
-            // We're bad at guessing the original reference count of the object,
-            // so suppress the report for now.
-            BR.markInvalid(getTag(), DD);
-          } else if (!FoundAnyDestructor) {
-            assert(!ReleaseDestructorLC &&
+        // See if we're releasing memory while inlining a destructor or
+        // functions that decrement reference counters (or one of its callees).
+        // This turns on various common false positive suppressions.
+        bool FoundAnyReleaseFunction = false;
+        for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
+            if (isReferenceCountingPointerDestructor(DD)) {
+              // This immediately looks like a reference-counting destructor.
+              // We're bad at guessing the original reference count of the
+              // object, so suppress the report for now.
+              BR.markInvalid(getTag(), DD);
+              continue;
+            }
+          }
+
+          if (!FoundAnyReleaseFunction) {
+            assert(!ReleaseFunctionLC &&
                    "There can be only one release point!");
-            // Suspect that it's a reference counting pointer destructor.
-            // On one of the next nodes might find out that it has atomic
-            // reference counting operations within it (see the code above),
-            // and if so, we'd conclude that it likely is a reference counting
-            // pointer destructor.
-            ReleaseDestructorLC = LC->getStackFrame();
+            // Suspect that it's a reference counting pointer
+            // destructor/function. On one of the next nodes might find out that
+            // it has atomic reference counting operations within it (see the
+            // code above), and if so, we'd conclude that it likely is a
+            // reference counting pointer destructor.
+            ReleaseFunctionLC = LC->getStackFrame();
             // It is unlikely that releasing memory is delegated to a destructor
             // inside a destructor of a shared pointer, because it's fairly hard
             // to pass the information that the pointer indeed needs to be
             // released into it. So we're only interested in the innermost
-            // destructor.
-            FoundAnyDestructor = true;
+            // destructor or function.
+            FoundAnyReleaseFunction = true;
           }
         }
-      }
     } else if (isRelinquished(RSCurr, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
       StackHint = std::make_unique<StackHintGeneratorForSymbol>(Sym, "");
