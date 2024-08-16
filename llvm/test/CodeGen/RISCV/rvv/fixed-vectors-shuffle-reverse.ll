@@ -25,7 +25,7 @@ define <2 x i1> @reverse_v2i1(<2 x i1> %a) {
 ; ZVBB-NEXT:    vbrev.v v8, v0
 ; ZVBB-NEXT:    vsrl.vi v0, v8, 6
 ; ZVBB-NEXT:    ret
-  %res = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %a)
+  %res = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i1> %res
 }
 
@@ -47,7 +47,7 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; ZVBB-NEXT:    vbrev.v v8, v0
 ; ZVBB-NEXT:    vsrl.vi v0, v8, 4
 ; ZVBB-NEXT:    ret
-  %res = call <4 x i1> @llvm.vector.reverse.v4i1(<4 x i1> %a)
+  %res = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i1> %res
 }
 
@@ -68,7 +68,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; ZVBB-NEXT:    vbrev.v v0, v0
 ; ZVBB-NEXT:    ret
-  %res = call <8 x i1> @llvm.vector.reverse.v8i1(<8 x i1> %a)
+  %res = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i1> %res
 }
 
@@ -89,7 +89,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; ZVBB-NEXT:    vbrev.v v0, v0
 ; ZVBB-NEXT:    ret
-  %res = call <16 x i1> @llvm.vector.reverse.v16i1(<16 x i1> %a)
+  %res = shufflevector <16 x i1> %a, <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x i1> %res
 }
 
@@ -112,7 +112,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; ZVBB-NEXT:    vbrev.v v0, v0
 ; ZVBB-NEXT:    ret
-  %res = call <32 x i1> @llvm.vector.reverse.v32i1(<32 x i1> %a)
+  %res = shufflevector <32 x i1> %a, <32 x i1> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <32 x i1> %res
 }
 
@@ -135,7 +135,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; ZVBB-NEXT:    vbrev.v v0, v0
 ; ZVBB-NEXT:    ret
-  %res = call <64 x i1> @llvm.vector.reverse.v64i1(<64 x i1> %a)
+  %res = shufflevector <64 x i1> %a, <64 x i1> poison, <64 x i32> <i32 63, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <64 x i1> %res
 }
 
@@ -152,7 +152,7 @@ define <128 x i1> @reverse_v128i1(<128 x i1> %a) {
 ; CHECK-NEXT:    vrgather.vv v24, v16, v8
 ; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    ret
-  %res = call <128 x i1> @llvm.vector.reverse.v128i1(<128 x i1> %a)
+  %res = shufflevector <128 x i1> %a, <128 x i1> poison, <128 x i32> <i32 127, i32 126, i32 125, i32 124, i32 123, i32 122, i32 121, i32 120, i32 119, i32 118, i32 117, i32 116, i32 115, i32 114, i32 113, i32 112, i32 111, i32 110, i32 109, i32 108, i32 107, i32 106, i32 105, i32 104, i32 103, i32 102, i32 101, i32 100, i32 99, i32 98, i32 97, i32 96, i32 95, i32 94, i32 93, i32 92, i32 91, i32 90, i32 89, i32 88, i32 87, i32 86, i32 85, i32 84, i32 83, i32 82, i32 81, i32 80, i32 79, i32 78, i32 77, i32 76, i32 75, i32 74, i32 73, i32 72, i32 71, i32 70, i32 69, i32 68, i32 67, i32 66, i32 65, i32 64, i32 63, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <128 x i1> %res
 }
 
@@ -160,7 +160,7 @@ define <1 x i8> @reverse_v1i8(<1 x i8> %a) {
 ; CHECK-LABEL: reverse_v1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x i8> @llvm.vector.reverse.v1i8(<1 x i8> %a)
+  %res = shufflevector <1 x i8> %a, <1 x i8> poison, <1 x i32> <i32 0>
   ret <1 x i8> %res
 }
 
@@ -178,7 +178,7 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; ZVBB-NEXT:    vrev8.v v8, v8
 ; ZVBB-NEXT:    ret
-  %res = call <2 x i8> @llvm.vector.reverse.v2i8(<2 x i8> %a)
+  %res = shufflevector <2 x i8> %a, <2 x i8> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i8> %res
 }
 
@@ -191,7 +191,7 @@ define <4 x i8> @reverse_v4i8(<4 x i8> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> %a)
+  %res = shufflevector <4 x i8> %a, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i8> %res
 }
 
@@ -204,7 +204,7 @@ define <8 x i8> @reverse_v8i8(<8 x i8> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <8 x i8> @llvm.vector.reverse.v8i8(<8 x i8> %a)
+  %res = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i8> %res
 }
 
@@ -217,7 +217,7 @@ define <16 x i8> @reverse_v16i8(<16 x i8> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <16 x i8> @llvm.vector.reverse.v16i8(<16 x i8> %a)
+  %res = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x i8> %res
 }
 
@@ -232,7 +232,7 @@ define <32 x i8> @reverse_v32i8(<32 x i8> %a) {
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <32 x i8> @llvm.vector.reverse.v32i8(<32 x i8> %a)
+  %res = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <32 x i8> %res
 }
 
@@ -247,7 +247,7 @@ define <64 x i8> @reverse_v64i8(<64 x i8> %a) {
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <64 x i8> @llvm.vector.reverse.v64i8(<64 x i8> %a)
+  %res = shufflevector <64 x i8> %a, <64 x i8> poison, <64 x i32> <i32 63, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <64 x i8> %res
 }
 
@@ -255,7 +255,7 @@ define <1 x i16> @reverse_v1i16(<1 x i16> %a) {
 ; CHECK-LABEL: reverse_v1i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x i16> @llvm.vector.reverse.v1i16(<1 x i16> %a)
+  %res = shufflevector <1 x i16> %a, <1 x i16> poison, <1 x i32> <i32 0>
   ret <1 x i16> %res
 }
 
@@ -273,7 +273,7 @@ define <2 x i16> @reverse_v2i16(<2 x i16> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; ZVBB-NEXT:    vror.vi v8, v8, 16
 ; ZVBB-NEXT:    ret
-  %res = call <2 x i16> @llvm.vector.reverse.v2i16(<2 x i16> %a)
+  %res = shufflevector <2 x i16> %a, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i16> %res
 }
 
@@ -286,7 +286,7 @@ define <4 x i16> @reverse_v4i16(<4 x i16> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16> %a)
+  %res = shufflevector <4 x i16> %a, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i16> %res
 }
 
@@ -299,7 +299,7 @@ define <8 x i16> @reverse_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> %a)
+  %res = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i16> %res
 }
 
@@ -312,7 +312,7 @@ define <16 x i16> @reverse_v16i16(<16 x i16> %a) {
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <16 x i16> @llvm.vector.reverse.v16i16(<16 x i16> %a)
+  %res = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x i16> %res
 }
 
@@ -327,7 +327,7 @@ define <32 x i16> @reverse_v32i16(<32 x i16> %a) {
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <32 x i16> @llvm.vector.reverse.v32i16(<32 x i16> %a)
+  %res = shufflevector <32 x i16> %a, <32 x i16> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <32 x i16> %res
 }
 
@@ -335,7 +335,7 @@ define <1 x i32> @reverse_v1i32(<1 x i32> %a) {
 ; CHECK-LABEL: reverse_v1i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x i32> @llvm.vector.reverse.v1i32(<1 x i32> %a)
+  %res = shufflevector <1 x i32> %a, <1 x i32> poison, <1 x i32> <i32 0>
   ret <1 x i32> %res
 }
 
@@ -353,7 +353,7 @@ define <2 x i32> @reverse_v2i32(<2 x i32> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; ZVBB-NEXT:    vror.vi v8, v8, 32
 ; ZVBB-NEXT:    ret
-  %res = call <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32> %a)
+  %res = shufflevector <2 x i32> %a, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i32> %res
 }
 
@@ -366,7 +366,7 @@ define <4 x i32> @reverse_v4i32(<4 x i32> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %a)
+  %res = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i32> %res
 }
 
@@ -380,7 +380,7 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <8 x i32> @llvm.vector.reverse.v8i32(<8 x i32> %a)
+  %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i32> %res
 }
 
@@ -394,7 +394,7 @@ define <16 x i32> @reverse_v16i32(<16 x i32> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <16 x i32> @llvm.vector.reverse.v16i32(<16 x i32> %a)
+  %res = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x i32> %res
 }
 
@@ -402,7 +402,7 @@ define <1 x i64> @reverse_v1i64(<1 x i64> %a) {
 ; CHECK-LABEL: reverse_v1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x i64> @llvm.vector.reverse.v1i64(<1 x i64> %a)
+  %res = shufflevector <1 x i64> %a, <1 x i64> poison, <1 x i32> <i32 0>
   ret <1 x i64> %res
 }
 
@@ -414,7 +414,7 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) {
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <2 x i64> @llvm.vector.reverse.v2i64(<2 x i64> %a)
+  %res = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i64> %res
 }
 
@@ -428,7 +428,7 @@ define <4 x i64> @reverse_v4i64(<4 x i64> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <4 x i64> @llvm.vector.reverse.v4i64(<4 x i64> %a)
+  %res = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i64> %res
 }
 
@@ -442,7 +442,7 @@ define <8 x i64> @reverse_v8i64(<8 x i64> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <8 x i64> @llvm.vector.reverse.v8i64(<8 x i64> %a)
+  %res = shufflevector <8 x i64> %a, <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i64> %res
 }
 
@@ -451,7 +451,7 @@ define <1 x half> @reverse_v1f16(<1 x half> %a) {
 ; CHECK-LABEL: reverse_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x half> @llvm.vector.reverse.v1f16(<1 x half> %a)
+  %res = shufflevector <1 x half> %a, <1 x half> poison, <1 x i32> <i32 0>
   ret <1 x half> %res
 }
 
@@ -469,7 +469,7 @@ define <2 x half> @reverse_v2f16(<2 x half> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; ZVBB-NEXT:    vror.vi v8, v8, 16
 ; ZVBB-NEXT:    ret
-  %res = call <2 x half> @llvm.vector.reverse.v2f16(<2 x half> %a)
+  %res = shufflevector <2 x half> %a, <2 x half> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x half> %res
 }
 
@@ -482,7 +482,7 @@ define <4 x half> @reverse_v4f16(<4 x half> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <4 x half> @llvm.vector.reverse.v4f16(<4 x half> %a)
+  %res = shufflevector <4 x half> %a, <4 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x half> %res
 }
 
@@ -495,7 +495,7 @@ define <8 x half> @reverse_v8f16(<8 x half> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <8 x half> @llvm.vector.reverse.v8f16(<8 x half> %a)
+  %res = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x half> %res
 }
 
@@ -508,7 +508,7 @@ define <16 x half> @reverse_v16f16(<16 x half> %a) {
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <16 x half> @llvm.vector.reverse.v16f16(<16 x half> %a)
+  %res = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x half> %res
 }
 
@@ -523,7 +523,7 @@ define <32 x half> @reverse_v32f16(<32 x half> %a) {
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <32 x half> @llvm.vector.reverse.v32f16(<32 x half> %a)
+  %res = shufflevector <32 x half> %a, <32 x half> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <32 x half> %res
 }
 
@@ -531,7 +531,7 @@ define <1 x float> @reverse_v1f32(<1 x float> %a) {
 ; CHECK-LABEL: reverse_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x float> @llvm.vector.reverse.v1f32(<1 x float> %a)
+  %res = shufflevector <1 x float> %a, <1 x float> poison, <1 x i32> <i32 0>
   ret <1 x float> %res
 }
 
@@ -549,7 +549,7 @@ define <2 x float> @reverse_v2f32(<2 x float> %a) {
 ; ZVBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; ZVBB-NEXT:    vror.vi v8, v8, 32
 ; ZVBB-NEXT:    ret
-  %res = call <2 x float> @llvm.vector.reverse.v2f32(<2 x float> %a)
+  %res = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x float> %res
 }
 
@@ -562,7 +562,7 @@ define <4 x float> @reverse_v4f32(<4 x float> %a) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %a)
+  %res = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x float> %res
 }
 
@@ -576,7 +576,7 @@ define <8 x float> @reverse_v8f32(<8 x float> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <8 x float> @llvm.vector.reverse.v8f32(<8 x float> %a)
+  %res = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x float> %res
 }
 
@@ -590,7 +590,7 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <16 x float> @llvm.vector.reverse.v16f32(<16 x float> %a)
+  %res = shufflevector <16 x float> %a, <16 x float> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x float> %res
 }
 
@@ -598,7 +598,7 @@ define <1 x double> @reverse_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: reverse_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %res = call <1 x double> @llvm.vector.reverse.v1f64(<1 x double> %a)
+  %res = shufflevector <1 x double> %a, <1 x double> poison, <1 x i32> <i32 0>
   ret <1 x double> %res
 }
 
@@ -610,7 +610,7 @@ define <2 x double> @reverse_v2f64(<2 x double> %a) {
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %res = call <2 x double> @llvm.vector.reverse.v2f64(<2 x double> %a)
+  %res = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x double> %res
 }
 
@@ -624,7 +624,7 @@ define <4 x double> @reverse_v4f64(<4 x double> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = call <4 x double> @llvm.vector.reverse.v4f64(<4 x double> %a)
+  %res = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x double> %res
 }
 
@@ -638,7 +638,7 @@ define <8 x double> @reverse_v8f64(<8 x double> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %res = call <8 x double> @llvm.vector.reverse.v8f64(<8 x double> %a)
+  %res = shufflevector <8 x double> %a, <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x double> %res
 }
 
@@ -683,7 +683,7 @@ define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
 ; RV64-ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV64-ZVBB-NEXT:    vmv.v.v v8, v10
 ; RV64-ZVBB-NEXT:    ret
-  %res = call <3 x i64> @llvm.vector.reverse.v3i64(<3 x i64> %a)
+  %res = shufflevector <3 x i64> %a, <3 x i64> poison, <3 x i32> <i32 2, i32 1, i32 0>
   ret <3 x i64> %res
 }
 
@@ -727,7 +727,7 @@ define <6 x i64> @reverse_v6i64(<6 x i64> %a) {
 ; RV64-ZVBB-NEXT:    vrgatherei16.vv v12, v8, v16
 ; RV64-ZVBB-NEXT:    vmv.v.v v8, v12
 ; RV64-ZVBB-NEXT:    ret
-  %res = call <6 x i64> @llvm.vector.reverse.v6i64(<6 x i64> %a)
+  %res = shufflevector <6 x i64> %a, <6 x i64> poison, <6 x i32> <i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <6 x i64> %res
 }
 
@@ -773,54 +773,6 @@ define <12 x i64> @reverse_v12i64(<12 x i64> %a) {
 ; RV64-ZVBB-NEXT:    vrgatherei16.vv v16, v8, v24
 ; RV64-ZVBB-NEXT:    vmv.v.v v8, v16
 ; RV64-ZVBB-NEXT:    ret
-  %res = call <12 x i64> @llvm.vector.reverse.v12i64(<12 x i64> %a)
+  %res = shufflevector <12 x i64> %a, <12 x i64> poison, <12 x i32> <i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <12 x i64> %res
 }
-
-declare <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1>)
-declare <4 x i1> @llvm.vector.reverse.v4i1(<4 x i1>)
-declare <8 x i1> @llvm.vector.reverse.v8i1(<8 x i1>)
-declare <16 x i1> @llvm.vector.reverse.v16i1(<16 x i1>)
-declare <32 x i1> @llvm.vector.reverse.v32i1(<32 x i1>)
-declare <64 x i1> @llvm.vector.reverse.v64i1(<64 x i1>)
-declare <128 x i1> @llvm.vector.reverse.v128i1(<128 x i1>)
-declare <1 x i8> @llvm.vector.reverse.v1i8(<1 x i8>)
-declare <2 x i8> @llvm.vector.reverse.v2i8(<2 x i8>)
-declare <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8>)
-declare <8 x i8> @llvm.vector.reverse.v8i8(<8 x i8>)
-declare <16 x i8> @llvm.vector.reverse.v16i8(<16 x i8>)
-declare <32 x i8> @llvm.vector.reverse.v32i8(<32 x i8>)
-declare <64 x i8> @llvm.vector.reverse.v64i8(<64 x i8>)
-declare <1 x i16> @llvm.vector.reverse.v1i16(<1 x i16>)
-declare <2 x i16> @llvm.vector.reverse.v2i16(<2 x i16>)
-declare <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16>)
-declare <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16>)
-declare <16 x i16> @llvm.vector.reverse.v16i16(<16 x i16>)
-declare <32 x i16> @llvm.vector.reverse.v32i16(<32 x i16>)
-declare <1 x i32> @llvm.vector.reverse.v1i32(<1 x i32>)
-declare <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32>)
-declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
-declare <8 x i32> @llvm.vector.reverse.v8i32(<8 x i32>)
-declare <16 x i32> @llvm.vector.reverse.v16i32(<16 x i32>)
-declare <1 x i64> @llvm.vector.reverse.v1i64(<1 x i64>)
-declare <2 x i64> @llvm.vector.reverse.v2i64(<2 x i64>)
-declare <4 x i64> @llvm.vector.reverse.v4i64(<4 x i64>)
-declare <8 x i64> @llvm.vector.reverse.v8i64(<8 x i64>)
-declare <1 x half> @llvm.vector.reverse.v1f16(<1 x half>)
-declare <2 x half> @llvm.vector.reverse.v2f16(<2 x half>)
-declare <4 x half> @llvm.vector.reverse.v4f16(<4 x half>)
-declare <8 x half> @llvm.vector.reverse.v8f16(<8 x half>)
-declare <16 x half> @llvm.vector.reverse.v16f16(<16 x half>)
-declare <32 x half> @llvm.vector.reverse.v32f16(<32 x half>)
-declare <1 x float> @llvm.vector.reverse.v1f32(<1 x float>)
-declare <2 x float> @llvm.vector.reverse.v2f32(<2 x float>)
-declare <4 x float> @llvm.vector.reverse.v4f32(<4 x float>)
-declare <8 x float> @llvm.vector.reverse.v8f32(<8 x float>)
-declare <16 x float> @llvm.vector.reverse.v16f32(<16 x float>)
-declare <1 x double> @llvm.vector.reverse.v1f64(<1 x double>)
-declare <2 x double> @llvm.vector.reverse.v2f64(<2 x double>)
-declare <4 x double> @llvm.vector.reverse.v4f64(<4 x double>)
-declare <8 x double> @llvm.vector.reverse.v8f64(<8 x double>)
-declare <3 x i64> @llvm.vector.reverse.v3i64(<3 x i64>)
-declare <6 x i64> @llvm.vector.reverse.v6i64(<6 x i64>)
-declare <12 x i64> @llvm.vector.reverse.v12i64(<12 x i64>)
