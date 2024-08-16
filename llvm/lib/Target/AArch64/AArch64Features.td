@@ -782,8 +782,7 @@ def HasV8_2aOps : Architecture64<8, 2, "a", "v8.2a",
   [HasV8_1aOps, FeaturePsUAO, FeaturePAN_RWV, FeatureRAS, FeatureCCPP],
   !listconcat(HasV8_1aOps.DefaultExts, [FeatureRAS])>;
 def HasV8_3aOps : Architecture64<8, 3, "a", "v8.3a",
-  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureCCIDX,
-    FeatureComplxNum],
+  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureComplxNum],
   !listconcat(HasV8_2aOps.DefaultExts, [FeatureComplxNum, FeatureJS,
     FeaturePAuth, FeatureRCPC,  FeatureCCIDX])>;
 def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
