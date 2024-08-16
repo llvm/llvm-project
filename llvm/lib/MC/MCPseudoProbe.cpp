@@ -631,6 +631,10 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     CurChildIndex += buildAddress2ProbeMap<true>(
         &DummyInlineRoot, LastAddr, GuidFilter, FuncStartAddrs, CurChildIndex);
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
+  assert(PseudoProbeVec.size() == ProbeCount &&
+         "Mismatching probe count pre- and post-parsing");
+  assert(InlineTreeVec.size() == InlinedCount &&
+         "Mismatching function records count pre- and post-parsing");
   return true;
 }
 
