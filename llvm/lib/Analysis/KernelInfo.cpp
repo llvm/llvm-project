@@ -177,8 +177,12 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
     } else {
       R << ", '" << Inst.getOpcodeName() << "' instruction";
     }
-    if (Inst.hasName())
-      R << " ('%" << Inst.getName() << "')";
+    if (!Inst.getType()->isVoidTy()) {
+      std::string Name;
+      raw_string_ostream OS(Name);
+      Inst.printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
+      R << " ('" << Name << "')";
+    }
     R << " accesses memory in flat address space";
     return R;
   });
