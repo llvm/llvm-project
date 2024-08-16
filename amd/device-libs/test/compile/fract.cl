@@ -1,29 +1,33 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // CHECK-LABEL: test_fract_f16
-// GFX600: v_cvt_f32_f16
-// GFX600-DAG: v_floor_f32
-// GFX600-DAG: v_sub_f32
-// GFX600-DAG: v_min_f32_e32 v{{[0-9]+}}, 0x3f7fe000,
-// GFX600-DAG: v_cmp_u_f32
-// GFX600-DAG: v_cmp_neq_f32
-// GFX600-DAG: v_cndmask_b32
-// GFX600-DAG: v_cvt_f16_f32
-// GFX600-DAG: v_cvt_f16_f32
+// GFX600-DAG: s_add_u32
+// GFX600-DAG: s_addc_u32
+// GFX600: buffer_load_ushort
+// GFX600-DAG: v_lshlrev_b32
+// GFX600-DAG: v_mov_b32
+// GFX600-DAG: s_mov_b32
+// GFX600-DAG: s_mov_b32
+// GFX600: s_waitcnt
+// GFX600: buffer_store_short
 
 
 // TODO: Could promote the f16 pattern to f32
-// GFX700: flat_load_ushort [[VAL:v[0-9]+]]
-// GFX700: v_cvt_f32_f16_e32 [[VAL_F32:v[0-9]+]]
-// GFX700-DAG: v_floor_f32_e32 [[FLOOR:v[0-9]+]], [[VAL_F32]]
-// GFX700: v_sub_f32_e32 [[SUB:v[0-9]+]], [[VAL_F32]], [[FLOOR]]
+// GFX700-DAG: s_add_i32
+// GFX700-DAG: s_lshr_b32
+// GFX700-DAG: s_add_u32
+// GFX700-DAG: s_addc_u32
+// GFX700: buffer_load_ushort
+// GFX700-DAG: s_load_dwordx2
+// GFX700-DAG: v_lshlrev_b32
+// GFX700-DAG: s_mov_b32
+// GFX700-DAG: s_waitcnt
+// GFX700-DAG: v_mov_b32
+// GFX700-DAG: v_add_i32
+// GFX700-DAG: v_addc_u32
+// GFX700: s_waitcnt
+// GFX700: flat_store_short
 
-// GFX700-DAG: v_min_f32_e32 [[CLAMP:v[0-9]+]], 0x3f7fe000, [[SUB]]
-// GFX700-DAG: v_cmp_u_f32
-// GFX700-DAG: v_cmp_neq_f32
-// GFX700-DAG: v_cndmask_b32
-// GFX700-DAG: v_cvt_f16_f32
-// GFX700-DAG: v_cvt_f16_f32
 
 // GFX803: flat_load_ushort [[VAL:v[0-9]+]]
 // GFX803-DAG: v_floor_f16_e32 [[FLOOR:v[0-9]+]], [[VAL]]
