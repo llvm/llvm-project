@@ -987,6 +987,7 @@ def ProcessorFeatures {
                                       FeatureRME];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                        FeatureNEON, FeatureSPE, FeaturePerfMon, FeatureCRC,
+                                       FeatureCCIDX,
                                        FeatureLSE, FeatureRDM, FeatureRAS, FeatureRCPC];
   list<SubtargetFeature> ThunderX   = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                        FeatureFPARMv8, FeaturePerfMon, FeatureNEON];
@@ -995,6 +996,7 @@ def ProcessorFeatures {
                                           FeatureRDM];
   list<SubtargetFeature> ThunderX3T110 = [HasV8_3aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                           FeatureFPARMv8, FeatureNEON, FeatureLSE,
+                                          FeatureCCIDX,
                                           FeaturePAuth, FeaturePerfMon, FeatureComplxNum,
                                           FeatureJS, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
