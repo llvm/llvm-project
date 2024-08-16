@@ -4058,14 +4058,32 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&]() -> void {
+    const auto killDef = [&](SlotIndex NewIdx) -> void {
       const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
       // The only user is the instruction which will be killed.
       Register DefReg = DefMI->getOperand(0).getReg();
+
+      if (LIS) {
+        LiveInterval &DefLI = LIS->getInterval(DefReg);
+        LiveRange::Segment *OldSeg = DefLI.getSegmentContaining(NewIdx);
+
+        if (OldSeg->end == NewIdx.getRegSlot()) {
+          DefLI.removeSegment(OldSeg->start, NewIdx.getRegSlot(), true);
+
+          for (auto &SR : DefLI.subranges()) {
+            LiveRange::Segment *OldSegSR = SR.getSegmentContaining(NewIdx);
+            SR.removeSegment(OldSegSR->start, NewIdx.getRegSlot(), true);
+          }
+
+          DefLI.removeEmptySubRanges();
+        }
+      }
+
       if (!MRI.hasOneNonDBGUse(DefReg))
         return;
       // We cannot just remove the DefMI here, calling pass will crash.
       DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
+      DefMI->getOperand(0).setIsDead(true);
       for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
         DefMI->removeOperand(I);
       if (LV)
@@ -4087,9 +4105,10 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
+        SlotIndex NewIdx;
         if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef(NewIdx);
         return MIB;
       }
     }
@@ -4107,9 +4126,11 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
+
+        SlotIndex NewIdx;
         if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef(NewIdx);
         return MIB;
       }
     }
@@ -4129,10 +4150,12 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
+
+        SlotIndex NewIdx;
         if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+          NewIdx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
         if (DefMI)
-          killDef();
+          killDef(NewIdx);
         return MIB;
       }
     }
