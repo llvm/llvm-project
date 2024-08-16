@@ -324,12 +324,9 @@ LoopTermFold::LoopTermFold() : LoopPass(ID) {
 }
 
 void LoopTermFold::getAnalysisUsage(AnalysisUsage &AU) const {
-  // We split critical edges, so we change the CFG.  However, we do update
-  // many analyses if they are around.
-  AU.addPreservedID(LoopSimplifyID);
-
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addPreserved<LoopInfoWrapperPass>();
+  AU.addPreservedID(LoopSimplifyID);
   AU.addRequiredID(LoopSimplifyID);
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addPreserved<DominatorTreeWrapperPass>();
