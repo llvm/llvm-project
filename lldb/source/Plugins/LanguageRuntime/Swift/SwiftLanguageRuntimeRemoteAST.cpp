@@ -18,6 +18,8 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
+#include "swift/AST/Type.h"
+#include "swift/AST/Types.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
 using namespace lldb;
@@ -312,26 +314,29 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
 
     // Rewrite all dynamic self types to their static self types.
     target_swift_type =
-        target_swift_type.transform([](swift::Type type) -> swift::Type {
-          if (auto *dynamic_self =
-                  llvm::dyn_cast<swift::DynamicSelfType>(type.getPointer()))
+        target_swift_type.transformRec([](swift::TypeBase *type)
+            -> std::optional<swift::Type> {
+          if (auto *dynamic_self = llvm::dyn_cast<swift::DynamicSelfType>(type))
             return dynamic_self->getSelfType();
-          return type;
+          return std::nullopt;
         });
 
     // Thicken generic metatypes. Once substituted, they should always
     // be thick. TypeRef::subst() does the same transformation.
     target_swift_type =
-        target_swift_type.transform([](swift::Type type) -> swift::Type {
-          using namespace swift;
-          const auto thin = MetatypeRepresentation::Thin;
-          const auto thick = MetatypeRepresentation::Thick;
-          if (auto *metatype = dyn_cast<AnyMetatypeType>(type.getPointer()))
+        target_swift_type.transformRec([](swift::TypeBase *type)
+            -> std::optional<swift::Type> {
+          const auto thin = swift::MetatypeRepresentation::Thin;
+          const auto thick = swift::MetatypeRepresentation::Thick;
+          if (auto *metatype = swift::dyn_cast<swift::AnyMetatypeType>(type)) {
             if (metatype->hasRepresentation() &&
                 metatype->getRepresentation() == thin &&
-                metatype->getInstanceType()->hasTypeParameter())
-              return MetatypeType::get(metatype->getInstanceType(), thick);
-          return type;
+                metatype->getInstanceType()->hasTypeParameter()) {
+              return swift::Type(swift::MetatypeType::get(
+                  metatype->getInstanceType(), thick));
+            }
+          }
+          return std::nullopt;
         });
 
     while (target_swift_type->hasOpaqueArchetype()) {
