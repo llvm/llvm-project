@@ -421,14 +421,13 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   bool VLChanged = !MinVL->isIdenticalTo(SrcVL);
-  bool RaisesFPExceptions = MI.getDesc().mayRaiseFPException() &&
-                            !MI.getFlag(MachineInstr::MIFlag::NoFPExcept);
   bool ActiveElementsAffectResult = RISCVII::activeElementsAffectResult(
       TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
 
-  if (VLChanged && (ActiveElementsAffectResult || RaisesFPExceptions))
+  if (VLChanged && ActiveElementsAffectResult)
     return false;
 
+  // Check if any physical register uses would get clobbered (e.g fflags)
   if (!isSafeToMove(*Src, MI))
     return false;
 
