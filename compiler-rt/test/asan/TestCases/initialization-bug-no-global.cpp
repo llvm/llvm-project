@@ -2,7 +2,7 @@
 // RUN: %env_asan_opts=check_initialization_order=true:strict_init_order=true not %run %t 2>&1 | FileCheck %s
 
 // Not implemented.
-// XFAIL: * 
+// XFAIL: *
 
 // Do not test with optimization -- the error may be optimized away.
 
