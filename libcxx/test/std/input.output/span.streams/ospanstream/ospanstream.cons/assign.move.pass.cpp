@@ -60,11 +60,13 @@ void test() {
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
     assert(rhsSpSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt = std::move(rhsSpSt);
     assert(spSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
@@ -75,7 +77,7 @@ void test() {
   }
   // Mode `ate`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream rhsSpSt{sp, std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
