@@ -563,10 +563,10 @@ struct BasicAAResult::DecomposedGEP {
     dbgs() << "\n";
   }
   void print(raw_ostream &OS) const {
-    OS << "(DecomposedGEP Base=" << Base->getName()
-       << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
+    OS << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
        << ", nuw=" << (NWFlags.hasNoUnsignedWrap() ? "1" : "0")
-       << ", Offset=" << Offset << ", VarIndices=[";
+       << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
+       << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
         OS << ", ";
