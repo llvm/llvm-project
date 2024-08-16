@@ -161,7 +161,7 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       }
       if (!Call->isIndirectCall()) {
         if (const Function *Callee = Call->getCalledFunction()) {
-          if (Callee && !Callee->isIntrinsic() && !Callee->isDeclaration()) {
+          if (!Callee->isIntrinsic() && !Callee->isDeclaration()) {
             DirectCallsToDefinedFunctions += Direction;
             CallKind += " to defined function";
             RemarkKind += "ToDefinedFunction";
