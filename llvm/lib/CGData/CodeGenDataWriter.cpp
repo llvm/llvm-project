@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGenData/CodeGenDataWriter.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 
 #define DEBUG_TYPE "cg-data-writer"
 

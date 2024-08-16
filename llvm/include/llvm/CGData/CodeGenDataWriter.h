@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGENDATA_CODEGENDATAWRITER_H
-#define LLVM_CODEGENDATA_CODEGENDATAWRITER_H
+#ifndef LLVM_CGDATA_CODEGENDATAWRITER_H
+#define LLVM_CGDATA_CODEGENDATAWRITER_H
 
-#include "llvm/CodeGenData/CodeGenData.h"
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/CodeGenData.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 
@@ -97,4 +97,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGENDATA_CODEGENDATAWRITER_H
+#endif // LLVM_CGDATA_CODEGENDATAWRITER_H

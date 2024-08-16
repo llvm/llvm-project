@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS
+  CGData
   CodeGen
-  CodeGenData
   Core
   Object
   Option

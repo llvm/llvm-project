@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGENDATA_CODEGENDATAREADER_H
-#define LLVM_CODEGENDATA_CODEGENDATAREADER_H
+#ifndef LLVM_CGDATA_CODEGENDATAREADER_H
+#define LLVM_CGDATA_CODEGENDATAREADER_H
 
-#include "llvm/CodeGenData/CodeGenData.h"
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/CodeGenData.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -151,4 +151,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGENDATA_CODEGENDATAREADER_H
+#endif // LLVM_CGDATA_CODEGENDATAREADER_H

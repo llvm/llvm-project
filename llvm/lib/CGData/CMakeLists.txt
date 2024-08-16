@@ -1,4 +1,4 @@
-add_llvm_component_library(LLVMCodeGenData
+add_llvm_component_library(LLVMCGData
   CodeGenData.cpp
   CodeGenDataReader.cpp
   CodeGenDataWriter.cpp
@@ -6,7 +6,7 @@ add_llvm_component_library(LLVMCodeGenData
   OutlinedHashTreeRecord.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGenData
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/CGData
 
   DEPENDS
   intrinsics_gen

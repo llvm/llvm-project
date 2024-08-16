@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGenData/CodeGenDataReader.h"
-#include "llvm/CodeGenData/CodeGenDataWriter.h"
+#include "llvm/CGData/CodeGenDataReader.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"

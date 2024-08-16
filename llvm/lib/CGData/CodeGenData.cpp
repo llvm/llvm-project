@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGenData/CodeGenDataReader.h"
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/CodeGenDataReader.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -91,18 +91,18 @@ namespace {
 const char *CodeGenDataSectNameCommon[] = {
 #define CG_DATA_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix)         \
   SectNameCommon,
-#include "llvm/CodeGenData/CodeGenData.inc"
+#include "llvm/CGData/CodeGenData.inc"
 };
 
 const char *CodeGenDataSectNameCoff[] = {
 #define CG_DATA_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix)         \
   SectNameCoff,
-#include "llvm/CodeGenData/CodeGenData.inc"
+#include "llvm/CGData/CodeGenData.inc"
 };
 
 const char *CodeGenDataSectNamePrefix[] = {
 #define CG_DATA_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Prefix,
-#include "llvm/CodeGenData/CodeGenData.inc"
+#include "llvm/CGData/CodeGenData.inc"
 };
 
 } // namespace

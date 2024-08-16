@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGENDATA_CODEGENDATA_H
-#define LLVM_CODEGENDATA_CODEGENDATA_H
+#ifndef LLVM_CGDATA_CODEGENDATA_H
+#define LLVM_CGDATA_CODEGENDATA_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGenData/OutlinedHashTree.h"
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/OutlinedHashTree.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -28,7 +28,7 @@ namespace llvm {
 
 enum CGDataSectKind {
 #define CG_DATA_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
-#include "llvm/CodeGenData/CodeGenData.inc"
+#include "llvm/CGData/CodeGenData.inc"
 };
 
 std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
