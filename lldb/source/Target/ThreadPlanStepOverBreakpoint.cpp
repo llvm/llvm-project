@@ -103,6 +103,12 @@ bool ThreadPlanStepOverBreakpoint::ShouldStop(Event *event_ptr) {
 
 bool ThreadPlanStepOverBreakpoint::StopOthers() { return true; }
 
+// The ThreadPlanSingleThreadTimeout can interrupt and resume all threads during
+// stepping, which may cause them to miss breakpoint. Therefore, we should
+// prevent the creation of ThreadPlanSingleThreadTimeout during a step-over
+// breakpoint.
+bool ThreadPlanStepOverBreakpoint::SupportsResumeOthers() { return false; }
+
 StateType ThreadPlanStepOverBreakpoint::GetPlanRunState() {
   return eStateStepping;
 }
