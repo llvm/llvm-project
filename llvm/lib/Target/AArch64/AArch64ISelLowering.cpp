@@ -19811,7 +19811,6 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     // This optimization reduces instruction count.
     if (N00Opc == AArch64ISD::VLSHR && N10Opc == AArch64ISD::VLSHR &&
         N00->getOperand(1) == N10->getOperand(1)) {
-
       SDValue N000 = N00->getOperand(0);
       SDValue N100 = N10->getOperand(0);
       uint64_t N001ConstVal = N00->getConstantOperandVal(1),
@@ -19819,7 +19818,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                NScalarSize = N->getValueType(0).getScalarSizeInBits();
 
       if (N001ConstVal == N101ConstVal && N001ConstVal > NScalarSize) {
-
+        N000 = DAG.getNode(AArch64ISD::NVCAST, dl, VT, N000);
+        N100 = DAG.getNode(AArch64ISD::NVCAST, dl, VT, N100);
         SDValue Uzp = DAG.getNode(AArch64ISD::UZP2, dl, VT, N000, N100);
         SDValue NewShiftConstant =
             DAG.getConstant(N001ConstVal - NScalarSize, dl, MVT::i32);
@@ -29264,8 +29264,10 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
     assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
            "Expected vectors of equal size!");
     // TODO: Enable assert once bogus creations have been fixed.
-    // assert(OpVT.getVectorElementCount() == VT.getVectorElementCount()*2 &&
-    //       "Expected result vector with half the lanes of its input!");
+    if (VT.isScalableVector())
+      break;
+    assert(OpVT.getVectorElementCount() == VT.getVectorElementCount() * 2 &&
+           "Expected result vector with half the lanes of its input!");
     break;
   }
   case AArch64ISD::TRN1:
@@ -29282,7 +29284,9 @@ void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
     assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
            "Expected vectors!");
     // TODO: Enable assert once bogus creations have been fixed.
-    // assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
+    if (VT.isScalableVector())
+      break;
+    assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
     break;
   }
   }
