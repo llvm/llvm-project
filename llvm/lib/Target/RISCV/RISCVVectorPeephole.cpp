@@ -399,8 +399,9 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // Src needs to have the same passthru as VMV_V_V
-  if (Src->getOperand(1).getReg() != RISCV::NoRegister &&
-      Src->getOperand(1).getReg() != Passthru.getReg())
+  MachineOperand &SrcPassthru = Src->getOperand(1);
+  if (SrcPassthru.getReg() != RISCV::NoRegister &&
+      SrcPassthru.getReg() != Passthru.getReg())
     return false;
 
   // Because Src and MI have the same passthru, we can use either AVL as long as
@@ -424,19 +425,19 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   bool ActiveElementsAffectResult = RISCVII::activeElementsAffectResult(
       TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
 
-  if (VLChanged && ActiveElementsAffectResult)
+  if (VLChanged && (ActiveElementsAffectResult || Src->mayRaiseFPException()))
     return false;
 
-  // Check if any physical register uses would get clobbered (e.g fflags)
-  if (!isSafeToMove(*Src, MI))
-    return false;
+  // If Src ends up using MI's passthru/VL, move it so it can access it.
+  // TODO: We don't need to do this if they already dominate Src.
+  if (!SrcVL.isIdenticalTo(*MinVL) || !SrcPassthru.isIdenticalTo(Passthru)) {
+    if (!isSafeToMove(*Src, MI))
+      return false;
+    Src->moveBefore(&MI);
+  }
 
-  // Move Src down to MI so it can access its passthru/VL, then replace all uses
-  // of MI with it.
-  Src->moveBefore(&MI);
-
-  if (Src->getOperand(1).getReg() != Passthru.getReg()) {
-    Src->getOperand(1).setReg(Passthru.getReg());
+  if (SrcPassthru.getReg() != Passthru.getReg()) {
+    SrcPassthru.setReg(Passthru.getReg());
     // If Src is masked then its passthru needs to be in VRNoV0.
     if (Passthru.getReg() != RISCV::NoRegister)
       MRI->constrainRegClass(Passthru.getReg(),
