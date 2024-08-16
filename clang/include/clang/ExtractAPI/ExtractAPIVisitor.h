@@ -606,7 +606,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
 }
 
 template <typename Derived>
-bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(CXXRecordDecl *Decl) {
+bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(
+    CXXRecordDecl *Decl) {
   bool Ret = Base::TraverseCXXRecordDecl(Decl);
 
   if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {

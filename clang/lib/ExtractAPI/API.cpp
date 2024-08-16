@@ -70,7 +70,8 @@ void RecordContext::stealRecordChain(RecordContext &Other) {
 
   Last = Other.Last;
 
-  for (auto *StolenRecord = Other.First; StolenRecord != nullptr; StolenRecord = StolenRecord->getNextInContext())
+  for (auto *StolenRecord = Other.First; StolenRecord != nullptr;
+       StolenRecord = StolenRecord->getNextInContext())
     StolenRecord->Parent = SymbolReference(cast<APIRecord>(this));
 
   // Delete Other's chain to ensure we don't accidentally traverse it.
@@ -135,25 +136,22 @@ SymbolReference APISet::createSymbolReference(StringRef Name, StringRef USR,
   return SymbolReference(copyString(Name), copyString(USR), copyString(Source));
 }
 
-
 void APISet::removeRecord(StringRef USR) {
   auto Result = USRBasedLookupTable.find(USR);
   if (Result != USRBasedLookupTable.end()) {
     auto *Record = Result->getSecond().get();
-    auto &ParentReference= Record->Parent;
+    auto &ParentReference = Record->Parent;
     auto *ParentRecord = const_cast<APIRecord *>(ParentReference.Record);
     if (!ParentRecord)
       ParentRecord = findRecordForUSR(ParentReference.USR);
 
     if (auto *ParentCtx = llvm::cast_if_present<RecordContext>(ParentRecord)) {
       ParentCtx->removeFromRecordChain(Record);
-      if (auto *RecordAsCtx=
-              llvm::dyn_cast<RecordContext>(Record))
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record))
         ParentCtx->stealRecordChain(*RecordAsCtx);
     } else {
       TopLevelRecords.erase(Record);
-      if (auto *RecordAsCtx=
-              llvm::dyn_cast<RecordContext>(Record)) {
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record)) {
         for (const auto *Child = RecordAsCtx->First; Child != nullptr;
              Child = Child->getNextInContext())
           TopLevelRecords.insert(Child);
@@ -163,9 +161,7 @@ void APISet::removeRecord(StringRef USR) {
   }
 }
 
-void APISet::removeRecord(APIRecord *Record) {
-  removeRecord(Record->USR);
-}
+void APISet::removeRecord(APIRecord *Record) { removeRecord(Record->USR); }
 
 APIRecord::~APIRecord() {}
 TagRecord::~TagRecord() {}

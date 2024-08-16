@@ -1421,7 +1421,8 @@ public:
   createRecord(StringRef USR, StringRef Name, CtorArgsContTy &&...CtorArgs);
 
   auto getTopLevelRecords() const {
-    return llvm::iterator_range<decltype(TopLevelRecords)::iterator>(TopLevelRecords);
+    return llvm::iterator_range<decltype(TopLevelRecords)::iterator>(
+        TopLevelRecords);
   }
 
   void removeRecord(StringRef USR);
