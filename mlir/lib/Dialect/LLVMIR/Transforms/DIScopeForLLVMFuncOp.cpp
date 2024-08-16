@@ -79,7 +79,7 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
       context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
       fileAttr,
       /*line=*/line,
-      /*scopeline=*/col, subprogramFlags, subroutineTypeAttr);
+      /*scopeline=*/col, subprogramFlags, subroutineTypeAttr, {});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 

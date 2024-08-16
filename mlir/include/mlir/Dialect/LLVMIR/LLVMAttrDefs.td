@@ -565,19 +565,21 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
     OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type
+    OptionalParameter<"DISubroutineTypeAttr">:$type,
+    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
       "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
       "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+      "ArrayRef<DINodeAttr>":$retainedNodes
     ), [{
       MLIRContext *ctx = file.getContext();
       return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
-                   scopeLine, subprogramFlags, type);
+                   scopeLine, subprogramFlags, type, retainedNodes);
     }]>
   ];
 
@@ -627,8 +629,7 @@ def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entit
                                            /*traits=*/[], "DINodeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"DINodeAttr">:$entity,
+    "DINodeAttr":$entity,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"StringAttr">:$name,

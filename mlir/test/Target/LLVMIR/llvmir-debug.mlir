@@ -371,7 +371,7 @@ llvm.func @fn_with_gl() {
 
 llvm.func @imp_fn() {
   llvm.return
-} loc(#loc3)
+} loc(#loc2)
 #file = #llvm.di_file<"test.f90" in "">
 #SP_TY = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
 #CU = #llvm.di_compile_unit<id = distinct[0]<>,
@@ -380,15 +380,12 @@ llvm.func @imp_fn() {
 #MOD = #llvm.di_module<file = #file, scope = #CU, name = "mod1">
 #MOD1 = #llvm.di_module<file = #file, scope = #CU, name = "mod2">
 #SP = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #CU, scope = #file,
-  name = "imp_fn", file = #file, subprogramFlags = Definition, type = #SP_TY>
-#ENT1 = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #SP,
-  entity = #MOD1, file = #file>
-#ENT2 = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #SP,
-  entity = #MOD, file = #file>
+  name = "imp_fn", file = #file, subprogramFlags = Definition, type = #SP_TY,
+  retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  entity = #MOD1, file = #file, line = 1>, #llvm.di_imported_entity<tag
+  = DW_TAG_imported_module, entity = #MOD, file = #file, line = 1>>
 #loc1 = loc("test.f90":12:14)
 #loc2 = loc(fused<#SP>[#loc1])
-#loc3 = loc(fused<[#ENT1, #ENT2]>[#loc2])
-
 
 // CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
 // CHECK-DAG: ![[NODES]] = !{![[NODE2:[0-9]+]], ![[NODE1:[0-9]+]]}

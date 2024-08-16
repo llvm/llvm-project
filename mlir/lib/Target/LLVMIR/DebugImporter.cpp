@@ -40,18 +40,10 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   // Add a fused location to link the subprogram information.
   StringAttr funcName = StringAttr::get(context, subprogram->getName());
   StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
-  auto loc = FusedLocWith<DISubprogramAttr>::get(
+  return FusedLocWith<DISubprogramAttr>::get(
       {NameLoc::get(funcName),
        FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
       translate(subprogram), context);
-  if (subprogram->getRetainedNodes().empty())
-    return loc;
-  llvm::SmallVector<mlir::Attribute> entities;
-  for (auto node : subprogram->getRetainedNodes())
-    entities.push_back(translate(node));
-
-  auto entitiesAttr = mlir::ArrayAttr::get(context, entities);
-  return FusedLocWith<mlir::ArrayAttr>::get(loc, entitiesAttr, context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -226,8 +218,8 @@ DebugImporter::translateImpl(llvm::DIImportedEntity *node) {
   }
 
   return DIImportedEntityAttr::get(
-      context, node->getTag(), translate(node->getScope()),
-      translate(node->getEntity()), translate(node->getFile()), node->getLine(),
+      context, node->getTag(), translate(node->getEntity()),
+      translate(node->getFile()), node->getLine(),
       getStringAttrOrNull(node->getRawName()), elements);
 }
 
@@ -246,11 +238,18 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
+
+  SmallVector<DINodeAttr> retainedNodes;
+
+  for (auto node : node->getRetainedNodes())
+    retainedNodes.push_back(translate(node));
+
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
-                               node->getScopeLine(), *subprogramFlags, type);
+                               node->getScopeLine(), *subprogramFlags, type,
+                               retainedNodes);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {

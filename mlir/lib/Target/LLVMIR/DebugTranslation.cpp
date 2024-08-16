@@ -67,25 +67,7 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
       func.getLoc()->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>();
   if (!spLoc)
     return;
-  llvm::DISubprogram *sp = translate(spLoc.getMetadata());
-  llvmFunc.setSubprogram(sp);
-
-  // Look for any entities that are imported in this function.
-  auto entityLoc =
-      func.getLoc()->findInstanceOf<FusedLocWith<mlir::ArrayAttr>>();
-  if (!entityLoc)
-    return;
-
-  SmallVector<llvm::Metadata *> imported;
-  if (mlir::ArrayAttr arrayAttr = entityLoc.getMetadata()) {
-    for (mlir::Attribute attr : arrayAttr.getValue()) {
-      if (auto ent = dyn_cast_if_present<LLVM::DIImportedEntityAttr>(attr)) {
-        llvm::DINode *node = translate(ent);
-        imported.push_back(node);
-      }
-    }
-  }
-  sp->replaceRetainedNodes(llvm::MDTuple::get(llvmFunc.getContext(), imported));
+  llvmFunc.setSubprogram(translate(spLoc.getMetadata()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -324,6 +306,18 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit);
 
+  SmallVector<llvm::Metadata *> retainedNodes;
+
+  for (auto nodeAttr : attr.getRetainedNodes()) {
+    if (DIImportedEntityAttr importedAttr =
+            dyn_cast<DIImportedEntityAttr>(nodeAttr)) {
+      llvm::DINode *dn = translate(importedAttr, node);
+      retainedNodes.push_back(dn);
+    }
+  }
+  if (!retainedNodes.empty())
+    node->replaceRetainedNodes(llvm::MDTuple::get(llvmCtx, retainedNodes));
+
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);
   return node;
@@ -344,15 +338,15 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
                                 attr.getExportSymbols());
 }
 
-llvm::DIImportedEntity *
-DebugTranslation::translateImpl(DIImportedEntityAttr attr) {
+llvm::DIImportedEntity *DebugTranslation::translate(DIImportedEntityAttr attr,
+                                                    llvm::DIScope *scope) {
   SmallVector<llvm::Metadata *> elements;
   for (DINodeAttr member : attr.getElements())
     elements.push_back(translate(member));
 
   return llvm::DIImportedEntity::get(
-      llvmCtx, attr.getTag(), translate(attr.getScope()),
-      translate(attr.getEntity()), translate(attr.getFile()), attr.getLine(),
+      llvmCtx, attr.getTag(), scope, translate(attr.getEntity()),
+      translate(attr.getFile()), attr.getLine(),
       getMDStringOrNull(attr.getName()), llvm::MDNode::get(llvmCtx, elements));
 }
 
@@ -418,10 +412,10 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
                .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                      DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                     DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-                     DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                     DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-                     DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+                     DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                     DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                     DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())

@@ -293,14 +293,19 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
     MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
     MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type) {
+    uint64_t subprogramFlags, MlirAttribute type, intptr_t nNodes,
+    MlirAttribute const *nodes) {
+  SmallVector<Attribute> nodesStorage;
+  nodesStorage.reserve(nNodes);
   return wrap(DISubprogramAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)),
       cast<DICompileUnitAttr>(unwrap(compileUnit)),
       cast<DIScopeAttr>(unwrap(scope)), cast<StringAttr>(unwrap(name)),
       cast<StringAttr>(unwrap(linkageName)), cast<DIFileAttr>(unwrap(file)),
       line, scopeLine, DISubprogramFlags(subprogramFlags),
-      cast<DISubroutineTypeAttr>(unwrap(type))));
+      cast<DISubroutineTypeAttr>(unwrap(type)),
+      llvm::map_to_vector(unwrapList(nNodes, nodes, nodesStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetScope(MlirAttribute diSubprogram) {
@@ -344,4 +349,17 @@ MlirAttribute mlirLLVMDIModuleAttrGet(MlirContext ctx, MlirAttribute file,
 
 MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
   return wrap(cast<DIModuleAttr>(unwrap(diModule)).getScope());
+}
+
+MlirAttribute mlirLLVMDIImportedEntityAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute entity, MlirAttribute file,
+    unsigned int line, MlirAttribute name, intptr_t nElements,
+    MlirAttribute const *elements) {
+  SmallVector<Attribute> elementsStorage;
+  elementsStorage.reserve(nElements);
+  return wrap(DIImportedEntityAttr::get(
+      unwrap(ctx), tag, cast<DINodeAttr>(unwrap(entity)),
+      cast<DIFileAttr>(unwrap(file)), line, cast<StringAttr>(unwrap(name)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }

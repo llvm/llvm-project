@@ -84,12 +84,12 @@ private:
   llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
-  llvm::DIImportedEntity *translateImpl(DIImportedEntityAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
+  llvm::DIImportedEntity *translate(DIImportedEntityAttr attr, llvm::DIScope *);
 
   /// Attributes that support self recursion need to implement an additional
   /// method to hook into `translateRecursive`.

@@ -816,5 +816,4 @@ define void @imp_fn() !dbg !12 {
 !17 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !12, entity: !8, file: !3, line: 1, elements: !15)
 
 ; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}>
-; CHECK-DAG: llvm.di_imported_entity{{.*}}tag = DW_TAG_imported_module, scope = #[[SP]], entity = #[[M]]
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module, entity = #[[M]]{{.*}}>>
