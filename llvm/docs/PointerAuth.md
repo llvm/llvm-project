@@ -439,12 +439,10 @@ For example:
 
 #### MachO Object File Representation
 
-At the binary object file level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
-using the ``ARM64_RELOC_AUTHENTICATED_POINTER`` relocation kind (with value
-``11``).
+At the object file level, authenticated relocations are represented using the
+``ARM64_RELOC_AUTHENTICATED_POINTER`` relocation kind (with value ``11``).
 
-The pointer authentication information is encoded into the addend, as such:
+The pointer authentication information is encoded into the addend as follows:
 
 ```
 | 63 | 62 | 61-51 | 50-49 |   48   | 47     -     32 | 31  -  0 |

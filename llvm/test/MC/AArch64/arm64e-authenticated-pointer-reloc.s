@@ -1,9 +1,10 @@
-// RUN: llvm-mc -triple=arm64-apple-ios < %s | \
-// RUN: FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -triple=arm64-apple-darwin < %s | \
+// RUN:   FileCheck %s --check-prefix=ASM
 
-// RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj < %s | \
-// RUN: llvm-readobj --expand-relocs --sections --section-relocations --section-data - | \
-// RUN: FileCheck %s --check-prefix=RELOC
+// RUN: llvm-mc -triple=arm64-apple-darwin -filetype=obj < %s | \
+// RUN:   llvm-readobj --expand-relocs --sections \
+// RUN:   --section-relocations --section-data - | \
+// RUN:   FileCheck %s --check-prefix=RELOC
 
 
 

@@ -9,7 +9,6 @@
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -403,20 +402,21 @@ void AArch64MachObjectWriter::recordRelocation(
     assert(Type == MachO::ARM64_RELOC_UNSIGNED);
 
     if (IsPCRel) {
-      Asm.getContext().reportError(
-        Fixup.getLoc(), "invalid PC relative auth relocation");
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "invalid PC relative auth relocation");
       return;
     }
 
     if (Log2Size != 3) {
       Asm.getContext().reportError(
-        Fixup.getLoc(), "invalid auth relocation size, must be 8 bytes");
+          Fixup.getLoc(), "invalid auth relocation size, must be 8 bytes");
       return;
     }
 
     if (Target.getSymB()) {
       Asm.getContext().reportError(
-        Fixup.getLoc(), "invalid auth relocation, can't reference two symbols");
+          Fixup.getLoc(),
+          "invalid auth relocation, can't reference two symbols");
       return;
     }
 
@@ -424,9 +424,8 @@ void AArch64MachObjectWriter::recordRelocation(
     AArch64PACKey::ID Key = Expr->getKey();
 
     if (!isInt<32>(Value)) {
-      Asm.getContext().reportError(Fixup.getLoc(), "too wide addend '" +
-                                                       itostr(Value) +
-                                                       "' in auth relocation");
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "addend too big for relocation");
       return;
     }
 
