@@ -147,20 +147,21 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
     OptimizationRemark R(DEBUG_TYPE, RemarkKind, &Call);
     R << "in ";
     identifyFunction(R, Caller);
-    R << ", " << CallKind;
-    if (const Function *Callee =
-            dyn_cast_or_null<Function>(Call.getCalledOperand())) {
-      R << ", callee is";
-      StringRef Name = Callee->getName();
-      if (auto *SubProgram = Callee->getSubprogram()) {
+    R << ", " << CallKind << ", callee is";
+    Value *Callee = Call.getCalledOperand();
+    std::string Name;
+    if (const Function *FnCallee = dyn_cast<Function>(Callee)) {
+      if (auto *SubProgram = FnCallee->getSubprogram()) {
         if (SubProgram->isArtificial())
           R << " artificial";
       }
-      if (!Name.empty())
-        R << " '" << Name << "'";
-      else
-        R << " with unknown name";
+      Name = FnCallee->getName();
     }
+    if (Name.empty()) {
+      raw_string_ostream OS(Name);
+      Callee->printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
+    }
+    R << " '" << Name << "'";
     return R;
   });
 }

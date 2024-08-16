@@ -18,7 +18,7 @@ entry:
   ; CHECK: remark: test.c:18:5: in artificial function 'h', direct call to defined function, callee is artificial 'h'
   call void @h(), !dbg !105
   %fnPtr = load ptr, ptr null, align 8
-  ; CHECK: remark: test.c:19:5: in artificial function 'h', indirect call
+  ; CHECK: remark: test.c:19:5: in artificial function 'h', indirect call, callee is '%fnPtr'
   call void %fnPtr(), !dbg !106
   ; CHECK: remark: test.c:20:5: in artificial function 'h', direct invoke, callee is 'f'
   invoke void @f() to label %fcont unwind label %cleanup, !dbg !107
@@ -29,7 +29,7 @@ gcont:
   ; CHECK: remark: test.c:22:5: in artificial function 'h', direct invoke to defined function, callee is artificial 'h'
   invoke void @h() to label %hcont unwind label %cleanup, !dbg !109
 hcont:
-  ; CHECK: remark: test.c:23:5: in artificial function 'h', indirect invoke
+  ; CHECK: remark: test.c:23:5: in artificial function 'h', indirect invoke, callee is '%fnPtr'
   invoke void %fnPtr() to label %end unwind label %cleanup, !dbg !110
 cleanup:
   %ll = landingpad { ptr, i32 }
@@ -54,7 +54,7 @@ entry:
   ; CHECK: remark: test.c:8:3: in function 'g', direct call to defined function, callee is artificial 'h'
   call void @h(), !dbg !204
   %fnPtr = load ptr, ptr null, align 8
-  ; CHECK: remark: test.c:9:3: in function 'g', indirect call
+  ; CHECK: remark: test.c:9:3: in function 'g', indirect call, callee is '%fnPtr'
   call void %fnPtr(), !dbg !205
   ; CHECK: remark: test.c:10:3: in function 'g', direct invoke, callee is 'f'
   invoke void @f() to label %fcont unwind label %cleanup, !dbg !206
@@ -65,7 +65,7 @@ gcont:
   ; CHECK: remark: test.c:12:3: in function 'g', direct invoke to defined function, callee is artificial 'h'
   invoke void @h() to label %hcont unwind label %cleanup, !dbg !208
 hcont:
-  ; CHECK: remark: test.c:13:3: in function 'g', indirect invoke
+  ; CHECK: remark: test.c:13:3: in function 'g', indirect invoke, callee is '%fnPtr'
   invoke void %fnPtr() to label %end unwind label %cleanup, !dbg !209
 cleanup:
   %ll = landingpad { ptr, i32 }
