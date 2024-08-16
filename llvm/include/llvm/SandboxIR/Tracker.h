@@ -96,25 +96,6 @@ public:
 #endif
 };
 
-class PHISetIncoming : public IRChangeBase {
-  PHINode *PHI;
-  unsigned Idx;
-  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
-
-public:
-  enum class What {
-    Value,
-    Block,
-  };
-  PHISetIncoming(PHINode *PHI, unsigned Idx, What What);
-  void revert(Tracker &Tracker) final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
 class PHIRemoveIncoming : public IRChangeBase {
   PHINode *PHI;
   unsigned RemovedIdx;
@@ -250,18 +231,33 @@ public:
 #endif
 };
 
-class CallBrInstSetIndirectDest : public IRChangeBase {
-  CallBrInst *CallBr;
+/// Similar to GenericSetter but the setters/getters have an index as their
+/// first argument. This is commont in cases like: getOperand(unsigned Idx)
+template <auto GetterFn, auto SetterFn>
+class GenericSetterWithIdx final : public IRChangeBase {
+  /// Helper for getting the class type from the getter
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned) const);
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned));
+
+  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT, unsigned>;
+  InstrT *I;
+  SavedValT OrigVal;
   unsigned Idx;
-  BasicBlock *OrigIndirectDest;
 
 public:
-  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx);
-  void revert(Tracker &Tracker) final;
+  GenericSetterWithIdx(InstrT *I, unsigned Idx)
+      : I(I), OrigVal((I->*GetterFn)(Idx)), Idx(Idx) {}
+  void revert(Tracker &Tracker) final { (I->*SetterFn)(Idx, OrigVal); }
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "CallBrInstSetIndirectDest"; }
-  LLVM_DUMP_METHOD void dump() const final;
+  void dump(raw_ostream &OS) const final { OS << "GenericSetterWithIdx"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
 #endif
 };
 
