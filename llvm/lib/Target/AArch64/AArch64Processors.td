@@ -808,6 +808,7 @@ def ProcessorFeatures {
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML,
+                                 FeatureCCIDX,
                                  FeaturePAuth, FeatureSSBS, FeatureSB, FeatureSVE, FeatureSVE2, FeatureFlagM,
                                  FeatureComplxNum, FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureFullFP16,
                                  FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
@@ -816,6 +817,7 @@ def ProcessorFeatures {
                                  FeatureSPE, FeatureBF16, FeatureMatMulInt8,
                                  FeatureMTE, FeatureSVE2BitPerm, FeatureFullFP16,
                                  FeatureFP16FML,
+                                 FeatureCCIDX,
                                  FeatureSB, FeaturePAuth, FeaturePredRes, FeatureFlagM, FeatureSSBS,
                                  FeatureSVE2, FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS,
                                  FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureDotProd];
@@ -823,11 +825,13 @@ def ProcessorFeatures {
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureMTE, FeatureSVE2BitPerm,
                                  FeatureFP16FML, FeatureSPE_EEF,
+                                 FeatureCCIDX,
                                  FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
                                  FeatureSVE, FeatureSVE2, FeatureComplxNum, FeatureCRC, FeatureDotProd,
                                  FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS, FeatureLSE,
                                  FeatureNEON, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureBF16];
   list<SubtargetFeature> X925 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
+                                 FeatureCCIDX,
                                  FeatureETE, FeaturePerfMon, FeatureSPE,
                                  FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE,
                                  FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
