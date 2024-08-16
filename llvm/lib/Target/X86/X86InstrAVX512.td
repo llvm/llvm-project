@@ -12702,20 +12702,24 @@ defm VCVTNE2PS2BF16 : avx512_binop_all2<0x72, "vcvtne2ps2bf16",
 
 // Truncate Float to BFloat16
 multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,
-                             X86SchedWriteWidths sched> {
+                             AVX512VLVectorVTInfo vt_dst,
+                             AVX512VLVectorVTInfo vt_src,
+                             X86SchedWriteWidths sched,
+                             SDPatternOperator OpNode,
+                             list<Predicate> prds, list<Predicate> prds512> {
   let ExeDomain = SSEPackedSingle in {
-  let Predicates = [HasBF16], Uses = []<Register>, mayRaiseFPException = 0 in {
-    defm Z : avx512_vcvt_fp<opc, OpcodeStr, v16bf16x_info, v16f32_info,
-                            X86cvtneps2bf16, X86cvtneps2bf16, sched.ZMM>, EVEX_V512;
+  let Predicates = prds512, Uses = []<Register>, mayRaiseFPException = 0 in {
+    defm Z : avx512_vcvt_fp<opc, OpcodeStr, vt_dst.info256, vt_src.info512,
+                            OpNode, OpNode, sched.ZMM>, EVEX_V512;
   }
-  let Predicates = [HasBF16, HasVLX] in {
+  let Predicates = prds in {
     let Uses = []<Register>, mayRaiseFPException = 0 in {
-    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v8bf16x_info, v4f32x_info,
-                               null_frag, null_frag, sched.XMM, "{1to4}", "{x}", f128mem,
-                               VK4WM>, EVEX_V128;
-    defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v8bf16x_info, v8f32x_info,
-                               X86cvtneps2bf16, X86cvtneps2bf16,
-                               sched.YMM, "{1to8}", "{y}">, EVEX_V256;
+    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, vt_dst.info128, vt_src.info128,
+                               null_frag, null_frag, sched.XMM, vt_src.info128.BroadcastStr, "{x}", f128mem,
+                               vt_src.info128.KRCWM>, EVEX_V128;
+    defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, vt_dst.info128, vt_src.info256,
+                               OpNode, OpNode,
+                               sched.YMM, vt_src.info256.BroadcastStr, "{y}">, EVEX_V256;
     }
   } // Predicates = [HasBF16, HasVLX]
   } // ExeDomain = SSEPackedSingle
@@ -12735,8 +12739,10 @@ multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,
 }
 
 defm VCVTNEPS2BF16 : avx512_cvtps2bf16<0x72, "vcvtneps2bf16",
-                                       SchedWriteCvtPD2PS>, T8, XS,
-                                       EVEX_CD8<32, CD8VF>;
+                                       avx512vl_bf16_info, avx512vl_f32_info,
+                                       SchedWriteCvtPD2PS, X86cvtneps2bf16,
+                                       [HasBF16, HasVLX], [HasBF16]>,
+                                       T8, XS, EVEX_CD8<32, CD8VF>;
 
 let Predicates = [HasBF16, HasVLX] in {
   // Special patterns to allow use of X86mcvtneps2bf16 for masking. Instruction

@@ -895,41 +895,6 @@ multiclass avx10_convert_2op_packed<bits<8> OpCode, string OpcodeStr,
                                           (vt_src.BroadcastLdFrag addr:$src)))),
                                        vt_dst.ImmAllZerosV)>,
                       EVEX, EVEX_B, Sched<[sched]>;
-
-  // Allow rr with the x, y suffix.
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{$src, $dst|$dst, $src}",
-                  (!cast<Instruction>(NAME#"rr")
-                   vt_dst.RC:$dst, vt_src.RC:$src), 0, "att">;
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
-                  (!cast<Instruction>(NAME#"rrk")
-                   vt_dst.RC:$dst, vt_dst.KRCWM:$mask, vt_src.RC:$src),
-                   0, "att">;
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{$src, $dst {${mask}} {z}|$dst {${mask}} {z}, $src}",
-                  (!cast<Instruction>(NAME#"rrkz")
-                   vt_dst.RC:$dst, vt_dst.KRCWM:$mask, vt_src.RC:$src),
-                   0, "att">;
-
-  // Allow rmb with the x, y suffix.
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{${src}"#vt_src.BroadcastStr#", $dst|$dst, ${src}"#
-                  vt_src.BroadcastStr#"}",
-                  (!cast<Instruction>(NAME#"rmb")
-                   vt_dst.RC:$dst, vt_src.ScalarMemOp:$src), 0, "att">;
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{${src}"#vt_src.BroadcastStr#", $dst {${mask}}|"
-                  "$dst {${mask}}, ${src}"#vt_src.BroadcastStr#"}",
-                  (!cast<Instruction>(NAME#"rmbk")
-                   vt_dst.RC:$dst, vt_dst.KRCWM:$mask, vt_src.ScalarMemOp:$src),
-                   0, "att">;
-  def : InstAlias<OpcodeStr#Alias#
-                  "\t{${src}"#vt_src.BroadcastStr#", $dst {${mask}} {z}|"
-                  "$dst {${mask}} {z}, ${src}"#vt_src.BroadcastStr#"}",
-                  (!cast<Instruction>(NAME#"rmbkz")
-                   vt_dst.RC:$dst, vt_dst.KRCWM:$mask, vt_src.ScalarMemOp:$src),
-                   0, "att">;
 }
 
 multiclass avx10_convert_2op<bits<8> OpCode, string OpcodeStr,
@@ -985,22 +950,81 @@ multiclass avx10_convert_2op<bits<8> OpCode, string OpcodeStr,
   }
 }
 
-defm VCVTNEPH2BF8 : avx10_convert_2op<0x74, "vcvtneph2bf8", avx512vl_i8_info,
+multiclass avx10_convert_2op_pat<AVX512VLVectorVTInfo vt_dst,
+                                 AVX512VLVectorVTInfo vt_src,
+                                 SDPatternOperator OpNode,
+                                 SDPatternOperator MaskOpNode,
+                                 PatFrag bcast128 = vt_src.info128.BroadcastLdFrag,
+                                 PatFrag loadVT128 = vt_src.info128.LdFrag,
+                                 RegisterClass maskRC128 = vt_src.info128.KRCWM> {
+  let Predicates = [HasAVX10_2] in {
+    // Special patterns to allow use of MaskOpNode for masking 128 version. Instruction
+    // patterns have been disabled with null_frag.
+    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT VR128X:$src))),
+              (!cast<Instruction>(NAME # "Z128rr") VR128X:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), (vt_dst.info128.VT VR128X:$src0),
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rrk") VR128X:$src0, maskRC128:$mask, VR128X:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), vt_dst.info128.ImmAllZerosV,
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rrkz") maskRC128:$mask, VR128X:$src)>;
+
+    def : Pat<(vt_dst.info128.VT (OpNode (loadVT128 addr:$src))),
+              (!cast<Instruction>(NAME # "Z128rm") addr:$src)>;
+    def : Pat<(MaskOpNode (loadVT128 addr:$src), (vt_dst.info128.VT VR128X:$src0),
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
+    def : Pat<(MaskOpNode (loadVT128 addr:$src), vt_dst.info128.ImmAllZerosV,
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmkz") maskRC128:$mask, addr:$src)>;
+
+    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT (bcast128 addr:$src)))),
+              (!cast<Instruction>(NAME # "Z128rmb") addr:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
+                            (vt_dst.info128.VT VR128X:$src0), maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
+                            vt_dst.info128.ImmAllZerosV, maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmbkz") maskRC128:$mask, addr:$src)>;
+  }
+}
+
+// defm VCVTNEPH2BF8 : avx512_cvt_trunc<0x74, "vcvtneph2bf8",
+//                                      avx512vl_i8_info, avx512vl_f16_info,
+//                                      SchedWriteCvtPD2PS, [HasAVX10_2_512],
+//                                      [HasAVX10_2_512]>, T8, XS, EVEX_CD8<16, CD8VF>;
+
+// defm VCVTNEPH2BF8 : avx10_convert_2op<0x74, "vcvtneph2bf8", avx512vl_i8_info,
+//                                       avx512vl_f16_info, SchedWriteCvtPD2PS,
+//                                       X86vcvtneph2bf8, X86vmcvtneph2bf8>,
+//                                       T8, XS;
+defm VCVTNEPH2BF8 : avx512_cvtps2bf16<0x74, "vcvtneph2bf8", avx512vl_i8_info,
                                       avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                      X86vcvtneph2bf8, X86vmcvtneph2bf8>,
-                                      T8, XS;
-defm VCVTNEPH2BF8S : avx10_convert_2op<0x74, "vcvtneph2bf8s", avx512vl_i8_info,
+                                      X86vcvtneph2bf8, [HasAVX10_2], [HasAVX10_2_512]>,
+                                      T8, XS, EVEX_CD8<16, CD8VF>;
+defm VCVTNEPH2BF8 : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
+                                          X86vcvtneph2bf8, X86vmcvtneph2bf8>;
+
+defm VCVTNEPH2BF8S : avx512_cvtps2bf16<0x74, "vcvtneph2bf8s", avx512vl_i8_info,
                                        avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                       X86vcvtneph2bf8s, X86vmcvtneph2bf8s>,
-                                       T_MAP5, XS;
-defm VCVTNEPH2HF8 : avx10_convert_2op<0x18, "vcvtneph2hf8", avx512vl_i8_info,
+                                       X86vcvtneph2bf8s, [HasAVX10_2], [HasAVX10_2_512]>,
+                                       T_MAP5, XS, EVEX_CD8<16, CD8VF>;
+defm VCVTNEPH2BF8S : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
+                                           X86vcvtneph2bf8s, X86vmcvtneph2bf8s>;
+
+defm VCVTNEPH2HF8 : avx512_cvtps2bf16<0x18, "vcvtneph2hf8", avx512vl_i8_info,
                                       avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                      X86vcvtneph2hf8, X86vmcvtneph2hf8>,
-                                      T_MAP5, XS;
-defm VCVTNEPH2HF8S : avx10_convert_2op<0x1b, "vcvtneph2hf8s", avx512vl_i8_info,
-                                       avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                       X86vcvtneph2hf8s, X86vmcvtneph2hf8s>,
-                                       T_MAP5, XS;
+                                      X86vcvtneph2hf8, [HasAVX10_2], [HasAVX10_2_512]>,
+                                      T_MAP5, XS, EVEX_CD8<16, CD8VF>;
+defm VCVTNEPH2HF8 : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
+                                          X86vcvtneph2hf8, X86vmcvtneph2hf8>;
+
+defm VCVTNEPH2HF8S : avx512_cvtps2bf16<0x1b, "vcvtneph2hf8s", avx512vl_i8_info,
+                                      avx512vl_f16_info, SchedWriteCvtPD2PS,
+                                      X86vcvtneph2hf8s, [HasAVX10_2], [HasAVX10_2_512]>,
+                                      T_MAP5, XS, EVEX_CD8<16, CD8VF>;
+defm VCVTNEPH2HF8S : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
+                                      X86vcvtneph2hf8s, X86vmcvtneph2hf8s>;
 
 multiclass avx10_convert_2op_nomb_packed<bits<8> opc, string OpcodeStr,
                            X86VectorVTInfo _dest, X86VectorVTInfo _src,
