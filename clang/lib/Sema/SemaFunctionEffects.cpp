@@ -551,9 +551,9 @@ private:
         !Viols.empty())
       emitDiagnostics(Viols, CInfo, S);
 
-    CompleteFunctionAnalysis *CompletePtr =
-        new CompleteFunctionAnalysis(S.getASTContext(), std::move(Pending), CInfo.Effects,
-                                     AllInferrableEffectsToVerify);
+    CompleteFunctionAnalysis *CompletePtr = new CompleteFunctionAnalysis(
+        S.getASTContext(), std::move(Pending), CInfo.Effects,
+        AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     LLVM_DEBUG(llvm::dbgs() << "inserted complete " << CompletePtr << "\n";
                DeclAnalysis.dump(S, llvm::dbgs()););
