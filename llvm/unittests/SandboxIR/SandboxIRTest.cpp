@@ -2961,6 +2961,31 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
 }
 
+TEST_F(SandboxIRTest, PossiblyDisjointInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint(), isDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  PDI->setIsDisjoint(OrigIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
+}
+
 TEST_F(SandboxIRTest, AtomicRMWInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %arg) {
