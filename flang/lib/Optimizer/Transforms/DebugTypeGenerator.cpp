@@ -163,21 +163,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   mlir::LLVM::DITypeAttr elemTy =
       convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
-  // The seqTy.getShape() should have a value for each dimension of the array.
-  // But we can have a null declOp or declOp.getShift() can be an empty
-  // sequence (e.g. when default lower bound is used). We use an empty vector in
-  // that case.
-  for (auto [dimOpt, shiftOpt] : zip_longest(
-           seqTy.getShape(),
-           declOp ? declOp.getShift() : llvm::SmallVector<mlir::Value>())) {
-    // It is assumed that size of seqTy.getShape() will always be greater or
-    // equal to size of the 2nd argument of zip_longest so we should never have
-    // the scenario where dimOpt is nullopt.
-    if (!dimOpt) {
-      assert(dimOpt);
-      break;
-    }
-    fir::SequenceType::Extent dim = *dimOpt;
+  unsigned index = 0;
+  for (fir::SequenceType::Extent dim : seqTy.getShape()) {
     if (dim == seqTy.getUnknownExtent()) {
       // FIXME: This path is taken for assumed size arrays but also for arrays
       // with non constant extent. For the latter case, the DISubrangeAttr
@@ -189,9 +176,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     } else {
       auto intTy = mlir::IntegerType::get(context, 64);
       int64_t shift = 1;
-      if (shiftOpt) {
+      if (declOp && declOp.getShift().size() > index) {
         if (auto defOp = mlir::dyn_cast<mlir::arith::ConstantOp>(
-                shiftOpt->getDefiningOp())) {
+                declOp.getShift()[index].getDefiningOp())) {
           if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(defOp.getValue()))
             shift = iattr.getInt();
         }
@@ -203,6 +190,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
           /*stride=*/nullptr);
       elements.push_back(subrangeTy);
     }
+    ++index;
   }
   // Apart from arrays, the `DICompositeTypeAttr` is used for other things like
   // structure types. Many of its fields which are not applicable to arrays
