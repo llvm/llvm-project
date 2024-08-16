@@ -1196,7 +1196,7 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 }
 
 std::optional<lldb::addr_t> GetMemoryReference(lldb::SBValue v) {
-  if (!v.GetType().IsPointerType() && !v.GetType().IsArrayType())
+  if (!v.GetType().IsPointerType())
     return std::nullopt;
 
   lldb::SBValue deref = v.Dereference();
