@@ -1932,6 +1932,169 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
 }
 
+TEST_F(SandboxIRTest, AtomicRMWInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %arg) {
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %arg acquire, align 128
+  ret void
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMRMW = cast<llvm::AtomicRMWInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *Ptr = F->getArg(0);
+  auto *Arg = F->getArg(1);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *RMW = cast<sandboxir::AtomicRMWInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getOperationName().
+  EXPECT_EQ(
+      sandboxir::AtomicRMWInst::getOperationName(
+          sandboxir::AtomicRMWInst::BinOp::Add),
+      llvm::AtomicRMWInst::getOperationName(llvm::AtomicRMWInst::BinOp::Add));
+  // Check isFPOperation().
+  EXPECT_EQ(
+      sandboxir::AtomicRMWInst::isFPOperation(
+          sandboxir::AtomicRMWInst::BinOp::Add),
+      llvm::AtomicRMWInst::isFPOperation(llvm::AtomicRMWInst::BinOp::Add));
+  EXPECT_FALSE(sandboxir::AtomicRMWInst::isFPOperation(
+      sandboxir::AtomicRMWInst::BinOp::Add));
+  EXPECT_TRUE(sandboxir::AtomicRMWInst::isFPOperation(
+      sandboxir::AtomicRMWInst::BinOp::FAdd));
+  // Check setOperation(), getOperation().
+  EXPECT_EQ(RMW->getOperation(), LLVMRMW->getOperation());
+  RMW->setOperation(sandboxir::AtomicRMWInst::BinOp::Sub);
+  EXPECT_EQ(RMW->getOperation(), sandboxir::AtomicRMWInst::BinOp::Sub);
+  RMW->setOperation(sandboxir::AtomicRMWInst::BinOp::Add);
+  // Check getAlign().
+  EXPECT_EQ(RMW->getAlign(), LLVMRMW->getAlign());
+  auto OrigAlign = RMW->getAlign();
+  Align NewAlign(256);
+  EXPECT_NE(NewAlign, OrigAlign);
+  RMW->setAlignment(NewAlign);
+  EXPECT_EQ(RMW->getAlign(), NewAlign);
+  RMW->setAlignment(OrigAlign);
+  EXPECT_EQ(RMW->getAlign(), OrigAlign);
+  // Check isVolatile(), setVolatile().
+  EXPECT_EQ(RMW->isVolatile(), LLVMRMW->isVolatile());
+  bool OrigV = RMW->isVolatile();
+  bool NewV = true;
+  EXPECT_NE(NewV, OrigV);
+  RMW->setVolatile(NewV);
+  EXPECT_EQ(RMW->isVolatile(), NewV);
+  RMW->setVolatile(OrigV);
+  EXPECT_EQ(RMW->isVolatile(), OrigV);
+  // Check getOrdering(), setOrdering().
+  EXPECT_EQ(RMW->getOrdering(), LLVMRMW->getOrdering());
+  auto OldOrdering = RMW->getOrdering();
+  auto NewOrdering = AtomicOrdering::Monotonic;
+  EXPECT_NE(NewOrdering, OldOrdering);
+  RMW->setOrdering(NewOrdering);
+  EXPECT_EQ(RMW->getOrdering(), NewOrdering);
+  RMW->setOrdering(OldOrdering);
+  EXPECT_EQ(RMW->getOrdering(), OldOrdering);
+  // Check getSyncScopeID(), setSyncScopeID().
+  EXPECT_EQ(RMW->getSyncScopeID(), LLVMRMW->getSyncScopeID());
+  auto OrigSSID = RMW->getSyncScopeID();
+  SyncScope::ID NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  RMW->setSyncScopeID(NewSSID);
+  EXPECT_EQ(RMW->getSyncScopeID(), NewSSID);
+  RMW->setSyncScopeID(OrigSSID);
+  EXPECT_EQ(RMW->getSyncScopeID(), OrigSSID);
+  // Check getPointerOperand().
+  EXPECT_EQ(RMW->getPointerOperand(),
+            Ctx.getValue(LLVMRMW->getPointerOperand()));
+  // Check getValOperand().
+  EXPECT_EQ(RMW->getValOperand(), Ctx.getValue(LLVMRMW->getValOperand()));
+  // Check getPointerAddressSpace().
+  EXPECT_EQ(RMW->getPointerAddressSpace(), LLVMRMW->getPointerAddressSpace());
+  // Check isFloatingPointOperation().
+  EXPECT_EQ(RMW->isFloatingPointOperation(),
+            LLVMRMW->isFloatingPointOperation());
+
+  Align Align(1024);
+  auto Ordering = AtomicOrdering::Acquire;
+  auto SSID = SyncScope::System;
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
+            sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
+            /*WhereIt=*/Ret->getIterator(),
+            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicRMW1"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getOrdering(), Ordering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getValOperand().
+    EXPECT_EQ(NewI->getValOperand(), Arg);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicRMW1");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
+            sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
+            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicRMW2"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getOrdering(), Ordering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getValOperand().
+    EXPECT_EQ(NewI->getValOperand(), Arg);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicRMW2");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
+            sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
+            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicRMW3"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getOrdering(), Ordering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getValOperand().
+    EXPECT_EQ(NewI->getValOperand(), Arg);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicRMW3");
+#endif // NDEBUG
+  }
+}
+
 TEST_F(SandboxIRTest, AtomicCmpXchgInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %cmp, i8 %new) {

@@ -132,6 +132,7 @@ class BitCastInst;
 class AllocaInst;
 class UnaryOperator;
 class BinaryOperator;
+class AtomicRMWInst;
 class AtomicCmpXchgInst;
 
 /// Iterator for the `Use` edges of a User's operands.
@@ -253,6 +254,7 @@ protected:
   friend class GetElementPtrInst;  // For getting `Val`.
   friend class UnaryOperator;      // For getting `Val`.
   friend class BinaryOperator;     // For getting `Val`.
+  friend class AtomicRMWInst;      // For getting `Val`.
   friend class AtomicCmpXchgInst;  // For getting `Val`.
   friend class AllocaInst;         // For getting `Val`.
   friend class CastInst;           // For getting `Val`.
@@ -636,6 +638,7 @@ protected:
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
   friend class BinaryOperator;     // For getTopmostLLVMInstruction().
+  friend class AtomicRMWInst;      // For getTopmostLLVMInstruction().
   friend class AtomicCmpXchgInst;  // For getTopmostLLVMInstruction().
   friend class AllocaInst;         // For getTopmostLLVMInstruction().
   friend class CastInst;           // For getTopmostLLVMInstruction().
@@ -1559,6 +1562,77 @@ public:
   void swapOperands() { swapOperandsInternal(0, 1); }
 };
 
+class AtomicRMWInst : public SingleLLVMInstructionImpl<llvm::AtomicRMWInst> {
+  AtomicRMWInst(llvm::AtomicRMWInst *Atomic, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::AtomicRMW,
+                                  Instruction::Opcode::AtomicRMW, Atomic, Ctx) {
+  }
+  friend class Context; // For constructor.
+
+public:
+  using BinOp = llvm::AtomicRMWInst::BinOp;
+  BinOp getOperation() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getOperation();
+  }
+  static StringRef getOperationName(BinOp Op) {
+    return llvm::AtomicRMWInst::getOperationName(Op);
+  }
+  static bool isFPOperation(BinOp Op) {
+    return llvm::AtomicRMWInst::isFPOperation(Op);
+  }
+  void setOperation(BinOp Op) {
+    cast<llvm::AtomicRMWInst>(Val)->setOperation(Op);
+  }
+  Align getAlign() const { return cast<llvm::AtomicRMWInst>(Val)->getAlign(); }
+  void setAlignment(Align Align);
+  bool isVolatile() const {
+    return cast<llvm::AtomicRMWInst>(Val)->isVolatile();
+  }
+  void setVolatile(bool V);
+  AtomicOrdering getOrdering() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getOrdering();
+  }
+  void setOrdering(AtomicOrdering Ordering);
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getSyncScopeID();
+  }
+  void setSyncScopeID(SyncScope::ID SSID);
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<AtomicRMWInst *>(this)->getPointerOperand();
+  }
+  Value *getValOperand();
+  const Value *getValOperand() const {
+    return const_cast<AtomicRMWInst *>(this)->getValOperand();
+  }
+  unsigned getPointerAddressSpace() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getPointerAddressSpace();
+  }
+  bool isFloatingPointOperation() const {
+    return cast<llvm::AtomicRMWInst>(Val)->isFloatingPointOperation();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::AtomicRMW;
+  }
+
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               BBIterator WhereIt, BasicBlock *WhereBB,
+                               Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               Instruction *InsertBefore, Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               BasicBlock *InsertAtEnd, Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+};
+
 class AtomicCmpXchgInst
     : public SingleLLVMInstructionImpl<llvm::AtomicCmpXchgInst> {
   AtomicCmpXchgInst(llvm::AtomicCmpXchgInst *Atomic, Context &Ctx)
@@ -2007,6 +2081,8 @@ protected:
   friend UnaryOperator; // For createUnaryOperator()
   BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
   friend BinaryOperator; // For createBinaryOperator()
+  AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
+  friend AtomicRMWInst; // For createAtomicRMWInst()
   AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
   friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
   AllocaInst *createAllocaInst(llvm::AllocaInst *I);
