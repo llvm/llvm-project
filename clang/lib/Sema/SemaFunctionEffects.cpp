@@ -25,12 +25,13 @@ namespace {
 
 enum class ViolationID : uint8_t {
   None = 0, // Sentinel for an empty Violation.
-  Throws,
-  Catches,
-  CallsObjC,
-  AllocatesMemory,
-  HasStaticLocal,
-  AccessesThreadLocal,
+  // These first few map to a %select{} in a diagnostic.
+  BaseDiagnosticIndex,
+  AllocatesMemory = BaseDiagnosticIndex,
+  ThrowsOrCatchesExceptions,
+  HasStaticLocalVariable,
+  AccessesThreadLocalVariable,
+  AccessesObjCMethodOrProperty,
 
   // These only apply to callees, where the analysis stops at the Decl.
   DeclDisallowsInference,
@@ -60,6 +61,10 @@ struct Violation {
       : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {
     if (CalleeEffect != nullptr)
       CalleeEffectPreventingInference = *CalleeEffect;
+  }
+
+  unsigned diagnosticSelectIndex() const {
+    return unsigned(ID) - unsigned(ViolationID::BaseDiagnosticIndex);
   }
 };
 
@@ -664,27 +669,12 @@ private:
         llvm_unreachable("Unexpected violation kind");
         break;
       case ViolationID::AllocatesMemory:
-        S.Diag(Viol1.Loc, diag::warn_func_effect_allocates) << effectName;
-        MaybeAddTemplateNote(CInfo.CDecl);
-        break;
-      case ViolationID::Throws:
-      case ViolationID::Catches:
-        S.Diag(Viol1.Loc, diag::warn_func_effect_throws_or_catches)
-            << effectName;
-        MaybeAddTemplateNote(CInfo.CDecl);
-        break;
-      case ViolationID::HasStaticLocal:
-        S.Diag(Viol1.Loc, diag::warn_func_effect_has_static_local)
-            << effectName;
-        MaybeAddTemplateNote(CInfo.CDecl);
-        break;
-      case ViolationID::AccessesThreadLocal:
-        S.Diag(Viol1.Loc, diag::warn_func_effect_uses_thread_local)
-            << effectName;
-        MaybeAddTemplateNote(CInfo.CDecl);
-        break;
-      case ViolationID::CallsObjC:
-        S.Diag(Viol1.Loc, diag::warn_func_effect_calls_objc) << effectName;
+      case ViolationID::ThrowsOrCatchesExceptions:
+      case ViolationID::HasStaticLocalVariable:
+      case ViolationID::AccessesThreadLocalVariable:
+      case ViolationID::AccessesObjCMethodOrProperty:
+        S.Diag(Viol1.Loc, diag::warn_func_effect_violation)
+            << effectName << Viol1.diagnosticSelectIndex();
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
@@ -754,23 +744,12 @@ private:
                 << effectName;
             break;
           case ViolationID::AllocatesMemory:
-            S.Diag(Viol2.Loc, diag::note_func_effect_allocates) << effectName;
-            break;
-          case ViolationID::Throws:
-          case ViolationID::Catches:
-            S.Diag(Viol2.Loc, diag::note_func_effect_throws_or_catches)
-                << effectName;
-            break;
-          case ViolationID::HasStaticLocal:
-            S.Diag(Viol2.Loc, diag::note_func_effect_has_static_local)
-                << effectName;
-            break;
-          case ViolationID::AccessesThreadLocal:
-            S.Diag(Viol2.Loc, diag::note_func_effect_uses_thread_local)
-                << effectName;
-            break;
-          case ViolationID::CallsObjC:
-            S.Diag(Viol2.Loc, diag::note_func_effect_calls_objc) << effectName;
+          case ViolationID::ThrowsOrCatchesExceptions:
+          case ViolationID::HasStaticLocalVariable:
+          case ViolationID::AccessesThreadLocalVariable:
+          case ViolationID::AccessesObjCMethodOrProperty:
+            S.Diag(Viol2.Loc, diag::note_func_effect_violation)
+                << effectName << Viol2.diagnosticSelectIndex();
             break;
           case ViolationID::CallsDeclWithoutEffect:
             MaybeNextCallee.emplace(*Viol2.Callee);
@@ -952,37 +931,43 @@ private:
 
     bool VisitCXXThrowExpr(CXXThrowExpr *Throw) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
-                                ViolationID::Throws, Throw->getThrowLoc());
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Throw->getThrowLoc());
       return true;
     }
 
     bool VisitCXXCatchStmt(CXXCatchStmt *Catch) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
-                                ViolationID::Catches, Catch->getCatchLoc());
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Catch->getCatchLoc());
       return true;
     }
 
     bool VisitObjCAtThrowStmt(ObjCAtThrowStmt *Throw) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
-                                ViolationID::Throws, Throw->getThrowLoc());
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Throw->getThrowLoc());
       return true;
     }
 
     bool VisitObjCAtCatchStmt(ObjCAtCatchStmt *Catch) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
-                                ViolationID::Catches, Catch->getAtCatchLoc());
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Catch->getAtCatchLoc());
       return true;
     }
 
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
-                                ViolationID::CallsObjC, Msg->getBeginLoc());
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                Msg->getBeginLoc());
       return true;
     }
 
     bool VisitSEHExceptStmt(SEHExceptStmt *Exc) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
-                                ViolationID::Catches, Exc->getExceptLoc());
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Exc->getExceptLoc());
       return true;
     }
 
@@ -1018,7 +1003,7 @@ private:
 
       if (Var->isStaticLocal())
         diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeStaticLocalVars,
-                                  ViolationID::HasStaticLocal,
+                                  ViolationID::HasStaticLocalVariable,
                                   Var->getLocation());
 
       const QualType::DestructionKind DK =
@@ -1106,7 +1091,7 @@ private:
           // At least on macOS, thread-local variables are initialized on
           // first access, including a heap allocation.
           diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThreadLocalVars,
-                                    ViolationID::AccessesThreadLocal,
+                                    ViolationID::AccessesThreadLocalVariable,
                                     E->getLocation());
         }
       }

@@ -121,7 +121,7 @@ void nb8c()
 		friend Stringy operator+(const Stringy& x, const Stringy& y)
 		{
 			// Do something inferably unsafe
-			auto* z = new char[42]; // expected-note {{function cannot be inferred 'nonblocking' because it allocates/deallocates memory}}
+			auto* z = new char[42]; // expected-note {{function cannot be inferred 'nonblocking' because it allocates or deallocates memory}}
 			return {};
 		}
 	};

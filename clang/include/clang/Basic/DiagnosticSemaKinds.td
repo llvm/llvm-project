@@ -10945,39 +10945,22 @@ def warn_imp_cast_drops_unaligned : Warning<
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
 // Function effects
-def warn_func_effect_allocates : Warning<
-  "'%0' function must not allocate or deallocate memory">,
+def warn_func_effect_violation : Warning<
+  "'%0' function must not %select{allocate or deallocate memory|throw or catch exceptions|"
+  "have static local variables|use thread-local variables|access ObjC methods or properties}1">,
   InGroup<FunctionEffects>;
-def note_func_effect_allocates : Note<
-  "function cannot be inferred '%0' because it allocates/deallocates memory">;
-def warn_func_effect_throws_or_catches : Warning<
-  "'%0' function must not throw or catch exceptions">,
-  InGroup<FunctionEffects>;
-def note_func_effect_throws_or_catches : Note<
-  "function cannot be inferred '%0' because it throws or catches exceptions">;
-def warn_func_effect_has_static_local : Warning<
-  "'%0' function must not have static local variables">,
-  InGroup<FunctionEffects>;
-def note_func_effect_has_static_local : Note<
-  "function cannot be inferred '%0' because it has a static local variable">;
-def warn_func_effect_uses_thread_local : Warning<
-  "'%0' function must not use thread-local variables">,
-  InGroup<FunctionEffects>;
-def note_func_effect_uses_thread_local : Note<
-  "function cannot be inferred '%0' because it uses a thread-local variable">;
-def warn_func_effect_calls_objc : Warning<
-  "'%0' function must not access an ObjC method or property">,
-  InGroup<FunctionEffects>;
-def note_func_effect_calls_objc : Note<
-  "function cannot be inferred '%0' because it accesses an ObjC method or property">;
+def note_func_effect_violation : Note<
+  "function cannot be inferred '%0' because it %select{allocates or deallocates memory|"
+  "throws or catches exceptions|has a static local variable|uses a thread-local variable|"
+  "accesses an ObjC method or property}1">;
 def warn_func_effect_calls_func_without_effect : Warning<
   "'%0' function must not call non-'%0' function '%1'">,
   InGroup<FunctionEffects>;
+def note_func_effect_calls_func_without_effect : Note<
+  "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
 def warn_func_effect_calls_expr_without_effect : Warning<
   "'%0' function must not call non-'%0' expression">,
   InGroup<FunctionEffects>;
-def note_func_effect_calls_func_without_effect : Note<
-  "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
 def note_func_effect_call_extern : Note<
   "declaration cannot be inferred '%0' because it has no definition in this translation unit">;
 def note_func_effect_call_disallows_inference : Note<
