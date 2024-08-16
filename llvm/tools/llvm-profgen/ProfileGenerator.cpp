@@ -1291,7 +1291,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // and will be inferred by the compiler.
   for (auto &I : FrameSamples) {
     for (auto *FunctionProfile : I.second) {
-      for (auto &Probe : I.first->getProbes()) {
+      for (const MCDecodedPseudoProbe &Probe : I.first->getProbes()) {
         FunctionProfile->addBodySamples(Probe.getIndex(),
                                         Probe.getDiscriminator(), 0);
       }

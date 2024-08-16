@@ -224,15 +224,21 @@ public:
     return llvm::make_range(getIt(From), getIt(To));
   }
   // Returns range of probes with given \p Address.
-  auto find(uint64_t Address) const { return find(Address, Address + 1); }
+  auto find(uint64_t Address) const {
+    auto FromIt = getIt(Address);
+    if (FromIt == end())
+      return llvm::make_range(end(), end());
+    auto ToIt = getIt(Address + 1);
+    return llvm::make_range(FromIt, ToIt);
+  }
 };
 
 template <typename ProbesType, typename DerivedProbeInlineTreeType,
-          typename ChildrenType>
+          typename InlinedProbeTreeMap>
 class MCPseudoProbeInlineTreeBase {
 protected:
   // Track children (e.g. inlinees) of current context
-  ChildrenType Children;
+  InlinedProbeTreeMap Children;
   // Set of probes that come with the function.
   ProbesType Probes;
   MCPseudoProbeInlineTreeBase() {
@@ -247,13 +253,12 @@ public:
 
   // Root node has a GUID 0.
   bool isRoot() const { return Guid == 0; }
-  ChildrenType &getChildren() { return Children; }
-  const ChildrenType &getChildren() const { return Children; }
-  ProbesType &getProbes() { return Probes; }
+  InlinedProbeTreeMap &getChildren() { return Children; }
+  const InlinedProbeTreeMap &getChildren() const { return Children; }
   const ProbesType &getProbes() const { return Probes; }
   // Caller node of the inline site
   MCPseudoProbeInlineTreeBase<ProbesType, DerivedProbeInlineTreeType,
-                              ChildrenType> *Parent = nullptr;
+                              InlinedProbeTreeMap> *Parent = nullptr;
   DerivedProbeInlineTreeType *getOrAddNode(const InlineSite &Site) {
     auto Ret = Children.emplace(
         Site, std::make_unique<DerivedProbeInlineTreeType>(Site));
@@ -298,6 +303,7 @@ class MCDecodedPseudoProbeInlineTree
           MutableArrayRef<MCDecodedPseudoProbeInlineTree>> {
   uint32_t NumProbes = 0;
   uint32_t ProbeId = 0;
+
 public:
   MCDecodedPseudoProbeInlineTree() = default;
   MCDecodedPseudoProbeInlineTree(const InlineSite &Site,
