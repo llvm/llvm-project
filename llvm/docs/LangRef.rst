@@ -19648,8 +19648,7 @@ Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
 ``%scalable``, here are the constraints on the returned value:
 - If ``%cnt`` equals to 0, returns 0.
 - The returned value is always less or equal to ``%max_lanes``.
-- The returned value is always larger or equal to
-  ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
+- The returned value is always larger or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
   - This implies that if ``%cnt`` is non-zero, the result should be non-zero
     as well.
   - This also implies that if ``%cnt`` is less than ``%max_lanes``, it has to
