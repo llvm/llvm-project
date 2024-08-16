@@ -33,7 +33,7 @@ class KernelInfo {
                    OptimizationRemarkEmitter &ORE);
 
 public:
-  static KernelInfo getKernelInfo(Function &F, FunctionAnalysisManager &FAM);
+  static void emitKernelInfo(Function &F, FunctionAnalysisManager &FAM);
 
   /// Whether the function has external linkage and is not a kernel function.
   bool ExternalNotKernel = false;
@@ -359,8 +359,7 @@ static std::optional<int64_t> parseNVPTXMDNodeAsInteger(Function &F,
   return Result;
 }
 
-KernelInfo KernelInfo::getKernelInfo(Function &F,
-                                     FunctionAnalysisManager &FAM) {
+void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM) {
   KernelInfo KI;
   KI.FlatAddrspace = FAM.getResult<TargetIRAnalysis>(F).getFlatAddressSpace();
 
@@ -415,11 +414,11 @@ KernelInfo KernelInfo::getKernelInfo(Function &F,
   REMARK_PROPERTY(FlatAddrspaceAccesses);
 #undef REMARK_PROPERTY
 
-  return KI;
+  return;
 }
 
 PreservedAnalyses KernelInfoPrinter::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  KernelInfo::getKernelInfo(F, AM);
+  KernelInfo::emitKernelInfo(F, AM);
   return PreservedAnalyses::all();
 }
