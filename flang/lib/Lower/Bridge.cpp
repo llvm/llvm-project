@@ -4273,18 +4273,18 @@ private:
         // Special case if the rhs is a constant.
         if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
           builder.create<cuf::DataTransferOp>(
-              loc, base, lhsVal, mlir::ValueRange{}, transferKindAttr);
+              loc, base, lhsVal, /*shape=*/mlir::Value{}, transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
           builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                              mlir::ValueRange{},
+                                              /*shape=*/mlir::Value{},
                                               transferKindAttr);
           builder.create<hlfir::EndAssociateOp>(loc, associate);
         }
       } else {
         builder.create<cuf::DataTransferOp>(
-            loc, rhsVal, lhsVal, mlir::ValueRange{}, transferKindAttr);
+            loc, rhsVal, lhsVal, /*shape=*/mlir::Value{}, transferKindAttr);
       }
       return;
     }
@@ -4294,7 +4294,8 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
       builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
-                                          mlir::ValueRange{}, transferKindAttr);
+                                          /*shape=*/mlir::Value{},
+                                          transferKindAttr);
       return;
     }
 
@@ -4304,7 +4305,8 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
       builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
-                                          mlir::ValueRange{}, transferKindAttr);
+                                          /*shape=*/mlir::Value{},
+                                          transferKindAttr);
       return;
     }
     llvm_unreachable("Unhandled CUDA data transfer");
@@ -4348,7 +4350,7 @@ private:
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
           builder.create<cuf::DataTransferOp>(
-              loc, addr, temp, mlir::ValueRange{}, transferKindAttr);
+              loc, addr, temp, /*shape=*/mlir::Value{}, transferKindAttr);
           ++nbDeviceResidentObject;
         }
       }
@@ -4445,9 +4447,7 @@ private:
         !userDefinedAssignment) {
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
-      llvm::errs() << rhs << "\n";
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      llvm::errs() << lhs << "\n";
       if (isCUDATransfer && !hasCUDAImplicitTransfer)
         genCUDADataTransfer(builder, loc, assign, lhs, rhs);
       else
