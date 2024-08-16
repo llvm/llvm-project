@@ -61,6 +61,21 @@ define i32 @ashr_lshr2(i32 %x, i32 %y) {
   ret i32 %ret
 }
 
+define i128 @ashr_lshr2_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: @ashr_lshr2_i128(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i128 [[X:%.*]], 5
+; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i128 [[X]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i128 [[L]], i128 [[R]]
+; CHECK-NEXT:    ret i128 [[RET]]
+;
+  %cmp = icmp sgt i128 %x, 5
+  %l = lshr i128 %x, %y
+  %r = ashr exact i128 %x, %y
+  %ret = select i1 %cmp, i128 %l, i128 %r
+  ret i128 %ret
+}
+
 define <2 x i32> @ashr_lshr_splat_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec(
 ; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
