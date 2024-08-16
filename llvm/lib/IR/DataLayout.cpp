@@ -449,8 +449,9 @@ Error DataLayout::parseSpecification(StringRef Spec) {
 
   // The rest of the specifiers are single-character.
   assert(!Spec.empty() && "Empty specification is handled by the caller");
+  char Specifier = Spec.front();
 
-  if (Spec.front() == 'p')
+  if (Specifier == 'p')
     return parsePointerSpec(Spec);
 
   // Split at ':'.
