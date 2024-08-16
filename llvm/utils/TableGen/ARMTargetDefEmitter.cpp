@@ -38,8 +38,8 @@ static void CheckFeatureTree(Record *Root) {
   std::set<Record *> SeenFeats;
   CollectImpliedFeatures(SeenFeats, Root);
 
-  // For processors, check that each of the mandatory (implied) features which
-  // is an ExtensionWithMArch is also enabled by default.
+  // Check that each of the mandatory (implied) features which is an
+  // ExtensionWithMArch is also enabled by default.
   auto DefaultExtsVec = Root->getValueAsListOfDefs("DefaultExts");
   std::set<Record *> DefaultExts{DefaultExtsVec.begin(), DefaultExtsVec.end()};
   for (auto *Feat : SeenFeats) {
