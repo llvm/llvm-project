@@ -206,8 +206,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
   const size_t Target = Code.size();
   LabelOffsets.insert({Label, Target});
 
-  if (auto It = LabelRelocs.find(Label);
-      It != LabelRelocs.end()) {
+  if (auto It = LabelRelocs.find(Label); It != LabelRelocs.end()) {
     for (unsigned Reloc : It->second) {
       using namespace llvm::support;
 
@@ -228,8 +227,7 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   assert(aligned(Position));
 
   // If target is known, compute jump offset.
-  if (auto It = LabelOffsets.find(Label);
-      It != LabelOffsets.end())
+  if (auto It = LabelOffsets.find(Label); It != LabelOffsets.end())
     return It->second - Position;
 
   // Otherwise, record relocation and return dummy offset.
@@ -308,7 +306,8 @@ void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
 }
 
 template <typename... Tys>
-bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
+bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
+                             const SourceInfo &SI) {
   bool Success = true;
 
   // The opcode is followed by arguments. The source info is
