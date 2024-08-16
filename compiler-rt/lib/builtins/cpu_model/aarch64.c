@@ -45,7 +45,7 @@ _Bool __aarch64_have_lse_atomics
 #elif defined(__ANDROID__)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/android.inc"
-#elif __has_include(<sys/auxv.h>)
+#elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/getauxval.inc"
 #else
@@ -73,7 +73,7 @@ struct {
 #elif defined(__ANDROID__)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/android.inc"
-#elif __has_include(<sys/auxv.h>)
+#elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/getauxval.inc"
 #else
