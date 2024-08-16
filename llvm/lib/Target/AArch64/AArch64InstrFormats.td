@@ -5974,7 +5974,6 @@ multiclass SIMDThreeSameVectorB<bit U, bits<5> opc, string asm,
           (OpNode (v16i8 V128:$Rn), (v16i8 V128:$Rm)))]>;
 }
 
-// As above, but only floating point elements supported.
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDThreeSameVectorFP<bit U, bit S, bits<3> opc,
                                  string asm, SDPatternOperator OpNode> {
