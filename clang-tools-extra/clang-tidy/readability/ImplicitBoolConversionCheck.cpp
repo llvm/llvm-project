@@ -39,22 +39,14 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
 }
 
 StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
-                                             QualType Type, ASTContext &Context,
-                                             bool UseUpperCaseLiteralSuffix) {
+                                             QualType Type,
+                                             ASTContext &Context) {
   switch (CastExprKind) {
-  case CK_IntegralToBoolean: {
-    if (Type->isUnsignedIntegerType())
-      return UseUpperCaseLiteralSuffix ? "0U" : "0u";
+  case CK_IntegralToBoolean:
+    return Type->isUnsignedIntegerType() ? "0u" : "0";
 
-    return "0";
-  }
-
-  case CK_FloatingToBoolean: {
-    if (Context.hasSameType(Type, Context.FloatTy)) {
-      return UseUpperCaseLiteralSuffix ? "0.0F" : "0.0f";
-    }
-    return "0.0";
-  }
+  case CK_FloatingToBoolean:
+    return Context.hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
@@ -121,9 +113,13 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
     EndLocInsertion += " != ";
   }
 
-  EndLocInsertion += getZeroLiteralToCompareWithForType(
-      Cast->getCastKind(), SubExpr->getType(), Context,
-      UseUpperCaseLiteralSuffix);
+  const StringRef ZeroLiteral = getZeroLiteralToCompareWithForType(
+      Cast->getCastKind(), SubExpr->getType(), Context);
+
+  if (UseUpperCaseLiteralSuffix)
+    EndLocInsertion += ZeroLiteral.upper();
+  else
+    EndLocInsertion += ZeroLiteral;
 
   if (NeedOuterParens) {
     EndLocInsertion += ")";
@@ -202,8 +198,7 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 }
 
 StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                                      QualType DestType, ASTContext &Context,
-                                      bool UseUpperCaseLiteralSuffix) {
+                                      QualType DestType, ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -213,19 +208,13 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
 
   if (DestType->isFloatingType()) {
     if (Context.hasSameType(DestType, Context.FloatTy)) {
-      if (BoolLiteral->getValue())
-        return UseUpperCaseLiteralSuffix ? "1.0F" : "1.0f";
-
-      return UseUpperCaseLiteralSuffix ? "0.0F" : "0.0f";
+      return BoolLiteral->getValue() ? "1.0f" : "0.0f";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
   if (DestType->isUnsignedIntegerType()) {
-    if (BoolLiteral->getValue())
-      return UseUpperCaseLiteralSuffix ? "1U" : "1u";
-
-    return UseUpperCaseLiteralSuffix ? "0U" : "0u";
+    return BoolLiteral->getValue() ? "1u" : "0u";
   }
   return BoolLiteral->getValue() ? "1" : "0";
 }
@@ -413,9 +402,16 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
-    Diag << tooling::fixit::createReplacement(
-        *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context,
-                                           UseUpperCaseLiteralSuffix));
+
+    const auto EquivalentForBoolLiteral =
+        getEquivalentForBoolLiteral(BoolLiteral, DestType, Context);
+    if (UseUpperCaseLiteralSuffix) {
+      Diag << tooling::fixit::createReplacement(
+          *Cast, EquivalentForBoolLiteral.upper());
+    } else {
+      Diag << tooling::fixit::createReplacement(*Cast,
+                                                EquivalentForBoolLiteral);
+    }
   } else {
     fixGenericExprCastFromBool(Diag, Cast, Context, DestType.getAsString());
   }

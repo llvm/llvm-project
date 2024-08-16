@@ -137,14 +137,13 @@ Options
 .. option::  UseUpperCaseLiteralSuffix
 
    When `true`, the replacements will use an uppercase literal suffix in the
-   provided fixes.
+   provided fixes. Default a lowercase literal suffix is used.
 
-Example
-^^^^^^^
+    Example
 
-.. code-block:: c++
+    .. code-block:: c++
 
-  uint32_t foo;
-  if (foo) {}
-  // ^ propose replacement default: if (foo != 0u) {}
-  // ^ propose replacement with option `UseUpperCaseLiteralSuffix`: if (foo != 0U) {}
+      uint32_t foo;
+      if (foo) {}
+      // ^ propose replacement default: if (foo != 0u) {}
+      // ^ propose replacement with option `UseUpperCaseLiteralSuffix`: if (foo != 0U) {}
