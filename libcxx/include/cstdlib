@@ -63,11 +63,11 @@ long        abs(     long j);
 long long   abs(long long j);                                             // C++0X
 long       labs(     long j);
 long long llabs(long long j);                                             // C99
-div_t     div(      int numer,       int denom);
-ldiv_t    div(     long numer,      long denom);
-lldiv_t   div(long long numer, long long denom);                          // C++0X
-ldiv_t   ldiv(     long numer,      long denom);
-lldiv_t lldiv(long long numer, long long denom);                          // C99
+constexpr div_t     div(      int numer,       int denom);
+constexpr ldiv_t    div(     long numer,      long denom);
+constexpr lldiv_t   div(long long numer, long long denom);                          // C++0X
+constexpr ldiv_t   ldiv(     long numer,      long denom);
+constexpr lldiv_t lldiv(long long numer, long long denom);                          // C99
 int mblen(const char* s, size_t n);
 int mbtowc(wchar_t* restrict pwc, const char* restrict s, size_t n);
 int wctomb(char* s, wchar_t wchar);
