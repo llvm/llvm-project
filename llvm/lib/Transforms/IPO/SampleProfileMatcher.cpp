@@ -36,6 +36,12 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
     cl::desc("The minimum number of call anchors required for a function to "
              "run stale profile call graph matching."));
 
+static cl::opt<bool> ReadToplevProfileforCGMatching(
+    "read-toplev-profile-for-cg-matching", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Read top-level profiles that the sample reader initially skips for "
+        "the call-graph matching(only meaningful for extended binary format)"));
+
 extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> SalvageUnusedProfile;
 extern cl::opt<bool> PersistProfileStaleness;
@@ -784,22 +790,19 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   const auto *FSFlattened = getFlattenedSamplesFor(ProfFunc);
   // With extbinary profile format, initial profile loading only reads profile
   // based on current function names in the module.
-  // However, if a function is renamed, sample loader fails to load its original
+  // However, if a function is renamed, sample loader skips to load its original
   // profile(which has a different name), we will miss this case. To address
   // this, we load the top-level profile candidate explicitly for the matching.
-  if (!FSFlattened) {
+  if (!FSFlattened && ReadToplevProfileforCGMatching) {
     DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
-    SampleProfileMap TopLevelProfile;
-    Reader.read(TopLevelFunc, TopLevelProfile);
-    assert(TopLevelProfile.size() <= 1 &&
-           "More than one profile is found for top-level function");
-    if (!TopLevelProfile.empty()) {
-      LLVM_DEBUG(dbgs() << "Read top-level function " << ProfFunc
-                        << " for call-graph matching\n");
-      auto &FS = TopLevelProfile.begin()->second;
-      FSFlattened =
-          &(FlattenedProfiles.create(FS.getContext()) = std::move(FS));
-    }
+    if (std::error_code EC = Reader.read(TopLevelFunc, FlattenedProfiles))
+      return false;
+    FSFlattened = getFlattenedSamplesFor(ProfFunc);
+    LLVM_DEBUG({
+      if (FSFlattened)
+        dbgs() << "Read top-level function " << ProfFunc
+               << " for call-graph matching\n";
+    });
   }
   if (!FSFlattened)
     return false;
@@ -901,8 +904,8 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
   // based on current function names in the module, so we need to load top-level
   // profiles for functions with different profile name explicitly after
   // function-profile name map is established with stale profile matching.
-  Reader.read(ProfileSalvagedFuncs, Reader.getProfiles());
-  Reader.setFuncNameToProfNameMap(FuncNameToProfNameMap);
+  Reader.read(ProfileSalvagedFuncs);
+  Reader.setFuncNameToProfNameMap(*FuncNameToProfNameMap);
 }
 
 void SampleProfileMatcher::runOnModule() {

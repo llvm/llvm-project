@@ -380,8 +380,17 @@ public:
     return sampleprof_error::success;
   }
 
-  /// Read sample profiles for the given functions. Currently it's only used
-  /// for extended binary format to load the profiles on-demand.
+  /// Read sample profiles for the given functions. Currently it's only used for
+  /// extended binary format to load the profiles on-demand.
+  std::error_code read(const DenseSet<StringRef> &FuncsToUse) {
+    if (std::error_code EC = read(FuncsToUse, Profiles))
+      return EC;
+    return sampleprof_error::success;
+  };
+
+  /// Read sample profiles for the given functions and write them to the given
+  /// profile map. Currently it's only used for extended binary format to load
+  /// the profiles on-demand.
   virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
                                SampleProfileMap &Profiles) {
     return sampleprof_error::not_implemented;
@@ -512,8 +521,8 @@ public:
   void setModule(const Module *Mod) { M = Mod; }
 
   void setFuncNameToProfNameMap(
-      HashKeyMap<std::unordered_map, FunctionId, FunctionId> *FPMap) {
-    FuncNameToProfNameMap = FPMap;
+      const HashKeyMap<std::unordered_map, FunctionId, FunctionId> &FPMap) {
+    FuncNameToProfNameMap = &FPMap;
   }
 
 protected:
@@ -547,7 +556,7 @@ protected:
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+  const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
       *FuncNameToProfNameMap = nullptr;
 
   // A map from a function's context hash to its meta data section range, used
@@ -557,6 +566,7 @@ protected:
 
   std::pair<const uint8_t *, const uint8_t *> LBRProfileSecRange;
 
+  /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
 
   /// \brief Whether samples are collected based on pseudo probes.
