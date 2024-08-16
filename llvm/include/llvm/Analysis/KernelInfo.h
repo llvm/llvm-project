@@ -29,12 +29,6 @@ class KernelInfo {
 public:
   static KernelInfo getKernelInfo(Function &F, FunctionAnalysisManager &FAM);
 
-  bool operator==(const KernelInfo &FPI) const {
-    return std::memcmp(this, &FPI, sizeof(KernelInfo)) == 0;
-  }
-
-  bool operator!=(const KernelInfo &FPI) const { return !(*this == FPI); }
-
   /// Whether the function has external linkage and is not a kernel function.
   bool ExternalNotKernel = false;
 
