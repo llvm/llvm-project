@@ -1289,7 +1289,7 @@ func.func @insertelement_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32
   %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<4xf32>
   return %1 : vector<4xf32>
 }
-// CHECK-LABEL: @insert_element_index(
+// CHECK-LABEL: @insertelement_index(
 //  CHECK-SAME: %[[A:.*]]: f32,
 //  CHECK-SAME: %[[B:.*]]: vector<4xf32>)
 //       CHECK:   %[[c:.*]] = arith.constant 3 : index
