@@ -1483,7 +1483,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Look for (and (sra y, c2), c1) where c1 is a shifted mask with c3
       // leading zeros and c4 trailing zeros. If c2 is greater than c3, we can
       // use (slli (srli (srai y, c2 - c3), c3 + c4), c4).
-      if (isShiftedMask_64(C1)) {
+      if (isShiftedMask_64(C1) && !Skip) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = llvm::countr_zero(C1);
         if (C2 > Leading && Trailing > 0) {
