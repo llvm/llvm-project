@@ -848,17 +848,17 @@ constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
   for (unsigned Idx = 0; Idx < Ops.size();) {
     const SCEV *Op = Ops[Idx];
     if (const auto *C = dyn_cast<SCEVConstant>(Op)) {
-      if (!HasConst) {
-        // Move the constant to the start.
-        std::swap(Ops[0], Ops[Idx]);
-        HasConst = true;
-      } else {
+      if (HasConst) {
         Ops[0] = SE.getConstant(
             Fold(cast<SCEVConstant>(Ops[0])->getAPInt(), C->getAPInt()));
         Ops.erase(Ops.begin() + Idx);
         // Revisit this index.
         continue;
       }
+
+      // Move the constant to the start, without changing order otherwise.
+      std::rotate(Ops.begin(), Ops.begin() + Idx, Ops.begin() + Idx + 1);
+      HasConst = true;
     }
     ++Idx;
   }
@@ -866,14 +866,16 @@ constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
   if (Ops.size() == 1)
     return Ops[0];
 
-  if (HasConst && IsIdentity(cast<SCEVConstant>(Ops[0])->getAPInt())) {
-    Ops.erase(Ops.begin());
-    HasConst = false;
+  if (HasConst) {
+    if (IsIdentity(cast<SCEVConstant>(Ops[0])->getAPInt())) {
+      Ops.erase(Ops.begin());
+      HasConst = false;
+      if (Ops.size() == 1)
+        return Ops[0];
+    } else if (IsAbsorber(cast<SCEVConstant>(Ops[0])->getAPInt())) {
+      return Ops[0];
+    }
   }
-
-  if (Ops.size() == 1 ||
-      (HasConst && IsAbsorber(cast<SCEVConstant>(Ops[0])->getAPInt())))
-    return Ops[0];
 
   GroupByComplexity(MutableArrayRef(Ops).drop_front(HasConst), &LI, DT);
   return nullptr;
