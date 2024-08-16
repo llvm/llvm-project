@@ -739,31 +739,23 @@ Error RISCVISAInfo::checkDependency() {
     return getError("'f' and 'zfinx' extensions are incompatible");
 
   if (HasZvl && !HasVector)
-    return getError(
-        "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
+    return getError(Twine("'") + "zvl*b" +
+                    "' requires 'v' or 'zve*' extension to also be specified");
 
-  if (Exts.count("zvbb") && !HasVector)
-    return getError(
-        "'zvbb' requires 'v' or 'zve*' extension to also be specified");
+  if (!HasVector)
+    for (auto Ext :
+         {"zvbb", "zvbc32e", "zvkb", "zvkg", "zvkgs", "zvkned", "zvknha", "zvksed", "zvksh"})
+      if (Exts.count(Ext))
+        return getError(
+            Twine("'") + Ext +
+            "' requires 'v' or 'zve*' extension to also be specified");
 
-  if (Exts.count("zvbc") && !Exts.count("zve64x"))
-    return getError(
-        "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
-
-  if (Exts.count("zvbc32e") && !Exts.count("zve32x"))
-    return getError(
-        "'zvbc32e' requires 'v' or 'zve*' extension to also be specified");
-
-  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkgs") ||
-       Exts.count("zvkned") || Exts.count("zvknha") || Exts.count("zvksed") ||
-       Exts.count("zvksh")) &&
-      !HasVector)
-    return getError(
-        "'zvk*' requires 'v' or 'zve*' extension to also be specified");
-
-  if (Exts.count("zvknhb") && !Exts.count("zve64x"))
-    return getError(
-        "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
+  if (!Exts.count("zve64x"))
+    for (auto Ext : {"zvknhb", "zvbc"})
+      if (Exts.count(Ext))
+        return getError(
+            Twine("'") + Ext +
+            "' requires 'v' or 'zve64*' extension to also be specified");
 
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
@@ -774,13 +766,12 @@ Error RISCVISAInfo::checkDependency() {
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
 
-  if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zaamo")))
-    return getError(
-        "'zacas' requires 'a' or 'zaamo' extension to also be specified");
-
-  if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zaamo")))
-    return getError(
-        "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+  if (!(Exts.count("a") || Exts.count("zaamo")))
+    for (auto Ext : {"zacas", "zabha"})
+      if (Exts.count(Ext))
+        return getError(
+            Twine("'") + Ext +
+            "' requires 'a' or 'zaamo' extension to also be specified");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
