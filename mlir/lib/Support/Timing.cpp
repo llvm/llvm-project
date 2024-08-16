@@ -527,6 +527,14 @@ void DefaultTimingManager::setOutput(std::unique_ptr<OutputStrategy> output) {
   out = std::move(output);
 }
 
+/// Change the output format.
+void DefaultTimingManager::setOutputFormat(OutputFormat outputFormat) {
+  if (outputFormat == OutputFormat::Text)
+    setOutput(std::make_unique<OutputTextStrategy>(llvm::errs()));
+  else if (outputFormat == OutputFormat::Json)
+    setOutput(std::make_unique<OutputJsonStrategy>(llvm::errs()));
+}
+
 /// Print and clear the timing results.
 void DefaultTimingManager::print() {
   if (impl->enabled) {

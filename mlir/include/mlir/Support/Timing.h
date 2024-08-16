@@ -430,6 +430,9 @@ public:
   /// Change the stream where the output will be printed to.
   void setOutput(std::unique_ptr<OutputStrategy> output);
 
+  /// Change the output format.
+  void setOutputFormat(OutputFormat format);
+
   /// Print and clear the timing results. Only call this when there are no more
   /// references to nested timers around, as printing post-processes and clears
   /// the timers.
