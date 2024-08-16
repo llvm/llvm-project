@@ -228,6 +228,8 @@ public:
     auto FromIt = getIt(Address);
     if (FromIt == end())
       return llvm::make_range(end(), end());
+    if (FromIt->get().getAddress() != Address)
+      return llvm::make_range(end(), end());
     auto ToIt = getIt(Address + 1);
     return llvm::make_range(FromIt, ToIt);
   }
