@@ -1627,3 +1627,29 @@ namespace DtorDestroysFieldsAfterSelf {
   static_assert(foo() == 15);
 }
 #endif
+
+namespace ExprWithCleanups {
+  struct A { A(); ~A(); int get(); };
+  constexpr int get() {return false ? A().get() : 1;}
+  static_assert(get() == 1, "");
+
+
+  struct S {
+    int V;
+    constexpr S(int V) : V(V) {}
+    constexpr int get() {
+      return V;
+    }
+  };
+  constexpr int get(bool b) {
+    S a = b ? S(1) : S(2);
+
+    return a.get();
+  }
+  static_assert(get(true) == 1, "");
+  static_assert(get(false) == 2, "");
+
+
+  constexpr auto F = true ? 1i : 2i;
+  static_assert(F == 1i, "");
+}
