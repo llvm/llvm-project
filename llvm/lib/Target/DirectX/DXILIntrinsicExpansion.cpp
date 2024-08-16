@@ -372,8 +372,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   if (Result) {
     Orig->replaceAllUsesWith(Result);
     Orig->eraseFromParent();
+    return true;
   }
-  return !!Result;
+  return false;
 }
 
 static bool expansionIntrinsics(Module &M) {
