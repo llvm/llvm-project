@@ -1247,7 +1247,6 @@ inline bool CanCUDASymbolHasSave(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
     if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned &&
         *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
       return false;
     }

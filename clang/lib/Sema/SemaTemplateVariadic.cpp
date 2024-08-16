@@ -825,12 +825,9 @@ bool Sema::CheckParameterPacksForExpansion(
   return false;
 }
 
-std::optional<unsigned> Sema::getNumArgumentsInExpansion(
-    QualType T, const MultiLevelTemplateArgumentList &TemplateArgs) {
-  QualType Pattern = cast<PackExpansionType>(T)->getPattern();
-  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseType(Pattern);
-
+std::optional<unsigned> Sema::getNumArgumentsInExpansionFromUnexpanded(
+    llvm::ArrayRef<UnexpandedParameterPack> Unexpanded,
+    const MultiLevelTemplateArgumentList &TemplateArgs) {
   std::optional<unsigned> Result;
   for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
     // Compute the depth and index for this parameter pack.
@@ -876,6 +873,14 @@ std::optional<unsigned> Sema::getNumArgumentsInExpansion(
   }
 
   return Result;
+}
+
+std::optional<unsigned> Sema::getNumArgumentsInExpansion(
+    QualType T, const MultiLevelTemplateArgumentList &TemplateArgs) {
+  QualType Pattern = cast<PackExpansionType>(T)->getPattern();
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseType(Pattern);
+  return getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
 }
 
 bool Sema::containsUnexpandedParameterPacks(Declarator &D) {

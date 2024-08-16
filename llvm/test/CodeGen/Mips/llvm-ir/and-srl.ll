@@ -6,8 +6,7 @@
 define i64 @foo(i64 noundef %a) {
 ; MIPS4-LABEL: foo:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:   sll    $1, $4, 0
-; MIPS4-NEXT:   srl    $1, $1, 2
+; MIPS4-NEXT:   dsrl   $1, $4, 2
 ; MIPS4-NEXT:   andi   $1, $1, 7
 ; MIPS4-NEXT:   daddiu $2, $zero, 1
 ; MIPS4-NEXT:   jr     $ra
@@ -15,8 +14,7 @@ define i64 @foo(i64 noundef %a) {
 ;
 ; MIPS64R2-LABEL: foo:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:   sll	  $1, $4, 0
-; MIPS64R2-NEXT:   ext	  $1, $1, 2, 3
+; MIPS64R2-NEXT:   dext	  $1, $4, 2, 3
 ; MIPS64R2-NEXT:   daddiu $2, $zero, 1
 ; MIPS64R2-NEXT:   jr     $ra
 ; MIPS64R2-NEXT:   dsllv  $2, $2, $1

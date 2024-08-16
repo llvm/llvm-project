@@ -1628,6 +1628,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
                       << "\n");
     assert(OffsetInfoMap.count(CurPtr) &&
            "The current pointer offset should have been seeded!");
+    assert(!OffsetInfoMap[CurPtr].isUnassigned() &&
+           "Current pointer should be assigned");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
@@ -1906,6 +1908,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
   };
   auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
     assert(OffsetInfoMap.count(OldU) && "Old use should be known already!");
+    assert(!OffsetInfoMap[OldU].isUnassigned() && "Old use should be assinged");
     if (OffsetInfoMap.count(NewU)) {
       LLVM_DEBUG({
         if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
@@ -1916,8 +1919,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       });
       return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
     }
-    OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
-    return true;
+    bool Unused;
+    return HandlePassthroughUser(NewU.get(), OldU.get(), Unused);
   };
   if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
                          /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
@@ -2327,8 +2330,8 @@ struct AANoFreeFloating : AANoFreeImpl {
             DepClassTy::REQUIRED, IsKnown);
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
-          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+      if (isa<GetElementPtrInst>(UserI) || isa<PHINode>(UserI) ||
+          isa<SelectInst>(UserI)) {
         Follow = true;
         return true;
       }
@@ -12357,7 +12360,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
     for (Function *NewCallee : AssumedCallees) {
-      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee)) {
+      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
+                                               AssumedCallees.size())) {
         SkippedAssumedCallees.push_back(NewCallee);
         SpecializedForAllCallees = false;
         continue;

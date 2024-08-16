@@ -560,6 +560,8 @@ set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TR
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 
+set(LLVM_HAS_LOGF128 "OFF" CACHE STRING "Use logf128 to constant fold fp128 logarithm calls. Can be ON, OFF, or FORCE_ON")
+
 set(LLVM_ENABLE_HTTPLIB "OFF" CACHE STRING "Use cpp-httplib HTTP server library if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
@@ -793,10 +795,6 @@ option(LLVM_BUILD_RUNTIME
 option(LLVM_BUILD_EXAMPLES
   "Build the LLVM example programs. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" ON)
-
-if(LLVM_BUILD_EXAMPLES)
-  add_compile_definitions(BUILD_EXAMPLES)
-endif(LLVM_BUILD_EXAMPLES)
 
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)

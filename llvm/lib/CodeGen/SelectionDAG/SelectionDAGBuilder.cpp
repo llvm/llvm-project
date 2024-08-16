@@ -2977,7 +2977,7 @@ void SelectionDAGBuilder::visitJumpTable(SwitchCG::JumpTable &JT) {
   // Emit the code for the jump table
   assert(JT.SL && "Should set SDLoc for SelectionDAG!");
   assert(JT.Reg != -1U && "Should lower JT Header first!");
-  EVT PTy = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+  EVT PTy = DAG.getTargetLoweringInfo().getJumpTableRegTy(DAG.getDataLayout());
   SDValue Index = DAG.getCopyFromReg(getControlRoot(), *JT.SL, JT.Reg, PTy);
   SDValue Table = DAG.getJumpTable(JT.JTI, PTy);
   SDValue BrJumpTable = DAG.getNode(ISD::BR_JT, *JT.SL, MVT::Other,
@@ -3005,12 +3005,13 @@ void SelectionDAGBuilder::visitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SwitchOp = DAG.getZExtOrTrunc(Sub, dl, TLI.getPointerTy(DAG.getDataLayout()));
+  SwitchOp =
+      DAG.getZExtOrTrunc(Sub, dl, TLI.getJumpTableRegTy(DAG.getDataLayout()));
 
   unsigned JumpTableReg =
-      FuncInfo.CreateReg(TLI.getPointerTy(DAG.getDataLayout()));
-  SDValue CopyTo = DAG.getCopyToReg(getControlRoot(), dl,
-                                    JumpTableReg, SwitchOp);
+      FuncInfo.CreateReg(TLI.getJumpTableRegTy(DAG.getDataLayout()));
+  SDValue CopyTo =
+      DAG.getCopyToReg(getControlRoot(), dl, JumpTableReg, SwitchOp);
   JT.Reg = JumpTableReg;
 
   if (!JTH.FallthroughUnreachable) {
@@ -6881,6 +6882,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::minimumnum:
+    setValue(&I, DAG.getNode(ISD::FMINIMUMNUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::maximumnum:
+    setValue(&I, DAG.getNode(ISD::FMAXIMUMNUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::copysign:
     setValue(&I, DAG.getNode(ISD::FCOPYSIGN, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -9254,6 +9267,18 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_fmaxf:
       case LibFunc_fmaxl:
         if (visitBinaryFloatCall(I, ISD::FMAXNUM))
+          return;
+        break;
+      case LibFunc_fminimum_num:
+      case LibFunc_fminimum_numf:
+      case LibFunc_fminimum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
+          return;
+        break;
+      case LibFunc_fmaximum_num:
+      case LibFunc_fmaximum_numf:
+      case LibFunc_fmaximum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
           return;
         break;
       case LibFunc_sin:
