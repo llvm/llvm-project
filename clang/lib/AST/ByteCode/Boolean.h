@@ -9,25 +9,25 @@
 #ifndef LLVM_CLANG_AST_INTERP_BOOLEAN_H
 #define LLVM_CLANG_AST_INTERP_BOOLEAN_H
 
-#include <cstddef>
-#include <cstdint>
 #include "Integral.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace clang {
 namespace interp {
 
 /// Wrapper around boolean types.
 class Boolean final {
- private:
+private:
   /// Underlying boolean.
   bool V;
 
- public:
+public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
   explicit Boolean(bool V) : V(V) {}
@@ -104,8 +104,7 @@ class Boolean final {
 
   static Boolean zero() { return from(false); }
 
-  template <typename T>
-  static Boolean from(T Value, unsigned NumBits) {
+  template <typename T> static Boolean from(T Value, unsigned NumBits) {
     return Boolean(Value);
   }
 
@@ -153,7 +152,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Boolean &B) {
   return OS;
 }
 
-}  // namespace interp
-}  // namespace clang
+} // namespace interp
+} // namespace clang
 
 #endif

@@ -91,7 +91,7 @@ public:
 
   /// Mutates a local copy of a parameter.
   template <typename T> void setParam(unsigned Offset, const T &Value) {
-     getParamPointer(Offset).deref<T>() = Value;
+    getParamPointer(Offset).deref<T>() = Value;
   }
 
   /// Returns a pointer to an argument - lazily creates a block.

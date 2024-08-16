@@ -13,8 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_PROGRAM_H
 #define LLVM_CLANG_AST_INTERP_PROGRAM_H
 
-#include <map>
-#include <vector>
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -24,6 +22,8 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
+#include <vector>
 
 namespace clang {
 class RecordDecl;
@@ -94,15 +94,14 @@ public:
 
   /// Creates a new function from a code range.
   template <typename... Ts>
-  Function *createFunction(const FunctionDecl *Def, Ts &&... Args) {
+  Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
     Def = Def->getCanonicalDecl();
     auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
     Funcs.insert({Def, std::unique_ptr<Function>(Func)});
     return Func;
   }
   /// Creates an anonymous function.
-  template <typename... Ts>
-  Function *createFunction(Ts &&... Args) {
+  template <typename... Ts> Function *createFunction(Ts &&...Args) {
     auto *Func = new Function(*this, std::forward<Ts>(Args)...);
     AnonFuncs.emplace_back(Func);
     return Func;
@@ -213,8 +212,7 @@ private:
   llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
-  template <typename... Ts>
-  Descriptor *allocateDescriptor(Ts &&... Args) {
+  template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {
     return new (Allocator) Descriptor(std::forward<Ts>(Args)...);
   }
 
@@ -232,9 +230,7 @@ private:
   }
 
   /// Ends a global declaration.
-  void endDeclaration() {
-    CurrentDeclaration = NoDeclaration;
-  }
+  void endDeclaration() { CurrentDeclaration = NoDeclaration; }
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

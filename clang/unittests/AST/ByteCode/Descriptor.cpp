@@ -1,6 +1,6 @@
-#include "../../../lib/AST/Interp/Descriptor.h"
-#include "../../../lib/AST/Interp/Context.h"
-#include "../../../lib/AST/Interp/Program.h"
+#include "../../../lib/AST/ByteCode/Descriptor.h"
+#include "../../../lib/AST/ByteCode/Context.h"
+#include "../../../lib/AST/ByteCode/Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,17 +15,17 @@ using namespace clang::ast_matchers;
 /// Inspect generated Descriptors as well as the pointers we create.
 ///
 TEST(Descriptor, Primitives) {
-  constexpr char Code[] =
-      "struct A { bool a; bool b; };\n"
-      "struct S {\n"
-      "  float f;\n"
-      "  char s[4];\n"
-      "  A a[3];\n"
-      "  short l[3][3];\n"
-      "  int EmptyA[0];\n"
-      "};\n"
-      "constexpr S d = {0.0, \"foo\", {{true, false}, {false, true}, {false, false}},\n"
-      "  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, {}};\n";
+  constexpr char Code[] = "struct A { bool a; bool b; };\n"
+                          "struct S {\n"
+                          "  float f;\n"
+                          "  char s[4];\n"
+                          "  A a[3];\n"
+                          "  short l[3][3];\n"
+                          "  int EmptyA[0];\n"
+                          "};\n"
+                          "constexpr S d = {0.0, \"foo\", {{true, false}, "
+                          "{false, true}, {false, false}},\n"
+                          "  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, {}};\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
