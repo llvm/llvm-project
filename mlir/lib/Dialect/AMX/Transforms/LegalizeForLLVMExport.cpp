@@ -76,7 +76,7 @@ Value getStride(ConversionPatternRewriter &rewriter,
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
 private:
   const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      &enablingAnalysis;
+      enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileZeroOp>::ConvertOpToLLVMPattern;
@@ -120,7 +120,7 @@ public:
 struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
 private:
   const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      &enablingAnalysis;
+      enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileLoadOp>::ConvertOpToLLVMPattern;
@@ -174,7 +174,7 @@ public:
 struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
 private:
   const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      &enablingAnalysis;
+      enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileStoreOp>::ConvertOpToLLVMPattern;
@@ -221,7 +221,7 @@ public:
 struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
 private:
   const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      &enablingAnalysis;
+      enablingAnalysis;
 
 public:
   using ConvertOpToLLVMPattern<TileMulFOp>::ConvertOpToLLVMPattern;
