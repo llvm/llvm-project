@@ -17,6 +17,8 @@ entry:
   call void @g(), !dbg !104
   ; CHECK: remark: test.c:18:5: in artificial function 'h', direct call to defined function, callee is artificial 'h'
   call void @h(), !dbg !105
+  ; CHECK: remark: test.c:24:5: in artificial function 'h', direct call to inline assembly, callee is 'asm sideeffect "eieio", ""'
+  call void asm sideeffect "eieio", ""(), !dbg !111
   %fnPtr = load ptr, ptr null, align 8
   ; CHECK: remark: test.c:19:5: in artificial function 'h', indirect call, callee is '%fnPtr'
   call void %fnPtr(), !dbg !106
@@ -29,6 +31,9 @@ gcont:
   ; CHECK: remark: test.c:22:5: in artificial function 'h', direct invoke to defined function, callee is artificial 'h'
   invoke void @h() to label %hcont unwind label %cleanup, !dbg !109
 hcont:
+  ; CHECK: remark: test.c:25:5: in artificial function 'h', direct invoke to inline assembly, callee is 'asm sideeffect "eieio", ""'
+  invoke void asm sideeffect "eieio", ""() to label %asmcont unwind label %cleanup, !dbg !112
+asmcont:
   ; CHECK: remark: test.c:23:5: in artificial function 'h', indirect invoke, callee is '%fnPtr'
   invoke void %fnPtr() to label %end unwind label %cleanup, !dbg !110
 cleanup:
@@ -38,10 +43,11 @@ cleanup:
 end:
   ret void
 }
-; CHECK: remark: test.c:13:0: in artificial function 'h', DirectCalls = 6
+; CHECK: remark: test.c:13:0: in artificial function 'h', DirectCalls = 8
 ; CHECK: remark: test.c:13:0: in artificial function 'h', IndirectCalls = 2
 ; CHECK: remark: test.c:13:0: in artificial function 'h', DirectCallsToDefinedFunctions = 4
-; CHECK: remark: test.c:13:0: in artificial function 'h', Invokes = 4
+; CHECK: remark: test.c:13:0: in artificial function 'h', InlineAssemblyCalls = 2
+; CHECK: remark: test.c:13:0: in artificial function 'h', Invokes = 5
 
 declare void @f()
 
@@ -53,6 +59,8 @@ entry:
   call void @g(), !dbg !203
   ; CHECK: remark: test.c:8:3: in function 'g', direct call to defined function, callee is artificial 'h'
   call void @h(), !dbg !204
+  ; CHECK: remark: test.c:14:3: in function 'g', direct call to inline assembly, callee is 'asm sideeffect "eieio", ""'
+  call void asm sideeffect "eieio", ""(), !dbg !210
   %fnPtr = load ptr, ptr null, align 8
   ; CHECK: remark: test.c:9:3: in function 'g', indirect call, callee is '%fnPtr'
   call void %fnPtr(), !dbg !205
@@ -65,6 +73,9 @@ gcont:
   ; CHECK: remark: test.c:12:3: in function 'g', direct invoke to defined function, callee is artificial 'h'
   invoke void @h() to label %hcont unwind label %cleanup, !dbg !208
 hcont:
+  ; CHECK: remark: test.c:15:3: in function 'g', direct invoke to inline assembly, callee is 'asm sideeffect "eieio", ""'
+  invoke void asm sideeffect "eieio", ""() to label %asmcont unwind label %cleanup, !dbg !211
+asmcont:
   ; CHECK: remark: test.c:13:3: in function 'g', indirect invoke, callee is '%fnPtr'
   invoke void %fnPtr() to label %end unwind label %cleanup, !dbg !209
 cleanup:
@@ -74,10 +85,11 @@ cleanup:
 end:
   ret void
 }
-; CHECK: remark: test.c:3:0: in function 'g', DirectCalls = 6
+; CHECK: remark: test.c:3:0: in function 'g', DirectCalls = 8
 ; CHECK: remark: test.c:3:0: in function 'g', IndirectCalls = 2
 ; CHECK: remark: test.c:3:0: in function 'g', DirectCallsToDefinedFunctions = 4
-; CHECK: remark: test.c:3:0: in function 'g', Invokes = 4
+; CHECK: remark: test.c:3:0: in function 'g', InlineAssemblyCalls = 2
+; CHECK: remark: test.c:3:0: in function 'g', Invokes = 5
 
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
@@ -99,6 +111,8 @@ end:
 !108 = !DILocation(line: 21, column: 5, scope: !103)
 !109 = !DILocation(line: 22, column: 5, scope: !103)
 !110 = !DILocation(line: 23, column: 5, scope: !103)
+!111 = !DILocation(line: 24, column: 5, scope: !103)
+!112 = !DILocation(line: 25, column: 5, scope: !103)
 
 !200 = distinct !DISubprogram(name: "g", scope: !2, file: !2, line: 3, type: !201, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
 !201 = !DISubroutineType(types: !3)
@@ -110,3 +124,5 @@ end:
 !207 = !DILocation(line: 11, column: 3, scope: !200)
 !208 = !DILocation(line: 12, column: 3, scope: !200)
 !209 = !DILocation(line: 13, column: 3, scope: !200)
+!210 = !DILocation(line: 14, column: 3, scope: !200)
+!211 = !DILocation(line: 15, column: 3, scope: !200)

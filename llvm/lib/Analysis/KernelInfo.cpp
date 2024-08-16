@@ -80,6 +80,9 @@ public:
   /// defined in this module.
   int64_t DirectCallsToDefinedFunctions = 0;
 
+  /// Number of direct calls to inline assembly.
+  int64_t InlineAssemblyCalls = 0;
+
   /// Number of calls of type InvokeInst.
   int64_t Invokes = 0;
 
@@ -234,6 +237,10 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
             CallKind += " to defined function";
             RemarkKind += "ToDefinedFunction";
           }
+        } else if (Call->isInlineAsm()) {
+          InlineAssemblyCalls += Direction;
+          CallKind += " to inline assembly";
+          RemarkKind += "ToInlineAssembly";
         }
       }
       remarkCall(ORE, F, *Call, CallKind, RemarkKind);
@@ -403,6 +410,7 @@ KernelInfo KernelInfo::getKernelInfo(Function &F,
   REMARK_PROPERTY(DirectCalls);
   REMARK_PROPERTY(IndirectCalls);
   REMARK_PROPERTY(DirectCallsToDefinedFunctions);
+  REMARK_PROPERTY(InlineAssemblyCalls);
   REMARK_PROPERTY(Invokes);
   REMARK_PROPERTY(FlatAddrspaceAccesses);
 #undef REMARK_PROPERTY
