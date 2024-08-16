@@ -288,6 +288,54 @@ static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
   return Error::success();
 }
 
+/// Attempts to parse a size component of a specification.
+static Error parseSize(StringRef Str, unsigned &BitWidth,
+                       StringRef Name = "size") {
+  if (Str.empty())
+    return createStringError(Name + " component cannot be empty");
+
+  if (!to_integer(Str, BitWidth, 10) || BitWidth == 0 || !isUInt<24>(BitWidth))
+    return createStringError(Name + " must be a non-zero 24-bit integer");
+
+  return Error::success();
+}
+
+/// Attempts to parse an alignment component of a specification.
+///
+/// On success, returns the value converted to byte amount in \p Alignment.
+/// If the value is zero and \p AllowZero is true, \p Alignment is set to one.
+///
+/// Return an error in a number of cases:
+/// - \p Str is empty or contains characters other than decimal digits;
+/// - the value is zero and \p AllowZero is false;
+/// - the value is too large;
+/// - the value is not a multiple of the byte width;
+/// - the value converted to byte amount is not not a power of two.
+static Error parseAlignment(StringRef Str, Align &Alignment, StringRef Name,
+                            bool AllowZero = false) {
+  if (Str.empty())
+    return createStringError(Name + " alignment component cannot be empty");
+
+  unsigned Value;
+  if (!to_integer(Str, Value, 10) || !isUInt<16>(Value))
+    return createStringError(Name + " alignment must be a 16-bit integer");
+
+  if (Value == 0) {
+    if (!AllowZero)
+      return createStringError(Name + " alignment must be non-zero");
+    Alignment = Align(1);
+    return Error::success();
+  }
+
+  constexpr unsigned ByteWidth = 8;
+  if (Value % ByteWidth || !isPowerOf2_32(Value / ByteWidth))
+    return createStringError(
+        Name + " alignment must be a power of two times the byte width");
+
+  Alignment = Align(Value / ByteWidth);
+  return Error::success();
+}
+
 /// Checked version of split, to ensure mandatory subparts.
 static Error split(StringRef Str, char Separator,
                    std::pair<StringRef, StringRef> &Split) {
@@ -328,6 +376,56 @@ static Error getAddrSpace(StringRef R, unsigned &AddrSpace) {
   return Error::success();
 }
 
+Error DataLayout::parsePointerSpec(StringRef Spec) {
+  // p[<n>]:<size>:<abi>[:<pref>[:<idx>]]
+  SmallVector<StringRef, 5> Components;
+  assert(Spec.front() == 'p');
+  Spec.drop_front().split(Components, ':');
+
+  if (Components.size() < 3 || Components.size() > 5)
+    return createSpecFormatError("p[<n>]:<size>:<abi>[:<pref>[:<idx>]]");
+
+  // Address space. Optional, defaults to 0.
+  unsigned AddrSpace = 0;
+  if (!Components[0].empty())
+    if (Error Err = parseAddrSpace(Components[0], AddrSpace))
+      return Err;
+
+  // Size. Required, cannot be zero.
+  unsigned BitWidth;
+  if (Error Err = parseSize(Components[1], BitWidth, "pointer size"))
+    return Err;
+
+  // ABI alignment. Required, cannot be zero.
+  Align ABIAlign;
+  if (Error Err = parseAlignment(Components[2], ABIAlign, "ABI"))
+    return Err;
+
+  // Preferred alignment. Optional, defaults to the ABI alignment.
+  // Cannot be zero.
+  Align PrefAlign = ABIAlign;
+  if (Components.size() > 3)
+    if (Error Err = parseAlignment(Components[3], PrefAlign, "preferred"))
+      return Err;
+
+  if (PrefAlign < ABIAlign)
+    return createStringError(
+        "preferred alignment cannot be less than the ABI alignment");
+
+  // Index size. Optional, defaults to pointer size. Cannot be zero.
+  unsigned IndexBitWidth = BitWidth;
+  if (Components.size() > 4)
+    if (Error Err = parseSize(Components[4], IndexBitWidth, "index size"))
+      return Err;
+
+  if (IndexBitWidth > BitWidth)
+    return createStringError(
+        "index size cannot be larger than the pointer size");
+
+  setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth);
+  return Error::success();
+}
+
 Error DataLayout::parseSpecification(StringRef Spec) {
   // The "ni" specifier is the only two-character specifier. Handle it first.
   if (Spec.starts_with("ni")) {
@@ -348,6 +446,12 @@ Error DataLayout::parseSpecification(StringRef Spec) {
     }
     return Error::success();
   }
+
+  // The rest of the specifiers are single-character.
+  assert(!Spec.empty() && "Empty specification is handled by the caller");
+
+  if (Spec.front() == 'p')
+    return parsePointerSpec(Spec);
 
   // Split at ':'.
   std::pair<StringRef, StringRef> Split;
@@ -372,69 +476,6 @@ Error DataLayout::parseSpecification(StringRef Spec) {
   case 'e':
     BigEndian = false;
     break;
-  case 'p': {
-    // Address space.
-    unsigned AddrSpace = 0;
-    if (!Tok.empty())
-      if (Error Err = getInt(Tok, AddrSpace))
-        return Err;
-    if (!isUInt<24>(AddrSpace))
-      return reportError("Invalid address space, must be a 24-bit integer");
-
-    // Size.
-    if (Rest.empty())
-      return reportError(
-          "Missing size specification for pointer in datalayout string");
-    if (Error Err = ::split(Rest, ':', Split))
-      return Err;
-    unsigned PointerMemSize;
-    if (Error Err = getInt(Tok, PointerMemSize))
-      return Err;
-    if (!PointerMemSize)
-      return reportError("Invalid pointer size of 0 bytes");
-
-    // ABI alignment.
-    if (Rest.empty())
-      return reportError(
-          "Missing alignment specification for pointer in datalayout string");
-    if (Error Err = ::split(Rest, ':', Split))
-      return Err;
-    unsigned PointerABIAlign;
-    if (Error Err = getIntInBytes(Tok, PointerABIAlign))
-      return Err;
-    if (!isPowerOf2_64(PointerABIAlign))
-      return reportError("Pointer ABI alignment must be a power of 2");
-
-    // Size of index used in GEP for address calculation.
-    // The parameter is optional. By default it is equal to size of pointer.
-    unsigned IndexSize = PointerMemSize;
-
-    // Preferred alignment.
-    unsigned PointerPrefAlign = PointerABIAlign;
-    if (!Rest.empty()) {
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      if (Error Err = getIntInBytes(Tok, PointerPrefAlign))
-        return Err;
-      if (!isPowerOf2_64(PointerPrefAlign))
-        return reportError("Pointer preferred alignment must be a power of 2");
-
-      // Now read the index. It is the second optional parameter here.
-      if (!Rest.empty()) {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        if (Error Err = getInt(Tok, IndexSize))
-          return Err;
-        if (!IndexSize)
-          return reportError("Invalid index size of 0 bytes");
-      }
-    }
-    if (Error Err = setPointerSpec(AddrSpace, PointerMemSize,
-                                   assumeAligned(PointerABIAlign),
-                                   assumeAligned(PointerPrefAlign), IndexSize))
-      return Err;
-    break;
-  }
   case 'i':
   case 'v':
   case 'f':
@@ -680,15 +721,9 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
   return PointerSpecs[0];
 }
 
-Error DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
-                                 Align ABIAlign, Align PrefAlign,
-                                 uint32_t IndexBitWidth) {
-  if (PrefAlign < ABIAlign)
-    return reportError(
-        "Preferred alignment cannot be less than the ABI alignment");
-  if (IndexBitWidth > BitWidth)
-    return reportError("Index width cannot be larger than pointer width");
-
+void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
+                                Align ABIAlign, Align PrefAlign,
+                                uint32_t IndexBitWidth) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
@@ -699,7 +734,6 @@ Error DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
   }
-  return Error::success();
 }
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
