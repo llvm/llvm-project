@@ -1730,8 +1730,8 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
 }
 
 static BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape,
-                                               Value *Def,
-                                               const DominatorTree &DT) {
+                                                Value *Def,
+                                                const DominatorTree &DT) {
   BasicBlock::iterator InsertPt;
   if (auto *Arg = dyn_cast<Argument>(Def)) {
     // For arguments, we will place the store instruction right after
