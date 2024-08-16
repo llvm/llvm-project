@@ -255,7 +255,15 @@ struct PackOpTiling
       ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
+    if (operandNumber != 0)
+      return failure();
+
     auto packOp = cast<PackOp>(op);
+    // It is not trivial to infer dest tile from source tile if `packOp` has
+    // padding semantic.
+    if (packOp.getPaddingValue())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
@@ -269,7 +277,20 @@ struct PackOpTiling
                 /*stopCondition=*/nullptr, /*closedUB=*/true);
         std::optional<int64_t> cstInnerSize =
             getConstantIntValue(dimAndTileMapping[dim]);
-        // Currently only expect perfect tiling cases.
+        // Currently fusing `packOp` as consumer only expects perfect tiling
+        // scenario because even if without padding semantic, the `packOp` may
+        // also yield incomplete tiles. E.g. tensor<30xf32> -> tensor<5x6xf32>,
+        // where the `tileSize` from operand of `packOp` is 5, which is not
+        // exactly divided by `innerTile`(=6) of `packOp`. As the result:
+        // 1. the first slice is extracted from (0) to (4) and inserted into
+        // (0,0)~(0,4) at first row.
+        // 2. the second slice is extracted from (5) to (9) and SHOULD BE
+        // respectively inserted into two rows with different length, including
+        // first row: (0,5) and second row (1,0)~(1,3). It is hard to coordinate
+        // them, thus adding below constraint to bypass them temporarily. In
+        // another word, we can only support tiling with consumer if the tile
+        // size for the producer is a multiple of the inner tile size for the
+        // packed dimensions at this moment.
         if (failed(cstSize) || !cstInnerSize || *cstSize % *cstInnerSize != 0) {
           return failure();
         }
@@ -299,6 +320,9 @@ struct PackOpTiling
   FailureOr<TilingResult> getTiledImplementationFromOperandTile(
       Operation *op, OpBuilder &b, unsigned operandNumber,
       ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+    if (operandNumber != 0)
+      return failure();
+
     auto packOp = cast<PackOp>(op);
     Location loc = packOp.getLoc();
 
@@ -326,8 +350,7 @@ struct PackOpTiling
         loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(extractSlice);
 
-    if (auto val = packOp.getPaddingValue())
-      tiledOperands.push_back(val);
+    assert(!packOp.getPaddingValue() && "Expect no padding semantic");
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
