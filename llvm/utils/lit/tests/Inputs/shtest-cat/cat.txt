@@ -1,5 +1,4 @@
 ## Test cat command with a single file.
-#
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: echo "abcdefgh" > %t/temp.write
@@ -10,9 +9,8 @@
 # RUN:      --match-full-lines --strict-whitespace < %t/tempcat.write %s
 # FILE-EXISTS: True
 # CAT-OUTPUT:abcdefgh
-#
+
 ## Test cat command with multiple files.
-#
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: echo "abcdefgh" > %t/temp1.write
@@ -27,39 +25,36 @@
 #      MULTI-CAT-OUTPUT:abcdefgh
 # MULTI-CAT-OUTPUT-NEXT:efghijkl
 # MULTI-CAT-OUTPUT-NEXT:mnopqrst
-#
+
 ## Test cat command with multiple files and piped output to FileCheck.
-#
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: echo "abcdefgh" > %t/temp1.write
 # RUN: echo "efghijkl" > %t/temp2.write
-# RUN: cat %t/temp1.write %t/temp2.write \
-# RUN:      | FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN: cat %t/temp1.write %t/temp2.write | \
+# RUN:      FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
 #      PIPED-CAT-OUTPUT:abcdefgh
 # PIPED-CAT-OUTPUT-NEXT:efghijkl
-#
+
 ## Test cat command with multiple files and glob expressions.
-#
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: echo "cvbnm" > %t/temp1.write
 # RUN: echo "qwerty" > %t/temp2.write
-# RUN: cat %t/*.write \
-# RUN:      | FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN: cat %t/*.write | \
+# RUN:      FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
 #      GLOB-CAT-OUTPUT:cvbnm
 # GLOB-CAT-OUTPUT-NEXT:qwerty
-#
+
 ## Test cat command with -v and --show-nonprinting option.
 ## The -v/--show-nonprinting options format text input into ^ and M- notation
-#
-# RUN: cat -v %S/cat_nonprinting.bin \
-# RUN:      | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN: cat -v %S/cat_nonprinting.bin | \
+# RUN:      FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
-# RUN: cat --show-nonprinting %S/cat_nonprinting.bin \
-# RUN:      | FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN: cat --show-nonprinting %S/cat_nonprinting.bin | \
+# RUN:      FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
 # RUN:      --match-full-lines --strict-whitespace %s
 #      NP-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H
 # NP-CAT-OUTPUT-NEXT:^K^L^M^N^O^P^Q^R^S
