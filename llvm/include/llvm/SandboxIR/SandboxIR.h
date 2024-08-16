@@ -130,6 +130,7 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class UnaryOperator;
 class BinaryOperator;
 class AtomicCmpXchgInst;
 
@@ -250,6 +251,7 @@ protected:
   friend class InvokeInst;         // For getting `Val`.
   friend class CallBrInst;         // For getting `Val`.
   friend class GetElementPtrInst;  // For getting `Val`.
+  friend class UnaryOperator;      // For getting `Val`.
   friend class BinaryOperator;     // For getting `Val`.
   friend class AtomicCmpXchgInst;  // For getting `Val`.
   friend class AllocaInst;         // For getting `Val`.
@@ -632,6 +634,7 @@ protected:
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class UnaryOperator;      // For getTopmostLLVMInstruction().
   friend class BinaryOperator;     // For getTopmostLLVMInstruction().
   friend class AtomicCmpXchgInst;  // For getTopmostLLVMInstruction().
   friend class AllocaInst;         // For getTopmostLLVMInstruction().
@@ -1435,6 +1438,47 @@ public:
   // TODO: Add missing member functions.
 };
 
+class UnaryOperator : public UnaryInstruction {
+  static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
+    switch (UnOp) {
+    case llvm::Instruction::FNeg:
+      return Opcode::FNeg;
+    case llvm::Instruction::UnaryOpsEnd:
+      llvm_unreachable("Bad UnOp!");
+    }
+    llvm_unreachable("Unhandled UnOp!");
+  }
+  UnaryOperator(llvm::UnaryOperator *UO, Context &Ctx)
+      : UnaryInstruction(ClassID::UnOp, getUnaryOpcode(UO->getOpcode()), UO,
+                         Ctx) {}
+  friend Context; // for constructor.
+public:
+  static Value *create(Instruction::Opcode Op, Value *OpV, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BBIterator WhereIt,
+                                      BasicBlock *WhereBB, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom,
+                                      Instruction *InsertBefore, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BasicBlock *InsertAtEnd,
+                                      Context &Ctx, const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::UnOp;
+  }
+};
+
 class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
   static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
     switch (BinOp) {
@@ -1959,6 +2003,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
+  friend UnaryOperator; // For createUnaryOperator()
   BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
   friend BinaryOperator; // For createBinaryOperator()
   AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);

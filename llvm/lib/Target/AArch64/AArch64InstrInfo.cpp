@@ -9074,8 +9074,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // link register.
     outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     bool ModStackToSaveLR = false;
-    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
-                    [](const MachineInstr &MI) { return MI.isCall(); }))
+    if (any_of(drop_end(FirstCand),
+               [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
 
     // Handle the last instruction separately. If this is a tail call, then the
