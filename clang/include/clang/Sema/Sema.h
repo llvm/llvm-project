@@ -481,55 +481,6 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
-struct FunctionEffectDiff {
-  enum class Kind { Added, Removed, ConditionMismatch };
-
-  FunctionEffect::Kind EffectKind;
-  Kind DiffKind;
-  FunctionEffectWithCondition Old; // invalid when Added.
-  FunctionEffectWithCondition New; // invalid when Removed.
-
-  StringRef effectName() const {
-    if (Old.Effect.kind() != FunctionEffect::Kind::None)
-      return Old.Effect.name();
-    return New.Effect.name();
-  }
-
-  /// Describes the result of effects differing between a base class's virtual
-  /// method and an overriding method in a subclass.
-  enum class OverrideResult {
-    NoAction,
-    Warn,
-    Merge // Merge missing effect from base to derived.
-  };
-
-  /// Return true if adding or removing the effect as part of a type conversion
-  /// should generate a diagnostic.
-  bool shouldDiagnoseConversion(QualType SrcType,
-                                const FunctionEffectsRef &SrcFX,
-                                QualType DstType,
-                                const FunctionEffectsRef &DstFX) const;
-
-  /// Return true if adding or removing the effect in a redeclaration should
-  /// generate a diagnostic.
-  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
-                                   const FunctionEffectsRef &OldFX,
-                                   const FunctionDecl &NewFunction,
-                                   const FunctionEffectsRef &NewFX) const;
-
-  /// Return true if adding or removing the effect in a C++ virtual method
-  /// override should generate a diagnostic.
-  OverrideResult shouldDiagnoseMethodOverride(
-      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
-      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
-};
-
-struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
-  /// Caller should short-circuit by checking for equality first.
-  FunctionEffectDifferences(const FunctionEffectsRef &Old,
-                            const FunctionEffectsRef &New);
-};
-
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -568,6 +519,7 @@ class Sema final : public SemaBase {
   // 30. Constraints and Concepts (SemaConcept.cpp)
   // 31. Types (SemaType.cpp)
   // 32. FixIt Helpers (SemaFixItUtils.cpp)
+  // 33. Function Effects (SemaFunctionEffects.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -15091,6 +15043,55 @@ public:
   /// Implementations are in SemaFunctionEffects.cpp
   ///@{
 public:
+  struct FunctionEffectDiff {
+    enum class Kind { Added, Removed, ConditionMismatch };
+
+    FunctionEffect::Kind EffectKind;
+    Kind DiffKind;
+    FunctionEffectWithCondition Old; // invalid when Added.
+    FunctionEffectWithCondition New; // invalid when Removed.
+
+    StringRef effectName() const {
+      if (Old.Effect.kind() != FunctionEffect::Kind::None)
+        return Old.Effect.name();
+      return New.Effect.name();
+    }
+
+    /// Describes the result of effects differing between a base class's virtual
+    /// method and an overriding method in a subclass.
+    enum class OverrideResult {
+      NoAction,
+      Warn,
+      Merge // Merge missing effect from base to derived.
+    };
+
+    /// Return true if adding or removing the effect as part of a type
+    /// conversion should generate a diagnostic.
+    bool shouldDiagnoseConversion(QualType SrcType,
+                                  const FunctionEffectsRef &SrcFX,
+                                  QualType DstType,
+                                  const FunctionEffectsRef &DstFX) const;
+
+    /// Return true if adding or removing the effect in a redeclaration should
+    /// generate a diagnostic.
+    bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                     const FunctionEffectsRef &OldFX,
+                                     const FunctionDecl &NewFunction,
+                                     const FunctionEffectsRef &NewFX) const;
+
+    /// Return true if adding or removing the effect in a C++ virtual method
+    /// override should generate a diagnostic.
+    OverrideResult shouldDiagnoseMethodOverride(
+        const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+        const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+  };
+
+  struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
+    /// Caller should short-circuit by checking for equality first.
+    FunctionEffectDifferences(const FunctionEffectsRef &Old,
+                              const FunctionEffectsRef &New);
+  };
+
   /// All functions/lambdas/blocks which have bodies and which have a non-empty
   /// FunctionEffectsRef to be verified.
   SmallVector<const Decl *> DeclsWithEffectsToVerify;
