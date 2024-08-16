@@ -112,7 +112,7 @@ static const CodeGenIntrinsic *getCodeGenIntrinsic(Record *R) {
 
   auto &Ptr = AllIntrinsics[R];
   if (!Ptr)
-    Ptr = std::make_unique<CodeGenIntrinsic>(R, std::vector<Record *>());
+    Ptr = std::make_unique<CodeGenIntrinsic>(R);
   return Ptr.get();
 }
 
