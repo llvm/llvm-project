@@ -160,6 +160,27 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
+
+#ifndef NDEBUG
+void SwitchRemoveCase::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+void SwitchAddCase::revert(Tracker &Tracker) {
+  auto It = Switch->findCaseValue(Val);
+  Switch->removeCase(It);
+}
+
+#ifndef NDEBUG
+void SwitchAddCase::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())
     NextInstrOrBB = NextI;
