@@ -678,21 +678,21 @@ defm VCVT2PS2PHX : avx10_cvt2ps2ph<0x67, "vcvt2ps2phx",
                                    avx512vl_f32_info, avx512vl_f16_info,
                                    X86vcvt2ps2phx, X86vcvt2ps2phxRnd>, T8;
 
-defm VCVTNE2PH2BF8 : avx512_binop_all2<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2BF8 : avx512_binop_all<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2bf8, [HasAVX10_2_512], [HasAVX10_2], 0>,
+                                     X86vcvtne2ph2bf8, [HasAVX10_2_512], [HasAVX10_2]>,
                                     EVEX_CD8<16, CD8VF>, T8, XD;
-defm VCVTNE2PH2BF8S : avx512_binop_all2<0x74, "vcvtne2ph2bf8s", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2BF8S : avx512_binop_all<0x74, "vcvtne2ph2bf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2bf8s, [HasAVX10_2_512], [HasAVX10_2], 0>,
+                                      X86vcvtne2ph2bf8s, [HasAVX10_2_512], [HasAVX10_2]>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8 : avx512_binop_all2<0x18, "vcvtne2ph2hf8", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2HF8 : avx512_binop_all<0x18, "vcvtne2ph2hf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2hf8, [HasAVX10_2_512], [HasAVX10_2], 0>,
+                                     X86vcvtne2ph2hf8, [HasAVX10_2_512], [HasAVX10_2]>,
                                     EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8S : avx512_binop_all2<0x1b, "vcvtne2ph2hf8s", SchedWriteCvtPD2PS,
+defm VCVTNE2PH2HF8S : avx512_binop_all<0x1b, "vcvtne2ph2hf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2hf8s, [HasAVX10_2_512], [HasAVX10_2], 0>,
+                                      X86vcvtne2ph2hf8s, [HasAVX10_2_512], [HasAVX10_2]>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
 
 multiclass avx10_convert_3op_packed<bits<8> OpCode, string OpcodeStr,
