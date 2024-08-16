@@ -10763,9 +10763,9 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     for (int i = 0, Size = Mask.size(); i < Size; ++i)
       for (int j = 0; j < Scale; ++j)
         VSELECTMask.push_back(
-            Mask[i] < 0 ? DAG.getUNDEF(MVT::i8)
-                        : DAG.getConstant(Mask[i] < Size ? -1 : 0, DL,
-                                          MVT::i8));
+            Mask[i] < 0
+                ? DAG.getUNDEF(MVT::i8)
+                : DAG.getSignedConstant(Mask[i] < Size ? -1 : 0, DL, MVT::i8));
 
     V1 = DAG.getBitcast(BlendVT, V1);
     V2 = DAG.getBitcast(BlendVT, V2);
@@ -18654,7 +18654,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   // addition for it.
   if (Offset != 0)
     Result = DAG.getNode(ISD::ADD, dl, PtrVT, Result,
-                         DAG.getConstant(Offset, dl, PtrVT));
+                         DAG.getSignedConstant(Offset, dl, PtrVT));
 
   return Result;
 }
@@ -24975,9 +24975,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
       Result = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
     }
     if (Alignment && *Alignment > StackAlign)
-      Result =
-          DAG.getNode(ISD::AND, dl, VT, Result,
-                      DAG.getConstant(~(Alignment->value() - 1ULL), dl, VT));
+      Result = DAG.getNode(
+          ISD::AND, dl, VT, Result,
+          DAG.getSignedConstant(~(Alignment->value() - 1ULL), dl, VT));
     Chain = DAG.getCopyToReg(Chain, dl, SPReg, Result); // Output chain
   } else if (SplitStack) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -25009,8 +25009,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     Chain = SP.getValue(1);
 
     if (Alignment) {
-      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                       DAG.getConstant(~(Alignment->value() - 1ULL), dl, VT));
+      SP = DAG.getNode(
+          ISD::AND, dl, VT, SP.getValue(0),
+          DAG.getSignedConstant(~(Alignment->value() - 1ULL), dl, VT));
       Chain = DAG.getCopyToReg(Chain, dl, SPReg, SP);
     }
 
