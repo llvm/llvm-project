@@ -6,4 +6,6 @@
 # RUN:   -arch arm64 %t.arm64.o
 # RUN: llvm-jitlink -noexec -triple arm64-apple-macosx %t.universal.o
 #
+# REQUIRES: x86-registered-target && aarch64-registered-target
+#
 # Check that universal binaries don't raise "not a valid object file" errors.
