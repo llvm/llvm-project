@@ -11977,7 +11977,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
       Vec = InsElt = Builder.CreateInsertVector(
-          Vec->getType(), Vec, V,
+          Vec->getType(), Vec, Scalar,
           Builder.getInt64(Pos * VecTy->getNumElements()));
       auto *II = dyn_cast<IntrinsicInst>(InsElt);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)

@@ -160,6 +160,11 @@ Changes to the C API
   * ``LLVMX86MMXTypeInContext``
   * ``LLVMX86MMXType``
 
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
