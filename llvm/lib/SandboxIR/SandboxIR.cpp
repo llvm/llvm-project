@@ -1496,6 +1496,21 @@ void CatchSwitchInst::addHandler(BasicBlock *Dest) {
       cast<llvm::BasicBlock>(Dest->Val));
 }
 
+ResumeInst *ResumeInst::create(Value *Exn, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto *LLVMI = cast<llvm::ResumeInst>(Builder.CreateResume(Exn->Val));
+  return Ctx.createResumeInst(LLVMI);
+}
+
+Value *ResumeInst::getValue() const {
+  return Ctx.getValue(cast<llvm::ResumeInst>(Val)->getValue());
+}
+
 SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
                                BasicBlock::iterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
@@ -2346,6 +2361,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new CatchSwitchInst(LLVMCatchSwitchInst, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Resume: {
+    auto *LLVMResumeInst = cast<llvm::ResumeInst>(LLVMV);
+    It->second =
+        std::unique_ptr<ResumeInst>(new ResumeInst(LLVMResumeInst, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Switch: {
     auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
     It->second =
@@ -2551,6 +2572,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
 CatchSwitchInst *Context::createCatchSwitchInst(llvm::CatchSwitchInst *I) {
   auto NewPtr = std::unique_ptr<CatchSwitchInst>(new CatchSwitchInst(I, *this));
   return cast<CatchSwitchInst>(registerValue(std::move(NewPtr)));
+}
+ResumeInst *Context::createResumeInst(llvm::ResumeInst *I) {
+  auto NewPtr = std::unique_ptr<ResumeInst>(new ResumeInst(I, *this));
+  return cast<ResumeInst>(registerValue(std::move(NewPtr)));
 }
 SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
   auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));
