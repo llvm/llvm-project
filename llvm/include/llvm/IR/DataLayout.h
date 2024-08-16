@@ -154,10 +154,9 @@ private:
   /// Returns the default address space specification if not found.
   const PointerSpec &getPointerSpec(uint32_t AddrSpace) const;
 
-  /// Attempts to set the specification for pointer in the given address space.
-  /// Returns an error description on failure.
-  Error setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
-                       Align PrefAlign, uint32_t IndexBitWidth);
+  /// Sets or updates the specification for pointer in the given address space.
+  void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
+                      Align PrefAlign, uint32_t IndexBitWidth);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -165,8 +164,11 @@ private:
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
+  /// Attempts to parse a pointer specification ('p').
+  Error parsePointerSpec(StringRef Spec);
+
   /// Attempts to parse a single specification.
-  Error parseSpecification(StringRef Specification);
+  Error parseSpecification(StringRef Spec);
 
   /// Attempts to parse a data layout string.
   Error parseLayoutString(StringRef LayoutString);
