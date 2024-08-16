@@ -892,19 +892,20 @@ private:
     // follow the field and base destructors.
     void followDestructor(const CXXRecordDecl *Rec,
                           const CXXDestructorDecl *Dtor) {
+      SourceLocation DtorLoc = Dtor->getLocation();
       for (const FieldDecl *Field : Rec->fields())
-        followTypeDtor(Field->getType(), Dtor);
+        followTypeDtor(Field->getType(), DtorLoc);
 
       if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec)) {
         for (const CXXBaseSpecifier &Base : Class->bases())
-          followTypeDtor(Base.getType(), Dtor);
+          followTypeDtor(Base.getType(), DtorLoc);
 
         for (const CXXBaseSpecifier &Base : Class->vbases())
-          followTypeDtor(Base.getType(), Dtor);
+          followTypeDtor(Base.getType(), DtorLoc);
       }
     }
 
-    void followTypeDtor(QualType QT, const CXXDestructorDecl *OuterDtor) {
+    void followTypeDtor(QualType QT, SourceLocation CallSite) {
       const Type *Ty = QT.getTypePtr();
       while (Ty->isArrayType()) {
         const ArrayType *Arr = Ty->getAsArrayTypeUnsafe();
@@ -916,7 +917,7 @@ private:
         if (const CXXRecordDecl *Class = Ty->getAsCXXRecordDecl()) {
           if (CXXDestructorDecl *Dtor = Class->getDestructor()) {
             CallableInfo CI(*Dtor);
-            followCall(CI, OuterDtor->getLocation());
+            followCall(CI, CallSite);
           }
         }
       }
@@ -1007,18 +1008,8 @@ private:
 
       const QualType::DestructionKind DK =
           Var->needsDestruction(Outer.S.getASTContext());
-      if (DK == QualType::DK_cxx_destructor) {
-        QualType QT = Var->getType();
-        if (const auto *ClsType = QT.getTypePtr()->getAs<RecordType>()) {
-          if (const auto *CxxRec =
-                  dyn_cast<CXXRecordDecl>(ClsType->getDecl())) {
-            if (const CXXDestructorDecl *Dtor = CxxRec->getDestructor()) {
-              CallableInfo CI(*Dtor);
-              followCall(CI, Var->getLocation());
-            }
-          }
-        }
-      }
+      if (DK == QualType::DK_cxx_destructor)
+        followTypeDtor(Var->getType(), Var->getLocation());
       return true;
     }
 
