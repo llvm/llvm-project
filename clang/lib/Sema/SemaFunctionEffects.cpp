@@ -57,9 +57,9 @@ struct Violation {
 
   Violation(FunctionEffect Effect, ViolationID ID, SourceLocation Loc,
             const Decl *Callee = nullptr,
-            const FunctionEffect *CalleeEffect = nullptr)
+            std::optional<FunctionEffect> CalleeEffect = std::nullopt)
       : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {
-    if (CalleeEffect != nullptr)
+    if (CalleeEffect)
       CalleeEffectPreventingInference = *CalleeEffect;
   }
 
@@ -259,7 +259,7 @@ public:
         // try to infer it.
         InferrableEffectToFirstViolation.maybeInsert(Violation(
             effect, ViolationID::DeclDisallowsInference,
-            CInfo.CDecl->getLocation(), nullptr, &*ProblemCalleeEffect));
+            CInfo.CDecl->getLocation(), nullptr, ProblemCalleeEffect));
       }
     }
     // InferrableEffects is now the set of inferrable effects which are not
@@ -338,7 +338,7 @@ private:
 
 public:
   // The incoming Pending analysis is consumed (member(s) are moved-from).
-  CompleteFunctionAnalysis(ASTContext &Ctx, PendingFunctionAnalysis &Pending,
+  CompleteFunctionAnalysis(ASTContext &Ctx, PendingFunctionAnalysis &&Pending,
                            FunctionEffectKindSet DeclaredEffects,
                            FunctionEffectKindSet AllInferrableEffectsToVerify)
       : VerifiedEffects(DeclaredEffects) {
@@ -530,7 +530,7 @@ private:
 
     Visitor.run();
     if (FAnalysis.isComplete()) {
-      completeAnalysis(CInfo, FAnalysis);
+      completeAnalysis(CInfo, std::move(FAnalysis));
       return nullptr;
     }
     // Move the pending analysis to the heap and save it in the map.
@@ -545,14 +545,14 @@ private:
   // Consume PendingFunctionAnalysis, create with it a CompleteFunctionAnalysis,
   // inserted in the container.
   void completeAnalysis(const CallableInfo &CInfo,
-                        PendingFunctionAnalysis &Pending) {
+                        PendingFunctionAnalysis &&Pending) {
     if (ArrayRef<Violation> Viols =
             Pending.getSortedViolationsForExplicitEffects(S.getSourceManager());
         !Viols.empty())
       emitDiagnostics(Viols, CInfo, S);
 
     CompleteFunctionAnalysis *CompletePtr =
-        new CompleteFunctionAnalysis(S.getASTContext(), Pending, CInfo.Effects,
+        new CompleteFunctionAnalysis(S.getASTContext(), std::move(Pending), CInfo.Effects,
                                      AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     LLVM_DEBUG(llvm::dbgs() << "inserted complete " << CompletePtr << "\n";
@@ -576,7 +576,7 @@ private:
       followCall(Caller, *Pending, Callee, Call.CallLoc,
                  /*AssertNoFurtherInference=*/true);
     }
-    completeAnalysis(Caller, *Pending);
+    completeAnalysis(Caller, std::move(*Pending));
     delete Pending;
   }
 
