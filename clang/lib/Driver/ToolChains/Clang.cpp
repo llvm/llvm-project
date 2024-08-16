@@ -2628,6 +2628,11 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         continue; // LLVM handles bigobj automatically
 
       auto Equal = Value.split('=');
+      auto checkArg = [&](std::initializer_list<const char *> Set) {
+        if (!llvm::is_contained(Set, Equal.second))
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << (Twine("-Wa,") + Equal.first + "=").str() << Equal.second;
+      };
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
@@ -2636,8 +2641,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (Equal.first == "-mrelax-relocations" ||
             Equal.first == "--mrelax-relocations") {
           UseRelaxRelocations = Equal.second == "yes";
-          if (llvm::is_contained({"yes", "no"}, Equal.second))
-            continue;
+          checkArg({"yes", "no"});
+          continue;
         }
         if (Value == "-msse2avx") {
           CmdArgs.push_back("-msse2avx");
@@ -2658,8 +2663,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (Equal.first == "-mimplicit-it") {
           // Only store the value; the last value set takes effect.
           ImplicitIt = Equal.second;
-          if (CheckARMImplicitITArg(Equal.second))
-            continue;
+          checkArg({"always", "never", "arm", "thumb"});
+          continue;
         }
         if (Value == "-mthumb")
           // -mthumb has already been processed in ComputeLLVMTriple()
