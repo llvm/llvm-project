@@ -420,21 +420,19 @@ add_header_macro(
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 
-add_header_macro(
+add_gen_header(
   link
-  ../libc/newhdrgen/yaml/link.yaml
-  link.h.def
-  link.h
+  DEF_FILE link.h.def
+  GEN_HDR link.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
 )
 
-add_header_macro(
+add_gen_header(
   elf
-  ../libc/newhdrgen/yaml/elf.yaml
-  elf.h.def
-  elf.h
+  DEF_FILE elf.h.def
+  GEN_HDR elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
 )
