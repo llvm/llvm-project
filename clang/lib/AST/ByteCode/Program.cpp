@@ -76,26 +76,26 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
     Pointer Field = Ptr.atIndex(I).narrow();
     const uint32_t CodePoint = I == N ? 0 : S->getCodeUnit(I);
     switch (CharType) {
-      case PT_Sint8: {
-        using T = PrimConv<PT_Sint8>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
-        Field.initialize();
-        break;
-      }
-      case PT_Uint16: {
-        using T = PrimConv<PT_Uint16>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
-        Field.initialize();
-        break;
-      }
-      case PT_Uint32: {
-        using T = PrimConv<PT_Uint32>::T;
-        Field.deref<T>() = T::from(CodePoint, BitWidth);
-        Field.initialize();
-        break;
-      }
-      default:
-        llvm_unreachable("unsupported character type");
+    case PT_Sint8: {
+      using T = PrimConv<PT_Sint8>::T;
+      Field.deref<T>() = T::from(CodePoint, BitWidth);
+      Field.initialize();
+      break;
+    }
+    case PT_Uint16: {
+      using T = PrimConv<PT_Uint16>::T;
+      Field.deref<T>() = T::from(CodePoint, BitWidth);
+      Field.initialize();
+      break;
+    }
+    case PT_Uint32: {
+      using T = PrimConv<PT_Uint32>::T;
+      Field.deref<T>() = T::from(CodePoint, BitWidth);
+      Field.initialize();
+      break;
+    }
+    default:
+      llvm_unreachable("unsupported character type");
     }
   }
   return I;
@@ -394,8 +394,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
-        unsigned ElemSize =
-            ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
+        unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
         return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,

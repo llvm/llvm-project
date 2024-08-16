@@ -1226,7 +1226,7 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Obj = S.Stk.peek<Pointer>();
   if (!CheckNull(S, OpPC, Obj, CSK_Field))
-      return false;
+    return false;
   if (!CheckRange(S, OpPC, Obj, CSK_Field))
     return false;
   const Pointer &Field = Obj.atField(I);
@@ -1542,7 +1542,7 @@ inline bool GetPtrActiveField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 }
 
 inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
- if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression())
     return false;
   const Pointer &This = S.Current->getThis();
   if (!CheckThis(S, OpPC, This))
@@ -2053,7 +2053,7 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 /// 1) Pops a Floating from the stack.
 /// 2) Pushes a new floating on the stack that uses the given semantics.
 inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM) {
+                   llvm::RoundingMode RM) {
   Floating F = S.Stk.pop<Floating>();
   Floating Result = F.toSemantics(Sem, RM);
   S.Stk.push<Floating>(Result);
@@ -2313,9 +2313,9 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
     if (!S.noteUndefinedBehavior())
       return false;
     RHS = -RHS;
-    return DoShift < LT, RT,
-           Dir == ShiftDir::Left ? ShiftDir::Right
-                                 : ShiftDir::Left > (S, OpPC, LHS, RHS);
+    return DoShift<LT, RT,
+                   Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
+        S, OpPC, LHS, RHS);
   }
 
   if constexpr (Dir == ShiftDir::Left) {
@@ -2467,7 +2467,8 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex, uint32_t DestIndex, uint32_t Size) {
+inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
+                      uint32_t DestIndex, uint32_t Size) {
   const auto &SrcPtr = S.Stk.pop<Pointer>();
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
