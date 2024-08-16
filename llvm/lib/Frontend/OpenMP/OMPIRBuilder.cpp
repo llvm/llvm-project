@@ -2022,8 +2022,8 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
 
   addOutlineInfo(std::move(OI));
@@ -5907,7 +5907,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
-    Device = ConstantInt::get(Int32, -1);
+    Device = Constant::getAllOnesValue(Int32);
   Constant *InteropTypeVal = ConstantInt::get(Int32, (int)InteropType);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
@@ -5935,7 +5935,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropDestroy(
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
-    Device = ConstantInt::get(Int32, -1);
+    Device = Constant::getAllOnesValue(Int32);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
     PointerType *PointerTypeVar = PointerType::getUnqual(M.getContext());
@@ -5963,7 +5963,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropUse(const LocationDescription &Loc,
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
-    Device = ConstantInt::get(Int32, -1);
+    Device = Constant::getAllOnesValue(Int32);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
     PointerType *PointerTypeVar = PointerType::getUnqual(M.getContext());
@@ -6104,7 +6104,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
-      ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
+      ThreadKind, Constant::getAllOnesValue(ThreadKind->getType()),
       "exec_user_code");
 
   // ThreadKind = __kmpc_target_init(...)
@@ -7049,8 +7049,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
     }
 
     StaleCI->eraseFromParent();
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
   addOutlineInfo(std::move(OI));
 
@@ -8345,9 +8345,8 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
 
-    llvm::for_each(llvm::reverse(ToBeDeleted),
-                   [](Instruction *I) { I->eraseFromParent(); });
-
+    for (Instruction *I : llvm::reverse(ToBeDeleted))
+      I->eraseFromParent();
   };
 
   if (!Config.isTargetDevice())

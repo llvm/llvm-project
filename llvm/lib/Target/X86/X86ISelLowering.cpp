@@ -412,6 +412,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTTZ           , MVT::i32  , Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Legal);
     if (Subtarget.is64Bit()) {
+      setOperationPromotedToType(ISD::CTTZ , MVT::i32, MVT::i64);
       setOperationAction(ISD::CTTZ         , MVT::i64  , Custom);
       setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Legal);
     }
@@ -3237,9 +3238,10 @@ bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
 }
 
 bool X86TargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  // Speculate cttz only if we can directly use TZCNT or can promote to i32.
+  // Speculate cttz only if we can directly use TZCNT or can promote to i32/i64.
   return Subtarget.hasBMI() ||
-         (!Ty->isVectorTy() && Ty->getScalarSizeInBits() < 32);
+         (!Ty->isVectorTy() &&
+          Ty->getScalarSizeInBits() < (Subtarget.is64Bit() ? 64u : 32u));
 }
 
 bool X86TargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
@@ -10496,8 +10498,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
   MVT LogicVT = VT;
   if (EltVT == MVT::f32 || EltVT == MVT::f64) {
     Zero = DAG.getConstantFP(0.0, DL, EltVT);
-    APFloat AllOnesValue =
-        APFloat::getAllOnesValue(SelectionDAG::EVTToAPFloatSemantics(EltVT));
+    APFloat AllOnesValue = APFloat::getAllOnesValue(EltVT.getFltSemantics());
     AllOnes = DAG.getConstantFP(AllOnesValue, DL, EltVT);
     LogicVT =
         MVT::getVectorVT(EltVT == MVT::f64 ? MVT::i64 : MVT::i32, Mask.size());
@@ -21336,8 +21337,9 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     MaxInt = APInt::getMaxValue(SatWidth).zext(DstWidth);
   }
 
-  APFloat MinFloat(DAG.EVTToAPFloatSemantics(SrcVT));
-  APFloat MaxFloat(DAG.EVTToAPFloatSemantics(SrcVT));
+  const fltSemantics &Sem = SrcVT.getFltSemantics();
+  APFloat MinFloat(Sem);
+  APFloat MaxFloat(Sem);
 
   APFloat::opStatus MinStatus = MinFloat.convertFromAPInt(
     MinInt, IsSigned, APFloat::rmTowardZero);
@@ -21812,7 +21814,7 @@ static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
   // N0 += copysign(nextafter(0.5, 0.0), N0)
-  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Sem = VT.getFltSemantics();
   bool Ignored;
   APFloat Point5Pred = APFloat(0.5f);
   Point5Pred.convert(Sem, APFloat::rmNearestTiesToEven, &Ignored);
@@ -21868,7 +21870,7 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   // For FABS, mask is 0x7f...; for FNEG, mask is 0x80...
   APInt MaskElt = IsFABS ? APInt::getSignedMaxValue(EltBits) :
                            APInt::getSignMask(EltBits);
-  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Sem = VT.getFltSemantics();
   SDValue Mask = DAG.getConstantFP(APFloat(Sem, MaskElt), dl, LogicVT);
 
   SDValue Op0 = Op.getOperand(0);
@@ -21911,7 +21913,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
          DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Unexpected type in LowerFCOPYSIGN");
 
-  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Sem = VT.getFltSemantics();
 
   // Perform all scalar logic operations as 16-byte vectors because there are no
   // scalar FP logic instructions in SSE.
@@ -37135,12 +37137,9 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   Known2 = DAG.computeKnownBits(LHS, DemandedSrcElts, Depth + 1);
   Known = KnownBits::abdu(Known, Known2).zext(16);
   // Known = (((D0 + D1) + (D2 + D3)) + ((D4 + D5) + (D6 + D7)))
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
-                                      Known, Known);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
+  Known = KnownBits::add(Known, Known, /*NSW=*/true, /*NUW=*/true);
   Known = Known.zext(64);
 }
 
@@ -37163,8 +37162,7 @@ static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
   KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
   KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
   KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
-                                      /*NUW=*/false, Lo, Hi);
+  Known = KnownBits::add(Lo, Hi, /*NSW=*/false, /*NUW=*/false);
 }
 
 static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
@@ -42525,6 +42523,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
       // Zero upper elements.
     case X86ISD::VZEXT_MOVL:
+      // Variable blend.
+    case X86ISD::BLENDV:
       // Target unary shuffles by immediate:
     case X86ISD::PSHUFD:
     case X86ISD::PSHUFLW:
@@ -56091,7 +56091,7 @@ CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
                  unsigned NumSignificantBitsRHS) {
   MVT SVT = VT.getScalarType();
   assert(SVT == MVT::f32 && "Only tested for float so far");
-  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(SVT);
+  const fltSemantics &Sem = SVT.getFltSemantics();
   assert((CC == ISD::SETEQ || CC == ISD::SETGT) &&
          "Only PCMPEQ/PCMPGT currently supported");
 
@@ -56382,8 +56382,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             break;
           for (int M : SubMask) {
             if (0 <= M) {
+              int Src = M < NumSrcElts ? 0 : 2;
               M += M < NumSrcElts ? 0 : NumSrcElts;
-              M += i * NumSrcElts;
+
+              // Reference the lowest sub if they upper sub is the same.
+              if (Ops[0].getOperand(Src) != Ops[i].getOperand(Src))
+                M += i * NumSrcElts;
             }
             ConcatMask.push_back(M);
           }
@@ -57140,6 +57144,11 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   auto IsExtractFree = [](SDValue V) {
+    if (V.hasOneUse()) {
+      V = peekThroughOneUseBitcasts(V);
+      if (V.getOpcode() == ISD::LOAD)
+        return true;
+    }
     V = peekThroughBitcasts(V);
     if (ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
       return true;
@@ -57169,8 +57178,10 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::VFPEXT, DL, VT, InVec.getOperand(0));
       }
     }
-    // v4i32 CVTPS2DQ(v4f32).
-    if (InOpcode == ISD::FP_TO_SINT && VT == MVT::v4i32) {
+    // v4i32 CVTPS2DQ(v4f32) / CVTPS2UDQ(v4f32).
+    if ((InOpcode == ISD::FP_TO_SINT ||
+         (InOpcode == ISD::FP_TO_UINT && Subtarget.hasVLX())) &&
+        VT == MVT::v4i32) {
       SDValue Src = InVec.getOperand(0);
       if (Src.getValueType().getScalarType() == MVT::f32)
         return DAG.getNode(InOpcode, DL, VT,
@@ -57202,24 +57213,49 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext);
     }
-    if ((InOpcode == X86ISD::CMPP || InOpcode == X86ISD::PCMPEQ ||
-         InOpcode == X86ISD::PCMPGT) &&
-        (IsExtractFree(InVec.getOperand(0)) ||
-         IsExtractFree(InVec.getOperand(1))) &&
-        SizeInBits == 128) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      SDValue Ext1 =
-          extractSubVector(InVec.getOperand(1), IdxVal, DAG, DL, SizeInBits);
-      if (InOpcode == X86ISD::CMPP)
-        return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, InVec.getOperand(2));
-      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1);
-    }
-    if (InOpcode == X86ISD::MOVDDUP &&
-        (SizeInBits == 128 || SizeInBits == 256)) {
-      SDValue Ext0 =
-          extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
-      return DAG.getNode(InOpcode, DL, VT, Ext0);
+
+    if (SizeInBits == 128 || SizeInBits == 256) {
+      switch (InOpcode) {
+      case X86ISD::MOVDDUP:
+        return DAG.getNode(
+            InOpcode, DL, VT,
+            extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits));
+      case X86ISD::PCMPEQ:
+      case X86ISD::PCMPGT:
+      case X86ISD::UNPCKH:
+      case X86ISD::UNPCKL:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits));
+        break;
+      case X86ISD::CMPP:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1)))
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             InVec.getOperand(2));
+        break;
+      case X86ISD::BLENDI:
+        if (IsExtractFree(InVec.getOperand(0)) ||
+            IsExtractFree(InVec.getOperand(1))) {
+          uint64_t M = InVec.getConstantOperandVal(2) & 255;
+          M = VT.getScalarType() == MVT::i16 ? M : (M >> IdxVal);
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             extractSubVector(InVec.getOperand(1), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
+      }
     }
   }
 

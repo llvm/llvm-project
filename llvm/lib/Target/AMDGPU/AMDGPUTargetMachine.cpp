@@ -338,10 +338,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool> EnableStructurizerWorkarounds(
+static cl::opt<bool, true> EnableStructurizerWorkarounds(
     "amdgpu-enable-structurizer-workarounds",
-    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
-    cl::Hidden);
+    cl::desc("Enable workarounds for the StructurizeCFG pass"),
+    cl::location(AMDGPUTargetMachine::EnableStructurizerWorkarounds),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
@@ -382,6 +383,11 @@ static cl::opt<bool> EnableHipStdPar(
   "amdgpu-enable-hipstdpar",
   cl::desc("Enable HIP Standard Parallelism Offload support"), cl::init(false),
   cl::Hidden);
+
+static cl::opt<bool>
+    EnableAMDGPUAttributor("amdgpu-attributor-enable",
+                           cl::desc("Enable AMDGPUAttributorPass"),
+                           cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
@@ -428,7 +434,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
-  initializeAMDGPULateCodeGenPreparePass(*PR);
+  initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
@@ -611,6 +617,7 @@ bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 bool AMDGPUTargetMachine::DisableStructurizer = false;
+bool AMDGPUTargetMachine::EnableStructurizerWorkarounds = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -654,14 +661,6 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   if (Result)
     return *Result;
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
-}
-
-Error AMDGPUTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
 Expected<AMDGPUAttributorOptions>
@@ -770,6 +769,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // module is partitioned for codegen.
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -918,6 +919,14 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
+}
+
+Error GCNTargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,7 +1236,7 @@ bool GCNPassConfig::addPreISel() {
     addPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createAMDGPULateCodeGenPrepareLegacyPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

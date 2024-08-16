@@ -111,6 +111,7 @@ class Context;
 class Function;
 class Instruction;
 class SelectInst;
+class ExtractElementInst;
 class InsertElementInst;
 class BranchInst;
 class UnaryInstruction;
@@ -129,6 +130,9 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class UnaryOperator;
+class BinaryOperator;
+class AtomicCmpXchgInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -232,24 +236,28 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;           // For getting `Val`.
-  friend class User;              // For getting `Val`.
-  friend class Use;               // For getting `Val`.
-  friend class SelectInst;        // For getting `Val`.
-  friend class InsertElementInst; // For getting `Val`.
-  friend class BranchInst;        // For getting `Val`.
-  friend class LoadInst;          // For getting `Val`.
-  friend class StoreInst;         // For getting `Val`.
-  friend class ReturnInst;        // For getting `Val`.
-  friend class CallBase;          // For getting `Val`.
-  friend class CallInst;          // For getting `Val`.
-  friend class InvokeInst;        // For getting `Val`.
-  friend class CallBrInst;        // For getting `Val`.
-  friend class GetElementPtrInst; // For getting `Val`.
-  friend class AllocaInst;        // For getting `Val`.
-  friend class CastInst;          // For getting `Val`.
-  friend class PHINode;           // For getting `Val`.
-  friend class UnreachableInst;   // For getting `Val`.
+  friend class Context;            // For getting `Val`.
+  friend class User;               // For getting `Val`.
+  friend class Use;                // For getting `Val`.
+  friend class SelectInst;         // For getting `Val`.
+  friend class ExtractElementInst; // For getting `Val`.
+  friend class InsertElementInst;  // For getting `Val`.
+  friend class BranchInst;         // For getting `Val`.
+  friend class LoadInst;           // For getting `Val`.
+  friend class StoreInst;          // For getting `Val`.
+  friend class ReturnInst;         // For getting `Val`.
+  friend class CallBase;           // For getting `Val`.
+  friend class CallInst;           // For getting `Val`.
+  friend class InvokeInst;         // For getting `Val`.
+  friend class CallBrInst;         // For getting `Val`.
+  friend class GetElementPtrInst;  // For getting `Val`.
+  friend class UnaryOperator;      // For getting `Val`.
+  friend class BinaryOperator;     // For getting `Val`.
+  friend class AtomicCmpXchgInst;  // For getting `Val`.
+  friend class AllocaInst;         // For getting `Val`.
+  friend class CastInst;           // For getting `Val`.
+  friend class PHINode;            // For getting `Val`.
+  friend class UnreachableInst;    // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -615,20 +623,24 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
-  friend class SelectInst;        // For getTopmostLLVMInstruction().
-  friend class InsertElementInst; // For getTopmostLLVMInstruction().
-  friend class BranchInst;        // For getTopmostLLVMInstruction().
-  friend class LoadInst;          // For getTopmostLLVMInstruction().
-  friend class StoreInst;         // For getTopmostLLVMInstruction().
-  friend class ReturnInst;        // For getTopmostLLVMInstruction().
-  friend class CallInst;          // For getTopmostLLVMInstruction().
-  friend class InvokeInst;        // For getTopmostLLVMInstruction().
-  friend class CallBrInst;        // For getTopmostLLVMInstruction().
-  friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
-  friend class AllocaInst;        // For getTopmostLLVMInstruction().
-  friend class CastInst;          // For getTopmostLLVMInstruction().
-  friend class PHINode;           // For getTopmostLLVMInstruction().
-  friend class UnreachableInst;   // For getTopmostLLVMInstruction().
+  friend class SelectInst;         // For getTopmostLLVMInstruction().
+  friend class ExtractElementInst; // For getTopmostLLVMInstruction().
+  friend class InsertElementInst;  // For getTopmostLLVMInstruction().
+  friend class BranchInst;         // For getTopmostLLVMInstruction().
+  friend class LoadInst;           // For getTopmostLLVMInstruction().
+  friend class StoreInst;          // For getTopmostLLVMInstruction().
+  friend class ReturnInst;         // For getTopmostLLVMInstruction().
+  friend class CallInst;           // For getTopmostLLVMInstruction().
+  friend class InvokeInst;         // For getTopmostLLVMInstruction().
+  friend class CallBrInst;         // For getTopmostLLVMInstruction().
+  friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class UnaryOperator;      // For getTopmostLLVMInstruction().
+  friend class BinaryOperator;     // For getTopmostLLVMInstruction().
+  friend class AtomicCmpXchgInst;  // For getTopmostLLVMInstruction().
+  friend class AllocaInst;         // For getTopmostLLVMInstruction().
+  friend class CastInst;           // For getTopmostLLVMInstruction().
+  friend class PHINode;            // For getTopmostLLVMInstruction().
+  friend class UnreachableInst;    // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -675,6 +687,98 @@ public:
   BasicBlock *getParent() const;
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From);
+
+  /// Determine whether the no signed wrap flag is set.
+  bool hasNoUnsignedWrap() const {
+    return cast<llvm::Instruction>(Val)->hasNoUnsignedWrap();
+  }
+  /// Set or clear the nuw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoUnsignedWrap(bool B = true);
+  /// Determine whether the no signed wrap flag is set.
+  bool hasNoSignedWrap() const {
+    return cast<llvm::Instruction>(Val)->hasNoSignedWrap();
+  }
+  /// Set or clear the nsw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoSignedWrap(bool B = true);
+  /// Determine whether all fast-math-flags are set.
+  bool isFast() const { return cast<llvm::Instruction>(Val)->isFast(); }
+  /// Set or clear all fast-math-flags on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setFast(bool B);
+  /// Determine whether the allow-reassociation flag is set.
+  bool hasAllowReassoc() const {
+    return cast<llvm::Instruction>(Val)->hasAllowReassoc();
+  }
+  /// Set or clear the reassociation flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowReassoc(bool B);
+  /// Determine whether the exact flag is set.
+  bool isExact() const { return cast<llvm::Instruction>(Val)->isExact(); }
+  /// Set or clear the exact flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setIsExact(bool B = true);
+  /// Determine whether the no-NaNs flag is set.
+  bool hasNoNaNs() const { return cast<llvm::Instruction>(Val)->hasNoNaNs(); }
+  /// Set or clear the no-nans flag on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoNaNs(bool B);
+  /// Determine whether the no-infs flag is set.
+  bool hasNoInfs() const { return cast<llvm::Instruction>(Val)->hasNoInfs(); }
+  /// Set or clear the no-infs flag on this instruction, which must be an
+  /// operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoInfs(bool B);
+  /// Determine whether the no-signed-zeros flag is set.
+  bool hasNoSignedZeros() const {
+    return cast<llvm::Instruction>(Val)->hasNoSignedZeros();
+  }
+  /// Set or clear the no-signed-zeros flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasNoSignedZeros(bool B);
+  /// Determine whether the allow-reciprocal flag is set.
+  bool hasAllowReciprocal() const {
+    return cast<llvm::Instruction>(Val)->hasAllowReciprocal();
+  }
+  /// Set or clear the allow-reciprocal flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowReciprocal(bool B);
+  /// Determine whether the allow-contract flag is set.
+  bool hasAllowContract() const {
+    return cast<llvm::Instruction>(Val)->hasAllowContract();
+  }
+  /// Set or clear the allow-contract flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowContract(bool B);
+  /// Determine whether the approximate-math-functions flag is set.
+  bool hasApproxFunc() const {
+    return cast<llvm::Instruction>(Val)->hasApproxFunc();
+  }
+  /// Set or clear the approximate-math-functions flag on this instruction,
+  /// which must be an operator which supports this flag. See LangRef.html for
+  /// the meaning of this flag.
+  void setHasApproxFunc(bool B);
+  /// Convenience function for getting all the fast-math flags, which must be an
+  /// operator which supports these flags. See LangRef.html for the meaning of
+  /// these flags.
+  FastMathFlags getFastMathFlags() const {
+    return cast<llvm::Instruction>(Val)->getFastMathFlags();
+  }
+  /// Convenience function for setting multiple fast-math flags on this
+  /// instruction, which must be an operator which supports these flags. See
+  /// LangRef.html for the meaning of these flags.
+  void setFastMathFlags(FastMathFlags FMF);
+  /// Convenience function for transferring all fast-math flag values to this
+  /// instruction, which must be an operator which supports these flags. See
+  /// LangRef.html for the meaning of these flags.
+  void copyFastMathFlags(FastMathFlags FMF);
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -765,6 +869,37 @@ public:
                               const Value *Idx) {
     return llvm::InsertElementInst::isValidOperands(Vec->Val, NewElt->Val,
                                                     Idx->Val);
+  }
+};
+
+class ExtractElementInst final
+    : public SingleLLVMInstructionImpl<llvm::ExtractElementInst> {
+  /// Use Context::createExtractElementInst() instead.
+  ExtractElementInst(llvm::Instruction *I, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::ExtractElement,
+                                  Opcode::ExtractElement, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+
+public:
+  static Value *create(Value *Vec, Value *Idx, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Vec, Value *Idx, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ExtractElement;
+  }
+
+  static bool isValidOperands(const Value *Vec, const Value *Idx) {
+    return llvm::ExtractElementInst::isValidOperands(Vec->Val, Idx->Val);
+  }
+  Value *getVectorOperand() { return getOperand(0); }
+  Value *getIndexOperand() { return getOperand(1); }
+  const Value *getVectorOperand() const { return getOperand(0); }
+  const Value *getIndexOperand() const { return getOperand(1); }
+
+  VectorType *getVectorOperandType() const {
+    return cast<VectorType>(getVectorOperand()->getType());
   }
 };
 
@@ -1303,6 +1438,212 @@ public:
   // TODO: Add missing member functions.
 };
 
+class UnaryOperator : public UnaryInstruction {
+  static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
+    switch (UnOp) {
+    case llvm::Instruction::FNeg:
+      return Opcode::FNeg;
+    case llvm::Instruction::UnaryOpsEnd:
+      llvm_unreachable("Bad UnOp!");
+    }
+    llvm_unreachable("Unhandled UnOp!");
+  }
+  UnaryOperator(llvm::UnaryOperator *UO, Context &Ctx)
+      : UnaryInstruction(ClassID::UnOp, getUnaryOpcode(UO->getOpcode()), UO,
+                         Ctx) {}
+  friend Context; // for constructor.
+public:
+  static Value *create(Instruction::Opcode Op, Value *OpV, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BBIterator WhereIt,
+                                      BasicBlock *WhereBB, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom,
+                                      Instruction *InsertBefore, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BasicBlock *InsertAtEnd,
+                                      Context &Ctx, const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::UnOp;
+  }
+};
+
+class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
+  static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
+    switch (BinOp) {
+    case llvm::Instruction::Add:
+      return Opcode::Add;
+    case llvm::Instruction::FAdd:
+      return Opcode::FAdd;
+    case llvm::Instruction::Sub:
+      return Opcode::Sub;
+    case llvm::Instruction::FSub:
+      return Opcode::FSub;
+    case llvm::Instruction::Mul:
+      return Opcode::Mul;
+    case llvm::Instruction::FMul:
+      return Opcode::FMul;
+    case llvm::Instruction::UDiv:
+      return Opcode::UDiv;
+    case llvm::Instruction::SDiv:
+      return Opcode::SDiv;
+    case llvm::Instruction::FDiv:
+      return Opcode::FDiv;
+    case llvm::Instruction::URem:
+      return Opcode::URem;
+    case llvm::Instruction::SRem:
+      return Opcode::SRem;
+    case llvm::Instruction::FRem:
+      return Opcode::FRem;
+    case llvm::Instruction::Shl:
+      return Opcode::Shl;
+    case llvm::Instruction::LShr:
+      return Opcode::LShr;
+    case llvm::Instruction::AShr:
+      return Opcode::AShr;
+    case llvm::Instruction::And:
+      return Opcode::And;
+    case llvm::Instruction::Or:
+      return Opcode::Or;
+    case llvm::Instruction::Xor:
+      return Opcode::Xor;
+    case llvm::Instruction::BinaryOpsEnd:
+      llvm_unreachable("Bad BinOp!");
+    }
+    llvm_unreachable("Unhandled BinOp!");
+  }
+  BinaryOperator(llvm::BinaryOperator *BinOp, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::BinaryOperator,
+                                  getBinOpOpcode(BinOp->getOpcode()), BinOp,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      BBIterator WhereIt, BasicBlock *WhereBB,
+                                      Context &Ctx, const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      Instruction *InsertBefore, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      BasicBlock *InsertAtEnd, Context &Ctx,
+                                      const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::BinaryOperator;
+  }
+  void swapOperands() { swapOperandsInternal(0, 1); }
+};
+
+class AtomicCmpXchgInst
+    : public SingleLLVMInstructionImpl<llvm::AtomicCmpXchgInst> {
+  AtomicCmpXchgInst(llvm::AtomicCmpXchgInst *Atomic, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::AtomicCmpXchg,
+                                  Instruction::Opcode::AtomicCmpXchg, Atomic,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
+  Align getAlign() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getAlign();
+  }
+
+  void setAlignment(Align Align);
+  /// Return true if this is a cmpxchg from a volatile memory
+  /// location.
+  bool isVolatile() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->isVolatile();
+  }
+  /// Specify whether this is a volatile cmpxchg.
+  void setVolatile(bool V);
+  /// Return true if this cmpxchg may spuriously fail.
+  bool isWeak() const { return cast<llvm::AtomicCmpXchgInst>(Val)->isWeak(); }
+  void setWeak(bool IsWeak);
+  static bool isValidSuccessOrdering(AtomicOrdering Ordering) {
+    return llvm::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering);
+  }
+  static bool isValidFailureOrdering(AtomicOrdering Ordering) {
+    return llvm::AtomicCmpXchgInst::isValidFailureOrdering(Ordering);
+  }
+  AtomicOrdering getSuccessOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getSuccessOrdering();
+  }
+  void setSuccessOrdering(AtomicOrdering Ordering);
+
+  AtomicOrdering getFailureOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getFailureOrdering();
+  }
+  void setFailureOrdering(AtomicOrdering Ordering);
+  AtomicOrdering getMergedOrdering() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getMergedOrdering();
+  }
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getSyncScopeID();
+  }
+  void setSyncScopeID(SyncScope::ID SSID);
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getPointerOperand();
+  }
+
+  Value *getCompareOperand();
+  const Value *getCompareOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getCompareOperand();
+  }
+
+  Value *getNewValOperand();
+  const Value *getNewValOperand() const {
+    return const_cast<AtomicCmpXchgInst *>(this)->getNewValOperand();
+  }
+
+  /// Returns the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return cast<llvm::AtomicCmpXchgInst>(Val)->getPointerAddressSpace();
+  }
+
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         Instruction *InsertBefore, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+  static AtomicCmpXchgInst *
+  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
+         BasicBlock *InsertAtEnd, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
+};
+
 class AllocaInst final : public UnaryInstruction {
   AllocaInst(llvm::AllocaInst *AI, Context &Ctx)
       : UnaryInstruction(ClassID::Alloca, Instruction::Opcode::Alloca, AI,
@@ -1644,6 +1985,8 @@ protected:
   friend SelectInst; // For createSelectInst()
   InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
   friend InsertElementInst; // For createInsertElementInst()
+  ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
+  friend ExtractElementInst; // For createExtractElementInst()
   BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
@@ -1660,6 +2003,12 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
+  friend UnaryOperator; // For createUnaryOperator()
+  BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
+  friend BinaryOperator; // For createBinaryOperator()
+  AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
+  friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
   AllocaInst *createAllocaInst(llvm::AllocaInst *I);
   friend AllocaInst; // For createAllocaInst()
   CastInst *createCastInst(llvm::CastInst *I);

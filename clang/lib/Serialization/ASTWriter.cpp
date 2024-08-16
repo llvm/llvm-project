@@ -4734,6 +4734,7 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
+    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -6752,6 +6753,12 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
   // higher module file indexes.
   if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
+}
+
+void ASTWriter::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  assert(D->isCanonicalDecl() && "predefined decl is not canonical");
+  DeclIDs[D] = LocalDeclID(ID);
+  PredefinedDecls.insert(D);
 }
 
 void ASTWriter::SelectorRead(SelectorID ID, Selector S) {

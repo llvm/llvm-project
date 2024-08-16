@@ -3139,12 +3139,10 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     return WideningDecision != CM_GatherScatter;
   };
 
-  // A helper that returns true if the given value is a bitcast or
-  // getelementptr instruction contained in the loop.
-  auto isLoopVaryingBitCastOrGEP = [&](Value *V) {
-    return ((isa<BitCastInst>(V) && V->getType()->isPointerTy()) ||
-            isa<GetElementPtrInst>(V)) &&
-           !TheLoop->isLoopInvariant(V);
+  // A helper that returns true if the given value is a getelementptr
+  // instruction contained in the loop.
+  auto isLoopVaryingGEP = [&](Value *V) {
+    return isa<GetElementPtrInst>(V) && !TheLoop->isLoopInvariant(V);
   };
 
   // A helper that evaluates a memory access's use of a pointer. If the use will
@@ -3154,7 +3152,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
-    if (!isLoopVaryingBitCastOrGEP(Ptr))
+    if (!isLoopVaryingGEP(Ptr))
       return;
 
     // If the pointer has already been identified as scalar (e.g., if it was
@@ -3220,7 +3218,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   unsigned Idx = 0;
   while (Idx != Worklist.size()) {
     Instruction *Dst = Worklist[Idx++];
-    if (!isLoopVaryingBitCastOrGEP(Dst->getOperand(0)))
+    if (!isLoopVaryingGEP(Dst->getOperand(0)))
       continue;
     auto *Src = cast<Instruction>(Dst->getOperand(0));
     if (llvm::all_of(Src->users(), [&](User *U) -> bool {
@@ -3705,7 +3703,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     auto *I = cast<Instruction>(V);
     auto UsersAreMemAccesses =
       llvm::all_of(I->users(), [&](User *U) -> bool {
-        return isVectorizedMemAccessUse(cast<Instruction>(U), V);
+        auto *UI = cast<Instruction>(U);
+        return TheLoop->contains(UI) && isVectorizedMemAccessUse(UI, V);
       });
     if (UsersAreMemAccesses)
       addToWorklistIfAllowed(I);
@@ -7080,7 +7079,16 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    SmallVector<Instruction *> IVInsts = {IV, IVInc};
+    SmallVector<Instruction *> IVInsts = {IVInc};
+    for (unsigned I = 0; I != IVInsts.size(); I++) {
+      for (Value *Op : IVInsts[I]->operands()) {
+        auto *OpI = dyn_cast<Instruction>(Op);
+        if (Op == IV || !OpI || !OrigLoop->contains(OpI) || !Op->hasOneUse())
+          continue;
+        IVInsts.push_back(OpI);
+      }
+    }
+    IVInsts.push_back(IV);
     for (User *U : IV->users()) {
       auto *CI = cast<Instruction>(U);
       if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
@@ -7835,7 +7843,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    VPlans.push_back(buildVPlan(SubRange));
+    auto Plan = buildVPlan(SubRange);
+    VPlanTransforms::optimize(*Plan, *PSE.getSE());
+    VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }
 }
@@ -8008,8 +8018,9 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB) {
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
-  // This is the block mask. We OR all incoming edges.
-  for (auto *Predecessor : predecessors(BB)) {
+  // This is the block mask. We OR all unique incoming edges.
+  for (auto *Predecessor :
+       SetVector<BasicBlock *>(pred_begin(BB), pred_end(BB))) {
     VPValue *EdgeMask = createEdgeMask(Predecessor, BB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is too.
       BlockMaskCache[BB] = EdgeMask;
@@ -8535,13 +8546,18 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
 static void addUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
-  BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
-  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
-  // Only handle single-exit loops with unique exit blocks for now.
-  if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
+  auto MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  // No edge from the middle block to the unique exit block has been inserted
+  // and there is nothing to fix from vector loop; phis should have incoming
+  // from scalar loop only.
+  if (MiddleVPBB->getNumSuccessors() != 2)
     return;
 
   // Introduce VPUsers modeling the exit values.
+  BasicBlock *ExitBB =
+      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
+  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
@@ -8767,13 +8783,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // After here, VPBB should not be used.
   VPBB = nullptr;
 
-  if (CM.requiresScalarEpilogue(Range)) {
-    // No edge from the middle block to the unique exit block has been inserted
-    // and there is nothing to fix from vector loop; phis should have incoming
-    // from scalar loop only.
-  } else
-    addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
-                        Legal->getInductionVars());
+  addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
+                      Legal->getInductionVars());
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
@@ -9352,46 +9363,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
   State.set(this, Res, 0);
-}
-
-void VPWidenStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
-
-  VPValue *StoredVPValue = getStoredValue();
-  bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-
-  auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
-
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Instruction *NewSI = nullptr;
-    Value *Mask = nullptr;
-    if (auto *VPMask = getMask()) {
-      // Mask reversal is only needed for non-all-one (null) masks, as reverse
-      // of a null all-one mask is a null mask.
-      Mask = State.get(VPMask, Part);
-      if (isReverse())
-        Mask = Builder.CreateVectorReverse(Mask, "reverse");
-    }
-
-    Value *StoredVal = State.get(StoredVPValue, Part);
-    if (isReverse()) {
-      // If we store to reverse consecutive memory locations, then we need
-      // to reverse the order of elements in the stored value.
-      StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-      // We don't want to update the value in the map as it might be used in
-      // another expression. So don't call resetVectorValue(StoredVal).
-    }
-    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
-    if (CreateScatter)
-      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
-    else if (Mask)
-      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
-    else
-      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-    State.addMetadata(NewSI, SI);
-  }
 }
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
@@ -10167,22 +10138,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   return true;
 }
 
-LoopVectorizeResult LoopVectorizePass::runImpl(
-    Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
-    DominatorTree &DT_, BlockFrequencyInfo *BFI_, TargetLibraryInfo *TLI_,
-    DemandedBits &DB_, AssumptionCache &AC_, LoopAccessInfoManager &LAIs_,
-    OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_) {
-  SE = &SE_;
-  LI = &LI_;
-  TTI = &TTI_;
-  DT = &DT_;
-  BFI = BFI_;
-  TLI = TLI_;
-  AC = &AC_;
-  LAIs = &LAIs_;
-  DB = &DB_;
-  ORE = &ORE_;
-  PSI = PSI_;
+LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
@@ -10242,53 +10198,51 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 
 PreservedAnalyses LoopVectorizePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-    auto &LI = AM.getResult<LoopAnalysis>(F);
-    // There are no loops in the function. Return before computing other expensive
-    // analyses.
-    if (LI.empty())
-      return PreservedAnalyses::all();
-    auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
-    auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-    auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-    auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-    auto &AC = AM.getResult<AssumptionAnalysis>(F);
-    auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
-    auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  LI = &AM.getResult<LoopAnalysis>(F);
+  // There are no loops in the function. Return before computing other
+  // expensive analyses.
+  if (LI->empty())
+    return PreservedAnalyses::all();
+  SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  TTI = &AM.getResult<TargetIRAnalysis>(F);
+  DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  TLI = &AM.getResult<TargetLibraryAnalysis>(F);
+  AC = &AM.getResult<AssumptionAnalysis>(F);
+  DB = &AM.getResult<DemandedBitsAnalysis>(F);
+  ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  LAIs = &AM.getResult<LoopAccessAnalysis>(F);
 
-    LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    BlockFrequencyInfo *BFI = nullptr;
-    if (PSI && PSI->hasProfileSummary())
-      BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-    LoopVectorizeResult Result =
-        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AC, LAIs, ORE, PSI);
-    if (!Result.MadeAnyChange)
-      return PreservedAnalyses::all();
-    PreservedAnalyses PA;
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  BFI = nullptr;
+  if (PSI && PSI->hasProfileSummary())
+    BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  LoopVectorizeResult Result = runImpl(F);
+  if (!Result.MadeAnyChange)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
 
-    if (isAssignmentTrackingEnabled(*F.getParent())) {
-      for (auto &BB : F)
-        RemoveRedundantDbgInstrs(&BB);
-    }
+  if (isAssignmentTrackingEnabled(*F.getParent())) {
+    for (auto &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
+  }
 
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<ScalarEvolutionAnalysis>();
-    PA.preserve<LoopAccessAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<LoopAccessAnalysis>();
 
-    if (Result.MadeCFGChange) {
-      // Making CFG changes likely means a loop got vectorized. Indicate that
-      // extra simplification passes should be run.
-      // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
-      // be run if runtime checks have been added.
-      AM.getResult<ShouldRunExtraVectorPasses>(F);
-      PA.preserve<ShouldRunExtraVectorPasses>();
-    } else {
-      PA.preserveSet<CFGAnalyses>();
-    }
-    return PA;
+  if (Result.MadeCFGChange) {
+    // Making CFG changes likely means a loop got vectorized. Indicate that
+    // extra simplification passes should be run.
+    // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
+    // be run if runtime checks have been added.
+    AM.getResult<ShouldRunExtraVectorPasses>(F);
+    PA.preserve<ShouldRunExtraVectorPasses>();
+  } else {
+    PA.preserveSet<CFGAnalyses>();
+  }
+  return PA;
 }
 
 void LoopVectorizePass::printPipeline(
