@@ -178,7 +178,6 @@ class Builder:
             if not lldbplatformutil.platformIsDarwin():
                 if os.getenv("USE_LLVM_TOOLS"):
                     # Use the llvm project tool instead of the system defaults.
-                    # Note: do not override explicity specified tool from the cmd line.
                     for var, name in util_names.items():
                         utils.append('%s="%s"' % (var, getLlvmUtil("llvm-" + name)))
                     utils.extend(['AR="%s"' % llvm_ar])
@@ -186,6 +185,7 @@ class Builder:
                     util_paths = {}
                     # Assembly a toolchain side tool cmd based on passed CC.
                     for var, name in util_names.items():
+                        # Do not override explicity specified tool from the cmd line.
                         if not os.getenv(var):
                             util_paths[var] = getToolchainUtil(name)
                         else:
