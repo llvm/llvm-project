@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the KernelInfo, KernelInfoAnalysis, and KernelInfoPrinter
-// classes used to extract function properties from a kernel.
+// This file defines the KernelInfoPrinter class used to emit remarks about
+// function properties from a GPU kernel.
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,6 +26,69 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "kernel-info"
+
+/// Data structure holding function info for kernels.
+class KernelInfo {
+  void updateForBB(const BasicBlock &BB, int64_t Direction,
+                   OptimizationRemarkEmitter &ORE);
+
+public:
+  static KernelInfo getKernelInfo(Function &F, FunctionAnalysisManager &FAM);
+
+  /// Whether the function has external linkage and is not a kernel function.
+  bool ExternalNotKernel = false;
+
+  /// OpenMP Launch bounds.
+  ///@{
+  std::optional<int64_t> OmpTargetNumTeams;
+  std::optional<int64_t> OmpTargetThreadLimit;
+  ///@}
+
+  /// AMDGPU launch bounds.
+  ///@{
+  std::optional<int64_t> AmdgpuMaxNumWorkgroupsX;
+  std::optional<int64_t> AmdgpuMaxNumWorkgroupsY;
+  std::optional<int64_t> AmdgpuMaxNumWorkgroupsZ;
+  std::optional<int64_t> AmdgpuFlatWorkGroupSizeMin;
+  std::optional<int64_t> AmdgpuFlatWorkGroupSizeMax;
+  std::optional<int64_t> AmdgpuWavesPerEuMin;
+  std::optional<int64_t> AmdgpuWavesPerEuMax;
+  ///@}
+
+  /// NVPTX launch bounds.
+  ///@{
+  std::optional<int64_t> Maxclusterrank;
+  std::optional<int64_t> Maxntidx;
+  ///@}
+
+  /// The number of alloca instructions inside the function, the number of those
+  /// with allocation sizes that cannot be determined at compile time, and the
+  /// sum of the sizes that can be.
+  ///
+  /// With the current implementation for at least some GPU archs,
+  /// AllocasDyn > 0 might not be possible, but we report AllocasDyn anyway in
+  /// case the implementation changes.
+  int64_t Allocas = 0;
+  int64_t AllocasDyn = 0;
+  int64_t AllocasStaticSizeSum = 0;
+
+  /// Number of direct/indirect calls (anything derived from CallBase).
+  int64_t DirectCalls = 0;
+  int64_t IndirectCalls = 0;
+
+  /// Number of direct calls made from this function to other functions
+  /// defined in this module.
+  int64_t DirectCallsToDefinedFunctions = 0;
+
+  /// Number of calls of type InvokeInst.
+  int64_t Invokes = 0;
+
+  /// Target-specific flat address space.
+  unsigned FlatAddrspace;
+
+  /// Number of flat address space memory accesses (via load, store, etc.).
+  int64_t FlatAddrspaceAccesses = 0;
+};
 
 static bool isKernelFunction(Function &F) {
   // TODO: Is this general enough?  Consider languages beyond OpenMP.
@@ -342,4 +405,8 @@ KernelInfo KernelInfo::getKernelInfo(Function &F,
   return KI;
 }
 
-AnalysisKey KernelInfoAnalysis::Key;
+PreservedAnalyses KernelInfoPrinter::run(Function &F,
+                                         FunctionAnalysisManager &AM) {
+  KernelInfo::getKernelInfo(F, AM);
+  return PreservedAnalyses::all();
+}

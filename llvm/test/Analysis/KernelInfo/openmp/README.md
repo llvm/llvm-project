@@ -1,9 +1,9 @@
-The tests in this directory check that basic KernelInfoAnalysis functionality
+The tests in this directory check that basic KernelInfoPrinter functionality
 behaves reasonably for LLVM IR produced by Clang OpenMP codegen.
 
 So that these tests are straightforward to maintain and faithfully represent
 Clang OpenMP codegen, do not tweak or reduce the LLVM IR in them.  Other tests
-more exhaustively check KernelInfoAnalysis features using reduced LLVM IR.
+more exhaustively check KernelInfoPrinter features using reduced LLVM IR.
 
 The LLVM IR in each test file `$TEST` can be regenerated as follows in the case
 that Clang OpenMP codegen changes or it becomes desirable to adjust the source
