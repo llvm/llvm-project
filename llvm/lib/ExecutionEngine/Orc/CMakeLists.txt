@@ -62,6 +62,7 @@ add_llvm_component_library(LLVMOrcJIT
   ${atomic_lib}
 
   LINK_COMPONENTS
+  BinaryFormat
   Core
   ExecutionEngine
   JITLink
