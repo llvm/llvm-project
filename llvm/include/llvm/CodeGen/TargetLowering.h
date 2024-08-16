@@ -1543,7 +1543,9 @@ public:
        getIndexedStoreAction(IdxMode, VT.getSimpleVT()) == Custom);
   }
 
-  virtual bool isGlobalAddressOffsetFoldable(const GlobalValue *GV) const;
+  virtual bool isGlobalAddressOffsetFoldable(const GlobalValue *GV) const {
+    return false;
+  }
 
   /// Return how the indexed load should be treated: either it is legal, needs
   /// to be promoted to a larger size, needs to be expanded to some other code
@@ -3861,6 +3863,8 @@ public:
   virtual const MCExpr *
   getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
                                unsigned JTI, MCContext &Ctx) const;
+
+  bool isGlobalAddressOffsetFoldable(const GlobalValue *GV) const override;
 
   /// Return true if folding a constant offset with the given GlobalAddress is
   /// legal.  It is frequently not legal in PIC relocation models.

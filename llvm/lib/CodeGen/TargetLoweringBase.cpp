@@ -2187,23 +2187,6 @@ int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
   return getOpRefinementSteps(true, VT, getRecipEstimateForFunc(MF));
 }
 
-bool TargetLoweringBase::isGlobalAddressOffsetFoldable(
-    const GlobalValue *GV) const {
-  const TargetMachine &TM = getTargetMachine();
-
-  // If the address is not even local to this DSO we will have to load it from
-  // a got and then add the offset.
-  if (!TM.shouldAssumeDSOLocal(GV))
-    return false;
-
-  // If the code is position independent we will have to add a base register.
-  if (TM.isPositionIndependent())
-    return false;
-
-  // Otherwise we can do it.
-  return true;
-}
-
 int TargetLoweringBase::getDivRefinementSteps(EVT VT,
                                               MachineFunction &MF) const {
   return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
