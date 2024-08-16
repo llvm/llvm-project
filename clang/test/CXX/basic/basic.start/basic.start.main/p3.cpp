@@ -130,13 +130,8 @@ extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
 extern "C" __attribute__((visibility("default"))) __attribute__((weak))
 int main(); // expected-warning {{'main' should not be 'extern "C"'}}
 
-using uptr = unsigned long;
-
-extern bool f(uptr, uptr);
-bool InitModuleList() {
-  uptr me = reinterpret_cast<uptr>(InitModuleList);
-  uptr exe = reinterpret_cast<uptr>(&main); // expected-warning {{referring to 'main' within an expression is a Clang extension}}
-  return f(me, exe);
+unsigned long g() {
+  return reinterpret_cast<unsigned long>(&main); // expected-warning {{referring to 'main' within an expression is a Clang extension}}
 }
 
 #else
