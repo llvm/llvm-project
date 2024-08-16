@@ -1057,7 +1057,7 @@ private:
     }
 
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {
-      // We override this so as the be able to skip traversal of the lambda's
+      // We override this so as to be able to skip traversal of the lambda's
       // body. We have to explicitly traverse the captures. Why not return
       // false from shouldVisitLambdaBody()? Because we need to visit a lambda's
       // body when we are verifying the lambda itself; we only want to skip it
