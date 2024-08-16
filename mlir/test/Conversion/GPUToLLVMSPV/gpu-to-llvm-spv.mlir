@@ -444,7 +444,7 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_17:.*]] = llvm.insertvalue %[[VAL_15]], %[[VAL_16]][0]
 // CHECK:           llvm.insertvalue %[[VAL_15]], %[[VAL_17]][1]
   gpu.func @kernel_with_private_attributions()
-      private(%arg2: memref<32xf32>, %arg3: memref<16xi16>)
+      private(%arg2: memref<32xf32, #gpu.address_space<private>>, %arg3: memref<16xi16, #gpu.address_space<private>>)
       kernel {
     gpu.return
   }
@@ -471,7 +471,7 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_41]][0]
 // CHECK:           llvm.insertvalue %[[VAL_30]], %[[VAL_42]][1]
   gpu.func @kernel_with_workgoup_attributions()
-      workgroup(%arg2: memref<32xf32, 3>, %arg3: memref<16xi16, 3>)
+      workgroup(%arg2: memref<32xf32, #gpu.address_space<workgroup>>, %arg3: memref<16xi16, #gpu.address_space<workgroup>>)
       kernel {
     gpu.return
   }
@@ -491,8 +491,8 @@ gpu.module @kernels {
 // CHECK-64:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i64 : (i64) -> !llvm.ptr
 // CHECK-32:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i32 : (i64) -> !llvm.ptr
   gpu.func @kernel_with_both_attributions()
-      workgroup(%arg4: memref<8xf32, 3>, %arg5: memref<16xindex, 3>)
-      private(%arg6: memref<32xi32>, %arg7: memref<32xindex>)
+      workgroup(%arg4: memref<8xf32, #gpu.address_space<workgroup>>, %arg5: memref<16xindex, #gpu.address_space<workgroup>>)
+      private(%arg6: memref<32xi32, #gpu.address_space<private>>, %arg7: memref<32xindex, #gpu.address_space<private>>)
       kernel {
     gpu.return
   }
@@ -500,6 +500,18 @@ gpu.module @kernels {
 // CHECK-LABEL:   llvm.func spir_kernelcc @kernel_known_block_size
 // CHECK-SAME:                                                     reqd_work_group_size = array<i32: 128, 128, 256>
   gpu.func @kernel_known_block_size() kernel attributes {known_block_size = array<i32: 128, 128, 256>} {
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @kernels {
+// CHECK-LABEL:   llvm.func spir_funccc @address_spaces(
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<1>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr<3>
+// CHECK-SAME:                                          {{.*}}: !llvm.ptr
+  gpu.func @address_spaces(%arg0: memref<f32, #gpu.address_space<global>>, %arg1: memref<f32, #gpu.address_space<workgroup>>, %arg2: memref<f32, #gpu.address_space<private>>) {
     gpu.return
   }
 }

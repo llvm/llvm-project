@@ -9,6 +9,8 @@
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
+#include "mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -328,6 +330,7 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ReturnOp, gpu::ShuffleOp, gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
+    populateGpuMemorySpaceAttributeConversions(converter);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -341,6 +344,15 @@ struct GPUToLLVMSPVConversionPass final
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+namespace {
+static unsigned
+gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
+  constexpr spirv::ClientAPI clientAPI = spirv::ClientAPI::OpenCL;
+  return storageClassToAddressSpace(clientAPI,
+                                    addressSpaceToStorageClass(addressSpace));
+}
+} // namespace
+
 void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                                             RewritePatternSet &patterns) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
@@ -349,12 +361,11 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                LaunchConfigOpConversion<gpu::BlockDimOp>,
                LaunchConfigOpConversion<gpu::ThreadIdOp>,
                LaunchConfigOpConversion<gpu::GlobalIdOp>>(typeConverter);
-  constexpr spirv::ClientAPI clientAPI = spirv::ClientAPI::OpenCL;
   MLIRContext *context = &typeConverter.getContext();
   unsigned privateAddressSpace =
-      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Function);
+      gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Private);
   unsigned localAddressSpace =
-      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Workgroup);
+      gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Workgroup);
   OperationName llvmFuncOpName(LLVM::LLVMFuncOp::getOperationName(), context);
   StringAttr kernelBlockSizeAttributeName =
       LLVM::LLVMFuncOp::getReqdWorkGroupSizeAttrName(llvmFuncOpName);
@@ -365,5 +376,10 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
           /*kernelAttributeName=*/{}, kernelBlockSizeAttributeName,
           LLVM::CConv::SPIR_KERNEL, LLVM::CConv::SPIR_FUNC,
           /*encodeWorkgroupAttributionsAsArguments=*/true});
+}
+
+void populateGpuMemorySpaceAttributeConversions(TypeConverter &typeConverter) {
+  populateGpuMemorySpaceAttributeConversions(typeConverter,
+                                             gpuAddressSpaceToOCLAddressSpace);
 }
 } // namespace mlir
