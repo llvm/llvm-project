@@ -53,9 +53,9 @@ MachOCASWriter::MachOCASWriter(
         SerializeObjectFile,
     std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack,
     raw_pwrite_stream *CasIDOS)
-    : Target(TT), CAS(CAS), Mode(Mode), ResultCallBack(ResultCallBack), OS(OS),
+    : MachObjectWriter(std::move(MOTW), InternalOS, IsLittleEndian), Target(TT),
+      CAS(CAS), Mode(Mode), ResultCallBack(ResultCallBack), OS(OS),
       CasIDOS(CasIDOS), InternalOS(InternalBuffer),
-      MOW(std::move(MOTW), InternalOS, IsLittleEndian),
       CreateFromMcAssembler(CreateFromMcAssembler),
       SerializeObjectFile(SerializeObjectFile) {
   assert(TT.isLittleEndian() == IsLittleEndian && "Endianess should match");
