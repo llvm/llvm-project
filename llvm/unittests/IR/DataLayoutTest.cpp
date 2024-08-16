@@ -145,13 +145,14 @@ TEST(DataLayout, ParseNonIntegralAddrSpace) {
                           "\"ni:<address space>[:<address space>]...\""));
 
   for (StringRef Str : {"ni:", "ni::42", "ni:42:"})
-    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
-                         FailedWithMessage("<address space> is required"));
-
-  for (StringRef Str : {"ni:x", "ni:16777216", "ni:42:16777216"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
-        FailedWithMessage("<address space> must be a 24-bit integer"));
+        FailedWithMessage("address space component cannot be empty"));
+
+  for (StringRef Str : {"ni:x", "ni:42:0x1", "ni:16777216", "ni:42:16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
 
   for (StringRef Str : {"ni:0", "ni:42:0"})
     EXPECT_THAT_EXPECTED(

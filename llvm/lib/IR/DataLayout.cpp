@@ -279,16 +279,12 @@ static Error createSpecFormatError(Twine Format) {
 
 /// Attempts to parse an address space component of a specification,
 /// commonly referred to as <n> or <address space>.
-///
-/// \p Name should be the name of the component as specified by LangRef,
-/// it is used in diagnostic messages.
-static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace,
-                            StringRef Name) {
+static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
   if (Str.empty())
-    return createStringError(Name + " is required");
+    return createStringError("address space component cannot be empty");
 
   if (!to_integer(Str, AddrSpace, 10) || !isUInt<24>(AddrSpace))
-    return createStringError(Name + " must be a 24-bit integer");
+    return createStringError("address space must be a 24-bit integer");
 
   return Error::success();
 }
@@ -345,7 +341,7 @@ Error DataLayout::parseSpecification(StringRef Spec) {
 
     for (StringRef Str : split(Rest, ':')) {
       unsigned AddrSpace;
-      if (Error Err = parseAddrSpace(Str, AddrSpace, "<address space>"))
+      if (Error Err = parseAddrSpace(Str, AddrSpace))
         return Err;
       if (AddrSpace == 0)
         return createStringError("address space 0 cannot be non-integral");
