@@ -24,7 +24,7 @@ struct S {
 };
 } // namespace cwg2917
 
-#if __cplusplus >= 202002
+#if __cplusplus >= 202400L
 
 namespace std {
   using size_t = decltype(sizeof(0));

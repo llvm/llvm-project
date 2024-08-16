@@ -245,7 +245,7 @@ namespace std {
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{placement new would change type of storage from 'char' to 'int'}} \
+    new (c) int{12}; // ref-note {{this placement new expression is not yet supported in constant expressions}} \
                      // expected-note {{subexpression not valid in a constant expression}}
     return 0;
   }

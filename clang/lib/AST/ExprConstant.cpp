@@ -10025,7 +10025,9 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
       return false;
     IsNothrow = true;
-  } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
+  } else if (OperatorNew->isReservedGlobalPlacementOperator() &&
+             (Info.CurrentCall->isStdFunction() ||
+              Info.getLangOpts().CPlusPlus26)) {
     if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
       return false;
     if (Result.Designator.Invalid)
