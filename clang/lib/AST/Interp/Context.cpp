@@ -135,6 +135,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isAnyComplexType() || T->isVectorType())
     return std::nullopt;
 
+  if (const auto *ET = T->getAs<EnumType>())
+    return classify(ET->getDecl()->getIntegerType());
+
   if (T->isSignedIntegerOrEnumerationType()) {
     switch (Ctx.getIntWidth(T)) {
     case 64:

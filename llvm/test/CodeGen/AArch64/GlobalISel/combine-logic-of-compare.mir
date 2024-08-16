@@ -203,8 +203,8 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_and_icmp_9_2
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY [[C]](s64)
+    ; CHECK-NEXT: %zext:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
     %0:_(s64) = COPY $x0
     %nine:_(s64) = G_CONSTANT i64 9
     %two:_(s64) = G_CONSTANT i64 2
