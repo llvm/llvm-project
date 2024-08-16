@@ -173,7 +173,7 @@ public:
 
   /// Subtract the given offset from the current Base and Offset
   /// of the pointer.
-  [[nodiscard]]  Pointer atFieldSub(unsigned Off) const {
+  [[nodiscard]] Pointer atFieldSub(unsigned Off) const {
     assert(Offset >= Off);
     unsigned O = Offset - Off;
     return Pointer(asBlockPointer().Pointee, O, O);

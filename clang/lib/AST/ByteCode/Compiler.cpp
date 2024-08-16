@@ -3722,7 +3722,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Toplevel) {
+VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
+                                                 bool Toplevel) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -5124,7 +5125,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitNeg(*T, E);
-  case UO_Plus:                // +x
+  case UO_Plus: // +x
     if (!T)
       return this->emitError(E);
 
