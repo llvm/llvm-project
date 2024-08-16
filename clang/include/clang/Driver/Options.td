@@ -7603,6 +7603,10 @@ def ast_dump_filter : Separate<["-"], "ast-dump-filter">,
   MarshallingInfoString<FrontendOpts<"ASTDumpFilter">>;
 def ast_dump_filter_EQ : Joined<["-"], "ast-dump-filter=">,
   Alias<ast_dump_filter>;
+def fdump_auto_type_inference : Flag<["-"], "fdump-auto-type-inference">, Group<f_Group>,
+    HelpText<"Dump auto type inference information">;
+def fno_dump_auto_type_inference : Flag<["-"], "fno-dump-auto-type-inference">,Group<f_Group>,
+    HelpText<"Disable dumping auto type inference information">;
 def fno_modules_global_index : Flag<["-"], "fno-modules-global-index">,
   HelpText<"Do not automatically generate or update the global module index">,
   MarshallingInfoNegativeFlag<FrontendOpts<"UseGlobalModuleIndex">>;

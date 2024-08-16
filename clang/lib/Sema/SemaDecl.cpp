@@ -12976,6 +12976,12 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
   VDecl->setType(DeducedType);
   assert(VDecl->isLinkageValid());
 
+  // Emit a remark indicating the compiler-deduced type for variables declared
+  // using the C++ 'auto' keyword
+  SourceManager &SM = getSourceManager();
+  Sema::DumpAutoTypeInference(SM, VDecl->getLocation(), true, Context,
+                              VDecl->getNameAsString(), DeducedType);
+
   // In ARC, infer lifetime.
   if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(VDecl))
     VDecl->setInvalidDecl();
