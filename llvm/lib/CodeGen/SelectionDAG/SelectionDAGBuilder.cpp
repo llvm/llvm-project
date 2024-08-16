@@ -5242,7 +5242,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // definition.
   const Function *F = I.getCalledFunction();
   bool HasChain = !F->doesNotAccessMemory();
-  bool OnlyLoad = HasChain && F->onlyReadsMemory();
+  bool OnlyLoad =
+      HasChain && F->onlyReadsMemory() && F->willReturn() && F->doesNotThrow();
 
   // Build the operand list.
   SmallVector<SDValue, 8> Ops;
