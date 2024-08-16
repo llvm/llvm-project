@@ -264,6 +264,7 @@ Bug Fixes to C++ Support
 - Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
+- Fixed a crash caused by marking the function declaration as invalid during strictness checks on ``extern`` main. (#GH104570).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -12233,7 +12233,6 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
        FD->getDeclContext()->getRedeclContext()->isTranslationUnit())) {
     Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
         << FD->getLanguageLinkage();
-    FD->setInvalidDecl();
     return;
   }
 
