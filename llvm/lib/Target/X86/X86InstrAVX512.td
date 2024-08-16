@@ -12680,8 +12680,8 @@ defm VCVTNE2PS2BF16 : avx512_binop_all<0x72, "vcvtne2ps2bf16",
                                        X86cvtne2ps2bf16, [HasBF16], [HasVLX, HasBF16]>, T8, XD,
                                        EVEX_CD8<32, CD8VF>;
 
-// Truncate Float to BFloat16
-multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,
+// Truncate Float to BFloat16, Float16 to BF8/HF8[,S]
+multiclass avx512_cvt_trunc_ne<bits<8> opc, string OpcodeStr,
                              AVX512VLVectorVTInfo vt_dst,
                              AVX512VLVectorVTInfo vt_src,
                              X86SchedWriteWidths sched,
@@ -12718,11 +12718,11 @@ multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,
                   f256mem:$src), 0, "intel">;
 }
 
-defm VCVTNEPS2BF16 : avx512_cvtps2bf16<0x72, "vcvtneps2bf16",
-                                       avx512vl_bf16_info, avx512vl_f32_info,
-                                       SchedWriteCvtPD2PS, X86cvtneps2bf16,
-                                       [HasBF16, HasVLX], [HasBF16]>,
-                                       T8, XS, EVEX_CD8<32, CD8VF>;
+defm VCVTNEPS2BF16 : avx512_cvt_trunc_ne<0x72, "vcvtneps2bf16",
+                                         avx512vl_bf16_info, avx512vl_f32_info,
+                                         SchedWriteCvtPD2PS, X86cvtneps2bf16,
+                                         [HasBF16, HasVLX], [HasBF16]>,
+                                         T8, XS, EVEX_CD8<32, CD8VF>;
 
 let Predicates = [HasBF16, HasVLX] in {
   // Special patterns to allow use of X86mcvtneps2bf16 for masking. Instruction
