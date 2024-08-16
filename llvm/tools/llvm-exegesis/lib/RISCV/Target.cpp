@@ -8,8 +8,6 @@
 
 #include "../Target.h"
 
-#include "RISCVCounters.h"
-
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
@@ -31,16 +29,9 @@ namespace exegesis {
 
 namespace {
 
-#include "RISCVGenExegesis.inc"
-
 class ExegesisRISCVTarget : public ExegesisTarget {
 public:
   ExegesisRISCVTarget();
-
-  Expected<std::unique_ptr<pfm::CounterGroup>>
-  createCounter(StringRef CounterName, const LLVMState &State,
-                ArrayRef<const char *> ValidationCounters,
-                const pid_t ProcessID) const override;
 
   bool checkOpcodeSupported(int Opcode,
                             const MCSubtargetInfo &SI) const override;
@@ -81,19 +72,8 @@ public:
 };
 
 ExegesisRISCVTarget::ExegesisRISCVTarget()
-    : ExegesisTarget(RISCVCpuPfmCounters, RISCV_MC::isOpcodeAvailable) {}
-
-Expected<std::unique_ptr<pfm::CounterGroup>> ExegesisRISCVTarget::createCounter(
-    StringRef CounterName, const LLVMState &State,
-    ArrayRef<const char *> ValidationCounters, const pid_t ProcessID) const {
-  if (CounterName == RISCVPfmCounterNames[0]) {
-    // TODO add support for Linux perf counters
-    return createRISCVCpuCyclesCounter(pfm::PerfEvent(CounterName));
-  }
-  return make_error<Failure>(Twine("Unsupported performance counter '")
-                                 .concat(CounterName)
-                                 .concat("'"));
-}
+    : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
+                     RISCV_MC::isOpcodeAvailable) {}
 
 bool ExegesisRISCVTarget::checkOpcodeSupported(
     int Opcode, const MCSubtargetInfo &SI) const {
@@ -135,11 +115,12 @@ static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
   for (const RISCVMatInt::Inst &Inst : InstSeq) {
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
-      MatIntInstrs.push_back(
-          MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Inst.getImm()));
+      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
+                                 .addReg(DestReg)
+                                 .addImm(Inst.getImm()));
       break;
     case RISCVMatInt::RegX0:
-      MatIntInstrs.push_back(MCInstBuilder(RISCV::ADD_UW)
+      MatIntInstrs.push_back(MCInstBuilder(Inst.getOpcode())
                                  .addReg(DestReg)
                                  .addReg(SrcReg)
                                  .addReg(RISCV::X0));

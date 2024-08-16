@@ -15,7 +15,6 @@ add_llvm_library(LLVMExegesisRISCV
   DISABLE_LLVM_LINK_LLVM_DYLIB
   STATIC
   Target.cpp
-  RISCVCounters.cpp
 
   DEPENDS
   intrinsics_gen
