@@ -721,6 +721,16 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
+static Error getIncompatibleError(StringRef Ext1, StringRef Ext2) {
+  return getError("'" + Ext1 + "' and '" + Ext2 +
+                  "' extensions are incompatible");
+}
+
+static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
+  return getError("'" + Ext + "' requires '" + ReqExt +
+                  "' extension to also be specified");
+}
+
 Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") != 0;
   bool HasI = Exts.count("i") != 0;
@@ -733,29 +743,24 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmt = Exts.count("zcmt") != 0;
 
   if (HasI && HasE)
-    return getError("'I' and 'E' extensions are incompatible");
+    return getIncompatibleError("I", "E");
 
   if (HasF && HasZfinx)
-    return getError("'f' and 'zfinx' extensions are incompatible");
+    return getIncompatibleError("f", "zfinx");
 
   if (HasZvl && !HasVector)
-    return getError(Twine("'") + "zvl*b" +
-                    "' requires 'v' or 'zve*' extension to also be specified");
+    return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
   if (!HasVector)
     for (auto Ext :
          {"zvbb", "zvkb", "zvkg", "zvkned", "zvknha", "zvksed", "zvksh"})
       if (Exts.count(Ext))
-        return getError(
-            Twine("'") + Ext +
-            "' requires 'v' or 'zve*' extension to also be specified");
+        return getExtensionRequiresError(Ext, "v' or 'zve*");
 
   if (!Exts.count("zve64x"))
     for (auto Ext : {"zvknhb", "zvbc"})
       if (Exts.count(Ext))
-        return getError(
-            Twine("'") + Ext +
-            "' requires 'v' or 'zve64*' extension to also be specified");
+        return getExtensionRequiresError(Ext, "v' or 'zve64*");
 
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
@@ -769,19 +774,17 @@ Error RISCVISAInfo::checkDependency() {
   if (!(Exts.count("a") || Exts.count("zaamo")))
     for (auto Ext : {"zacas", "zabha"})
       if (Exts.count(Ext))
-        return getError(
-            Twine("'") + Ext +
-            "' requires 'a' or 'zaamo' extension to also be specified");
+        return getExtensionRequiresError(Ext, "a' or 'zaamo");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
       return getError("'Xwchc' is only supported for 'rv32'");
 
     if (HasD)
-      return getError("'D' and 'Xwchc' extensions are incompatible");
+      return getIncompatibleError("D", "Xwchc");
 
     if (Exts.count("zcb") != 0)
-      return getError("'Xwchc' and 'Zcb' extensions are incompatible");
+      return getIncompatibleError("Xwchc", "Zcb");
   }
 
   return Error::success();
