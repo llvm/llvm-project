@@ -172,12 +172,17 @@ TEST(DataLayout, ParsePointerSpec) {
         DataLayout::parse(Str),
         FailedWithMessage("preferred alignment must be non-zero"));
 
-  for (StringRef Str : {"p:32:32:4", "p42:32:32:24", "p0:32:32:65535:32"})
+  for (StringRef Str : {"p:32:32:4", "p0:32:32:24", "p42:32:32:65535:32"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage(
             "preferred alignment must be a power of two times the byte width"));
-  // TODO: Check PrefAlign >= ABIAlign.
+
+  for (StringRef Str : {"p:64:64:32", "p0:16:32:16:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
 
   // index size
   for (StringRef Str : {"p:32:32:32:", "p0:32:32:32:"})
