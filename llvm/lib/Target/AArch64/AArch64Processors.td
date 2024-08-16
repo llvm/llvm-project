@@ -1036,7 +1036,7 @@ def ProcessorFeatures {
                                      FeatureSHA3, FeatureAES,
                                      FeatureSPE, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
-                                     FeatureCCIDX,
+                                     FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
