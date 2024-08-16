@@ -946,7 +946,7 @@ public:
            Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
-  bool isF16PseudoScalarTrans(unsigned Opcode) const {
+  static bool isF16PseudoScalarTrans(unsigned Opcode) {
     return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
            Opcode == AMDGPU::V_S_LOG_F16_e64 ||
            Opcode == AMDGPU::V_S_RCP_F16_e64 ||
