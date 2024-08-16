@@ -4474,7 +4474,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(~StackAlignMask, dl, IntPtr));
+                          DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
 
   SDValue Ops[] = {
       getRoot(), AllocSize,
@@ -5229,7 +5229,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // definition.
   const Function *F = I.getCalledFunction();
   bool HasChain = !F->doesNotAccessMemory();
-  bool OnlyLoad = HasChain && F->onlyReadsMemory();
+  bool OnlyLoad =
+      HasChain && F->onlyReadsMemory() && F->willReturn() && F->doesNotThrow();
 
   // Build the operand list.
   SmallVector<SDValue, 8> Ops;
@@ -6878,6 +6879,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::maximum:
     setValue(&I, DAG.getNode(ISD::FMAXIMUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::minimumnum:
+    setValue(&I, DAG.getNode(ISD::FMINIMUMNUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::maximumnum:
+    setValue(&I, DAG.getNode(ISD::FMAXIMUMNUM, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
@@ -9255,6 +9268,18 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_fmaxf:
       case LibFunc_fmaxl:
         if (visitBinaryFloatCall(I, ISD::FMAXNUM))
+          return;
+        break;
+      case LibFunc_fminimum_num:
+      case LibFunc_fminimum_numf:
+      case LibFunc_fminimum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
+          return;
+        break;
+      case LibFunc_fmaximum_num:
+      case LibFunc_fmaximum_numf:
+      case LibFunc_fmaximum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
           return;
         break;
       case LibFunc_sin:

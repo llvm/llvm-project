@@ -238,9 +238,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto FloatVT = EVT::getFloatingPointVT(32);
 
   SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
@@ -251,6 +253,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
 
   SDValue VScale = DAG->getVScale(DL, Int32VT, APInt::getMaxValue(32));
+
+  SDValue FPToSI = DAG->getNode(ISD::FP_TO_SINT, DL, FloatVT, Op2);
+  SDValue FPToUI = DAG->getNode(ISD::FP_TO_UINT, DL, FloatVT, Op2);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
@@ -263,6 +268,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
+
+  EXPECT_TRUE(sd_match(FPToUI, m_FPToUI(m_Value())));
+  EXPECT_TRUE(sd_match(FPToSI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
+  EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
@@ -383,6 +393,10 @@ struct VPMatchContext : public SDPatternMatch::BasicMatchContext {
     auto BaseOpc = ISD::getBaseOpcodeForVP(OpVal->getOpcode(), false);
     return BaseOpc.has_value() && *BaseOpc == Opc;
   }
+
+  unsigned getNumOperands(SDValue N) const {
+    return N->isVPOpcode() ? N->getNumOperands() - 2 : N->getNumOperands();
+  }
 };
 } // anonymous namespace
 TEST_F(SelectionDAGPatternMatchTest, matchContext) {
@@ -400,15 +414,54 @@ TEST_F(SelectionDAGPatternMatchTest, matchContext) {
                                {Vector0, Vector0, Mask0, Scalar0});
   SDValue VPReduceAdd = DAG->getNode(ISD::VP_REDUCE_ADD, DL, Int32VT,
                                      {Scalar0, VPAdd, Mask0, Scalar0});
+  SDValue Add = DAG->getNode(ISD::ADD, DL, VInt32VT, {Vector0, Vector0});
 
   using namespace SDPatternMatch;
   VPMatchContext VPCtx(DAG.get());
   EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_Opc(ISD::ADD)));
+  EXPECT_TRUE(
+      sd_context_match(VPAdd, VPCtx, m_Node(ISD::ADD, m_Value(), m_Value())));
+  // VPMatchContext can't match pattern using explicit VP Opcode
+  EXPECT_FALSE(sd_context_match(VPAdd, VPCtx,
+                                m_Node(ISD::VP_ADD, m_Value(), m_Value())));
+  EXPECT_FALSE(sd_context_match(
+      VPAdd, VPCtx,
+      m_Node(ISD::VP_ADD, m_Value(), m_Value(), m_Value(), m_Value())));
+  // Check Binary Op Pattern
+  EXPECT_TRUE(sd_context_match(VPAdd, VPCtx, m_Add(m_Value(), m_Value())));
   // VP_REDUCE_ADD doesn't have a based opcode, so we use a normal
   // sd_match before switching to VPMatchContext when checking VPAdd.
   EXPECT_TRUE(sd_match(VPReduceAdd, m_Node(ISD::VP_REDUCE_ADD, m_Value(),
                                            m_Context(VPCtx, m_Opc(ISD::ADD)),
                                            m_Value(), m_Value())));
+  // non-vector predicated should match too
+  EXPECT_TRUE(sd_context_match(Add, VPCtx, m_Opc(ISD::ADD)));
+  EXPECT_TRUE(
+      sd_context_match(Add, VPCtx, m_Node(ISD::ADD, m_Value(), m_Value())));
+  EXPECT_FALSE(sd_context_match(
+      Add, VPCtx,
+      m_Node(ISD::ADD, m_Value(), m_Value(), m_Value(), m_Value())));
+  EXPECT_TRUE(sd_context_match(Add, VPCtx, m_Add(m_Value(), m_Value())));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchVPWithBasicContext) {
+  SDLoc DL;
+  auto BoolVT = EVT::getIntegerVT(Context, 1);
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
+  auto MaskVT = EVT::getVectorVT(Context, BoolVT, 4);
+
+  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
+  SDValue Mask = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, MaskVT);
+  SDValue EL = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
+
+  SDValue VPAdd =
+      DAG->getNode(ISD::VP_ADD, DL, VInt32VT, Vector0, Vector0, Mask, EL);
+
+  using namespace SDPatternMatch;
+  EXPECT_FALSE(sd_match(VPAdd, m_Node(ISD::VP_ADD, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(
+      VPAdd, m_Node(ISD::VP_ADD, m_Value(), m_Value(), m_Value(), m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {

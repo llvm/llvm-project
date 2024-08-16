@@ -1939,7 +1939,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
   case ISD::FMINIMUM:
-  case ISD::FMAXIMUM:           return visitFMinMax(N);
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:       return visitFMinMax(N);
   case ISD::FCEIL:              return visitFCEIL(N);
   case ISD::FTRUNC:             return visitFTRUNC(N);
   case ISD::FFREXP:             return visitFFREXP(N);
@@ -6068,6 +6070,7 @@ static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
 
+// FIXME: use FMINIMUMNUM if possible, such as for RISC-V.
 static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
                                      ISD::CondCode CC, unsigned OrAndOpcode,
                                      SelectionDAG &DAG,
@@ -13198,9 +13201,7 @@ SDValue DAGCombiner::matchVSelectOpSizesWithSetCC(SDNode *Cast) {
   unsigned CastOpcode = Cast->getOpcode();
   assert((CastOpcode == ISD::SIGN_EXTEND || CastOpcode == ISD::ZERO_EXTEND ||
           CastOpcode == ISD::TRUNCATE || CastOpcode == ISD::FP_EXTEND ||
-          CastOpcode == ISD::TRUNCATE_SSAT_S ||
-          CastOpcode == ISD::TRUNCATE_SSAT_U ||
-          CastOpcode == ISD::TRUNCATE_USAT_U || CastOpcode == ISD::FP_ROUND) &&
+          CastOpcode == ISD::FP_ROUND) &&
          "Unexpected opcode for vector select narrowing/widening");
 
   // We only do this transform before legal ops because the pattern may be
@@ -27135,6 +27136,10 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
           Opcode, LegalTypes
                       ? EltVT
                       : TLI.getTypeToTransformTo(*DAG.getContext(), EltVT)))
+    return SDValue();
+
+  // FIXME: Type legalization can't handle illegal MULHS/MULHU.
+  if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
