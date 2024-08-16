@@ -4389,12 +4389,6 @@ bool X86FrameLowering::skipSpillFPBP(
       ++MI;
     return true;
   }
-
-  // FP clobbered by longjmp is expected.
-  X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (X86FI->containLongJmpMIClobberFP(&*MI))
-    return true;
-
   return false;
 }
 

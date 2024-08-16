@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_X86_X86MACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
@@ -174,9 +173,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   // True if a function clobbers FP/BP according to its calling convention.
   bool FPClobberedByCall = false;
   bool BPClobberedByCall = false;
-
-  // A set of instructions clobber FP generated from longjmp.
-  SmallSet<MachineInstr *, 2> LongJmpMIClobberFP;
 
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
@@ -342,13 +338,6 @@ public:
 
   bool getBPClobberedByCall() const { return BPClobberedByCall; }
   void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
-
-  bool containLongJmpMIClobberFP(MachineInstr *MI) const {
-    return LongJmpMIClobberFP.contains(MI);
-  }
-  void insertLongJmpMIClobberFP(MachineInstr *MI) {
-    LongJmpMIClobberFP.insert(MI);
-  }
 };
 
 } // End llvm namespace
