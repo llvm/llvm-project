@@ -1180,6 +1180,16 @@ LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,
 LLVMValueRef LLVMGetNamedFunction(LLVMModuleRef M, const char *Name);
 
 /**
+ * Obtain a Function value from a Module by its name.
+ *
+ * The returned value corresponds to a llvm::Function value.
+ *
+ * @see llvm::Module::getFunction()
+ */
+LLVMValueRef LLVMGetNamedFunctionWithLength(LLVMModuleRef M, const char *Name,
+                                            size_t Length);
+
+/**
  * Obtain an iterator to the first Function in a Module.
  *
  * @see llvm::Module::begin()
@@ -2633,6 +2643,8 @@ LLVMValueRef LLVMAddGlobalInAddressSpace(LLVMModuleRef M, LLVMTypeRef Ty,
                                          const char *Name,
                                          unsigned AddressSpace);
 LLVMValueRef LLVMGetNamedGlobal(LLVMModuleRef M, const char *Name);
+LLVMValueRef LLVMGetNamedGlobalWithLength(LLVMModuleRef M, const char *Name,
+                                          size_t Length);
 LLVMValueRef LLVMGetFirstGlobal(LLVMModuleRef M);
 LLVMValueRef LLVMGetLastGlobal(LLVMModuleRef M);
 LLVMValueRef LLVMGetNextGlobal(LLVMValueRef GlobalVar);
