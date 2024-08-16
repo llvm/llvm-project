@@ -16,6 +16,7 @@
 
 #include "R600TargetMachine.h"
 #include "R600.h"
+#include "R600MachineFunctionInfo.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
 #include "llvm/Transforms/Scalar.h"
@@ -152,6 +153,13 @@ Error R600TargetMachine::buildCodeGenPipeline(
     PassInstrumentationCallbacks *PIC) {
   R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+}
+
+MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
+      Allocator, F, static_cast<const R600Subtarget *>(STI));
 }
 
 //===----------------------------------------------------------------------===//
