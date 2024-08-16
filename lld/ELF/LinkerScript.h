@@ -74,6 +74,63 @@ struct ExprValue {
 // Later, we evaluate the expression by calling the function.
 using Expr = std::function<ExprValue()>;
 
+class ScriptExpr {
+public:
+  enum class ExprKind : uint8_t { Constant, Dynamic, Unary, Binary };
+
+private:
+  ExprKind kind_;
+
+protected:
+  explicit ScriptExpr(ExprKind kind) : kind_(kind) {}
+
+public:
+  ExprKind getKind() const { return kind_; }
+};
+
+class ConstantExpr : public ScriptExpr {
+public:
+  ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
+  ConstantExpr(uint64_t val)
+      : ScriptExpr(ExprKind::Constant), val_(ExprValue(val)) {}
+  ExprValue getVal() const { return val_; }
+
+private:
+  ExprValue val_;
+};
+
+class DynamicExpr : public ScriptExpr {
+public:
+  static DynamicExpr create(std::function<ExprValue()> impl) {
+    return DynamicExpr(impl);
+  }
+  std::function<ExprValue()> getImpl() const { return impl_; }
+
+private:
+  DynamicExpr(std::function<ExprValue()> impl)
+      : ScriptExpr(ExprKind::Dynamic), impl_(impl) {}
+  std::function<ExprValue()> impl_;
+};
+
+class UnaryExpr : public ScriptExpr {
+public:
+  static const UnaryExpr *create();
+
+private:
+  UnaryExpr() : ScriptExpr(ExprKind::Unary) {}
+};
+
+class BinaryExpr : public ScriptExpr {
+public:
+  static const BinaryExpr *create();
+
+private:
+  BinaryExpr(const ExprValue *LHS, const ExprValue *RHS)
+      : ScriptExpr(ExprKind::Binary), LHS(LHS), RHS(RHS) {}
+
+  const ExprValue *LHS, *RHS;
+};
+
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
 enum SectionsCommandKind {

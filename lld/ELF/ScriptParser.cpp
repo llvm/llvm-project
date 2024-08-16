@@ -104,8 +104,8 @@ private:
   SymbolAssignment *readAssignment(StringRef tok);
   void readSort();
   Expr readAssert();
-  Expr readConstant();
-  Expr getPageSize();
+  DynamicExpr readConstant();
+  DynamicExpr getPageSize();
 
   Expr readMemoryAssignment(StringRef, StringRef, StringRef);
   void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
@@ -1322,24 +1322,24 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
   return lhs;
 }
 
-Expr ScriptParser::getPageSize() {
+DynamicExpr ScriptParser::getPageSize() {
   std::string location = getCurrentLocation();
-  return [=]() -> uint64_t {
+  return DynamicExpr::create([=]() -> uint64_t {
     if (target)
       return config->commonPageSize;
     error(location + ": unable to calculate page size");
     return 4096; // Return a dummy value.
-  };
+  });
 }
 
-Expr ScriptParser::readConstant() {
+DynamicExpr ScriptParser::readConstant() {
   StringRef s = readParenName();
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
-    return [] { return config->maxPageSize; };
+    return DynamicExpr::create([] { return config->maxPageSize; });
   setError("unknown constant: " + s);
-  return [] { return 0; };
+  return DynamicExpr::create([] { return 0; });
 }
 
 // Parses Tok as an integer. It recognizes hexadecimal (prefixed with
@@ -1537,7 +1537,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "ASSERT")
     return readAssert();
   if (tok == "CONSTANT")
-    return readConstant();
+    return readConstant().getImpl();
   if (tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
     Expr e = readExpr();
