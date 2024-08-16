@@ -50,3 +50,12 @@ class MyClass2 {
 };
 _Static_assert(__builtin_is_intangible(MyClass2), "");
 _Static_assert(__builtin_is_intangible(MyClass2[5]), "");
+
+class Simple {
+    int a;
+};
+
+class MyClass3 : MyClass2, Simple {
+    half h;
+};
+_Static_assert(__builtin_is_intangible(MyClass3), "");
