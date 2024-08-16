@@ -57,6 +57,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1573,21 +1574,7 @@ bool ShouldUnique(StringRef arg) {
 
 // static
 void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
-                                        std::vector<std::string> &dest,
-                                        bool cc1) {
-  // FIXME: Support for cc1 flags isn't complete.  The uniquing
-  // algortihm below does not work for cc1 flags. Since cc1 flags are
-  // not stable it's not feasible to keep a list of all multi-arg
-  // flags, for example. It also makes it difficult to correctly
-  // identify where workng directories and path remappings should
-  // applied. For all these reasons, using cc1 flags for anything but
-  // a local build with explicit modules and precise compiler
-  // invocations isn't supported yet.
-  if (cc1) {
-    dest.insert(dest.end(), source.begin(), source.end());
-    return;
-  }
-
+                                        std::vector<std::string> &dest) {
   llvm::StringSet<> unique_flags;
   for (auto &arg : dest)
     unique_flags.insert(arg);
@@ -1779,8 +1766,14 @@ void SwiftASTContext::AddExtraClangArgs(
         eSeverityWarning,
         "Mixing and matching of driver and cc1 Clang options detected");
 
-  AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs,
-                    importer_options.DirectClangCC1ModuleBuild);
+  // If using direct cc1 flags, compute the arguments and return.
+  // Since this is cc1 flags, no driver overwrite can be applied.
+  if (importer_options.DirectClangCC1ModuleBuild) {
+    AddExtraClangCC1Args(ExtraArgs, importer_options.ExtraArgs);
+    return;
+  }
+
+  AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
   applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
@@ -1790,6 +1783,69 @@ void SwiftASTContext::AddExtraClangArgs(
       llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
         return StringRef(arg).starts_with("-fmodule-file=");
       });
+}
+
+void SwiftASTContext::AddExtraClangCC1Args(
+    const std::vector<std::string> &source, std::vector<std::string> &dest) {
+  clang::CompilerInvocation invocation;
+  llvm::SmallVector<const char *> clangArgs;
+  clangArgs.reserve(source.size());
+  llvm::for_each(source, [&](const std::string &Arg) {
+    clangArgs.push_back(Arg.c_str());
+  });
+
+  std::string diags;
+  llvm::raw_string_ostream os(diags);
+  auto diagOpts = llvm::makeIntrusiveRefCnt<clang::DiagnosticOptions>();
+  clang::DiagnosticsEngine clangDiags(
+      new clang::DiagnosticIDs(), diagOpts,
+      new clang::TextDiagnosticPrinter(os, diagOpts.get()));
+
+  if (!clang::CompilerInvocation::CreateFromArgs(invocation, clangArgs,
+                                                 clangDiags)) {
+    // If cc1 arguments failed to parse, report diagnostics and return
+    // immediately.
+    AddDiagnostic(eSeverityError, diags);
+    // Disable direct-cc1 build as fallback.
+    GetClangImporterOptions().DirectClangCC1ModuleBuild = false;
+    return;
+  }
+
+  // Clear module cache key and other CAS options to load modules from disk
+  // directly.
+  invocation.getFrontendOpts().ModuleCacheKeys.clear();
+  invocation.getCASOpts() = clang::CASOptions();
+
+  // Remove non-existing modules in a systematic way.
+  bool module_missing = false;
+  auto CheckFileExists = [&](const char *file) {
+    if (!llvm::sys::fs::exists(file)) {
+      std::string m_description;
+      HEALTH_LOG_PRINTF("Nonexistent explicit module file %s", file);
+      module_missing = true;
+    }
+  };
+  llvm::for_each(invocation.getHeaderSearchOpts().PrebuiltModuleFiles,
+                 [&](const auto &mod) { CheckFileExists(mod.second.c_str()); });
+  llvm::for_each(invocation.getFrontendOpts().ModuleFiles,
+                 [&](const auto &mod) { CheckFileExists(mod.c_str()); });
+
+  // If missing, clear all the prebuilt module options and use implicit module
+  // build.
+  if (module_missing) {
+    invocation.getHeaderSearchOpts().PrebuiltModuleFiles.clear();
+    invocation.getFrontendOpts().ModuleFiles.clear();
+    invocation.getLangOpts().ImplicitModules = true;
+    invocation.getHeaderSearchOpts().ImplicitModuleMaps = true;
+  }
+
+  invocation.generateCC1CommandLine(
+      [&](const llvm::Twine &arg) { dest.push_back(arg.str()); });
+
+  // If cc1 arguments are parsed and generated correctly, set explicitly-built
+  // module since only explicit module build can use direct cc1 mode.
+  m_has_explicit_modules = true;
+  return;
 }
 
 void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {

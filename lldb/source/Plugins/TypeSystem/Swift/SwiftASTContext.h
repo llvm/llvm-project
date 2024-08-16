@@ -280,8 +280,10 @@ public:
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs,
                          llvm::StringRef overrideOpts = "");
+  void AddExtraClangCC1Args(const std::vector<std::string>& source,
+                                std::vector<std::string>& dest);
   static void AddExtraClangArgs(const std::vector<std::string>& source,
-                                std::vector<std::string>& dest, bool cc1);
+                                std::vector<std::string>& dest);
   static std::string GetPluginServer(llvm::StringRef plugin_library_path);
   /// Removes nonexisting VFS overlay options.
   static void FilterClangImporterOptions(std::vector<std::string> &extra_args,
