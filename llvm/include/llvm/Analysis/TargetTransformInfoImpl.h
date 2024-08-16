@@ -220,6 +220,8 @@ public:
   void getPeelingPreferences(Loop *, ScalarEvolution &,
                              TTI::PeelingPreferences &) const {}
 
+  bool isGlobalAddressOffsetFoldable(GlobalValue *GV) const { return false; }
+
   bool isLegalAddImmediate(int64_t Imm) const { return false; }
 
   bool isLegalAddScalableImmediate(int64_t Imm) const { return false; }

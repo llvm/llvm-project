@@ -350,6 +350,10 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  bool isGlobalAddressOffsetFoldable(const GlobalValue *GV) {
+    return getTLI()->isGlobalAddressOffsetFoldable(GV);
+  }
+
   int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset, int64_t MaxOffset) {
     return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
   }

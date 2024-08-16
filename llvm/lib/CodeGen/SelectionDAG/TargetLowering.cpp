@@ -485,22 +485,8 @@ SDValue TargetLowering::expandIndirectJTBranch(const SDLoc &dl, SDValue Value,
   return DAG.getNode(ISD::BRIND, dl, MVT::Other, Chain, Addr);
 }
 
-bool
-TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
-  const TargetMachine &TM = getTargetMachine();
-  const GlobalValue *GV = GA->getGlobal();
-
-  // If the address is not even local to this DSO we will have to load it from
-  // a got and then add the offset.
-  if (!TM.shouldAssumeDSOLocal(GV))
-    return false;
-
-  // If the code is position independent we will have to add a base register.
-  if (isPositionIndependent())
-    return false;
-
-  // Otherwise we can do it.
-  return true;
+bool TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+  return isGlobalAddressOffsetFoldable(GA->getGlobal());
 }
 
 //===----------------------------------------------------------------------===//

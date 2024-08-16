@@ -1543,6 +1543,8 @@ public:
        getIndexedStoreAction(IdxMode, VT.getSimpleVT()) == Custom);
   }
 
+  virtual bool isGlobalAddressOffsetFoldable(const GlobalValue *GV) const;
+
   /// Return how the indexed load should be treated: either it is legal, needs
   /// to be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
