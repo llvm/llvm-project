@@ -135,9 +135,8 @@ New checks
   <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
 
   Check if class/structs publicly inherits from ``std::enable_shared_from_this``,
-  because otherwise when ``shared_from_this`` is called, the code will throw 
-  ``std::bad_weak_ptr``. Also checks for ``std::`` in 
-  ``std::enable_shared_from_this``.
+  because otherwise when ``shared_from_this`` is called unintended behaviour will 
+  occur.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

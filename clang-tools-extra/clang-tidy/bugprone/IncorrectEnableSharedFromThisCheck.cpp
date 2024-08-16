@@ -31,17 +31,20 @@ void IncorrectEnableSharedFromThisCheck::check(
 
   public:
     explicit Visitor(IncorrectEnableSharedFromThisCheck &Check)
-        : Check(Check), EnableSharedClassSet(EnableSharedClassSet) {}
+        : Check(Check) {}
 
-    bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
+    bool TraverseCXXRecordHelper(CXXRecordDecl *RDecl) {
+      if (!RDecl->hasDefinition()) {
+        return true;
+      }
       for (const auto &Base : RDecl->bases()) {
         VisitCXXBaseSpecifier(Base, RDecl);
       }
       for (const auto &Base : RDecl->bases()) {
         const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
-        if (BaseType && BaseType->getQualifiedNameAsString() ==
-                            "std::enable_shared_from_this") {
+        if (BaseType && isStdEnableSharedFromThis(BaseType)) {
           EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
+          return true;
         }
       }
       return true;
@@ -52,44 +55,21 @@ void IncorrectEnableSharedFromThisCheck::check(
       const CXXRecordDecl *BaseType = Base.getType()->getAsCXXRecordDecl();
       const clang::AccessSpecifier AccessSpec = Base.getAccessSpecifier();
 
-      if (BaseType &&
-          BaseType->getQualifiedNameAsString() == "enable_shared_from_this") {
-        if (AccessSpec == clang::AS_public) {
-          const SourceLocation InsertLocation = Base.getBaseTypeLoc();
-          const FixItHint Hint = FixItHint::CreateInsertion(InsertLocation, "std::");
-          Check.diag(RDecl->getLocation(),
-                     "Should be std::enable_shared_from_this",
-                     DiagnosticIDs::Warning)
-              << Hint;
-
-        } else {
-          const SourceRange ReplacementRange = Base.getSourceRange();
-          const std::string ReplacementString =
-              "public std::" + Base.getType().getAsString();
-          const FixItHint Hint =
-              FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
-          Check.diag(
-              RDecl->getLocation(),
-              "Should be std::enable_shared_from_this and "
-              "inheritance from std::enable_shared_from_this should be public "
-              "inheritance, otherwise the internal weak_ptr won't be "
-              "initialized",
-              DiagnosticIDs::Warning)
-              << Hint;
-        }
-      } else if (BaseType && BaseType->getQualifiedNameAsString() ==
-                                 "std::enable_shared_from_this") {
+      if (BaseType && isStdEnableSharedFromThis(BaseType)) {
         if (AccessSpec != clang::AS_public) {
           const SourceRange ReplacementRange = Base.getSourceRange();
           const std::string ReplacementString =
+              // Base.getType().getAsString() results in
+              // std::enable_shared_from_this<ClassName> or alias/typedefs of
+              // std::enable_shared_from_this<ClassName>
               "public " + Base.getType().getAsString();
           const FixItHint Hint =
               FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
           Check.diag(
               RDecl->getLocation(),
-              "inheritance from std::enable_shared_from_this should be public "
-              "inheritance, otherwise the internal weak_ptr won't be "
-              "initialized",
+              "this is not publicly inheriting from "
+              "std::enable_shared_from_this, will cause unintended behaviour "
+              "on shared_from_this. fix this by making it public inheritance",
               DiagnosticIDs::Warning)
               << Hint;
         }
@@ -102,14 +82,21 @@ void IncorrectEnableSharedFromThisCheck::check(
               FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
           Check.diag(
               RDecl->getLocation(),
-              "inheritance from std::enable_shared_from_this should be public "
-              "inheritance, otherwise the internal weak_ptr won't be "
-              "initialized",
+              "this is not publicly inheriting from "
+              "std::enable_shared_from_this, will cause unintended behaviour "
+              "on shared_from_this. fix this by making it public inheritance",
               DiagnosticIDs::Warning)
               << Hint;
         }
       }
       return true;
+    }
+
+  private:
+    // FIXME: configure this for boost in the future
+    bool isStdEnableSharedFromThis(const CXXRecordDecl *BaseType) {
+      return BaseType->getName() == "enable_shared_from_this" &&
+             BaseType->isInStdNamespace();
     }
   };
 
