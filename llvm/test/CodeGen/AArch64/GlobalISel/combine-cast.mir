@@ -221,3 +221,22 @@ body:             |
     %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
     %large:_(<2 x s64>) = G_SEXT %bv(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
+...
+---
+name:            test_combine_anyext_build_vector_multi_use
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_anyext_build_vector_multi_use
+    ; CHECK: %arg1:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg2:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY %bv(<2 x s32>)
+    %arg1:_(s32) = COPY $w0
+    %arg2:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+    $d0 = COPY %bv(<2 x s32>)
