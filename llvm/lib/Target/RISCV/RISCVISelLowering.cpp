@@ -10328,6 +10328,54 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+
+  // On most uarchs vrgather.vv is quadratic in LMUL because each output
+  // register may read from LMUL registers. However to reverse a vector each
+  // output register only needs to read from one register. So decompose it into
+  // LMUL * M1 vrgather.vvs, so we get O(LMUL) performance instead of O(LMUL^2).
+  //
+  // vsetvli a1, zero, e64, m4, ta, ma
+  // vrgatherei16.vv v12, v8, v16
+  // ->
+  // vsetvli a1, zero, e64, m1, ta, ma
+  // vrgather.vv v15, v8, v16
+  // vrgather.vv v14, v9, v16
+  // vrgather.vv v13, v10, v16
+  // vrgather.vv v12, v11, v16
+  if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+      ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
+    MVT HalfVT = ContainerVT.getHalfNumVectorElementsVT();
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec,
+                             DAG.getVectorIdxConstant(0, DL));
+    SDValue Hi = DAG.getNode(
+        ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec,
+        DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, HalfVT, Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HalfVT, Hi);
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ContainerVT, Hi, Lo);
+
+    // Fixed length vectors might not fit exactly into their container, and so
+    // leave a gap in the front of the vector after being reversed. Slide this
+    // away.
+    //
+    // x x x x 3 2 1 0 <- v4i16 @ vlen=128
+    // 0 1 2 3 x x x x <- reverse
+    // x x x x 0 1 2 3 <- vslidedown.vx
+    if (VecVT.isFixedLengthVector()) {
+      SDValue Offset = DAG.getNode(
+          ISD::SUB, DL, XLenVT,
+          DAG.getElementCount(DL, XLenVT, ContainerVT.getVectorElementCount()),
+          DAG.getElementCount(DL, XLenVT, VecVT.getVectorElementCount()));
+      Concat =
+          getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Concat, Offset, Mask, VL);
+      Concat = convertFromScalableVector(VecVT, Concat, DAG, Subtarget);
+    }
+    return Concat;
+  }
+
   unsigned EltSize = ContainerVT.getScalarSizeInBits();
   unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
@@ -10374,9 +10422,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IntVT = IntVT.changeVectorElementType(MVT::i16);
   }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
   SDValue VLMinus1 = DAG.getNode(
