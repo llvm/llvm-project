@@ -167,6 +167,15 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr div_t div(int __x, int __y) {
   return std::__div<std::div_t>(__x, __y);
 }
 
+inline _LIBCPP_HIDE_FROM_ABI constexpr ldiv_t div(long __x, long __y) {
+  return std::__div<std::ldiv_t>(__x, __y);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr lldiv_t div(long long __x,
+                                                   long long __y) {
+  return std::__div<std::lldiv_t>(__x, __y);
+}
+
 #endif  // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD

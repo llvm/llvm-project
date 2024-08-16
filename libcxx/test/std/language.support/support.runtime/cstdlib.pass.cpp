@@ -96,8 +96,8 @@ void test_div() {
   {  // tests return type of std::div
     // clang-format off
     static_assert((std::is_same<decltype(std::div(  0,   0  )), std::div_t  >::value), "");
-    // static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
-    // static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
+    static_assert((std::is_same<decltype(std::div(  0L,  0L )), std::ldiv_t >::value), "");
+    static_assert((std::is_same<decltype(std::div(  0LL, 0LL)), std::lldiv_t>::value), "");
     static_assert((std::is_same<decltype(std::ldiv( 0L,  0L )), std::ldiv_t >::value), "");
     static_assert((std::is_same<decltype(std::lldiv(0LL, 0LL)), std::lldiv_t>::value), "");
     // clang-format on
@@ -119,8 +119,8 @@ void test_div() {
 
     // clang-format off
     check([](int       n, int       k) { return std::div(  n, k); });
-    // check([](long      n, long      k) { return std::div(  n, k); });
-    // check([](long long n, long long k) { return std::div(  n, k); });
+    check([](long      n, long      k) { return std::div(  n, k); });
+    check([](long long n, long long k) { return std::div(  n, k); });
     // check([](long      n, long      k) { return std::ldiv( n, k); });
     // check([](long long n, long long k) { return std::lldiv(n, k); });
     // clang-format on
