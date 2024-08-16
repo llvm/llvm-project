@@ -311,19 +311,19 @@ gpu.module @shuffles attributes {
   // CHECK-SAME-DAG:  will_return
   // CHECK-NOT:       memory_effects = #llvm.memory_effects
   // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32 attributes {
+  // CHECK:           llvm.func spir_funccc @_Z20sub_group_shuffle_upDhj(f16, i32) -> f16 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
   // CHECK-SAME-DAG:  will_return
   // CHECK-NOT:       memory_effects = #llvm.memory_effects
   // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64 attributes {
+  // CHECK:           llvm.func spir_funccc @_Z21sub_group_shuffle_xorsj(i16, i32) -> i16 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
   // CHECK-SAME-DAG:  will_return
   // CHECK-NOT:       memory_effects = #llvm.memory_effects
   // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {
+  // CHECK:           llvm.func spir_funccc @_Z17sub_group_shufflecj(i8, i32) -> i8 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
   // CHECK-SAME-DAG:  will_return
@@ -331,24 +331,25 @@ gpu.module @shuffles attributes {
   // CHECK-SAME:      }
 
   // CHECK-LABEL: gpu_shuffles
-  // CHECK-SAME:              (%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: f32, %[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: i32)
-  func.func @gpu_shuffles(%val0: i32, %id: i32,
-                          %val1: i64, %mask: i32,
-                          %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) {
+  // CHECK-SAME:              (%[[I8_VAL:.*]]: i8, %[[I16_VAL:.*]]: i16, %[[F16_VAL:.*]]: f16, %[[F64_VAL:.*]]: f64,  %[[OFFSET:.*]]: i32)
+  func.func @gpu_shuffles(%i8_val: i8,
+                          %i16_val: i16,
+                          %f16_val: f16,
+                          %f64_val: f64,
+                          %offset: i32) {
     %width = arith.constant 16 : i32
-    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[VAL_0]], %[[VAL_1]])
+    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shufflecj(%[[I8_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorlj(%[[VAL_2]], %[[VAL_3]])
+    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorsj(%[[I16_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upfj(%[[VAL_4]], %[[VAL_5]])
+    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upDhj(%[[F16_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[VAL_6]], %[[VAL_7]])
+    // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[F64_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
-    %shuffleResult0, %valid0 = gpu.shuffle idx %val0, %id, %width : i32
-    %shuffleResult1, %valid1 = gpu.shuffle xor %val1, %mask, %width : i64
-    %shuffleResult2, %valid2 = gpu.shuffle up %val2, %delta_up, %width : f32
-    %shuffleResult3, %valid3 = gpu.shuffle down %val3, %delta_down, %width : f64
+    %shuffleResult0, %valid0 = gpu.shuffle idx %i8_val, %offset, %width : i8
+    %shuffleResult1, %valid1 = gpu.shuffle xor %i16_val, %offset, %width : i16
+    %shuffleResult2, %valid2 = gpu.shuffle up %f16_val, %offset, %width : f16
+    %shuffleResult3, %valid3 = gpu.shuffle down %f64_val, %offset, %width : f64
     return
   }
 }

@@ -243,10 +243,15 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
   static StringRef getTypeMangling(Type type) {
     return TypeSwitch<Type, StringRef>(type)
+        .Case<Float16Type>([](auto) { return "Dhj"; })
         .Case<Float32Type>([](auto) { return "fj"; })
         .Case<Float64Type>([](auto) { return "dj"; })
         .Case<IntegerType>([](auto intTy) {
           switch (intTy.getWidth()) {
+          case 8:
+            return "cj";
+          case 16:
+            return "sj";
           case 32:
             return "ij";
           case 64:
