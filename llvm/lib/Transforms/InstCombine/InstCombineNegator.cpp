@@ -46,12 +46,8 @@
 #include <type_traits>
 #include <utility>
 
-namespace llvm {
-class DataLayout;
-class LLVMContext;
-} // namespace llvm
-
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
@@ -222,6 +218,11 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     }
     break;
   }
+  case Instruction::Call:
+    if (auto *CI = dyn_cast<CmpIntrinsic>(I); CI && CI->hasOneUse())
+      return Builder.CreateIntrinsic(CI->getType(), CI->getIntrinsicID(),
+                                     {CI->getRHS(), CI->getLHS()});
+    break;
   default:
     break; // Other instructions require recursive reasoning.
   }

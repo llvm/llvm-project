@@ -769,9 +769,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
-    StringRef MArchName = riscv::getRISCVArch(Args, getToolChain().getTriple());
+    std::string MArchName =
+        riscv::getRISCVArch(Args, getToolChain().getTriple());
     CmdArgs.push_back("-march");
-    CmdArgs.push_back(MArchName.data());
+    CmdArgs.push_back(Args.MakeArgString(MArchName));
     if (!Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
       Args.addOptOutFlag(CmdArgs, options::OPT_mrelax, options::OPT_mno_relax);
     break;
@@ -1882,7 +1883,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   Multilib::flags_list Flags;
   llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
-  StringRef MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
+  std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
                     Twine("-march=", Element.march).str().c_str(), Flags);
@@ -2563,9 +2564,11 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
                                                "riscv64-unknown-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
-  static const char *const SPARCv8Triples[] = {"sparcv8-linux-gnu"};
+  static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
+                                               "sparcv8-linux-gnu"};
   static const char *const SPARCv9LibDirs[] = {"/lib64", "/lib"};
-  static const char *const SPARCv9Triples[] = {"sparcv9-linux-gnu"};
+  static const char *const SPARCv9Triples[] = {"sparc64-linux-gnu",
+                                               "sparcv9-linux-gnu"};
 
   static const char *const SystemZLibDirs[] = {"/lib64", "/lib"};
   static const char *const SystemZTriples[] = {

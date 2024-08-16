@@ -150,11 +150,6 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
     return failure();
   }
 
-  // Get the ISA version.
-  StringRef isaVersion =
-      llvm::AMDGPU::getArchNameAMDGCN(llvm::AMDGPU::parseArchAMDGCN(chip));
-  isaVersion.consume_front("gfx");
-
   // Helper function for adding a library.
   auto addLib = [&](const Twine &lib) -> bool {
     auto baseSize = path.size();
@@ -175,9 +170,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
   if ((any(libs & AMDGCNLibraries::Ocml) && addLib("ocml.bc")) ||
       (any(libs & AMDGCNLibraries::Ockl) && addLib("ockl.bc")) ||
       (any(libs & AMDGCNLibraries::Hip) && addLib("hip.bc")) ||
-      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")) ||
-      (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl)) &&
-       addLib("oclc_isa_version_" + isaVersion + ".bc")))
+      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")))
     return failure();
   return success();
 }
@@ -270,6 +263,14 @@ void SerializeGPUModuleBase::addControlVariables(
   // Add ocml or ockl related control variables.
   if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
     addControlVariable("__oclc_wavefrontsize64", wave64, 8);
+
+    // Get the ISA version.
+    llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
+    // Add the ISA control variable.
+    addControlVariable("__oclc_ISA_version",
+                       isaVersion.Minor + 100 * isaVersion.Stepping +
+                           1000 * isaVersion.Major,
+                       32);
     int abi = 500;
     abiVer.getAsInteger(0, abi);
     addControlVariable("__oclc_ABI_version", abi, 32);
@@ -323,8 +324,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),
       mab->createObjectWriter(os), std::unique_ptr<llvm::MCCodeEmitter>(ce),
-      *sti, mcOptions.MCRelaxAll, mcOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      *sti));
 
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));

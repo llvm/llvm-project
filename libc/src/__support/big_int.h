@@ -15,6 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
@@ -24,7 +25,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace multiword {
 
@@ -731,6 +732,11 @@ public:
     return *result.div(other);
   }
 
+  LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
+    *this = *this % other;
+    return *this;
+  }
+
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
     *this = *this * other;
     return *this;
@@ -1288,6 +1294,6 @@ first_trailing_one(T value) {
                                                 : cpp::countr_zero(value) + 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

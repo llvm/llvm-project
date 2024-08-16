@@ -449,7 +449,7 @@ public:
          StringRef RemapFilename = "");
 
   /// Return the profile summary.
-  ProfileSummary &getSummary() const { return *(Summary.get()); }
+  ProfileSummary &getSummary() const { return *Summary; }
 
   MemoryBuffer *getBuffer() const { return Buffer.get(); }
 

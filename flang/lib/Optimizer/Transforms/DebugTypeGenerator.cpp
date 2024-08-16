@@ -143,7 +143,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
 
     offset += dimsSize;
     mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-        context, nullptr, lowerAttr, countAttr, nullptr);
+        context, countAttr, lowerAttr, /*upperBound=*/nullptr,
+        /*stride=*/nullptr);
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
@@ -157,28 +158,36 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
   mlir::MLIRContext *context = module.getContext();
-  // FIXME: Only fixed sizes arrays handled at the moment.
-  if (seqTy.hasDynamicExtents())
-    return genPlaceholderType(context);
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   mlir::LLVM::DITypeAttr elemTy =
       convertType(seqTy.getEleTy(), fileAttr, scope, loc);
 
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
-    auto intTy = mlir::IntegerType::get(context, 64);
-    // FIXME: Only supporting lower bound of 1 at the moment. The
-    // 'SequenceType' has information about the shape but not the shift. In
-    // cases where the conversion originated during the processing of
-    // 'DeclareOp', it may be possible to pass on this information. But the
-    // type conversion should ideally be based on what information present in
-    // the type class so that it works from everywhere (e.g. when it is part
-    // of a module or a derived type.)
-    auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
-    auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, 1));
-    auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-        context, countAttr, lowerAttr, nullptr, nullptr);
-    elements.push_back(subrangeTy);
+    if (dim == seqTy.getUnknownExtent()) {
+      // FIXME: This path is taken for assumed size arrays but also for arrays
+      // with non constant extent. For the latter case, the DISubrangeAttr
+      // should point to a variable which will have the extent at runtime.
+      auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+          context, /*count=*/nullptr, /*lowerBound=*/nullptr,
+          /*upperBound*/ nullptr, /*stride*/ nullptr);
+      elements.push_back(subrangeTy);
+    } else {
+      auto intTy = mlir::IntegerType::get(context, 64);
+      // FIXME: Only supporting lower bound of 1 at the moment. The
+      // 'SequenceType' has information about the shape but not the shift. In
+      // cases where the conversion originated during the processing of
+      // 'DeclareOp', it may be possible to pass on this information. But the
+      // type conversion should ideally be based on what information present in
+      // the type class so that it works from everywhere (e.g. when it is part
+      // of a module or a derived type.)
+      auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
+      auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, 1));
+      auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+          context, countAttr, lowerAttr, /*upperBound=*/nullptr,
+          /*stride=*/nullptr);
+      elements.push_back(subrangeTy);
+    }
   }
   // Apart from arrays, the `DICompositeTypeAttr` is used for other things like
   // structure types. Many of its fields which are not applicable to arrays

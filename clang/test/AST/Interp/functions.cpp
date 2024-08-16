@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++14 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
+// RUN: %clang_cc1 -pedantic -verify=ref,both %s
+// RUN: %clang_cc1 -pedantic -std=c++14 -verify=ref,both %s
+// RUN: %clang_cc1 -pedantic -std=c++20 -verify=ref,both %s
 
 constexpr void doNothing() {}
 constexpr int gimme5() {
@@ -221,6 +221,17 @@ namespace Comparison {
   static_assert(pg == &g, "");
 }
 
+  constexpr int Double(int n) { return 2 * n; }
+  constexpr int Triple(int n) { return 3 * n; }
+  constexpr int Twice(int (*F)(int), int n) { return F(F(n)); }
+  constexpr int Quadruple(int n) { return Twice(Double, n); }
+  constexpr auto Select(int n) -> int (*)(int) {
+    return n == 2 ? &Double : n == 3 ? &Triple : n == 4 ? &Quadruple : 0;
+  }
+  constexpr int Apply(int (*F)(int), int n) { return F(n); } // both-note {{'F' evaluates to a null function pointer}}
+
+  constexpr int Invalid = Apply(Select(0), 0); // both-error {{must be initialized by a constant expression}} \
+                                               // both-note {{in call to 'Apply(nullptr, 0)'}}
 }
 
 struct F {
@@ -471,7 +482,7 @@ namespace AddressOf {
   constexpr int foo() {return 1;}
   static_assert(__builtin_addressof(foo) == foo, "");
 
-  constexpr _Complex float F = {3, 4};
+  constexpr _Complex float F = {3, 4}; // both-warning {{'_Complex' is a C99 extension}}
   static_assert(__builtin_addressof(F) == &F, "");
 
   void testAddressof(int x) {
@@ -633,3 +644,32 @@ namespace {
   void (&r)() = f;
   void (&cond3)() = r;
 }
+
+namespace FunctionCast {
+  // When folding, we allow functions to be cast to different types. Such
+  // cast functions cannot be called, even if they're constexpr.
+  constexpr int f() { return 1; }
+  typedef double (*DoubleFn)();
+  typedef int (*IntFn)();
+  int a[(int)DoubleFn(f)()]; // both-error {{variable length array}} \
+                             // both-warning {{are a Clang extension}}
+  int b[(int)IntFn(f)()];    // ok
+}
+
+#if __cplusplus >= 202002L
+namespace StableAddress {
+  template<unsigned N> struct str {
+    char arr[N];
+  };
+  // FIXME: Deduction guide not needed with P1816R0.
+  template<unsigned N> str(const char (&)[N]) -> str<N>;
+
+  template<str s> constexpr int sum() {
+    int n = 0;
+    for (char c : s.arr)
+      n += c;
+    return n;
+  }
+  static_assert(sum<str{"$hello $world."}>() == 1234, "");
+}
+#endif

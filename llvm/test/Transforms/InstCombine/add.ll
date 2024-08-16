@@ -99,13 +99,51 @@ define i32 @test3(i32 %A) {
 }
 
 ; D = B + -A = B - A
-define i32 @test4(i32 %A, i32 %B) {
+define i32 @test4(i32 %A, i32 %BB) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
   %C = sub i32 0, %A
   %D = add i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_both_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_both_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub nsw i32 0, %A
+  %D = add nsw i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_neg_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_neg_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub nsw i32 0, %A
+  %D = add i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test4_add_nsw(i32 %A, i32 %BB) {
+; CHECK-LABEL: @test4_add_nsw(
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
+  %C = sub i32 0, %A
+  %D = add nsw i32 %B, %C
   ret i32 %D
 }
 
@@ -949,6 +987,21 @@ define i64 @test41(i32 %a) {
   %zext = zext i32 %add to i64
   %sub = add i64 %zext, -1
   ret i64 %sub
+}
+
+define i64 @test41_multiuse_constants_cancel(i32 %a) {
+; CHECK-LABEL: @test41_multiuse_constants_cancel(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nuw nsw i64 [[ZEXT]], [[SUB]]
+; CHECK-NEXT:    ret i64 [[EXTRAUSE]]
+;
+  %add = add nuw i32 %a, 1
+  %zext = zext i32 %add to i64
+  %sub = add i64 %zext, -1
+  %extrause = add i64 %zext, %sub
+  ret i64 %extrause
 }
 
 ; (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))

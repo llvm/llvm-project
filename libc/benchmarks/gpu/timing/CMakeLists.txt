@@ -1,4 +1,4 @@
-foreach(target nvptx)
+foreach(target nvptx amdgpu)
   add_subdirectory(${target})
   list(APPEND target_gpu_timing libc.benchmarks.gpu.timing.${target}.${target}_timing)
 endforeach()

@@ -285,7 +285,7 @@ void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
 
   AsmPrinter::emitFunctionEntryLabel();
@@ -298,7 +298,7 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
         (Twine("BB") + Twine(getFunctionNumber())
          + "_" + Twine(MBB.getNumber()) + ":").str());
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
   AsmPrinter::emitBasicBlockStart(MBB);
 }
@@ -344,13 +344,13 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
       break;
     default:
       report_fatal_error("Unexpected code object version");
@@ -395,12 +395,10 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
 SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OSS(Str);
-  int64_t IVal;
-  if (Value->evaluateAsAbsolute(IVal)) {
-    OSS << static_cast<uint64_t>(IVal);
-  } else {
-    Value->print(OSS, MAI);
-  }
+  auto &Streamer = getTargetStreamer()->getStreamer();
+  auto &Context = Streamer.getContext();
+  const MCExpr *New = foldAMDGPUMCExpr(Value, Context);
+  printAMDGPUMCExpr(New, OSS, MAI);
   return Str;
 }
 
@@ -1450,7 +1448,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
                                        *MF->getSubtarget().getRegisterInfo());
     return false;
-  } else if (MO.isImm()) {
+  }
+  if (MO.isImm()) {
     int64_t Val = MO.getImm();
     if (AMDGPU::isInlinableIntLiteral(Val)) {
       O << Val;
@@ -1484,6 +1483,10 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   // If the remark is not specifically enabled, do not output to yaml
   LLVMContext &Ctx = MF.getFunction().getContext();
   if (!Ctx.getDiagHandlerPtr()->isAnalysisRemarkEnabled(Name))
+    return;
+
+  // Currently non-kernel functions have no resources to emit.
+  if (!isEntryFunctionCC(MF.getFunction().getCallingConv()))
     return;
 
   auto EmitResourceUsageRemark = [&](StringRef RemarkName,

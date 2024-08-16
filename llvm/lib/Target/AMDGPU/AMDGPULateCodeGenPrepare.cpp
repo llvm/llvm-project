@@ -42,10 +42,10 @@ static cl::opt<bool>
 namespace {
 
 class AMDGPULateCodeGenPrepare
-    : public FunctionPass,
-      public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
+    : public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
+  const GCNSubtarget &ST;
 
   AssumptionCache *AC = nullptr;
   UniformityInfo *UA = nullptr;
@@ -53,24 +53,10 @@ class AMDGPULateCodeGenPrepare
   SmallVector<WeakTrackingVH, 8> DeadInsts;
 
 public:
-  static char ID;
-
-  AMDGPULateCodeGenPrepare() : FunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "AMDGPU IR late optimizations";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
-
+  AMDGPULateCodeGenPrepare(Module &M, const GCNSubtarget &ST,
+                           AssumptionCache *AC, UniformityInfo *UA)
+      : Mod(&M), DL(&M.getDataLayout()), ST(ST), AC(AC), UA(UA) {}
+  bool run(Function &F);
   bool visitInstruction(Instruction &) { return false; }
 
   // Check if the specified value is at least DWORD aligned.
@@ -148,23 +134,7 @@ public:
 
 } // end anonymous namespace
 
-bool AMDGPULateCodeGenPrepare::doInitialization(Module &M) {
-  Mod = &M;
-  DL = &Mod->getDataLayout();
-  return false;
-}
-
-bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
+bool AMDGPULateCodeGenPrepare::run(Function &F) {
   // "Optimize" the virtual regs that cross basic block boundaries. When
   // building the SelectionDAG, vectors of illegal types that cross basic blocks
   // will be scalarized and widened, with each scalar living in its
@@ -360,34 +330,65 @@ bool LiveRegOptimizer::optimizeLiveType(
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal))
+      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
         NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
     }
-    Instruction *DeadInst = Phi;
     if (MissingIncVal) {
-      DeadInst = cast<Instruction>(ValMap[Phi]);
-      // Do not use the dead phi
-      ValMap[Phi] = Phi;
+      Value *DeadVal = ValMap[Phi];
+      // The coercion chain of the PHI is broken. Delete the Phi
+      // from the ValMap and any connected / user Phis.
+      SmallVector<Value *, 4> PHIWorklist;
+      SmallPtrSet<Value *, 4> VisitedPhis;
+      PHIWorklist.push_back(DeadVal);
+      while (!PHIWorklist.empty()) {
+        Value *NextDeadValue = PHIWorklist.pop_back_val();
+        VisitedPhis.insert(NextDeadValue);
+        auto OriginalPhi =
+            std::find_if(PhiNodes.begin(), PhiNodes.end(),
+                         [this, &NextDeadValue](PHINode *CandPhi) {
+                           return ValMap[CandPhi] == NextDeadValue;
+                         });
+        // This PHI may have already been removed from maps when
+        // unwinding a previous Phi
+        if (OriginalPhi != PhiNodes.end())
+          ValMap.erase(*OriginalPhi);
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
+
+        for (User *U : NextDeadValue->users()) {
+          if (!VisitedPhis.contains(cast<PHINode>(U)))
+            PHIWorklist.push_back(U);
+        }
+      }
+    } else {
+      DeadInsts.emplace_back(cast<Instruction>(Phi));
     }
-    DeadInsts.emplace_back(DeadInst);
   }
   // Coerce back to the original type and replace the uses.
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op)) {
+      if (ValMap.contains(Op) && ValMap[Op]) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
             BBUseValMap[U->getParent()].contains(ValMap[Op]))
           NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
-          NewVal =
-              convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
-                                 InsertPt, U->getParent());
-          BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          // We may pick up ops that were previously converted for users in
+          // other blocks. If there is an originally typed definition of the Op
+          // already in this block, simply reuse it.
+          if (isa<Instruction>(Op) && !isa<PHINode>(Op) &&
+              U->getParent() == cast<Instruction>(Op)->getParent()) {
+            NewVal = Op;
+          } else {
+            NewVal =
+                convertFromOptType(Op->getType(), cast<Instruction>(ValMap[Op]),
+                                   InsertPt, U->getParent());
+            BBUseValMap[U->getParent()][ValMap[Op]] = NewVal;
+          }
         }
         assert(NewVal);
         U->setOperand(OpIdx, NewVal);
@@ -474,16 +475,72 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   return true;
 }
 
-INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+PreservedAnalyses
+AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
+  UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
+
+  AMDGPULateCodeGenPrepare Impl(*F.getParent(), ST, &AC, &UI);
+
+  bool Changed = Impl.run(F);
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  if (!Changed)
+    return PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+class AMDGPULateCodeGenPrepareLegacy : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPULateCodeGenPrepareLegacy() : FunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "AMDGPU IR late optimizations";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override;
+};
+
+bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC =
+      getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+
+  AMDGPULateCodeGenPrepare Impl(*F.getParent(), ST, &AC, &UI);
+
+  return Impl.run(F);
+}
+
+INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                       "AMDGPU IR late optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 
-char AMDGPULateCodeGenPrepare::ID = 0;
+char AMDGPULateCodeGenPrepareLegacy::ID = 0;
 
-FunctionPass *llvm::createAMDGPULateCodeGenPreparePass() {
-  return new AMDGPULateCodeGenPrepare();
+FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass() {
+  return new AMDGPULateCodeGenPrepareLegacy();
 }

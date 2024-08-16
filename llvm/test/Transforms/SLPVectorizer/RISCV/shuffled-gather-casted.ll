@@ -6,13 +6,13 @@ define i32 @test(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D_0:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[D_0]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, i16 [[D_0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i16> [[TMP2]], <4 x i16> <i16 0, i16 2, i16 0, i16 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i16> [[TMP2]], <4 x i16> <i16 2, i16 0, i16 0, i16 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP8]], i32 1)
@@ -58,13 +58,13 @@ define i32 @test1(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D_0:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[D_0]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, i16 [[D_0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP2]], <i32 -16383, i32 -1, i32 65535, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> <i32 -16383, i32 -1, i32 65535, i32 -1>, <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], <i32 -16383, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP2]], <i32 -1, i32 -16383, i32 65535, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 -1, i32 -16383, i32 65535, i32 -1>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], <i32 65535, i32 -16383, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 3, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
 ; CHECK-NEXT:    ret i32 [[TMP8]]
 ;

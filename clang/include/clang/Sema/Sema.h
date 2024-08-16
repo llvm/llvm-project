@@ -536,37 +536,40 @@ class Sema final : public SemaBase {
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
-  // 2. C++ Access Control (SemaAccess.cpp)
-  // 3. Attributes (SemaAttr.cpp)
-  // 4. Availability Attribute Handling (SemaAvailability.cpp)
-  // 5. Casts (SemaCast.cpp)
-  // 6. Extra Semantic Checking (SemaChecking.cpp)
-  // 7. C++ Coroutines (SemaCoroutine.cpp)
-  // 8. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
-  // 9. Declarations (SemaDecl.cpp)
-  // 10. Declaration Attribute Handling (SemaDeclAttr.cpp)
-  // 11. C++ Declarations (SemaDeclCXX.cpp)
-  // 12. C++ Exception Specifications (SemaExceptionSpec.cpp)
-  // 13. Expressions (SemaExpr.cpp)
-  // 14. C++ Expressions (SemaExprCXX.cpp)
-  // 15. Member Access Expressions (SemaExprMember.cpp)
-  // 16. Initializers (SemaInit.cpp)
-  // 17. C++ Lambda Expressions (SemaLambda.cpp)
-  // 18. Name Lookup (SemaLookup.cpp)
-  // 19. Modules (SemaModule.cpp)
-  // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Statements (SemaStmt.cpp)
-  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 24. C++ Templates (SemaTemplate.cpp)
-  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 27. C++ Template Declaration Instantiation
+  // 2. API Notes (SemaAPINotes.cpp)
+  // 3. C++ Access Control (SemaAccess.cpp)
+  // 4. Attributes (SemaAttr.cpp)
+  // 5. Availability Attribute Handling (SemaAvailability.cpp)
+  // 6. Bounds Safety (SemaBoundsSafety.cpp)
+  // 7. Casts (SemaCast.cpp)
+  // 8. Extra Semantic Checking (SemaChecking.cpp)
+  // 9. C++ Coroutines (SemaCoroutine.cpp)
+  // 10. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
+  // 11. Declarations (SemaDecl.cpp)
+  // 12. Declaration Attribute Handling (SemaDeclAttr.cpp)
+  // 13. C++ Declarations (SemaDeclCXX.cpp)
+  // 14. C++ Exception Specifications (SemaExceptionSpec.cpp)
+  // 15. Expressions (SemaExpr.cpp)
+  // 16. C++ Expressions (SemaExprCXX.cpp)
+  // 17. Member Access Expressions (SemaExprMember.cpp)
+  // 18. Initializers (SemaInit.cpp)
+  // 19. C++ Lambda Expressions (SemaLambda.cpp)
+  // 20. Name Lookup (SemaLookup.cpp)
+  // 21. Modules (SemaModule.cpp)
+  // 22. C++ Overloading (SemaOverload.cpp)
+  // 23. Statements (SemaStmt.cpp)
+  // 24. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 25. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 26. C++ Templates (SemaTemplate.cpp)
+  // 27. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 28. C++ Template Deduction Guide (SemaTemplateDeductionGuide.cpp)
+  // 29. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 30. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 29. Constraints and Concepts (SemaConcept.cpp)
-  // 30. Types (SemaType.cpp)
-  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 31. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 32. Constraints and Concepts (SemaConcept.cpp)
+  // 33. Types (SemaType.cpp)
+  // 34. FixIt Helpers (SemaFixItUtils.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1315,6 +1318,25 @@ private:
   std::unique_ptr<SemaSystemZ> SystemZPtr;
   std::unique_ptr<SemaWasm> WasmPtr;
   std::unique_ptr<SemaX86> X86Ptr;
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name API Notes
+  /// Implementations are in SemaAPINotes.cpp
+  ///@{
+
+public:
+  /// Map any API notes provided for this declaration to attributes on the
+  /// declaration.
+  ///
+  /// Triggered by declaration-attribute processing.
+  void ProcessAPINotes(Decl *D);
 
   ///@}
 
@@ -2094,6 +2116,39 @@ public:
   //
   //
 
+  /// \name Bounds Safety
+  /// Implementations are in SemaBoundsSafety.cpp
+  ///@{
+public:
+  /// Check if applying the specified attribute variant from the "counted by"
+  /// family of attributes to FieldDecl \p FD is semantically valid. If
+  /// semantically invalid diagnostics will be emitted explaining the problems.
+  ///
+  /// \param FD The FieldDecl to apply the attribute to
+  /// \param E The count expression on the attribute
+  /// \param CountInBytes If true the attribute is from the "sized_by" family of
+  ///                     attributes. If the false the attribute is from
+  ///                     "counted_by" family of attributes.
+  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
+  ///               of attributes. If false the attribute does not have the
+  ///               suffix.
+  ///
+  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
+  /// \p CountInBytes and \p OrNull both being true indicates the
+  /// `counted_by_or_null` attribute.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                 bool OrNull);
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
   /// \name Casts
   /// Implementations are in SemaCast.cpp
   ///@{
@@ -2213,6 +2268,7 @@ public:
     FST_FreeBSDKPrintf,
     FST_OSTrace,
     FST_OSLog,
+    FST_Syslog,
     FST_Unknown
   };
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -3098,7 +3154,7 @@ public:
   TentativeDefinitionsType TentativeDefinitions;
 
   /// All the external declarations encoutered and used in the TU.
-  SmallVector<VarDecl *, 4> ExternalDeclarations;
+  SmallVector<DeclaratorDecl *, 4> ExternalDeclarations;
 
   /// Generally null except when we temporarily switch decl contexts,
   /// like in \see SemaObjC::ActOnObjCTemporaryExitContainerContext.
@@ -3455,6 +3511,8 @@ public:
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
 
+  bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
+
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
   /// Diagnose function specifiers on a declaration of an identifier that
@@ -3796,7 +3854,8 @@ public:
                                    const ParsedAttributesView &DeclAttrs,
                                    MultiTemplateParamsArg TemplateParams,
                                    bool IsExplicitInstantiation,
-                                   RecordDecl *&AnonRecord);
+                                   RecordDecl *&AnonRecord,
+                                   SourceLocation EllipsisLoc = {});
 
   /// BuildAnonymousStructOrUnion - Handle the declaration of an
   /// anonymous structure or union. Anonymous unions are a C++ feature
@@ -4533,8 +4592,7 @@ public:
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
   /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                              StringRef &Str, bool &isDefault);
+  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
   bool checkTargetClonesAttrString(
       SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
@@ -5535,7 +5593,8 @@ public:
   /// parameters present at all, require proper matching, i.e.
   ///   template <> template \<class T> friend class A<int>::B;
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
-                            MultiTemplateParamsArg TemplateParams);
+                            MultiTemplateParamsArg TemplateParams,
+                            SourceLocation EllipsisLoc);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
                                      MultiTemplateParamsArg TemplateParams);
 
@@ -5849,6 +5908,7 @@ public:
                                      unsigned TagSpec, SourceLocation TagLoc,
                                      CXXScopeSpec &SS, IdentifierInfo *Name,
                                      SourceLocation NameLoc,
+                                     SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
                                      MultiTemplateParamsArg TempParamLists);
 
@@ -6342,7 +6402,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
-      EK_BoundsAttrArgument,
+      EK_AttrArgument,
       EK_Other
     } ExprContext;
 
@@ -6455,10 +6515,9 @@ public:
     return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
-  bool isBoundsAttrContext() const {
+  bool isAttrContext() const {
     return ExprEvalContexts.back().ExprContext ==
-           ExpressionEvaluationContextRecord::ExpressionKind::
-               EK_BoundsAttrArgument;
+           ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument;
   }
 
   /// Increment when we find a reference; decrement when we find an ignored
@@ -11358,6 +11417,10 @@ public:
       bool &IsMemberSpecialization, bool &Invalid,
       bool SuppressDiagnostic = false);
 
+  /// Returns the template parameter list with all default template argument
+  /// information.
+  TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD);
+
   DeclResult CheckClassTemplate(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -12021,29 +12084,23 @@ public:
                                                  unsigned TemplateDepth,
                                                  const Expr *Constraint);
 
-  /// Declare implicit deduction guides for a class template if we've
-  /// not already done so.
-  void DeclareImplicitDeductionGuides(TemplateDecl *Template,
-                                      SourceLocation Loc);
-
-  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
-      TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
-      SourceLocation Loc);
-
   /// Find the failed Boolean condition within a given Boolean
   /// constant expression, and describe it with a string.
   std::pair<Expr *, std::string> findFailedBooleanCondition(Expr *Cond);
 
   void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
-  Decl *ActOnConceptDefinition(Scope *S,
-                               MultiTemplateParamsArg TemplateParameterLists,
-                               const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr,
-                               const ParsedAttributesView &Attrs);
+  ConceptDecl *ActOnStartConceptDefinition(
+      Scope *S, MultiTemplateParamsArg TemplateParameterLists,
+      const IdentifierInfo *Name, SourceLocation NameLoc);
+
+  ConceptDecl *ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
+                                            Expr *ConstraintExpr,
+                                            const ParsedAttributesView &Attrs);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
+  bool CheckConceptUseInDefinition(ConceptDecl *Concept, SourceLocation Loc);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                const CXXScopeSpec &SS,
@@ -12573,6 +12630,27 @@ public:
   /// more constrained, returns NULL.
   FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
                                            FunctionDecl *FD2);
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name C++ Template Deduction Guide
+  /// Implementations are in SemaTemplateDeductionGuide.cpp
+  ///@{
+
+  /// Declare implicit deduction guides for a class template if we've
+  /// not already done so.
+  void DeclareImplicitDeductionGuides(TemplateDecl *Template,
+                                      SourceLocation Loc);
+
+  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
+      TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
+      SourceLocation Loc);
 
   ///@}
 
@@ -14063,6 +14141,11 @@ public:
       const DeclarationNameInfo &NameInfo,
       SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
+  /// Collect the set of unexpanded parameter packs within the given
+  /// expression.
+  static void collectUnexpandedParameterPacks(
+      Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
+
   /// Invoked when parsing a template argument followed by an
   /// ellipsis, which creates a pack expansion.
   ///
@@ -14162,6 +14245,10 @@ public:
   /// Returns an empty Optional if the type can't be expanded.
   std::optional<unsigned> getNumArgumentsInExpansion(
       QualType T, const MultiLevelTemplateArgumentList &TemplateArgs);
+
+  std::optional<unsigned> getNumArgumentsInExpansionFromUnexpanded(
+      llvm::ArrayRef<UnexpandedParameterPack> Unexpanded,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Determine whether the given declarator contains any unexpanded
   /// parameter packs.
@@ -14605,7 +14692,9 @@ public:
                            SourceLocation AttrLoc);
 
   QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                  Expr *CountExpr);
+                                                  Expr *CountExpr,
+                                                  bool CountInBytes,
+                                                  bool OrNull);
 
   /// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an
   /// expression is uninstantiated. If instantiated it will apply the
@@ -15008,25 +15097,6 @@ public:
   std::string getFixItZeroInitializerForType(QualType T,
                                              SourceLocation Loc) const;
   std::string getFixItZeroLiteralForType(QualType T, SourceLocation Loc) const;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name API Notes
-  /// Implementations are in SemaAPINotes.cpp
-  ///@{
-
-public:
-  /// Map any API notes provided for this declaration to attributes on the
-  /// declaration.
-  ///
-  /// Triggered by declaration-attribute processing.
-  void ProcessAPINotes(Decl *D);
 
   ///@}
 };

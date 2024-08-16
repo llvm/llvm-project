@@ -334,8 +334,7 @@ namespace InitializerTemporaries {
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 12;
   }
   static_assert(f() == 12); // both-error {{not an integral constant expression}} \
@@ -494,6 +493,12 @@ namespace DeclRefs {
   constexpr B b;
   static_assert(b.a.m == 100, "");
   static_assert(b.a.f == 100, "");
+
+  constexpr B b2{};
+  static_assert(b2.a.m == 100, "");
+  static_assert(b2.a.f == 100, "");
+  static_assert(b2.a.f == 101, ""); // both-error {{failed}} \
+                                    // both-note {{evaluates to '100 == 101'}}
 }
 
 namespace PointerArith {
@@ -592,8 +597,7 @@ namespace Destructors {
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}} \
-         // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // both-note {{in call to 'S{}.~S()'}}
     return 1;
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
@@ -960,8 +964,6 @@ namespace TemporaryObjectExpr {
     static_assert(foo(F()) == 0, "");
   }
 
-  /// FIXME: This needs support for unions on the new interpreter.
-  /// We diagnose an uninitialized object in c++14.
 #if __cplusplus > 201402L
   namespace Unions {
     struct F {
@@ -974,10 +976,10 @@ namespace TemporaryObjectExpr {
     };
 
     constexpr int foo(F f) {
-      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+      return f.i + f.U.f; // both-note {{read of member 'f' of union with active member 'a'}}
     }
-    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+    static_assert(foo(F()) == 0, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{in call to}}
   }
 #endif
 
@@ -1482,3 +1484,172 @@ namespace FloatAPValue {
   ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
 }
 #endif
+
+namespace LocalWithThisPtrInit {
+  struct S {
+    int i;
+    int *p = &i;
+  };
+  constexpr int foo() {
+    S s{2};
+    return *s.p;
+  }
+  static_assert(foo() == 2, "");
+}
+
+namespace OnePastEndAndBack {
+  struct Base {
+    constexpr Base() {}
+    int n = 0;
+  };
+
+  constexpr Base a;
+  constexpr const Base *c = &a + 1;
+  constexpr const Base *d = c - 1;
+  static_assert(d == &a, "");
+}
+
+namespace BitSet {
+  class Bitset {
+    unsigned Bit = 0;
+
+  public:
+    constexpr Bitset() {
+      int Init[2] = {1,2};
+      for (auto I : Init)
+        set(I);
+    }
+    constexpr void set(unsigned I) {
+      this->Bit++;
+      this->Bit = 1u << 1;
+    }
+  };
+
+  struct ArchInfo {
+    Bitset DefaultExts;
+  };
+
+  constexpr ArchInfo ARMV8A = {
+    Bitset()
+  };
+}
+
+namespace ArrayInitChain {
+  struct StringLiteral {
+    const char *S;
+  };
+
+  struct CustomOperandVal {
+    StringLiteral Str;
+    unsigned Width;
+    unsigned Mask = Width + 1;
+  };
+
+  constexpr CustomOperandVal A[] = {
+    {},
+    {{"depctr_hold_cnt"},  12,   13},
+  };
+  static_assert(A[0].Str.S == nullptr, "");
+  static_assert(A[0].Width == 0, "");
+  static_assert(A[0].Mask == 1, "");
+
+  static_assert(A[1].Width == 12, "");
+  static_assert(A[1].Mask == 13, "");
+}
+
+#if __cplusplus >= 202002L
+namespace ctorOverrider {
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+  };
+
+  struct Covariant1 {
+    A d;
+  };
+
+  constexpr Covariant1 cb;
+}
+#endif
+
+#if __cplusplus >= 202002L
+namespace VirtDtor {
+  struct X { char *p; constexpr ~X() { *p++ = 'X'; } };
+  struct Y : X { int y; virtual constexpr ~Y() { *p++ = 'Y'; } };
+  struct Z : Y { int z; constexpr ~Z() override { *p++ = 'Z'; } };
+
+  union VU {
+    constexpr VU() : z() {}
+    constexpr ~VU() {}
+    Z z;
+  };
+
+  constexpr char virt_dtor(int mode, const char *expected) {
+    char buff[4] = {};
+    VU vu;
+    vu.z.p = buff;
+
+    ((Y&)vu.z).~Y();
+    return true;
+  }
+  static_assert(virt_dtor(0, "ZYX"));
+}
+
+namespace DtorDestroysFieldsAfterSelf {
+    struct  S {
+      int a = 10;
+      constexpr ~S() {
+        a = 0;
+      }
+
+    };
+    struct F {
+      S s;
+      int a;
+      int &b;
+      constexpr F(int a, int &b) : a(a), b(b) {}
+      constexpr ~F() {
+        b += s.a;
+      }
+    };
+
+  constexpr int foo() {
+    int a = 10;
+    int b = 5;
+    {
+      F f(a, b);
+    }
+
+    return b;
+  }
+
+  static_assert(foo() == 15);
+}
+#endif
+
+namespace ExprWithCleanups {
+  struct A { A(); ~A(); int get(); };
+  constexpr int get() {return false ? A().get() : 1;}
+  static_assert(get() == 1, "");
+
+
+  struct S {
+    int V;
+    constexpr S(int V) : V(V) {}
+    constexpr int get() {
+      return V;
+    }
+  };
+  constexpr int get(bool b) {
+    S a = b ? S(1) : S(2);
+
+    return a.get();
+  }
+  static_assert(get(true) == 1, "");
+  static_assert(get(false) == 2, "");
+
+
+  constexpr auto F = true ? 1i : 2i;
+  static_assert(F == 1i, "");
+}

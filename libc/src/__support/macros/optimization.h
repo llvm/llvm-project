@@ -11,16 +11,19 @@
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
 // We use a template to implement likely/unlikely to make sure that we don't
 // accidentally pass an integer.
-namespace LIBC_NAMESPACE::details {
+namespace LIBC_NAMESPACE_DECL {
+namespace details {
 template <typename T>
 LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
   return __builtin_expect(value, expected);
 }
-} // namespace LIBC_NAMESPACE::details
+} // namespace details
+} // namespace LIBC_NAMESPACE_DECL
 #define LIBC_LIKELY(x) LIBC_NAMESPACE::details::expects_bool_condition(x, true)
 #define LIBC_UNLIKELY(x)                                                       \
   LIBC_NAMESPACE::details::expects_bool_condition(x, false)

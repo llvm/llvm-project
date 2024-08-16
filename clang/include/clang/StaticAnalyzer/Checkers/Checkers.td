@@ -1039,24 +1039,8 @@ def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
   Documentation<HasDocumentation>;
 
-def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
-  HelpText<"Check for overflows in the arguments to malloc()">,
-  Documentation<HasDocumentation>;
-
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
@@ -1071,7 +1055,7 @@ def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
 
 let ParentPackage = Taint in {
 
-def GenericTaintChecker : Checker<"TaintPropagation">,
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
   HelpText<"Generate taint information used by other checkers">,
   CheckerOptions<[
     CmdLineOption<String,
@@ -1080,6 +1064,12 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
                   "",
                   InAlpha>,
   ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security.taint"
@@ -1717,9 +1707,7 @@ let ParentPackage = TaintOptIn in {
 def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
-  Dependencies<[DynamicMemoryModeling]>,
-  //FIXME: GenericTaintChecker should be a dependency, but only after it
-  //is transformed into a modeling checker
+  Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"

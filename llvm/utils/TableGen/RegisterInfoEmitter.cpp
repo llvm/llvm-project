@@ -1149,6 +1149,8 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS,
      << "  ArrayRef<const uint32_t *> getRegMasks() const override;\n"
      << "  bool isGeneralPurposeRegister(const MachineFunction &, "
      << "MCRegister) const override;\n"
+     << "  bool isGeneralPurposeRegisterClass(const TargetRegisterClass *RC)"
+     << " const override;\n"
      << "  bool isFixedRegister(const MachineFunction &, "
      << "MCRegister) const override;\n"
      << "  bool isArgumentRegister(const MachineFunction &, "
@@ -1734,6 +1736,20 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       for (const CodeGenRegisterClass *RC : Category.getClasses())
         OS << "      " << RC->getQualifiedName()
            << "RegClass.contains(PhysReg) ||\n";
+      break;
+    }
+  OS << "      false;\n";
+  OS << "}\n\n";
+
+  OS << "bool " << ClassName << "::\n"
+     << "isGeneralPurposeRegisterClass(const TargetRegisterClass *RC)"
+     << " const {\n"
+     << "  return\n";
+  for (const CodeGenRegisterCategory &Category : RegCategories)
+    if (Category.getName() == "GeneralPurposeRegisters") {
+      for (const CodeGenRegisterClass *RC : Category.getClasses())
+        OS << "      " << RC->getQualifiedName()
+           << "RegClass.hasSubClassEq(RC) ||\n";
       break;
     }
   OS << "      false;\n";

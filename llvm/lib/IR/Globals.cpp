@@ -169,7 +169,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     else
       GlobalName += FileName;
 
-    GlobalName += kGlobalIdentifierDelimiter;
+    GlobalName += GlobalIdentifierDelimiter;
   }
   GlobalName += Name;
   return GlobalName;
@@ -501,6 +501,12 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
       setGlobalVariableNumOperands(1);
     Op<0>().set(InitVal);
   }
+}
+
+void GlobalVariable::replaceInitializer(Constant *InitVal) {
+  assert(InitVal && "Can't compute type of null initializer");
+  ValueType = InitVal->getType();
+  setInitializer(InitVal);
 }
 
 /// Copy all additional attributes (those not needed to create a GlobalVariable)

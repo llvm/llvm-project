@@ -97,10 +97,8 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
   StringRef sbss[4] = {".sbss.1", ".sbss.2", ".sbss.4", ".sbss.8"};
 
   auto ELFSymbol = cast<MCSymbolELF>(Symbol);
-  if (!ELFSymbol->isBindingSet()) {
+  if (!ELFSymbol->isBindingSet())
     ELFSymbol->setBinding(ELF::STB_GLOBAL);
-    ELFSymbol->setExternal(true);
-  }
 
   ELFSymbol->setType(ELF::STT_OBJECT);
 

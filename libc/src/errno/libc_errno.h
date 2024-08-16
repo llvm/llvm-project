@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include "hdr/errno_macros.h"
@@ -30,7 +31,10 @@
 // - Use regular `errno` in the code
 // - Still depend on libc.src.errno.errno
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+extern "C" int *__llvm_libc_errno() noexcept;
+
 struct Errno {
   void operator=(int);
   operator int();
@@ -38,6 +42,6 @@ struct Errno {
 
 extern Errno libc_errno;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

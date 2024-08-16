@@ -8,11 +8,13 @@
 
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 // TODO(https://github.com/llvm/llvm-project/issues/94066): Add unittests for
 // the remaining algorithm functions.
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 TEST(LlvmLibcAlgorithmTest, FindIfNot) {
   array<int, 4> nums{1, 2, 3, 4};
@@ -44,4 +46,5 @@ TEST(LlvmLibcAlgorithmTest, AllOf) {
   EXPECT_TRUE(all_of(nums.begin(), nums.begin(), [](int i) { return i < 0; }));
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL

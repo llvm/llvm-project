@@ -413,12 +413,20 @@ constexpr uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return (Numerator - Bias) / Denominator + Bias;
 }
 
+// Check whether divideCeilSigned or divideFloorSigned would overflow. This
+// happens only when Numerator = INT_MIN and Denominator = -1.
+template <typename U, typename V>
+constexpr bool divideSignedWouldOverflow(U Numerator, V Denominator) {
+  return Numerator == std::numeric_limits<U>::min() && Denominator == -1;
+}
+
 /// Returns the integer ceil(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflow is explicitly forbidden with an assert.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideCeilSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
@@ -429,11 +437,12 @@ constexpr T divideCeilSigned(U Numerator, V Denominator) {
 }
 
 /// Returns the integer floor(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
-/// is -1.
+/// Overflow is explicitly forbidden with an assert.
 template <typename U, typename V, typename T = common_sint<U, V>>
 constexpr T divideFloorSigned(U Numerator, V Denominator) {
   assert(Denominator && "Division by zero");
+  assert(!divideSignedWouldOverflow(Numerator, Denominator) &&
+         "Divide would overflow");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
@@ -760,6 +769,14 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
     return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
 #endif
 }
+
+/// Type to force float point values onto the stack, so that x86 doesn't add
+/// hidden precision, avoiding rounding differences on various platforms.
+#if defined(__i386__) || defined(_M_IX86)
+using stack_float_t = volatile float;
+#else
+using stack_float_t = float;
+#endif
 
 } // namespace llvm
 

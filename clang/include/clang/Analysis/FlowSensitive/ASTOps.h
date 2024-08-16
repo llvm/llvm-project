@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -113,7 +114,11 @@ public:
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) override { return true; }
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) override { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) override { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) override {
+    if (TIE->isPotentiallyEvaluated())
+      return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(TIE);
+    return true;
+  }
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) override {
     return true;
   }

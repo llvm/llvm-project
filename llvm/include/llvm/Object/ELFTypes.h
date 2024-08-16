@@ -487,7 +487,7 @@ struct Elf_Rel_Impl<ELFType<Endianness, true>, true>
 // In-memory representation. The serialized representation uses LEB128.
 template <bool Is64> struct Elf_Crel_Impl {
   using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
-  static const bool IsRela = true;
+  static const bool HasAddend = true;
   static const bool IsCrel = true;
   uint r_offset;
   uint32_t r_symidx;

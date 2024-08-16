@@ -266,6 +266,12 @@ def SDTMaskedScatter : SDTypeProfile<0, 4, [
   SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
+def SDTVectorCompress : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>,
+  SDTCisSameAs<1, 3>
+]>;
+
 def SDTVecShuffle : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>
 ]>;
@@ -471,6 +477,9 @@ def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
 def zext       : SDNode<"ISD::ZERO_EXTEND", SDTIntExtendOp>;
 def anyext     : SDNode<"ISD::ANY_EXTEND" , SDTIntExtendOp>;
 def trunc      : SDNode<"ISD::TRUNCATE"   , SDTIntTruncOp>;
+def truncssat_s : SDNode<"ISD::TRUNCATE_SSAT_S", SDTIntTruncOp>;
+def truncssat_u : SDNode<"ISD::TRUNCATE_SSAT_U", SDTIntTruncOp>;
+def truncusat_u : SDNode<"ISD::TRUNCATE_USAT_U", SDTIntTruncOp>;
 def bitconvert : SDNode<"ISD::BITCAST"    , SDTUnaryOp>;
 def addrspacecast : SDNode<"ISD::ADDRSPACECAST", SDTUnaryOp>;
 def freeze     : SDNode<"ISD::FREEZE"     , SDTFreeze>;
@@ -508,6 +517,10 @@ def fminimum   : SDNode<"ISD::FMINIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximum   : SDNode<"ISD::FMAXIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
+def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
@@ -515,6 +528,12 @@ def fsqrt      : SDNode<"ISD::FSQRT"      , SDTFPUnaryOp>;
 def fsin       : SDNode<"ISD::FSIN"       , SDTFPUnaryOp>;
 def fcos       : SDNode<"ISD::FCOS"       , SDTFPUnaryOp>;
 def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
+def fasin      : SDNode<"ISD::FASIN"      , SDTFPUnaryOp>;
+def facos      : SDNode<"ISD::FACOS"      , SDTFPUnaryOp>;
+def fatan      : SDNode<"ISD::FATAN"      , SDTFPUnaryOp>;
+def fsinh      : SDNode<"ISD::FSINH"      , SDTFPUnaryOp>;
+def fcosh      : SDNode<"ISD::FCOSH"      , SDTFPUnaryOp>;
+def ftanh      : SDNode<"ISD::FTANH"      , SDTFPUnaryOp>;
 def fexp2      : SDNode<"ISD::FEXP2"      , SDTFPUnaryOp>;
 def fexp10     : SDNode<"ISD::FEXP10"     , SDTFPUnaryOp>;
 def fpow       : SDNode<"ISD::FPOW"       , SDTFPBinOp>;
@@ -570,11 +589,23 @@ def strict_fcos       : SDNode<"ISD::STRICT_FCOS",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ftan       : SDNode<"ISD::STRICT_FTAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fasin      : SDNode<"ISD::STRICT_FASIN",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_facos      : SDNode<"ISD::STRICT_FACOS",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fatan      : SDNode<"ISD::STRICT_FATAN",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fsinh      : SDNode<"ISD::STRICT_FSINH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fcosh      : SDNode<"ISD::STRICT_FCOSH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_ftanh      : SDNode<"ISD::STRICT_FTANH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fexp2      : SDNode<"ISD::STRICT_FEXP2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fpow       : SDNode<"ISD::STRICT_FPOW",
                                SDTFPBinOp, [SDNPHasChain]>;
-def strict_fldexp       : SDNode<"ISD::STRICT_FLDEXP",
+def strict_fldexp     : SDNode<"ISD::STRICT_FLDEXP",
                                SDTFPExpOp, [SDNPHasChain]>;
 def strict_flog2      : SDNode<"ISD::STRICT_FLOG2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -738,6 +769,8 @@ def masked_gather : SDNode<"ISD::MGATHER", SDTMaskedGather,
 
 def masked_scatter : SDNode<"ISD::MSCATTER", SDTMaskedScatter,
                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def vector_compress : SDNode<"ISD::VECTOR_COMPRESS", SDTVectorCompress>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
 // and truncst (see below).
@@ -1052,6 +1085,13 @@ def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
                         (anyext node:$op)]>;
+
+def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
+  return N->getFlags().hasNonNeg();
+}]>;
+def sext_like : PatFrags<(ops node:$src),
+                         [(zext_nneg node:$src),
+                          (sext node:$src)]>;
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal
@@ -1528,6 +1568,24 @@ def any_fcos       : PatFrags<(ops node:$src),
 def any_ftan       : PatFrags<(ops node:$src),
                               [(strict_ftan node:$src),
                                (ftan node:$src)]>;
+def any_fasin      : PatFrags<(ops node:$src),
+                              [(strict_fasin node:$src),
+                               (fasin node:$src)]>;
+def any_facos      : PatFrags<(ops node:$src),
+                              [(strict_facos node:$src),
+                               (facos node:$src)]>;
+def any_fatan      : PatFrags<(ops node:$src),
+                              [(strict_fatan node:$src),
+                               (fatan node:$src)]>;
+def any_fsinh      : PatFrags<(ops node:$src),
+                              [(strict_fsinh node:$src),
+                               (fsinh node:$src)]>;
+def any_fcosh      : PatFrags<(ops node:$src),
+                              [(strict_fcosh node:$src),
+                               (fcosh node:$src)]>;
+def any_ftanh      : PatFrags<(ops node:$src),
+                              [(strict_ftanh node:$src),
+                               (ftanh node:$src)]>;
 def any_fexp2      : PatFrags<(ops node:$src),
                               [(strict_fexp2 node:$src),
                                (fexp2 node:$src)]>;
@@ -1704,6 +1762,8 @@ multiclass binary_atomic_op_fp<SDNode atomic_op> {
       let IsAtomic = true;
       let MemoryVT = vt;
     }
+
+    defm NAME#_#vt : binary_atomic_op_ord;
   }
 }
 

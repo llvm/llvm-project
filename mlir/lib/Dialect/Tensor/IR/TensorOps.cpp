@@ -178,8 +178,7 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
 static RankedTensorType
 foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
-  SmallVector<int64_t> staticShape(type.getShape().begin(),
-                                   type.getShape().end());
+  SmallVector<int64_t> staticShape(type.getShape());
   assert(type.getNumDynamicDims() ==
              static_cast<int64_t>(dynamicSizes.size()) &&
          "incorrect number of dynamic sizes");
@@ -1585,12 +1584,24 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           getResult().getType()))
     return reshapedSource;
 
+  // If the producer of operand 'source' is another 'tensor.reshape' op, use the
+  // producer's input instead as the original tensor to reshape. This could
+  // render such producer dead code.
+  if (auto reshapeOpProducer = getSource().getDefiningOp<ReshapeOp>()) {
+    getSourceMutable().assign(reshapeOpProducer.getSource());
+    return getResult();
+  }
+
   auto source = getSource();
   auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
   auto resultTy = dyn_cast<RankedTensorType>(getType());
-
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
+
+  // If the source and result are both 1D tensors and have the same type, the
+  // reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() == 1)
+    return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
     auto elements = fromElements.getElements();
@@ -2798,8 +2809,7 @@ struct InsertSliceOpSourceCastInserter final
     RankedTensorType srcType = insertSliceOp.getSourceType();
     if (srcType.getRank() != insertSliceOp.getDestType().getRank())
       return failure();
-    SmallVector<int64_t> newSrcShape(srcType.getShape().begin(),
-                                     srcType.getShape().end());
+    SmallVector<int64_t> newSrcShape(srcType.getShape());
     for (int64_t i = 0; i < srcType.getRank(); ++i) {
       if (std::optional<int64_t> constInt =
               getConstantIntValue(insertSliceOp.getMixedSizes()[i])) {

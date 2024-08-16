@@ -1600,6 +1600,10 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  llvm::json::Object body;
+
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_dap.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
@@ -1611,6 +1615,13 @@ void request_initialize(const llvm::json::Object &request) {
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
   g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  if (llvm::Error err = g_dap.RunPreInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
   g_dap.PopulateExceptionBreakpoints();
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
@@ -1630,9 +1641,6 @@ void request_initialize(const llvm::json::Object &request) {
   // process and more.
   g_dap.event_thread = std::thread(EventThreadFunction);
 
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
   // The debug adapter supports the configurationDoneRequest.
   body.try_emplace("supportsConfigurationDoneRequest", true);
   // The debug adapter supports function breakpoints.
@@ -1710,6 +1718,11 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
+
+  // Put in non-DAP specification lldb specific information.
+  llvm::json::Object lldb_json;
+  lldb_json.try_emplace("version", g_dap.debugger.GetVersionString());
+  body.try_emplace("__lldb", std::move(lldb_json));
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -4316,6 +4329,11 @@ int main(int argc, char *argv[]) {
   } else {
     g_dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
     g_dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
+  }
+
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    g_dap.pre_init_commands.push_back(arg);
   }
 
   bool CleanExit = true;

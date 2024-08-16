@@ -1013,7 +1013,7 @@ void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *GV) const {
 // the VTable does not need a relocation and move into rodata. A frequent
 // time this can occur is for classes that should be made public from a DSO
 // (like in libc++). For cases like these, we can make the vtable hidden or
-// private and create a public alias with the same visibility and linkage as
+// internal and create a public alias with the same visibility and linkage as
 // the original vtable type.
 void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                                  llvm::StringRef AliasNameRef) {
@@ -1050,15 +1050,18 @@ void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
   VTableAlias->setVisibility(VTable->getVisibility());
   VTableAlias->setUnnamedAddr(VTable->getUnnamedAddr());
 
-  // Both of these imply dso_local for the vtable.
+  // Both of these will now imply dso_local for the vtable.
   if (!VTable->hasComdat()) {
-    // If this is in a comdat, then we shouldn't make the linkage private due to
-    // an issue in lld where private symbols can be used as the key symbol when
-    // choosing the prevelant group. This leads to "relocation refers to a
-    // symbol in a discarded section".
-    VTable->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    VTable->setLinkage(llvm::GlobalValue::InternalLinkage);
   } else {
-    // We should at least make this hidden since we don't want to expose it.
+    // If a relocation targets an internal linkage symbol, MC will generate the
+    // relocation against the symbol's section instead of the symbol itself
+    // (see ELFObjectWriter::shouldRelocateWithSymbol). If an internal symbol is
+    // in a COMDAT section group, that section might be discarded, and then the
+    // relocation to that section will generate a linker error. We therefore
+    // make COMDAT vtables hidden instead of internal: they'll still not be
+    // public, but relocations will reference the symbol instead of the section
+    // and COMDAT deduplication will thus work as expected.
     VTable->setVisibility(llvm::GlobalValue::HiddenVisibility);
   }
 
@@ -1078,9 +1081,11 @@ llvm::GlobalVariable::LinkageTypes
 CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
-
-  bool IsInNamedModule = RD->isInNamedModule();
-  // If the CXXRecordDecl are not in a module unit, we need to get
+  
+  // In windows, the linkage of vtable is not related to modules.
+  bool IsInNamedModule = !getTarget().getCXXABI().isMicrosoft() &&
+        RD->isInNamedModule();
+  // If the CXXRecordDecl is not in a module unit, we need to get
   // its key function. We're at the end of the translation unit, so the current
   // key function is fully correct.
   const CXXMethodDecl *keyFunction =
@@ -1223,18 +1228,8 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
       TSK == TSK_ExplicitInstantiationDefinition)
     return false;
 
-  // Itanium C++ ABI [5.2.3]:
-  // Virtual tables for dynamic classes are emitted as follows:
-  //
-  // - If the class is templated, the tables are emitted in every object that
-  // references any of them.
-  // - Otherwise, if the class is attached to a module, the tables are uniquely
+  // Otherwise, if the class is attached to a module, the tables are uniquely
   // emitted in the object for the module unit in which it is defined.
-  // - Otherwise, if the class has a key function (see below), the tables are
-  // emitted in the object for the translation unit containing the definition of
-  // the key function. This is unique if the key function is not inline.
-  // - Otherwise, the tables are emitted in every object that references any of
-  // them.
   if (RD->isInNamedModule())
     return RD->shouldEmitInExternalSource();
 
@@ -1244,10 +1239,9 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   if (!keyFunction)
     return false;
 
-  const FunctionDecl *Def;
   // Otherwise, if we don't have a definition of the key function, the
   // vtable must be defined somewhere else.
-  return !keyFunction->hasBody(Def);
+  return !keyFunction->hasBody();
 }
 
 /// Given that we're currently at the end of the translation unit, and

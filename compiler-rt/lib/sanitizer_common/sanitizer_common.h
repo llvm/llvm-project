@@ -177,7 +177,7 @@ bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
 void RunMallocHooks(void *ptr, uptr size);
-void RunFreeHooks(void *ptr);
+int RunFreeHooks(void *ptr);
 
 class ReservedAddressRange {
  public:
@@ -239,13 +239,15 @@ void RemoveANSIEscapeSequencesFromString(char *buffer);
 void Printf(const char *format, ...) FORMAT(1, 2);
 void Report(const char *format, ...) FORMAT(1, 2);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
-#define VReport(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Report(__VA_ARGS__); \
+#define VReport(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Report(__VA_ARGS__);                      \
   } while (0)
-#define VPrintf(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Printf(__VA_ARGS__); \
+#define VPrintf(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Printf(__VA_ARGS__);                      \
   } while (0)
 
 // Lock sanitizer error reporting and protects against nested errors.

@@ -1021,6 +1021,8 @@ void Sema::CompleteLambdaCallOperator(
       getGenericLambdaTemplateParameterList(LSI, *this);
 
   DeclContext *DC = Method->getLexicalDeclContext();
+  // DeclContext::addDecl() assumes that the DeclContext we're adding to is the
+  // lexical context of the Method. Do so.
   Method->setLexicalDeclContext(LSI->Lambda);
   if (TemplateParams) {
     FunctionTemplateDecl *TemplateMethod =
@@ -1105,6 +1107,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
   LSI->CallOperator = Method;
+  // Temporarily set the lexical declaration context to the current
+  // context, so that the Scope stack matches the lexical nesting.
   Method->setLexicalDeclContext(CurContext);
 
   PushDeclContext(CurScope, Method);
@@ -1380,6 +1384,8 @@ void Sema::ActOnLambdaClosureParameters(
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
     LSI->Lambda->setLambdaIsGeneric(true);
+    LSI->ContainsUnexpandedParameterPack |=
+        TemplateParams->containsUnexpandedParameterPack();
   }
   LSI->AfterParameterList = true;
 }
@@ -2383,23 +2389,42 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
 
   SemaRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 
-  FunctionDecl *Pattern = getPatternFunctionDecl(FD);
-  if (Pattern) {
-    SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
+  FunctionDecl *FDPattern = getPatternFunctionDecl(FD);
+  if (!FDPattern)
+    return;
 
-    FunctionDecl *ParentFD = FD;
-    while (ShouldAddDeclsFromParentScope) {
+  if (!ShouldAddDeclsFromParentScope)
+    return;
 
-      ParentFD =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));
-      Pattern =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
+  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
+  llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
+      ParentInstantiations;
+  while (true) {
+    FDPattern =
+        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
+    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
 
-      if (!ParentFD || !Pattern)
-        break;
+    if (!FDPattern || !FD)
+      break;
 
-      SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);
-      SemaRef.addInstantiatedLocalVarsToScope(ParentFD, Pattern, Scope);
-    }
+    ParentInstantiations.emplace_back(FDPattern, FD);
   }
+
+  // Add instantiated parameters and local vars to scopes, starting from the
+  // outermost lambda to the innermost lambda. This ordering ensures that
+  // parameters in inner lambdas can correctly depend on those defined
+  // in outer lambdas, e.g. auto L = [](auto... x) {
+  //   return [](decltype(x)... y) { }; // `y` depends on `x`
+  // };
+
+  for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
+    SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
+    SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
+
+    if (isLambdaCallOperator(FD))
+      SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
+  }
+
+  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
+                                         MLTAL);
 }

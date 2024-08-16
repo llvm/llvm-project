@@ -404,7 +404,7 @@ defm : SKLWriteResPair<WritePSADBW,  [SKLPort5], 3, [1], 1, 5>; // Vector PSADBW
 defm : SKLWriteResPair<WritePSADBWX, [SKLPort5], 3, [1], 1, 6>;
 defm : SKLWriteResPair<WritePSADBWY, [SKLPort5], 3, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
-defm : SKLWriteResPair<WritePHMINPOS, [SKLPort01], 4, [1], 1, 6>; // Vector PHMINPOS.
+defm : SKLWriteResPair<WritePHMINPOS, [SKLPort0], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector integer shifts.
 defm : SKLWriteResPair<WriteVecShift,     [SKLPort0], 1, [1], 1, 5>;
