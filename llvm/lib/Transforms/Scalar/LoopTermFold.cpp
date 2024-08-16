@@ -169,8 +169,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    if (Expander.isHighCostExpansion(TermValueSLocal, L, ExpansionBudget,
-                                     &TTI, InsertPt)) {
+    if (Expander.isHighCostExpansion(TermValueSLocal, L, ExpansionBudget, &TTI,
+                                     InsertPt)) {
       LLVM_DEBUG(
           dbgs() << "Is too expensive to expand terminating value for phi node"
                  << PN << "\n");
@@ -180,8 +180,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // The candidate IV may have been otherwise dead and poison from the
     // very first iteration.  If we can't disprove that, we can't use the IV.
     if (!mustExecuteUBIfPoisonOnPathTo(&PN, LoopLatch->getTerminator(), &DT)) {
-      LLVM_DEBUG(dbgs() << "Can not prove poison safety for IV "
-                        << PN << "\n");
+      LLVM_DEBUG(dbgs() << "Can not prove poison safety for IV " << PN << "\n");
       continue;
     }
 
@@ -191,11 +190,11 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // insert UB which didn't previously exist.
     bool MustDropPoisonLocal = false;
     Instruction *PostIncV =
-      cast<Instruction>(PN.getIncomingValueForBlock(LoopLatch));
+        cast<Instruction>(PN.getIncomingValueForBlock(LoopLatch));
     if (!mustExecuteUBIfPoisonOnPathTo(PostIncV, LoopLatch->getTerminator(),
                                        &DT)) {
-      LLVM_DEBUG(dbgs() << "Can not prove poison safety to insert use"
-                        << PN << "\n");
+      LLVM_DEBUG(dbgs() << "Can not prove poison safety to insert use" << PN
+                        << "\n");
 
       // If this is a complex recurrance with multiple instructions computing
       // the backedge value, we might need to strip poison flags from all of
@@ -203,8 +202,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       if (PostIncV->getOperand(0) != &PN)
         continue;
 
-      // In order to perform the transform, we need to drop the poison generating
-      // flags on this instruction (if any).
+      // In order to perform the transform, we need to drop the poison
+      // generating flags on this instruction (if any).
       MustDropPoisonLocal = PostIncV->hasPoisonGeneratingFlags();
     }
 
@@ -231,11 +230,9 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   return std::make_tuple(ToFold, ToHelpFold, TermValueS, MustDropPoison);
 }
 
-static bool RunTermFold(Loop *L, ScalarEvolution &SE,
-                        DominatorTree &DT, LoopInfo &LI,
-                        const TargetTransformInfo &TTI,
-                        TargetLibraryInfo &TLI,
-                        MemorySSA *MSSA) {
+static bool RunTermFold(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+                        LoopInfo &LI, const TargetTransformInfo &TTI,
+                        TargetLibraryInfo &TLI, MemorySSA *MSSA) {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
@@ -253,9 +250,9 @@ static bool RunTermFold(Loop *L, ScalarEvolution &SE,
 
   (void)ToFold;
   LLVM_DEBUG(dbgs() << "To fold phi-node:\n"
-             << *ToFold << "\n"
-             << "New term-cond phi-node:\n"
-             << *ToHelpFold << "\n");
+                    << *ToFold << "\n"
+                    << "New term-cond phi-node:\n"
+                    << *ToHelpFold << "\n");
 
   Value *StartValue = ToHelpFold->getIncomingValueForBlock(LoopPreheader);
   (void)StartValue;
@@ -277,24 +274,25 @@ static bool RunTermFold(Loop *L, ScalarEvolution &SE,
                                             LoopPreheader->getTerminator());
 
   LLVM_DEBUG(dbgs() << "Start value of new term-cond phi-node:\n"
-             << *StartValue << "\n"
-             << "Terminating value of new term-cond phi-node:\n"
-             << *TermValue << "\n");
+                    << *StartValue << "\n"
+                    << "Terminating value of new term-cond phi-node:\n"
+                    << *TermValue << "\n");
 
   // Create new terminating condition at loop latch
   BranchInst *BI = cast<BranchInst>(LoopLatch->getTerminator());
   ICmpInst *OldTermCond = cast<ICmpInst>(BI->getCondition());
   IRBuilder<> LatchBuilder(LoopLatch->getTerminator());
   Value *NewTermCond =
-    LatchBuilder.CreateICmp(CmpInst::ICMP_EQ, LoopValue, TermValue,
-                            "lsr_fold_term_cond.replaced_term_cond");
+      LatchBuilder.CreateICmp(CmpInst::ICMP_EQ, LoopValue, TermValue,
+                              "lsr_fold_term_cond.replaced_term_cond");
   // Swap successors to exit loop body if IV equals to new TermValue
   if (BI->getSuccessor(0) == L->getHeader())
     BI->swapSuccessors();
 
   LLVM_DEBUG(dbgs() << "Old term-cond:\n"
-             << *OldTermCond << "\n"
-             << "New term-cond:\n" << *NewTermCond << "\n");
+                    << *OldTermCond << "\n"
+                    << "New term-cond:\n"
+                    << *NewTermCond << "\n");
 
   BI->setCondition(NewTermCond);
 
@@ -337,7 +335,6 @@ void LoopTermFold::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MemorySSAWrapperPass>();
 }
 
-
 bool LoopTermFold::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (skipLoop(L))
     return false;
@@ -370,14 +367,14 @@ PreservedAnalyses LoopTermFoldPass::run(Loop &L, LoopAnalysisManager &AM,
 
 char LoopTermFold::ID = 0;
 
-INITIALIZE_PASS_BEGIN(LoopTermFold, "loop-term-fold",
-                      "Loop Terminator Folding", false, false)
+INITIALIZE_PASS_BEGIN(LoopTermFold, "loop-term-fold", "Loop Terminator Folding",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_END(LoopTermFold, "loop-term-fold",
-                    "Loop Terminator Folding", false, false)
+INITIALIZE_PASS_END(LoopTermFold, "loop-term-fold", "Loop Terminator Folding",
+                    false, false)
 
 Pass *llvm::createLoopTermFoldPass() { return new LoopTermFold(); }
