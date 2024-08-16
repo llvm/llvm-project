@@ -483,7 +483,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
-; ATTRIBUTOR_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR13]] {
 ; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, ptr addrspace(1) [[PTR]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
@@ -500,7 +500,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
-; ATTRIBUTOR_HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR_HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR13]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr addrspace(4) [[PTR]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;

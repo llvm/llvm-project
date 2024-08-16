@@ -33,8 +33,8 @@ define void @indirect_use_vcc() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_2level_use_vcc_kernel:
-; CI: ; NumSgprs: 36
-; VI-NOBUG: ; NumSgprs: 36
+; CI: ; NumSgprs: 38
+; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
 ; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
@@ -121,8 +121,8 @@ define void @indirect_use_80_sgpr() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_80_sgpr:
-; CI: ; NumSgprs: 82
-; VI-NOBUG: ; NumSgprs: 82
+; CI: ; NumSgprs: 84
+; VI-NOBUG: ; NumSgprs: 86
 ; VI-BUG: ; NumSgprs: 96
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()

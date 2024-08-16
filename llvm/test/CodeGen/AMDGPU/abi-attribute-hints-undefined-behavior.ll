@@ -135,6 +135,9 @@ define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) 
 ; FIXEDABI-LABEL: marked_kernel_use_workitem_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v4, s1
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s0
@@ -181,16 +184,19 @@ define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr)
 ; FIXEDABI-LABEL: marked_kernel_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s6
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s8
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s1
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s7
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s9
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s8
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s10
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_endpgm
@@ -238,6 +244,9 @@ define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_addc_u32 s1, s5, 0
@@ -261,7 +270,10 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
 define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
+; FIXEDABI-NEXT:    s_add_i32 s4, s4, s9
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm
