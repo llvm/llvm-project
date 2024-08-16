@@ -1031,7 +1031,10 @@ void CallBrInst::setDefaultDest(BasicBlock *BB) {
   cast<llvm::CallBrInst>(Val)->setDefaultDest(cast<llvm::BasicBlock>(BB->Val));
 }
 void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
-  Ctx.getTracker().emplaceIfTracking<CallBrInstSetIndirectDest>(this, Idx);
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetterWithIdx<&CallBrInst::getIndirectDest,
+                                              &CallBrInst::setIndirectDest>>(
+          this, Idx);
   cast<llvm::CallBrInst>(Val)->setIndirectDest(Idx,
                                                cast<llvm::BasicBlock>(BB->Val));
 }
@@ -1102,10 +1105,10 @@ Value *PHINode::getIncomingValue(unsigned Idx) const {
   return Ctx.getValue(cast<llvm::PHINode>(Val)->getIncomingValue(Idx));
 }
 void PHINode::setIncomingValue(unsigned Idx, Value *V) {
-  auto &Tracker = Ctx.getTracker();
-  Tracker.emplaceIfTracking<PHISetIncoming>(this, Idx,
-                                            PHISetIncoming::What::Value);
-
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetterWithIdx<&PHINode::getIncomingValue,
+                                              &PHINode::setIncomingValue>>(this,
+                                                                           Idx);
   cast<llvm::PHINode>(Val)->setIncomingValue(Idx, V->Val);
 }
 BasicBlock *PHINode::getIncomingBlock(unsigned Idx) const {
@@ -1118,9 +1121,13 @@ BasicBlock *PHINode::getIncomingBlock(const Use &U) const {
   return cast<BasicBlock>(Ctx.getValue(BB));
 }
 void PHINode::setIncomingBlock(unsigned Idx, BasicBlock *BB) {
-  auto &Tracker = Ctx.getTracker();
-  Tracker.emplaceIfTracking<PHISetIncoming>(this, Idx,
-                                            PHISetIncoming::What::Block);
+  // Helper to disambiguate PHINode::getIncomingBlock(unsigned).
+  constexpr BasicBlock *(PHINode::*GetIncomingBlockFn)(unsigned) const =
+      &PHINode::getIncomingBlock;
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetterWithIdx<GetIncomingBlockFn, &PHINode::setIncomingBlock>>(
+          this, Idx);
   cast<llvm::PHINode>(Val)->setIncomingBlock(Idx,
                                              cast<llvm::BasicBlock>(BB->Val));
 }
@@ -1688,18 +1695,20 @@ Value *ExtractElementInst::create(Value *Vec, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
-                              bool IsSigned) {
-  llvm::Constant *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
-  return Ctx.getOrCreateConstant(LLVMC);
-}
-
 #ifndef NDEBUG
 void Constant::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
 }
+#endif // NDEBUG
 
+ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, Context &Ctx,
+                              bool IsSigned) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+#ifndef NDEBUG
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
   auto *F = cast<llvm::Function>(Val);
   OS << *F->getReturnType() << " @" << F->getName() << "(";
@@ -1781,6 +1790,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
+    if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+      It->second = std::unique_ptr<ConstantInt>(new ConstantInt(CI, *this));
+      return It->second.get();
+    }
     if (auto *F = dyn_cast<llvm::Function>(LLVMV))
       It->second = std::unique_ptr<Function>(new Function(F, *this));
     else
