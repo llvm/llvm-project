@@ -100,8 +100,7 @@ public:
   Expected<std::vector<DILocal>>
   symbolizeFrame(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
-  symbolizeFrame(StringRef ModuleName,
-                 object::SectionedAddress ModuleOffset);
+  symbolizeFrame(StringRef ModuleName, object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(ArrayRef<uint8_t> BuildID,
                  object::SectionedAddress ModuleOffset);
@@ -132,8 +131,7 @@ public:
   /// Only one attempt is made to load a module, and errors during loading are
   /// only reported once. Subsequent calls to get module info for a module that
   /// failed to load will return nullptr.
-  Expected<SymbolizableModule *>
-  getOrCreateModuleInfo(StringRef ModuleName);
+  Expected<SymbolizableModule *> getOrCreateModuleInfo(StringRef ModuleName);
 
 private:
   // Bundles together object file with code/data and object file with
