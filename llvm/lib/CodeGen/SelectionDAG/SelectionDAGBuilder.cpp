@@ -4474,7 +4474,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(~StackAlignMask, dl, IntPtr));
+                          DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
 
   SDValue Ops[] = {
       getRoot(), AllocSize,

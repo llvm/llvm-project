@@ -73,23 +73,45 @@ constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
-template <> struct PrimConv<PT_Sint8> { using T = Integral<8, true>; };
-template <> struct PrimConv<PT_Uint8> { using T = Integral<8, false>; };
-template <> struct PrimConv<PT_Sint16> { using T = Integral<16, true>; };
-template <> struct PrimConv<PT_Uint16> { using T = Integral<16, false>; };
-template <> struct PrimConv<PT_Sint32> { using T = Integral<32, true>; };
-template <> struct PrimConv<PT_Uint32> { using T = Integral<32, false>; };
-template <> struct PrimConv<PT_Sint64> { using T = Integral<64, true>; };
-template <> struct PrimConv<PT_Uint64> { using T = Integral<64, false>; };
+template <> struct PrimConv<PT_Sint8> {
+  using T = Integral<8, true>;
+};
+template <> struct PrimConv<PT_Uint8> {
+  using T = Integral<8, false>;
+};
+template <> struct PrimConv<PT_Sint16> {
+  using T = Integral<16, true>;
+};
+template <> struct PrimConv<PT_Uint16> {
+  using T = Integral<16, false>;
+};
+template <> struct PrimConv<PT_Sint32> {
+  using T = Integral<32, true>;
+};
+template <> struct PrimConv<PT_Uint32> {
+  using T = Integral<32, false>;
+};
+template <> struct PrimConv<PT_Sint64> {
+  using T = Integral<64, true>;
+};
+template <> struct PrimConv<PT_Uint64> {
+  using T = Integral<64, false>;
+};
 template <> struct PrimConv<PT_IntAP> {
   using T = IntegralAP<false>;
 };
 template <> struct PrimConv<PT_IntAPS> {
   using T = IntegralAP<true>;
 };
-template <> struct PrimConv<PT_Float> { using T = Floating; };
-template <> struct PrimConv<PT_Bool> { using T = Boolean; };
-template <> struct PrimConv<PT_Ptr> { using T = Pointer; };
+template <> struct PrimConv<PT_Float> {
+  using T = Floating;
+};
+template <> struct PrimConv<PT_Bool> {
+  using T = Boolean;
+};
+template <> struct PrimConv<PT_Ptr> {
+  using T = Pointer;
+};
 template <> struct PrimConv<PT_FnPtr> {
   using T = FunctionPointer;
 };
@@ -117,8 +139,12 @@ static inline bool aligned(const void *P) {
 
 /// Helper macro to simplify type switches.
 /// The macro implicitly exposes a type T in the scope of the inner block.
-#define TYPE_SWITCH_CASE(Name, B) \
-  case Name: { using T = PrimConv<Name>::T; B; break; }
+#define TYPE_SWITCH_CASE(Name, B)                                              \
+  case Name: {                                                                 \
+    using T = PrimConv<Name>::T;                                               \
+    B;                                                                         \
+    break;                                                                     \
+  }
 #define TYPE_SWITCH(Expr, B)                                                   \
   do {                                                                         \
     switch (Expr) {                                                            \
@@ -181,7 +207,10 @@ static inline bool aligned(const void *P) {
   do {                                                                         \
     switch (Expr) {                                                            \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-      default: { D; break; }                                                   \
+    default: {                                                                 \
+      D;                                                                       \
+      break;                                                                   \
+    }                                                                          \
     }                                                                          \
   } while (0)
 #endif
