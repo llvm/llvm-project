@@ -16625,7 +16625,7 @@ static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
          << " operation at memory scope " << MemScope;
 }
 
-static bool isHalf2OrBFloat2(Type *Ty) {
+static bool isV2F16OrV2BF16(Type *Ty) {
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Type *EltTy = VT->getElementType();
     return VT->getNumElements() == 2 &&
@@ -16635,12 +16635,12 @@ static bool isHalf2OrBFloat2(Type *Ty) {
   return false;
 }
 
-static bool isHalf2(Type *Ty) {
+static bool isV2F16(Type *Ty) {
   FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isHalfTy();
 }
 
-static bool isBFloat2(Type *Ty) {
+static bool isV2BF16(Type *Ty) {
   FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
@@ -16780,7 +16780,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
                                                  : AtomicExpansionKind::CmpXChg;
       }
 
-      if (Subtarget->hasAtomicDsPkAdd16Insts() && isHalf2OrBFloat2(Ty))
+      if (Subtarget->hasAtomicDsPkAdd16Insts() && isV2F16OrV2BF16(Ty))
         return AtomicExpansionKind::None;
 
       return AtomicExpansionKind::CmpXChg;
@@ -16805,24 +16805,24 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         // gfx940, gfx12
-        if (Subtarget->hasAtomicFlatPkAdd16Insts() && isHalf2OrBFloat2(Ty))
+        if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
         // gfx90a, gfx940, gfx12
-        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
         // gfx940, gfx12
-        if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isBFloat2(Ty))
+        if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
         // gfx90a, gfx940, gfx12
-        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
         // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
-        if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isBFloat2(Ty))
+        if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
@@ -16843,7 +16843,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
           // gfx908
           if (RMW->use_empty() &&
               Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() &&
-              isHalf2(Ty))
+              isV2F16(Ty))
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
         }
       }

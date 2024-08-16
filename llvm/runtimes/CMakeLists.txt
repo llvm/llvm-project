@@ -521,8 +521,7 @@ if(build_runtimes)
     endforeach()
   endif()
   if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
-      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD) AND 
-      (NOT LIBC_USE_NEW_HEADER_GEN))
+      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
     if(LIBC_HDRGEN_EXE)
       set(hdrgen_exe ${LIBC_HDRGEN_EXE})
     else()
