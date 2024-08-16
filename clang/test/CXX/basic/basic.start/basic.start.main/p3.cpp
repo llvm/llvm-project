@@ -80,12 +80,14 @@ namespace ns {
 extern "C" struct A { int main(); }; // ok
 
 namespace c {
-  extern "C" int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+  extern "C" void main(); // expected-error {{'main' must return 'int'}} \
+                          // expected-warning {{'main' should not be 'extern "C"'}}
 }
 
 extern "C" {
   namespace Z {
-    int main(); // expected-warning {{'main' should not be 'extern "C"'}}
+    void main(); // expected-error {{'main' must return 'int'}} \
+                 // expected-warning {{'main' should not be 'extern "C"'}}
   }
 }
 
