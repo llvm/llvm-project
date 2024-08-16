@@ -60,3 +60,11 @@ namespace MoveFnWorks {
   }
   static_assert(dtor_calls_dtor(), "");
 }
+
+namespace PrimitiveMoveFn {
+  /// This used to crash.
+  void test() {
+    const float y = 100;
+    const float &x = y;
+  }
+}

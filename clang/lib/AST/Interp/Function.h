@@ -100,9 +100,6 @@ public:
     return F->getQualifiedNameAsString();
   }
 
-  /// Returns the location.
-  SourceLocation getLoc() const { return Loc; }
-
   /// Returns a parameter descriptor.
   ParamDescriptor getParamDescriptor(unsigned Offset) const;
 
@@ -235,8 +232,6 @@ private:
 
   /// Program reference.
   Program &P;
-  /// Location of the executed code.
-  SourceLocation Loc;
   /// Declaration this function was compiled from.
   const FunctionDecl *F;
   /// Local area size: storage + metadata.

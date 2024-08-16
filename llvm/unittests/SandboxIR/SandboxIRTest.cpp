@@ -54,7 +54,6 @@ define void @foo(i32 %v1) {
   sandboxir::Argument *Arg0 = F->getArg(0);
   sandboxir::BasicBlock *BB = &*F->begin();
   sandboxir::Instruction *AddI = &*BB->begin();
-  sandboxir::OpaqueInst *OpaqueI = cast<sandboxir::OpaqueInst>(AddI);
   sandboxir::Constant *Const0 = cast<sandboxir::Constant>(Ctx.getValue(LLVMC));
 
   EXPECT_TRUE(isa<sandboxir::Function>(F));
@@ -62,42 +61,36 @@ define void @foo(i32 %v1) {
   EXPECT_FALSE(isa<sandboxir::Function>(BB));
   EXPECT_FALSE(isa<sandboxir::Function>(AddI));
   EXPECT_FALSE(isa<sandboxir::Function>(Const0));
-  EXPECT_FALSE(isa<sandboxir::Function>(OpaqueI));
 
   EXPECT_FALSE(isa<sandboxir::Argument>(F));
   EXPECT_TRUE(isa<sandboxir::Argument>(Arg0));
   EXPECT_FALSE(isa<sandboxir::Argument>(BB));
   EXPECT_FALSE(isa<sandboxir::Argument>(AddI));
   EXPECT_FALSE(isa<sandboxir::Argument>(Const0));
-  EXPECT_FALSE(isa<sandboxir::Argument>(OpaqueI));
 
   EXPECT_TRUE(isa<sandboxir::Constant>(F));
   EXPECT_FALSE(isa<sandboxir::Constant>(Arg0));
   EXPECT_FALSE(isa<sandboxir::Constant>(BB));
   EXPECT_FALSE(isa<sandboxir::Constant>(AddI));
   EXPECT_TRUE(isa<sandboxir::Constant>(Const0));
-  EXPECT_FALSE(isa<sandboxir::Constant>(OpaqueI));
 
   EXPECT_FALSE(isa<sandboxir::OpaqueInst>(F));
   EXPECT_FALSE(isa<sandboxir::OpaqueInst>(Arg0));
   EXPECT_FALSE(isa<sandboxir::OpaqueInst>(BB));
-  EXPECT_TRUE(isa<sandboxir::OpaqueInst>(AddI));
+  EXPECT_FALSE(isa<sandboxir::OpaqueInst>(AddI));
   EXPECT_FALSE(isa<sandboxir::OpaqueInst>(Const0));
-  EXPECT_TRUE(isa<sandboxir::OpaqueInst>(OpaqueI));
 
   EXPECT_FALSE(isa<sandboxir::Instruction>(F));
   EXPECT_FALSE(isa<sandboxir::Instruction>(Arg0));
   EXPECT_FALSE(isa<sandboxir::Instruction>(BB));
   EXPECT_TRUE(isa<sandboxir::Instruction>(AddI));
   EXPECT_FALSE(isa<sandboxir::Instruction>(Const0));
-  EXPECT_TRUE(isa<sandboxir::Instruction>(OpaqueI));
 
   EXPECT_TRUE(isa<sandboxir::User>(F));
   EXPECT_FALSE(isa<sandboxir::User>(Arg0));
   EXPECT_FALSE(isa<sandboxir::User>(BB));
   EXPECT_TRUE(isa<sandboxir::User>(AddI));
   EXPECT_TRUE(isa<sandboxir::User>(Const0));
-  EXPECT_TRUE(isa<sandboxir::User>(OpaqueI));
 
 #ifndef NDEBUG
   std::string Buff;
@@ -107,7 +100,6 @@ define void @foo(i32 %v1) {
   BB->dumpOS(BS);
   AddI->dumpOS(BS);
   Const0->dumpOS(BS);
-  OpaqueI->dumpOS(BS);
 #endif
 }
 
@@ -183,7 +175,7 @@ define i32 @foo(i32 %v0, i32 %v1) {
   I0->getOperandUse(0).dumpOS(BS);
   EXPECT_EQ(Buff, R"IR(
 Def:  i32 %v0 ; SB2. (Argument)
-User:   %add0 = add i32 %v0, %v1 ; SB5. (Opaque)
+User:   %add0 = add i32 %v0, %v1 ; SB5. (BinaryOperator)
 OperandNo: 0
 )IR");
 #endif // NDEBUG
@@ -508,8 +500,8 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(Ret->getIterator(), std::next(BB->begin(), 2));
 
   // Check getOpcode().
-  EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
-  EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
+  EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Add);
+  EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Sub);
   EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
 
   // Check moveBefore(I).
@@ -1567,6 +1559,569 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   }
   EXPECT_EQ(NewGEP2->getPrevNode(), Ret);
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
+}
+
+TEST_F(SandboxIRTest, Flags) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg) {
+  %add = add i32 %arg, %arg
+  %fadd = fadd float %farg, %farg
+  %udiv = udiv i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMAdd = &*LLVMIt++;
+  auto *LLVMFAdd = &*LLVMIt++;
+  auto *LLVMUDiv = &*LLVMIt++;
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Add = &*It++;
+  auto *FAdd = &*It++;
+  auto *UDiv = &*It++;
+
+#define CHECK_FLAG(I, LLVMI, GETTER, SETTER)                                   \
+  {                                                                            \
+    EXPECT_EQ(I->GETTER(), LLVMI->GETTER());                                   \
+    bool NewFlagVal = !I->GETTER();                                            \
+    I->SETTER(NewFlagVal);                                                     \
+    EXPECT_EQ(I->GETTER(), NewFlagVal);                                        \
+    EXPECT_EQ(I->GETTER(), LLVMI->GETTER());                                   \
+  }
+
+  CHECK_FLAG(Add, LLVMAdd, hasNoUnsignedWrap, setHasNoUnsignedWrap);
+  CHECK_FLAG(Add, LLVMAdd, hasNoSignedWrap, setHasNoSignedWrap);
+  CHECK_FLAG(FAdd, LLVMFAdd, isFast, setFast);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowReassoc, setHasAllowReassoc);
+  CHECK_FLAG(UDiv, LLVMUDiv, isExact, setIsExact);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoNaNs, setHasNoNaNs);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoInfs, setHasNoInfs);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasNoSignedZeros, setHasNoSignedZeros);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowReciprocal, setHasAllowReciprocal);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasAllowContract, setHasAllowContract);
+  CHECK_FLAG(FAdd, LLVMFAdd, hasApproxFunc, setHasApproxFunc);
+
+  // Check getFastMathFlags(), copyFastMathFlags().
+  FAdd->setFastMathFlags(FastMathFlags::getFast());
+  EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
+  FastMathFlags OrigFMF = FAdd->getFastMathFlags();
+  FastMathFlags NewFMF;
+  NewFMF.setAllowReassoc(true);
+  EXPECT_TRUE(NewFMF != OrigFMF);
+  FAdd->setFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
+  FAdd->copyFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
+}
+
+TEST_F(SandboxIRTest, UnaryOperator) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0) {
+  %fneg = fneg float %arg0
+  %copyfrom = fadd reassoc float %arg0, 42.0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Arg0 = F.getArg(0);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *I = cast<sandboxir::UnaryOperator>(&*It++);
+  auto *CopyFrom = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ret = &*It++;
+  EXPECT_EQ(I->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+  EXPECT_EQ(I->getOperand(0), Arg0);
+
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "New1"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*InsertBefore=*/Ret, Ctx, "New2"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*InsertAtEnd=*/BB, Ctx, "New3"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+  {
+    // Check create() when it gets folded.
+    auto *FortyTwo = CopyFrom->getOperand(1);
+    auto *NewV = sandboxir::UnaryOperator::create(
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo,
+        /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+        "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+
+  {
+    // Check createWithCopiedFlags() WhereIt, WhereBB.
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "NewCopyFrom1"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertBefore,
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*InsertBefore=*/Ret, Ctx, "NewCopyFrom2"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertAtEnd,
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*InsertAtEnd=*/BB, Ctx, "NewCopyFrom3"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+  {
+    // Check createWithCopiedFlags() when it gets folded.
+    auto *FortyTwo = CopyFrom->getOperand(1);
+    auto *NewV = sandboxir::UnaryOperator::createWithCopiedFlags(
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo, CopyFrom,
+        /*InsertAtEnd=*/BB, Ctx, "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+}
+
+TEST_F(SandboxIRTest, BinaryOperator) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
+  %add = add i8 %arg0, %arg1
+  %fadd = fadd float %farg0, %farg1
+  %sub = sub i8 %arg0, %arg1
+  %fsub = fsub float %farg0, %farg1
+  %mul = mul i8 %arg0, %arg1
+  %fmul = fmul float %farg0, %farg1
+  %udiv = udiv i8 %arg0, %arg1
+  %sdiv = sdiv i8 %arg0, %arg1
+  %fdiv = fdiv float %farg0, %farg1
+  %urem = urem i8 %arg0, %arg1
+  %srem = srem i8 %arg0, %arg1
+  %frem = frem float %farg0, %farg1
+  %shl = shl i8 %arg0, %arg1
+  %lshr = lshr i8 %arg0, %arg1
+  %ashr = ashr i8 %arg0, %arg1
+  %and = and i8 %arg0, %arg1
+  %or = or i8 %arg0, %arg1
+  %xor = xor i8 %arg0, %arg1
+
+  %copyfrom = add nsw i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  auto *FArg0 = F.getArg(2);
+  auto *FArg1 = F.getArg(3);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+
+#define CHECK_IBINOP(OPCODE)                                                   \
+  {                                                                            \
+    auto *I = cast<sandboxir::BinaryOperator>(&*It++);                         \
+    EXPECT_EQ(I->getOpcode(), OPCODE);                                         \
+    EXPECT_EQ(I->getOperand(0), Arg0);                                         \
+    EXPECT_EQ(I->getOperand(1), Arg1);                                         \
+  }
+#define CHECK_FBINOP(OPCODE)                                                   \
+  {                                                                            \
+    auto *I = cast<sandboxir::BinaryOperator>(&*It++);                         \
+    EXPECT_EQ(I->getOpcode(), OPCODE);                                         \
+    EXPECT_EQ(I->getOperand(0), FArg0);                                        \
+    EXPECT_EQ(I->getOperand(1), FArg1);                                        \
+  }
+
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Add);
+  CHECK_FBINOP(sandboxir::Instruction::Opcode::FAdd);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Sub);
+  CHECK_FBINOP(sandboxir::Instruction::Opcode::FSub);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Mul);
+  CHECK_FBINOP(sandboxir::Instruction::Opcode::FMul);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::UDiv);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::SDiv);
+  CHECK_FBINOP(sandboxir::Instruction::Opcode::FDiv);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::URem);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::SRem);
+  CHECK_FBINOP(sandboxir::Instruction::Opcode::FRem);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Shl);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::LShr);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::AShr);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::And);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Or);
+  CHECK_IBINOP(sandboxir::Instruction::Opcode::Xor);
+
+  auto *CopyFrom = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::BinaryOperator>(sandboxir::BinaryOperator::create(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "New1"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::BinaryOperator>(sandboxir::BinaryOperator::create(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1,
+            /*InsertBefore=*/Ret, Ctx, "New2"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::BinaryOperator>(sandboxir::BinaryOperator::create(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1,
+            /*InsertAtEnd=*/BB, Ctx, "New3"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    EXPECT_EQ(NewI->getParent(), BB);
+  }
+  {
+    // Check create() when it gets folded.
+    auto *FortyTwo =
+        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *NewV = sandboxir::BinaryOperator::create(
+        sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo,
+        /*InsertBefore=*/Ret, Ctx, "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+
+  {
+    // Check createWithCopiedFlags() WhereIt, WhereBB.
+    auto *NewI = cast<sandboxir::BinaryOperator>(
+        sandboxir::BinaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "NewNSW1"));
+    EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewNSW1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertBefore.
+    auto *NewI = cast<sandboxir::BinaryOperator>(
+        sandboxir::BinaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
+            /*InsertBefore=*/Ret, Ctx, "NewNSW2"));
+    EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewNSW2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertAtEnd.
+    auto *NewI = cast<sandboxir::BinaryOperator>(
+        sandboxir::BinaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
+            /*InsertAtEnd=*/BB, Ctx, "NewNSW3"));
+    EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+    EXPECT_EQ(NewI->getOperand(1), Arg1);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewNSW3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+  {
+    // Check createWithCopiedFlags() when it gets folded.
+    auto *FortyTwo =
+        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *NewV = sandboxir::BinaryOperator::createWithCopiedFlags(
+        sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo, CopyFrom,
+        /*InsertBefore=*/Ret, Ctx, "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+}
+
+TEST_F(SandboxIRTest, AtomicCmpXchgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
+  %cmpxchg = cmpxchg ptr %ptr, i8 %cmp, i8 %new monotonic monotonic, align 128
+  ret void
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCmpXchg = cast<llvm::AtomicCmpXchgInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *Ptr = F->getArg(0);
+  auto *Cmp = F->getArg(1);
+  auto *New = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *CmpXchg = cast<sandboxir::AtomicCmpXchgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getAlign(), setAlignment().
+  EXPECT_EQ(CmpXchg->getAlign(), LLVMCmpXchg->getAlign());
+  auto OrigAlign = CmpXchg->getAlign();
+  Align NewAlign(256);
+  EXPECT_NE(NewAlign, OrigAlign);
+  CmpXchg->setAlignment(NewAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), NewAlign);
+  CmpXchg->setAlignment(OrigAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), OrigAlign);
+  // Check isVolatile(), setVolatile().
+  EXPECT_EQ(CmpXchg->isVolatile(), LLVMCmpXchg->isVolatile());
+  bool OrigV = CmpXchg->isVolatile();
+  bool NewV = true;
+  EXPECT_NE(NewV, OrigV);
+  CmpXchg->setVolatile(NewV);
+  EXPECT_EQ(CmpXchg->isVolatile(), NewV);
+  CmpXchg->setVolatile(OrigV);
+  EXPECT_EQ(CmpXchg->isVolatile(), OrigV);
+  // Check isWeak(), setWeak().
+  EXPECT_EQ(CmpXchg->isWeak(), LLVMCmpXchg->isWeak());
+  bool OrigWeak = CmpXchg->isWeak();
+  bool NewWeak = true;
+  EXPECT_NE(NewWeak, OrigWeak);
+  CmpXchg->setWeak(NewWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), NewWeak);
+  CmpXchg->setWeak(OrigWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), OrigWeak);
+  // Check isValidSuccessOrdering(), isValidFailureOrdering().
+  SmallVector<AtomicOrdering> AllOrderings(
+      {AtomicOrdering::NotAtomic, AtomicOrdering::Unordered,
+       AtomicOrdering::Monotonic, AtomicOrdering::Acquire,
+       AtomicOrdering::Release, AtomicOrdering::AcquireRelease,
+       AtomicOrdering::SequentiallyConsistent});
+  for (auto Ordering : AllOrderings) {
+    EXPECT_EQ(sandboxir::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering),
+              llvm::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering));
+    EXPECT_EQ(sandboxir::AtomicCmpXchgInst::isValidFailureOrdering(Ordering),
+              llvm::AtomicCmpXchgInst::isValidFailureOrdering(Ordering));
+  }
+  // Check getSuccessOrdering(), setSuccessOrdering().
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), LLVMCmpXchg->getSuccessOrdering());
+  auto OldSuccOrdering = CmpXchg->getSuccessOrdering();
+  auto NewSuccOrdering = AtomicOrdering::Acquire;
+  EXPECT_NE(NewSuccOrdering, OldSuccOrdering);
+  CmpXchg->setSuccessOrdering(NewSuccOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), NewSuccOrdering);
+  CmpXchg->setSuccessOrdering(OldSuccOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), OldSuccOrdering);
+  // Check getFailureOrdering(), setFailureOrdering().
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), LLVMCmpXchg->getFailureOrdering());
+  auto OldFailOrdering = CmpXchg->getFailureOrdering();
+  auto NewFailOrdering = AtomicOrdering::Acquire;
+  EXPECT_NE(NewFailOrdering, OldFailOrdering);
+  CmpXchg->setFailureOrdering(NewFailOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), NewFailOrdering);
+  CmpXchg->setFailureOrdering(OldFailOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), OldFailOrdering);
+  // Check getMergedOrdering().
+  EXPECT_EQ(CmpXchg->getMergedOrdering(), LLVMCmpXchg->getMergedOrdering());
+  // Check getSyncScopeID(), setSyncScopeID().
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), LLVMCmpXchg->getSyncScopeID());
+  auto OrigSSID = CmpXchg->getSyncScopeID();
+  SyncScope::ID NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  CmpXchg->setSyncScopeID(NewSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), NewSSID);
+  CmpXchg->setSyncScopeID(OrigSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), OrigSSID);
+  // Check getPointerOperand().
+  EXPECT_EQ(CmpXchg->getPointerOperand(),
+            Ctx.getValue(LLVMCmpXchg->getPointerOperand()));
+  // Check getCompareOperand().
+  EXPECT_EQ(CmpXchg->getCompareOperand(),
+            Ctx.getValue(LLVMCmpXchg->getCompareOperand()));
+  // Check getNewValOperand().
+  EXPECT_EQ(CmpXchg->getNewValOperand(),
+            Ctx.getValue(LLVMCmpXchg->getNewValOperand()));
+  // Check getPointerAddressSpace().
+  EXPECT_EQ(CmpXchg->getPointerAddressSpace(),
+            LLVMCmpXchg->getPointerAddressSpace());
+
+  Align Align(1024);
+  auto SuccOrdering = AtomicOrdering::Acquire;
+  auto FailOrdering = AtomicOrdering::Monotonic;
+  auto SSID = SyncScope::System;
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*WhereIt=*/Ret->getIterator(),
+            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicCmpXchg1"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg1");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicCmpXchg2"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg2");
+#endif // NDEBUG
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
+            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicCmpXchg3"));
+    // Check getOpcode().
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
+    // Check getAlign().
+    EXPECT_EQ(NewI->getAlign(), Align);
+    // Check getSuccessOrdering().
+    EXPECT_EQ(NewI->getSuccessOrdering(), SuccOrdering);
+    // Check getFailureOrdering().
+    EXPECT_EQ(NewI->getFailureOrdering(), FailOrdering);
+    // Check instr position.
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+    // Check getPointerOperand().
+    EXPECT_EQ(NewI->getPointerOperand(), Ptr);
+    // Check getCompareOperand().
+    EXPECT_EQ(NewI->getCompareOperand(), Cmp);
+    // Check getNewValOperand().
+    EXPECT_EQ(NewI->getNewValOperand(), New);
+#ifndef NDEBUG
+    // Check getName().
+    EXPECT_EQ(NewI->getName(), "NewAtomicCmpXchg3");
+#endif // NDEBUG
+  }
 }
 
 TEST_F(SandboxIRTest, AllocaInst) {

@@ -651,7 +651,7 @@ end
 ! LLVM: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE_EXT]] to i8
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
 ! LLVM: %[[BOX4:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX3]], i8 0, 5
-! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 1, 6
+! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 %{{.*}}, 6
 ! LLVM: %[[BOX6A:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C3]], 7
 ! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6A]], i64 0, 8, 0
 ! LLVM: %[[BOX7:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6]], ptr %{{.*}}, 0
@@ -673,7 +673,7 @@ end
 ! LLVM: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE_EXT]] to i8
 ! LLVM: %[[BOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX2]], i8 %[[TYPE_CODE_TRUNC]], 4
 ! LLVM: %[[BOX4:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX3]], i8 0, 5
-! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 1, 6
+! LLVM: %[[BOX5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX4]], i8 %{{.*}}, 6
 ! LLVM: %[[BOX6A:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX5]], ptr %[[TDESC_C4]], 7
 ! LLVM: %[[BOX6:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6A]], i64 0, 8, 0
 ! LLVM: %[[BOX7:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX6]], ptr %{{.*}}, 0

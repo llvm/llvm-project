@@ -132,9 +132,8 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
   // convert modifies in place, so make a copy.
   APFloat Val2 = APFloat(Val);
   bool losesInfo;
-  (void) Val2.convert(SelectionDAG::EVTToAPFloatSemantics(VT),
-                      APFloat::rmNearestTiesToEven,
-                      &losesInfo);
+  (void)Val2.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                     &losesInfo);
   return !losesInfo;
 }
 
@@ -1748,6 +1747,12 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   return Result;
 }
 
+SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
+                                         bool IsOpaque) {
+  return getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT,
+                     IsTarget, IsOpaque);
+}
+
 SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                                         bool isTarget) {
   return getConstant(Val, DL, TLI->getPointerTy(getDataLayout()), isTarget);
@@ -1820,7 +1825,7 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
       EltVT == MVT::f16 || EltVT == MVT::bf16) {
     bool Ignored;
     APFloat APF = APFloat(Val);
-    APF.convert(EVTToAPFloatSemantics(EltVT), APFloat::rmNearestTiesToEven,
+    APF.convert(EltVT.getFltSemantics(), APFloat::rmNearestTiesToEven,
                 &Ignored);
     return getConstantFP(APF, DL, VT, isTarget);
   }
@@ -5460,7 +5465,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return false;
   }
   case ISD::FMINNUM:
-  case ISD::FMAXNUM: {
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
     // other ends up being one.
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) ||
@@ -6441,11 +6448,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP: {
-        APFloat apf(EVTToAPFloatSemantics(VT),
-                    APInt::getZero(VT.getSizeInBits()));
-        (void)apf.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
+        APFloat FPV(VT.getFltSemantics(), APInt::getZero(VT.getSizeInBits()));
+        (void)FPV.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
                                    APFloat::rmNearestTiesToEven);
-        return getConstantFP(apf, DL, VT);
+        return getConstantFP(FPV, DL, VT);
       }
       case ISD::FP16_TO_FP:
       case ISD::BF16_TO_FP: {
@@ -6456,8 +6462,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
         // This can return overflow, underflow, or inexact; we don't care.
         // FIXME need to be more flexible about rounding mode.
-        (void)FPV.convert(EVTToAPFloatSemantics(VT),
-                          APFloat::rmNearestTiesToEven, &Ignored);
+        (void)FPV.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                          &Ignored);
         return getConstantFP(FPV, DL, VT);
       }
       case ISD::STEP_VECTOR:
@@ -6509,7 +6515,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         bool ignored;
         // This can return overflow, underflow, or inexact; we don't care.
         // FIXME need to be more flexible about rounding mode.
-        (void)V.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
+        (void)V.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
                         &ignored);
         return getConstantFP(V, DL, VT);
       }
@@ -6800,6 +6806,10 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       return getConstantFP(minimum(C1, C2), DL, VT);
     case ISD::FMAXIMUM:
       return getConstantFP(maximum(C1, C2), DL, VT);
+    case ISD::FMINIMUMNUM:
+      return getConstantFP(minimumnum(C1, C2), DL, VT);
+    case ISD::FMAXIMUMNUM:
+      return getConstantFP(maximumnum(C1, C2), DL, VT);
     default: break;
     }
   }
@@ -6808,8 +6818,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     bool Unused;
     // This can return overflow, underflow, or inexact; we don't care.
     // FIXME need to be more flexible about rounding mode.
-    (void) C1.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
-                      &Unused);
+    (void)C1.convert(VT.getFltSemantics(), APFloat::rmNearestTiesToEven,
+                     &Unused);
     return getConstantFP(C1, DL, VT);
   }
 
@@ -6830,7 +6840,7 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
     if (N1.isUndef() || N2.isUndef())
-      return getConstantFP(APFloat::getNaN(EVTToAPFloatSemantics(VT)), DL, VT);
+      return getConstantFP(APFloat::getNaN(VT.getFltSemantics()), DL, VT);
   }
   return SDValue();
 }
@@ -7655,8 +7665,7 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
           !DAG.getTargetLoweringInfo().isLegalStoreImmediate(C->getSExtValue());
       return DAG.getConstant(Val, dl, VT, false, IsOpaque);
     }
-    return DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(VT), Val), dl,
-                             VT);
+    return DAG.getConstantFP(APFloat(VT.getFltSemantics(), Val), dl, VT);
   }
 
   assert(Value.getValueType() == MVT::i8 && "memset with non-byte fill value?");
@@ -11946,7 +11955,7 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
     case ISD::FMAXNUM: {
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
       EVT VT = V.getValueType();
-      const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+      const fltSemantics &Semantics = VT.getFltSemantics();
       APFloat NeutralAF = !Flags.hasNoNaNs()
                               ? APFloat::getQNaN(Semantics)
                               : !Flags.hasNoInfs()
@@ -13222,7 +13231,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMINNUM:
   case ISD::FMAXNUM: {
     // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
-    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
                         !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
                         APFloat::getLargest(Semantics);
@@ -13234,7 +13243,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM: {
     // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
-    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
                                            : APFloat::getLargest(Semantics);
     if (Opcode == ISD::FMAXIMUM)

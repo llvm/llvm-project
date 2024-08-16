@@ -472,6 +472,103 @@ bool Instruction::classof(const sandboxir::Value *From) {
   }
 }
 
+void Instruction::setHasNoUnsignedWrap(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoUnsignedWrap,
+                                       &Instruction::setHasNoUnsignedWrap>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoUnsignedWrap(B);
+}
+
+void Instruction::setHasNoSignedWrap(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoSignedWrap,
+                                       &Instruction::setHasNoSignedWrap>>(this);
+  cast<llvm::Instruction>(Val)->setHasNoSignedWrap(B);
+}
+
+void Instruction::setFast(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::isFast, &Instruction::setFast>>(this);
+  cast<llvm::Instruction>(Val)->setFast(B);
+}
+
+void Instruction::setIsExact(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::isExact, &Instruction::setIsExact>>(this);
+  cast<llvm::Instruction>(Val)->setIsExact(B);
+}
+
+void Instruction::setHasAllowReassoc(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowReassoc,
+                                       &Instruction::setHasAllowReassoc>>(this);
+  cast<llvm::Instruction>(Val)->setHasAllowReassoc(B);
+}
+
+void Instruction::setHasNoNaNs(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::hasNoNaNs, &Instruction::setHasNoNaNs>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoNaNs(B);
+}
+
+void Instruction::setHasNoInfs(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&Instruction::hasNoInfs, &Instruction::setHasNoInfs>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoInfs(B);
+}
+
+void Instruction::setHasNoSignedZeros(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasNoSignedZeros,
+                                       &Instruction::setHasNoSignedZeros>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasNoSignedZeros(B);
+}
+
+void Instruction::setHasAllowReciprocal(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowReciprocal,
+                                       &Instruction::setHasAllowReciprocal>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasAllowReciprocal(B);
+}
+
+void Instruction::setHasAllowContract(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasAllowContract,
+                                       &Instruction::setHasAllowContract>>(
+          this);
+  cast<llvm::Instruction>(Val)->setHasAllowContract(B);
+}
+
+void Instruction::setFastMathFlags(FastMathFlags FMF) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
+                                       &Instruction::copyFastMathFlags>>(this);
+  cast<llvm::Instruction>(Val)->setFastMathFlags(FMF);
+}
+
+void Instruction::copyFastMathFlags(FastMathFlags FMF) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
+                                       &Instruction::copyFastMathFlags>>(this);
+  cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
+}
+
+void Instruction::setHasApproxFunc(bool B) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&Instruction::hasApproxFunc,
+                                       &Instruction::setHasApproxFunc>>(this);
+  cast<llvm::Instruction>(Val)->setHasApproxFunc(B);
+}
+
 #ifndef NDEBUG
 void Instruction::dumpOS(raw_ostream &OS) const {
   OS << "Unimplemented! Please override dump().";
@@ -1122,6 +1219,270 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   }
 }
 
+/// \Returns the LLVM opcode that corresponds to \p Opc.
+static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
+  switch (Opc) {
+  case Instruction::Opcode::FNeg:
+    return static_cast<llvm::Instruction::UnaryOps>(llvm::Instruction::FNeg);
+  default:
+    llvm_unreachable("Not a unary op!");
+  }
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             BBIterator WhereIt, BasicBlock *WhereBB,
+                             Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *NewLLVMV = Builder.CreateUnOp(getLLVMUnaryOp(Op), OpV->Val, Name);
+  if (auto *NewUnOpV = dyn_cast<llvm::UnaryOperator>(NewLLVMV)) {
+    return Ctx.createUnaryOperator(NewUnOpV);
+  }
+  assert(isa<llvm::Constant>(NewLLVMV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewLLVMV));
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             Instruction *InsertBefore, Context &Ctx,
+                             const Twine &Name) {
+  return create(Op, OpV, InsertBefore->getIterator(), InsertBefore->getParent(),
+                Ctx, Name);
+}
+
+Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
+                             BasicBlock *InsertAfter, Context &Ctx,
+                             const Twine &Name) {
+  return create(Op, OpV, InsertAfter->end(), InsertAfter, Ctx, Name);
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom, BBIterator WhereIt,
+                                            BasicBlock *WhereBB, Context &Ctx,
+                                            const Twine &Name) {
+  auto *NewV = create(Op, OpV, WhereIt, WhereBB, Ctx, Name);
+  if (auto *UnI = dyn_cast<llvm::UnaryOperator>(NewV->Val))
+    UnI->copyIRFlags(CopyFrom->Val);
+  return NewV;
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom,
+                                            Instruction *InsertBefore,
+                                            Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertBefore->getIterator(),
+                               InsertBefore->getParent(), Ctx, Name);
+}
+
+Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                            Value *CopyFrom,
+                                            BasicBlock *InsertAtEnd,
+                                            Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertAtEnd->end(),
+                               InsertAtEnd, Ctx, Name);
+}
+
+/// \Returns the LLVM opcode that corresponds to \p Opc.
+static llvm::Instruction::BinaryOps getLLVMBinaryOp(Instruction::Opcode Opc) {
+  switch (Opc) {
+  case Instruction::Opcode::Add:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Add);
+  case Instruction::Opcode::FAdd:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::FAdd);
+  case Instruction::Opcode::Sub:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Sub);
+  case Instruction::Opcode::FSub:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::FSub);
+  case Instruction::Opcode::Mul:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Mul);
+  case Instruction::Opcode::FMul:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::FMul);
+  case Instruction::Opcode::UDiv:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::UDiv);
+  case Instruction::Opcode::SDiv:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::SDiv);
+  case Instruction::Opcode::FDiv:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::FDiv);
+  case Instruction::Opcode::URem:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::URem);
+  case Instruction::Opcode::SRem:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::SRem);
+  case Instruction::Opcode::FRem:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::FRem);
+  case Instruction::Opcode::Shl:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Shl);
+  case Instruction::Opcode::LShr:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::LShr);
+  case Instruction::Opcode::AShr:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::AShr);
+  case Instruction::Opcode::And:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::And);
+  case Instruction::Opcode::Or:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Or);
+  case Instruction::Opcode::Xor:
+    return static_cast<llvm::Instruction::BinaryOps>(llvm::Instruction::Xor);
+  default:
+    llvm_unreachable("Not a binary op!");
+  }
+}
+Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                              BBIterator WhereIt, BasicBlock *WhereBB,
+                              Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  llvm::Value *NewV =
+      Builder.CreateBinOp(getLLVMBinaryOp(Op), LHS->Val, RHS->Val, Name);
+  if (auto *NewBinOp = dyn_cast<llvm::BinaryOperator>(NewV))
+    return Ctx.createBinaryOperator(NewBinOp);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                              Instruction *InsertBefore, Context &Ctx,
+                              const Twine &Name) {
+  return create(Op, LHS, RHS, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+
+Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                              BasicBlock *InsertAtEnd, Context &Ctx,
+                              const Twine &Name) {
+  return create(Op, LHS, RHS, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                             Value *RHS, Value *CopyFrom,
+                                             BBIterator WhereIt,
+                                             BasicBlock *WhereBB, Context &Ctx,
+                                             const Twine &Name) {
+
+  Value *NewV = create(Op, LHS, RHS, WhereIt, WhereBB, Ctx, Name);
+  if (auto *NewBO = dyn_cast<BinaryOperator>(NewV))
+    cast<llvm::BinaryOperator>(NewBO->Val)->copyIRFlags(CopyFrom->Val);
+  return NewV;
+}
+
+Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                             Value *RHS, Value *CopyFrom,
+                                             Instruction *InsertBefore,
+                                             Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, LHS, RHS, CopyFrom,
+                               InsertBefore->getIterator(),
+                               InsertBefore->getParent(), Ctx, Name);
+}
+
+Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                             Value *RHS, Value *CopyFrom,
+                                             BasicBlock *InsertAtEnd,
+                                             Context &Ctx, const Twine &Name) {
+  return createWithCopiedFlags(Op, LHS, RHS, CopyFrom, InsertAtEnd->end(),
+                               InsertAtEnd, Ctx, Name);
+}
+
+void AtomicCmpXchgInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSyncScopeID,
+                                       &AtomicCmpXchgInst::setSyncScopeID>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSyncScopeID(SSID);
+}
+
+Value *AtomicCmpXchgInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getPointerOperand());
+}
+
+Value *AtomicCmpXchgInst::getCompareOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getCompareOperand());
+}
+
+Value *AtomicCmpXchgInst::getNewValOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getNewValOperand());
+}
+
+AtomicCmpXchgInst *
+AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+                          AtomicOrdering SuccessOrdering,
+                          AtomicOrdering FailureOrdering, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx, SyncScope::ID SSID,
+                          const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *LLVMAtomicCmpXchg =
+      Builder.CreateAtomicCmpXchg(Ptr->Val, Cmp->Val, New->Val, Align,
+                                  SuccessOrdering, FailureOrdering, SSID);
+  LLVMAtomicCmpXchg->setName(Name);
+  return Ctx.createAtomicCmpXchgInst(LLVMAtomicCmpXchg);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             Instruction *InsertBefore,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                SSID, Name);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             BasicBlock *InsertAtEnd,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertAtEnd->end(), InsertAtEnd, Ctx, SSID, Name);
+}
+
+void AtomicCmpXchgInst::setAlignment(Align Align) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getAlign,
+                                       &AtomicCmpXchgInst::setAlignment>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setAlignment(Align);
+}
+
+void AtomicCmpXchgInst::setVolatile(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isVolatile,
+                                       &AtomicCmpXchgInst::setVolatile>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setVolatile(V);
+}
+
+void AtomicCmpXchgInst::setWeak(bool IsWeak) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isWeak,
+                                       &AtomicCmpXchgInst::setWeak>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setWeak(IsWeak);
+}
+
+void AtomicCmpXchgInst::setSuccessOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSuccessOrdering,
+                                       &AtomicCmpXchgInst::setSuccessOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSuccessOrdering(Ordering);
+}
+
+void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getFailureOrdering,
+                                       &AtomicCmpXchgInst::setFailureOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
+}
+
 AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
                                Value *ArraySize, const Twine &Name) {
@@ -1433,6 +1794,41 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::FNeg: {
+    auto *LLVMUnaryOperator = cast<llvm::UnaryOperator>(LLVMV);
+    It->second = std::unique_ptr<UnaryOperator>(
+        new UnaryOperator(LLVMUnaryOperator, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::Add:
+  case llvm::Instruction::FAdd:
+  case llvm::Instruction::Sub:
+  case llvm::Instruction::FSub:
+  case llvm::Instruction::Mul:
+  case llvm::Instruction::FMul:
+  case llvm::Instruction::UDiv:
+  case llvm::Instruction::SDiv:
+  case llvm::Instruction::FDiv:
+  case llvm::Instruction::URem:
+  case llvm::Instruction::SRem:
+  case llvm::Instruction::FRem:
+  case llvm::Instruction::Shl:
+  case llvm::Instruction::LShr:
+  case llvm::Instruction::AShr:
+  case llvm::Instruction::And:
+  case llvm::Instruction::Or:
+  case llvm::Instruction::Xor: {
+    auto *LLVMBinaryOperator = cast<llvm::BinaryOperator>(LLVMV);
+    It->second = std::unique_ptr<BinaryOperator>(
+        new BinaryOperator(LLVMBinaryOperator, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::AtomicCmpXchg: {
+    auto *LLVMAtomicCmpXchg = cast<llvm::AtomicCmpXchgInst>(LLVMV);
+    It->second = std::unique_ptr<AtomicCmpXchgInst>(
+        new AtomicCmpXchgInst(LLVMAtomicCmpXchg, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Alloca: {
     auto *LLVMAlloca = cast<llvm::AllocaInst>(LLVMV);
     It->second = std::unique_ptr<AllocaInst>(new AllocaInst(LLVMAlloca, *this));
@@ -1549,6 +1945,20 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
+  auto NewPtr = std::unique_ptr<UnaryOperator>(new UnaryOperator(I, *this));
+  return cast<UnaryOperator>(registerValue(std::move(NewPtr)));
+}
+BinaryOperator *Context::createBinaryOperator(llvm::BinaryOperator *I) {
+  auto NewPtr = std::unique_ptr<BinaryOperator>(new BinaryOperator(I, *this));
+  return cast<BinaryOperator>(registerValue(std::move(NewPtr)));
+}
+AtomicCmpXchgInst *
+Context::createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I) {
+  auto NewPtr =
+      std::unique_ptr<AtomicCmpXchgInst>(new AtomicCmpXchgInst(I, *this));
+  return cast<AtomicCmpXchgInst>(registerValue(std::move(NewPtr)));
 }
 AllocaInst *Context::createAllocaInst(llvm::AllocaInst *I) {
   auto NewPtr = std::unique_ptr<AllocaInst>(new AllocaInst(I, *this));

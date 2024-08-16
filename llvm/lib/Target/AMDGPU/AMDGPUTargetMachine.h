@@ -38,6 +38,7 @@ public:
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
   static bool DisableStructurizer;
+  static bool EnableStructurizerWorkarounds;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,

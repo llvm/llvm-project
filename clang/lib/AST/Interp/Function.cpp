@@ -21,10 +21,9 @@ Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
                    bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
-    : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
-      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO), Variadic(F->isVariadic()),
+    : P(P), F(F), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
+      Params(std::move(Params)), ParamOffsets(std::move(ParamOffsets)),
+      HasThisPointer(HasThisPointer), HasRVO(HasRVO), Variadic(F->isVariadic()),
       IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {

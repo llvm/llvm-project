@@ -1987,6 +1987,22 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
+  for (const Pointer &P : {LHS, RHS}) {
+    if (P.isZeroSizeArray()) {
+      QualType PtrT = P.getType();
+      while (auto *AT = dyn_cast<ArrayType>(PtrT))
+        PtrT = AT->getElementType();
+
+      QualType ArrayTy = S.getCtx().getConstantArrayType(
+          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_pointer_subtraction_zero_size)
+          << ArrayTy;
+
+      return false;
+    }
+  }
+
   if (RHS.isZero()) {
     S.Stk.push<T>(T::from(LHS.getIndex()));
     return true;
@@ -2686,9 +2702,9 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   const Function *F = FuncPtr.getFunction();
   if (!F) {
-    const Expr *E = S.Current->getExpr(OpPC);
+    const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
     S.FFDiag(E, diag::note_constexpr_null_callee)
-        << const_cast<Expr *>(E) << E->getSourceRange();
+        << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
     return false;
   }
 

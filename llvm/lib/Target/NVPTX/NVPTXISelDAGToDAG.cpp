@@ -1974,8 +1974,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     Ops.append({BasePtr, Chain});
   }
 
-  SDNode *NVPTXST = NVPTXST =
-      CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
+  SDNode *NVPTXST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
   if (!NVPTXST)
     return false;

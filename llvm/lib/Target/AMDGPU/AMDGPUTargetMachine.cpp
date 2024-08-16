@@ -338,10 +338,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool> EnableStructurizerWorkarounds(
+static cl::opt<bool, true> EnableStructurizerWorkarounds(
     "amdgpu-enable-structurizer-workarounds",
-    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
-    cl::Hidden);
+    cl::desc("Enable workarounds for the StructurizeCFG pass"),
+    cl::location(AMDGPUTargetMachine::EnableStructurizerWorkarounds),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
@@ -616,6 +617,7 @@ bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 bool AMDGPUTargetMachine::DisableStructurizer = false;
+bool AMDGPUTargetMachine::EnableStructurizerWorkarounds = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
