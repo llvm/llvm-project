@@ -459,21 +459,15 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
   if (!GetStream(StreamType::Memory64List).empty()) {
     llvm::Error err = llvm::Error::success();
     for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
-      // Explicit error check so we can return from within
       if (memory_desc.first.StartOfMemoryRange <= addr 
-          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize 
-          && !err) {
+          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize) {
         return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
       }
     }
 
     if (err)
-      // Without std::move(err) fails with 
-      // error: call to deleted constructor of '::llvm::Error'
       LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
   }
-  
-
 
   return std::nullopt;
 }
@@ -548,18 +542,13 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
                                  std::vector<MemoryRegionInfo> &regions) {
   Log *log = GetLog(LLDBLog::Modules);
   // Cache the expected memory32 into an optional
-  // because double checking the expected triggers the unchecked warning.
-  std::optional<llvm::ArrayRef<MemoryDescriptor>> memory32_list;
+  // because it is possible to just have a memory64 list
   auto ExpectedMemory = parser.GetMinidumpFile().getMemoryList();
   if (!ExpectedMemory) {
     LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
                    "Failed to read memory list: {0}");
   } else {
-    memory32_list = *ExpectedMemory;
-  }
-
-  if (memory32_list) {
-    for (const MemoryDescriptor &memory_desc : *memory32_list) {
+    for (const MemoryDescriptor &memory_desc : *ExpectedMemory) {
       if (memory_desc.Memory.DataSize == 0)
         continue;
       MemoryRegionInfo region;
