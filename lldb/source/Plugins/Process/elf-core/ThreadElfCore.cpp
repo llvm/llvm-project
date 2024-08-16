@@ -332,9 +332,9 @@ ELFLinuxPrStatus::Populate(const lldb::ThreadSP &thread_sp) {
   prstatus.pr_pid = thread_sp->GetID();
   lldb::ProcessSP process_sp = thread_sp->GetProcess();
   ProcessInstanceInfo info;
-  if (!process_sp->GetProcessInfo(info)) {
+  if (!process_sp->GetProcessInfo(info))
     return std::nullopt;
-  }
+
   prstatus.pr_ppid = info.GetParentProcessID();
   prstatus.pr_pgrp = info.GetProcessGroupID();
   prstatus.pr_sid = info.GetProcessSessionID();
