@@ -42525,6 +42525,26 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
     }
+      // Conversions.
+      // TODO: Add more CVT opcodes when we have test coverage.
+    case X86ISD::CVTTP2SI:
+    case X86ISD::CVTTP2UI:
+    case X86ISD::CVTPH2PS: {
+      SDLoc DL(Op);
+      unsigned Scale = SizeInBits / ExtSizeInBits;
+      SDValue SrcOp = Op.getOperand(0);
+      MVT SrcVT = SrcOp.getSimpleValueType();
+      unsigned SrcExtSize =
+          std::max<unsigned>(SrcVT.getSizeInBits() / Scale, 128);
+      MVT ExtVT = MVT::getVectorVT(VT.getSimpleVT().getScalarType(),
+                                   ExtSizeInBits / VT.getScalarSizeInBits());
+      SDValue ExtOp = TLO.DAG.getNode(
+          Opc, DL, ExtVT, extractSubVector(SrcOp, 0, TLO.DAG, DL, SrcExtSize));
+      SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+      SDValue Insert =
+          insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
+      return TLO.CombineTo(Op, Insert);
+    }
       // Zero upper elements.
     case X86ISD::VZEXT_MOVL:
       // Variable blend.

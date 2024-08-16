@@ -272,6 +272,22 @@ static Error reportError(const Twine &Message) {
   return createStringError(inconvertibleErrorCode(), Message);
 }
 
+static Error createSpecFormatError(Twine Format) {
+  return createStringError("malformed specification, must be of the form \"" +
+                           Format + "\"");
+}
+
+/// Attempts to parse an address space component of a specification.
+static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
+  if (Str.empty())
+    return createStringError("address space component cannot be empty");
+
+  if (!to_integer(Str, AddrSpace, 10) || !isUInt<24>(AddrSpace))
+    return createStringError("address space must be a 24-bit integer");
+
+  return Error::success();
+}
+
 /// Checked version of split, to ensure mandatory subparts.
 static Error split(StringRef Str, char Separator,
                    std::pair<StringRef, StringRef> &Split) {
@@ -313,6 +329,26 @@ static Error getAddrSpace(StringRef R, unsigned &AddrSpace) {
 }
 
 Error DataLayout::parseSpecification(StringRef Spec) {
+  // The "ni" specifier is the only two-character specifier. Handle it first.
+  if (Spec.starts_with("ni")) {
+    // ni:<address space>[:<address space>]...
+    StringRef Rest = Spec.drop_front(2);
+
+    // Drop the first ':', then split the rest of the string the usual way.
+    if (!Rest.consume_front(":"))
+      return createSpecFormatError("ni:<address space>[:<address space>]...");
+
+    for (StringRef Str : split(Rest, ':')) {
+      unsigned AddrSpace;
+      if (Error Err = parseAddrSpace(Str, AddrSpace))
+        return Err;
+      if (AddrSpace == 0)
+        return createStringError("address space 0 cannot be non-integral");
+      NonIntegralAddressSpaces.push_back(AddrSpace);
+    }
+    return Error::success();
+  }
+
   // Split at ':'.
   std::pair<StringRef, StringRef> Split;
   if (Error Err = ::split(Spec, ':', Split))
@@ -321,22 +357,6 @@ Error DataLayout::parseSpecification(StringRef Spec) {
   // Aliases used below.
   StringRef &Tok = Split.first;   // Current token.
   StringRef &Rest = Split.second; // The rest of the string.
-
-  if (Tok == "ni") {
-    do {
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      Rest = Split.second;
-      unsigned AS;
-      if (Error Err = getInt(Split.first, AS))
-        return Err;
-      if (AS == 0)
-        return reportError("Address space 0 can never be non-integral");
-      NonIntegralAddressSpaces.push_back(AS);
-    } while (!Rest.empty());
-
-    return Error::success();
-  }
 
   char SpecifierChar = Tok.front();
   Tok = Tok.substr(1);
