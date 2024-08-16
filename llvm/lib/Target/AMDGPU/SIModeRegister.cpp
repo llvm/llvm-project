@@ -165,7 +165,7 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
                                           const SIInstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
   if (TII->usesFPDPRounding(MI) ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F32_TO_F16) {
+      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
@@ -173,7 +173,7 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       // f16 interpolation instructions need double precision round to zero
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));
-    case AMDGPU::FPTRUNC_ROUND_F32_TO_F16: {
+    case AMDGPU::FPTRUNC_ROUND_F16_F32: {
       unsigned Mode = MI.getOperand(2).getImm();
       MI.removeOperand(2);
       // Replacing the pseudo by a real instruction in place

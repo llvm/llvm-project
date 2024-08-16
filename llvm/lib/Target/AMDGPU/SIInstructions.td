@@ -228,7 +228,7 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
-def FPTRUNC_ROUND_F32_TO_F16 : VPseudoInstSI <(outs VGPR_32:$vdst),
+def FPTRUNC_ROUND_F16_F32 : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, i32imm:$round),
   [(set f16:$vdst, (SIfptrunc_round f32:$src0, i32:$round))]>;
 } // End Uses = [MODE, EXEC]

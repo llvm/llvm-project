@@ -6660,7 +6660,7 @@ SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
   if (Op.getOperand(0)->getValueType(0) != MVT::f32)
     return SDValue();
 
-  // Only support towardzero, tonearest, upward and downward. 
+  // Only support towardzero, tonearest, upward and downward.
   int RoundMode = Op.getConstantOperandVal(1);
   if (RoundMode < (int)RoundingMode::TowardZero ||
       RoundMode > (int)RoundingMode::TowardNegative)
@@ -6680,6 +6680,8 @@ SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType() == MVT::f16 &&
          "Do not know how to custom lower FP_ROUND for non-f16 type");
+
+  return Op;
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
