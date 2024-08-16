@@ -57203,11 +57203,13 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       }
     }
     // v4i32 CVTPS2DQ(v4f32) / CVTPS2UDQ(v4f32).
-    if ((InOpcode == ISD::FP_TO_SINT ||
-         (InOpcode == ISD::FP_TO_UINT && Subtarget.hasVLX())) &&
-        VT == MVT::v4i32) {
+    // v4f32 CVTDQ2PS(v4i32) / CVTUDQ2PS(v4i32).
+    if ((InOpcode == ISD::FP_TO_SINT || InOpcode == ISD::SINT_TO_FP ||
+         ((InOpcode == ISD::FP_TO_UINT || InOpcode == ISD::UINT_TO_FP) &&
+          Subtarget.hasVLX())) &&
+        (VT == MVT::v4i32 || VT == MVT::v4f32)) {
       SDValue Src = InVec.getOperand(0);
-      if (Src.getValueType().getScalarType() == MVT::f32)
+      if (Src.getValueType().getScalarSizeInBits() == 32)
         return DAG.getNode(InOpcode, DL, VT,
                            extractSubVector(Src, IdxVal, DAG, DL, SizeInBits));
     }
