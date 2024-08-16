@@ -43,3 +43,5 @@ add_llvm_component_library(LLVMInstrumentation
   TransformUtils
   ProfileData
   )
+
+  set_property(TARGET LLVMInstrumentation APPEND_STRING PROPERTY COMPILE_FLAGS " -g -O0")
