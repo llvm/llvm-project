@@ -319,6 +319,12 @@ class SourceLocation(Structure):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __lt__(self, other: SourceLocation) -> bool:
+        return conf.lib.clang_isBeforeInTranslationUnit(self, other)  # type: ignore [no-any-return]
+
+    def __le__(self, other: SourceLocation) -> bool:
+        return self < other or self == other
+
     def __repr__(self):
         if self.file:
             filename = self.file.name
@@ -375,26 +381,7 @@ class SourceRange(Structure):
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
-        if other.file is None and self.start.file is None:
-            pass
-        elif (
-            self.start.file.name != other.file.name
-            or other.file.name != self.end.file.name
-        ):
-            # same file name
-            return False
-        # same file, in between lines
-        if self.start.line < other.line < self.end.line:
-            return True
-        elif self.start.line == other.line:
-            # same file first line
-            if self.start.column <= other.column:
-                return True
-        elif other.line == self.end.line:
-            # same file last line
-            if other.column <= self.end.column:
-                return True
-        return False
+        return self.start <= other <= self.end
 
     def __repr__(self):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
@@ -3908,6 +3895,7 @@ functionList: list[LibFunc] = [
     ("clang_isUnexposed", [CursorKind], bool),
     ("clang_isVirtualBase", [Cursor], bool),
     ("clang_isVolatileQualifiedType", [Type], bool),
+    ("clang_isBeforeInTranslationUnit", [SourceLocation, SourceLocation], bool),
     (
         "clang_parseTranslationUnit",
         [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int],
