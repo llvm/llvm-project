@@ -31,7 +31,10 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
   return error;
 }
 
-void SaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) { m_style = style; }
+void SaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) { 
+  if (!m_regions_to_save.empty())
+    m_style = style;
+}
 
 void SaveCoreOptions::SetOutputFile(FileSpec file) { m_file = file; }
 
@@ -101,10 +104,17 @@ bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
   return m_threads_to_save.count(tid) > 0;
 }
 
-Status SaveCoreOptions::AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region) {
-  Status error;
+void SaveCoreOptions::AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region) {
+  // Currently we just insert memory regions into the map by their base
+  // This is probably overly simple, but adding ranges of memory introduces
+  // a lot of potential complexity, such as if the range to save is smaller
+  // than the range being evaluated, but both start at the same address
+  // should we truncate or save as is? 
+  // To avoid that we simply save off by their base.
   m_regions_to_save.insert(region.GetRange().GetRangeBase());
-  return error;
+  // Because this list is exclusive, if this map is inserted into, we override
+  // the style with core style full.
+  m_style = lldb::eSaveCoreFull;
 }
 
 bool SaveCoreOptions::ShouldSaveRegion(const lldb_private::MemoryRegionInfo &region) const {

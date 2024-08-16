@@ -79,6 +79,15 @@ public:
   /// \param thread The thread to remove.
   /// \return True if the thread was removed, false if it was not in the list.
   bool RemoveThread(lldb::SBThread thread);
+
+  /// Add a memory region to save in the core file.
+  ///
+  /// \param region The memory region to save.
+  /// \returns An empty SBStatus upon success, or an error if the region is
+  /// invalid.
+  /// \note This supercedes SaveCoreStyle, and if this list is set
+  /// only regions within this list will be saved. If the list is empty
+  /// all regions will be saved according to style.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
   /// Reset all options.

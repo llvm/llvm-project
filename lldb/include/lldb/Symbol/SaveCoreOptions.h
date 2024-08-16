@@ -42,8 +42,8 @@ public:
   bool ShouldThreadBeSaved(lldb::tid_t tid) const;
 
   Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
-  Status AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
 
+  void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
   bool ShouldSaveRegion(const lldb_private::MemoryRegionInfo &region) const;
 
   void Clear();

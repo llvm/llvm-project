@@ -300,3 +300,49 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(default_value_file):
                 os.unlink(default_value_file)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_linux_minidump_one_region(self):
+        """Test that we can save a Linux mini dump with one region in sbsavecore regions"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        default_value_file = self.getBuildArtifact("core.defaults.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            memory_region = lldb.SBMemoryRegionInfo()
+            memory_list = process.GetMemoryRegions()
+            memory_list.GetMemoryRegionAtIndex(0, memory_region)
+            
+
+            # This is almost identical to the single thread test case because
+            # minidump defaults to stacks only, so we want to see if the
+            # default options work as expected.
+            options = lldb.SBSaveCoreOptions()
+            default_value_spec = lldb.SBFileSpec(default_value_file)
+            options.SetOutputFile(default_value_spec)
+            options.SetPluginName("minidump")
+            options.AddMemoryRegionToSave(memory_region)
+            error = process.SaveCore(options)
+            print (f"Error: {error.GetCString()}")
+            self.assertTrue(error.Success(), error.GetCString())
+
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = target.LoadCore(default_value_file)
+            core_memory_list = core_proc.GetMemoryRegions()
+            self.assertEqual(core_memory_list.GetSize(), 1)
+            core_memory_region = lldb.SBMemoryRegionInfo()
+            core_memory_list.GetMemoryRegionAtIndex(0, core_memory_region)
+            self.assertEqual(core_memory_region.GetRegionBase(), memory_region.GetRegionBase())
+            self.assertEqual(core_memory_region.GetRegionEnd(), memory_region.GetRegionEnd())
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(default_value_file):
+                os.unlink(default_value_file)
