@@ -31,6 +31,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -317,10 +318,11 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
 #ifndef NDEBUG
   // Verify the target flags.
   if (MO.isGlobal() || MO.isSymbol() || MO.isCPI()) {
-    if (MI->getOpcode() == SP::CALL)
+    unsigned Opc = MI->getOpcode();
+    if (Opc == SP::CALL)
       assert(TF == SparcMCExpr::VK_Sparc_None &&
              "Cannot handle target flags on call address");
-    else if (MI->getOpcode() == SP::SETHIi)
+    else if (Opc == SP::SETHIi)
       assert((TF == SparcMCExpr::VK_Sparc_HI
               || TF == SparcMCExpr::VK_Sparc_H44
               || TF == SparcMCExpr::VK_Sparc_HH
@@ -331,28 +333,28 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
               || TF == SparcMCExpr::VK_Sparc_TLS_IE_HI22
               || TF == SparcMCExpr::VK_Sparc_TLS_LE_HIX22) &&
              "Invalid target flags for address operand on sethi");
-    else if (MI->getOpcode() == SP::TLS_CALL)
+    else if (Opc == SP::TLS_CALL)
       assert((TF == SparcMCExpr::VK_Sparc_None
               || TF == SparcMCExpr::VK_Sparc_TLS_GD_CALL
               || TF == SparcMCExpr::VK_Sparc_TLS_LDM_CALL) &&
              "Cannot handle target flags on tls call address");
-    else if (MI->getOpcode() == SP::TLS_ADDrr)
+    else if (Opc == SP::TLS_ADDrr)
       assert((TF == SparcMCExpr::VK_Sparc_TLS_GD_ADD
               || TF == SparcMCExpr::VK_Sparc_TLS_LDM_ADD
               || TF == SparcMCExpr::VK_Sparc_TLS_LDO_ADD
               || TF == SparcMCExpr::VK_Sparc_TLS_IE_ADD) &&
              "Cannot handle target flags on add for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDrr)
+    else if (Opc == SP::TLS_LDrr)
       assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LD &&
              "Cannot handle target flags on ld for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDXrr)
+    else if (Opc == SP::TLS_LDXrr)
       assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LDX &&
              "Cannot handle target flags on ldx for TLS");
-    else if (MI->getOpcode() == SP::XORri)
+    else if (Opc == SP::XORri)
       assert((TF == SparcMCExpr::VK_Sparc_TLS_LDO_LOX10
               || TF == SparcMCExpr::VK_Sparc_TLS_LE_LOX10) &&
              "Cannot handle target flags on xor for TLS");
-    else
+    else if (Opc != SP::INLINEASM && Opc != SP::INLINEASM_BR)
       assert((TF == SparcMCExpr::VK_Sparc_LO
               || TF == SparcMCExpr::VK_Sparc_M44
               || TF == SparcMCExpr::VK_Sparc_L44
