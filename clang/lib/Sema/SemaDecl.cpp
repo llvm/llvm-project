@@ -18496,11 +18496,15 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       // the program is ill-formed, except when compiling with MSVC extensions
       // enabled.
       if (EltTy->isReferenceType()) {
-        Diag(NewFD->getLocation(), getLangOpts().MicrosoftExt ?
-                                    diag::ext_union_member_of_reference_type :
-                                    diag::err_union_member_of_reference_type)
-          << NewFD->getDeclName() << EltTy;
-        if (!getLangOpts().MicrosoftExt)
+        const bool HaveMSExt =
+            getLangOpts().MicrosoftExt &&
+            !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015);
+
+        Diag(NewFD->getLocation(),
+             HaveMSExt ? diag::ext_union_member_of_reference_type
+                       : diag::err_union_member_of_reference_type)
+            << NewFD->getDeclName() << EltTy;
+        if (!HaveMSExt)
           NewFD->setInvalidDecl();
       }
     }
