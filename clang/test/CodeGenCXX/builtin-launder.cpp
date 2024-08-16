@@ -53,9 +53,65 @@ extern "C" void test_builtin_launder_virtual_base(TestVirtualBase *p) {
   TestVirtualBase *d = __builtin_launder(p);
 }
 
+struct IncompleteNeedsLaunder;
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_launder_incomplete_later_needs_launder
+extern "C" void test_builtin_launder_incomplete_later_needs_launder(IncompleteNeedsLaunder *p) {
+  // CHECK-STRICT-NOT: ret void
+  // CHECK-STRICT: @llvm.launder.invariant.group
+
+  // CHECK-NONSTRICT-NOT: @llvm.launder.invariant.group
+
+  // CHECK: ret void
+  IncompleteNeedsLaunder *d = __builtin_launder(p);
+}
+
+struct IncompleteNeedsLaunder {
+  virtual void foo() {}
+};
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_launder_completed_needs_launder
+extern "C" void test_builtin_launder_completed_needs_launder(IncompleteNeedsLaunder *p) {
+  // CHECK-STRICT-NOT: ret void
+  // CHECK-STRICT: @llvm.launder.invariant.group
+
+  // CHECK-NONSTRICT-NOT: @llvm.launder.invariant.group
+
+  // CHECK: ret void
+  IncompleteNeedsLaunder *d = __builtin_launder(p);
+}
+
+struct IncompleteDoesntNeedLaunder;
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_launder_incomplete_later_doesnt_needs_launder
+extern "C" void test_builtin_launder_incomplete_later_doesnt_needs_launder(IncompleteDoesntNeedLaunder *p) {
+  // CHECK-STRICT-NOT: ret void
+  // CHECK-STRICT: @llvm.launder.invariant.group
+
+  // CHECK-NONSTRICT-NOT: @llvm.launder.invariant.group
+
+  // CHECK: ret void
+  IncompleteDoesntNeedLaunder *d = __builtin_launder(p);
+}
+
 //===----------------------------------------------------------------------===//
 //                            Negative Cases
 //===----------------------------------------------------------------------===//
+
+struct IncompleteDoesntNeedLaunder {};
+
+// CHECK-LABEL: define{{.*}} void @test_builtin_launder_completed_doesnt_need_launder
+extern "C" void test_builtin_launder_completed_doesnt_need_launder(IncompleteDoesntNeedLaunder *p) {
+  // CHECK: entry
+  // CHECK-NOT: llvm.launder.invariant.group
+  // CHECK-NEXT: %p.addr = alloca ptr, align 8
+  // CHECK-NEXT: %d = alloca ptr
+  // CHECK-NEXT: store ptr %p, ptr %p.addr
+  // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr %p.addr
+  // CHECK-NEXT: store ptr [[TMP]], ptr %d
+  // CHECK-NEXT: ret void
+  IncompleteDoesntNeedLaunder *d = __builtin_launder(p);
+}
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_launder_ommitted_one
 extern "C" void test_builtin_launder_ommitted_one(int *p) {

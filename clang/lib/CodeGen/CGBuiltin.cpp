@@ -2402,8 +2402,9 @@ TypeRequiresBuiltinLaunderImp(const ASTContext &Ctx, QualType Ty,
   if (!Seen.insert(Record).second)
     return false;
 
-  assert(Record->hasDefinition() &&
-         "Incomplete types should already be diagnosed");
+  // Assume incomplete types need to be laundered
+  if (!Record->hasDefinition())
+    return true;
 
   if (Record->isDynamicClass())
     return true;

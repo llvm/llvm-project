@@ -230,6 +230,8 @@ Bug Fixes in This Version
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
 
+- `__builtin_launder` no longer requires a pointer to a complete type. (#GH90949)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
