@@ -141,9 +141,9 @@ overload resolution behavior (or something very similar) is required to
 implement
 `non-member operator overloading <https://github.com/microsoft/hlsl-specs/blob/main/proposals/0008-non-member-operator-overloading.md>`_.
 
-Clang adopts the C++-inspired language from the
+Clang adopts the C++ inspired language from the
 `draft HLSL specification <https://microsoft.github.io/hlsl-specs/specs/hlsl.pdf>`_,
-where an overload ``f`` is a better candidate than ``f\` `` if for all arguments the
+where an overload ``f1`` is a better candidate than ``f2`` if for all arguments the
 conversion sequences is not worse than the corresponding conversion sequence and
 for at least one argument it is better.
 
