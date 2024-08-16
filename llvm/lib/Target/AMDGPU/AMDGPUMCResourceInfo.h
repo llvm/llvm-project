@@ -37,9 +37,9 @@ public:
   };
 
 private:
-  int32_t MaxVGPR;
-  int32_t MaxAGPR;
-  int32_t MaxSGPR;
+  int32_t MaxVGPR = 0;
+  int32_t MaxAGPR = 0;
+  int32_t MaxSGPR = 0;
 
   MCContext &OutContext;
   bool finalized;
@@ -54,8 +54,7 @@ private:
 
 public:
   MCResourceInfo(MCContext &OutContext)
-      : MaxVGPR(0), MaxAGPR(0), MaxSGPR(0), OutContext(OutContext),
-        finalized(false) {}
+      : OutContext(OutContext), finalized(false) {}
   void addMaxVGPRCandidate(int32_t candidate) {
     MaxVGPR = std::max(MaxVGPR, candidate);
   }
@@ -72,7 +71,7 @@ public:
 
   // Resolves the final symbols that requires the inter-function resource info
   // to be resolved.
-  void Finalize();
+  void finalize();
 
   MCSymbol *getMaxVGPRSymbol();
   MCSymbol *getMaxAGPRSymbol();

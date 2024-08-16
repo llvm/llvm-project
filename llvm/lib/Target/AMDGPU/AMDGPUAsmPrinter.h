@@ -49,11 +49,10 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
-  // ValidateMCResourceInfo cannot recompute parts of the occupancy as it does
+  // validateMCResourceInfo cannot recompute parts of the occupancy as it does
   // for other metadata to validate (e.g., NumSGPRs) so a map is necessary if we
   // really want to track and validate the occupancy.
-  std::unique_ptr<DenseMap<const Function *, const MCExpr *>>
-      OccupancyValidateMap;
+  DenseMap<const Function *, const MCExpr *> OccupancyValidateMap;
 
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
 
@@ -91,7 +90,7 @@ private:
   /// Attempts to replace the validation that is missed in getSIProgramInfo due
   /// to MCExpr being unknown. Invoked during doFinalization such that the
   /// MCResourceInfo symbols are known.
-  void ValidateMCResourceInfo(Function &F);
+  void validateMCResourceInfo(Function &F);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

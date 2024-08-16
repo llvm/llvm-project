@@ -68,7 +68,7 @@ void MCResourceInfo::assignMaxRegs() {
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
 }
 
-void MCResourceInfo::Finalize() {
+void MCResourceInfo::finalize() {
   assert(!finalized && "Cannot finalize ResourceInfo again.");
   finalized = true;
   assignMaxRegs();
@@ -93,8 +93,8 @@ void MCResourceInfo::assignResourceInfoExpr(
   const MCConstantExpr *localConstExpr =
       MCConstantExpr::create(localValue, OutContext);
   const MCExpr *SymVal = localConstExpr;
-  if (Callees.size() > 0) {
-    std::vector<const MCExpr *> ArgExprs;
+  if (!Callees.empty()) {
+    SmallVector<const MCExpr *, 8> ArgExprs;
     // Avoid recursive symbol assignment.
     SmallSet<StringRef, 8> Seen;
     ArgExprs.push_back(localConstExpr);
@@ -148,7 +148,7 @@ void MCResourceInfo::gatherResourceInfo(
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
-    std::vector<const MCExpr *> ArgExprs;
+    SmallVector<const MCExpr *, 8> ArgExprs;
     if (FRI.CalleeSegmentSize)
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
@@ -162,7 +162,7 @@ void MCResourceInfo::gatherResourceInfo(
     }
     const MCExpr *localConstExpr =
         MCConstantExpr::create(FRI.PrivateSegmentSize, OutContext);
-    if (ArgExprs.size() > 0) {
+    if (!ArgExprs.empty()) {
       const AMDGPUMCExpr *transitiveExpr =
           AMDGPUMCExpr::createMax(ArgExprs, OutContext);
       localConstExpr =

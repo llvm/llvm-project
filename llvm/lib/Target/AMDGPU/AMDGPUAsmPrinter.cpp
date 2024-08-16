@@ -94,8 +94,6 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
   RI = std::make_unique<MCResourceInfo>(OutContext);
-  OccupancyValidateMap =
-      std::make_unique<DenseMap<const Function *, const MCExpr *>>();
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -363,7 +361,7 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   return AsmPrinter::doInitialization(M);
 }
 
-void AMDGPUAsmPrinter::ValidateMCResourceInfo(Function &F) {
+void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
     return;
 
@@ -438,8 +436,8 @@ void AMDGPUAsmPrinter::ValidateMCResourceInfo(Function &F) {
       }
     }
 
-    auto I = OccupancyValidateMap->find(&F);
-    if (I != OccupancyValidateMap->end()) {
+    auto I = OccupancyValidateMap.find(&F);
+    if (I != OccupancyValidateMap.end()) {
       const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
           F, "amdgpu-waves-per-eu", {0, 0}, true);
       uint64_t Occupancy;
@@ -473,13 +471,13 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
 
   // Assign expressions which can only be resolved when all other functions are
   // known.
-  RI->Finalize();
+  RI->finalize();
   getTargetStreamer()->EmitMCResourceMaximums(
       RI->getMaxVGPRSymbol(), RI->getMaxAGPRSymbol(), RI->getMaxSGPRSymbol());
 
-  for (Function &F : M.functions()) {
-    ValidateMCResourceInfo(F);
-  }
+  for (Function &F : M.functions())
+    validateMCResourceInfo(F);
+
   return AsmPrinter::doFinalization(M);
 }
 
@@ -867,6 +865,24 @@ uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const 
   return CodeSize;
 }
 
+// AccumOffset computed for the MCExpr equivalent of:
+// alignTo(std::max(1, NumVGPR), 4) / 4 - 1;
+static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
+  const MCExpr *ConstFour = MCConstantExpr::create(4, Ctx);
+  const MCExpr *ConstOne = MCConstantExpr::create(1, Ctx);
+
+  // Can't be lower than 1 for subsequent alignTo.
+  const MCExpr *MaximumTaken =
+      AMDGPUMCExpr::createMax({ConstOne, NumVGPR}, Ctx);
+
+  // Practically, it's computing divideCeil(MaximumTaken, 4).
+  const MCExpr *DivCeil = MCBinaryExpr::createDiv(
+      AMDGPUMCExpr::createAlignTo(MaximumTaken, ConstFour, Ctx), ConstFour,
+      Ctx);
+
+  return MCBinaryExpr::createSub(DivCeil, ConstOne, Ctx);
+}
+
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                         const MachineFunction &MF) {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
@@ -891,24 +907,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
-  const MCExpr *ConstFour = MCConstantExpr::create(4, Ctx);
-  const MCExpr *ConstOne = MCConstantExpr::create(1, Ctx);
-
   using RIK = MCResourceInfo::ResourceInfoKind;
   ProgInfo.NumArchVGPR = GetSymRefExpr(RIK::RIK_NumVGPR);
   ProgInfo.NumAccVGPR = GetSymRefExpr(RIK::RIK_NumAGPR);
   ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
-  // AccumOffset computed for the MCExpr equivalent of:
-  // alignTo(std::max(1, Info.NumVGPR), 4) / 4 - 1;
-  ProgInfo.AccumOffset = MCBinaryExpr::createSub(
-      MCBinaryExpr::createDiv(
-          AMDGPUMCExpr::createAlignTo(
-              AMDGPUMCExpr::createMax({ConstOne, ProgInfo.NumArchVGPR}, Ctx),
-              ConstFour, Ctx),
-          ConstFour, Ctx),
-      ConstOne, Ctx);
+  ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
   ProgInfo.TgSplit = STM.isTgSplitEnabled();
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
@@ -1225,7 +1230,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       STM.computeOccupancy(F, ProgInfo.LDSSize), ProgInfo.NumSGPRsForWavesPerEU,
       ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
 
-  OccupancyValidateMap->insert({&MF.getFunction(), ProgInfo.Occupancy});
+  OccupancyValidateMap.insert({&MF.getFunction(), ProgInfo.Occupancy});
 
   const auto [MinWEU, MaxWEU] =
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
