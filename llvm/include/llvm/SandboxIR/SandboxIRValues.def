@@ -19,6 +19,7 @@ DEF_VALUE(Argument, Argument)
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_USER(Constant, Constant)
+DEF_USER(ConstantInt, ConstantInt)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
