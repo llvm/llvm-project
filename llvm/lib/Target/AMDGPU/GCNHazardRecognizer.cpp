@@ -923,6 +923,30 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
   return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 }
 
+/// Checks whether the provided \p MI "consumes" the operand with a Dest sel
+/// fowarding issue \p Dst . We may "consume" the Dst via a standard explicit
+/// RAW, or through irregular ways (e.g implicit RAW, certain types of WAW)
+static bool consumesDstSelForwardingOperand(const MachineInstr *VALU,
+                                            const MachineOperand *Dst,
+                                            const SIRegisterInfo *TRI) {
+  // We must consider implicit reads of the VALU. SDWA with dst_sel and
+  // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
+  // and we must account for that hazard.
+  // We also must account for WAW hazards. In particular, WAW with dest
+  // preserve semantics (e.g. VOP3 with op_sel, VOP2 &&
+  // !zeroesHigh16BitsOfDest) will read the forwarded dest for parity
+  // check for ECC. Without accounting for this hazard, the ECC will be
+  // wrong.
+  // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e.
+  // complete zeroesHigh16BitsOfDest)
+  for (auto &Operand : VALU->operands()) {
+    if (Operand.isReg() && TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
   int WaitStatesNeeded = 0;
 
@@ -955,38 +979,17 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
 
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      SmallVector<const MachineOperand *, 4> Dsts;
       const MachineOperand *ForwardedDst = getDstSelForwardingOperand(MI, ST);
       if (ForwardedDst) {
-        Dsts.push_back(ForwardedDst);
+        return consumesDstSelForwardingOperand(VALU, ForwardedDst, TRI);
       } else if (MI.isInlineAsm()) {
         // Assume inline asm has dst forwarding hazard
-        for (auto &Op :
-             drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-          if (Op.isReg() && Op.isDef()) {
-            Dsts.push_back(&Op);
-          }
+        for (auto &Def : MI.all_defs()) {
+          if (consumesDstSelForwardingOperand(VALU, &Def, TRI))
+            return true;
         }
       }
 
-      for (auto Dst : Dsts) {
-        // We must consider implicit reads of the VALU. SDWA with dst_sel and
-        // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
-        // and we must account for that hazard.
-        // We also must account for WAW hazards. In particular, WAW with dest
-        // preserve semantics (e.g. VOP3 with op_sel, VOP2 &&
-        // !zeroesHigh16BitsOfDest) will read the forwarded dest for parity
-        // check for ECC. Without accounting for this hazard, the ECC will be
-        // wrong.
-        // TODO: limit to RAW (including implicit reads) + problematic WAW (i.e.
-        // complete zeroesHigh16BitsOfDest)
-        for (auto &Operand : VALU->operands()) {
-          if (Operand.isReg() &&
-              TRI->regsOverlap(Dst->getReg(), Operand.getReg())) {
-            return true;
-          }
-        }
-      }
       return false;
     };
 
