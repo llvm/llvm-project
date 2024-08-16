@@ -48,3 +48,8 @@ constexpr EC getB() {
 
 
 static_assert(getB() == EC::B, "");
+
+namespace B {
+  enum E : bool { Zero, One };
+  static_assert((int)(E)2 == 1, "");
+} // namespace B
