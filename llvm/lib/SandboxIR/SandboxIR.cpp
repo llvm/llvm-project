@@ -1385,6 +1385,74 @@ Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                InsertAtEnd, Ctx, Name);
 }
 
+void AtomicRMWInst::setAlignment(Align Align) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getAlign,
+                                       &AtomicRMWInst::setAlignment>>(this);
+  cast<llvm::AtomicRMWInst>(Val)->setAlignment(Align);
+}
+
+void AtomicRMWInst::setVolatile(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicRMWInst::isVolatile,
+                                       &AtomicRMWInst::setVolatile>>(this);
+  cast<llvm::AtomicRMWInst>(Val)->setVolatile(V);
+}
+
+void AtomicRMWInst::setOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getOrdering,
+                                       &AtomicRMWInst::setOrdering>>(this);
+  cast<llvm::AtomicRMWInst>(Val)->setOrdering(Ordering);
+}
+
+void AtomicRMWInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicRMWInst::getSyncScopeID,
+                                       &AtomicRMWInst::setSyncScopeID>>(this);
+  cast<llvm::AtomicRMWInst>(Val)->setSyncScopeID(SSID);
+}
+
+Value *AtomicRMWInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::AtomicRMWInst>(Val)->getPointerOperand());
+}
+
+Value *AtomicRMWInst::getValOperand() {
+  return Ctx.getValue(cast<llvm::AtomicRMWInst>(Val)->getValOperand());
+}
+
+AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
+                                     MaybeAlign Align, AtomicOrdering Ordering,
+                                     BBIterator WhereIt, BasicBlock *WhereBB,
+                                     Context &Ctx, SyncScope::ID SSID,
+                                     const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *LLVMAtomicRMW =
+      Builder.CreateAtomicRMW(Op, Ptr->Val, Val->Val, Align, Ordering, SSID);
+  LLVMAtomicRMW->setName(Name);
+  return Ctx.createAtomicRMWInst(LLVMAtomicRMW);
+}
+
+AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
+                                     MaybeAlign Align, AtomicOrdering Ordering,
+                                     Instruction *InsertBefore, Context &Ctx,
+                                     SyncScope::ID SSID, const Twine &Name) {
+  return create(Op, Ptr, Val, Align, Ordering, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, SSID, Name);
+}
+
+AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
+                                     MaybeAlign Align, AtomicOrdering Ordering,
+                                     BasicBlock *InsertAtEnd, Context &Ctx,
+                                     SyncScope::ID SSID, const Twine &Name) {
+  return create(Op, Ptr, Val, Align, Ordering, InsertAtEnd->end(), InsertAtEnd,
+                Ctx, SSID, Name);
+}
+
 void AtomicCmpXchgInst::setSyncScopeID(SyncScope::ID SSID) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSyncScopeID,
@@ -1823,6 +1891,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new BinaryOperator(LLVMBinaryOperator, *this));
     return It->second.get();
   }
+  case llvm::Instruction::AtomicRMW: {
+    auto *LLVMAtomicRMW = cast<llvm::AtomicRMWInst>(LLVMV);
+    It->second =
+        std::unique_ptr<AtomicRMWInst>(new AtomicRMWInst(LLVMAtomicRMW, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::AtomicCmpXchg: {
     auto *LLVMAtomicCmpXchg = cast<llvm::AtomicCmpXchgInst>(LLVMV);
     It->second = std::unique_ptr<AtomicCmpXchgInst>(
@@ -1953,6 +2027,10 @@ UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
 BinaryOperator *Context::createBinaryOperator(llvm::BinaryOperator *I) {
   auto NewPtr = std::unique_ptr<BinaryOperator>(new BinaryOperator(I, *this));
   return cast<BinaryOperator>(registerValue(std::move(NewPtr)));
+}
+AtomicRMWInst *Context::createAtomicRMWInst(llvm::AtomicRMWInst *I) {
+  auto NewPtr = std::unique_ptr<AtomicRMWInst>(new AtomicRMWInst(I, *this));
+  return cast<AtomicRMWInst>(registerValue(std::move(NewPtr)));
 }
 AtomicCmpXchgInst *
 Context::createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I) {
