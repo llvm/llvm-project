@@ -229,7 +229,7 @@ public:
   /// Returns the allocated size, including metadata.
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
-  unsigned getElemSize()  const { return ElemSize; }
+  unsigned getElemSize() const { return ElemSize; }
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
 
