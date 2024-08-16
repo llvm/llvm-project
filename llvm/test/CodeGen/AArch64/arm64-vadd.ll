@@ -1022,11 +1022,18 @@ declare <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float>, <4 x float>) nou
 declare <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double>, <2 x double>) nounwind readnone
 
 define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs) {
-; CHECK-LABEL: uaddl_duprhs:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v1.2s, w0
-; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uaddl_duprhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.2s, w0
+; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uaddl_duprhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    dup v1.2d, x8
+; CHECK-GI-NEXT:    uaddw v0.2d, v1.2d, v0.2s
+; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
@@ -1048,8 +1055,8 @@ define <2 x i64> @uaddl2_duprhs(<4 x i32> %lhs, i32 %rhs) {
 ;
 ; CHECK-GI-LABEL: uaddl2_duprhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v1.2s, w0
-; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    dup v1.2d, x8
 ; CHECK-GI-NEXT:    uaddw2 v0.2d, v1.2d, v0.4s
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -1108,11 +1115,19 @@ define <2 x i64> @saddl2_duplhs(i32 %lhs, <4 x i32> %rhs) {
 }
 
 define <2 x i64> @usubl_duprhs(<4 x i32> %lhs, i32 %rhs) {
-; CHECK-LABEL: usubl_duprhs:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v1.2s, w0
-; CHECK-NEXT:    usubl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usubl_duprhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.2s, w0
+; CHECK-SD-NEXT:    usubl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usubl_duprhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    dup v1.2d, x8
+; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
@@ -1134,9 +1149,10 @@ define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs) {
 ;
 ; CHECK-GI-LABEL: usubl2_duprhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v1.2s, w0
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    usubl v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-GI-NEXT:    dup v1.2d, x8
+; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
