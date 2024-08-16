@@ -25,6 +25,7 @@ set(ANALYSIS_TEST_SOURCES
   DDGTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp
+  GraphWriterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
