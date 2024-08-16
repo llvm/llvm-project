@@ -2589,6 +2589,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   bool TakeNextArg = false;
 
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
+  bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
@@ -2628,10 +2629,16 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         continue; // LLVM handles bigobj automatically
 
       auto Equal = Value.split('=');
-      auto checkArg = [&](std::initializer_list<const char *> Set) {
-        if (!llvm::is_contained(Set, Equal.second))
+      auto checkArg = [&](bool ValidTarget,
+                          std::initializer_list<const char *> Set) {
+        if (!ValidTarget) {
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << (Twine("-Wa,") + Equal.first + "=").str()
+              << Triple.getTriple();
+        } else if (!llvm::is_contained(Set, Equal.second)) {
           D.Diag(diag::err_drv_unsupported_option_argument)
               << (Twine("-Wa,") + Equal.first + "=").str() << Equal.second;
+        }
       };
       switch (C.getDefaultToolChain().getArch()) {
       default:
@@ -2641,7 +2648,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (Equal.first == "-mrelax-relocations" ||
             Equal.first == "--mrelax-relocations") {
           UseRelaxRelocations = Equal.second == "yes";
-          checkArg({"yes", "no"});
+          checkArg(IsELF, {"yes", "no"});
           continue;
         }
         if (Value == "-msse2avx") {
@@ -2663,7 +2670,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (Equal.first == "-mimplicit-it") {
           // Only store the value; the last value set takes effect.
           ImplicitIt = Equal.second;
-          checkArg({"always", "never", "arm", "thumb"});
+          checkArg(true, {"always", "never", "arm", "thumb"});
           continue;
         }
         if (Value == "-mthumb")
