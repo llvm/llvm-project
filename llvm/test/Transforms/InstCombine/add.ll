@@ -114,7 +114,7 @@ define i32 @test4(i32 %A, i32 %BB) {
 define i32 @test4_both_nsw(i32 %A, i32 %BB) {
 ; CHECK-LABEL: @test4_both_nsw(
 ; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], 1
-; CHECK-NEXT:    [[D:%.*]] = sub i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %B = xor i32 %BB, 1 ; thwart complexity-based canonicalization
