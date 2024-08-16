@@ -1620,6 +1620,132 @@ define void @foo(i32 %arg, float %farg) {
   EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
 }
 
+TEST_F(SandboxIRTest, UnaryOperator) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0) {
+  %fneg = fneg float %arg0
+  %copyfrom = fadd reassoc float %arg0, 42.0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Arg0 = F.getArg(0);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *I = cast<sandboxir::UnaryOperator>(&*It++);
+  auto *CopyFrom = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ret = &*It++;
+  EXPECT_EQ(I->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+  EXPECT_EQ(I->getOperand(0), Arg0);
+
+  {
+    // Check create() WhereIt, WhereBB.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "New1"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertBefore.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*InsertBefore=*/Ret, Ctx, "New2"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check create() InsertAtEnd.
+    auto *NewI =
+        cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
+            sandboxir::Instruction::Opcode::FNeg, Arg0,
+            /*InsertAtEnd=*/BB, Ctx, "New3"));
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "New3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+  {
+    // Check create() when it gets folded.
+    auto *FortyTwo = CopyFrom->getOperand(1);
+    auto *NewV = sandboxir::UnaryOperator::create(
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo,
+        /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+        "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+
+  {
+    // Check createWithCopiedFlags() WhereIt, WhereBB.
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            "NewCopyFrom1"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom1");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertBefore,
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*InsertBefore=*/Ret, Ctx, "NewCopyFrom2"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom2");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getNextNode(), Ret);
+  }
+  {
+    // Check createWithCopiedFlags() InsertAtEnd,
+    auto *NewI = cast<sandboxir::UnaryOperator>(
+        sandboxir::UnaryOperator::createWithCopiedFlags(
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
+            /*InsertAtEnd=*/BB, Ctx, "NewCopyFrom3"));
+    EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
+    EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
+    EXPECT_EQ(NewI->getOperand(0), Arg0);
+#ifndef NDEBUG
+    EXPECT_EQ(NewI->getName(), "NewCopyFrom3");
+#endif // NDEBUG
+    EXPECT_EQ(NewI->getParent(), BB);
+    EXPECT_EQ(NewI->getNextNode(), nullptr);
+  }
+  {
+    // Check createWithCopiedFlags() when it gets folded.
+    auto *FortyTwo = CopyFrom->getOperand(1);
+    auto *NewV = sandboxir::UnaryOperator::createWithCopiedFlags(
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo, CopyFrom,
+        /*InsertAtEnd=*/BB, Ctx, "Folded");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
+  }
+}
+
 TEST_F(SandboxIRTest, BinaryOperator) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
