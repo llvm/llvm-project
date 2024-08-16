@@ -3692,7 +3692,7 @@ Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
 
   // Skip optimizing notail and musttail calls so
   // LibCallSimplifier::optimizeCall doesn't have to preserve those invariants.
-  // LibCallSimplifier::optimizeCall should try to preseve tail calls though.
+  // LibCallSimplifier::optimizeCall should try to preserve tail calls though.
   if (CI->isMustTailCall() || CI->isNoTailCall())
     return nullptr;
 

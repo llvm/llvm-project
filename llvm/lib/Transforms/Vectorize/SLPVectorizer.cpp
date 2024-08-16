@@ -11977,7 +11977,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
       Vec = InsElt = Builder.CreateInsertVector(
-          Vec->getType(), Vec, V,
+          Vec->getType(), Vec, Scalar,
           Builder.getInt64(Pos * VecTy->getNumElements()));
       auto *II = dyn_cast<IntrinsicInst>(InsElt);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
@@ -15663,7 +15663,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (any_of(E.Scalars, [&](Value *V) {
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
-                 (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                 (E.Idx == 0 && UserIgnoreList &&
+                  UserIgnoreList->contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
                   !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);

@@ -90,6 +90,9 @@ Clang Python Bindings Potentially Breaking Changes
 - Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
   statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
+- For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
+  but after the end of the ``SourceRange``, ``SourceRange.__contains__``
+  used to incorrectly return ``True``. (#GH22617), (#GH52827)
 
 What's New in Clang |release|?
 ==============================
@@ -125,6 +128,8 @@ C++2c Feature Support
 
 - Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
+
+- Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -254,6 +259,11 @@ Bug Fixes to C++ Support
   specialization of a conversion function template.
 - Correctly diagnose attempts to use a concept name in its own definition;
   A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
+- Properly reject defaulted relational operators with invalid types for explicit object parameters,
+  e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
+- Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
+- Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
+- Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -311,6 +321,12 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
+  Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
+  Clang now follows the MSVC behavior in this scenario.
+  When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
+  allowed as VS2013 and prior allow it.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
@@ -357,6 +373,8 @@ clang-format
 
 libclang
 --------
+- Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
+  whether the first one comes strictly before the second in the source code.
 
 Static Analyzer
 ---------------
@@ -391,36 +409,6 @@ Moved checkers
 
 Sanitizers
 ----------
-
-- Added the ``-fsanitize-overflow-pattern-exclusion=`` flag which can be used
-  to disable specific overflow-dependent code patterns. The supported patterns
-  are: ``add-overflow-test``, ``negated-unsigned-const``, and
-  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
-  available patterns by specifying ``all``. Conversely, you can disable all
-  exclusions with ``none``.
-
-  .. code-block:: c++
-
-     /// specified with ``-fsanitize-overflow-pattern-exclusion=add-overflow-test``
-     int common_overflow_check_pattern(unsigned base, unsigned offset) {
-       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
-     }
-
-     /// specified with ``-fsanitize-overflow-pattern-exclusion=negated-unsigned-const``
-     void negation_overflow() {
-       unsigned long foo = -1UL; // No longer causes a negation overflow warning
-       unsigned long bar = -2UL; // and so on...
-     }
-
-     /// specified with ``-fsanitize-overflow-pattern-exclusion=post-decr-while``
-     void while_post_decrement() {
-       unsigned char count = 16;
-       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
-     }
-
-  Many existing projects have a large amount of these code patterns present.
-  This new flag should allow those projects to enable integer sanitizers with
-  less noise.
 
 Python Binding Changes
 ----------------------

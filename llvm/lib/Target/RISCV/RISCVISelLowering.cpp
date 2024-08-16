@@ -1087,8 +1087,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
                            Custom);
 
-        setOperationAction({ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS}, VT,
-                           Custom);
+        setOperationAction(
+            {ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE}, VT,
+            Custom);
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
@@ -1235,8 +1236,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
 
-        setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                            ISD::EXTRACT_SUBVECTOR},
+        setOperationAction({ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE,
+                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
 
         // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
@@ -3813,16 +3814,14 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
   if (EltBitSize > 8 && VT.isInteger() &&
-      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
-    unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (EltBitSize - SignBits < 8) {
-      SDValue Source = DAG.getBuildVector(VT.changeVectorElementType(MVT::i8),
-                                          DL, Op->ops());
-      Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
-                                       Source, DAG, Subtarget);
-      SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
-      return convertFromScalableVector(VT, Res, DAG, Subtarget);
-    }
+      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen()) &&
+      DAG.ComputeMaxSignificantBits(Op) <= 8) {
+    SDValue Source = DAG.getBuildVector(VT.changeVectorElementType(MVT::i8),
+                                        DL, Op->ops());
+    Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
+                                     Source, DAG, Subtarget);
+    SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
 
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
@@ -5161,6 +5160,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
+
+  if (ShuffleVectorInst::isReverseMask(Mask, NumElts) && V2.isUndef())
+    return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
 
   // If this is a deinterleave and we can widen the vector, then we can use
   // vnsrl to deinterleave.
@@ -10310,19 +10312,27 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     SDValue Op2 = DAG.getNode(ISD::VECTOR_REVERSE, DL, WidenVT, Op1);
     return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Op2);
   }
-  unsigned EltSize = VecVT.getScalarSizeInBits();
-  unsigned MinSize = VecVT.getSizeInBits().getKnownMinValue();
+
+  MVT ContainerVT = VecVT;
+  SDValue Vec = Op.getOperand(0);
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
+  unsigned EltSize = ContainerVT.getScalarSizeInBits();
+  unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
   unsigned MaxVLMAX =
-    RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+      VecVT.isFixedLengthVector()
+          ? VecVT.getVectorNumElements()
+          : RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
 
   unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
-  MVT IntVT = VecVT.changeVectorElementTypeToInteger();
+  MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
 
   // If this is SEW=8 and VLMAX is potentially more than 256, we need
   // to use vrgatherei16.vv.
-  // TODO: It's also possible to use vrgatherei16.vv for other types to
-  // decrease register width for the index calculation.
   if (MaxVLMAX > 256 && EltSize == 8) {
     // If this is LMUL=8, we have to split before can use vrgatherei16.vv.
     // Reverse each half, then reassemble them in reverse order.
@@ -10344,17 +10354,27 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     }
 
     // Just promote the int type to i16 which will double the LMUL.
-    IntVT = MVT::getVectorVT(MVT::i16, VecVT.getVectorElementCount());
+    IntVT = MVT::getVectorVT(MVT::i16, ContainerVT.getVectorElementCount());
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
   }
 
+  // At LMUL > 1, do the index computation in 16 bits to reduce register
+  // pressure.
+  if (IntVT.getScalarType().bitsGT(MVT::i16) &&
+      IntVT.bitsGT(getLMUL1VT(IntVT))) {
+    assert(isUInt<16>(MaxVLMAX - 1)); // Largest VLMAX is 65536 @ zvl65536b
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IntVT = IntVT.changeVectorElementType(MVT::i16);
+  }
+
   MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
-  SDValue VLMinus1 = DAG.getNode(ISD::SUB, DL, XLenVT,
-                                 computeVLMax(VecVT, DL, DAG),
-                                 DAG.getConstant(1, DL, XLenVT));
+  SDValue VLMinus1 = DAG.getNode(
+      ISD::SUB, DL, XLenVT,
+      DAG.getElementCount(DL, XLenVT, VecVT.getVectorElementCount()),
+      DAG.getConstant(1, DL, XLenVT));
 
   // Splat VLMAX-1 taking care to handle SEW==64 on RV32.
   bool IsRV32E64 =
@@ -10370,8 +10390,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   SDValue Indices = DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID,
                                 DAG.getUNDEF(IntVT), Mask, VL);
 
-  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices,
-                     DAG.getUNDEF(VecVT), Mask, VL);
+  SDValue Gather = DAG.getNode(GatherOpc, DL, ContainerVT, Vec, Indices,
+                               DAG.getUNDEF(ContainerVT), Mask, VL);
+  if (VecVT.isFixedLengthVector())
+    Gather = convertFromScalableVector(VecVT, Gather, DAG, Subtarget);
+  return Gather;
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
