@@ -130,6 +130,161 @@ define void @foo(i32 %v0) {
   EXPECT_NE(FortyThree, FortyTwo);
 }
 
+TEST_F(SandboxIRTest, ConstantFP) {
+  parseIR(C, R"IR(
+define void @foo(float %v0, double %v1) {
+  %fadd0 = fadd float %v0, 42.0
+  %fadd1 = fadd double %v1, 43.0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *FAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FortyTwo = cast<sandboxir::ConstantFP>(FAdd0->getOperand(1));
+  [[maybe_unused]] auto *FortyThree =
+      cast<sandboxir::ConstantFP>(FAdd1->getOperand(1));
+
+  auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
+  auto *DoubleTy = sandboxir::Type::getDoubleTy(Ctx);
+  auto *LLVMFloatTy = Type::getFloatTy(C);
+  auto *LLVMDoubleTy = Type::getDoubleTy(C);
+  // Check that creating an identical constant gives us the same object.
+  auto *NewFortyTwo = sandboxir::ConstantFP::get(FloatTy, 42.0);
+  EXPECT_EQ(NewFortyTwo, FortyTwo);
+  // Check get(Type, double).
+  auto *FortyFour =
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::get(FloatTy, 44.0));
+  auto *LLVMFortyFour =
+      cast<llvm::ConstantFP>(llvm::ConstantFP::get(LLVMFloatTy, 44.0));
+  EXPECT_NE(FortyFour, FortyTwo);
+  EXPECT_EQ(FortyFour, Ctx.getValue(LLVMFortyFour));
+  // Check get(Type, APFloat).
+  auto *FortyFive = cast<sandboxir::ConstantFP>(
+      sandboxir::ConstantFP::get(DoubleTy, APFloat(45.0)));
+  auto *LLVMFortyFive = cast<llvm::ConstantFP>(
+      llvm::ConstantFP::get(LLVMDoubleTy, APFloat(45.0)));
+  EXPECT_EQ(FortyFive, Ctx.getValue(LLVMFortyFive));
+  // Check get(Type, StringRef).
+  auto *FortySix = sandboxir::ConstantFP::get(FloatTy, "46.0");
+  EXPECT_EQ(FortySix, Ctx.getValue(llvm::ConstantFP::get(LLVMFloatTy, "46.0")));
+  // Check get(APFloat).
+  auto *FortySeven = sandboxir::ConstantFP::get(APFloat(47.0), Ctx);
+  EXPECT_EQ(FortySeven, Ctx.getValue(llvm::ConstantFP::get(C, APFloat(47.0))));
+  // Check getNaN().
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(LLVMFloatTy)));
+  }
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(LLVMFloatTy,
+                                                         /*Negative=*/true)));
+  }
+  {
+    auto *NaN = sandboxir::ConstantFP::getNaN(FloatTy, /*Negative=*/true,
+                                              /*Payload=*/1);
+    EXPECT_EQ(NaN, Ctx.getValue(llvm::ConstantFP::getNaN(
+                       LLVMFloatTy, /*Negative=*/true, /*Payload=*/1)));
+  }
+  // Check getQNaN().
+  {
+    auto *QNaN = sandboxir::ConstantFP::getQNaN(FloatTy);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(LLVMFloatTy)));
+  }
+  {
+    auto *QNaN = sandboxir::ConstantFP::getQNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+  {
+    APInt Payload(1, 1);
+    auto *QNaN =
+        sandboxir::ConstantFP::getQNaN(FloatTy, /*Negative=*/true, &Payload);
+    EXPECT_EQ(QNaN, Ctx.getValue(llvm::ConstantFP::getQNaN(
+                        LLVMFloatTy, /*Negative=*/true, &Payload)));
+  }
+  // Check getSNaN().
+  {
+    auto *SNaN = sandboxir::ConstantFP::getSNaN(FloatTy);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(LLVMFloatTy)));
+  }
+  {
+    auto *SNaN = sandboxir::ConstantFP::getSNaN(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+  {
+    APInt Payload(1, 1);
+    auto *SNaN =
+        sandboxir::ConstantFP::getSNaN(FloatTy, /*Negative=*/true, &Payload);
+    EXPECT_EQ(SNaN, Ctx.getValue(llvm::ConstantFP::getSNaN(
+                        LLVMFloatTy, /*Negative=*/true, &Payload)));
+  }
+
+  // Check getZero().
+  {
+    auto *Zero = sandboxir::ConstantFP::getZero(FloatTy);
+    EXPECT_EQ(Zero, Ctx.getValue(llvm::ConstantFP::getZero(LLVMFloatTy)));
+  }
+  {
+    auto *Zero = sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(Zero, Ctx.getValue(llvm::ConstantFP::getZero(LLVMFloatTy,
+                                                           /*Negative=*/true)));
+  }
+
+  // Check getNegativeZero().
+  auto *NegZero = cast<sandboxir::ConstantFP>(
+      sandboxir::ConstantFP::getNegativeZero(FloatTy));
+  EXPECT_EQ(NegZero,
+            Ctx.getValue(llvm::ConstantFP::getNegativeZero(LLVMFloatTy)));
+
+  // Check getInfinity().
+  {
+    auto *Inf = sandboxir::ConstantFP::getInfinity(FloatTy);
+    EXPECT_EQ(Inf, Ctx.getValue(llvm::ConstantFP::getInfinity(LLVMFloatTy)));
+  }
+  {
+    auto *Inf = sandboxir::ConstantFP::getInfinity(FloatTy, /*Negative=*/true);
+    EXPECT_EQ(Inf, Ctx.getValue(llvm::ConstantFP::getInfinity(
+                       LLVMFloatTy, /*Negative=*/true)));
+  }
+
+  // Check isValueValidForType().
+  APFloat V(1.1);
+  EXPECT_EQ(sandboxir::ConstantFP::isValueValidForType(FloatTy, V),
+            llvm::ConstantFP::isValueValidForType(LLVMFloatTy, V));
+  // Check getValueAPF().
+  EXPECT_EQ(FortyFour->getValueAPF(), LLVMFortyFour->getValueAPF());
+  // Check getValue().
+  EXPECT_EQ(FortyFour->getValue(), LLVMFortyFour->getValue());
+  // Check isZero().
+  EXPECT_EQ(FortyFour->isZero(), LLVMFortyFour->isZero());
+  EXPECT_TRUE(sandboxir::ConstantFP::getZero(FloatTy));
+  EXPECT_TRUE(sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true));
+  // Check isNegative().
+  EXPECT_TRUE(cast<sandboxir::ConstantFP>(
+                  sandboxir::ConstantFP::getZero(FloatTy, /*Negative=*/true))
+                  ->isNegative());
+  // Check isInfinity().
+  EXPECT_TRUE(
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::getInfinity(FloatTy))
+          ->isInfinity());
+  // Check isNaN().
+  EXPECT_TRUE(
+      cast<sandboxir::ConstantFP>(sandboxir::ConstantFP::getNaN(FloatTy))
+          ->isNaN());
+  // Check isExactlyValue(APFloat).
+  EXPECT_TRUE(NegZero->isExactlyValue(NegZero->getValueAPF()));
+  // Check isExactlyValue(double).
+  EXPECT_TRUE(NegZero->isExactlyValue(-0.0));
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
