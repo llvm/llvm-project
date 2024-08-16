@@ -767,6 +767,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # echo-appending to a file.
         # FIXME: Standardize on the builtin echo implementation. We can use a
         # temporary file to sidestep blocking pipe write issues.
+
+        # Ensure args[0] is hashable.
+        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
             # env calling an in-process builtin is useless, so we take the safe

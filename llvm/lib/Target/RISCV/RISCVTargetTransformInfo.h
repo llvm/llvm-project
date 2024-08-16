@@ -397,7 +397,9 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }
-
+  bool
+  shouldConsiderAddressTypePromotion(const Instruction &I,
+                                     bool &AllowPromotionWithoutCommonHeader);
   std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 

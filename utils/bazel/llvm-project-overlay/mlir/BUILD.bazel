@@ -5425,8 +5425,9 @@ cc_library(
     includes = ["include"],
     deps = [
 	":DataLayoutInterfaces",
+        ":Analysis",
         ":FuncDialect",
-	":InliningUtils",
+	    ":InliningUtils",
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
@@ -6051,9 +6052,11 @@ cc_library(
     srcs = [
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
+        "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
     ],
     hdrs = [
         "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
+        "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
     ],
     includes = ["include"],
@@ -6073,6 +6076,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
+        ":SPIRVDialect",
         ":MemRefToLLVM",
         ":Support",
         ":VectorToLLVM",
