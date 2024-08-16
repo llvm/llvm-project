@@ -265,10 +265,16 @@ struct Unsafe {
 
   Unsafe() { problem1(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem1'}}
   ~Unsafe() { problem2(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem2'}}
+
+  Unsafe(int x); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+  // Delegating initializer.
+  Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
 };
 
 struct DerivedFromUnsafe : public Unsafe {
   DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
+  DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
   ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::~Unsafe'}}
 };
 
