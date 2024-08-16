@@ -15,12 +15,11 @@
 #ifndef LLVM_ANALYSIS_KERNELINFO_H
 #define LLVM_ANALYSIS_KERNELINFO_H
 
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class DominatorTree;
-class Function;
+class BasicBlock;
+class OptimizationRemarkEmitter;
 
 /// Data structure holding function info for kernels.
 class KernelInfo {
