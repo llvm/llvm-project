@@ -1165,19 +1165,22 @@ static bool calculateIsIntangibleType(QualType Ty) {
   TypesToScan.push_back(Ty);
   while (!TypesToScan.empty()) {
     QualType T = TypesToScan.pop_back_val();
-    assert(T == T.getCanonicalType().getUnqualifiedType() && "expected sugar-free type");
+    assert(T == T.getCanonicalType().getUnqualifiedType() &&
+           "expected sugar-free type");
     assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
 
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
-      QualType ElTy = AT->getElementType().getCanonicalType().getUnqualifiedType();
+      QualType ElTy =
+          AT->getElementType().getCanonicalType().getUnqualifiedType();
       if (ElTy->isBuiltinType())
         return ElTy->isHLSLSpecificType();
       TypesToScan.push_back(ElTy);
-      continue; 
+      continue;
     }
 
     if (const auto *VT = dyn_cast<VectorType>(T)) {
-      QualType ElTy = VT->getElementType().getCanonicalType().getUnqualifiedType();
+      QualType ElTy =
+          VT->getElementType().getCanonicalType().getUnqualifiedType();
       assert(ElTy->isBuiltinType() && "vectors can only contain builtin types");
       if (ElTy->isHLSLSpecificType())
         return true;
@@ -1187,12 +1190,13 @@ static bool calculateIsIntangibleType(QualType Ty) {
     if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *RD = RT->getDecl();
       for (const auto *FD : RD->fields()) {
-        QualType FieldTy = FD->getType().getCanonicalType().getUnqualifiedType();
+        QualType FieldTy =
+            FD->getType().getCanonicalType().getUnqualifiedType();
         if (FieldTy->isBuiltinType()) {
           if (FieldTy->isHLSLSpecificType())
             return true;
         } else {
-          TypesToScan.push_back(FieldTy); 
+          TypesToScan.push_back(FieldTy);
         }
       }
       continue;
@@ -1207,7 +1211,8 @@ bool SemaHLSL::IsIntangibleType(const clang::QualType Ty) {
 
   const auto CachedEntry = IsIntangibleTypeCache.find(Ty.getTypePtr());
   if (CachedEntry != IsIntangibleTypeCache.end()) {
-    assert(CachedEntry->second == calculateIsIntangibleType(Ty) && "IsIntangibleType mismatch");
+    assert(CachedEntry->second == calculateIsIntangibleType(Ty) &&
+           "IsIntangibleType mismatch");
     return CachedEntry->second;
   }
 
