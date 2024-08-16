@@ -315,7 +315,7 @@ namespace {
                                              AM.SymbolFlags);
       else
         Disp =
-            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget*/ true);
+            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
