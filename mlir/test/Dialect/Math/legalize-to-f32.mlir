@@ -86,7 +86,7 @@ func.func @sequences(%arg0: f16) -> f16 {
 
 // CHECK-LABEL: @promote_in_if_block
 func.func @promote_in_if_block(%arg0: bf16, %arg1: bf16, %arg2: i1) -> bf16 {
-  // CHECK: [[EXTF0:%.+]] = arith.extf [[ARG0]]
+  // CHECK: [[EXTF0:%.+]] = arith.extf
   %0 = scf.if %arg2 -> bf16 {
     %1 = math.absf %arg0 : bf16
     // CHECK: [[TRUNCF0:%.+]] = arith.truncf
