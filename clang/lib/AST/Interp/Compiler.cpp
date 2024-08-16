@@ -533,10 +533,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(CE);
-      if (!LocalIndex)
-        return false;
-      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+      unsigned LocalIndex = allocateTemporary(CE);
+      if (!this->emitGetPtrLocal(LocalIndex, CE))
         return false;
     }
 
@@ -671,10 +669,8 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return true;
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
-    if (!LocalIndex)
-      return false;
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
+    unsigned LocalIndex = allocateTemporary(E);
+    if (!this->emitGetPtrLocal(LocalIndex, E))
       return false;
   }
 
@@ -986,10 +982,8 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
-    if (!LocalIndex)
-      return false;
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
+    unsigned LocalIndex = allocateTemporary(E);
+    if (!this->emitGetPtrLocal(LocalIndex, E))
       return false;
   }
 
@@ -1045,10 +1039,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!LHSIsComplex) {
       // This is using the RHS type for the fake-complex LHS.
-      if (auto LHSO = allocateLocal(RHS))
-        LHSOffset = *LHSO;
-      else
-        return false;
+      LHSOffset = allocateTemporary(RHS);
 
       if (!this->emitGetPtrLocal(LHSOffset, E))
         return false;
@@ -1881,15 +1872,26 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   if (!this->jumpFalse(LabelFalse))
     return false;
 
-  if (!this->delegate(TrueExpr))
-    return false;
+  {
+    LocalScope<Emitter> S(this);
+    if (!this->delegate(TrueExpr))
+      return false;
+    if (!S.destroyLocals())
+      return false;
+  }
+
   if (!this->jump(LabelEnd))
     return false;
 
   this->emitLabel(LabelFalse);
 
-  if (!this->delegate(FalseExpr))
-    return false;
+  {
+    LocalScope<Emitter> S(this);
+    if (!this->delegate(FalseExpr))
+      return false;
+    if (!S.destroyLocals())
+      return false;
+  }
 
   this->fallthrough(LabelEnd);
   this->emitLabel(LabelEnd);
@@ -3546,6 +3548,27 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
     VarScope->addExtended(Local, ExtendingDecl);
   else
     VarScope->add(Local, false);
+  return Local.Offset;
+}
+
+template <class Emitter>
+unsigned Compiler<Emitter>::allocateTemporary(const Expr *E) {
+  QualType Ty = E->getType();
+  assert(!Ty->isRecordType());
+
+  Descriptor *D = P.createDescriptor(
+      E, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
+      /*IsTemporary=*/true, /*IsMutable=*/false, /*Init=*/nullptr);
+  assert(D);
+
+  Scope::Local Local = this->createLocal(D);
+  VariableScope<Emitter> *S = VarScope;
+  assert(S);
+  // Attach to topmost scope.
+  while (S->getParent())
+    S = S->getParent();
+  assert(S && !S->getParent());
+  S->addLocal(Local);
   return Local.Offset;
 }
 
