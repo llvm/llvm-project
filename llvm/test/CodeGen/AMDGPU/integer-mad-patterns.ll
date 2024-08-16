@@ -7298,7 +7298,6 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7323,7 +7322,6 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
@@ -7580,7 +7578,6 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[4:5], v3, off scope:SCOPE_SYS
 ; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-SDAG-NEXT:    v_add_nc_u32_e32 v0, v3, v1
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7603,7 +7600,6 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[2:3], v5, off scope:SCOPE_SYS
 ; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-GISEL-NEXT:    v_add_nc_u32_e32 v0, v5, v1
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:

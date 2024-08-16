@@ -141,7 +141,6 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
 ; GFX1210-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off scope:SCOPE_SYS
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -166,7 +165,6 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
