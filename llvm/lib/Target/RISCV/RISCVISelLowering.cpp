@@ -784,9 +784,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
-      setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
-                          ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
-                         VT, Custom);
+      setOperationAction(
+          {ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_USAT_U}, VT,
+          Custom);
 
       // Custom-lower insert/extract operations to simplify patterns.
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
@@ -1087,8 +1087,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
                            Custom);
 
-        setOperationAction({ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS}, VT,
-                           Custom);
+        setOperationAction(
+            {ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE}, VT,
+            Custom);
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
@@ -1101,9 +1102,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SELECT, VT, Custom);
 
-        setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
-                            ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
-                           VT, Custom);
+        setOperationAction(
+            {ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_USAT_U}, VT,
+            Custom);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
@@ -1235,8 +1236,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
 
-        setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                            ISD::EXTRACT_SUBVECTOR},
+        setOperationAction({ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE,
+                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
 
         // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
@@ -5160,6 +5161,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
 
+  if (ShuffleVectorInst::isReverseMask(Mask, NumElts) && V2.isUndef())
+    return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
+
   // If this is a deinterleave and we can widen the vector, then we can use
   // vnsrl to deinterleave.
   if (isDeinterleaveShuffle(VT, ContainerVT, V1, V2, Mask, Subtarget)) {
@@ -6228,7 +6232,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::TRUNCATE:
   case ISD::TRUNCATE_SSAT_S:
-  case ISD::TRUNCATE_SSAT_U:
   case ISD::TRUNCATE_USAT_U:
     // Only custom-lower vector truncates
     if (!Op.getSimpleValueType().isVector())
@@ -8115,7 +8118,7 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
   unsigned NewOpc;
   if (Opc == ISD::TRUNCATE_SSAT_S)
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
-  else if (Opc == ISD::TRUNCATE_SSAT_U || Opc == ISD::TRUNCATE_USAT_U)
+  else if (Opc == ISD::TRUNCATE_USAT_U)
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
   else
     NewOpc = RISCVISD::TRUNCATE_VECTOR_VL;
@@ -10308,14 +10311,24 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     SDValue Op2 = DAG.getNode(ISD::VECTOR_REVERSE, DL, WidenVT, Op1);
     return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Op2);
   }
-  unsigned EltSize = VecVT.getScalarSizeInBits();
-  unsigned MinSize = VecVT.getSizeInBits().getKnownMinValue();
+
+  MVT ContainerVT = VecVT;
+  SDValue Vec = Op.getOperand(0);
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
+  unsigned EltSize = ContainerVT.getScalarSizeInBits();
+  unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
   unsigned MaxVLMAX =
-    RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+      VecVT.isFixedLengthVector()
+          ? VecVT.getVectorNumElements()
+          : RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
 
   unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
-  MVT IntVT = VecVT.changeVectorElementTypeToInteger();
+  MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
 
   // If this is SEW=8 and VLMAX is potentially more than 256, we need
   // to use vrgatherei16.vv.
@@ -10340,7 +10353,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     }
 
     // Just promote the int type to i16 which will double the LMUL.
-    IntVT = MVT::getVectorVT(MVT::i16, VecVT.getVectorElementCount());
+    IntVT = MVT::getVectorVT(MVT::i16, ContainerVT.getVectorElementCount());
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
   }
 
@@ -10354,12 +10367,13 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
-  SDValue VLMinus1 = DAG.getNode(ISD::SUB, DL, XLenVT,
-                                 computeVLMax(VecVT, DL, DAG),
-                                 DAG.getConstant(1, DL, XLenVT));
+  SDValue VLMinus1 = DAG.getNode(
+      ISD::SUB, DL, XLenVT,
+      DAG.getElementCount(DL, XLenVT, VecVT.getVectorElementCount()),
+      DAG.getConstant(1, DL, XLenVT));
 
   // Splat VLMAX-1 taking care to handle SEW==64 on RV32.
   bool IsRV32E64 =
@@ -10375,8 +10389,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   SDValue Indices = DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID,
                                 DAG.getUNDEF(IntVT), Mask, VL);
 
-  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices,
-                     DAG.getUNDEF(VecVT), Mask, VL);
+  SDValue Gather = DAG.getNode(GatherOpc, DL, ContainerVT, Vec, Indices,
+                               DAG.getUNDEF(ContainerVT), Mask, VL);
+  if (VecVT.isFixedLengthVector())
+    Gather = convertFromScalableVector(VecVT, Gather, DAG, Subtarget);
+  return Gather;
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,

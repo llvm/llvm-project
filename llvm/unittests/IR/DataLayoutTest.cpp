@@ -134,6 +134,47 @@ TEST(DataLayout, LayoutStringFormat) {
         FailedWithMessage("empty specification is not allowed"));
 }
 
+TEST(DataLayout, ParseNonIntegralAddrSpace) {
+  for (StringRef Str : {"ni:1", "ni:16777215", "ni:1:16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"ni", "ni42", "nix"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be of the form "
+                          "\"ni:<address space>[:<address space>]...\""));
+
+  for (StringRef Str : {"ni:", "ni::42", "ni:42:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space component cannot be empty"));
+
+  for (StringRef Str : {"ni:x", "ni:42:0x1", "ni:16777216", "ni:42:16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
+
+  for (StringRef Str : {"ni:0", "ni:42:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space 0 cannot be non-integral"));
+}
+
+TEST(DataLayout, IsNonIntegralAddressSpace) {
+  DataLayout Default;
+  EXPECT_THAT(Default.getNonIntegralAddressSpaces(), ::testing::SizeIs(0));
+  EXPECT_FALSE(Default.isNonIntegralAddressSpace(0));
+  EXPECT_FALSE(Default.isNonIntegralAddressSpace(1));
+
+  DataLayout Custom = cantFail(DataLayout::parse("ni:2:16777215"));
+  EXPECT_THAT(Custom.getNonIntegralAddressSpaces(),
+              ::testing::ElementsAreArray({2U, 16777215U}));
+  EXPECT_FALSE(Custom.isNonIntegralAddressSpace(0));
+  EXPECT_FALSE(Custom.isNonIntegralAddressSpace(1));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(16777215));
+}
+
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
   DataLayout DL1 = cantFail(DataLayout::parse("p:32:32"));
   DataLayout DL2 = cantFail(DataLayout::parse("p:64:64"));

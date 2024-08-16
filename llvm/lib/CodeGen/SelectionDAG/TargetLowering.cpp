@@ -6349,9 +6349,9 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     }
 
     MagicFactors.push_back(DAG.getConstant(magics.Magic, dl, SVT));
-    Factors.push_back(DAG.getConstant(NumeratorFactor, dl, SVT));
+    Factors.push_back(DAG.getSignedConstant(NumeratorFactor, dl, SVT));
     Shifts.push_back(DAG.getConstant(magics.ShiftAmount, dl, ShSVT));
-    ShiftMasks.push_back(DAG.getConstant(ShiftMask, dl, SVT));
+    ShiftMasks.push_back(DAG.getSignedConstant(ShiftMask, dl, SVT));
     return true;
   };
 

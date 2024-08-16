@@ -2030,8 +2030,7 @@ void mlir::vector::populateVectorContractCanonicalizeMatmulToMMT(
 void mlir::vector::populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
-               CombineContractABTranspose, CombineContractResultTranspose,
-               ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnTranspose>(
+               CombineContractABTranspose, CombineContractResultTranspose>(
       patterns.getContext(), benefit);
 }
 
@@ -2043,10 +2042,11 @@ void mlir::vector::
                                                    benefit);
 }
 
-void mlir::vector::populateSinkVectorBroadcastPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
-      patterns.getContext(), benefit);
+void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit) {
+  patterns.add<ReorderElementwiseOpsOnTranspose, ReorderCastOpsOnBroadcast,
+               ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
+                                                 benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(
