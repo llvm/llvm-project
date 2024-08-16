@@ -103,6 +103,30 @@ define void @foo(i32 %v1) {
 #endif
 }
 
+TEST_F(SandboxIRTest, ConstantInt) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v0) {
+  %add0 = add i32 %v0, 42
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FortyTwo = cast<sandboxir::ConstantInt>(Add0->getOperand(1));
+
+  // Check that creating an identical constant gives us the same object.
+  auto *NewCI = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  EXPECT_EQ(NewCI, FortyTwo);
+  // Check new constant.
+  auto *FortyThree = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 43, Ctx);
+  EXPECT_NE(FortyThree, FortyTwo);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
@@ -610,12 +634,11 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   }
   {
     // Check SelectInst::create() Folded.
-    auto *False =
-        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 0, Ctx,
-                                       /*IsSigned=*/false);
+    auto *False = sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 0, Ctx,
+                                              /*IsSigned=*/false);
     auto *FortyTwo =
-        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 42, Ctx,
-                                       /*IsSigned=*/false);
+        sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 42, Ctx,
+                                    /*IsSigned=*/false);
     auto *NewSel =
         sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
     EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
@@ -706,7 +729,7 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
 
   auto *LLVMArg0 = LLVMF.getArg(0);
   auto *LLVMArgVec = LLVMF.getArg(2);
-  auto *Zero = sandboxir::Constant::createInt(Type::getInt8Ty(C), 0, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt8Ty(C), 0, Ctx);
   auto *LLVMZero = llvm::ConstantInt::get(Type::getInt8Ty(C), 0);
   EXPECT_EQ(
       sandboxir::InsertElementInst::isValidOperands(ArgVec, Arg0, Zero),
@@ -1866,8 +1889,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check create() when it gets folded.
-    auto *FortyTwo =
-        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
     auto *NewV = sandboxir::BinaryOperator::create(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo,
         /*InsertBefore=*/Ret, Ctx, "Folded");
@@ -1923,8 +1945,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check createWithCopiedFlags() when it gets folded.
-    auto *FortyTwo =
-        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
     auto *NewV = sandboxir::BinaryOperator::createWithCopiedFlags(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo, CopyFrom,
         /*InsertBefore=*/Ret, Ctx, "Folded");
@@ -2378,7 +2399,7 @@ define void @foo() {
   auto *Ty = Type::getInt32Ty(C);
   unsigned AddrSpace = 42;
   auto *PtrTy = PointerType::get(C, AddrSpace);
-  auto *ArraySize = sandboxir::Constant::createInt(Ty, 43, Ctx);
+  auto *ArraySize = sandboxir::ConstantInt::get(Ty, 43, Ctx);
   {
     // Check create() WhereIt, WhereBB.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
