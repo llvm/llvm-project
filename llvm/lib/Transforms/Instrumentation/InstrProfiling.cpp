@@ -1223,8 +1223,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
     Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
-    Value *Cmp = Builder.CreateICmpNE(Load, ConstantInt::get(Int8Ty, 0),
-                                      "pgocount.ifnonzero");
+    Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
         SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
     Builder.SetInsertPoint(ThenBranch);
