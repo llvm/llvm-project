@@ -751,7 +751,7 @@ define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
 ; AKF_HSA-NEXT:    ret float [[FADD]]
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_indirect_use_dispatch_ptr_constexpr_cast_func
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR7]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR22:[0-9]+]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[F:%.*]] = call float @use_dispatch_ptr_ret_type()
 ; ATTRIBUTOR_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; ATTRIBUTOR_HSA-NEXT:    ret float [[FADD]]

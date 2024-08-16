@@ -440,17 +440,11 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       return;
     }
 
-    bool HasAllocaOrASCast = false;
-    for (BasicBlock &BB : *F) {
-      for (Instruction &I : BB) {
-        if (isa<AllocaInst>(I) || isa<AddrSpaceCastInst>(I)) {
-          HasAllocaOrASCast = true;
-          removeAssumedBits(FLAT_SCRATCH_INIT);
-          break;
-        }
+    for (Instruction &I : instructions(F)) {
+      if (isa<AllocaInst>(I) || isa<AddrSpaceCastInst>(I)) {
+        removeAssumedBits(FLAT_SCRATCH_INIT);
+        return;
       }
-      if (HasAllocaOrASCast)
-        break;
     }
   }
 
@@ -707,13 +701,12 @@ private:
     // no-flat-scratch-init.
     auto CheckForNoFlatScratchInit = [&](Instruction &I) {
       const auto &CB = cast<CallBase>(I);
-      const Value *CalleeOp = CB.getCalledOperand();
-      const Function *Callee = dyn_cast<Function>(CalleeOp);
+      const Function *Callee = CB.getCalledFunction();
       if (!Callee) // indirect call
         return CB.isInlineAsm();
 
       if (Callee->isIntrinsic())
-        return true;
+        return Callee->getIntrinsicID() != Intrinsic::amdgcn_addrspacecast_nonnull;
 
       const auto *CalleeInfo = A.getAAFor<AAAMDAttributes>(
           *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
@@ -722,7 +715,8 @@ private:
 
     bool UsedAssumedInformation = false;
     // If any callee is false (i.e. need FlatScratchInit),
-    // checkForAllCallLikeInstructions returns false
+    // checkForAllCallLikeInstructions returns false, in which case this
+    // function returns true.
     return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
                                               UsedAssumedInformation);
   }

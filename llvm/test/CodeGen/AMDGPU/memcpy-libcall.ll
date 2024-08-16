@@ -9,6 +9,8 @@ define amdgpu_kernel void @memcpy_p0_p0_minsize(ptr %dest, ptr readonly %src) #0
 ; CHECK-LABEL: memcpy_p0_p0_minsize:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -186,7 +188,7 @@ define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; CHECK-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_add_u32 s16, s16, s15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:15
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:14
@@ -566,7 +568,9 @@ define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
 ; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
-; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; CHECK-NEXT:    s_add_u32 s16, s16, s15
 ; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -981,6 +985,8 @@ define amdgpu_kernel void @memcpy_p0_p3_minsize(ptr %generic) #0 {
 ; CHECK-NEXT:    ds_read_u8 v8, v2 offset:117
 ; CHECK-NEXT:    ds_read_u8 v9, v2 offset:118
 ; CHECK-NEXT:    ds_read_u8 v10, v2 offset:119
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
@@ -1255,6 +1261,8 @@ define amdgpu_kernel void @memcpy_p0_p0_optsize(ptr %dest, ptr %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p0_optsize:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -1432,7 +1440,7 @@ define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
 ; CHECK-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_add_u32 s16, s16, s15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:15
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:14
@@ -1812,7 +1820,9 @@ define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
 ; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
-; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; CHECK-NEXT:    s_add_u32 s16, s16, s15
 ; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -2227,6 +2237,8 @@ define amdgpu_kernel void @memcpy_p0_p3_optsize(ptr %generic) #1 {
 ; CHECK-NEXT:    ds_read_u8 v8, v2 offset:117
 ; CHECK-NEXT:    ds_read_u8 v9, v2 offset:118
 ; CHECK-NEXT:    ds_read_u8 v10, v2 offset:119
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1

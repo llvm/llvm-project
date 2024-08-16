@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefix=FIJI-NOXNACK -check-prefix=GCN %s
 
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
@@ -8,16 +8,16 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
 
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GCN %s
 
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=GFX9-ARCH-FLAT-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=GFX9-ARCH-FLAT-XNACK,GCN %s
 
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=GFX10-ARCH-FLAT-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=GFX10-ARCH-FLAT-XNACK,GCN %s
 
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 
@@ -25,11 +25,15 @@
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; TotalNumSgprs: 8
-; VI-NOXNACK: ; TotalNumSgprs: 8
-; VI-XNACK: ; TotalNumSgprs: 12
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 8
+; CI: ; NumSgprs: 8
+; VI-NOXNACK: ; NumSgprs: 8
+; VI-XNACK: ; NumSgprs: 12
+; HSA-VI-NOXNACK: ; NumSgprs: 8
+; HSA-VI-XNACK: ; NumSgprs: 12
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 14
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 8
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 8
 define amdgpu_kernel void @no_vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7}"()
@@ -42,11 +46,15 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; TotalNumSgprs: 10
-; VI-NOXNACK: ; TotalNumSgprs: 10
-; VI-XNACK: ; TotalNumSgprs: 12
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 10
+; CI: ; NumSgprs: 10
+; VI-NOXNACK: ; NumSgprs: 10
+; VI-XNACK: ; NumSgprs: 12
+; HSA-VI-NOXNACK: ; NumSgprs: 10
+; HSA-VI-XNACK: ; NumSgprs: 12
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 14
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 10
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 10
 define amdgpu_kernel void @vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc}"()
@@ -59,11 +67,16 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; TotalNumSgprs: 12
-; VI-NOXNACK: ; TotalNumSgprs: 14
-; VI-XNACK: ; TotalNumSgprs: 14
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 8
+; CI: ; NumSgprs: 12
+; FIJI-NOXNACK: ; NumSgprs: 14
+; VI-NOXNACK: ; NumSgprs: 14
+; VI-XNACK: ; NumSgprs: 14
+; HSA-VI-NOXNACK: ; NumSgprs: 24
+; HSA-VI-XNACK: ; NumSgprs: 24
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 14
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 8
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 8
 define amdgpu_kernel void @no_vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{flat_scratch}"()
@@ -76,11 +89,13 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; TotalNumSgprs: 12
-; VI-NOXNACK: ; TotalNumSgprs: 14
-; VI-XNACK: ; TotalNumSgprs: 14
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 10
+; CI: ; NumSgprs: 12
+; VI-NOXNACK: ; NumSgprs: 14
+; VI-XNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 14
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 14
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 10
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 10
 define amdgpu_kernel void @vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc},~{flat_scratch}"()
@@ -96,11 +111,13 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 6
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 6
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 0
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch}"()
@@ -113,11 +130,13 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 6
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 6
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 0
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_lo() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_lo}"()
@@ -130,11 +149,13 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
-; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
-; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+; GFX9-ARCH-FLAT-NOXNACK: ; NumSgprs: 6
+; GFX9-ARCH-FLAT-XNACK: ; NumSgprs: 6
+; GFX10-ARCH-FLAT-NOXNACK: ; NumSgprs: 0
+; GFX10-ARCH-FLAT-XNACK: ; NumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_hi() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_hi}"()

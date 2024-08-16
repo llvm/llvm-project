@@ -153,7 +153,7 @@ define internal void @merge_cycle_1() #3 {
 
 define amdgpu_kernel void @kernel_64_256() #7 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel_64_256
-; CHECK-SAME: () #[[ATTR6]] {
+; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
 ; CHECK-NEXT:    call void @default_captured_address()
 ; CHECK-NEXT:    call void @externally_visible_default()

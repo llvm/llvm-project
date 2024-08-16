@@ -478,11 +478,16 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #1 {
 
 ; No-op addrspacecast should not use queue ptr
 define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) #1 {
-; HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
-; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
+; AKF_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
+; AKF_HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
+; ATTRIBUTOR_HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, ptr addrspace(1) [[PTR]], align 4
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(1) %ptr to ptr
   store volatile i32 0, ptr %stof
@@ -490,11 +495,16 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 }
 
 define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) #1 {
-; HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
-; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
-; HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr [[STOF]], align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
+; AKF_HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; AKF_HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
+; AKF_HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr [[STOF]], align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
+; ATTRIBUTOR_HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR_HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr addrspace(4) [[PTR]], align 4
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(4) %ptr to ptr
   %ld = load volatile i32, ptr %stof

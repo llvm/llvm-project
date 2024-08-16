@@ -25,8 +25,9 @@
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr6' }
-; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+; CHECK-NEXT: flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr8' }
+; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr9' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT: psInputAddr:     0
 ; CHECK-NEXT: psInputEnable:   0
@@ -40,7 +41,7 @@
 ; CHECK-NEXT: BitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy:       8
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr98_sgpr99'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:

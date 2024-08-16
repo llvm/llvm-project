@@ -1,5 +1,5 @@
 ; Test the generation of the attribute amdgpu-no-flat-scratch-init
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -global-isel -stop-after=irtranslator < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: opt -S -O2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -global-isel -stop-after=irtranslator | FileCheck -check-prefixes=GFX10 %s
 
 ;; tests of alloca
 

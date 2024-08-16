@@ -148,7 +148,7 @@ define amdgpu_kernel void @kernel_lds() {
 
 define internal i16 @mutual_recursion_0(i16 %arg) {
 ; CHECK-LABEL: define internal i16 @mutual_recursion_0(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[RECURSIVE_KERNEL_LDS]], align 4
@@ -168,7 +168,7 @@ define internal i16 @mutual_recursion_0(i16 %arg) {
 
 define internal void @mutual_recursion_1(i16 %arg) {
 ; CHECK-LABEL: define internal void @mutual_recursion_1(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
@@ -178,7 +178,7 @@ define internal void @mutual_recursion_1(i16 %arg) {
 
 define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_lds_recursion(
-; CHECK-SAME: ) #[[ATTR2]] !llvm.amdgcn.lds.kernel.id [[META9:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] !llvm.amdgcn.lds.kernel.id !9 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds) ]
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 0)
 ; CHECK-NEXT:    ret void
@@ -196,6 +196,8 @@ define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-lds-size"="2" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR3]] = { "amdgpu-lds-size"="4" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR4]] = { "amdgpu-lds-size"="2" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-lds-size"="2" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
