@@ -365,22 +365,22 @@ TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr, Bool)
 /// __sized_ptr_t __size_returning_new(size_t size)
 TLI_DEFINE_ENUM_INTERNAL(size_returning_new)
 TLI_DEFINE_STRING_INTERNAL("__size_returning_new")
-TLI_DEFINE_SIG_INTERNAL(Struct, Long)
+TLI_DEFINE_SIG_INTERNAL(/* Checked manually. */)
 
 /// __sized_ptr_t __size_returning_new_hot_cold(size_t, __hot_cold_t)
 TLI_DEFINE_ENUM_INTERNAL(size_returning_new_hot_cold)
 TLI_DEFINE_STRING_INTERNAL("__size_returning_new_hot_cold")
-TLI_DEFINE_SIG_INTERNAL(Struct, Long, Bool)
+TLI_DEFINE_SIG_INTERNAL(/* Checked manually. */)
 
 /// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t)
 TLI_DEFINE_ENUM_INTERNAL(size_returning_new_aligned)
 TLI_DEFINE_STRING_INTERNAL("__size_returning_new_aligned")
-TLI_DEFINE_SIG_INTERNAL(Struct, Long, Long)
+TLI_DEFINE_SIG_INTERNAL(/* Checked manually. */)
 
 /// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t, __hot_cold_t)
 TLI_DEFINE_ENUM_INTERNAL(size_returning_new_aligned_hot_cold)
 TLI_DEFINE_STRING_INTERNAL("__size_returning_new_aligned_hot_cold")
-TLI_DEFINE_SIG_INTERNAL(Struct, Long, Long, Bool)
+TLI_DEFINE_SIG_INTERNAL(/* Checked manually. */)
 
 /// double __acos_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(acos_finite)

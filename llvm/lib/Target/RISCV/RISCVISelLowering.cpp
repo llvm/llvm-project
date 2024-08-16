@@ -268,11 +268,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::i32, Custom);
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
-    setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT}, MVT::i32,
-                       Custom);
+    setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
     if (!Subtarget.hasStdExtZbb())
-      setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, MVT::i32,
-                         Custom);
+      setOperationAction(
+          {ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT}, MVT::i32,
+          Custom);
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
@@ -784,7 +784,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
-      setOperationAction(ISD::TRUNCATE, VT, Custom);
+      setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
+                          ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
+                         VT, Custom);
 
       // Custom-lower insert/extract operations to simplify patterns.
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
@@ -1099,7 +1101,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SELECT, VT, Custom);
 
-        setOperationAction(ISD::TRUNCATE, VT, Custom);
+        setOperationAction({ISD::TRUNCATE, ISD::TRUNCATE_SSAT_S,
+                            ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
+                           VT, Custom);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
@@ -2977,7 +2981,7 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // Determine the largest integer that can be represented exactly. This and
   // values larger than it don't have any fractional bits so don't need to
   // be converted.
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(ContainerVT);
+  const fltSemantics &FltSem = ContainerVT.getFltSemantics();
   unsigned Precision = APFloat::semanticsPrecision(FltSem);
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
@@ -3087,7 +3091,7 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // Determine the largest integer that can be represented exactly. This and
   // values larger than it don't have any fractional bits so don't need to
   // be converted.
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(ContainerVT);
+  const fltSemantics &FltSem = ContainerVT.getFltSemantics();
   unsigned Precision = APFloat::semanticsPrecision(FltSem);
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
@@ -3167,7 +3171,7 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // Create an integer the size of the mantissa with the MSB set. This and all
   // values larger than it don't have any fractional bits so don't need to be
   // converted.
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
   unsigned Precision = APFloat::semanticsPrecision(FltSem);
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
@@ -6224,6 +6228,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(RISCVISD::BREV8, DL, VT, BSwap);
   }
   case ISD::TRUNCATE:
+  case ISD::TRUNCATE_SSAT_S:
+  case ISD::TRUNCATE_SSAT_U:
+  case ISD::TRUNCATE_USAT_U:
     // Only custom-lower vector truncates
     if (!Op.getSimpleValueType().isVector())
       return Op;
@@ -8060,7 +8067,8 @@ SDValue RISCVTargetLowering::lowerVectorMaskTruncLike(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  bool IsVPTrunc = Op.getOpcode() == ISD::VP_TRUNCATE;
+  unsigned Opc = Op.getOpcode();
+  bool IsVPTrunc = Opc == ISD::VP_TRUNCATE;
   SDLoc DL(Op);
 
   MVT VT = Op.getSimpleValueType();
@@ -8105,11 +8113,18 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
         getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
   }
 
+  unsigned NewOpc;
+  if (Opc == ISD::TRUNCATE_SSAT_S)
+    NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
+  else if (Opc == ISD::TRUNCATE_SSAT_U || Opc == ISD::TRUNCATE_USAT_U)
+    NewOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
+  else
+    NewOpc = RISCVISD::TRUNCATE_VECTOR_VL;
+
   do {
     SrcEltVT = MVT::getIntegerVT(SrcEltVT.getSizeInBits() / 2);
     MVT ResultVT = ContainerVT.changeVectorElementType(SrcEltVT);
-    Result = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, ResultVT, Result,
-                         Mask, VL);
+    Result = DAG.getNode(NewOpc, DL, ResultVT, Result, Mask, VL);
   } while (SrcEltVT != DstEltVT);
 
   if (SrcVT.isFixedLengthVector())
@@ -9598,8 +9613,7 @@ SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
                                 DAG.getConstant(0, DL, XLenVT), ISD::SETEQ);
   return DAG.getSelect(
       DL, ResVT, NoNaNs, Res,
-      DAG.getConstantFP(APFloat::getNaN(DAG.EVTToAPFloatSemantics(ResVT)), DL,
-                        ResVT));
+      DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
 
 SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
@@ -9648,8 +9662,7 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
   MVT ResVT = Res.getSimpleValueType();
   return DAG.getSelect(
       DL, ResVT, NoNaNs, Res,
-      DAG.getConstantFP(APFloat::getNaN(DAG.EVTToAPFloatSemantics(ResVT)), DL,
-                        ResVT));
+      DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
 
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
@@ -12173,20 +12186,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UADDSAT:
   case ISD::USUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
-    if (Subtarget.hasStdExtZbb()) {
-      // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
-      // sign extend allows overflow of the lower 32 bits to be detected on
-      // the promoted size.
-      SDValue LHS =
-          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
-      SDValue RHS =
-          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Res = DAG.getNode(N->getOpcode(), DL, MVT::i64, LHS, RHS);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      return;
-    }
-
+           !Subtarget.hasStdExtZbb() && "Unexpected custom legalisation");
     // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
     // promotion for UADDO/USUBO.
     Results.push_back(expandAddSubSat(N, DAG));
@@ -21037,6 +21037,11 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
     // which ends up using scalar sequences.
     return MVT::Other;
 
+  // If the minimum VLEN is less than RISCV::RVVBitsPerBlock we don't support
+  // fixed vectors.
+  if (MinVLenInBytes <= RISCV::RVVBitsPerBlock / 8)
+    return MVT::Other;
+
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
   // a large scalar constant and instead use vmv.v.x/i to do the
   // broadcast.  For everything else, prefer ELenVT to minimize VL and thus
@@ -21365,8 +21370,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                           LoadInst *LI) const {
+bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
+    IntrinsicInst *DI, LoadInst *LI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
@@ -21415,8 +21421,9 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
   return true;
 }
 
-bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                                          StoreInst *SI) const {
+bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
+    IntrinsicInst *II, StoreInst *SI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   assert(SI->isSimple());
   IRBuilder<> Builder(SI);
 
