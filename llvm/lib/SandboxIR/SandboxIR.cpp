@@ -1122,6 +1122,104 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   }
 }
 
+void AtomicCmpXchgInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSyncScopeID,
+                                       &AtomicCmpXchgInst::setSyncScopeID>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSyncScopeID(SSID);
+}
+
+Value *AtomicCmpXchgInst::getPointerOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getPointerOperand());
+}
+
+Value *AtomicCmpXchgInst::getCompareOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getCompareOperand());
+}
+
+Value *AtomicCmpXchgInst::getNewValOperand() {
+  return Ctx.getValue(cast<llvm::AtomicCmpXchgInst>(Val)->getNewValOperand());
+}
+
+AtomicCmpXchgInst *
+AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
+                          AtomicOrdering SuccessOrdering,
+                          AtomicOrdering FailureOrdering, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx, SyncScope::ID SSID,
+                          const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt == WhereBB->end())
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  else
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto *LLVMAtomicCmpXchg =
+      Builder.CreateAtomicCmpXchg(Ptr->Val, Cmp->Val, New->Val, Align,
+                                  SuccessOrdering, FailureOrdering, SSID);
+  LLVMAtomicCmpXchg->setName(Name);
+  return Ctx.createAtomicCmpXchgInst(LLVMAtomicCmpXchg);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             Instruction *InsertBefore,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                SSID, Name);
+}
+
+AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
+                                             MaybeAlign Align,
+                                             AtomicOrdering SuccessOrdering,
+                                             AtomicOrdering FailureOrdering,
+                                             BasicBlock *InsertAtEnd,
+                                             Context &Ctx, SyncScope::ID SSID,
+                                             const Twine &Name) {
+  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
+                InsertAtEnd->end(), InsertAtEnd, Ctx, SSID, Name);
+}
+
+void AtomicCmpXchgInst::setAlignment(Align Align) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getAlign,
+                                       &AtomicCmpXchgInst::setAlignment>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setAlignment(Align);
+}
+
+void AtomicCmpXchgInst::setVolatile(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isVolatile,
+                                       &AtomicCmpXchgInst::setVolatile>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setVolatile(V);
+}
+
+void AtomicCmpXchgInst::setWeak(bool IsWeak) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::isWeak,
+                                       &AtomicCmpXchgInst::setWeak>>(this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setWeak(IsWeak);
+}
+
+void AtomicCmpXchgInst::setSuccessOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getSuccessOrdering,
+                                       &AtomicCmpXchgInst::setSuccessOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setSuccessOrdering(Ordering);
+}
+
+void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&AtomicCmpXchgInst::getFailureOrdering,
+                                       &AtomicCmpXchgInst::setFailureOrdering>>(
+          this);
+  cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
+}
+
 AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
                                Value *ArraySize, const Twine &Name) {
@@ -1231,6 +1329,30 @@ Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
       Builder.CreateInsertElement(Vec->Val, NewElt->Val, Idx->Val, Name);
   if (auto *NewInsert = dyn_cast<llvm::InsertElementInst>(NewV))
     return Ctx.createInsertElementInst(NewInsert);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *ExtractElementInst::create(Value *Vec, Value *Idx,
+                                  Instruction *InsertBefore, Context &Ctx,
+                                  const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  llvm::Value *NewV = Builder.CreateExtractElement(Vec->Val, Idx->Val, Name);
+  if (auto *NewExtract = dyn_cast<llvm::ExtractElementInst>(NewV))
+    return Ctx.createExtractElementInst(NewExtract);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *ExtractElementInst::create(Value *Vec, Value *Idx,
+                                  BasicBlock *InsertAtEnd, Context &Ctx,
+                                  const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::Value *NewV = Builder.CreateExtractElement(Vec->Val, Idx->Val, Name);
+  if (auto *NewExtract = dyn_cast<llvm::ExtractElementInst>(NewV))
+    return Ctx.createExtractElementInst(NewExtract);
   assert(isa<llvm::Constant>(NewV) && "Expected constant");
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
@@ -1356,6 +1478,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
     return It->second.get();
   }
+  case llvm::Instruction::ExtractElement: {
+    auto *LLVMIns = cast<llvm::ExtractElementInst>(LLVMV);
+    It->second = std::unique_ptr<ExtractElementInst>(
+        new ExtractElementInst(LLVMIns, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::InsertElement: {
     auto *LLVMIns = cast<llvm::InsertElementInst>(LLVMV);
     It->second = std::unique_ptr<InsertElementInst>(
@@ -1401,6 +1529,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     auto *LLVMGEP = cast<llvm::GetElementPtrInst>(LLVMV);
     It->second = std::unique_ptr<GetElementPtrInst>(
         new GetElementPtrInst(LLVMGEP, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::AtomicCmpXchg: {
+    auto *LLVMAtomicCmpXchg = cast<llvm::AtomicCmpXchgInst>(LLVMV);
+    It->second = std::unique_ptr<AtomicCmpXchgInst>(
+        new AtomicCmpXchgInst(LLVMAtomicCmpXchg, *this));
     return It->second.get();
   }
   case llvm::Instruction::Alloca: {
@@ -1459,6 +1593,13 @@ SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
   return cast<SelectInst>(registerValue(std::move(NewPtr)));
 }
 
+ExtractElementInst *
+Context::createExtractElementInst(llvm::ExtractElementInst *EEI) {
+  auto NewPtr =
+      std::unique_ptr<ExtractElementInst>(new ExtractElementInst(EEI, *this));
+  return cast<ExtractElementInst>(registerValue(std::move(NewPtr)));
+}
+
 InsertElementInst *
 Context::createInsertElementInst(llvm::InsertElementInst *IEI) {
   auto NewPtr =
@@ -1512,6 +1653,12 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+AtomicCmpXchgInst *
+Context::createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I) {
+  auto NewPtr =
+      std::unique_ptr<AtomicCmpXchgInst>(new AtomicCmpXchgInst(I, *this));
+  return cast<AtomicCmpXchgInst>(registerValue(std::move(NewPtr)));
 }
 AllocaInst *Context::createAllocaInst(llvm::AllocaInst *I) {
   auto NewPtr = std::unique_ptr<AllocaInst>(new AllocaInst(I, *this));

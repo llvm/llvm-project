@@ -343,24 +343,27 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     EmitInt(Cur->Guid, 8);
     // Emit number of probes in this node
     uint64_t Deleted = 0;
-    for (MCDecodedPseudoProbe *&Probe : Cur->getProbes())
+    for (MCDecodedPseudoProbe *&Probe :
+         llvm::make_pointer_range(Cur->getProbes()))
       if (Probe->getAddress() == INT64_MAX)
         Deleted++;
     LLVM_DEBUG(dbgs() << "Deleted Probes:" << Deleted << "\n");
     size_t InjectedProbes = ProbeDecoder.getNumInjectedProbes(Cur);
-    uint64_t ProbesSize = Cur->NumProbes + InjectedProbes - Deleted;
+    uint64_t ProbesSize = Cur->getProbes().size() - Deleted + InjectedProbes;
     EmitULEB128IntValue(ProbesSize);
     // Emit number of direct inlinees
     EmitULEB128IntValue(Cur->getChildren().size());
     // Emit probes in this group
-    for (MCDecodedPseudoProbe *&Probe : Cur->getProbes()) {
+    for (MCDecodedPseudoProbe *&Probe :
+         llvm::make_pointer_range(Cur->getProbes())) {
       if (Probe->getAddress() == INT64_MAX)
         continue;
       EmitDecodedPseudoProbe(Probe);
       LastProbe = Probe;
     }
     if (InjectedProbes) {
-      for (MCDecodedPseudoProbe *&Probe : ProbeDecoder.getInjectedProbes(Cur)) {
+      for (MCDecodedPseudoProbe *&Probe :
+           llvm::make_pointer_range(ProbeDecoder.getInjectedProbes(Cur))) {
         if (Probe->getAddress() == INT64_MAX)
           continue;
         EmitDecodedPseudoProbe(Probe);

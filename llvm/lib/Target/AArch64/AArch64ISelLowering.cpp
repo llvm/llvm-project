@@ -1410,6 +1410,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
+  for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Legal);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Legal);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Legal);
+  }
+
   if (Subtarget->hasSME()) {
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   }
@@ -1774,6 +1780,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+
+    // We can lower types that have <vscale x {2|4}> elements to compact.
+    for (auto VT :
+         {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv2f32,
+          MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16, MVT::nxv4i32, MVT::nxv4f32})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+    // If we have SVE, we can use SVE logic for legal (or smaller than legal)
+    // NEON vectors in the lowest bits of the SVE register.
+    for (auto VT : {MVT::v2i8, MVT::v2i16, MVT::v2i32, MVT::v2i64, MVT::v2f32,
+                    MVT::v2f64, MVT::v4i8, MVT::v4i16, MVT::v4i32, MVT::v4f32})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -6619,6 +6637,104 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   return DAG.getMergeValues({Ext, Chain}, DL);
 }
 
+SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDValue Passthru = Op.getOperand(2);
+  EVT VecVT = Vec.getValueType();
+  EVT MaskVT = Mask.getValueType();
+  EVT ElmtVT = VecVT.getVectorElementType();
+  const bool IsFixedLength = VecVT.isFixedLengthVector();
+  const bool HasPassthru = !Passthru.isUndef();
+  unsigned MinElmts = VecVT.getVectorElementCount().getKnownMinValue();
+  EVT FixedVecVT = MVT::getVectorVT(ElmtVT.getSimpleVT(), MinElmts);
+
+  assert(VecVT.isVector() && "Input to VECTOR_COMPRESS must be vector.");
+
+  if (!Subtarget->isSVEAvailable())
+    return SDValue();
+
+  if (IsFixedLength && VecVT.getSizeInBits().getFixedValue() > 128)
+    return SDValue();
+
+  // Only <vscale x {4|2} x {i32|i64}> supported for compact.
+  if (MinElmts != 2 && MinElmts != 4)
+    return SDValue();
+
+  // We can use the SVE register containing the NEON vector in its lowest bits.
+  if (IsFixedLength) {
+    EVT ScalableVecVT =
+        MVT::getScalableVectorVT(ElmtVT.getSimpleVT(), MinElmts);
+    EVT ScalableMaskVT = MVT::getScalableVectorVT(
+        MaskVT.getVectorElementType().getSimpleVT(), MinElmts);
+
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableVecVT,
+                      DAG.getUNDEF(ScalableVecVT), Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Mask = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableMaskVT,
+                       DAG.getUNDEF(ScalableMaskVT), Mask,
+                       DAG.getConstant(0, DL, MVT::i64));
+    Mask = DAG.getNode(ISD::TRUNCATE, DL,
+                       ScalableMaskVT.changeVectorElementType(MVT::i1), Mask);
+    Passthru = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableVecVT,
+                           DAG.getUNDEF(ScalableVecVT), Passthru,
+                           DAG.getConstant(0, DL, MVT::i64));
+
+    VecVT = Vec.getValueType();
+    MaskVT = Mask.getValueType();
+  }
+
+  // Get legal type for compact instruction
+  EVT ContainerVT = getSVEContainerType(VecVT);
+  EVT CastVT = VecVT.changeVectorElementTypeToInteger();
+
+  // Convert to i32 or i64 for smaller types, as these are the only supported
+  // sizes for compact.
+  if (ContainerVT != VecVT) {
+    Vec = DAG.getBitcast(CastVT, Vec);
+    Vec = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Vec);
+  }
+
+  SDValue Compressed = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, Vec.getValueType(),
+      DAG.getConstant(Intrinsic::aarch64_sve_compact, DL, MVT::i64), Mask, Vec);
+
+  // compact fills with 0s, so if our passthru is all 0s, do nothing here.
+  if (HasPassthru && !ISD::isConstantSplatVectorAllZeros(Passthru.getNode())) {
+    SDValue Offset = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask, Mask);
+
+    SDValue IndexMask = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MaskVT,
+        DAG.getConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64),
+        DAG.getConstant(0, DL, MVT::i64), Offset);
+
+    Compressed =
+        DAG.getNode(ISD::VSELECT, DL, VecVT, IndexMask, Compressed, Passthru);
+  }
+
+  // Extracting from a legal SVE type before truncating produces better code.
+  if (IsFixedLength) {
+    Compressed = DAG.getNode(
+        ISD::EXTRACT_SUBVECTOR, DL,
+        FixedVecVT.changeVectorElementType(ContainerVT.getVectorElementType()),
+        Compressed, DAG.getConstant(0, DL, MVT::i64));
+    CastVT = FixedVecVT.changeVectorElementTypeToInteger();
+    VecVT = FixedVecVT;
+  }
+
+  // If we changed the element type before, we need to convert it back.
+  if (ContainerVT != VecVT) {
+    Compressed = DAG.getNode(ISD::TRUNCATE, DL, CastVT, Compressed);
+    Compressed = DAG.getBitcast(VecVT, Compressed);
+  }
+
+  return Compressed;
+}
+
 // Generate SUBS and CSEL for integer abs.
 SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
@@ -6999,6 +7115,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::VSCALE:
     return LowerVSCALE(Op, DAG);
+  case ISD::VECTOR_COMPRESS:
+    return LowerVECTOR_COMPRESS(Op, DAG);
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -8762,10 +8880,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-
-    Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
-                        DAG.getVTList(MVT::Other, MVT::Glue), Chain);
-    InGlue = Chain.getValue(1);
+    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
+      Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
+                          DAG.getVTList(MVT::Other, MVT::Glue), Chain);
+      InGlue = Chain.getValue(1);
+    }
 
     SDValue NewChain = changeStreamingMode(
         DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
@@ -8944,11 +9063,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
-    InGlue = Result.getValue(1);
 
-    Result =
-        DAG.getNode(AArch64ISD::VG_RESTORE, DL,
-                    DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
+    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
+      InGlue = Result.getValue(1);
+      Result =
+          DAG.getNode(AArch64ISD::VG_RESTORE, DL,
+                      DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
+    }
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
@@ -11356,8 +11477,7 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
       // the result for float (23 mantissa bits) is 2 and for double (52
       // mantissa bits) is 3.
       constexpr unsigned AccurateBits = 8;
-      unsigned DesiredBits =
-          APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(VT));
+      unsigned DesiredBits = APFloat::semanticsPrecision(VT.getFltSemantics());
       ExtraSteps = DesiredBits <= AccurateBits
                        ? 0
                        : Log2_64_Ceil(DesiredBits) - Log2_64_Ceil(AccurateBits);
@@ -17202,17 +17322,148 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
+bool getDeinterleave2Values(
+    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
+    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
+  if (!DI->hasNUses(2))
+    return false;
+  auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
+  auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
+  if (!Extr1 || !Extr2)
+    return false;
+
+  DeinterleavedValues.resize(2);
+  // Place the values into the vector in the order of extraction:
+  DeinterleavedValues[0x1 & (Extr1->getIndices()[0])] = Extr1;
+  DeinterleavedValues[0x1 & (Extr2->getIndices()[0])] = Extr2;
+  if (!DeinterleavedValues[0] || !DeinterleavedValues[1])
+    return false;
+
+  // Make sure that the extracted values match the deinterleave tree pattern
+  if (!match(DeinterleavedValues[0], m_ExtractValue<0>((m_Specific(DI)))) ||
+      !match(DeinterleavedValues[1], m_ExtractValue<1>((m_Specific(DI))))) {
+    LLVM_DEBUG(dbgs() << "matching deinterleave2 failed\n");
+    return false;
+  }
+  // DeinterleavedValues will be replace by output of ld2
+  DeInterleaveDeadInsts.insert(DeInterleaveDeadInsts.end(),
+                               DeinterleavedValues.begin(),
+                               DeinterleavedValues.end());
+  return true;
+}
+
+/*
+DeinterleaveIntrinsic tree:
+                   [DI]
+                /        \
+         [Extr<0>]      [Extr<1>]
+            |                 |
+           [DI]              [DI]
+          /    \            /    \
+    [Extr<0>][Extr<1>] [Extr<0>][Extr<1>]
+        |       |         |         |
+roots:  A       C         B         D
+roots in correct order of DI4 will be: A B C D.
+Returns true if `DI` is the top of an IR tree that represents a theoretical
+vector.deinterleave4 intrinsic. When true is returned, \p `DeinterleavedValues`
+vector is populated with the results such an intrinsic would return: (i.e. {A,
+B, C, D } = vector.deinterleave4(...))
+*/
+bool getDeinterleave4Values(
+    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
+    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
+  if (!DI->hasNUses(2))
+    return false;
+  auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
+  auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
+  if (!Extr1 || !Extr2)
+    return false;
+
+  if (!Extr1->hasOneUse() || !Extr2->hasOneUse())
+    return false;
+  auto *DI1 = *(Extr1->user_begin());
+  auto *DI2 = *(Extr2->user_begin());
+
+  if (!DI1->hasNUses(2) || !DI2->hasNUses(2))
+    return false;
+  // Leaf nodes of the deinterleave tree:
+  auto *A = dyn_cast<ExtractValueInst>(*(DI1->user_begin()));
+  auto *C = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
+  auto *B = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
+  auto *D = dyn_cast<ExtractValueInst>(*(++DI2->user_begin()));
+  // Make sure that the A,B,C and D are ExtractValue instructions before getting
+  // the extract index
+  if (!A || !B || !C || !D)
+    return false;
+
+  DeinterleavedValues.resize(4);
+  // Place the values into the vector in the order of deinterleave4:
+  DeinterleavedValues[0x3 &
+                      ((A->getIndices()[0] * 2) + Extr1->getIndices()[0])] = A;
+  DeinterleavedValues[0x3 &
+                      ((B->getIndices()[0] * 2) + Extr2->getIndices()[0])] = B;
+  DeinterleavedValues[0x3 &
+                      ((C->getIndices()[0] * 2) + Extr1->getIndices()[0])] = C;
+  DeinterleavedValues[0x3 &
+                      ((D->getIndices()[0] * 2) + Extr2->getIndices()[0])] = D;
+  if (!DeinterleavedValues[0] || !DeinterleavedValues[1] ||
+      !DeinterleavedValues[2] || !DeinterleavedValues[3])
+    return false;
+
+  // Make sure that A,B,C,D match the deinterleave tree pattern
+  if (!match(DeinterleavedValues[0], m_ExtractValue<0>(m_Deinterleave2(
+                                         m_ExtractValue<0>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[1], m_ExtractValue<0>(m_Deinterleave2(
+                                         m_ExtractValue<1>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[2], m_ExtractValue<1>(m_Deinterleave2(
+                                         m_ExtractValue<0>(m_Specific(DI))))) ||
+      !match(DeinterleavedValues[3], m_ExtractValue<1>(m_Deinterleave2(
+                                         m_ExtractValue<1>(m_Specific(DI)))))) {
+    LLVM_DEBUG(dbgs() << "matching deinterleave4 failed\n");
+    return false;
+  }
+
+  // These Values will not be used anymore,
+  // DI4 will be created instead of nested DI1 and DI2
+  DeInterleaveDeadInsts.insert(DeInterleaveDeadInsts.end(),
+                               DeinterleavedValues.begin(),
+                               DeinterleavedValues.end());
+  DeInterleaveDeadInsts.push_back(cast<Instruction>(DI1));
+  DeInterleaveDeadInsts.push_back(cast<Instruction>(Extr1));
+  DeInterleaveDeadInsts.push_back(cast<Instruction>(DI2));
+  DeInterleaveDeadInsts.push_back(cast<Instruction>(Extr2));
+
+  return true;
+}
+
+bool getDeinterleavedValues(
+    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
+    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
+  if (getDeinterleave4Values(DI, DeinterleavedValues, DeInterleaveDeadInsts))
+    return true;
+  return getDeinterleave2Values(DI, DeinterleavedValues, DeInterleaveDeadInsts);
+}
+
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI) const {
+    IntrinsicInst *DI, LoadInst *LI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only deinterleave2 supported at present.
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
-  // Only a factor of 2 supported at present.
-  const unsigned Factor = 2;
+  SmallVector<Instruction *, 4> DeinterleavedValues;
+  SmallVector<Instruction *, 8> DeInterleaveDeadInsts;
 
-  VectorType *VTy = cast<VectorType>(DI->getType()->getContainedType(0));
-  const DataLayout &DL = DI->getDataLayout();
+  if (!getDeinterleavedValues(DI, DeinterleavedValues, DeInterleaveDeadInsts)) {
+    LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
+    return false;
+  }
+  unsigned Factor = DeinterleavedValues.size();
+  assert((Factor == 2 || Factor == 4) &&
+         "Currently supported Factor is 2 or 4 only");
+  VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
+
+  const DataLayout &DL = DI->getModule()->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -17223,7 +17474,6 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
-
   VectorType *LdTy =
       VectorType::get(VTy->getElementType(),
                       VTy->getElementCount().divideCoefficientBy(NumLoads));
@@ -17233,18 +17483,15 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
-
   Value *Pred = nullptr;
   if (UseScalable)
     Pred =
         Builder.CreateVectorSplat(LdTy->getElementCount(), Builder.getTrue());
 
   Value *BaseAddr = LI->getPointerOperand();
-  Value *Result;
   if (NumLoads > 1) {
-    Value *Left = PoisonValue::get(VTy);
-    Value *Right = PoisonValue::get(VTy);
-
+    // Create multiple legal small ldN.
+    SmallVector<Value *, 4> ExtractedLdValues(Factor, PoisonValue::get(VTy));
     for (unsigned I = 0; I < NumLoads; ++I) {
       Value *Offset = Builder.getInt64(I * Factor);
 
@@ -17254,40 +17501,96 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LdN = Builder.CreateCall(LdNFunc, {Pred, Address}, "ldN");
       else
         LdN = Builder.CreateCall(LdNFunc, Address, "ldN");
-
       Value *Idx =
           Builder.getInt64(I * LdTy->getElementCount().getKnownMinValue());
-      Left = Builder.CreateInsertVector(
-          VTy, Left, Builder.CreateExtractValue(LdN, 0), Idx);
-      Right = Builder.CreateInsertVector(
-          VTy, Right, Builder.CreateExtractValue(LdN, 1), Idx);
+      for (unsigned J = 0; J < Factor; ++J) {
+        ExtractedLdValues[J] = Builder.CreateInsertVector(
+            VTy, ExtractedLdValues[J], Builder.CreateExtractValue(LdN, J), Idx);
+      }
+      LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
-
-    Result = PoisonValue::get(DI->getType());
-    Result = Builder.CreateInsertValue(Result, Left, 0);
-    Result = Builder.CreateInsertValue(Result, Right, 1);
+    // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
+    for (unsigned J = 0; J < Factor; ++J)
+      DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
   } else {
+    Value *Result;
     if (UseScalable)
       Result = Builder.CreateCall(LdNFunc, {Pred, BaseAddr}, "ldN");
     else
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
+    // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
+    for (unsigned I = 0; I < Factor; I++) {
+      Value *NewExtract = Builder.CreateExtractValue(Result, I);
+      DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+    }
   }
-
-  DI->replaceAllUsesWith(Result);
+  DeadInsts.insert(DeadInsts.end(), DeInterleaveDeadInsts.begin(),
+                   DeInterleaveDeadInsts.end());
   return true;
 }
 
+/*
+InterleaveIntrinsic tree.
+          A    C         B    D
+           \  /           \  /
+           [II]           [II]
+                 \     /
+                  [II]
+
+values in correct order of interleave4: A B C D.
+Returns true if `II` is the root of an IR tree that represents a theoretical
+vector.interleave4 intrinsic. When true is returned, \p `InterleavedValues`
+vector is populated with the inputs such an intrinsic would take: (i.e.
+vector.interleave4(A, B, C, D)).
+*/
+bool getValuesToInterleave(
+    Value *II, SmallVectorImpl<Value *> &InterleavedValues,
+    SmallVectorImpl<Instruction *> &InterleaveDeadInsts) {
+  Value *A, *B, *C, *D;
+  // Try to match interleave of Factor 4
+  if (match(II, m_Interleave2(m_Interleave2(m_Value(A), m_Value(C)),
+                              m_Interleave2(m_Value(B), m_Value(D))))) {
+    InterleavedValues.push_back(A);
+    InterleavedValues.push_back(B);
+    InterleavedValues.push_back(C);
+    InterleavedValues.push_back(D);
+    // intermediate II will not be needed anymore
+    InterleaveDeadInsts.push_back(
+        cast<Instruction>(cast<Instruction>(II)->getOperand(0)));
+    InterleaveDeadInsts.push_back(
+        cast<Instruction>(cast<Instruction>(II)->getOperand(1)));
+    return true;
+  }
+
+  // Try to match interleave of Factor 2
+  if (match(II, m_Interleave2(m_Value(A), m_Value(B)))) {
+    InterleavedValues.push_back(A);
+    InterleavedValues.push_back(B);
+    return true;
+  }
+
+  return false;
+}
+
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI) const {
+    IntrinsicInst *II, StoreInst *SI,
+    SmallVectorImpl<Instruction *> &DeadInsts) const {
   // Only interleave2 supported at present.
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
-  // Only a factor of 2 supported at present.
-  const unsigned Factor = 2;
+  SmallVector<Value *, 4> InterleavedValues;
+  SmallVector<Instruction *, 2> InterleaveDeadInsts;
+  if (!getValuesToInterleave(II, InterleavedValues, InterleaveDeadInsts)) {
+    LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
+    return false;
+  }
+  unsigned Factor = InterleavedValues.size();
+  assert((Factor == 2 || Factor == 4) &&
+         "Currently supported Factor is 2 or 4 only");
+  VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
+  const DataLayout &DL = II->getModule()->getDataLayout();
 
-  VectorType *VTy = cast<VectorType>(II->getOperand(0)->getType());
-  const DataLayout &DL = II->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -17316,27 +17619,28 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     Pred =
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
-  Value *L = II->getOperand(0);
-  Value *R = II->getOperand(1);
-
+  auto ExtractedValues = InterleavedValues;
+  if (UseScalable)
+    InterleavedValues.push_back(Pred);
+  InterleavedValues.push_back(BaseAddr);
   for (unsigned I = 0; I < NumStores; ++I) {
     Value *Address = BaseAddr;
     if (NumStores > 1) {
       Value *Offset = Builder.getInt64(I * Factor);
       Address = Builder.CreateGEP(StTy, BaseAddr, {Offset});
-
       Value *Idx =
           Builder.getInt64(I * StTy->getElementCount().getKnownMinValue());
-      L = Builder.CreateExtractVector(StTy, II->getOperand(0), Idx);
-      R = Builder.CreateExtractVector(StTy, II->getOperand(1), Idx);
+      for (unsigned J = 0; J < Factor; J++) {
+        InterleavedValues[J] =
+            Builder.CreateExtractVector(StTy, ExtractedValues[J], Idx);
+      }
+      // update the address
+      InterleavedValues[InterleavedValues.size() - 1] = Address;
     }
-
-    if (UseScalable)
-      Builder.CreateCall(StNFunc, {L, R, Pred, Address});
-    else
-      Builder.CreateCall(StNFunc, {L, R, Address});
+    Builder.CreateCall(StNFunc, InterleavedValues);
   }
-
+  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(),
+                   InterleaveDeadInsts.end());
   return true;
 }
 
@@ -26376,6 +26680,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::VECREDUCE_UMIN:
     Results.push_back(LowerVECREDUCE(SDValue(N, 0), DAG));
     return;
+  case ISD::VECTOR_COMPRESS:
+    if (SDValue Res = LowerVECTOR_COMPRESS(SDValue(N, 0), DAG))
+      Results.push_back(Res);
+    return;
   case ISD::ADD:
   case ISD::FADD:
     ReplaceAddWithADDP(N, Results, DAG, Subtarget);
@@ -28924,6 +29232,18 @@ bool AArch64TargetLowering::hasInlineStackProbe(
     const MachineFunction &MF) const {
   return !Subtarget->isTargetWindows() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
+}
+
+bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
+  switch (Opc) {
+  case ISD::TRUNCATE_SSAT_S:
+  case ISD::TRUNCATE_SSAT_U:
+  case ISD::TRUNCATE_USAT_U:
+    if (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)
+      return true;
+  }
+
+  return TargetLowering::isTypeDesirableForOp(Opc, VT);
 }
 
 #ifndef NDEBUG
