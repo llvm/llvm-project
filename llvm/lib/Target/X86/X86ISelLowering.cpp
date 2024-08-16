@@ -608,6 +608,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMAXNUM, VT, Action);
     setOperationAction(ISD::FMINIMUM, VT, Action);
     setOperationAction(ISD::FMAXIMUM, VT, Action);
+    setOperationAction(ISD::FCANONICALIZE, VT, Action);
     setOperationAction(ISD::FSIN, VT, Action);
     setOperationAction(ISD::FCOS, VT, Action);
     setOperationAction(ISD::FSINCOS, VT, Action);
@@ -668,6 +669,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
+
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
     }
 
     // Half type will be promoted by default.

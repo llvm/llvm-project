@@ -8622,8 +8622,16 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // If MinMax is NaN, let's quiet it.
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
       !DAG.isKnownNeverNaN(RHS)) {
-    SDValue MinMaxQuiet =
-        DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
+    SDValue MinMaxQuiet;
+    if (isOperationLegalOrCustom(ISD::FCANONICALIZE, VT)) {
+      MinMaxQuiet = DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
+    } else {
+      // MIPS pre-R5 and HPPA use different encoding of qNaN and sNaN.
+      // ISD::FCANONICALIZE is supported by MIPS.
+      // HPPA is not supported by LLVM yet.
+      MinMaxQuiet =
+          DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()), DL, VT);
+    }
     MinMax =
         DAG.getSelectCC(DL, MinMax, MinMax, MinMaxQuiet, MinMax, ISD::SETUO);
   }
