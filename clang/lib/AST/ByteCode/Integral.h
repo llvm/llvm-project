@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTEGRAL_H
 #define LLVM_CLANG_AST_INTERP_INTEGRAL_H
 
-#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/APValue.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,14 +33,30 @@ template <bool Signed> class IntegralAP;
 
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
-template <> struct Repr<8, false> { using Type = uint8_t; };
-template <> struct Repr<16, false> { using Type = uint16_t; };
-template <> struct Repr<32, false> { using Type = uint32_t; };
-template <> struct Repr<64, false> { using Type = uint64_t; };
-template <> struct Repr<8, true> { using Type = int8_t; };
-template <> struct Repr<16, true> { using Type = int16_t; };
-template <> struct Repr<32, true> { using Type = int32_t; };
-template <> struct Repr<64, true> { using Type = int64_t; };
+template <> struct Repr<8, false> {
+  using Type = uint8_t;
+};
+template <> struct Repr<16, false> {
+  using Type = uint16_t;
+};
+template <> struct Repr<32, false> {
+  using Type = uint32_t;
+};
+template <> struct Repr<64, false> {
+  using Type = uint64_t;
+};
+template <> struct Repr<8, true> {
+  using Type = int8_t;
+};
+template <> struct Repr<16, true> {
+  using Type = int16_t;
+};
+template <> struct Repr<32, true> {
+  using Type = int32_t;
+};
+template <> struct Repr<64, true> {
+  using Type = int64_t;
+};
 
 /// Wrapper around numeric types.
 ///
@@ -159,12 +175,8 @@ public:
 
   void print(llvm::raw_ostream &OS) const { OS << V; }
 
-  static Integral min(unsigned NumBits) {
-    return Integral(Min);
-  }
-  static Integral max(unsigned NumBits) {
-    return Integral(Max);
-  }
+  static Integral min(unsigned NumBits) { return Integral(Min); }
+  static Integral max(unsigned NumBits) { return Integral(Max); }
 
   template <typename ValT> static Integral from(ValT Value) {
     if constexpr (std::is_integral<ValT>::value)

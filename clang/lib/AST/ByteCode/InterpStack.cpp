@@ -18,9 +18,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpStack::~InterpStack() {
-  clear();
-}
+InterpStack::~InterpStack() { clear(); }
 
 void InterpStack::clear() {
   if (Chunk && Chunk->Next)
