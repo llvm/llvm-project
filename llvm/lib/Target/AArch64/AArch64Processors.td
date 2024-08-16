@@ -988,6 +988,7 @@ def ProcessorFeatures {
                                     FeatureSHA2, FeatureSHA3, FeatureAES,
                                     FeatureFullFP16, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                     FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8, FeatureJS,
+                                    FeatureCCIDX,
                                     FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> Ampere1A = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
@@ -996,6 +997,7 @@ def ProcessorFeatures {
                                      FeatureFullFP16, FeatureBF16, FeatureComplxNum,
                                      FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
+                                     FeatureCCIDX,
                                      FeatureRDM];
   list<SubtargetFeature> Ampere1B = [HasV8_7aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
@@ -1004,6 +1006,7 @@ def ProcessorFeatures {
                                      FeatureWFxT, FeatureFullFP16, FeatureBF16, FeatureComplxNum,
                                      FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
+                                     FeatureCCIDX,
                                      FeatureRDM];
 
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
@@ -1012,6 +1015,7 @@ def ProcessorFeatures {
                                      FeatureSHA3, FeatureAES,
                                      FeatureSPE, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
+                                     FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
