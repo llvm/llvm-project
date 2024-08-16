@@ -2194,6 +2194,7 @@ def BPFFastCall : InheritableAttr,
   let Spellings = [Clang<"bpf_fastcall">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [BPFFastCallDocs];
+  let LangOpts = [COnly];
   let SimpleHandler = 1;
 }
 
