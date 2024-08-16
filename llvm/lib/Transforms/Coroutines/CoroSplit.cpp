@@ -1219,11 +1219,10 @@ static void postSplitCleanup(Function &F) {
 // frame if possible.
 static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
-  auto *CoroId = CoroBegin->getId();
-  auto *AllocInst = CoroId->getCoroAlloc();
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = cast<CoroIdInst>(CoroId);
+    auto SwitchId = Shape.getSwitchCoroId();
+    auto *AllocInst = SwitchId->getCoroAlloc();
     coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
     if (AllocInst) {
       IRBuilder<> Builder(AllocInst);
@@ -1687,7 +1686,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   auto &Context = F.getContext();
   auto *Int8PtrTy = PointerType::getUnqual(Context);
 
-  auto *Id = cast<CoroIdAsyncInst>(Shape.CoroBegin->getId());
+  auto *Id = Shape.getAsyncCoroId();
   IRBuilder<> Builder(Id);
 
   auto *FramePtr = Id->getStorage();
@@ -1781,7 +1780,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
-  auto *Id = cast<AnyCoroIdRetconInst>(Shape.CoroBegin->getId());
+  auto *Id = Shape.getRetconCoroId();
   Value *RawFramePtr;
   if (Shape.RetconLowering.IsFrameInlineInStorage) {
     RawFramePtr = Id->getStorage();
