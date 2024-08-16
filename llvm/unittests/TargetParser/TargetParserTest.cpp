@@ -1228,18 +1228,18 @@ INSTANTIATE_TEST_SUITE_P(
              AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "cortex-a78", "armv8.2-a",
-            {AArch64::AEK_CRC, AArch64::AEK_AES,
-             AArch64::AEK_SHA2, AArch64::AEK_FP, AArch64::AEK_RDM,
-             AArch64::AEK_SIMD, AArch64::AEK_RAS, AArch64::AEK_LSE,
-             AArch64::AEK_FP16, AArch64::AEK_DOTPROD, AArch64::AEK_RCPC,
-             AArch64::AEK_SSBS, AArch64::AEK_PROFILE, AArch64::AEK_PERFMON}),
+            {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
+             AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
+             AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
+             AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
+             AArch64::AEK_PROFILE, AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "cortex-a78ae", "armv8.2-a",
-            {AArch64::AEK_CRC, AArch64::AEK_AES,
-             AArch64::AEK_SHA2, AArch64::AEK_FP, AArch64::AEK_RDM,
-             AArch64::AEK_SIMD, AArch64::AEK_RAS, AArch64::AEK_LSE,
-             AArch64::AEK_FP16, AArch64::AEK_DOTPROD, AArch64::AEK_RCPC,
-             AArch64::AEK_SSBS, AArch64::AEK_PROFILE, AArch64::AEK_PERFMON}),
+            {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
+             AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
+             AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
+             AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
+             AArch64::AEK_PROFILE, AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "cortex-a78c", "armv8.2-a",
             {AArch64::AEK_RAS, AArch64::AEK_CRC, AArch64::AEK_AES,
@@ -2263,9 +2263,9 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
 }
 
 TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
-  std::string expected =
-      "All available -march extensions for AArch64\n\n"
-      "    Name                Architecture Feature(s)                                Description\n";
+  std::string expected = "All available -march extensions for AArch64\n\n"
+                         "    Name                Architecture Feature(s)      "
+                         "                          Description\n";
 
   outs().flush();
   testing::internal::CaptureStdout();
