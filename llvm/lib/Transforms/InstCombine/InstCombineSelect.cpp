@@ -3562,7 +3562,7 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
 //   (x < y) ? -1 : zext(x != y)
 //   (x > y) ? 1 : sext(x != y)
 // Into ucmp/scmp(x, y), where signedness is determined by the signedness
-// of the comparison in the original sequence
+// of the comparison in the original sequence.
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
   Value *TV = SI.getTrueValue();
   Value *FV = SI.getFalseValue();
@@ -3580,7 +3580,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
   // constant inside select to determine if swapping operands would be
   // beneficial to us.
   if ((ICmpInst::isGT(Pred) && match(TV, m_AllOnes())) ||
-      (ICmpInst::isLT(Pred) && match(TV, m_One())) || ICmpInst::isLE(Pred)) {
+      (ICmpInst::isLT(Pred) && match(TV, m_One()))) {
     Pred = ICmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
   }
