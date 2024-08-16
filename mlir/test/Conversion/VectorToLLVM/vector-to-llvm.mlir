@@ -1284,7 +1284,7 @@ func.func @insertelement_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<
 
 // -----
 
-func.func @insert_element_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
+func.func @insertelement_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
   %0 = arith.constant 3 : index
   %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<4xf32>
   return %1 : vector<4xf32>
