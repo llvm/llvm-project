@@ -511,26 +511,54 @@ define double @test_atomicrmw_fmax_f32_seq_cst_align8(ptr %ptr, double %value) #
 define fp128 @test_atomicrmw_fmax_fp128_seq_cst_align16(ptr %ptr, fp128 %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fmax_fp128_seq_cst_align16:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    sub sp, sp, #80
-; NOLSE-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; NOLSE-NEXT:    sub sp, sp, #96
+; NOLSE-NEXT:    ldr q1, [x0]
+; NOLSE-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; NOLSE-NEXT:    mov x19, x0
-; NOLSE-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; NOLSE-NEXT:  .LBB6_1: // %atomicrmw.start
-; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOLSE-NEXT:    ldaxp x8, x9, [x19]
-; NOLSE-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; NOLSE-NEXT:    stp x8, x9, [sp, #48]
-; NOLSE-NEXT:    ldr q0, [sp, #48]
 ; NOLSE-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NOLSE-NEXT:    b .LBB6_2
+; NOLSE-NEXT:  .LBB6_1: // %atomicrmw.start
+; NOLSE-NEXT:    // in Loop: Header=BB6_2 Depth=1
+; NOLSE-NEXT:    stp x12, x13, [sp, #32]
+; NOLSE-NEXT:    cmp x13, x10
+; NOLSE-NEXT:    ldr q1, [sp, #32]
+; NOLSE-NEXT:    ccmp x12, x11, #0, eq
+; NOLSE-NEXT:    b.eq .LBB6_6
+; NOLSE-NEXT:  .LBB6_2: // %atomicrmw.start
+; NOLSE-NEXT:    // =>This Loop Header: Depth=1
+; NOLSE-NEXT:    // Child Loop BB6_3 Depth 2
+; NOLSE-NEXT:    mov v0.16b, v1.16b
+; NOLSE-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; NOLSE-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; NOLSE-NEXT:    bl fmaxl
-; NOLSE-NEXT:    str q0, [sp, #32]
-; NOLSE-NEXT:    ldp x9, x8, [sp, #32]
-; NOLSE-NEXT:    stlxp w10, x9, x8, [x19]
-; NOLSE-NEXT:    cbnz w10, .LBB6_1
-; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
-; NOLSE-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; NOLSE-NEXT:    add sp, sp, #80
+; NOLSE-NEXT:    str q0, [sp, #48]
+; NOLSE-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; NOLSE-NEXT:    ldp x9, x8, [sp, #48]
+; NOLSE-NEXT:    str q0, [sp, #64]
+; NOLSE-NEXT:    ldp x11, x10, [sp, #64]
+; NOLSE-NEXT:  .LBB6_3: // %atomicrmw.start
+; NOLSE-NEXT:    // Parent Loop BB6_2 Depth=1
+; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
+; NOLSE-NEXT:    ldaxp x12, x13, [x19]
+; NOLSE-NEXT:    cmp x12, x11
+; NOLSE-NEXT:    cset w14, ne
+; NOLSE-NEXT:    cmp x13, x10
+; NOLSE-NEXT:    cinc w14, w14, ne
+; NOLSE-NEXT:    cbz w14, .LBB6_5
+; NOLSE-NEXT:  // %bb.4: // %atomicrmw.start
+; NOLSE-NEXT:    // in Loop: Header=BB6_3 Depth=2
+; NOLSE-NEXT:    stlxp w14, x12, x13, [x19]
+; NOLSE-NEXT:    cbnz w14, .LBB6_3
+; NOLSE-NEXT:    b .LBB6_1
+; NOLSE-NEXT:  .LBB6_5: // %atomicrmw.start
+; NOLSE-NEXT:    // in Loop: Header=BB6_3 Depth=2
+; NOLSE-NEXT:    stlxp w14, x9, x8, [x19]
+; NOLSE-NEXT:    cbnz w14, .LBB6_3
+; NOLSE-NEXT:    b .LBB6_1
+; NOLSE-NEXT:  .LBB6_6: // %atomicrmw.end
+; NOLSE-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; NOLSE-NEXT:    mov v0.16b, v1.16b
+; NOLSE-NEXT:    add sp, sp, #96
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmax_fp128_seq_cst_align16:
