@@ -182,8 +182,8 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
       R << ", '" << Inst.getOpcodeName() << "' instruction";
     }
     if (!Inst.getType()->isVoidTy()) {
-      std::string Name;
-      raw_string_ostream OS(Name);
+      SmallString<20> Name;
+      raw_svector_ostream OS(Name);
       Inst.printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
       R << " ('" << Name << "')";
     }
