@@ -121,8 +121,8 @@ void test_div() {
     check([](int       n, int       k) { return std::div(  n, k); });
     check([](long      n, long      k) { return std::div(  n, k); });
     check([](long long n, long long k) { return std::div(  n, k); });
-    // check([](long      n, long      k) { return std::ldiv( n, k); });
-    // check([](long long n, long long k) { return std::lldiv(n, k); });
+    check([](long      n, long      k) { return std::ldiv( n, k); });
+    check([](long long n, long long k) { return std::lldiv(n, k); });
     // clang-format on
   }
 }

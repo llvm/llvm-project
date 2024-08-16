@@ -146,12 +146,11 @@ using ::quick_exit _LIBCPP_USING_IF_EXISTS;
 using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
 #endif
 
-using ::ldiv _LIBCPP_USING_IF_EXISTS;
-using ::lldiv _LIBCPP_USING_IF_EXISTS;
-
 #if _LIBCPP_STD_VER < 23
 // use non-constexpr versions from libc
 using ::div _LIBCPP_USING_IF_EXISTS;
+using ::ldiv _LIBCPP_USING_IF_EXISTS;
+using ::lldiv _LIBCPP_USING_IF_EXISTS;
 
 #else  // _LIBCPP_STD_VER >= 23
 
@@ -174,6 +173,15 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr ldiv_t div(long __x, long __y) {
 inline _LIBCPP_HIDE_FROM_ABI constexpr lldiv_t div(long long __x,
                                                    long long __y) {
   return std::__div<std::lldiv_t>(__x, __y);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr ldiv_t ldiv(long __x, long __y) {
+  return std::div(__x, __y);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI constexpr lldiv_t lldiv(long long __x,
+                                                     long long __y) {
+  return std::div(__x, __y);
 }
 
 #endif  // _LIBCPP_STD_VER
