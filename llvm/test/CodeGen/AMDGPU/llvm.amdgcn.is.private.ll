@@ -64,9 +64,7 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX1210-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_mov_b32 s0, src_flat_scratch_base_hi
-; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    v_xor_b32_e32 v0, s0, v1
+; GFX1210-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x4000000, v0
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -186,10 +184,8 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1210-SDAG-LABEL: is_private_sgpr:
 ; GFX1210-SDAG:       ; %bb.0:
 ; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x4
-; GFX1210-SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_hi
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX1210-SDAG-NEXT:    s_xor_b32 s0, s0, s1
+; GFX1210-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_cmp_lt_u32 s0, 0x4000000
 ; GFX1210-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
@@ -264,9 +260,7 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-GISEL-NEXT:    s_mov_b32 s0, src_flat_scratch_base_hi
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_xor_b32 s0, s1, s0
+; GFX1210-GISEL-NEXT:    s_xor_b32 s0, s1, src_flat_scratch_base_hi
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_cmp_ge_u32 s0, 0x4000000
 ; GFX1210-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
