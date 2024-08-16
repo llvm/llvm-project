@@ -80,21 +80,43 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
         Defs[&I].insert(cast<Value>(&I));
 
       // For normal instructions we just iterate over all operands and mark
-      // them as used. We can't do this for PHI nodes though, since depending
-      // on the control flow (i.e. which block we are coming from) only one of
-      // the operands is used at a time. For example:
+      // them as used. We can't do this for PHI nodes though, since this can
+      // cause liveness of a variable to flow backwards into places it
+      // shouldn't.
       //
-      //   phi [%1, bb1], [%2, bb2], [%3, bb3]
+      // Consider the case where we have a PHI node which merges SSA variables
+      // defined inside its direct predecessor blocks:
       //
-      // Here, when the previous block was bb1, then only %1 is used, %2 if we
-      // come from bb2, and so on.
+      //                 ┌─bb1─────┐       ┌─bb2──────┐
+      //                 │ %3 = ...│       │ %4 = ... │
+      //                 │ ...     │       │ ...      │
+      //                 └┬────────┘       └─────────┬┘
+      //                  │                          │
+      //                  │                          │
+      //                  │   ┌─bb3─────────────┐    │
+      //                  │   │   %5 = phi(     │    │
+      //                  └──►│     bb1 -> %3,  │◄───┘
+      //                      │     bb2 -> %4   │
+      //                      │   )             │
+      //                      └─────────────────┘
       //
-      // The next problem is that we can't mark the operand as used in the
-      // current block, since that use would perculate upwards when looking at
-      // the predecessor blocks, and thus consider the operand used in blocks
-      // where it isn't. Instead, we want to mark the operand as used
-      // only in the predecssor block: %1 is marked as used at the end of bb1,
-      // %2 at the end of bb2, and so on.
+      // The algorithm works by backwards propagating liveness from variable
+      // use sites until their definition sites (where their liveness is
+      // "killed"). If we naively consider the above PHI node as a use-site of
+      // %3 and %4, then the liveness analysis will backward propagate their
+      // liveness up into *all* predecessor blocks. For example, %4 flows up
+      // into bb1 even though %4 is never live there! Further, because there's
+      // no definition of %4 in bb1 to kill it, the analysis will continue to
+      // backwards propagate %4 into predecessors of bb1. The same happens for
+      // %3 in bb2 and it's predecessors. This would obviously be incorrect.
+      //
+      // To solve this, we don't consider a PHI node a use of the variables it
+      // merges. Instead we say that the last instruction of a PHI predecessor
+      // block is a use-site of the variable being merged.
+      //
+      // So in the above example:
+      //  - the last instruction of bb1 is a use-site of %3.
+      //  - the last instruction of bb2 is a use-site of %4.
       //
       // The book doesn't cover this quirk, as it explains liveness for
       // non-SSA form, and thus doesn't need to worry about Phi nodes.
