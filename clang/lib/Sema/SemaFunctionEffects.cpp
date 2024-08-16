@@ -549,7 +549,7 @@ private:
     if (ArrayRef<Violation> Viols =
             Pending.getSortedViolationsForExplicitEffects(S.getSourceManager());
         !Viols.empty())
-      emitDiagnostics(Viols, CInfo, S);
+      emitDiagnostics(Viols, CInfo);
 
     CompleteFunctionAnalysis *CompletePtr = new CompleteFunctionAnalysis(
         S.getASTContext(), std::move(Pending), CInfo.Effects,
@@ -644,8 +644,7 @@ private:
 
   // Should only be called when function's analysis is determined to be
   // complete.
-  void emitDiagnostics(ArrayRef<Violation> Viols, const CallableInfo &CInfo,
-                       Sema &S) {
+  void emitDiagnostics(ArrayRef<Violation> Viols, const CallableInfo &CInfo) {
     if (Viols.empty())
       return;
 
