@@ -425,6 +425,8 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
     GUID2FuncDescMap.emplace_back(GUID, Hash, Name.copy(FuncNameAllocator));
   }
   assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
+  assert(GUID2FuncDescMap.size() == FuncDescCount &&
+         "Mismatching function description count pre- and post-parsing");
   llvm::sort(GUID2FuncDescMap, [](const auto &LHS, const auto &RHS) {
     return LHS.FuncGUID < RHS.FuncGUID;
   });
