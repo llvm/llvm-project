@@ -192,6 +192,10 @@ TargetStats::ToJSON(Target &target,
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
+  target_metrics_json.try_emplace("sourceRealpathAttemptCount",
+                                  m_source_realpath_attempt_count);
+  target_metrics_json.try_emplace("sourceRealpathCompatibleCount",
+                                  m_source_realpath_compatible_count);
   return target_metrics_json;
 }
 
@@ -218,6 +222,14 @@ void TargetStats::SetFirstPublicStopTime() {
 
 void TargetStats::IncreaseSourceMapDeduceCount() {
   ++m_source_map_deduce_count;
+}
+
+void TargetStats::IncreaseSourceRealpathAttemptCount(uint32_t count) {
+  m_source_realpath_attempt_count += count;
+}
+
+void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
+  m_source_realpath_compatible_count += count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;
