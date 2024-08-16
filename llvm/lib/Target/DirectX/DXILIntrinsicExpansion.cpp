@@ -64,9 +64,8 @@ static Value *expandAbs(CallInst *Orig) {
                              ConstantInt::get(EltTy, 0))
                        : ConstantInt::get(EltTy, 0);
   auto *V = Builder.CreateSub(Zero, X);
-  auto *MaxCall =
-      Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr, "dx.max");
-  return MaxCall;
+  return Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr,
+                                 "dx.max");
 }
 
 static Value *expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
