@@ -1136,6 +1136,8 @@ void CodeGenModule::Release() {
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
+    if (CodeGenOpts.SanitizeCfiICallNormalizeIntegers)
+      getModule().addModuleFlag(llvm::Module::Override, "kcfi-normalized", 1);
     // KCFI assumes patchable-function-prefix is the same for all indirectly
     // called functions. Store the expected offset for code generation.
     if (CodeGenOpts.PatchableFunctionEntryOffset)
