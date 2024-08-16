@@ -277,8 +277,7 @@ static Error createSpecFormatError(Twine Format) {
                            Format + "\"");
 }
 
-/// Attempts to parse an address space component of a specification,
-/// commonly referred to as <n> or <address space>.
+/// Attempts to parse an address space component of a specification.
 static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
   if (Str.empty())
     return createStringError("address space component cannot be empty");
