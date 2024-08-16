@@ -83,10 +83,8 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
                                      Loop *L) {
   // Check to see if NewBB is already well placed.
   Function::iterator BBI = --NewBB->getIterator();
-  for (BasicBlock *Pred : SplitPreds) {
-    if (&*BBI == Pred)
-      return;
-  }
+  if (llvm::is_contained(SplitPreds, &*BBI))
+    return;
 
   // If it isn't already after an outside block, move it after one.  This is
   // always good as it makes the uncond branch from the outside block into a

@@ -460,7 +460,7 @@ static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
     LLVMContext &Ctx = LI->getContext();
     new StoreInst(ConstantInt::getTrue(Ctx),
                   PoisonValue::get(PointerType::getUnqual(Ctx)),
-                  /*isVolatile=*/false, Align(1), LI);
+                  /*isVolatile=*/false, Align(1), LI->getIterator());
     return;
   }
 

@@ -203,6 +203,29 @@ def to_valid_timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
 }]>;
 
+// FP immediate of VLDI patterns.
+def f32imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f32);
+}]>;
+def f64imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f64);
+}]>;
+
+def to_f32imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+}]>;
+def to_f64imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -663,7 +686,9 @@ def VMSKGEZ_B : LSX2R_VV<0x729c5000>;
 
 def VMSKNZ_B : LSX2R_VV<0x729c6000>;
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def VLDI : LSX1RI13_VI<0x73e00000>;
+}
 
 def VAND_V : LSX3R_VVV<0x71260000>;
 def VOR_V : LSX3R_VVV<0x71268000>;
@@ -1909,6 +1934,12 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+
+// Vector loads floating-point constants
+def : Pat<(f32 f32imm_vldi:$in),
+          (f32 (EXTRACT_SUBREG (VLDI (to_f32imm_vldi f32imm_vldi:$in)), sub_32))>;
+def : Pat<(f64 f64imm_vldi:$in),
+          (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
 } // Predicates = [HasExtLSX]
 

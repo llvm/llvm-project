@@ -5507,11 +5507,8 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   std::optional<DerivedTypeSpec> extendsType{
       ResolveExtendsType(name, extendsName)};
   DerivedTypeDetails derivedTypeDetails;
-  if (Symbol * typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
-      typeSymbol->has<DerivedTypeDetails>() &&
-      typeSymbol->get<DerivedTypeDetails>().isForwardReferenced()) {
-    derivedTypeDetails.set_isForwardReferenced(true);
-  }
+  // Catch any premature structure constructors within the definition
+  derivedTypeDetails.set_isForwardReferenced(true);
   auto &symbol{MakeSymbol(name, GetAttrs(), std::move(derivedTypeDetails))};
   symbol.ReplaceName(name.source);
   derivedTypeInfo_.type = &symbol;
@@ -9235,7 +9232,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       node.GetKind() == ProgramTree::Kind::Submodule};
   for (auto &pair : *node.scope()) {
     Symbol &symbol{*pair.second};
-    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
+    if (inModule && symbol.attrs().test(Attr::EXTERNAL) && !IsPointer(symbol) &&
         !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine)) {
       // in a module, external proc without return type is subroutine

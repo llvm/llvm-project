@@ -335,6 +335,48 @@ def INT_FENCE_SC_CLUSTER:
        MEMBAR<"fence.sc.cluster;", int_nvvm_fence_sc_cluster>,
        Requires<[hasPTX<78>, hasSM<90>]>;
 
+// Proxy fence (uni-directional)
+// fence.proxy.tensormap.release variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins),
+                  "fence.proxy.tensormap::generic.release." # Scope # ";", [(Intr)]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CTA:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_release_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CLUSTER:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_release_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_GPU:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_release_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_SYS:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_release_sys>;
+
+// fence.proxy.tensormap.acquire variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins Int64Regs:$addr),
+                  "fence.proxy.tensormap::generic.acquire." # Scope # " [$addr], 128;",
+                  [(Intr Int64Regs:$addr, (i32 128))]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CTA :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CLUSTER :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_GPU :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_SYS :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_sys>;
+
 //-----------------------------------
 // Async Copy Functions
 //-----------------------------------

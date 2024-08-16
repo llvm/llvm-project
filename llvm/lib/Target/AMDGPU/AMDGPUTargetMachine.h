@@ -38,6 +38,7 @@ public:
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
   static bool DisableStructurizer;
+  static bool EnableStructurizerWorkarounds;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
@@ -51,12 +52,6 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
-                             CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
@@ -102,6 +97,12 @@ public:
   bool useIPRA() const override {
     return true;
   }
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 

@@ -740,6 +740,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
 
+  Tokens = annotate("func((void (*)())&a);");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_UnaryOperator);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
@@ -3209,6 +3216,17 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[17], BK_Block);
   EXPECT_BRACE_KIND(Tokens[22], BK_Block);
   EXPECT_BRACE_KIND(Tokens[26], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "#define M(x) \\\n"
+                    "  return {#x};\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

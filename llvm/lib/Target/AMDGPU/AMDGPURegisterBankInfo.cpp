@@ -3739,17 +3739,28 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (MI.isCopy() || MI.getOpcode() == AMDGPU::G_FREEZE) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+
     // The default logic bothers to analyze impossible alternative mappings. We
     // want the most straightforward mapping, so just directly handle this.
-    const RegisterBank *DstBank = getRegBank(MI.getOperand(0).getReg(), MRI,
-                                             *TRI);
-    const RegisterBank *SrcBank = getRegBank(MI.getOperand(1).getReg(), MRI,
-                                             *TRI);
+    const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI);
+    const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
     assert(SrcBank && "src bank should have been assigned already");
+
+    // For COPY between a physical reg and an s1, there is no type associated so
+    // we need to take the virtual register's type as a hint on how to interpret
+    // s1 values.
+    if (!SrcReg.isVirtual() && !DstBank &&
+        MRI.getType(DstReg) == LLT::scalar(1))
+      DstBank = &AMDGPU::VCCRegBank;
+    else if (!DstReg.isVirtual() && MRI.getType(SrcReg) == LLT::scalar(1))
+      DstBank = &AMDGPU::VCCRegBank;
+
     if (!DstBank)
       DstBank = SrcBank;
 
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    unsigned Size = getSizeInBits(DstReg, MRI, *TRI);
     if (MI.getOpcode() != AMDGPU::G_FREEZE &&
         cannotCopy(*DstBank, *SrcBank, TypeSize::getFixed(Size)))
       return getInvalidInstructionMapping();

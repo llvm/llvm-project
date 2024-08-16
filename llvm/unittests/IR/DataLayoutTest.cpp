@@ -19,6 +19,142 @@ using namespace llvm;
 
 namespace {
 
+// TODO: Split into multiple TESTs.
+TEST(DataLayoutTest, ParseErrors) {
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("^"),
+      FailedWithMessage("Unknown specifier in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("m:v"),
+      FailedWithMessage("Unknown mangling in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("n0"),
+      FailedWithMessage("Zero width native integer type in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p16777216:64:64:64"),
+      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("a1:64"),
+      FailedWithMessage("Sized aggregate specification in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("a:"),
+      FailedWithMessage("Trailing separator in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:48:52"),
+      FailedWithMessage("number of bits must be a byte width multiple"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("e-p"),
+      FailedWithMessage(
+          "Missing size specification for pointer in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("e-p:64"),
+      FailedWithMessage(
+          "Missing alignment specification for pointer in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("m"),
+      FailedWithMessage("Expected mangling specifier in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("m."),
+      FailedWithMessage("Unexpected trailing characters after mangling "
+                        "specifier in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("f"),
+      FailedWithMessage(
+          "Missing alignment specification in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse(":32"),
+      FailedWithMessage(
+          "Expected token before separator in datalayout string"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i64:64:16"),
+      FailedWithMessage(
+          "Preferred alignment cannot be less than the ABI alignment"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i64:16:16777216"),
+      FailedWithMessage(
+          "Invalid preferred alignment, must be a 16bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i64:16777216:16777216"),
+      FailedWithMessage("Invalid ABI alignment, must be a 16bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i16777216:16:16"),
+      FailedWithMessage("Invalid bit width, must be a 24-bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:32:32:16"),
+      FailedWithMessage(
+          "Preferred alignment cannot be less than the ABI alignment"));
+  EXPECT_THAT_EXPECTED(DataLayout::parse("p:0:32:32"),
+                       FailedWithMessage("Invalid pointer size of 0 bytes"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:64:24:64"),
+      FailedWithMessage("Pointer ABI alignment must be a power of 2"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:64:64:24"),
+      FailedWithMessage("Pointer preferred alignment must be a power of 2"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:64:64:64:128"),
+      FailedWithMessage("Index width cannot be larger than pointer width"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("v128:0:128"),
+      FailedWithMessage(
+          "ABI alignment specification must be >0 for non-aggregate types"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i32:24:32"),
+      FailedWithMessage("Invalid ABI alignment, must be a power of 2"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i32:32:24"),
+      FailedWithMessage("Invalid preferred alignment, must be a power of 2"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("A16777216"),
+      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("G16777216"),
+      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("P16777216"),
+      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("Fi24"),
+      FailedWithMessage("Alignment is neither 0 nor a power of 2"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("i8:16"),
+      FailedWithMessage("Invalid ABI alignment, i8 must be naturally aligned"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("S24"),
+      FailedWithMessage("Alignment is neither 0 nor a power of 2"));
+}
+
+TEST(DataLayout, LayoutStringFormat) {
+  for (StringRef Str : {"", "e", "m:e", "m:e-e"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"-", "e-", "-m:e", "m:e--e"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("empty specification is not allowed"));
+}
+
+TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
+  DataLayout DL1 = cantFail(DataLayout::parse("p:32:32"));
+  DataLayout DL2 = cantFail(DataLayout::parse("p:64:64"));
+
+  LLVMContext Ctx;
+  StructType *Ty = StructType::get(PointerType::getUnqual(Ctx));
+
+  // Initialize struct layout caches.
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getSizeInBits(), 32U);
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getAlignment(), Align(4));
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getSizeInBits(), 64U);
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getAlignment(), Align(8));
+
+  // The copy should invalidate DL1's cache.
+  DL1 = DL2;
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getSizeInBits(), 64U);
+  EXPECT_EQ(DL1.getStructLayout(Ty)->getAlignment(), Align(8));
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getSizeInBits(), 64U);
+  EXPECT_EQ(DL2.getStructLayout(Ty)->getAlignment(), Align(8));
+}
+
 TEST(DataLayoutTest, FunctionPtrAlign) {
   EXPECT_EQ(MaybeAlign(0), DataLayout("").getFunctionPtrAlign());
   EXPECT_EQ(MaybeAlign(1), DataLayout("Fi8").getFunctionPtrAlign());

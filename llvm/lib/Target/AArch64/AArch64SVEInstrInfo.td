@@ -279,6 +279,10 @@ def AArch64fsub_m1 : PatFrags<(ops node:$pg, node:$op1, node:$op2), [
     (int_aarch64_sve_fsub node:$pg, node:$op1, node:$op2),
     (vselect node:$pg, (AArch64fsub_p (SVEAllActive), node:$op1, node:$op2), node:$op1)
 ]>;
+def AArch64fsubr_m1 : PatFrags<(ops node:$pg, node:$op1, node:$op2), [
+    (int_aarch64_sve_fsubr node:$pg, node:$op1, node:$op2),
+    (vselect node:$pg, (AArch64fsub_p (SVEAllActive), node:$op2, node:$op1), node:$op1)
+]>;
 
 def AArch64shadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                             [(int_aarch64_sve_shadd node:$pg, node:$op1, node:$op2),
@@ -423,6 +427,11 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
 
 def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
                           (sub node:$op2, node:$op1)>;
+
+def AArch64subr_m1 : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                              [(int_aarch64_sve_subr node:$pg, node:$op1, node:$op2),
+                               (vselect node:$pg, (sub node:$op2, node:$op1), node:$op1)]>;
+
 def AArch64mla_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mla node:$pred, node:$op1, node:$op2, node:$op3),
                               (vselect node:$pred, (add node:$op1, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)]>;
@@ -529,7 +538,7 @@ let Predicates = [HasSVEorSME] in {
 
   defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  "ADD_ZPZZ", AArch64add_m1, DestructiveBinaryComm>;
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  "SUB_ZPZZ", AArch64sub_m1, DestructiveBinaryCommWithRev, "SUBR_ZPmZ">;
-  defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", int_aarch64_sve_subr, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;
+  defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", AArch64subr_m1, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;
 
   defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", "ORR_ZPZZ", AArch64orr_m1, DestructiveBinaryComm>;
   defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", "EOR_ZPZZ", AArch64eor_m1, DestructiveBinaryComm>;
@@ -685,7 +694,7 @@ let Predicates = [HasSVEorSME] in {
   defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd", "FADD_ZPZZ", AArch64fadd_m1, DestructiveBinaryComm>;
   defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub", "FSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryCommWithRev, "FSUBR_ZPmZ">;
   defm FMUL_ZPmZ   : sve_fp_2op_p_zds<0b0010, "fmul", "FMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
-  defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr", "FSUBR_ZPZZ", int_aarch64_sve_fsubr, DestructiveBinaryCommWithRev, "FSUB_ZPmZ", /*isReverseInstr*/ 1>;
+  defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr", "FSUBR_ZPZZ", AArch64fsubr_m1, DestructiveBinaryCommWithRev, "FSUB_ZPmZ", /*isReverseInstr*/ 1>;
   defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm", "FMAXNM_ZPZZ", AArch64fmaxnm_m1, DestructiveBinaryComm>;
   defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm", "FMINNM_ZPZZ", AArch64fminnm_m1, DestructiveBinaryComm>;
   defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax", "FMAX_ZPZZ", AArch64fmax_m1, DestructiveBinaryComm>;
@@ -4101,7 +4110,7 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVE2orSME2, HasB16B16, UseExperimentalZeroingPseudos] in {
+let Predicates = [HasSVE2orSME2, HasSVEB16B16, UseExperimentalZeroingPseudos] in {
 defm BFADD_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fadd>;
 defm BFSUB_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fsub>;
 defm BFMUL_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmul>;
@@ -4109,9 +4118,9 @@ defm BFMAXNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmaxnm>;
 defm BFMINNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fminnm>;
 defm BFMIN_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmax>;
-} // HasSVE2orSME2, HasB16B16, UseExperimentalZeroingPseudos
+} // HasSVE2orSME2, HasSVEB16B16, UseExperimentalZeroingPseudos
 
-let Predicates = [HasSVE2orSME2, HasB16B16] in {
+let Predicates = [HasSVE2orSME2, HasSVEB16B16] in {
 
 defm BFMLA_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b00, "bfmla", "BFMLA_ZPZZZ", AArch64fmla_m1>;
 defm BFMLS_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b01, "bfmls", "BFMLS_ZPZZZ", AArch64fmls_m1>;
@@ -4151,7 +4160,7 @@ defm BFMINNM_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fminnm_p>;
 defm BFMUL_ZZZI : sve2p1_fp_bfmul_by_indexed_elem<"bfmul", int_aarch64_sve_fmul_lane>;
 
 defm BFCLAMP_ZZZ : sve2p1_bfclamp<"bfclamp", AArch64fclamp>;
-} // End HasSVE2orSME2, HasB16B16
+} // End HasSVE2orSME2, HasSVEB16B16
 
 
 //===----------------------------------------------------------------------===//

@@ -44,6 +44,8 @@ struct BlockPointer {
 struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
+
+  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
 };
 
 enum class Storage { Block, Int, Fn };
@@ -87,6 +89,9 @@ public:
     StorageKind = Storage::Int;
     PointeeStorage.Int.Value = 0;
     PointeeStorage.Int.Desc = nullptr;
+  }
+  Pointer(IntPointer &&IntPtr) : StorageKind(Storage::Int) {
+    PointeeStorage.Int = std::move(IntPtr);
   }
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
@@ -161,9 +166,8 @@ public:
 
   /// Creates a pointer to a field.
   [[nodiscard]] Pointer atField(unsigned Off) const {
+    assert(isBlockPointer());
     unsigned Field = Offset + Off;
-    if (isIntegralPointer())
-      return Pointer(asIntPointer().Value + Field, asIntPointer().Desc);
     return Pointer(asBlockPointer().Pointee, Field, Field);
   }
 
@@ -396,6 +400,12 @@ public:
       return getFieldDesc()->IsArray;
     return false;
   }
+  bool inUnion() const {
+    if (isBlockPointer())
+      return getInlineDesc()->InUnion;
+    return false;
+  };
+
   /// Checks if the structure is a primitive array.
   bool inPrimitiveArray() const {
     if (isBlockPointer())
@@ -603,7 +613,11 @@ public:
   bool isElementPastEnd() const { return Offset == PastEndMark; }
 
   /// Checks if the pointer is pointing to a zero-size array.
-  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
+  bool isZeroSizeArray() const {
+    if (const auto *Desc = getFieldDesc())
+      return Desc->isZeroSizeArray();
+    return false;
+  }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
