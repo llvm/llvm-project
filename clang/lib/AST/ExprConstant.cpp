@@ -10032,8 +10032,6 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       return false;
     if (Result.Designator.Invalid)
       return false;
-    /// if(!lifetimeStartedInEvaluation(Info, Result.getLValueBase()))
-    //  return false;
     TargetType = E->getPlacementArg(0)->getType();
     IsPlacement = true;
   } else if (E->getNumPlacementArgs()) {
