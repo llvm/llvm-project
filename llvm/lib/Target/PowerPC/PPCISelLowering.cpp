@@ -3388,17 +3388,15 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
     // global variables (global variables taken as the first parameter to
     // Intrinsic::threadlocal_address).
     const Function &Func = DAG.getMachineFunction().getFunction();
-    for (Function::const_iterator BI = Func.begin(), BE = Func.end(); BI != BE;
-         ++BI)
-      for (BasicBlock::const_iterator II = BI->begin(), IE = BI->end();
-           II != IE; ++II)
-        if (II->getOpcode() == Instruction::Call)
-          if (const CallInst *CI = dyn_cast<const CallInst>(&*II))
+    for (const BasicBlock &BB : Func)
+      for (const Instruction &I : BB)
+        if (I.getOpcode() == Instruction::Call)
+          if (const CallInst *CI = dyn_cast<const CallInst>(&I))
             if (Function *CF = CI->getCalledFunction())
               if (CF->isDeclaration() &&
                   CF->getIntrinsicID() == Intrinsic::threadlocal_address)
                 if (const GlobalValue *GV =
-                        dyn_cast<GlobalValue>(II->getOperand(0))) {
+                        dyn_cast<GlobalValue>(I.getOperand(0))) {
                   TLSModel::Model GVModel = TM.getTLSModel(GV);
                   if (GVModel == TLSModel::LocalDynamic)
                     TLSGV.insert(GV);
