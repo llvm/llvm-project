@@ -622,7 +622,7 @@ public:
   FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                            const TargetLibraryInfo *libInfo) const override;
 
-  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

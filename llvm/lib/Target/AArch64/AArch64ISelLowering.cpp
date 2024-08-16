@@ -11282,8 +11282,7 @@ SDValue AArch64TargetLowering::LowerShiftParts(SDValue Op,
   return DAG.getMergeValues({Lo, Hi}, SDLoc(Op));
 }
 
-bool AArch64TargetLowering::isOffsetFoldingLegal(
-    const GlobalAddressSDNode *GA) const {
+bool AArch64TargetLowering::isOffsetFoldingLegal(const GlobalValue *GV) const {
   // Offsets are folded in the DAG combine rather than here so that we can
   // intelligently choose an offset based on the uses.
   return false;

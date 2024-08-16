@@ -30,4 +30,5 @@ add_llvm_target_unittest(AArch64Tests
   SMEAttributesTest.cpp
   AArch64SVESchedPseudoTest.cpp
   Immediates.cpp
+  TargetTransformInfo.cpp
   )

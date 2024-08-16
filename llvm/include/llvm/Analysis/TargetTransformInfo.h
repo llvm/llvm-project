@@ -665,6 +665,12 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              PeelingPreferences &PP) const;
 
+  /// Return true if folding a constant offset with the given GlobalValue
+  /// (representing a GlobalAddress) is legal.  It is frequently not legal
+  /// in PIC relocation models.
+  /// Caller must guarantee that GlobalValue represents a global address.
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const;
+
   /// Targets can implement their own combinations for target-specific
   /// intrinsics. This function will be called from the InstCombine pass every
   /// time a target-specific intrinsic is encountered.
@@ -1880,6 +1886,7 @@ public:
       APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
+  virtual bool isOffsetFoldingLegal(const GlobalValue *GV) const = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddScalableImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
@@ -2347,6 +2354,9 @@ public:
     return Impl.simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const override {
+    return Impl.isOffsetFoldingLegal(GV);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);

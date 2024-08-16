@@ -23,5 +23,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(X86Tests
   MachineSizeOptsTest.cpp
+  TargetTransformInfo.cpp
   TernlogTest.cpp
   )

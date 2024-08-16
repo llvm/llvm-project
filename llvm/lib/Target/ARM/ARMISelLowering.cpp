@@ -20974,8 +20974,7 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
 }
 
-bool
-ARMTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+bool ARMTargetLowering::isOffsetFoldingLegal(const GlobalValue *GV) const {
   // The ARM target isn't yet aware of offsets.
   return false;
 }

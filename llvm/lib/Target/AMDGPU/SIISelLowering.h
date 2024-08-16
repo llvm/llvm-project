@@ -364,7 +364,7 @@ public:
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
 
-  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const override;
 
   unsigned combineRepeatedFPDivisors() const override {
     // Combine multiple FDIVs with the same divisor into multiple FMULs by the

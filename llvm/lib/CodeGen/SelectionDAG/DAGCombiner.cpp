@@ -1161,7 +1161,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
     }
   } else {
     if (auto *GA = dyn_cast<GlobalAddressSDNode>(N0.getOperand(1)))
-      if (GA->getOpcode() == ISD::GlobalAddress && TLI.isOffsetFoldingLegal(GA))
+      if (GA->getOpcode() == ISD::GlobalAddress &&
+          TLI.isOffsetFoldingLegal(GA->getGlobal()))
         return false;
 
     for (SDNode *Node : N->uses()) {
@@ -4006,7 +4007,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
-    if (!LegalOperations && TLI.isOffsetFoldingLegal(GA)) {
+    if (!LegalOperations && TLI.isOffsetFoldingLegal(GA->getGlobal())) {
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())

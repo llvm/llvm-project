@@ -6339,7 +6339,7 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
                                        const SDNode *N2) {
   if (GA->getOpcode() != ISD::GlobalAddress)
     return SDValue();
-  if (!TLI->isOffsetFoldingLegal(GA))
+  if (!TLI->isOffsetFoldingLegal(GA->getGlobal()))
     return SDValue();
   auto *C2 = dyn_cast<ConstantSDNode>(N2);
   if (!C2)
@@ -13112,7 +13112,7 @@ SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) const {
   // constant integer.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N))
     if (GA->getOpcode() == ISD::GlobalAddress &&
-        TLI->isOffsetFoldingLegal(GA))
+        TLI->isOffsetFoldingLegal(GA->getGlobal()))
       return GA;
   if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&
       isa<ConstantSDNode>(N.getOperand(0)))

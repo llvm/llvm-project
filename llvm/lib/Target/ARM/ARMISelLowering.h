@@ -595,7 +595,7 @@ class VectorType;
 
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
-    bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+    bool isOffsetFoldingLegal(const GlobalValue *GV) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will

@@ -396,6 +396,10 @@ void TargetTransformInfo::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   return TTIImpl->getPeelingPreferences(L, SE, PP);
 }
 
+bool TargetTransformInfo::isOffsetFoldingLegal(const GlobalValue *GV) const {
+  return TTIImpl->isOffsetFoldingLegal(GV);
+}
+
 bool TargetTransformInfo::isLegalAddImmediate(int64_t Imm) const {
   return TTIImpl->isLegalAddImmediate(Imm);
 }

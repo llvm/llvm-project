@@ -2811,6 +2811,10 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  virtual bool isOffsetFoldingLegal(const GlobalValue *GV) const {
+    return false;
+  }
+
   /// Returns true if the targets addressing mode can target thread local
   /// storage (TLS).
   virtual bool addressingModeSupportsTLS(const GlobalValue &) const {
@@ -3862,7 +3866,7 @@ public:
 
   /// Return true if folding a constant offset with the given GlobalAddress is
   /// legal.  It is frequently not legal in PIC relocation models.
-  virtual bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const;
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const override;
 
   /// On x86, return true if the operand with index OpNo is a CALL or JUMP
   /// instruction, which can use either a memory constraint or an address

@@ -354,6 +354,10 @@ public:
     return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
   }
 
+  bool isOffsetFoldingLegal(const GlobalValue *GV) const {
+    return getTLI()->isOffsetFoldingLegal(GV);
+  }
+
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
     auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
