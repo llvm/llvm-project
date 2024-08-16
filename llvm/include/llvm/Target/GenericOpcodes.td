@@ -1091,21 +1091,21 @@ def G_FNEARBYINT : GenericInstruction {
 /// Floating point vector dot product
 def G_FDOTPROD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2);
+  let InOperandList = (ins type1:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
 /// Signed integer vector dot product
 def G_SDOTPROD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2);
+  let InOperandList = (ins type1:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
 /// Unsigned integer vector dot product
 def G_UDOTPROD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2);
+  let InOperandList = (ins type1:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 

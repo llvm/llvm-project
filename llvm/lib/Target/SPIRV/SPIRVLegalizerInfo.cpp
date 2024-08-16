@@ -285,9 +285,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FCOSH,
                                G_FSINH,
                                G_FTANH,
-                               G_FDOTPROD,
-                               G_SDOTPROD,
-                               G_UDOTPROD,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
@@ -305,6 +302,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FPOWI).legalForCartesianProduct(
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
+
+  getActionDefinitionsBuilder(G_FDOTPROD)
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder({G_SDOTPROD, G_UDOTPROD})
+      .legalForCartesianProduct(allIntScalarsAndVectors,
+                                allIntScalarsAndVectors);
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     getActionDefinitionsBuilder(

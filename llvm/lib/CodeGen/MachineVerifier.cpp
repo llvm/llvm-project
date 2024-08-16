@@ -2092,6 +2092,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+
+  case TargetOpcode::G_SDOTPROD:
+  case TargetOpcode::G_UDOTPROD:
+  case TargetOpcode::G_FDOTPROD: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (!DstTy.isScalar()) {
+      report("Destination must be a scalar", MI);
+      break;
+    }
+    LLT Src0Ty = MRI->getType(MI->getOperand(1).getReg());
+    LLT Src1Ty = MRI->getType(MI->getOperand(2).getReg());
+    LLT Src0EltTy = Src0Ty.getScalarType();
+    LLT Src1EltTy = Src1Ty.getScalarType();
+
+    if (!Src0Ty.isVector() || !Src1Ty.isVector()) {
+      report("Sources must be vectors", MI);
+      break;
+    }
+    if (Src0EltTy == Src1EltTy) {
+      report("Source vectors must have the same scalar element types", MI);
+    }
+    if (Src0EltTy != DstTy.getScalarType()) {
+      report("Destination type must match source element types", MI);
+      break;
+    }
+
+    if (!verifyVectorElementMatch(Src0Ty, Src1Ty, MI))
+      break;
+    break;
+  }
   case TargetOpcode::G_PREFETCH: {
     const MachineOperand &AddrOp = MI->getOperand(0);
     if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer()) {
