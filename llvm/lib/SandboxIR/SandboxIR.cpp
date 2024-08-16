@@ -1695,18 +1695,20 @@ Value *ExtractElementInst::create(Value *Vec, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-Constant *Constant::createInt(Type *Ty, uint64_t V, Context &Ctx,
-                              bool IsSigned) {
-  llvm::Constant *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
-  return Ctx.getOrCreateConstant(LLVMC);
-}
-
 #ifndef NDEBUG
 void Constant::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
   dumpCommonSuffix(OS);
 }
+#endif // NDEBUG
 
+ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, Context &Ctx,
+                              bool IsSigned) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty, V, IsSigned);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+#ifndef NDEBUG
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
   auto *F = cast<llvm::Function>(Val);
   OS << *F->getReturnType() << " @" << F->getName() << "(";
@@ -1788,6 +1790,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
+    if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+      It->second = std::unique_ptr<ConstantInt>(new ConstantInt(CI, *this));
+      return It->second.get();
+    }
     if (auto *F = dyn_cast<llvm::Function>(LLVMV))
       It->second = std::unique_ptr<Function>(new Function(F, *this));
     else

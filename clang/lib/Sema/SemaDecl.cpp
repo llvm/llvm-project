@@ -12230,12 +12230,9 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   //    The main function shall not be declared with a linkage-specification.
   if (FD->isExternCContext() ||
       (FD->isExternCXXContext() &&
-       FD->getDeclContext()->getRedeclContext()->isTranslationUnit())) {
+       FD->getDeclContext()->getRedeclContext()->isTranslationUnit()))
     Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
         << FD->getLanguageLinkage();
-    FD->setInvalidDecl();
-    return;
-  }
 
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
