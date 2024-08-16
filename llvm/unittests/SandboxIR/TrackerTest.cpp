@@ -644,6 +644,136 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, AtomicRMWSetters) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %arg) {
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %arg acquire, align 128
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *RMW = cast<sandboxir::AtomicRMWInst>(&*It++);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = RMW->getAlign();
+  Align NewAlign(1024);
+  EXPECT_NE(NewAlign, OrigAlign);
+  RMW->setAlignment(NewAlign);
+  EXPECT_EQ(RMW->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getAlign(), OrigAlign);
+
+  // Check setVolatile().
+  Ctx.save();
+  auto OrigIsVolatile = RMW->isVolatile();
+  bool NewIsVolatile = true;
+  EXPECT_NE(NewIsVolatile, OrigIsVolatile);
+  RMW->setVolatile(NewIsVolatile);
+  EXPECT_EQ(RMW->isVolatile(), NewIsVolatile);
+  Ctx.revert();
+  EXPECT_EQ(RMW->isVolatile(), OrigIsVolatile);
+
+  // Check setOrdering().
+  Ctx.save();
+  auto OrigOrdering = RMW->getOrdering();
+  auto NewOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  RMW->setOrdering(NewOrdering);
+  EXPECT_EQ(RMW->getOrdering(), NewOrdering);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getOrdering(), OrigOrdering);
+
+  // Check setSyncScopeID().
+  Ctx.save();
+  auto OrigSSID = RMW->getSyncScopeID();
+  auto NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  RMW->setSyncScopeID(NewSSID);
+  EXPECT_EQ(RMW->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getSyncScopeID(), OrigSSID);
+}
+
+TEST_F(TrackerTest, AtomicCmpXchgSetters) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
+  %cmpxchg = cmpxchg ptr %ptr, i8 %cmp, i8 %new monotonic monotonic, align 128
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *CmpXchg = cast<sandboxir::AtomicCmpXchgInst>(&*It++);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = CmpXchg->getAlign();
+  Align NewAlign(1024);
+  EXPECT_NE(NewAlign, OrigAlign);
+  CmpXchg->setAlignment(NewAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getAlign(), OrigAlign);
+
+  // Check setVolatile().
+  Ctx.save();
+  auto OrigIsVolatile = CmpXchg->isVolatile();
+  bool NewIsVolatile = true;
+  EXPECT_NE(NewIsVolatile, OrigIsVolatile);
+  CmpXchg->setVolatile(NewIsVolatile);
+  EXPECT_EQ(CmpXchg->isVolatile(), NewIsVolatile);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->isVolatile(), OrigIsVolatile);
+
+  // Check setWeak().
+  Ctx.save();
+  auto OrigIsWeak = CmpXchg->isWeak();
+  bool NewIsWeak = true;
+  EXPECT_NE(NewIsWeak, OrigIsWeak);
+  CmpXchg->setWeak(NewIsWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), NewIsWeak);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->isWeak(), OrigIsWeak);
+
+  // Check setSuccessOrdering().
+  Ctx.save();
+  auto OrigSuccessOrdering = CmpXchg->getSuccessOrdering();
+  auto NewSuccessOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewSuccessOrdering, OrigSuccessOrdering);
+  CmpXchg->setSuccessOrdering(NewSuccessOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), NewSuccessOrdering);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), OrigSuccessOrdering);
+
+  // Check setFailureOrdering().
+  Ctx.save();
+  auto OrigFailureOrdering = CmpXchg->getFailureOrdering();
+  auto NewFailureOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewFailureOrdering, OrigFailureOrdering);
+  CmpXchg->setFailureOrdering(NewFailureOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), NewFailureOrdering);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), OrigFailureOrdering);
+
+  // Check setSyncScopeID().
+  Ctx.save();
+  auto OrigSSID = CmpXchg->getSyncScopeID();
+  auto NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  CmpXchg->setSyncScopeID(NewSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), OrigSSID);
+}
+
 TEST_F(TrackerTest, AllocaInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg) {
@@ -892,4 +1022,65 @@ define void @foo(ptr %arg0, i8 %val) {
   EXPECT_TRUE(Store->isVolatile());
   Ctx.revert();
   EXPECT_FALSE(Store->isVolatile());
+}
+
+TEST_F(TrackerTest, Flags) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg) {
+  %add = add i32 %arg, %arg
+  %fadd = fadd float %farg, %farg
+  %udiv = udiv i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Add = &*It++;
+  auto *FAdd = &*It++;
+  auto *UDiv = &*It++;
+
+#define CHECK_FLAG(I, GETTER, SETTER)                                          \
+  {                                                                            \
+    Ctx.save();                                                                \
+    bool OrigFlag = I->GETTER();                                               \
+    bool NewFlag = !OrigFlag;                                                  \
+    I->SETTER(NewFlag);                                                        \
+    EXPECT_EQ(I->GETTER(), NewFlag);                                           \
+    Ctx.revert();                                                              \
+    EXPECT_EQ(I->GETTER(), OrigFlag);                                          \
+  }
+
+  CHECK_FLAG(Add, hasNoUnsignedWrap, setHasNoUnsignedWrap);
+  CHECK_FLAG(Add, hasNoSignedWrap, setHasNoSignedWrap);
+  CHECK_FLAG(FAdd, isFast, setFast);
+  CHECK_FLAG(FAdd, hasAllowReassoc, setHasAllowReassoc);
+  CHECK_FLAG(UDiv, isExact, setIsExact);
+  CHECK_FLAG(FAdd, hasNoNaNs, setHasNoNaNs);
+  CHECK_FLAG(FAdd, hasNoInfs, setHasNoInfs);
+  CHECK_FLAG(FAdd, hasNoSignedZeros, setHasNoSignedZeros);
+  CHECK_FLAG(FAdd, hasAllowReciprocal, setHasAllowReciprocal);
+  CHECK_FLAG(FAdd, hasAllowContract, setHasAllowContract);
+  CHECK_FLAG(FAdd, hasApproxFunc, setHasApproxFunc);
+
+  // Check setFastMathFlags().
+  FastMathFlags OrigFMF = FAdd->getFastMathFlags();
+  FastMathFlags NewFMF;
+  NewFMF.setAllowReassoc(true);
+  EXPECT_TRUE(NewFMF != OrigFMF);
+
+  Ctx.save();
+  FAdd->setFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  Ctx.revert();
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
+
+  // Check copyFastMathFlags().
+  Ctx.save();
+  FAdd->copyFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  Ctx.revert();
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
 }

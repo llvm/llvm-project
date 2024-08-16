@@ -6664,17 +6664,17 @@ const ConstantRange &ScalarEvolution::getRangeRef(
       WrapType |= OBO::NoSignedWrap;
     if (Add->hasNoUnsignedWrap())
       WrapType |= OBO::NoUnsignedWrap;
-    for (unsigned i = 1, e = Add->getNumOperands(); i != e; ++i)
-      X = X.addWithNoWrap(getRangeRef(Add->getOperand(i), SignHint, Depth + 1),
-                          WrapType, RangeType);
+    for (const SCEV *Op : drop_begin(Add->operands()))
+      X = X.addWithNoWrap(getRangeRef(Op, SignHint, Depth + 1), WrapType,
+                          RangeType);
     return setRange(Add, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
   case scMulExpr: {
     const SCEVMulExpr *Mul = cast<SCEVMulExpr>(S);
     ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint, Depth + 1);
-    for (unsigned i = 1, e = Mul->getNumOperands(); i != e; ++i)
-      X = X.multiply(getRangeRef(Mul->getOperand(i), SignHint, Depth + 1));
+    for (const SCEV *Op : drop_begin(Mul->operands()))
+      X = X.multiply(getRangeRef(Op, SignHint, Depth + 1));
     return setRange(Mul, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
@@ -11953,9 +11953,10 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
 
   unsigned BW = getTypeSizeInBits(More->getType());
   APInt Diff(BW, 0);
+  APInt DiffMul(BW, 1);
   // Try various simplifications to reduce the difference to a constant. Limit
   // the number of allowed simplifications to keep compile-time low.
-  for (unsigned I = 0; I < 4; ++I) {
+  for (unsigned I = 0; I < 8; ++I) {
     if (More == Less)
       return Diff;
 
@@ -11980,15 +11981,36 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
       continue;
     }
 
+    // Try to match a common constant multiply.
+    auto MatchConstMul =
+        [](const SCEV *S) -> std::optional<std::pair<const SCEV *, APInt>> {
+      auto *M = dyn_cast<SCEVMulExpr>(S);
+      if (!M || M->getNumOperands() != 2 ||
+          !isa<SCEVConstant>(M->getOperand(0)))
+        return std::nullopt;
+      return {
+          {M->getOperand(1), cast<SCEVConstant>(M->getOperand(0))->getAPInt()}};
+    };
+    if (auto MatchedMore = MatchConstMul(More)) {
+      if (auto MatchedLess = MatchConstMul(Less)) {
+        if (MatchedMore->second == MatchedLess->second) {
+          More = MatchedMore->first;
+          Less = MatchedLess->first;
+          DiffMul *= MatchedMore->second;
+          continue;
+        }
+      }
+    }
+
     // Try to cancel out common factors in two add expressions.
     SmallDenseMap<const SCEV *, int, 8> Multiplicity;
     auto Add = [&](const SCEV *S, int Mul) {
       if (auto *C = dyn_cast<SCEVConstant>(S)) {
         if (Mul == 1) {
-          Diff += C->getAPInt();
+          Diff += C->getAPInt() * DiffMul;
         } else {
           assert(Mul == -1);
-          Diff -= C->getAPInt();
+          Diff -= C->getAPInt() * DiffMul;
         }
       } else
         Multiplicity[S] += Mul;

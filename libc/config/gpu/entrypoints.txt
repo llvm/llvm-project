@@ -248,6 +248,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2l
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
