@@ -6663,7 +6663,7 @@ SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
   // Only support towardzero, tonearest, upward and downward.
   int RoundMode = Op.getConstantOperandVal(1);
   if (RoundMode != (int)RoundingMode::TowardZero &&
-      RoundMode != (int)RoundingMode::TowardNegative &&
+      RoundMode != (int)RoundingMode::NearestTiesToEven &&
       RoundMode != (int)RoundingMode::TowardPositive &&
       RoundMode != (int)RoundingMode::TowardNegative)
     return SDValue();

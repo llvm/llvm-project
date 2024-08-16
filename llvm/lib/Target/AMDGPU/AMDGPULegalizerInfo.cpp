@@ -7098,7 +7098,7 @@ bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
   // Only support towardzero, tonearest, upward and downward.
   int RoundMode = MI.getOperand(2).getImm();
   if (RoundMode != (int)RoundingMode::TowardZero &&
-      RoundMode != (int)RoundingMode::TowardNegative &&
+      RoundMode != (int)RoundingMode::NearestTiesToEven &&
       RoundMode != (int)RoundingMode::TowardPositive &&
       RoundMode != (int)RoundingMode::TowardNegative)
     return false;
