@@ -15,6 +15,6 @@ end program
 
 ! ERROR: cuda-option.f90:{{.*}}:{{.*}}: error: expected end of statement
 
-! The whole pipeline is not in place yet. It will currently fails at MLIR
+! The whole pipeline is not in place yet. It will currently fail at MLIR
 ! translation level.
 ! MLIRERROR: failed to legalize operation 'cuf.alloc'
