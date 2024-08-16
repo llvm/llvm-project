@@ -290,6 +290,12 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
     int64_t getInputCDim() {
       return 3;
     }
+    int64_t getOutputAlphaHDim() {
+      return 0;
+    }
+    int64_t getOutputAlphaWDim() {
+      return 1;
+    }
     int64_t getOutputTileHDim() {
       return 2;
     }
@@ -377,6 +383,18 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
     }
     int64_t getValueFDim() {
       return 5;
+    }
+    int64_t getOutputNDim() {
+      return 0;
+    }
+    int64_t getOutputHDim() {
+      return 1;
+    }
+    int64_t getOutputWDim() {
+      return 2;
+    }
+    int64_t getOutputFDim() {
+      return 3;
     }
   }];
   let hasVerifier = 1;

@@ -2995,21 +2995,21 @@ LogicalResult WinogradInputTransformOp::verify() {
 
   SmallVector<int64_t> expectedOutputShape(6, inputH);
   if (ShapedType::isDynamic(inputH)) {
-    expectedOutputShape[0] = tileSize;
-    expectedOutputShape[2] = ShapedType::kDynamic;
+    expectedOutputShape[getOutputAlphaHDim()] = tileSize;
+    expectedOutputShape[getOutputTileHDim()] = ShapedType::kDynamic;
   } else {
-    expectedOutputShape[0] = leftTransform ? tileSize : 1;
-    expectedOutputShape[2] = leftTransform ? (inputH - (r - 1)) / m : 1;
+    expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
+    expectedOutputShape[getOutputTileHDim()] = leftTransform ? (inputH - (r - 1)) / m : 1;
   }
   if (ShapedType::isDynamic(inputW)) {
-    expectedOutputShape[1] = tileSize;
-    expectedOutputShape[3] = ShapedType::kDynamic;
+    expectedOutputShape[getOutputAlphaWDim()] = tileSize;
+    expectedOutputShape[getOutputTileWDim()] = ShapedType::kDynamic;
   } else {
-    expectedOutputShape[1] = rightTransform ? tileSize : 1;
-    expectedOutputShape[3] = rightTransform ? (inputW - (r - 1)) / m : 1;
+    expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
+    expectedOutputShape[getOutputTileWDim()] = rightTransform ? (inputW - (r - 1)) / m : 1;
   }
-  expectedOutputShape[4] = inputShape[getInputNDim()];
-  expectedOutputShape[5] = inputShape[getInputCDim()];
+  expectedOutputShape[getOutputNDim()] = inputShape[getInputNDim()];
+  expectedOutputShape[getOutputCDim()] = inputShape[getInputCDim()];
 
   auto outputType = cast<ShapedType>(getOutput().getType());
   ArrayRef<int64_t> outputShape = outputType.getShape();
@@ -3162,21 +3162,21 @@ LogicalResult WinogradOutputTransformOp::verify() {
   int64_t outputRank = getOutputOperandRank();
   SmallVector<int64_t> expectedOutputShape(outputRank, valueH);
   if (ShapedType::isDynamic(valueH) || ShapedType::isDynamic(valueTileH)) {
-    expectedOutputShape[1] = ShapedType::kDynamic;
+    expectedOutputShape[getOutputHDim()] = ShapedType::kDynamic;
   } else {
     if (valueH != (leftTransform ? m + r - 1 : 1))
       return emitOpError("expect input height equals to input tile size");
-    expectedOutputShape[1] = (leftTransform ? m : 1) * valueTileH;
+    expectedOutputShape[getOutputHDim()] = (leftTransform ? m : 1) * valueTileH;
   }
   if (ShapedType::isDynamic(valueW) || ShapedType::isDynamic(valueTileW)) {
-    expectedOutputShape[2] = ShapedType::kDynamic;
+    expectedOutputShape[getOutputWDim()] = ShapedType::kDynamic;
   } else {
     if (valueW != (rightTransform ? m + r - 1 : 1))
       return emitOpError("expect input width equals to input tile size");
-    expectedOutputShape[2] = (rightTransform ? m : 1) * valueTileW;
+    expectedOutputShape[getOutputWDim()] = (rightTransform ? m : 1) * valueTileW;
   }
-  expectedOutputShape[0] = valueShape[getValueNDim()];
-  expectedOutputShape[3] = valueShape[getValueFDim()];
+  expectedOutputShape[getOutputNDim()] = valueShape[getValueNDim()];
+  expectedOutputShape[getOutputFDim()] = valueShape[getValueFDim()];
 
   auto outputType = cast<ShapedType>(getOutput().getType());
   ArrayRef<int64_t> outputShape = outputType.getShape();
