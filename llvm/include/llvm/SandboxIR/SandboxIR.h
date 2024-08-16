@@ -107,6 +107,7 @@ namespace llvm {
 namespace sandboxir {
 
 class BasicBlock;
+class ConstantInt;
 class Context;
 class Function;
 class Instruction;
@@ -489,22 +490,22 @@ class Constant : public sandboxir::User {
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
   Constant(ClassID ID, llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ID, C, SBCtx) {}
-  friend class Function; // For constructor
-  friend class Context;  // For constructor.
-  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+  friend class ConstantInt; // For constructor.
+  friend class Function;    // For constructor
+  friend class Context;     // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const override {
     return getOperandUseDefault(OpIdx, Verify);
   }
 
 public:
-  static Constant *createInt(Type *Ty, uint64_t V, Context &Ctx,
-                             bool IsSigned = false);
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Constant ||
+           From->getSubclassID() == ClassID::ConstantInt ||
            From->getSubclassID() == ClassID::Function;
   }
   sandboxir::Context &getParent() const { return getContext(); }
-  unsigned getUseOperandNo(const Use &Use) const final {
+  unsigned getUseOperandNo(const Use &Use) const override {
     return getUseOperandNoDefault(Use);
   }
 #ifndef NDEBUG
@@ -512,6 +513,41 @@ public:
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
   }
   void dumpOS(raw_ostream &OS) const override;
+#endif
+};
+
+class ConstantInt : public Constant {
+  ConstantInt(llvm::ConstantInt *C, sandboxir::Context &Ctx)
+      : Constant(ClassID::ConstantInt, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    llvm_unreachable("ConstantInt has no operands!");
+  }
+
+public:
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantInt for the given value.
+  static ConstantInt *get(Type *Ty, uint64_t V, Context &Ctx,
+                          bool IsSigned = false);
+
+  // TODO: Implement missing functions.
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantInt;
+  }
+  unsigned getUseOperandNo(const Use &Use) const override {
+    llvm_unreachable("ConstantInt has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantInt>(Val) && "Expected a ConstantInst!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
 #endif
 };
 
@@ -2045,7 +2081,7 @@ protected:
   Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
     return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
   }
-  friend class Constant; // For getOrCreateConstant().
+  friend class ConstantInt; // For getOrCreateConstant().
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
