@@ -336,3 +336,16 @@ entry:
   store <4 x i32> %vmovl.i108, ptr %add.ptr35, align 4
   ret void
 }
+
+define void @test11(<2 x i64> %0, i64 %1, <2 x i64> %2) {
+entry:
+  %3 = insertelement <2 x i64> %0, i64 %1, i32 1
+  %4 = add <2 x i64> <i64 5, i64 0>, %2
+  %5 = trunc <2 x i64> %3 to <2 x i8>
+  %6 = trunc <2 x i64> %4 to <2 x i8>
+  %7 = urem <2 x i8> %5, zeroinitializer
+  %8 = urem <2 x i8> %6, zeroinitializer
+  %9 = icmp ne <2 x i8> %7, zeroinitializer
+  %10 = icmp ne <2 x i8> %8, zeroinitializer
+  ret void
+}
