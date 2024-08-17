@@ -3365,6 +3365,7 @@ TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
   EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
 
   auto Tokens = annotate("return 1 <=> 2;", Style);
+  ASSERT_EQ(Tokens.size(), 6u);
   EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
 }
 
