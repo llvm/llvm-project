@@ -2875,7 +2875,7 @@ LogicalResult OperationConverter::legalizeErasedResult(
 
 void mlir::reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
-    SmallVector<UnrealizedConversionCastOp> *remainingCastOps) {
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
   SetVector<UnrealizedConversionCastOp> worklist(castOps.begin(),
                                                  castOps.end());
   // This set is maintained only if `remainingCastOps` is provided.

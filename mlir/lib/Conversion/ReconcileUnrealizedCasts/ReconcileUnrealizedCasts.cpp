@@ -42,7 +42,7 @@ struct ReconcileUnrealizedCasts
   void runOnOperation() override {
     SmallVector<UnrealizedConversionCastOp> ops;
     getOperation()->walk(
-        [&](UnrealizedConversionCastOp castOp) { ops.insert(castOp); });
+        [&](UnrealizedConversionCastOp castOp) { ops.push_back(castOp); });
     reconcileUnrealizedCasts(ops);
   }
 };
