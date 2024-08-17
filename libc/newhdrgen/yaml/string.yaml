@@ -181,7 +181,7 @@ functions:
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: const char *__restrict
+      - type: char *__restrict
       - type: const char *__restrict
       - type: size_t
   - name: strlcpy
@@ -189,7 +189,7 @@ functions:
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: const char *__restrict
+      - type: char *__restrict
       - type: const char *__restrict
       - type: size_t
   - name: strlen
