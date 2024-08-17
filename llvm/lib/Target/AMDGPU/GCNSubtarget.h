@@ -1327,6 +1327,12 @@ public:
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
+  /// \returns true if inline constants are not supported for F16 pseudo
+  /// scalar transcendentals.
+  bool hasNoF16PseudoScalarTransInlineConstants() const {
+    return getGeneration() == GFX12;
+  }
+
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }

@@ -9561,7 +9561,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // A rotate left of ~1 is a nice way of achieving the desired result.
   if (TLI.isOperationLegalOrCustom(ISD::ROTL, VT) && N0Opcode == ISD::SHL &&
       isAllOnesConstant(N1) && isOneConstant(N0.getOperand(0))) {
-    return DAG.getNode(ISD::ROTL, DL, VT, DAG.getConstant(~1, DL, VT),
+    return DAG.getNode(ISD::ROTL, DL, VT, DAG.getSignedConstant(~1, DL, VT),
                        N0.getOperand(1));
   }
 
