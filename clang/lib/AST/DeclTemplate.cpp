@@ -396,7 +396,7 @@ void RedeclarableTemplateDecl::addSpecializationImpl(
                                       SETraits::getDecl(Entry));
 }
 
-ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
+MutableArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
   TemplateParameterList *Params = getTemplateParameters();
   auto *CommonPtr = getCommonPtr();
   if (!CommonPtr->InjectedArgs) {
@@ -409,7 +409,11 @@ ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
               CommonPtr->InjectedArgs);
   }
 
-  return llvm::ArrayRef(CommonPtr->InjectedArgs, Params->size());
+  return llvm::MutableArrayRef(CommonPtr->InjectedArgs, Params->size());
+}
+
+ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() const {
+  return const_cast<RedeclarableTemplateDecl *>(this)->getInjectedTemplateArgs();
 }
 
 //===----------------------------------------------------------------------===//

@@ -929,7 +929,8 @@ public:
   /// Although the C++ standard has no notion of the "injected" template
   /// arguments for a template, the notion is convenient when
   /// we need to perform substitutions inside the definition of a template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  MutableArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs() const;
 
   using redecl_range = redeclarable_base::redecl_range;
   using redecl_iterator = redeclarable_base::redecl_iterator;
@@ -1829,7 +1830,7 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
 
     /// The template argument list deduced for the class template
     /// partial specialization itself.
-    const TemplateArgumentList *TemplateArgs;
+    TemplateArgumentList *TemplateArgs;
   };
 
   /// The template that this specialization specializes
@@ -1841,7 +1842,7 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   SpecializationOrInstantiationInfo ExplicitInfo = nullptr;
 
   /// The template arguments used to describe this specialization.
-  const TemplateArgumentList *TemplateArgs;
+  TemplateArgumentList *TemplateArgs;
 
   /// The point where this template was instantiated (if any)
   SourceLocation PointOfInstantiation;
@@ -1891,8 +1892,11 @@ public:
 
   /// Retrieve the template arguments of the class template
   /// specialization.
-  const TemplateArgumentList &getTemplateArgs() const {
+  TemplateArgumentList &getTemplateArgs() {
     return *TemplateArgs;
+  }
+  const TemplateArgumentList &getTemplateArgs() const {
+    return const_cast<ClassTemplateSpecializationDecl *>(this)->getTemplateArgs();
   }
 
   void setTemplateArgs(TemplateArgumentList *Args) {
@@ -1986,19 +1990,22 @@ public:
   /// a class template partial specialization, this function will return the
   /// deduced template arguments for the class template partial specialization
   /// itself.
-  const TemplateArgumentList &getTemplateInstantiationArgs() const {
-    if (const auto *PartialSpec =
+  TemplateArgumentList &getTemplateInstantiationArgs() {
+    if (auto *PartialSpec =
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
+  }
+  const TemplateArgumentList &getTemplateInstantiationArgs() const {
+    return const_cast<ClassTemplateSpecializationDecl *>(this)->getTemplateInstantiationArgs();
   }
 
   /// Note that this class template specialization is actually an
   /// instantiation of the given class template partial specialization whose
   /// template arguments have been deduced.
   void setInstantiationOf(ClassTemplatePartialSpecializationDecl *PartialSpec,
-                          const TemplateArgumentList *TemplateArgs) {
+                          TemplateArgumentList *TemplateArgs) {
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Already set to a class template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
@@ -2611,7 +2618,7 @@ class VarTemplateSpecializationDecl : public VarDecl,
 
     /// The template argument list deduced for the variable template
     /// partial specialization itself.
-    const TemplateArgumentList *TemplateArgs;
+    TemplateArgumentList *TemplateArgs;
   };
 
   /// The template that this specialization specializes.
@@ -2623,7 +2630,7 @@ class VarTemplateSpecializationDecl : public VarDecl,
   SpecializationOrInstantiationInfo ExplicitInfo = nullptr;
 
   /// The template arguments used to describe this specialization.
-  const TemplateArgumentList *TemplateArgs;
+  TemplateArgumentList *TemplateArgs;
 
   /// The point where this template was instantiated (if any).
   SourceLocation PointOfInstantiation;
@@ -2675,7 +2682,10 @@ public:
 
   /// Retrieve the template arguments of the variable template
   /// specialization.
-  const TemplateArgumentList &getTemplateArgs() const { return *TemplateArgs; }
+  TemplateArgumentList &getTemplateArgs() { return *TemplateArgs; }
+  const TemplateArgumentList &getTemplateArgs() const {
+    return const_cast<VarTemplateSpecializationDecl *>(this)->getTemplateArgs();
+  }
 
   /// Determine the kind of specialization that this
   /// declaration represents.
@@ -2751,19 +2761,22 @@ public:
   /// from a variable template partial specialization, this function will the
   /// return deduced template arguments for the variable template partial
   /// specialization itself.
-  const TemplateArgumentList &getTemplateInstantiationArgs() const {
+  TemplateArgumentList &getTemplateInstantiationArgs() {
     if (const auto *PartialSpec =
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
   }
+  const TemplateArgumentList &getTemplateInstantiationArgs() const {
+    return const_cast<VarTemplateSpecializationDecl *>(this)->getTemplateArgs();
+  }
 
   /// Note that this variable template specialization is actually an
   /// instantiation of the given variable template partial specialization whose
   /// template arguments have been deduced.
   void setInstantiationOf(VarTemplatePartialSpecializationDecl *PartialSpec,
-                          const TemplateArgumentList *TemplateArgs) {
+                          TemplateArgumentList *TemplateArgs) {
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Already set to a variable template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
@@ -3217,9 +3230,12 @@ public:
   CreateDeserialized(const ASTContext &C, GlobalDeclID ID,
                      unsigned NumTemplateArgs);
 
-  ArrayRef<TemplateArgument> getTemplateArguments() const {
-    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
+  MutableArrayRef<TemplateArgument> getTemplateArguments() {
+    return MutableArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
                                       NumTemplateArgs);
+  }
+  ArrayRef<TemplateArgument> getTemplateArguments() const {
+    return const_cast<ImplicitConceptSpecializationDecl *>(this)->getTemplateArguments();
   }
   void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
 

@@ -159,7 +159,7 @@ bool isLambdaEnclosedByTypeAliasDecl(
 
 // Add template arguments from a variable template instantiation.
 Response
-HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
+HandleVarTemplateSpec(VarTemplateSpecializationDecl *VarTemplSpec,
                       MultiLevelTemplateArgumentList &Result,
                       bool SkipForSpecialization) {
   // For a class-scope explicit specialization, there are no template arguments
@@ -221,7 +221,7 @@ Response HandlePartialClassTemplateSpec(
 
 // Add template arguments from a class template instantiation.
 Response
-HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
+HandleClassTemplateSpec(ClassTemplateSpecializationDecl *ClassTemplSpec,
                         MultiLevelTemplateArgumentList &Result,
                         bool SkipForSpecialization) {
   if (!ClassTemplSpec->isClassScopeExplicitSpecialization()) {
@@ -232,8 +232,8 @@ HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
 
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
-          const_cast<ClassTemplateSpecializationDecl *>(ClassTemplSpec),
-          ClassTemplSpec->getTemplateInstantiationArgs().asArray(),
+          ClassTemplSpec,
+          ClassTemplSpec->getTemplateInstantiationArgs().asMutableArray(),
           /*Final=*/false);
 
     // If this class template specialization was instantiated from a
@@ -253,7 +253,7 @@ HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
   return Response::UseNextDecl(ClassTemplSpec);
 }
 
-Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
+Response HandleFunction(Sema &SemaRef, FunctionDecl *Function,
                         MultiLevelTemplateArgumentList &Result,
                         const FunctionDecl *Pattern, bool RelativeToPrimary,
                         bool ForConstraintInstantiation) {
@@ -269,11 +269,11 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
     // don't get any template arguments from this function but might get
     // some from an enclosing template.
     return Response::UseNextDecl(Function);
-  } else if (const TemplateArgumentList *TemplateArgs =
+  } else if (TemplateArgumentList *TemplateArgs =
                  Function->getTemplateSpecializationArgs()) {
     // Add the template arguments for this specialization.
     Result.addOuterTemplateArguments(const_cast<FunctionDecl *>(Function),
-                                     TemplateArgs->asArray(),
+                                     TemplateArgs->asMutableArray(),
                                      /*Final=*/false);
 
     if (RelativeToPrimary &&
@@ -329,20 +329,20 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
   return Response::UseNextDecl(Function);
 }
 
-Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
+Response HandleFunctionTemplateDecl(FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
     Result.addOuterTemplateArguments(
-        const_cast<FunctionTemplateDecl *>(FTD),
-        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+        FTD,
+        FTD->getInjectedTemplateArgs(),
         /*Final=*/false);
 
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
-    while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
+    while (Type *Ty = NNS ? NNS->getAsType() : nullptr) {
       if (NNS->isInstantiationDependent()) {
-        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
-          ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+        if (auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
+          MutableArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
           // Prefer template arguments from the injected-class-type if possible.
           // For example,
           // ```cpp
@@ -367,11 +367,9 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
             else if (auto *Specialization =
                          dyn_cast<ClassTemplateSpecializationDecl>(RD))
               Arguments =
-                  Specialization->getTemplateInstantiationArgs().asArray();
+                  Specialization->getTemplateInstantiationArgs().asMutableArray();
           }
-          Result.addOuterTemplateArguments(
-              const_cast<FunctionTemplateDecl *>(FTD), Arguments,
-              /*Final=*/false);
+          Result.addOuterTemplateArguments(FTD, Arguments, /*Final=*/false);
         }
       }
 
@@ -449,10 +447,10 @@ Response HandleRecordDecl(Sema &SemaRef, const CXXRecordDecl *Rec,
 }
 
 Response HandleImplicitConceptSpecializationDecl(
-    const ImplicitConceptSpecializationDecl *CSD,
+    ImplicitConceptSpecializationDecl *CSD,
     MultiLevelTemplateArgumentList &Result) {
   Result.addOuterTemplateArguments(
-      const_cast<ImplicitConceptSpecializationDecl *>(CSD),
+      CSD,
       CSD->getTemplateArguments(),
       /*Final=*/false);
   return Response::UseNextDecl(CSD);
@@ -466,7 +464,7 @@ Response HandleGenericDeclContext(const Decl *CurDecl) {
 
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     const NamedDecl *ND, const DeclContext *DC, bool Final,
-    std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
+    std::optional<MutableArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     const FunctionDecl *Pattern, bool ForConstraintInstantiation,
     bool SkipForSpecialization) {
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
@@ -474,14 +472,13 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   MultiLevelTemplateArgumentList Result;
 
   using namespace TemplateInstArgsHelpers;
-  const Decl *CurDecl = ND;
+  Decl *CurDecl = ND;
 
   if (!CurDecl)
     CurDecl = Decl::castFromDeclContext(DC);
 
   if (Innermost) {
-    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
-                                     Final);
+    Result.addOuterTemplateArguments(ND, *Innermost, Final);
     // Populate placeholder template arguments for TemplateTemplateParmDecls.
     // This is essential for the case e.g.
     //
@@ -497,27 +494,27 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
-    if (const auto *VarTemplSpec =
+    if (auto *VarTemplSpec =
             dyn_cast<VarTemplateSpecializationDecl>(CurDecl)) {
       R = HandleVarTemplateSpec(VarTemplSpec, Result, SkipForSpecialization);
     } else if (const auto *PartialClassTemplSpec =
                    dyn_cast<ClassTemplatePartialSpecializationDecl>(CurDecl)) {
       R = HandlePartialClassTemplateSpec(PartialClassTemplSpec, Result,
                                          SkipForSpecialization);
-    } else if (const auto *ClassTemplSpec =
+    } else if (auto *ClassTemplSpec =
                    dyn_cast<ClassTemplateSpecializationDecl>(CurDecl)) {
       R = HandleClassTemplateSpec(ClassTemplSpec, Result,
                                   SkipForSpecialization);
-    } else if (const auto *Function = dyn_cast<FunctionDecl>(CurDecl)) {
+    } else if (auto *Function = dyn_cast<FunctionDecl>(CurDecl)) {
       R = HandleFunction(*this, Function, Result, Pattern, RelativeToPrimary,
                          ForConstraintInstantiation);
     } else if (const auto *Rec = dyn_cast<CXXRecordDecl>(CurDecl)) {
       R = HandleRecordDecl(*this, Rec, Result, Context,
                            ForConstraintInstantiation);
-    } else if (const auto *CSD =
+    } else if (auto *CSD =
                    dyn_cast<ImplicitConceptSpecializationDecl>(CurDecl)) {
       R = HandleImplicitConceptSpecializationDecl(CSD, Result);
-    } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CurDecl)) {
+    } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(CurDecl)) {
       R = HandleFunctionTemplateDecl(FTD, Result);
     } else if (const auto *CTD = dyn_cast<ClassTemplateDecl>(CurDecl)) {
       R = Response::ChangeDecl(CTD->getLexicalDeclContext());
@@ -3247,7 +3244,7 @@ bool Sema::SubstDefaultArgument(
                                              TemplateArgs.getInnermost());
         NewTemplateArgs = getTemplateInstantiationArgs(
             FD, FD->getDeclContext(), /*Final=*/false,
-            CurrentTemplateArgumentList->asArray(), /*RelativeToPrimary=*/true);
+            CurrentTemplateArgumentList->asMutableArray(), /*RelativeToPrimary=*/true);
       }
     }
 
