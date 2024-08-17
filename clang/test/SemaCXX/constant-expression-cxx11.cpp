@@ -1268,6 +1268,9 @@ constexpr complex_wrap makeComplexWrap(int re, int im) {
 static_assert(makeComplexWrap(1,0) == complex(1), "");
 static_assert(makeComplexWrap(1,0) != complex(0, 1), "");
 
+constexpr auto GH55390 = 1 / 65536j; // expected-note {{division by zero}} \
+                                     // expected-error {{constexpr variable 'GH55390' must be initialized by a constant expression}} \
+                                     // expected-warning {{imaginary constants are a GNU extension}}
 }
 
 namespace PR11595 {
