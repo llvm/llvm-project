@@ -25,3 +25,10 @@ func.func @foo() {
   "test.type_consumer"(%2) : (i64) -> ()
   return
 }
+
+// CHECK-LABEL: @direct_forward
+func.func @direct_forward(%arg0 : i16) -> i16 {
+  // CHECK-NEXT: return
+  %0 = "test.type_changer"(%arg0) : (i16) -> i16
+  return %0 : i16
+}
