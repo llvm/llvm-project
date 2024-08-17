@@ -233,46 +233,68 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       auto Ordering = NVPTX::Ordering(Imm);
       switch (Ordering) {
       case NVPTX::Ordering::NotAtomic:
-        break;
+        return;
+      case NVPTX::Ordering::Relaxed:
+        O << ".relaxed";
+        return;
+      case NVPTX::Ordering::Acquire:
+        O << ".acquire";
+        return;
+      case NVPTX::Ordering::Release:
+        O << ".release";
+        return;
       case NVPTX::Ordering::Volatile:
         O << ".volatile";
-        break;
-      case NVPTX::Ordering::Relaxed:
-        O << ".relaxed.sys";
-        break;
-      case NVPTX::Ordering::Acquire:
-        O << ".acquire.sys";
-        break;
-      case NVPTX::Ordering::Release:
-        O << ".release.sys";
-        break;
+        return;
       case NVPTX::Ordering::RelaxedMMIO:
-        O << ".mmio.relaxed.sys";
-        break;
+        O << ".mmio.relaxed";
+        return;
       default:
         report_fatal_error(formatv(
-            "NVPTX LdStCode Printer does not support \"{}\" sem modifier.",
-            OrderingToCString(Ordering)));
+            "NVPTX LdStCode Printer does not support \"{}\" sem modifier. "
+            "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
+            OrderingToString(Ordering)));
       }
+    } else if (!strcmp(Modifier, "sco")) {
+      auto S = NVPTX::Scope(Imm);
+      switch (S) {
+      case NVPTX::Scope::Thread:
+        return;
+      case NVPTX::Scope::System:
+        O << ".sys";
+        return;
+      case NVPTX::Scope::Block:
+        O << ".cta";
+        return;
+      case NVPTX::Scope::Cluster:
+        O << ".cluster";
+        return;
+      case NVPTX::Scope::Device:
+        O << ".gpu";
+        return;
+      }
+      report_fatal_error(formatv(
+          "NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
+          ScopeToString(S)));
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {
       case NVPTX::PTXLdStInstCode::GLOBAL:
         O << ".global";
-        break;
+        return;
       case NVPTX::PTXLdStInstCode::SHARED:
         O << ".shared";
-        break;
+        return;
       case NVPTX::PTXLdStInstCode::LOCAL:
         O << ".local";
-        break;
+        return;
       case NVPTX::PTXLdStInstCode::PARAM:
         O << ".param";
-        break;
+        return;
       case NVPTX::PTXLdStInstCode::CONSTANT:
         O << ".const";
-        break;
+        return;
       case NVPTX::PTXLdStInstCode::GENERIC:
-        break;
+        return;
       default:
         llvm_unreachable("Wrong Address Space");
       }

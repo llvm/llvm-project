@@ -117,12 +117,22 @@ enum Ordering : OrderingUnderlyingType {
   // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
   Acquire = (OrderingUnderlyingType)AtomicOrdering::Acquire,
   Release = (OrderingUnderlyingType)AtomicOrdering::Release,
-  // AcquireRelease = 6, // TODO
+  AcquireRelease = (OrderingUnderlyingType)AtomicOrdering::AcquireRelease,
   SequentiallyConsistent =
       (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
   Volatile = SequentiallyConsistent + 1,
   RelaxedMMIO = Volatile + 1,
-  LAST = RelaxedMMIO
+  LASTORDERING = RelaxedMMIO
+};
+
+using ScopeUnderlyingType = unsigned int;
+enum Scope : ScopeUnderlyingType {
+  Thread = 0,
+  System = 1,
+  Block = 2,
+  Cluster = 3,
+  Device = 4,
+  LASTSCOPE = Device
 };
 
 namespace PTXLdStInstCode {
