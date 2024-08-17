@@ -169,8 +169,8 @@ def BCLRIANDIMask : PatLeaf<(imm), [{
 }]>;
 
 def BCLRIANDIMaskLow : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() & 0x7ff) | ~0x7ffull,
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedConstant((N->getZExtValue() & 0x7ff) | ~0x7ffull,
+                                   SDLoc(N), N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 def CSImm12MulBy4 : PatLeaf<(imm), [{
@@ -191,13 +191,13 @@ def CSImm12MulBy8 : PatLeaf<(imm), [{
 }]>;
 
 def SimmShiftRightBy2XForm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 2, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() >> 2, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 3, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() >> 3, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 // Pattern to exclude simm12 immediates from matching, namely `non_imm12`.

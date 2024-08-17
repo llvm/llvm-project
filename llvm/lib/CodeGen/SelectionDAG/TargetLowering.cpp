@@ -9185,8 +9185,8 @@ SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
                      DAG.getNode(ISD::VP_SRL, dl, VT, Op, Tmp, Mask, VL), Mask,
                      VL);
   }
-  Op = DAG.getNode(ISD::VP_XOR, dl, VT, Op, DAG.getConstant(-1, dl, VT), Mask,
-                   VL);
+  Op = DAG.getNode(ISD::VP_XOR, dl, VT, Op, DAG.getAllOnesConstant(dl, VT),
+                   Mask, VL);
   return DAG.getNode(ISD::VP_CTPOP, dl, VT, Op, Mask, VL);
 }
 
@@ -9299,7 +9299,7 @@ SDValue TargetLowering::expandVPCTTZ(SDNode *Node, SelectionDAG &DAG) const {
 
   // Same as the vector part of expandCTTZ, use: popcount(~x & (x - 1))
   SDValue Not = DAG.getNode(ISD::VP_XOR, dl, VT, Op,
-                            DAG.getConstant(-1, dl, VT), Mask, VL);
+                            DAG.getAllOnesConstant(dl, VT), Mask, VL);
   SDValue MinusOne = DAG.getNode(ISD::VP_SUB, dl, VT, Op,
                                  DAG.getConstant(1, dl, VT), Mask, VL);
   SDValue Tmp = DAG.getNode(ISD::VP_AND, dl, VT, Not, MinusOne, Mask, VL);
