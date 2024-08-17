@@ -3360,6 +3360,14 @@ TEST_F(TokenAnnotatorTest, TypenameMacro) {
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
+  auto Style = getGNUStyle();
+  EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
+
+  auto Tokens = annotate("return 1 <=> 2;", Style);
+  EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
