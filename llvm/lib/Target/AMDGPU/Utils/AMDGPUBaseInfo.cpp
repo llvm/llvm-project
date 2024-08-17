@@ -948,13 +948,7 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  unsigned BytesPerCU = 0;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
-    BytesPerCU = 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
-    BytesPerCU = 65536;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize163840))
-    BytesPerCU = 163840;
+  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". So the effective local memory size is doubled in
