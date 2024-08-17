@@ -69,7 +69,7 @@ __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value
   // // iterate over the last segment
   // __fill(_Traits::__begin(__sfirst), _Traits::__local(__last), __value);
 
-  std::for_each(__first, __last, [__value](_Tp& val) { val = __value; });
+  std::for_each(__first, __last, [__value](_Tp& __val) { __val = __value; });
 }
 
 template <class _ForwardIterator, class _Tp>
