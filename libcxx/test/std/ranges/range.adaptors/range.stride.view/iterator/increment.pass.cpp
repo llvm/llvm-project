@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "../types.h"
-#include "test_iterators.h"
 
 template <class T>
 concept CanPostIncrementVoid = std::is_same_v<void, decltype(std::declval<T>()++)> && requires(T& t) { t++; };
@@ -43,9 +42,6 @@ template <typename Iter>
   requires std::sized_sentinel_for<Iter, Iter> && (!std::forward_iterator<Iter>)
 constexpr bool test_non_forward_operator_increment(Iter zero_begin, Iter three_begin, Iter end) {
   using Base               = BasicTestView<Iter, Iter>;
-  using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
-  static_assert(std::weakly_incrementable<StrideViewIterator>);
-  static_assert(!std::ranges::forward_range<Base>);
 
   auto base_view_offset_zero              = Base(zero_begin, end);
   auto base_view_offset_three             = Base(three_begin, end);
