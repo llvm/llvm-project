@@ -80,6 +80,11 @@ Changes to the LLVM IR
     removed. The next argument has been changed from byte index to bit
     index.
 * Added ``llvm.experimental.vector.compress`` intrinsic.
+* Added special kind of `constant expressions
+  <https://llvm.org/docs/LangRef.html#pointer-authentication-constants>`_ to
+  represent pointers with signature embedded into it.
+* Added `pointer authentication operand bundles
+  <https://llvm.org/docs/LangRef.html#pointer-authentication-operand-bundles>`_. 
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -125,6 +130,15 @@ Changes to the AArch64 Backend
   when specified via ``-march=`` or an ``-mcpu=`` that supports them.  The
   attribute ``"target-features"="+v9a"`` no longer implies ``"+sve"`` and
   ``"+sve2"`` respectively.
+* Added support for ELF pointer authentication relocations as specified in
+  `PAuth ABI Extension to ELF
+  <https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst>`_.
+* Added codegeneration, ELF object file and linker support for authenticated
+  call lowering, signed constants and emission of signing scheme details in
+  ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` property of ``.note.gnu.property``
+  section.
+* Added codegeneration support for ``llvm.ptrauth.auth`` and
+  ``llvm.ptrauth.resign`` intrinsics.
 
 Changes to the AMDGPU Backend
 -----------------------------

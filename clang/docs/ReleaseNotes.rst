@@ -1191,11 +1191,13 @@ Arm and AArch64 Support
   improvements for most targets. We have not changed the default behavior for
   ARMv6, but may revisit that decision in the future. Users can restore the old
   behavior with -m[no-]unaligned-access.
+
 - An alias identifier (rdma) has been added for targeting the AArch64
   Architecture Extension which uses Rounding Doubling Multiply Accumulate
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
     * Arm Cortex-R52+ (cortex-r52plus).
     * Arm Cortex-R82AE (cortex-r82ae).
@@ -1212,6 +1214,12 @@ Arm and AArch64 Support
   enables this. Enabling GCS causes the GCS GNU property bit to be set on output
   objects. It doesn't cause any code generation changes, as the code generated
   by clang is already compatible with GCS.
+
+ - Experimental support has been added for pointer authentication ABI for С/C++.
+
+ - Pointer authentication ABI could be enabled for AArch64 Linux via
+   ``-mabi=pauthtest`` option or via specifying ``pauthtest`` environment part of
+   target triple.
 
 Android Support
 ^^^^^^^^^^^^^^^
