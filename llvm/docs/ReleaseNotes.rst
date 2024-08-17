@@ -180,6 +180,8 @@ Changes to Sanitizers
 Other Changes
 -------------
 
+* A template for 'isa_or_null<>' has been added to the casting operations in support.
+
 External Open Source Projects Using LLVM 19
 ===========================================
 
