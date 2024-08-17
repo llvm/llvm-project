@@ -12537,8 +12537,10 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
 
   // VECTOR_SHUFFLE doesn't support a scalable mask so use a dedicated node.
   if (VT.isScalableVector()) {
-    setValue(&I, DAG.getNode(ISD::VECTOR_SPLICE, DL, VT, V1, V2,
-                             DAG.getVectorIdxConstant(Imm, DL)));
+    setValue(
+        &I, DAG.getNode(ISD::VECTOR_SPLICE, DL, VT, V1, V2,
+                        DAG.getSignedConstant(
+                            Imm, DL, TLI.getVectorIdxTy(DAG.getDataLayout()))));
     return;
   }
 
