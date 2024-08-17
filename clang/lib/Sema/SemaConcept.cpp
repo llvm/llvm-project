@@ -950,7 +950,7 @@ namespace {
 } // namespace
 
 static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
-    Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
+    Sema &S, Sema::TemplateCompareNewDeclInfo DeclInfo,
     const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
@@ -1002,7 +1002,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   return SubstConstr.get();
 }
 
-bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
+bool Sema::AreConstraintExpressionsEqual(NamedDecl *Old,
                                          const Expr *OldConstr,
                                          const TemplateCompareNewDeclInfo &New,
                                          const Expr *NewConstr) {

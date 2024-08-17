@@ -11837,13 +11837,13 @@ public:
   // the named decl, or the important information we need about it in order to
   // do constraint comparisons.
   class TemplateCompareNewDeclInfo {
-    const NamedDecl *ND = nullptr;
+    NamedDecl *ND = nullptr;
     const DeclContext *DC = nullptr;
     const DeclContext *LexicalDC = nullptr;
     SourceLocation Loc;
 
   public:
-    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
+    TemplateCompareNewDeclInfo(NamedDecl *ND) : ND(ND) {}
     TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
                                const DeclContext *LexicalDeclCtx,
                                SourceLocation Loc)
@@ -11858,7 +11858,10 @@ public:
     // for constraint comparison, so make sure we can check that.
     bool isInvalid() const { return !ND && !DC; }
 
-    const NamedDecl *getDecl() const { return ND; }
+    NamedDecl *getDecl() { return ND; }
+    const NamedDecl *getDecl() const { 
+      return const_cast<TemplateCompareNewDeclInfo *>(this)->getDecl();
+    }
 
     bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
 
@@ -11898,7 +11901,7 @@ public:
   /// otherwise.
   bool TemplateParameterListsAreEqual(
       const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
-      const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
+      NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
       TemplateParameterListEqualKind Kind,
       SourceLocation TemplateArgLoc = SourceLocation());
 
@@ -14432,7 +14435,7 @@ public:
   // for figuring out the relative 'depth' of the constraint. The depth of the
   // 'primary template' and the 'instantiated from' templates aren't necessarily
   // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
+  bool AreConstraintExpressionsEqual(NamedDecl *Old,
                                      const Expr *OldConstr,
                                      const TemplateCompareNewDeclInfo &New,
                                      const Expr *NewConstr);
