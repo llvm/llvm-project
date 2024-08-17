@@ -199,8 +199,7 @@ enum class TemplateSubstitutionKind : char {
       assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
       assert(Index <
              TemplateArgumentLists[getNumLevels() - Depth - 1].Args.size());
-      const_cast<TemplateArgument &>(
-          TemplateArgumentLists[getNumLevels() - Depth - 1].Args[Index]) = Arg;
+      TemplateArgumentLists[getNumLevels() - Depth - 1].Args[Index] = Arg;
     }
 
     /// Add a new outmost level to the multi-level template argument
