@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_FILL_H
 
 #include <__algorithm/fill_n.h>
+#include <__algorithm/for_each.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
@@ -22,10 +23,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // fill isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
 
-template <
-    class _ForwardIterator,
-    class _Tp,
-    __enable_if_t<!__has_random_access_iterator_category<_ForwardIterator>::value, int> = 0>
+template < class _ForwardIterator,
+           class _Tp,
+           __enable_if_t<!__has_random_access_iterator_category<_ForwardIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   for (; __first != __last; ++__first)
@@ -35,7 +35,8 @@ __fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
 template <class _RandomAccessIterator,
           class _Tp,
           __enable_if_t<__has_random_access_iterator_category<_RandomAccessIterator>::value &&
-                        !__is_segmented_iterator<_RandomAccessIterator>::value, int> = 0>
+                            !__is_segmented_iterator<_RandomAccessIterator>::value,
+                        int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& __value) {
   std::fill_n(__first, __last - __first, __value);
@@ -46,27 +47,29 @@ template <class _SegmentedIterator,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
-  using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
+  // using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
-  auto __sfirst = _Traits::__segment(__first);
-  auto __slast  = _Traits::__segment(__last);
+  // auto __sfirst = _Traits::__segment(__first);
+  // auto __slast  = _Traits::__segment(__last);
 
-  // We are in a single segment, so we might not be at the beginning or end
-  if (__sfirst == __slast) {
-    __fill(_Traits::__local(__first), _Traits::__local(__last), __value);
-    return;
-  }
+  // // We are in a single segment, so we might not be at the beginning or end
+  // if (__sfirst == __slast) {
+  //   __fill(_Traits::__local(__first), _Traits::__local(__last), __value);
+  //   return;
+  // }
 
-  // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
-  __fill(_Traits::__local(__first), _Traits::__end(__sfirst), __value);
-  ++__sfirst;
-  // iterate over the segments which are guaranteed to be completely in the range
-  while (__sfirst != __slast) {
-    __fill(_Traits::__begin(__sfirst), _Traits::__end(__sfirst), __value);
-    ++__sfirst;
-  }
-  // iterate over the last segment
-  __fill(_Traits::__begin(__sfirst), _Traits::__local(__last), __value);
+  // // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
+  // __fill(_Traits::__local(__first), _Traits::__end(__sfirst), __value);
+  // ++__sfirst;
+  // // iterate over the segments which are guaranteed to be completely in the range
+  // while (__sfirst != __slast) {
+  //   __fill(_Traits::__begin(__sfirst), _Traits::__end(__sfirst), __value);
+  //   ++__sfirst;
+  // }
+  // // iterate over the last segment
+  // __fill(_Traits::__begin(__sfirst), _Traits::__local(__last), __value);
+
+  std::for_each(__first, __last, [__value](_Tp& val) { val = __value; });
 }
 
 template <class _ForwardIterator, class _Tp>
