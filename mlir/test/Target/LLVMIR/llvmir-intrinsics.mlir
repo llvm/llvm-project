@@ -418,7 +418,7 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   %a = llvm.intr.masked.load %A, %mask { alignment = 1: i32} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison), !nontemporal !1
-  %b = llvm.intr.masked.load %A, %mask { alignment = 1: i32, nontemporal=1 :i1} :
+  %b = llvm.intr.masked.load %A, %mask { alignment = 1: i32, nontemporal} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %c = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i32} :

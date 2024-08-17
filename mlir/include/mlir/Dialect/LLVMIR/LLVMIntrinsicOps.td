@@ -843,7 +843,7 @@ def LLVM_GetActiveLaneMaskOp
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
                    Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
-                   DefaultValuedAttr<BoolAttr, "false">:$nontemporal);
+                   UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -857,9 +857,10 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $res = $_builder.create<LLVM::MaskedLoadOp>($_location,
       $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
-        mlir::BoolAttr::get($_builder.getContext(), intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal)));
+        nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
   list<int> llvmArgIndices = [0, 2, 3, 1, -1];
 }
