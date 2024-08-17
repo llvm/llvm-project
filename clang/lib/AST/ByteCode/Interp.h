@@ -2354,6 +2354,17 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
                                  LT::AsUnsigned::from(RHS, Bits), Bits, &R);
   }
 
+  // We did the shift above as unsigned. Restore the sign bit if we need to.
+  if constexpr (Dir == ShiftDir::Right) {
+    if (LHS.isSigned() && LHS.isNegative()) {
+      typename LT::AsUnsigned SignBit;
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(1, Bits),
+                                LT::AsUnsigned::from(Bits - 1, Bits), Bits,
+                                &SignBit);
+      LT::AsUnsigned::bitOr(R, SignBit, Bits, &R);
+    }
+  }
+
   S.Stk.push<LT>(LT::from(R));
   return true;
 }
