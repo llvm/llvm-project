@@ -2680,7 +2680,7 @@ static void computeNecessaryMaterializations(
       if (!castOp)
         continue;
       if (castOp->getResultTypes() == inputOperands.getTypes()) {
-        replaceMaterialization(rewriterImpl, opResult, inputOperands,
+        replaceMaterialization(rewriterImpl, user->getResults(), inputOperands,
                                inverseMapping);
         necessaryMaterializations.remove(materializationOps.lookup(user));
       }
