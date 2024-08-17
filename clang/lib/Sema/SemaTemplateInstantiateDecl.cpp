@@ -4906,7 +4906,7 @@ FunctionDecl *Sema::InstantiateFunctionDeclaration(
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
   sema::TemplateDeductionInfo Info(Loc);
-  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC, Info);
+  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asMutableArray(), CSC, Info);
   if (Inst.isInvalid())
     return nullptr;
 

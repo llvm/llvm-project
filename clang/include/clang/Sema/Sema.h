@@ -12800,7 +12800,7 @@ public:
     union {
       /// The list of template arguments we are substituting, if they
       /// are not part of the entity.
-      const TemplateArgument *TemplateArgs;
+      TemplateArgument *TemplateArgs;
 
       /// The list of argument expressions in a synthesized call.
       const Expr *const *CallArgs;
@@ -12819,9 +12819,12 @@ public:
       CXXSpecialMemberKind SpecialMember;
     };
 
-    ArrayRef<TemplateArgument> template_arguments() const {
+    MutableArrayRef<TemplateArgument> template_arguments() {
       assert(Kind != DeclaringSpecialMember);
       return {TemplateArgs, NumTemplateArgs};
+    }
+    ArrayRef<TemplateArgument> template_arguments() const {
+      return const_cast<CodeSynthesisContext *>(this)->template_arguments();
     }
 
     /// The template deduction info object associated with the
@@ -12873,21 +12876,21 @@ public:
     /// Note that we are instantiating a type alias template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TypeAliasTemplateDecl *Entity,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating a default argument in a
     /// template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateParameter Param, TemplateDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are substituting either explicitly-specified or
     /// deduced template arguments during function template argument deduction.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionTemplateDecl *FunctionTemplate,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           CodeSynthesisContext::SynthesisKind Kind,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
@@ -12896,7 +12899,7 @@ public:
     /// argument deduction for a class template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12905,7 +12908,7 @@ public:
     /// specialization.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ClassTemplatePartialSpecializationDecl *PartialSpec,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12914,7 +12917,7 @@ public:
     /// specialization.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           VarTemplatePartialSpecializationDecl *PartialSpec,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12922,28 +12925,28 @@ public:
     /// parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ParmVarDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are substituting prior template arguments into a
     /// non-type parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           NamedDecl *Template, NonTypeTemplateParmDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     /// Note that we are substituting prior template arguments into a
     /// template template parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           NamedDecl *Template, TemplateTemplateParmDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     /// Note that we are checking the default template argument
     /// against the template parameter for a given template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Template, NamedDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     struct ConstraintsCheck {};
@@ -12952,7 +12955,7 @@ public:
     /// constraints).
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ConstraintsCheck, NamedDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     struct ConstraintSubstitution {};
@@ -13026,7 +13029,7 @@ public:
         Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
         SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
         Decl *Entity, NamedDecl *Template = nullptr,
-        ArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
+        MutableArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
         sema::TemplateDeductionInfo *DeductionInfo = nullptr);
 
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;
@@ -14458,7 +14461,7 @@ public:
 
   bool CheckInstantiatedFunctionTemplateConstraints(
       SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
+      MutableArrayRef<TemplateArgument> TemplateArgs,
       ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
@@ -14526,7 +14529,7 @@ private:
   /// function.
   bool
   SetupConstraintScope(FunctionDecl *FD,
-                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
                        const MultiLevelTemplateArgumentList &MLTAL,
                        LocalInstantiationScope &Scope);
 
@@ -14535,7 +14538,7 @@ private:
   /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
   std::optional<MultiLevelTemplateArgumentList>
   SetupConstraintCheckingTemplateArgumentsAndScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+      FunctionDecl *FD, std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
       LocalInstantiationScope &Scope);
 
   ///@}

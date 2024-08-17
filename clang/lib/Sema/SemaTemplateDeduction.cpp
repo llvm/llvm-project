@@ -3766,7 +3766,7 @@ static TemplateDeductionResult instantiateExplicitSpecifierDeferred(
     Sema &S, FunctionDecl *Specialization,
     const MultiLevelTemplateArgumentList &SubstArgs,
     TemplateDeductionInfo &Info, FunctionTemplateDecl *FunctionTemplate,
-    ArrayRef<TemplateArgument> DeducedArgs) {
+    MutableArrayRef<TemplateArgument> DeducedArgs) {
   auto GetExplicitSpecifier = [](FunctionDecl *D) {
     return isa<CXXConstructorDecl>(D)
                ? cast<CXXConstructorDecl>(D)->getExplicitSpecifier()

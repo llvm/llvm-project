@@ -6545,9 +6545,12 @@ public:
   /// Retrieve the name of the template that we are specializing.
   TemplateName getTemplateName() const { return Template; }
 
-  ArrayRef<TemplateArgument> template_arguments() const {
-    return {reinterpret_cast<const TemplateArgument *>(this + 1),
+  MutableArrayRef<TemplateArgument> template_arguments() {
+    return {reinterpret_cast<TemplateArgument *>(this + 1),
             TemplateSpecializationTypeBits.NumArgs};
+  }
+  ArrayRef<TemplateArgument> template_arguments() const {
+    return const_cast<TemplateSpecializationType *>(this)->template_arguments();
   }
 
   bool isSugared() const {

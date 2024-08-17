@@ -106,7 +106,7 @@ getPrimaryTemplateOfGenericLambda(const FunctionDecl *LambdaCallOperator) {
 struct EnclosingTypeAliasTemplateDetails {
   TypeAliasTemplateDecl *Template = nullptr;
   TypeAliasTemplateDecl *PrimaryTypeAliasDecl = nullptr;
-  ArrayRef<TemplateArgument> AssociatedTemplateArguments;
+  MutableArrayRef<TemplateArgument> AssociatedTemplateArguments;
 
   explicit operator bool() noexcept { return Template; }
 };
@@ -341,7 +341,7 @@ Response HandleFunctionTemplateDecl(FunctionTemplateDecl *FTD,
 
     while (Type *Ty = NNS ? NNS->getAsType() : nullptr) {
       if (NNS->isInstantiationDependent()) {
-        if (auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
+        if (auto *TSTy = const_cast<TemplateSpecializationType *>(Ty->getAs<TemplateSpecializationType>())) {
           MutableArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
           // Prefer template arguments from the injected-class-type if possible.
           // For example,
@@ -472,13 +472,13 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   MultiLevelTemplateArgumentList Result;
 
   using namespace TemplateInstArgsHelpers;
-  Decl *CurDecl = ND;
+  Decl *CurDecl = const_cast<NamedDecl *>(ND);
 
   if (!CurDecl)
     CurDecl = Decl::castFromDeclContext(DC);
 
   if (Innermost) {
-    Result.addOuterTemplateArguments(ND, *Innermost, Final);
+    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost, Final);
     // Populate placeholder template arguments for TemplateTemplateParmDecls.
     // This is essential for the case e.g.
     //
@@ -489,7 +489,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     // has a depth of 0.
     if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
       HandleDefaultTempArgIntoTempTempParam(TTP, Result);
-    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
+    CurDecl = const_cast<Decl *>(Response::UseNextDecl(CurDecl).NextDecl);
   }
 
   while (!CurDecl->isFileContextDecl()) {
@@ -532,7 +532,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     if (R.ClearRelativeToPrimary)
       RelativeToPrimary = false;
     assert(R.NextDecl);
-    CurDecl = R.NextDecl;
+    CurDecl = const_cast<Decl *>(R.NextDecl);
   }
 
   return Result;
@@ -581,7 +581,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
     SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
-    Decl *Entity, NamedDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    Decl *Entity, NamedDecl *Template, MutableArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo *DeductionInfo)
     : SemaRef(SemaRef) {
   // Don't allow further instantiation if a fatal error and an uncompilable
@@ -629,7 +629,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, TemplateParameter Param,
-    TemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    TemplateDecl *Template, MutableArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -640,7 +640,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     FunctionTemplateDecl *FunctionTemplate,
-    ArrayRef<TemplateArgument> TemplateArgs,
+    MutableArrayRef<TemplateArgument> TemplateArgs,
     CodeSynthesisContext::SynthesisKind Kind,
     sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
     : InstantiatingTemplate(SemaRef, Kind, PointOfInstantiation,
@@ -654,7 +654,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     TemplateDecl *Template,
-    ArrayRef<TemplateArgument> TemplateArgs,
+    MutableArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -665,7 +665,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     ClassTemplatePartialSpecializationDecl *PartialSpec,
-    ArrayRef<TemplateArgument> TemplateArgs,
+    MutableArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -676,7 +676,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     VarTemplatePartialSpecializationDecl *PartialSpec,
-    ArrayRef<TemplateArgument> TemplateArgs,
+    MutableArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -686,7 +686,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, ParmVarDecl *Param,
-    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
+    MutableArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
           CodeSynthesisContext::DefaultFunctionArgumentInstantiation,
@@ -695,7 +695,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, NamedDecl *Template,
-    NonTypeTemplateParmDecl *Param, ArrayRef<TemplateArgument> TemplateArgs,
+    NonTypeTemplateParmDecl *Param, MutableArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -705,7 +705,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, NamedDecl *Template,
-    TemplateTemplateParmDecl *Param, ArrayRef<TemplateArgument> TemplateArgs,
+    TemplateTemplateParmDecl *Param, MutableArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef,
@@ -715,7 +715,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
-    TypeAliasTemplateDecl *Entity, ArrayRef<TemplateArgument> TemplateArgs,
+    TypeAliasTemplateDecl *Entity, MutableArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::TypeAliasTemplateInstantiation,
@@ -724,7 +724,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, TemplateDecl *Template,
-    NamedDecl *Param, ArrayRef<TemplateArgument> TemplateArgs,
+    NamedDecl *Param, MutableArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::DefaultTemplateArgumentChecking,
@@ -762,7 +762,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     ConstraintsCheck, NamedDecl *Template,
-    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
+    MutableArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ConstraintsCheck,
           PointOfInstantiation, InstantiationRange, Template, nullptr,

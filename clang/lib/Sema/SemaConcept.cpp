@@ -583,7 +583,7 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  ArrayRef<TemplateArgument> TemplateArgs =
+  MutableArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
           ? TemplateArgsLists.getOutermost()
           : MutableArrayRef<TemplateArgument> {};
@@ -750,7 +750,7 @@ bool Sema::addInstantiatedCapturesToScope(
 }
 
 bool Sema::SetupConstraintScope(
-    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    FunctionDecl *FD, std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
     const MultiLevelTemplateArgumentList &MLTAL,
     LocalInstantiationScope &Scope) {
   if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
@@ -758,7 +758,7 @@ bool Sema::SetupConstraintScope(
     InstantiatingTemplate Inst(
         *this, FD->getPointOfInstantiation(),
         Sema::InstantiatingTemplate::ConstraintsCheck{}, PrimaryTemplate,
-        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        TemplateArgs ? *TemplateArgs : MutableArrayRef<TemplateArgument>{},
         SourceRange());
     if (Inst.isInvalid())
       return true;
@@ -804,7 +804,7 @@ bool Sema::SetupConstraintScope(
     InstantiatingTemplate Inst(
         *this, FD->getPointOfInstantiation(),
         Sema::InstantiatingTemplate::ConstraintsCheck{}, InstantiatedFrom,
-        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        TemplateArgs ? *TemplateArgs : MutableArrayRef<TemplateArgument>{},
         SourceRange());
     if (Inst.isInvalid())
       return true;
@@ -822,7 +822,7 @@ bool Sema::SetupConstraintScope(
 // constraint-instantiation and checking.
 std::optional<MultiLevelTemplateArgumentList>
 Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
-    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    FunctionDecl *FD, std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
     LocalInstantiationScope &Scope) {
   MultiLevelTemplateArgumentList MLTAL;
 
@@ -1081,7 +1081,7 @@ bool Sema::EnsureTemplateArgumentListConstraints(
 
 bool Sema::CheckInstantiatedFunctionTemplateConstraints(
     SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-    ArrayRef<TemplateArgument> TemplateArgs,
+    MutableArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
   // In most cases we're not going to have constraints, so check for that first.
   FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();

@@ -193,12 +193,15 @@ public:
   CXXRecordDecl *getAsRecordDecl() const;
 
   /// Retrieve the type stored in this nested name specifier.
-  const Type *getAsType() const {
+  Type *getAsType() {
     if (Prefix.getInt() == StoredTypeSpec ||
         Prefix.getInt() == StoredTypeSpecWithTemplate)
-      return (const Type *)Specifier;
+      return static_cast<Type *>(Specifier);
 
     return nullptr;
+  }
+  const Type *getAsType() const {
+    return const_cast<NestedNameSpecifier *>(this)->getAsType();
   }
 
   NestedNameSpecifierDependence getDependence() const;
