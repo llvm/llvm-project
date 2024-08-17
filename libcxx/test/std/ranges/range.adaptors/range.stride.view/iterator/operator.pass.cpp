@@ -235,7 +235,7 @@ static_assert(!std::three_way_comparable<UnEqualableView>);
 
 template <typename Iter>
   requires std::sized_sentinel_for<Iter, Iter> && (!std::forward_iterator<Iter>)
-constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, Iter end) {
+constexpr bool test_non_forward_operator_plus(Iter zero_begin, Iter one_begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
   // Test the non-forward-range operator- between two iterators (i.e., ceil) and an
   // iterator and a default sentinel.
@@ -311,7 +311,7 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
 }
 
 template <std::forward_iterator Iter, typename difference_type>
-constexpr bool test_forward_operator_minus(Iter begin, Iter end, difference_type distance) {
+constexpr bool test_forward_operator_plus(Iter begin, Iter end, difference_type distance) {
   // Test the forward-range operator- between two iterators (i.e., no ceil) and
   // an iterator and a default sentinel.
   using Base = BasicTestView<Iter, Iter>;
@@ -420,13 +420,13 @@ int main(int, char**) {
   {
     constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    test_forward_operator_minus(arr, arr + 11, 4);
-    test_forward_operator_minus(vec.begin(), vec.end(), 4);
+    test_forward_operator_plus(arr, arr + 11, 4);
+    test_forward_operator_plus(vec.begin(), vec.end(), 4);
   }
 
   {
     int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    test_non_forward_operator_minus(SizedInputIterator(arr), SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
+    test_non_forward_operator_plus(SizedInputIterator(arr), SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
   }
 
   test_properly_handling_missing();
