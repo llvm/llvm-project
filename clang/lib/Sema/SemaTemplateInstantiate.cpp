@@ -341,7 +341,7 @@ Response HandleFunctionTemplateDecl(FunctionTemplateDecl *FTD,
 
     while (Type *Ty = NNS ? NNS->getAsType() : nullptr) {
       if (NNS->isInstantiationDependent()) {
-        if (auto *TSTy = const_cast<TemplateSpecializationType *>(Ty->getAs<TemplateSpecializationType>())) {
+        if (auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
           MutableArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
           // Prefer template arguments from the injected-class-type if possible.
           // For example,

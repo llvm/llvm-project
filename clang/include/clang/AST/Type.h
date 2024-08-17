@@ -2813,6 +2813,9 @@ public:
   /// There are some specializations of this member template listed
   /// immediately following this class.
   template <typename T> const T *getAs() const;
+  template <typename T> T *getAs() {
+    return const_cast<T *>(const_cast<const Type *>(this)->getAs<T>());
+  }
 
   /// Member-template getAsAdjusted<specific type>. Look through specific kinds
   /// of sugar (parens, attributes, etc) for an instance of \<specific type>.
@@ -2993,6 +2996,7 @@ template <> const UsingType *Type::getAs() const;
 /// existing sugar until it reaches a TemplateSpecializationType or a
 /// non-sugared type.
 template <> const TemplateSpecializationType *Type::getAs() const;
+template <> TemplateSpecializationType *Type::getAs();
 
 /// This will check for an AttributedType by removing any existing sugar
 /// until it reaches an AttributedType or a non-sugared type.

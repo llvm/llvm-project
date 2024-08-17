@@ -587,6 +587,10 @@ template <> const TemplateSpecializationType *Type::getAs() const {
   return getAsSugar<TemplateSpecializationType>(this);
 }
 
+template <> TemplateSpecializationType *Type::getAs() {
+  return const_cast<TemplateSpecializationType *>(getAsSugar<TemplateSpecializationType>(this));
+}
+
 template <> const AttributedType *Type::getAs() const {
   return getAsSugar<AttributedType>(this);
 }
