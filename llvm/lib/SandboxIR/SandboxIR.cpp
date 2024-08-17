@@ -1236,6 +1236,84 @@ static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
   }
 }
 
+SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
+                               BasicBlock::iterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::SwitchInst *LLVMSwitch =
+      Builder.CreateSwitch(V->Val, cast<llvm::BasicBlock>(Dest->Val), NumCases);
+  return Ctx.createSwitchInst(LLVMSwitch);
+}
+
+Value *SwitchInst::getCondition() const {
+  return Ctx.getValue(cast<llvm::SwitchInst>(Val)->getCondition());
+}
+
+void SwitchInst::setCondition(Value *V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&SwitchInst::getCondition, &SwitchInst::setCondition>>(
+          this);
+  cast<llvm::SwitchInst>(Val)->setCondition(V->Val);
+}
+
+BasicBlock *SwitchInst::getDefaultDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::SwitchInst>(Val)->getDefaultDest()));
+}
+
+void SwitchInst::setDefaultDest(BasicBlock *DefaultCase) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&SwitchInst::getDefaultDest,
+                                       &SwitchInst::setDefaultDest>>(this);
+  cast<llvm::SwitchInst>(Val)->setDefaultDest(
+      cast<llvm::BasicBlock>(DefaultCase->Val));
+}
+ConstantInt *SwitchInst::findCaseDest(BasicBlock *BB) {
+  auto *LLVMC = cast<llvm::SwitchInst>(Val)->findCaseDest(
+      cast<llvm::BasicBlock>(BB->Val));
+  return LLVMC != nullptr ? cast<ConstantInt>(Ctx.getValue(LLVMC)) : nullptr;
+}
+
+void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
+  Ctx.getTracker().emplaceIfTracking<SwitchAddCase>(this, OnVal);
+  // TODO: Track this!
+  cast<llvm::SwitchInst>(Val)->addCase(cast<llvm::ConstantInt>(OnVal->Val),
+                                       cast<llvm::BasicBlock>(Dest->Val));
+}
+
+SwitchInst::CaseIt SwitchInst::removeCase(CaseIt It) {
+  auto &Case = *It;
+  Ctx.getTracker().emplaceIfTracking<SwitchRemoveCase>(
+      this, Case.getCaseValue(), Case.getCaseSuccessor());
+
+  auto *LLVMSwitch = cast<llvm::SwitchInst>(Val);
+  unsigned CaseNum = It - case_begin();
+  llvm::SwitchInst::CaseIt LLVMIt(LLVMSwitch, CaseNum);
+  auto LLVMCaseIt = LLVMSwitch->removeCase(LLVMIt);
+  unsigned Num = LLVMCaseIt - LLVMSwitch->case_begin();
+  return CaseIt(this, Num);
+}
+
+BasicBlock *SwitchInst::getSuccessor(unsigned Idx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::SwitchInst>(Val)->getSuccessor(Idx)));
+}
+
+void SwitchInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetterWithIdx<&SwitchInst::getSuccessor,
+                                              &SwitchInst::setSuccessor>>(this,
+                                                                          Idx);
+  cast<llvm::SwitchInst>(Val)->setSuccessor(
+      Idx, cast<llvm::BasicBlock>(NewSucc->Val));
+}
+
 Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
                              BBIterator WhereIt, BasicBlock *WhereBB,
                              Context &Ctx, const Twine &Name) {
@@ -1875,6 +1953,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Switch: {
+    auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
+    It->second =
+        std::unique_ptr<SwitchInst>(new SwitchInst(LLVMSwitchInst, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::FNeg: {
     auto *LLVMUnaryOperator = cast<llvm::UnaryOperator>(LLVMV);
     It->second = std::unique_ptr<UnaryOperator>(
@@ -2032,6 +2116,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
+  auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));
+  return cast<SwitchInst>(registerValue(std::move(NewPtr)));
 }
 UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
   auto NewPtr = std::unique_ptr<UnaryOperator>(new UnaryOperator(I, *this));
