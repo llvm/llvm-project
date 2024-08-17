@@ -338,6 +338,12 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_SCC:
           llvm_unreachable("src_scc register should not be used");
 
+        case AMDGPU::IDX0:
+        case AMDGPU::IDX1:
+        case AMDGPU::IDX2:
+        case AMDGPU::IDX3:
+          continue;
+
         default:
           break;
         }
