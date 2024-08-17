@@ -300,7 +300,7 @@ static bool BuiltinFunctionStart(Sema &S, CallExpr *TheCall) {
     return true;
   }
 
-  return !S.checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
+  return !S.checkAddressOfFunctionIsAvailable(const_cast<FunctionDecl *>(FD), /*Complain=*/true,
                                               TheCall->getBeginLoc());
 }
 

@@ -3718,7 +3718,7 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
   // operator template, but not both.
   if (FoundRaw && FoundTemplate) {
     Diag(R.getNameLoc(), diag::err_ovl_ambiguous_call) << R.getLookupName();
-    for (const NamedDecl *D : R)
+    for (NamedDecl *D : R)
       NoteOverloadCandidate(D, D->getUnderlyingDecl()->getAsFunction());
     return LOLR_Error;
   }

@@ -10949,7 +10949,7 @@ static bool isFunctionAlwaysEnabled(const ASTContext &Ctx,
 ///   we in overload resolution?
 /// \param Loc - The location of the statement we're complaining about. Ignored
 ///   if we're not complaining, or if we're in overload resolution.
-static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
+static bool checkAddressOfFunctionIsAvailable(Sema &S, FunctionDecl *FD,
                                               bool Complain,
                                               bool InOverloadResolution,
                                               SourceLocation Loc) {
@@ -10966,7 +10966,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
 
   if (FD->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(const_cast<FunctionDecl *>(FD), Satisfaction, Loc))
+    if (S.CheckFunctionConstraints(FD, Satisfaction, Loc))
       return false;
     if (!Satisfaction.IsSatisfied) {
       if (Complain) {
@@ -11012,13 +11012,13 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
 }
 
 static bool checkAddressOfCandidateIsAvailable(Sema &S,
-                                               const FunctionDecl *FD) {
+                                               FunctionDecl *FD) {
   return checkAddressOfFunctionIsAvailable(S, FD, /*Complain=*/true,
                                            /*InOverloadResolution=*/true,
                                            /*Loc=*/SourceLocation());
 }
 
-bool Sema::checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
+bool Sema::checkAddressOfFunctionIsAvailable(FunctionDecl *Function,
                                              bool Complain,
                                              SourceLocation Loc) {
   return ::checkAddressOfFunctionIsAvailable(*this, Function, Complain,
@@ -11048,7 +11048,7 @@ static bool shouldSkipNotingLambdaConversionDecl(const FunctionDecl *Fn) {
 }
 
 // Notes the location of an overload candidate.
-void Sema::NoteOverloadCandidate(const NamedDecl *Found, const FunctionDecl *Fn,
+void Sema::NoteOverloadCandidate(const NamedDecl *Found, FunctionDecl *Fn,
                                  OverloadCandidateRewriteKind RewriteKind,
                                  QualType DestType, bool TakingAddress) {
   if (TakingAddress && !checkAddressOfCandidateIsAvailable(*this, Fn))
@@ -14024,7 +14024,7 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     // If the user passes in a function that we can't take the address of, we
     // generally end up emitting really bad error messages. Here, we attempt to
     // emit better ones.
-    for (const Expr *Arg : Args) {
+    for (Expr *Arg : Args) {
       if (!Arg->getType()->isFunctionType())
         continue;
       if (auto *DRE = dyn_cast<DeclRefExpr>(Arg->IgnoreParenImpCasts())) {

@@ -10391,7 +10391,7 @@ public:
 
   // Emit as a 'note' the specific overload candidate
   void NoteOverloadCandidate(
-      const NamedDecl *Found, const FunctionDecl *Fn,
+      const NamedDecl *Found, FunctionDecl *Fn,
       OverloadCandidateRewriteKind RewriteKind = OverloadCandidateRewriteKind(),
       QualType DestType = QualType(), bool TakingAddress = false);
 
@@ -10404,7 +10404,7 @@ public:
   /// optionally emitting a diagnostic if the address can't be taken.
   ///
   /// Returns false if taking the address of the function is illegal.
-  bool checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
+  bool checkAddressOfFunctionIsAvailable(FunctionDecl *Function,
                                          bool Complain = false,
                                          SourceLocation Loc = SourceLocation());
 

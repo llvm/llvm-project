@@ -6271,7 +6271,7 @@ InitializationSequence::InitializationSequence(
 
 /// Tries to get a FunctionDecl out of `E`. If it succeeds and we can take the
 /// address of that function, this returns true. Otherwise, it returns false.
-static bool isExprAnUnaddressableFunction(Sema &S, const Expr *E) {
+static bool isExprAnUnaddressableFunction(Sema &S, Expr *E) {
   auto *DRE = dyn_cast<DeclRefExpr>(E);
   if (!DRE || !isa<FunctionDecl>(DRE->getDecl()))
     return false;
