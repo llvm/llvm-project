@@ -41,7 +41,7 @@ static_assert(CanPreIncrementIterator<StrideViewOverForwardViewIterator>);
 template <typename Iter>
   requires std::sized_sentinel_for<Iter, Iter> && (!std::forward_iterator<Iter>)
 constexpr bool test_non_forward_operator_increment(Iter zero_begin, Iter three_begin, Iter end) {
-  using Base               = BasicTestView<Iter, Iter>;
+  using Base = BasicTestView<Iter, Iter>;
 
   auto base_view_offset_zero              = Base(zero_begin, end);
   auto base_view_offset_three             = Base(three_begin, end);
