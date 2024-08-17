@@ -1132,15 +1132,17 @@ class InstantiateReferencedParameter
     : public TreeTransform<InstantiateReferencedParameter> {
   const MultiLevelTemplateArgumentList &TemplateArgs;
 
-  DeclContext *FunctionDC;
+  llvm::SmallPtrSet<ParmVarDecl *, 4> InstantiatedDecls;
+
+  FunctionDecl *PrimaryTemplatedFunction;
 
   using inherited = TreeTransform<InstantiateReferencedParameter>;
 
   bool instantiateParameterToScope(ParmVarDecl *OldParm,
                                    LocalInstantiationScope &Scope) {
-    // Current context might have been changed by lambda expressions. So resume
-    // it before we substitute parameters.
-    Sema::ContextRAII Context(SemaRef, FunctionDC);
+    // The current context might have been changed by lambda expressions. So
+    // resume it before we substitute into parameters.
+    Sema::ContextRAII Context(SemaRef, PrimaryTemplatedFunction);
     std::optional<unsigned> NumExpansions;
     ParmVarDecl *NewParm = nullptr;
     unsigned IndexAdjustment = 0;
@@ -1194,13 +1196,17 @@ class InstantiateReferencedParameter
 public:
   InstantiateReferencedParameter(
       Sema &SemaRef, const MultiLevelTemplateArgumentList &TemplateArgs,
-      DeclContext *FunctionDC)
-      : inherited(SemaRef), TemplateArgs(TemplateArgs), FunctionDC(FunctionDC) {
-  }
+      FunctionDecl *PrimaryTemplatedFunction)
+      : inherited(SemaRef), TemplateArgs(TemplateArgs),
+        PrimaryTemplatedFunction(PrimaryTemplatedFunction) {}
 
   Decl *TransformDecl(SourceLocation Loc, Decl *D) {
-    if (auto *PVD = dyn_cast<ParmVarDecl>(D))
+    if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(D);
+        PVD && PVD->getDeclContext() == PrimaryTemplatedFunction &&
+        !InstantiatedDecls.contains(PVD)) {
       instantiateParameterToScope(PVD, *SemaRef.CurrentInstantiationScope);
+      InstantiatedDecls.insert(PVD);
+    }
     return D;
   }
 
@@ -1241,7 +1247,16 @@ bool Sema::CheckFunctionConstraintsWithoutInstantiation(
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
 
-  InstantiateReferencedParameter(*this, MLTAL, FD)
+  FunctionDecl *PatternDecl = FD;
+
+  if (FunctionTemplateDecl *FromMemTempl =
+          Template->getInstantiatedFromMemberTemplate()) {
+    while (FromMemTempl->getInstantiatedFromMemberTemplate())
+      FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
+    PatternDecl = FromMemTempl->getTemplatedDecl();
+  }
+
+  InstantiateReferencedParameter(*this, MLTAL, PatternDecl)
       .TraverseConstraintExprs(TemplateAC);
 
   Qualifiers ThisQuals;
