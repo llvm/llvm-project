@@ -743,7 +743,7 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmt = Exts.count("zcmt") != 0;
 
   if (HasI && HasE)
-    return getIncompatibleError("I", "E");
+    return getIncompatibleError("i", "e");
 
   if (HasF && HasZfinx)
     return getIncompatibleError("f", "zfinx");
@@ -778,13 +778,13 @@ Error RISCVISAInfo::checkDependency() {
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
-      return getError("'Xwchc' is only supported for 'rv32'");
+      return getError("'xwchc' is only supported for 'rv32'");
 
     if (HasD)
-      return getIncompatibleError("D", "Xwchc");
+      return getIncompatibleError("d", "xwchc");
 
     if (Exts.count("zcb") != 0)
-      return getIncompatibleError("Xwchc", "Zcb");
+      return getIncompatibleError("xwchc", "zcb");
   }
 
   return Error::success();
