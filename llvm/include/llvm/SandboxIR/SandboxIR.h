@@ -131,6 +131,7 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class SwitchInst;
 class UnaryOperator;
 class BinaryOperator;
 class AtomicRMWInst;
@@ -253,6 +254,7 @@ protected:
   friend class InvokeInst;         // For getting `Val`.
   friend class CallBrInst;         // For getting `Val`.
   friend class GetElementPtrInst;  // For getting `Val`.
+  friend class SwitchInst;         // For getting `Val`.
   friend class UnaryOperator;      // For getting `Val`.
   friend class BinaryOperator;     // For getting `Val`.
   friend class AtomicRMWInst;      // For getting `Val`.
@@ -672,6 +674,7 @@ protected:
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class SwitchInst;         // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
   friend class BinaryOperator;     // For getTopmostLLVMInstruction().
   friend class AtomicRMWInst;      // For getTopmostLLVMInstruction().
@@ -1477,6 +1480,91 @@ public:
   // TODO: Add missing member functions.
 };
 
+class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
+public:
+  SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Switch, Opcode::Switch, SI, Ctx) {}
+
+  static constexpr const unsigned DefaultPseudoIndex =
+      llvm::SwitchInst::DefaultPseudoIndex;
+
+  static SwitchInst *create(Value *V, BasicBlock *Dest, unsigned NumCases,
+                            BasicBlock::iterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx, const Twine &Name = "");
+
+  Value *getCondition() const;
+  void setCondition(Value *V);
+  BasicBlock *getDefaultDest() const;
+  bool defaultDestUndefined() const {
+    return cast<llvm::SwitchInst>(Val)->defaultDestUndefined();
+  }
+  void setDefaultDest(BasicBlock *DefaultCase);
+  unsigned getNumCases() const {
+    return cast<llvm::SwitchInst>(Val)->getNumCases();
+  }
+
+  using CaseHandle =
+      llvm::SwitchInst::CaseHandleImpl<SwitchInst, ConstantInt, BasicBlock>;
+  using ConstCaseHandle =
+      llvm::SwitchInst::CaseHandleImpl<const SwitchInst, const ConstantInt,
+                                       const BasicBlock>;
+  using CaseIt = llvm::SwitchInst::CaseIteratorImpl<CaseHandle>;
+  using ConstCaseIt = llvm::SwitchInst::CaseIteratorImpl<ConstCaseHandle>;
+
+  /// Returns a read/write iterator that points to the first case in the
+  /// SwitchInst.
+  CaseIt case_begin() { return CaseIt(this, 0); }
+  ConstCaseIt case_begin() const { return ConstCaseIt(this, 0); }
+  /// Returns a read/write iterator that points one past the last in the
+  /// SwitchInst.
+  CaseIt case_end() { return CaseIt(this, getNumCases()); }
+  ConstCaseIt case_end() const { return ConstCaseIt(this, getNumCases()); }
+  /// Iteration adapter for range-for loops.
+  iterator_range<CaseIt> cases() {
+    return make_range(case_begin(), case_end());
+  }
+  iterator_range<ConstCaseIt> cases() const {
+    return make_range(case_begin(), case_end());
+  }
+  CaseIt case_default() { return CaseIt(this, DefaultPseudoIndex); }
+  ConstCaseIt case_default() const {
+    return ConstCaseIt(this, DefaultPseudoIndex);
+  }
+  CaseIt findCaseValue(const ConstantInt *C) {
+    return CaseIt(
+        this,
+        const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
+  }
+  ConstCaseIt findCaseValue(const ConstantInt *C) const {
+    ConstCaseIt I = llvm::find_if(cases(), [C](const ConstCaseHandle &Case) {
+      return Case.getCaseValue() == C;
+    });
+    if (I != case_end())
+      return I;
+    return case_default();
+  }
+  ConstantInt *findCaseDest(BasicBlock *BB);
+
+  void addCase(ConstantInt *OnVal, BasicBlock *Dest);
+  /// This method removes the specified case and its successor from the switch
+  /// instruction. Note that this operation may reorder the remaining cases at
+  /// index idx and above.
+  /// Note:
+  /// This action invalidates iterators for all cases following the one removed,
+  /// including the case_end() iterator. It returns an iterator for the next
+  /// case.
+  CaseIt removeCase(CaseIt It);
+
+  unsigned getNumSuccessors() const {
+    return cast<llvm::SwitchInst>(Val)->getNumSuccessors();
+  }
+  BasicBlock *getSuccessor(unsigned Idx) const;
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Switch;
+  }
+};
+
 class UnaryOperator : public UnaryInstruction {
   static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
     switch (UnOp) {
@@ -2113,6 +2201,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  SwitchInst *createSwitchInst(llvm::SwitchInst *I);
+  friend SwitchInst; // For createSwitchInst()
   UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
   friend UnaryOperator; // For createUnaryOperator()
   BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);

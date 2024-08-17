@@ -59,6 +59,8 @@ class StoreInst;
 class Instruction;
 class Tracker;
 class AllocaInst;
+class SwitchInst;
+class ConstantInt;
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -259,6 +261,37 @@ public:
     dbgs() << "\n";
   }
 #endif
+};
+
+class SwitchAddCase : public IRChangeBase {
+  SwitchInst *Switch;
+  ConstantInt *Val;
+
+public:
+  SwitchAddCase(SwitchInst *Switch, ConstantInt *Val)
+      : Switch(Switch), Val(Val) {}
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchAddCase"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class SwitchRemoveCase : public IRChangeBase {
+  SwitchInst *Switch;
+  ConstantInt *Val;
+  BasicBlock *Dest;
+
+public:
+  SwitchRemoveCase(SwitchInst *Switch, ConstantInt *Val, BasicBlock *Dest)
+      : Switch(Switch), Val(Val), Dest(Dest) {}
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchRemoveCase"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
 };
 
 class MoveInstr : public IRChangeBase {
