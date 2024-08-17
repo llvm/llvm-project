@@ -71,11 +71,9 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1210-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX1210-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GFX1210-NEXT:  ; %bb.1: ; %for.body.preheader
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GFX1210-NEXT:  .LBB0_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -181,11 +179,9 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1210-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX1210-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GFX1210-NEXT:  ; %bb.1: ; %for.body.preheader
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GFX1210-NEXT:  .LBB1_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -295,7 +291,6 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1210-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX1210-NEXT:    s_cbranch_scc1 .LBB2_3
 ; GFX1210-NEXT:  ; %bb.1: ; %for.body.preheader
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:  .LBB2_2: ; %for.body
@@ -406,7 +401,6 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v4, s0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1210-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1210-NEXT:    s_add_co_i32 s1, s1, 16

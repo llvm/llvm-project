@@ -103,6 +103,30 @@ define void @foo(i32 %v1) {
 #endif
 }
 
+TEST_F(SandboxIRTest, ConstantInt) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v0) {
+  %add0 = add i32 %v0, 42
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FortyTwo = cast<sandboxir::ConstantInt>(Add0->getOperand(1));
+
+  // Check that creating an identical constant gives us the same object.
+  auto *NewCI = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  EXPECT_EQ(NewCI, FortyTwo);
+  // Check new constant.
+  auto *FortyThree = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 43, Ctx);
+  EXPECT_NE(FortyThree, FortyTwo);
+}
+
 TEST_F(SandboxIRTest, Use) {
   parseIR(C, R"IR(
 define i32 @foo(i32 %v0, i32 %v1) {
@@ -610,12 +634,11 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   }
   {
     // Check SelectInst::create() Folded.
-    auto *False =
-        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 0, Ctx,
-                                       /*IsSigned=*/false);
+    auto *False = sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 0, Ctx,
+                                              /*IsSigned=*/false);
     auto *FortyTwo =
-        sandboxir::Constant::createInt(llvm::Type::getInt1Ty(C), 42, Ctx,
-                                       /*IsSigned=*/false);
+        sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 42, Ctx,
+                                    /*IsSigned=*/false);
     auto *NewSel =
         sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
     EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
@@ -706,7 +729,7 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
 
   auto *LLVMArg0 = LLVMF.getArg(0);
   auto *LLVMArgVec = LLVMF.getArg(2);
-  auto *Zero = sandboxir::Constant::createInt(Type::getInt8Ty(C), 0, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt8Ty(C), 0, Ctx);
   auto *LLVMZero = llvm::ConstantInt::get(Type::getInt8Ty(C), 0);
   EXPECT_EQ(
       sandboxir::InsertElementInst::isValidOperands(ArgVec, Arg0, Zero),
@@ -1620,6 +1643,134 @@ define void @foo(i32 %arg, float %farg) {
   EXPECT_FALSE(FAdd->getFastMathFlags() != LLVMFAdd->getFastMathFlags());
 }
 
+TEST_F(SandboxIRTest, SwitchInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  entry:
+    switch i32 %cond0, label %default [ i32 0, label %bb0
+                                        i32 1, label %bb1 ]
+  bb0:
+    ret void
+  bb1:
+    ret void
+  default:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMEntry = getBasicBlockByName(LLVMF, "entry");
+  auto *LLVMSwitch = cast<llvm::SwitchInst>(&*LLVMEntry->begin());
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Cond1 = F.getArg(1);
+  auto *Entry = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMEntry));
+  auto *Switch = cast<sandboxir::SwitchInst>(&*Entry->begin());
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Default = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "default")));
+
+  // Check getCondition().
+  EXPECT_EQ(Switch->getCondition(), Ctx.getValue(LLVMSwitch->getCondition()));
+  // Check setCondition().
+  auto *OrigCond = Switch->getCondition();
+  auto *NewCond = Cond1;
+  EXPECT_NE(NewCond, OrigCond);
+  Switch->setCondition(NewCond);
+  EXPECT_EQ(Switch->getCondition(), NewCond);
+  Switch->setCondition(OrigCond);
+  EXPECT_EQ(Switch->getCondition(), OrigCond);
+  // Check getDefaultDest().
+  EXPECT_EQ(Switch->getDefaultDest(),
+            Ctx.getValue(LLVMSwitch->getDefaultDest()));
+  EXPECT_EQ(Switch->getDefaultDest(), Default);
+  // Check defaultDestUndefined().
+  EXPECT_EQ(Switch->defaultDestUndefined(), LLVMSwitch->defaultDestUndefined());
+  // Check setDefaultDest().
+  auto *OrigDefaultDest = Switch->getDefaultDest();
+  auto *NewDefaultDest = Entry;
+  EXPECT_NE(NewDefaultDest, OrigDefaultDest);
+  Switch->setDefaultDest(NewDefaultDest);
+  EXPECT_EQ(Switch->getDefaultDest(), NewDefaultDest);
+  Switch->setDefaultDest(OrigDefaultDest);
+  EXPECT_EQ(Switch->getDefaultDest(), OrigDefaultDest);
+  // Check getNumCases().
+  EXPECT_EQ(Switch->getNumCases(), LLVMSwitch->getNumCases());
+  // Check getNumSuccessors().
+  EXPECT_EQ(Switch->getNumSuccessors(), LLVMSwitch->getNumSuccessors());
+  // Check getSuccessor().
+  for (auto SuccIdx : seq<unsigned>(0, Switch->getNumSuccessors()))
+    EXPECT_EQ(Switch->getSuccessor(SuccIdx),
+              Ctx.getValue(LLVMSwitch->getSuccessor(SuccIdx)));
+  // Check setSuccessor().
+  auto *OrigSucc = Switch->getSuccessor(0);
+  auto *NewSucc = Entry;
+  EXPECT_NE(NewSucc, OrigSucc);
+  Switch->setSuccessor(0, NewSucc);
+  EXPECT_EQ(Switch->getSuccessor(0), NewSucc);
+  Switch->setSuccessor(0, OrigSucc);
+  EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
+  // Check case_begin(), case_end(), CaseIt.
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
+  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
+  auto CaseIt = Switch->case_begin();
+  {
+    sandboxir::SwitchInst::CaseHandle Case = *CaseIt++;
+    EXPECT_EQ(Case.getCaseValue(), Zero);
+    EXPECT_EQ(Case.getCaseSuccessor(), BB0);
+    EXPECT_EQ(Case.getCaseIndex(), 0u);
+    EXPECT_EQ(Case.getSuccessorIndex(), 1u);
+  }
+  {
+    sandboxir::SwitchInst::CaseHandle Case = *CaseIt++;
+    EXPECT_EQ(Case.getCaseValue(), One);
+    EXPECT_EQ(Case.getCaseSuccessor(), BB1);
+    EXPECT_EQ(Case.getCaseIndex(), 1u);
+    EXPECT_EQ(Case.getSuccessorIndex(), 2u);
+  }
+  EXPECT_EQ(CaseIt, Switch->case_end());
+  // Check cases().
+  unsigned CntCase = 0;
+  for (auto &Case : Switch->cases()) {
+    EXPECT_EQ(Case.getCaseIndex(), CntCase);
+    ++CntCase;
+  }
+  EXPECT_EQ(CntCase, 2u);
+  // Check case_default().
+  auto CaseDefault = *Switch->case_default();
+  EXPECT_EQ(CaseDefault.getCaseSuccessor(), Default);
+  EXPECT_EQ(CaseDefault.getCaseIndex(),
+            sandboxir::SwitchInst::DefaultPseudoIndex);
+  // Check findCaseValue().
+  EXPECT_EQ(Switch->findCaseValue(Zero)->getCaseIndex(), 0u);
+  EXPECT_EQ(Switch->findCaseValue(One)->getCaseIndex(), 1u);
+  // Check findCaseDest().
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  EXPECT_EQ(Switch->findCaseDest(Entry), nullptr);
+  // Check addCase().
+  auto *Two = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 2, Ctx);
+  Switch->addCase(Two, Entry);
+  auto CaseTwoIt = Switch->findCaseValue(Two);
+  auto CaseTwo = *CaseTwoIt;
+  EXPECT_EQ(CaseTwo.getCaseValue(), Two);
+  EXPECT_EQ(CaseTwo.getCaseSuccessor(), Entry);
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  // Check removeCase().
+  auto RemovedIt = Switch->removeCase(CaseTwoIt);
+  EXPECT_EQ(RemovedIt, Switch->case_end());
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  // Check create().
+  auto NewSwitch = sandboxir::SwitchInst::create(
+      Cond1, Default, 1, Default->begin(), Default, Ctx, "NewSwitch");
+  EXPECT_TRUE(isa<sandboxir::SwitchInst>(NewSwitch));
+  EXPECT_EQ(NewSwitch->getCondition(), Cond1);
+  EXPECT_EQ(NewSwitch->getDefaultDest(), Default);
+}
+
 TEST_F(SandboxIRTest, UnaryOperator) {
   parseIR(C, R"IR(
 define void @foo(float %arg0) {
@@ -1866,8 +2017,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check create() when it gets folded.
-    auto *FortyTwo =
-        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
     auto *NewV = sandboxir::BinaryOperator::create(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo,
         /*InsertBefore=*/Ret, Ctx, "Folded");
@@ -1923,8 +2073,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check createWithCopiedFlags() when it gets folded.
-    auto *FortyTwo =
-        sandboxir::Constant::createInt(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
     auto *NewV = sandboxir::BinaryOperator::createWithCopiedFlags(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo, CopyFrom,
         /*InsertBefore=*/Ret, Ctx, "Folded");
@@ -2378,7 +2527,7 @@ define void @foo() {
   auto *Ty = Type::getInt32Ty(C);
   unsigned AddrSpace = 42;
   auto *PtrTy = PointerType::get(C, AddrSpace);
-  auto *ArraySize = sandboxir::Constant::createInt(Ty, 43, Ctx);
+  auto *ArraySize = sandboxir::ConstantInt::get(Ty, 43, Ctx);
   {
     // Check create() WhereIt, WhereBB.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(

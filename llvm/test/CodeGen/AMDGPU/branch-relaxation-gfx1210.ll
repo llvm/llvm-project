@@ -36,7 +36,6 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB0_2: ; %bb3
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -79,7 +78,6 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB1_2: ; %bb3
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -127,7 +125,6 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB2_2: ; %bb3
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -361,7 +358,6 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 3
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:  .LBB7_2: ; %Flow
 ; GCN-NEXT:    s_wait_alu 0xfffe

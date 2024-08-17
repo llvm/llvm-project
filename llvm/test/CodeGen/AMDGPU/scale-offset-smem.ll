@@ -181,7 +181,6 @@ define amdgpu_ps float @s_load_b32_idxprom_range(ptr addrspace(4) align 4 inreg 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -199,7 +198,6 @@ define amdgpu_ps float @s_load_b32_idxprom_range_ioffset(ptr addrspace(4) align 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x40 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -220,7 +218,6 @@ define amdgpu_ps float @s_load_b8_idxprom_range_ioffset(ptr addrspace(4) align 4
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_u8 s0, s[0:1], s2 offset:0x10
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -241,7 +238,6 @@ define amdgpu_ps float @s_load_b16_idxprom_range(ptr addrspace(4) align 4 inreg 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_u16 s0, s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -261,7 +257,6 @@ define amdgpu_ps float @s_load_b16_idxprom_range_ioffset(ptr addrspace(4) align 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_u16 s0, s[0:1], s2 offset:0x20 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -282,7 +277,6 @@ define amdgpu_ps <2 x float> @s_load_b64_idxprom_range(ptr addrspace(4) align 4 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -300,7 +294,6 @@ define amdgpu_ps <3 x float> @s_load_b96_idxprom_range(ptr addrspace(4) align 4 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -319,7 +312,6 @@ define amdgpu_ps <4 x float> @s_load_b128_idxprom_range(ptr addrspace(4) align 4
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -338,7 +330,6 @@ define amdgpu_ps <8 x float> @s_load_b256_idxprom_range(ptr addrspace(4) align 4
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -359,7 +350,6 @@ define amdgpu_ps <16 x float> @s_load_b512_idxprom_range(ptr addrspace(4) align 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_load_b512 s[0:15], s[0:1], s2 offset:0x0 scale_offset
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1

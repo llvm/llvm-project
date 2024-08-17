@@ -129,7 +129,6 @@ define amdgpu_ps float @flat_load_b32_idxprom_range(ptr align 4 inreg %p, ptr al
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b32 v0, v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -146,7 +145,6 @@ define amdgpu_ps float @flat_load_b32_idxprom_range_ioffset(ptr align 4 inreg %p
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b32 v0, v0, s[0:1] offset:64 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -166,7 +164,6 @@ define amdgpu_ps float @flat_load_b8_idxprom_range_ioffset(ptr align 4 inreg %p,
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_u8 v0, v0, s[0:1] offset:16
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -186,7 +183,6 @@ define amdgpu_ps float @flat_load_b16_idxprom_range(ptr align 4 inreg %p, ptr al
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_u16 v0, v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -205,7 +201,6 @@ define amdgpu_ps float @flat_load_b16_idxprom_range_ioffset(ptr align 4 inreg %p
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_u16 v0, v0, s[0:1] offset:32 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -225,7 +220,6 @@ define amdgpu_ps <2 x float> @flat_load_b64_idxprom_range(ptr align 4 inreg %p, 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b64 v[0:1], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -242,7 +236,6 @@ define amdgpu_ps <3 x float> @flat_load_b96_idxprom_range(ptr align 4 inreg %p, 
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b96 v[0:2], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -259,7 +252,6 @@ define amdgpu_ps <3 x float> @flat_load_b96_idxprom_range_ioffset(ptr align 4 in
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -277,7 +269,6 @@ define amdgpu_ps <4 x float> @flat_load_b128_idxprom_range(ptr align 4 inreg %p,
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    flat_load_b32 v0, v[0:1]
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_load_b128 v[0:3], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
