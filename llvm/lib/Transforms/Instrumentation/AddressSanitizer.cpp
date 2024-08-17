@@ -2531,15 +2531,10 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
   SmallVector<GlobalVariable *, 16> NewGlobals(n);
   SmallVector<Constant *, 16> Initializers(n);
 
-  bool HasDynamicallyInitializedGlobals = false;
-
   // We shouldn't merge same module names, as this string serves as unique
   // module ID in runtime.
-  GlobalVariable *ModuleName =
-      n != 0
-          ? createPrivateGlobalForString(M, M.getModuleIdentifier(),
-                                         /*AllowMerging*/ false, kAsanGenPrefix)
-          : nullptr;
+  GlobalVariable *ModuleName = createPrivateGlobalForString(
+      M, M.getModuleIdentifier(), /*AllowMerging*/ false, kAsanGenPrefix);
 
   for (size_t i = 0; i < n; i++) {
     GlobalVariable *G = GlobalsToChange[i];
@@ -2646,9 +2641,6 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
         Constant::getNullValue(IntptrTy),
         ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
 
-    if (ClInitializers && MD.IsDynInit)
-      HasDynamicallyInitializedGlobals = true;
-
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
     Initializers[i] = Initializer;
@@ -2688,7 +2680,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
   }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
-  if (HasDynamicallyInitializedGlobals)
+  if (ClInitializers)
     createInitializerPoisonCalls(M, ModuleName);
 
   LLVM_DEBUG(dbgs() << M);
