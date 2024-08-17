@@ -36208,6 +36208,7 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
       MIB.add(MO);
   }
   MIB.setMemRefs(MMOs);
+  MIB.setMIFlag(MachineInstr::FrameDestroy);
 
   // Reload IP
   MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(PtrLoadOpc), Tmp);
@@ -36233,6 +36234,7 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
                                  // the last instruction of the expansion.
   }
   MIB.setMemRefs(MMOs);
+  MIB.setMIFlag(MachineInstr::FrameDestroy);
 
   // Jump
   BuildMI(*thisMBB, MI, MIMD, TII->get(IJmpOpc)).addReg(Tmp);
