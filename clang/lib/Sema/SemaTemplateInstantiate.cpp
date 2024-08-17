@@ -272,7 +272,7 @@ Response HandleFunction(Sema &SemaRef, FunctionDecl *Function,
   } else if (TemplateArgumentList *TemplateArgs =
                  Function->getTemplateSpecializationArgs()) {
     // Add the template arguments for this specialization.
-    Result.addOuterTemplateArguments(const_cast<FunctionDecl *>(Function),
+    Result.addOuterTemplateArguments(Function,
                                      TemplateArgs->asMutableArray(),
                                      /*Final=*/false);
 
