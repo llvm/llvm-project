@@ -229,7 +229,7 @@ define amdgpu_kernel void @kernel_calls_workitem_id_x(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @indirect_calls_none_agpr(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @indirect_calls_none_agpr(
-; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
@@ -261,7 +261,6 @@ attributes #0 = { "amdgpu-no-agpr" }
 ; CHECK: attributes #[[ATTR4]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,8" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR10]] = { "amdgpu-no-agpr" }

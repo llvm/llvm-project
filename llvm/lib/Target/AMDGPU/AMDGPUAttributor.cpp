@@ -697,20 +697,23 @@ private:
   // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is
   // not to be set.
   bool needFlatScratchInit(Attributor &A) {
+    assert(isAssumed(FLAT_SCRATCH_INIT)); // only called if the bit is still set
+
     // This is called on each callee; false means callee shouldn't have
     // no-flat-scratch-init.
     auto CheckForNoFlatScratchInit = [&](Instruction &I) {
       const auto &CB = cast<CallBase>(I);
       const Function *Callee = CB.getCalledFunction();
-      if (!Callee) // indirect call
-        return CB.isInlineAsm();
 
-      if (Callee->isIntrinsic())
-        return Callee->getIntrinsicID() != Intrinsic::amdgcn_addrspacecast_nonnull;
+      if (Callee && Callee->isIntrinsic())
+        return Callee->getIntrinsicID() !=
+               Intrinsic::amdgcn_addrspacecast_nonnull;
 
-      const auto *CalleeInfo = A.getAAFor<AAAMDAttributes>(
-          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-      return CalleeInfo && CalleeInfo->isAssumed(FLAT_SCRATCH_INIT);
+      // Return true for all other cases, including (1)inline asm, (2)direct
+      // call, and (3)indirect call with known callees. For (2) and (3)
+      // updateImpl() already checked the callees and we know their
+      // FLAT_SCRATCH_INIT bit is set.
+      return true;
     };
 
     bool UsedAssumedInformation = false;
