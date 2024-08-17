@@ -15,5 +15,5 @@ entry:
   ret i32 0
 }
 
-; CHECK: declare void @foo(ptr)
+; CHECK: declare !guid ![[#]] void @foo(ptr)
 declare void @foo(ptr) #1

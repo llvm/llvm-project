@@ -569,6 +569,12 @@ public:
     return Name;
   }
 
+  /// Declare a type to represent a global unique identifier for a global value.
+  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
+  /// unique way to identify a symbol.
+  using GUID = uint64_t;
+
+private:
   /// Return the modified name for a global value suitable to be
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   /// The value's original name is \c Name and has linkage of type
@@ -581,18 +587,30 @@ public:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   std::string getGlobalIdentifier() const;
 
-  /// Declare a type to represent a global unique identifier for a global value.
-  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
-  /// unique way to identify a symbol.
-  using GUID = uint64_t;
-
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
   static GUID getGUID(StringRef GlobalName);
 
+public:
+  std::string getGlobalIdentifierForPGO() const {
+    return getGlobalIdentifier();
+  }
+
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
+  GUID getGUID() const;
+  void setGUIDIfNotPresent(GUID ForceValue = 0);
+  
+  // FIXME: remove when we switch PGO to the guid metadata mechanism.
+  static std::string getGlobalIdentifierForPGO(StringRef Name,
+                                               LinkageTypes Linkage,
+                                               StringRef FileName) {
+    return getGlobalIdentifier(Name, Linkage, FileName);
+  }
+
+  static GUID getGUIDForExternalLinkageValue(StringRef GlobalName) {
+    return getGUID(GlobalName);
+  }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.

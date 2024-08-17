@@ -13,6 +13,6 @@
 ; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @llvm.embedded.object], section "llvm.metadata"
 
 ;; Make sure the metadata correlates to the .llvm.lto section.
-; CHECK: !llvm.embedded.objects = !{!1}
-; CHECK: !0 = !{}
+; CHECK: !llvm.embedded.objects = !{![[#]]}
+; CHECK: ![[#]] = !{}
 ; CHECK: !{ptr @llvm.embedded.object, !".llvm.lto"}

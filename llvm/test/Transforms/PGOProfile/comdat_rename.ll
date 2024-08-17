@@ -51,7 +51,7 @@ define linkonce void @tf2() comdat($tf) {
 ; CHECK: @aef = weak alias void (), ptr @aef.[[SINGLEBB_HASH]]
 
 define available_externally void @aef() {
-; CHECK: define linkonce_odr void @aef.[[SINGLEBB_HASH]]() comdat {
+; CHECK: define linkonce_odr void @aef.[[SINGLEBB_HASH]]() comdat !guid ![[#]] {
   ret void
 }
 

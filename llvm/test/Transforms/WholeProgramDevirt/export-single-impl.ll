@@ -64,16 +64,16 @@ $vf4 = comdat largest
 @vt1 = constant ptr @vf1, !type !0
 
 ; CHECK: @vt2 = constant ptr @vf2
-@vt2 = constant ptr @vf2, !type !1
+@vt2 = constant ptr @vf2, !type !2
 
-@vt3 = constant ptr @vf3, !type !2
+@vt3 = constant ptr @vf3, !type !4
 
 ; CHECK: @vt4 = constant ptr @vf4.llvm.merged, comdat($vf4.llvm.merged)
-@vt4 = constant ptr @vf4, comdat($vf4), !type !3
+@vt4 = constant ptr @vf4, comdat($vf4), !type !6
 
-@vt5 = constant ptr @vf5, !type !4
+@vt5 = constant ptr @vf5, !type !8
 
-; CHECK: declare void @vf1(ptr)
+; CHECK: declare !guid !11 void @vf1(ptr)
 declare void @vf1(ptr)
 
 ; CHECK: define void @vf2(ptr %0)
@@ -81,12 +81,12 @@ define void @vf2(ptr) {
   ret void
 }
 
-; CHECK: define hidden void @vf3.llvm.merged(ptr %0) {
+; CHECK: define hidden void @vf3.llvm.merged(ptr %0) !guid !13 {
 define internal void @vf3(ptr) {
   ret void
 }
 
-; CHECK: define hidden void @vf4.llvm.merged(ptr %0) comdat {
+; CHECK: define hidden void @vf4.llvm.merged(ptr %0) comdat !guid !14 {
 define internal void @vf4(ptr) comdat {
   ret void
 }
@@ -94,8 +94,8 @@ define internal void @vf4(ptr) comdat {
 declare void @vf5(ptr)
 
 !0 = !{i32 0, !"typeid1"}
-!1 = !{i32 0, !"typeid2"}
-!2 = !{i32 0, !"typeid3"}
-!3 = !{i32 0, !"typeid4"}
-!4 = !{i32 0, !5}
-!5 = distinct !{}
+!2 = !{i32 0, !"typeid2"}
+!4 = !{i32 0, !"typeid3"}
+!6 = !{i32 0, !"typeid4"}
+!8 = !{i32 0, !9}
+!9 = distinct !{}

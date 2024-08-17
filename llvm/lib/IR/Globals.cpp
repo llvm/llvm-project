@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -173,6 +174,37 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   }
   GlobalName += Name;
   return GlobalName;
+}
+
+static const char *GUIDMetadataName = "guid";
+
+void GlobalValue::setGUIDIfNotPresent(GUID ForceValue) {
+  if (isa<GlobalAlias>(this))
+    return;
+  if (auto *F = dyn_cast<Function>(this); F && F->getIntrinsicID())
+    return;
+  if (getMetadata(GUIDMetadataName) && !ForceValue)
+    return;
+  const GUID WithGUID =
+      ForceValue ? ForceValue : GlobalValue::getGUID(getGlobalIdentifier());
+  setMetadata(GUIDMetadataName,
+              MDNode::get(getContext(),
+                          {ConstantAsMetadata::get(ConstantInt::get(
+                              Type::getInt64Ty(getContext()), WithGUID))}));
+}
+
+GlobalValue::GUID GlobalValue::getGUID() const {
+  if (isa<GlobalAlias>(this))
+    return GlobalValue::getGUID(getGlobalIdentifier());
+  if (auto *F = dyn_cast<Function>(this); F && F->getIntrinsicID())
+    return GlobalValue::getGUID(getGlobalIdentifier());
+
+  auto *MD = getMetadata(GUIDMetadataName);
+  assert(MD);
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
 }
 
 std::string GlobalValue::getGlobalIdentifier() const {

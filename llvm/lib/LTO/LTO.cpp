@@ -444,7 +444,9 @@ void llvm::thinLTOResolvePrevailingInIndex(
 static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    function_ref<void(GlobalValue::GUID, const GlobalValueSummary &)>
+        onPromotion) {
   auto ExternallyVisibleCopies =
       llvm::count_if(VI.getSummaryList(),
                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
@@ -455,8 +457,10 @@ static void thinLTOInternalizeAndPromoteGUID(
     // First see if we need to promote an internal value because it is not
     // exported.
     if (isExported(S->modulePath(), VI)) {
-      if (GlobalValue::isLocalLinkage(S->linkage()))
+      if (GlobalValue::isLocalLinkage(S->linkage())) {
         S->setLinkage(GlobalValue::ExternalLinkage);
+        onPromotion(VI.getGUID(), *S);
+      }
       continue;
     }
 
@@ -524,10 +528,12 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    function_ref<void(GlobalValue::GUID, const GlobalValueSummary &)>
+        onPromotion) {
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
-                                     isPrevailing);
+                                     isPrevailing, onPromotion);
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -832,6 +838,18 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
+  auto *Map = M.getNamedMetadata("guid_table");
+  assert(Map);
+  for (auto I = 0U, E = Map->getNumOperands(); I < E; ++I) {
+    auto *N = Map->getOperand(I);
+    auto *V = cast<ValueAsMetadata>(N->getOperand(0))->getValue();
+    auto *GO = cast<GlobalObject>(V);
+    const auto *GUID = cast<ConstantAsMetadata>(
+        cast<MDNode>(N->getOperand(1).get())->getOperand(0));
+    GO->setGUIDIfNotPresent(
+        cast<ConstantInt>(GUID->getValue()->stripPointerCasts())
+            ->getZExtValue());
+  }
 
   // If cfi.functions is present and we are in regular LTO mode, LowerTypeTests
   // will rename local functions in the merged module as "<function name>.1".
@@ -1019,8 +1037,7 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     SymbolResolution Res = *ResITmp++;
 
     if (!Sym.getIRName().empty()) {
-      auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
+      auto GUID = GlobalValue::getGUIDForExternalLinkageValue(Sym.getIRName());
       if (Res.Prevailing)
         ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
     }
@@ -1029,8 +1046,8 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
                          [&](GlobalValue::GUID GUID) {
-                           return ThinLTO.PrevailingModuleForGUID[GUID] ==
-                                  BM.getModuleIdentifier();
+                           return ThinLTO.PrevailingModuleForGUID.lookup(
+                                      GUID) == BM.getModuleIdentifier();
                          }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
@@ -1040,10 +1057,9 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     SymbolResolution Res = *ResI++;
 
     if (!Sym.getIRName().empty()) {
-      auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
+      auto GUID = GlobalValue::getGUIDForExternalLinkageValue(Sym.getIRName());
       if (Res.Prevailing) {
-        assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
+        assert(ThinLTO.PrevailingModuleForGUID.lookup(GUID) ==
                BM.getModuleIdentifier());
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
@@ -1150,7 +1166,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     if (Res.second.IRName.empty())
       continue;
 
-    GlobalValue::GUID GUID = GlobalValue::getGUID(
+    GlobalValue::GUID GUID = GlobalValue::getGUIDForExternalLinkageValue(
         GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
 
     if (Res.second.VisibleOutsideSummary && Res.second.Prevailing)
@@ -1453,10 +1469,10 @@ public:
         Cache(std::move(Cache)), ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     for (auto &Name : CombinedIndex.cfiFunctionDefs())
       CfiFunctionDefs.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
+          GlobalValue::getGUIDForExternalLinkageValue(GlobalValue::dropLLVMManglingEscape(Name)));
     for (auto &Name : CombinedIndex.cfiFunctionDecls())
       CfiFunctionDecls.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
+          GlobalValue::getGUIDForExternalLinkageValue(GlobalValue::dropLLVMManglingEscape(Name)));
   }
 
   Error runThinLTOBackendThread(
@@ -1766,7 +1782,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                                LocalWPDTargetsMap);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
-    return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
+    return ThinLTO.PrevailingModuleForGUID.lookup(GUID) == S->modulePath();
   };
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
@@ -1783,7 +1799,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (Res.second.Partition != GlobalResolution::External ||
         !Res.second.isPrevailingIRSymbol())
       continue;
-    auto GUID = GlobalValue::getGUID(
+    auto GUID = GlobalValue::getGUIDForExternalLinkageValue(
         GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
     // Mark exported unless index-based analysis determined it to be dead.
     if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
@@ -1803,11 +1819,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
   for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
+    ExportedGUIDs.insert(GlobalValue::getGUIDForExternalLinkageValue(
+        GlobalValue::dropLLVMManglingEscape(Def)));
   for (auto &Decl : ThinLTO.CombinedIndex.cfiFunctionDecls())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Decl)));
+    ExportedGUIDs.insert(GlobalValue::getGUIDForExternalLinkageValue(
+        GlobalValue::dropLLVMManglingEscape(Decl)));
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
@@ -1820,8 +1836,15 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   updateIndexWPDForExports(ThinLTO.CombinedIndex, isExported,
                            LocalWPDTargetsMap);
 
-  thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported,
-                                      isPrevailing);
+  thinLTOInternalizeAndPromoteInIndex(
+      ThinLTO.CombinedIndex, isExported, isPrevailing,
+      [&](auto GUID, const auto &Summary) {
+        auto Ins = ThinLTO.PrevailingModuleForGUID.insert(
+            {GUID, Summary.modulePath()});
+        (void)Ins;
+        assert(Ins.second && "Should not have had a prevailing definition for "
+                             "an internal symbol.");
+      });
 
   auto recordNewLinkage = [&](StringRef ModuleIdentifier,
                               GlobalValue::GUID GUID,

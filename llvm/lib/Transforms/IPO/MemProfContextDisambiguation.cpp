@@ -3634,15 +3634,15 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     // See if theFn was internalized, by checking index directly with
     // original name (this avoids the name adjustment done by getGUID() for
     // internal symbols).
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUIDForExternalLinkageValue(F.getName()));
   if (TheFnVI)
     return TheFnVI;
   // Now query with the original name before any promotion was performed.
   StringRef OrigName =
       ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
-  std::string OrigId = GlobalValue::getGlobalIdentifier(
+  std::string OrigId = GlobalValue::getGlobalIdentifierForPGO(
       OrigName, GlobalValue::InternalLinkage, M.getSourceFileName());
-  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUIDForExternalLinkageValue(OrigId));
   if (TheFnVI)
     return TheFnVI;
   // Could be a promoted local imported from another module. We need to pass
@@ -3651,7 +3651,7 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // index. This would not work if there were same-named locals in multiple
   // modules, however.
   auto OrigGUID =
-      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUID(OrigName));
+      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUIDForExternalLinkageValue(OrigName));
   if (OrigGUID)
     TheFnVI = ImportSummary->getValueInfo(OrigGUID);
   return TheFnVI;

@@ -220,8 +220,25 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   ValueInfo VI;
-  if (GV.hasName())
-    VI = ImportIndex.getValueInfo(GV.getGUID());
+  if (auto *F = dyn_cast<Function>(&GV);
+      F && !F->isDeclaration() && !F->isMaterializable()) {
+    VI = ImportIndex.getValueInfo(F->getGUID());
+    // Set synthetic function entry counts.
+    if (VI && ImportIndex.hasSyntheticEntryCounts()) {
+      for (const auto &S : VI.getSummaryList()) {
+        auto *FS = cast<FunctionSummary>(S->getBaseObject());
+        if (FS->modulePath() == M.getModuleIdentifier()) {
+          F->setEntryCount(Function::ProfileCount(FS->entryCount(),
+                                                  Function::PCT_Synthetic));
+          break;
+        }
+      }
+    }
+  }
+  if (auto *GA = dyn_cast<GlobalAlias>(&GV))
+    VI = ImportIndex.getValueInfo(GA->getGUID());
+  if (auto *GVar = dyn_cast<GlobalVariable>(&GV))
+    VI = ImportIndex.getValueInfo(GVar->getGUID());
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.

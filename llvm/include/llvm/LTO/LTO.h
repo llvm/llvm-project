@@ -62,7 +62,9 @@ void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing);
+        isPrevailing,
+    function_ref<void(GlobalValue::GUID, const GlobalValueSummary &)>
+        onPromotion);
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.

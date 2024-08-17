@@ -361,7 +361,7 @@ public:
     for (const auto &F : CurrentModule) {
       StringRef OrigName = F.getName();
       CurrentGUIDToFuncNameMap.insert(
-          {Function::getGUID(OrigName), OrigName});
+          {Function::getGUIDForExternalLinkageValue(OrigName), OrigName});
 
       // Local to global var promotion used by optimization like thinlto
       // will rename the var and add suffix like ".llvm.xxx" to the
@@ -373,7 +373,7 @@ public:
       StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
       if (CanonName != OrigName)
         CurrentGUIDToFuncNameMap.insert(
-            {Function::getGUID(CanonName), CanonName});
+            {Function::getGUIDForExternalLinkageValue(CanonName), CanonName});
     }
 
     // Update GUIDToFuncNameMap for each function including inlinees.
@@ -818,7 +818,7 @@ static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
     // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
     // metadata, it means the candidate has been promoted for this
     // indirect call.
-    if (V.Value == Function::getGUID(Candidate))
+    if (V.Value == Function::getGUIDForExternalLinkageValue(Candidate))
       return false;
     NumPromoted++;
     // If already have MaxNumPromotions promotion, don't do it anymore.
@@ -949,7 +949,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     // For promoted target, set its value with NOMORE_ICP_MAGICNUM count
     // in the value profile metadata so the target won't be promoted again.
     SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
-        Function::getGUID(R->second->getName()), NOMORE_ICP_MAGICNUM}};
+        Function::getGUIDForExternalLinkageValue(R->second->getName()), NOMORE_ICP_MAGICNUM}};
     updateIDTMetaData(CI, SortedCallTargets, 0);
 
     auto *DI = &pgo::promoteIndirectCall(
@@ -1037,7 +1037,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // just add the direct GUID and move on
     if (!Samples) {
       InlinedGUIDs.insert(
-          Function::getGUID(CB->getCalledFunction()->getName()));
+          GlobalValue::getGUIDForExternalLinkageValue(CB->getCalledFunction()->getName()));
       return;
     }
     // Otherwise, drop the threshold to import everything that we can
@@ -2258,7 +2258,8 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // cold in sampled binary will actually not be cold after current build.
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
     if ((FunctionSamples::UseMD5 &&
-         GUIDsInProfile.count(Function::getGUID(CanonName))) ||
+         GUIDsInProfile.count(
+             GlobalValue::getGUIDForExternalLinkageValue(CanonName))) ||
         (!FunctionSamples::UseMD5 && NamesInProfile.count(CanonName)))
       initialEntryCount = -1;
   }

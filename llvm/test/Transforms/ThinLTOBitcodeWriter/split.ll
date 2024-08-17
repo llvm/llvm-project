@@ -30,7 +30,7 @@
 
 $g = comdat any
 
-; M0: @g = external global i8{{$}}
+; M0: @g = external global i8, !guid !0{{$}}
 ; M1: @g = global i8 42, comdat, !type !0
 @g = global i8 42, comdat, !type !0
 

@@ -134,7 +134,7 @@ entry:
 ; PGOSUMMARY: {{![0-9]+}} = !{!"NumFunctions", i64 8}
 ; PGOSUMMARY-DAG: ![[BW_PGO_BAR]] = !{!"branch_weights", i32 100000, i32 100000}
 
-; CSPGOSUMMARY: {{![0-9]+}} = !{i32 1, !"ProfileSummary", !1}
+; CSPGOSUMMARY: {{![0-9]+}} = !{i32 1, !"ProfileSummary", ![[#]]}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"ProfileFormat", !"InstrProf"}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"TotalCount", i64 2100001}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"MaxCount", i64 800000}

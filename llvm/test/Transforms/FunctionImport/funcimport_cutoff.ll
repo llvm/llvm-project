@@ -38,10 +38,10 @@ declare void @bar()
 ; Check -S output
 ; IMPORT-DAG: define available_externally void @foo()
 ; IMPORT-DAG: define available_externally void @bar()
-; NOIMPORT-DAG: declare void @foo()
-; NOIMPORT-DAG: declare void @bar()
+; NOIMPORT-DAG: declare !guid ![[#]] void @foo()
+; NOIMPORT-DAG: declare !guid ![[#]] void @bar()
 ; IMPORT1-DAG: define available_externally void @foo()
-; IMPORT1-DAG: declare void @bar()
+; IMPORT1-DAG: declare !guid ![[#]] void @bar()
 
 ; Check -stats output
 ; IMPORT: 2 function-import - Number of functions imported

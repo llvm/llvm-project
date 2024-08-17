@@ -297,7 +297,8 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   for (const auto &Sym : File.symbols()) {
     if (Sym.isUsed())
-      PreservedGUID.insert(GlobalValue::getGUID(Sym.getIRName()));
+      PreservedGUID.insert(
+          GlobalValue::getGUIDForExternalLinkageValue(Sym.getIRName()));
   }
 }
 
@@ -310,8 +311,8 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
     if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
-      GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
+      GUIDs.insert(
+          GlobalValue::getGUIDForExternalLinkageValue(Sym.getIRName()));
   }
 }
 
@@ -711,7 +712,8 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   // in the module.
   thinLTOInternalizeAndPromoteInIndex(
       Index, IsExported(ExportLists, GUIDPreservedSymbols),
-      IsPrevailing(PrevailingCopy));
+      IsPrevailing(PrevailingCopy),
+      [&](auto GUID, const auto &S) { PrevailingCopy.insert({GUID, &S}); });
 
   // FIXME Set ClearDSOLocalOnDeclarations.
   promoteModule(TheModule, Index, /*ClearDSOLocalOnDeclarations=*/false);
@@ -894,7 +896,8 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   // in the module.
   thinLTOInternalizeAndPromoteInIndex(
       Index, IsExported(ExportLists, GUIDPreservedSymbols),
-      IsPrevailing(PrevailingCopy));
+      IsPrevailing(PrevailingCopy),
+      [&](auto GUID, const auto &S) { PrevailingCopy.insert({GUID, &S}); });
 
   // FIXME Set ClearDSOLocalOnDeclarations.
   promoteModule(TheModule, Index, /*ClearDSOLocalOnDeclarations=*/false);
@@ -1095,7 +1098,8 @@ void ThinLTOCodeGenerator::run() {
                            LocalWPDTargetsMap);
   thinLTOInternalizeAndPromoteInIndex(
       *Index, IsExported(ExportLists, GUIDPreservedSymbols),
-      IsPrevailing(PrevailingCopy));
+      IsPrevailing(PrevailingCopy),
+      [&](auto GUID, const auto &S) { PrevailingCopy.insert({GUID, &S}); });
 
   thinLTOPropagateFunctionAttrs(*Index, IsPrevailing(PrevailingCopy));
 

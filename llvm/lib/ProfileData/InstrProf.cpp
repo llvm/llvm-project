@@ -322,7 +322,7 @@ static std::string
 getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
-  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
+  return GlobalValue::getGlobalIdentifierForPGO(GO.getName(), Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -517,7 +517,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
 
     bool Inserted = true;
     std::tie(std::ignore, Inserted) =
-        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+        MD5VTableMap.try_emplace(GlobalValue::getGUIDForExternalLinkageValue(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
@@ -634,7 +634,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    MD5FuncMap.emplace_back(Function::getGUIDForExternalLinkageValue(Name), &F);
     return Error::success();
   };
   if (Error E = NameToGUIDMap(PGOFuncName))

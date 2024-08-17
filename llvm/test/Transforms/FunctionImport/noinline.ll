@@ -18,6 +18,6 @@ entry:
   ret i32 0
 }
 
-; NOIMPORT: declare void @foo(ptr)
+; NOIMPORT: declare !guid ![[#]] void @foo(ptr)
 ; IMPORT: define available_externally void @foo
 declare void @foo(ptr) #1

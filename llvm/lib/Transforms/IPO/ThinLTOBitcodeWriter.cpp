@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
+#include "llvm/Analysis/AssignGUIDAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -580,7 +581,7 @@ PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-
+  AM.getResult<AssignGUIDAnalysis>(M).generateGuidTable();
   ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
                                                 WriteNewDbgInfoFormatToBitcode);
   if (M.IsNewDbgInfoFormat)

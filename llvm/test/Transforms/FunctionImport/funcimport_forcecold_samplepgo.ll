@@ -31,7 +31,7 @@ entry:
 ; IMPORT: Import foo
 ; NOIMPORT-NOT: Import foo
 ; IMPORT: define available_externally void @foo()
-; NOIMPORT: declare void @foo()
+; NOIMPORT: declare !guid ![[#]] void @foo()
 declare void @foo()
 
 !1 = !{!"function_entry_count", i64 110, i64 6699318081062747564}

@@ -226,8 +226,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
 
       IRBuilder<> Builder(Mark);
 
-      Guid = Builder.getInt64(
-          AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
+      Guid = Builder.getInt64(F.getGUID());
       // The type of the context of this function is now knowable since we have
       // NumCallsites and NumCounters. We delcare it here because it's more
       // convenient - we have the Builder.

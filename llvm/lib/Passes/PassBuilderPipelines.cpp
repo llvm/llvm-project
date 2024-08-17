@@ -1197,12 +1197,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       PGOOpt->FS);
   } else if (IsCtxProfGen || IsCtxProfUse) {
     MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
-    // In pre-link, we just want the instrumented IR. We use the contextual
-    // profile in the post-thinlink phase.
-    // The instrumentation will be removed in post-thinlink after IPO.
-    // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
-    // mechanism for GUIDs.
-    MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse)
       return MPM;
     addPostPGOLoopRotation(MPM, Level);

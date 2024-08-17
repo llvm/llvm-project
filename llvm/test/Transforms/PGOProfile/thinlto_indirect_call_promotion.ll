@@ -23,8 +23,8 @@
 
 ; Test that callee with local linkage has `PGOFuncName` metadata while callee with external doesn't have it.
 ; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=PGOName
-; PGOName-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]] {
-; PGOName-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
+; PGOName-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]] !guid ![[#]] {
+; PGOName-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !guid ![[#]] !PGOFuncName ![[#MD:]] {
 ; The source filename of `lib.ll` is specified as "lib.cc" (i.e., the name does
 ; not change with the directory), so match the full name here.
 ; PGOName: ![[#MD]] = !{!"lib.cc;_ZL7callee0v"}

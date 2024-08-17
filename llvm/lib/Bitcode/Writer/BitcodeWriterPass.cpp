@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/Analysis/AssignGUIDAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/PassManager.h"
@@ -29,6 +30,9 @@ PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
                        : nullptr;
+  if (EmitSummaryIndex)
+    AM.getResult<AssignGUIDAnalysis>(M).generateGuidTable();
+
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
 
   return PreservedAnalyses::all();

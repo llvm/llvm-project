@@ -32,5 +32,5 @@ entry:
 ; IMPORT: Import foo
 ; NOIMPORT-NOT: Import foo
 ; IMPORT: define available_externally void @foo()
-; NOIMPORT: declare void @foo()
+; NOIMPORT: declare !guid ![[#]] void @foo()
 declare void @foo()

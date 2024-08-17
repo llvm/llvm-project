@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -571,7 +572,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       if (PotentialCandidates.empty()) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because can't find eligible Callee. Guid is: "
-                          << Function::getGUID(VI.name()) << "\n");
+                          << VI.getGUID() << "\n");
         continue;
       }
       /// We will prefer importing the prevailing candidate, if not, we'll
@@ -625,7 +626,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       }
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
                         << ExportingModule << " : "
-                        << Function::getGUID(VI.name()) << "\n");
+                        << VI.getGUID() << "\n");
       ImportList.addDefinition(ExportingModule, VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
@@ -1349,6 +1350,7 @@ void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
   for (auto &EI : FS->mutableCalls()) {
     if (!EI.first.getSummaryList().empty())
       continue;
+    // FIXME: remove when we remove "original name".
     auto GUID = Index.getGUIDFromOriginalID(EI.first.getGUID());
     if (GUID == 0)
       continue;
@@ -1574,16 +1576,21 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
   LLVM_DEBUG(dbgs() << "Converting to a declaration: `" << GV.getName()
                     << "\n");
   if (Function *F = dyn_cast<Function>(&GV)) {
+    auto OldGUID = F->getGUID();
     F->deleteBody();
     F->clearMetadata();
+    F->setGUIDIfNotPresent(OldGUID);
     F->setComdat(nullptr);
   } else if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
     V->setInitializer(nullptr);
     V->setLinkage(GlobalValue::ExternalLinkage);
+    auto OldGUID = V->getGUID();
     V->clearMetadata();
+    V->setGUIDIfNotPresent(OldGUID);
     V->setComdat(nullptr);
   } else {
-    GlobalValue *NewGV;
+    GlobalValue *NewGV = nullptr;
+    auto OldGUID = GV.getGUID();
     if (GV.getValueType()->isFunctionTy())
       NewGV =
           Function::Create(cast<FunctionType>(GV.getValueType()),
@@ -1597,6 +1604,7 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
                              /*insertbefore*/ nullptr, GV.getThreadLocalMode(),
                              GV.getType()->getAddressSpace());
     NewGV->takeName(&GV);
+    NewGV->setGUIDIfNotPresent(OldGUID);
     GV.replaceAllUsesWith(NewGV);
     return false;
   }
@@ -1748,6 +1756,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
 
     // Lookup the linkage recorded in the summaries during global analysis.
     auto GS = DefinedGlobals.find(GV.getGUID());
+    // // FIXME: this can get removed when we switch sample pgo to the new guid
+    // // mechanism and can remove the "original name" concept.
     if (GS == DefinedGlobals.end()) {
       // Must have been promoted (possibly conservatively). Find original
       // name so that we can access the correct summary and see if it can
@@ -1756,10 +1766,10 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       // and internalizing again.
       StringRef OrigName =
           ModuleSummaryIndex::getOriginalNameBeforePromote(GV.getName());
-      std::string OrigId = GlobalValue::getGlobalIdentifier(
+      std::string OrigId = GlobalValue::getGlobalIdentifierForPGO(
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
-      GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      GS = DefinedGlobals.find(GlobalValue::getGUIDForExternalLinkageValue(OrigId));
       if (GS == DefinedGlobals.end()) {
         // Also check the original non-promoted non-globalized name. In some
         // cases a preempted weak value is linked in as a local copy because
@@ -1767,10 +1777,11 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
         // In that case, since it was originally not a local value, it was
         // recorded in the index using the original name.
         // FIXME: This may not be needed once PR27866 is fixed.
-        GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        GS = DefinedGlobals.find(GlobalValue::getGUIDForExternalLinkageValue(OrigName));
         assert(GS != DefinedGlobals.end());
       }
     }
+    assert(GS != DefinedGlobals.end());
     return !GlobalValue::isLocalLinkage(GS->second->linkage());
   };
 
@@ -1831,13 +1842,29 @@ Expected<bool> FunctionImporter::importFunctions(
     if (Error Err = SrcModule->materializeMetadata())
       return std::move(Err);
 
+    SmallDenseMap<const GlobalObject*, GlobalValue::GUID> GOToGuidMap;
+    auto *Map = SrcModule->getNamedMetadata("guid_table");
+    assert(Map);
+    for (auto I = 0U, E = Map->getNumOperands(); I < E; ++I) {
+      const auto *N = Map->getOperand(I);
+      const auto *V = cast<ValueAsMetadata>(N->getOperand(0))->getValue();
+      const auto *GO = cast<GlobalObject>(V);
+      const auto *GUID = cast<ConstantAsMetadata>(
+          cast<MDNode>(N->getOperand(1).get())->getOperand(0));
+      GOToGuidMap[GO] = cast<ConstantInt>(GUID->getValue()->stripPointerCasts())
+                            ->getZExtValue();
+    }
+    Map->eraseFromParent();
+
+    auto &ImportGUIDs = FunctionsToImportPerModule->second;
+
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
     for (Function &F : *SrcModule) {
       if (!F.hasName())
         continue;
-      auto GUID = F.getGUID();
-      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
+      auto GUID = GOToGuidMap[&F];
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")

@@ -7,7 +7,7 @@ define void @foo(i32 %n, i32 %N) {
 ; SAMPLING-LABEL: @foo
 ; SAMPLING:  %[[VV0:[0-9]+]] = load i16, ptr @__llvm_profile_sampling, align 2
 ; SAMPLING:  %[[VV1:[0-9]+]] = icmp ule i16 %[[VV0]], 200
-; SAMPLING:  br i1 %[[VV1]], label {{.*}}, label {{.*}}, !prof !0
+; SAMPLING:  br i1 %[[VV1]], label {{.*}}, label {{.*}}, !prof !1
 ; SAMPLING: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
 ; SAMPLING-NEXT: add
 ; SAMPLING-NEXT: store {{.*}}@__profc_foo{{.*}}3)
@@ -75,4 +75,4 @@ bb12:
 
 declare void @bar(i32)
 
-; SAMPLING: !0 = !{!"branch_weights", i32 200, i32 65336}
+; SAMPLING: !1 = !{!"branch_weights", i32 200, i32 65336}

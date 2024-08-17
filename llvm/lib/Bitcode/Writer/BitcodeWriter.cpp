@@ -135,6 +135,43 @@ enum {
   FUNCTION_DEBUG_RECORD_VALUE_ABBREV,
 };
 
+class IndexPreservingModuleVisitor final {
+  const Module &M;
+  llvm::function_ref<void(const GlobalVariable &GV)> GlobalVariableVisitor;
+  llvm::function_ref<void(const Function &GV)> FunctionVisitor;
+  llvm::function_ref<void(const GlobalAlias &GV)> AliasVisitor;
+
+public:
+  IndexPreservingModuleVisitor(
+      const Module &M,
+      llvm::function_ref<void(const GlobalVariable &GV)> GlobalVariableVisitor,
+      llvm::function_ref<void(const Function &GV)> FunctionVisitor,
+      llvm::function_ref<void(const GlobalAlias &GV)> AliasVisitor)
+      : M(M), GlobalVariableVisitor(GlobalVariableVisitor),
+        FunctionVisitor(FunctionVisitor), AliasVisitor(AliasVisitor) {}
+
+  void buildGUIDTableAndVisit(BitstreamWriter &Stream, bool HasIndex) {
+    if (HasIndex) {
+      SmallVector<uint64_t, 64> GUIDs;
+      for (const GlobalVariable &GV : M.globals())
+        GUIDs.push_back(GV.getGUID());
+
+      for (const Function &F : M)
+        GUIDs.push_back(F.getGUID());
+
+      for (const GlobalAlias &A : M.aliases())
+        GUIDs.push_back(A.getGUID());
+      Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, GUIDs);
+    }
+    for (const GlobalVariable &GV : M.globals())
+      GlobalVariableVisitor(GV);
+    for (const Function &F : M)
+      FunctionVisitor(F);
+    for (const GlobalAlias &A : M.aliases())
+      AliasVisitor(A);
+  }
+};
+
 /// Abstract class to manage the bitcode writing, subclassed for each bitcode
 /// file type.
 class BitcodeWriterBase {
@@ -1533,7 +1570,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   }
 
   // Emit the global variable information.
-  for (const GlobalVariable &GV : M.globals()) {
+  auto GVVisitor = [&] (const GlobalVariable &GV) {
     unsigned AbbrevToUse = 0;
 
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
@@ -1581,10 +1618,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
 
     Stream.EmitRecord(bitc::MODULE_CODE_GLOBALVAR, Vals, AbbrevToUse);
     Vals.clear();
-  }
+  };
 
   // Emit the function proto information.
-  for (const Function &F : M) {
+  auto FuncVisitor = [&](const Function &F) {
     // FUNCTION:  [strtab offset, strtab size, type, callingconv, isproto,
     //             linkage, paramattrs, alignment, section, visibility, gc,
     //             unnamed_addr, prologuedata, dllstorageclass, comdat,
@@ -1619,10 +1656,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_FUNCTION, Vals, AbbrevToUse);
     Vals.clear();
-  }
+  };
 
   // Emit the alias information.
-  for (const GlobalAlias &A : M.aliases()) {
+  auto GAVisitor =[&] (const GlobalAlias &A) {
     // ALIAS: [strtab offset, strtab size, alias type, aliasee val#, linkage,
     //         visibility, dllstorageclass, threadlocal, unnamed_addr,
     //         DSO_Local]
@@ -1643,7 +1680,9 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_ALIAS, Vals, AbbrevToUse);
     Vals.clear();
-  }
+  };
+  IndexPreservingModuleVisitor V(M, GVVisitor, FuncVisitor, GAVisitor);
+  V.buildGUIDTableAndVisit(Stream, !!Index);
 
   // Emit the ifunc information.
   for (const GlobalIFunc &I : M.ifuncs()) {
@@ -4806,8 +4845,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDefs().empty()) {
     for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      if (DefOrUseGUIDs.count(
+              GlobalValue::getGUIDForExternalLinkageValue(GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
       }
@@ -4820,8 +4859,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDecls().empty()) {
     for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      if (DefOrUseGUIDs.count(
+              GlobalValue::getGUIDForExternalLinkageValue(GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
       }
@@ -5256,7 +5295,7 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
   }
 
   // Emit the global variable information.
-  for (const GlobalVariable &GV : M.globals()) {
+  auto GVVisitor = [&] (const GlobalVariable &GV) {
     // GLOBALVAR: [strtab offset, strtab size, 0, 0, 0, linkage]
     Vals.push_back(StrtabBuilder.add(GV.getName()));
     Vals.push_back(GV.getName().size());
@@ -5267,10 +5306,10 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
 
     Stream.EmitRecord(bitc::MODULE_CODE_GLOBALVAR, Vals);
     Vals.clear();
-  }
+  };
 
   // Emit the function proto information.
-  for (const Function &F : M) {
+  auto FVisitor = [&] (const Function &F) {
     // FUNCTION:  [strtab offset, strtab size, 0, 0, 0, linkage]
     Vals.push_back(StrtabBuilder.add(F.getName()));
     Vals.push_back(F.getName().size());
@@ -5281,10 +5320,10 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
 
     Stream.EmitRecord(bitc::MODULE_CODE_FUNCTION, Vals);
     Vals.clear();
-  }
+  };
 
   // Emit the alias information.
-  for (const GlobalAlias &A : M.aliases()) {
+  auto GAVisitor = [&](const GlobalAlias &A) {
     // ALIAS: [strtab offset, strtab size, 0, 0, 0, linkage]
     Vals.push_back(StrtabBuilder.add(A.getName()));
     Vals.push_back(A.getName().size());
@@ -5295,8 +5334,9 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
 
     Stream.EmitRecord(bitc::MODULE_CODE_ALIAS, Vals);
     Vals.clear();
-  }
-
+  };
+  IndexPreservingModuleVisitor V(M, GVVisitor, FVisitor, GAVisitor);
+  V.buildGUIDTableAndVisit(Stream, !!Index);
   // Emit the ifunc information.
   for (const GlobalIFunc &I : M.ifuncs()) {
     // IFUNC: [strtab offset, strtab size, 0, 0, 0, linkage]

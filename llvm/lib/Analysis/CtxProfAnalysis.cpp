@@ -74,35 +74,7 @@ Value toJSON(const PGOCtxProfContext::CallTargetMapTy &P) {
 } // namespace json
 } // namespace llvm
 
-const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
-PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  for (auto &F : M.functions()) {
-    if (F.isDeclaration())
-      continue;
-    if (F.getMetadata(GUIDMetadataName))
-      continue;
-    const GlobalValue::GUID GUID = F.getGUID();
-    F.setMetadata(GUIDMetadataName,
-                  MDNode::get(M.getContext(),
-                              {ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt64Ty(M.getContext()), GUID))}));
-  }
-  return PreservedAnalyses::none();
-}
-
-GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
-  if (F.isDeclaration()) {
-    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
-    return GlobalValue::getGUID(F.getGlobalIdentifier());
-  }
-  auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "guid not found for defined function");
-  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
-                               ->getValue()
-                               ->stripPointerCasts())
-      ->getZExtValue();
-}
 AnalysisKey CtxProfAnalysis::Key;
 
 CtxProfAnalysis::CtxProfAnalysis(std::optional<StringRef> Profile)
@@ -154,7 +126,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   for (const auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto GUID = AssignGUIDPass::getGUID(F);
+    auto GUID = F.getGUID();
     assert(GUID && "guid not found for defined function");
     const auto &Entry = F.begin();
     uint32_t MaxCounters = 0; // we expect at least a counter.
@@ -189,7 +161,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
 
 GlobalValue::GUID
 PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
-  if (auto It = FuncInfo.find(AssignGUIDPass::getGUID(F)); It != FuncInfo.end())
+  if (auto It = FuncInfo.find(F.getGUID()); It != FuncInfo.end())
     return It->first;
   return 0;
 }
