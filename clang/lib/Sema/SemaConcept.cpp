@@ -461,17 +461,13 @@ static ExprResult calculateConstraintSatisfaction(
           return ExprError();
 
         llvm::FoldingSetNodeID ID;
-        // llvm::errs() << "Preparing for checking " << Template << "\n";
         if (Template &&
             DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, MLTAL)) {
-          // Template->dump();
           Satisfaction.IsSatisfied = false;
           Satisfaction.ContainsErrors = true;
-          // __builtin_trap();
           return ExprEmpty();
         }
 
-        // llvm::errs() << "Pushing " << Template << "\n";
         SatisfactionStackRAII StackRAII(S, Template, ID);
 
         // We do not want error diagnostics escaping here.
