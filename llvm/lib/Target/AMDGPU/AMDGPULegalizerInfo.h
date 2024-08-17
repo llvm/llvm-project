@@ -212,8 +212,7 @@ public:
 
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
-  bool legalizeFPTruncRound(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &B) const;
+  bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 

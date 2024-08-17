@@ -6674,9 +6674,9 @@ SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
   // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
   unsigned HW_Mode = (RoundMode + 3) % 4;
   SDLoc DL(Op);
-  unsigned Opc = AMDGPUISD::FPTRUNC_ROUND;
-  return DAG.getNode(Opc, DL, Op.getNode()->getVTList(), Op->getOperand(0),
-                     DAG.getTargetConstant(HW_Mode, DL, MVT::i32));
+  SDValue RoundFlag = DAG.getTargetConstant(HW_Mode, DL, MVT::i32);
+  return DAG.getNode(AMDGPUISD::FPTRUNC_ROUND, DL, Op.getNode()->getVTList(),
+                     Op->getOperand(0), RoundFlag);
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {

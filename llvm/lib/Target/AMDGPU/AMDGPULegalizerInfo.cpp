@@ -2180,7 +2180,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
-    return legalizeFPTruncRound(MI, MRI, B);
+    return legalizeFPTruncRound(MI, B);
   case TargetOpcode::G_STACKSAVE:
     return legalizeStackSave(MI, B);
   case TargetOpcode::G_GET_FPENV:
@@ -7089,8 +7089,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
-                                               MachineRegisterInfo &MRI,
                                                MachineIRBuilder &B) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
   Register Src = MI.getOperand(1).getReg();
   if (MRI.getType(Src) != LLT::scalar(32))
     return false;
