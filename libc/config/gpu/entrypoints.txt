@@ -248,6 +248,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2l
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
@@ -424,13 +425,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rint
     libc.src.math.rintf
     libc.src.math.rintl
-    libc.src.math.round
     libc.src.math.roundeven
     libc.src.math.roundevenf
     libc.src.math.roundevenl
+    libc.src.math.round
     libc.src.math.roundf
+    libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -458,6 +461,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tgammaf
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl

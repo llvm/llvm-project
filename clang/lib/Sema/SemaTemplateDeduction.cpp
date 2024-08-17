@@ -4462,6 +4462,9 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       ParamTypesForArgChecking.push_back(ParamType);
 
       if (ParamIdx == 0 && HasExplicitObject) {
+        if (ObjectType.isNull())
+          return TemplateDeductionResult::InvalidExplicitArguments;
+
         if (auto Result = DeduceCallArgument(ParamType, 0,
                                              /*ExplicitObjectArgument=*/true);
             Result != TemplateDeductionResult::Success)

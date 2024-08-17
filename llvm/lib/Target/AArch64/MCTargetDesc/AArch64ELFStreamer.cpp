@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -322,31 +321,36 @@ void AArch64TargetELFStreamer::finish() {
   if (S.ImplicitMapSyms) {
     auto &Syms = Asm.getSymbols();
     const size_t NumSyms = Syms.size();
-    DenseMap<MCSection *, MCSymbol *> EndMappingSym;
+    DenseMap<MCSection *, std::pair<size_t, MCSymbol *>> EndMapSym;
     for (MCSection &Sec : Asm) {
       S.switchSection(&Sec);
       if (S.LastEMS == (Sec.isText() ? AArch64ELFStreamer::EMS_Data
                                      : AArch64ELFStreamer::EMS_A64))
-        EndMappingSym.try_emplace(
-            &Sec, S.emitMappingSymbol(Sec.isText() ? "$x" : "$d"));
+        EndMapSym.insert(
+            {&Sec, {NumSyms, S.emitMappingSymbol(Sec.isText() ? "$x" : "$d")}});
     }
     if (Syms.size() != NumSyms) {
       SmallVector<const MCSymbol *, 0> NewSyms;
       DenseMap<MCSection *, size_t> Cnt;
       Syms.truncate(NumSyms);
-      for (const MCSymbol *Sym : Syms)
-        if (Sym->isInSection())
-          ++Cnt[&Sym->getSection()];
+      // Find the last symbol index for each candidate section.
+      for (auto [I, Sym] : llvm::enumerate(Syms)) {
+        if (!Sym->isInSection())
+          continue;
+        auto It = EndMapSym.find(&Sym->getSection());
+        if (It != EndMapSym.end())
+          It->second.first = I;
+      }
       SmallVector<size_t, 0> Idx;
       for (auto [I, Sym] : llvm::enumerate(Syms)) {
         NewSyms.push_back(Sym);
-        MCSection *Sec = Sym->isInSection() ? &Sym->getSection() : nullptr;
-        if (!Sec || --Cnt[Sec])
+        if (!Sym->isInSection())
           continue;
-        // `Sym` is the last symbol relative to `Sec`. Add the ending mapping
-        // symbol, if needed, after `Sym`.
-        if (auto *MapSym = EndMappingSym.lookup(Sec)) {
-          NewSyms.push_back(MapSym);
+        auto It = EndMapSym.find(&Sym->getSection());
+        // If `Sym` is the last symbol relative to the section, add the ending
+        // mapping symbol after `Sym`.
+        if (It != EndMapSym.end() && I == It->second.first) {
+          NewSyms.push_back(It->second.second);
           Idx.push_back(I);
         }
       }
