@@ -745,8 +745,7 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
   return ~(APFloatBase::integerPart) 0; /* A lot.  */
 }
 
-/* Place pow(5, power) in DST, and return the number of parts used.
-   DST must be at least one part larger than size of the answer.  */
+/* Calculate and return pow(5, power). */
 static SmallVector<APFloatBase::integerPart, 0> powerOf5(unsigned int power) {
   static const APFloatBase::integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125, 15625, 78125 };
 
