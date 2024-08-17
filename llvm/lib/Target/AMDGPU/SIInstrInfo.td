@@ -304,13 +304,11 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
-  SDTFPRoundOp
->;
+def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
 
-def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
-  SDTFPRoundOp
->;
+def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
 
 
 // Optimize v_mfma_scale* instructions to avoid the scale if the

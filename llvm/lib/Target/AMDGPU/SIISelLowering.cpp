@@ -5921,24 +5921,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
-  case ISD::FPTRUNC_ROUND: {
-    unsigned Opc;
-    SDLoc DL(Op);
-
-    if (Op.getOperand(0)->getValueType(0) != MVT::f32)
-      return SDValue();
-
-    // Get the rounding mode from the last operand
-    int RoundMode = Op.getConstantOperandVal(1);
-    if (RoundMode == (int)RoundingMode::TowardPositive)
-      Opc = AMDGPUISD::FPTRUNC_ROUND_UPWARD;
-    else if (RoundMode == (int)RoundingMode::TowardNegative)
-      Opc = AMDGPUISD::FPTRUNC_ROUND_DOWNWARD;
-    else
-      return SDValue();
-
-    return DAG.getNode(Opc, DL, Op.getNode()->getVTList(), Op->getOperand(0));
-  }
+  case ISD::FPTRUNC_ROUND:
+    return lowerFPTRUNC_ROUND(Op, DAG);
   case ISD::TRAP:
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
@@ -6787,6 +6771,30 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG,
       DAG.getNode(ISD::FP_EXTEND, DL, VT, Op) :
     DAG.getNode(ISD::FP_ROUND, DL, VT, Op,
                 DAG.getTargetConstant(0, DL, MVT::i32));
+}
+
+SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Op.getOperand(0)->getValueType(0) != MVT::f32)
+    return SDValue();
+
+  // Only support towardzero, tonearest, upward and downward.
+  int RoundMode = Op.getConstantOperandVal(1);
+  if (RoundMode != (int)RoundingMode::TowardZero &&
+      RoundMode != (int)RoundingMode::NearestTiesToEven &&
+      RoundMode != (int)RoundingMode::TowardPositive &&
+      RoundMode != (int)RoundingMode::TowardNegative)
+    return SDValue();
+
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  unsigned HW_Mode = (RoundMode + 3) % 4;
+  SDLoc DL(Op);
+  SDValue RoundFlag = DAG.getTargetConstant(HW_Mode, DL, MVT::i32);
+  return DAG.getNode(AMDGPUISD::FPTRUNC_ROUND, DL, Op.getNode()->getVTList(),
+                     Op->getOperand(0), RoundFlag);
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
