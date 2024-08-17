@@ -14372,7 +14372,7 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
       const MultiLevelTemplateArgumentList &TemplateArgLists,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
     llvm::SmallVector<Expr *, 4> Converted;
@@ -14404,7 +14404,7 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
       llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgList,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
@@ -14415,7 +14415,7 @@ public:
   /// occurred and satisfaction could not be determined.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckConstraintSatisfaction(const Expr *ConstraintExpr,
+  bool CheckConstraintSatisfaction(Expr *ConstraintExpr,
                                    ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
@@ -14424,7 +14424,7 @@ public:
   /// an error occurred and satisfaction could not be determined.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckFunctionConstraints(const FunctionDecl *FD,
+  bool CheckFunctionConstraints(FunctionDecl *FD,
                                 ConstraintSatisfaction &Satisfaction,
                                 SourceLocation UsageLoc = SourceLocation(),
                                 bool ForOverloadResolution = false);

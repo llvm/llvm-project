@@ -10966,7 +10966,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
 
   if (FD->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(FD, Satisfaction, Loc))
+    if (S.CheckFunctionConstraints(const_cast<FunctionDecl *>(FD), Satisfaction, Loc))
       return false;
     if (!Satisfaction.IsSatisfied) {
       if (Complain) {

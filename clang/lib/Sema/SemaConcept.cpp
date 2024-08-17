@@ -192,8 +192,8 @@ calculateConstraintSatisfaction(Sema &S, Expr *ConstraintExpr,
 
 template <typename ConstraintEvaluator>
 static ExprResult
-calculateConstraintSatisfaction(Sema &S, const Expr *LHS,
-                                OverloadedOperatorKind Op, const Expr *RHS,
+calculateConstraintSatisfaction(Sema &S, Expr *LHS,
+                                OverloadedOperatorKind Op, Expr *RHS,
                                 ConstraintSatisfaction &Satisfaction,
                                 const ConstraintEvaluator &Evaluator) {
   size_t EffectiveDetailEndIndex = Satisfaction.Details.size();
@@ -439,7 +439,7 @@ DiagRecursiveConstraintEval(Sema &S, llvm::FoldingSetNodeID &ID,
 
 static ExprResult calculateConstraintSatisfaction(
     Sema &S, const NamedDecl *Template, SourceLocation TemplateNameLoc,
-    const MultiLevelTemplateArgumentList &MLTAL, const Expr *ConstraintExpr,
+    const MultiLevelTemplateArgumentList &MLTAL, Expr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
   struct ConstraintEvaluator {
@@ -574,7 +574,7 @@ static ExprResult calculateConstraintSatisfaction(
 }
 
 static bool CheckConstraintSatisfaction(
-    Sema &S, const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+    Sema &S, const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
     llvm::SmallVectorImpl<Expr *> &Converted,
     const MultiLevelTemplateArgumentList &TemplateArgsLists,
     SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
@@ -599,7 +599,7 @@ static bool CheckConstraintSatisfaction(
   if (Inst.isInvalid())
     return true;
 
-  for (const Expr *ConstraintExpr : ConstraintExprs) {
+  for (Expr *ConstraintExpr : ConstraintExprs) {
     ExprResult Res = calculateConstraintSatisfaction(
         S, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
         ConstraintExpr, Satisfaction);
@@ -622,7 +622,7 @@ static bool CheckConstraintSatisfaction(
 }
 
 bool Sema::CheckConstraintSatisfaction(
-    const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+    const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
     llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
     const MultiLevelTemplateArgumentList &TemplateArgsLists,
     SourceRange TemplateIDRange, ConstraintSatisfaction &OutSatisfaction) {
@@ -690,7 +690,7 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
-bool Sema::CheckConstraintSatisfaction(const Expr *ConstraintExpr,
+bool Sema::CheckConstraintSatisfaction(Expr *ConstraintExpr,
                                        ConstraintSatisfaction &Satisfaction) {
 
   struct ConstraintEvaluator {
@@ -847,7 +847,7 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
   return MLTAL;
 }
 
-bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
+bool Sema::CheckFunctionConstraints(FunctionDecl *FD,
                                     ConstraintSatisfaction &Satisfaction,
                                     SourceLocation UsageLoc,
                                     bool ForOverloadResolution) {
