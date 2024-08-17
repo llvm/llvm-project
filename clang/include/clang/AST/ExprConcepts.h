@@ -78,8 +78,11 @@ public:
          const ConstraintSatisfaction *Satisfaction, bool Dependent,
          bool ContainsUnexpandedParameterPack);
 
-  ArrayRef<TemplateArgument> getTemplateArguments() const {
+  MutableArrayRef<TemplateArgument> getTemplateArguments() {
     return SpecDecl->getTemplateArguments();
+  }
+  ArrayRef<TemplateArgument> getTemplateArguments() const {
+    return const_cast<ConceptSpecializationExpr *>(this)->getTemplateArguments();
   }
 
   ConceptReference *getConceptReference() const { return ConceptRef; }

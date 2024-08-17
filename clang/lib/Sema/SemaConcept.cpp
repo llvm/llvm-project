@@ -1485,7 +1485,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
 }
 
 static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
-                                        const ConceptSpecializationExpr *CSE) {
+                                        ConceptSpecializationExpr *CSE) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
       /*Final=*/false, CSE->getTemplateArguments(),
@@ -1575,7 +1575,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
 
     return NormalizedConstraint(S.Context, std::move(*LHS), std::move(*RHS),
                                 BO.isAnd() ? CCK_Conjunction : CCK_Disjunction);
-  } else if (auto *CSE = dyn_cast<const ConceptSpecializationExpr>(E)) {
+  } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(const_cast<Expr *>(E))) {
     const NormalizedConstraint *SubNF;
     {
       Sema::InstantiatingTemplate Inst(

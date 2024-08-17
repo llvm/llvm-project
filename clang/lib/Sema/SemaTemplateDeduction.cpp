@@ -3075,7 +3075,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
-  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  std::optional<MutableArrayRef<TemplateArgument>> Innermost;
   // If we don't need to replace the deduced template arguments,
   // we can add them immediately as the inner-most argument list.
   if (!DeducedArgsNeedReplacement(Template))
