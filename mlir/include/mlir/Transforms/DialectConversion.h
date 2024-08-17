@@ -1147,7 +1147,7 @@ struct ConversionConfig {
 /// folded away.
 void reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
-    SmallVector<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points
