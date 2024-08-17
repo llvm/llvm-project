@@ -311,7 +311,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
       // Don't negate indvars to avoid infinite loops.
-      if (DT.dominates(PHI, std::get<0>(I)))
+      if (DT.dominates(PHI->getParent(), std::get<0>(I)))
         return nullptr;
       if (!(std::get<1>(I) =
                 negate(std::get<0>(I), IsNSW, Depth + 1))) // Early return.
