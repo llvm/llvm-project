@@ -445,6 +445,8 @@ cl::opt<bool> PrintPipelinePasses(
              "(best-effort only)."));
 } // namespace llvm
 
+extern cl::opt<std::string> UseCtxProfile;
+
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;

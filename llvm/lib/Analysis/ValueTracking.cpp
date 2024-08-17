@@ -9652,7 +9652,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   if (!I->getOperand(0)->getType()->getScalarType()->isHalfTy())
     return;
   if (isa<FPToSIInst>(I) && BitWidth >= 17) {
-    Lower = APInt(BitWidth, -65504);
+    Lower = APInt(BitWidth, -65504, true);
     Upper = APInt(BitWidth, 65505);
   }
 

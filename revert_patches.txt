@@ -92,6 +92,7 @@ cc7308a1563e [ctx_prof] Make the profile output analyzable by llvm-bcanalyzer (#
 c99bd3ce [ctx_prof] Extend `WorkloadImportsManager` to use the contextual profile (#98682)
 [ctx_prof] CtxProfAnalysis (#102084)
 aca01bff0 [ctx_prof] CtxProfAnalysis: populate module data (#102930) 
+0c876a486eb [nfc][ctx_prof] Remove the need for `PassBuilder` to know about `UseCtxProfile` (#104492)
 Contacts: RonL and Hulk
 ---
 needs previous SEMA patches
@@ -141,4 +142,6 @@ Ron
 Revert: Depends upon older [ctx_prof] reverts (e.g. c99bd3ce)
 6807ca8e937e [nfc][ctx_prof] Use one flag for the "use" scenario (#103377)
 contact : mhalk (Michael Halkenhaeuser)
+---
+revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo for AMDAttributor
 ---

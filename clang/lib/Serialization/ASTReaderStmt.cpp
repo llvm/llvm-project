@@ -1128,7 +1128,6 @@ void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
       (BinaryOperator::Opcode)CurrentUnpackingBits->getNextBits(/*Width=*/6));
   bool hasFP_Features = CurrentUnpackingBits->getNextBit();
   E->setHasStoredFPFeatures(hasFP_Features);
-  E->setExcludedOverflowPattern(CurrentUnpackingBits->getNextBit());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
