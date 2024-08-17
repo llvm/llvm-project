@@ -603,7 +603,6 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GISEL-NEXT:    s_mov_b32 s14, s43
 ; GISEL-NEXT:    s_mov_b32 s15, s42
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GISEL-NEXT:    v_mov_b32_e32 v1, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
 ; GISEL-NEXT:    s_xor_b64 exec, exec, s[48:49]
@@ -1384,7 +1383,6 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[1:2]
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[8:9]
-; GISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    s_xor_b64 exec, exec, s[6:7]
