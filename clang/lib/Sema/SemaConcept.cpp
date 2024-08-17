@@ -910,7 +910,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
 // the purpose of seeing if they differ by constraints. This isn't the same as
 // getTemplateDepth, because it includes already instantiated parents.
 static unsigned
-CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
+CalculateTemplateDepthForConstraints(Sema &S, NamedDecl *ND,
                                      bool SkipForSpecialization = false) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       ND, ND->getLexicalDeclContext(), /*Final=*/false,
@@ -1031,7 +1031,7 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
   return ID1 == ID2;
 }
 
-bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
+bool Sema::FriendConstraintsDependOnEnclosingTemplate(FunctionDecl *FD) {
   assert(FD->getFriendObjectKind() && "Must be a friend!");
 
   // The logic for non-templates is handled in ASTContext::isSameEntity, so we

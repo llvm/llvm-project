@@ -463,7 +463,7 @@ Response HandleGenericDeclContext(const Decl *CurDecl) {
 } // namespace
 
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
-    const NamedDecl *ND, const DeclContext *DC, bool Final,
+    NamedDecl *ND, const DeclContext *DC, bool Final,
     std::optional<MutableArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     const FunctionDecl *Pattern, bool ForConstraintInstantiation,
     bool SkipForSpecialization) {
@@ -472,13 +472,13 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   MultiLevelTemplateArgumentList Result;
 
   using namespace TemplateInstArgsHelpers;
-  Decl *CurDecl = const_cast<NamedDecl *>(ND);
+  Decl *CurDecl = ND;
 
   if (!CurDecl)
     CurDecl = Decl::castFromDeclContext(DC);
 
   if (Innermost) {
-    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost, Final);
+    Result.addOuterTemplateArguments(ND, *Innermost, Final);
     // Populate placeholder template arguments for TemplateTemplateParmDecls.
     // This is essential for the case e.g.
     //

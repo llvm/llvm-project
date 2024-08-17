@@ -13075,7 +13075,7 @@ public:
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
-      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<MutableArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
@@ -14439,7 +14439,7 @@ public:
 
   // Calculates whether the friend function depends on an enclosing template for
   // the purposes of [temp.friend] p9.
-  bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
+  bool FriendConstraintsDependOnEnclosingTemplate(FunctionDecl *FD);
 
   /// \brief Ensure that the given template arguments satisfy the constraints
   /// associated with the given template, emitting a diagnostic if they do not.
