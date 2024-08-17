@@ -497,7 +497,7 @@ static void instantiateOMPDeclareVariantAttr(
         if (!VariantFTD->isThisDeclarationADefinition())
           return;
         Sema::TentativeAnalysisScope Trap(S);
-        const TemplateArgumentList *TAL = TemplateArgumentList::CreateCopy(
+        TemplateArgumentList *TAL = TemplateArgumentList::CreateCopy(
             S.Context, TemplateArgs.getInnermost());
 
         auto *SubstFD = S.InstantiateFunctionDeclaration(VariantFTD, TAL,
@@ -1112,7 +1112,7 @@ Decl *TemplateDeclInstantiator::InstantiateTypeAliasTemplateDecl(
   Sema::InstantiatingTemplate InstTemplate(
       SemaRef, D->getBeginLoc(), D,
       D->getTemplateDepth() >= TemplateArgs.getNumLevels()
-          ? ArrayRef<TemplateArgument>()
+          ? MutableArrayRef<TemplateArgument>()
           : (TemplateArgs.begin() + TemplateArgs.getNumLevels() - 1 -
              D->getTemplateDepth())
                 ->Args);
@@ -4901,7 +4901,7 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 }
 
 FunctionDecl *Sema::InstantiateFunctionDeclaration(
-    FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+    FunctionTemplateDecl *FTD, TemplateArgumentList *Args,
     SourceLocation Loc, CodeSynthesisContext::SynthesisKind CSC) {
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
@@ -4911,7 +4911,7 @@ FunctionDecl *Sema::InstantiateFunctionDeclaration(
     return nullptr;
 
   ContextRAII SavedContext(*this, FD);
-  MultiLevelTemplateArgumentList MArgs(FTD, Args->asArray(),
+  MultiLevelTemplateArgumentList MArgs(FTD, Args->asMutableArray(),
                                        /*Final=*/false);
 
   return cast_or_null<FunctionDecl>(SubstDecl(FD, FD->getParent(), MArgs));
@@ -5252,7 +5252,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
 VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-    const TemplateArgumentList *PartialSpecArgs,
+    TemplateArgumentList *PartialSpecArgs,
     const TemplateArgumentListInfo &TemplateArgsInfo,
     SmallVectorImpl<TemplateArgument> &Converted,
     SourceLocation PointOfInstantiation, LateInstantiatedAttrVec *LateAttrs,
@@ -5280,7 +5280,7 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     assert(PartialSpecArgs);
     IsMemberSpec = PartialSpec->isMemberSpecialization();
     MultiLevelList.addOuterTemplateArguments(
-        PartialSpec, PartialSpecArgs->asArray(), /*Final=*/false);
+        PartialSpec, PartialSpecArgs->asMutableArray(), /*Final=*/false);
   } else {
     assert(VarTemplate == FromVar->getDescribedVarTemplate());
     IsMemberSpec = VarTemplate->isMemberSpecialization();

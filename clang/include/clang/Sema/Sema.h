@@ -11638,7 +11638,7 @@ public:
   TemplateArgumentLoc SubstDefaultTemplateArgumentIfAvailable(
       TemplateDecl *Template, SourceLocation TemplateLoc,
       SourceLocation RAngleLoc, Decl *Param,
-      ArrayRef<TemplateArgument> SugaredConverted,
+      MutableArrayRef<TemplateArgument> SugaredConverted,
       ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
   /// Returns the top most location responsible for the definition of \p N.
@@ -13676,7 +13676,7 @@ public:
   /// Usually this should not be used, and template argument deduction should be
   /// used in its place.
   FunctionDecl *InstantiateFunctionDeclaration(
-      FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+      FunctionTemplateDecl *FTD, TemplateArgumentList *Args,
       SourceLocation Loc,
       CodeSynthesisContext::SynthesisKind CSC =
           CodeSynthesisContext::ExplicitTemplateArgumentSubstitution);
@@ -13705,7 +13705,7 @@ public:
                                      bool AtEndOfTU = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-      const TemplateArgumentList *PartialSpecArgs,
+      TemplateArgumentList *PartialSpecArgs,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,

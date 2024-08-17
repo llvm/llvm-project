@@ -76,7 +76,7 @@ enum class TemplateSubstitutionKind : char {
   class MultiLevelTemplateArgumentList {
     /// The template argument list at a certain template depth
 
-    using ArgList = ArrayRef<TemplateArgument>;
+    using ArgList = MutableArrayRef<TemplateArgument>;
     struct ArgumentListLevel {
       llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
       ArgList Args;

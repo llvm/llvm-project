@@ -2913,6 +2913,7 @@ public:
   /// If this function declaration is not a function template specialization,
   /// returns NULL.
   const TemplateArgumentList *getTemplateSpecializationArgs() const;
+  TemplateArgumentList *getTemplateSpecializationArgs();
 
   /// Retrieve the template argument list as written in the sources,
   /// if any.

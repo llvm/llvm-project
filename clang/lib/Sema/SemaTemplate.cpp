@@ -4190,7 +4190,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // the set of specializations, based on the closest partial specialization
   // that it represents. That is,
   VarDecl *InstantiationPattern = Template->getTemplatedDecl();
-  const TemplateArgumentList *PartialSpecArgs = nullptr;
+  TemplateArgumentList *PartialSpecArgs = nullptr;
   bool AmbiguousPartialSpec = false;
   typedef PartialSpecMatchResult MatchResult;
   SmallVector<MatchResult, 4> Matched;
@@ -4764,7 +4764,7 @@ bool Sema::CheckTemplateTypeArgument(
 static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, TemplateTypeParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     TemplateArgumentLoc &Output) {
   Output = Param->getDefaultArgument();
@@ -4824,7 +4824,7 @@ static bool SubstDefaultTemplateArgument(
 static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, NonTypeTemplateParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     TemplateArgumentLoc &Output) {
   Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Param, Template,
@@ -4874,7 +4874,7 @@ static bool SubstDefaultTemplateArgument(
 static TemplateName SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, TemplateTemplateParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     NestedNameSpecifierLoc &QualifierLoc) {
   Sema::InstantiatingTemplate Inst(
@@ -4909,7 +4909,7 @@ static TemplateName SubstDefaultTemplateArgument(
 TemplateArgumentLoc Sema::SubstDefaultTemplateArgumentIfAvailable(
     TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, Decl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg) {
   HasDefaultArg = false;
 

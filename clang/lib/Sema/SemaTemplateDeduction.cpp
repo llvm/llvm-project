@@ -3070,7 +3070,7 @@ template <typename TemplateDeclT>
 static TemplateDeductionResult
 CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
                                 ArrayRef<TemplateArgument> SugaredDeducedArgs,
-                                ArrayRef<TemplateArgument> CanonicalDeducedArgs,
+                                MutableArrayRef<TemplateArgument> CanonicalDeducedArgs,
                                 TemplateDeductionInfo &Info) {
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
@@ -3524,7 +3524,7 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   ExtParameterInfoBuilder ExtParamInfos;
 
   MultiLevelTemplateArgumentList MLTAL(FunctionTemplate,
-                                       SugaredExplicitArgumentList->asArray(),
+                                       SugaredExplicitArgumentList->asMutableArray(),
                                        /*Final=*/true);
 
   // Instantiate the types of each of the function parameters given the
@@ -3877,7 +3877,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     Owner = FD->getLexicalDeclContext();
   }
   MultiLevelTemplateArgumentList SubstArgs(
-      FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
+      FunctionTemplate, CanonicalDeducedArgumentList->asMutableArray(),
       /*Final=*/false);
   Specialization = cast_or_null<FunctionDecl>(
       SubstDecl(FD, Owner, SubstArgs));

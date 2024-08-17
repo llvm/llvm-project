@@ -181,7 +181,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
           Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
-          Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
+          Partial, VarTemplSpec->getTemplateInstantiationArgs().asMutableArray(),
           /*Final=*/false);
     if (Partial->isMemberSpecialization())
       return Response::Done();
@@ -189,7 +189,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
     VarTemplateDecl *Tmpl = Specialized.get<VarTemplateDecl *>();
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
-          Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
+          Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asMutableArray(),
           /*Final=*/false);
     if (Tmpl->isMemberSpecialization())
       return Response::Done();

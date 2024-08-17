@@ -275,12 +275,22 @@ public:
     return llvm::ArrayRef(data(), size());
   }
 
+  /// Produce this as a mutable array ref.
+  MutableArrayRef<TemplateArgument> asMutableArray() {
+    return llvm::MutableArrayRef(data(), size());
+  }
+
   /// Retrieve the number of template arguments in this
   /// template argument list.
   unsigned size() const { return NumArguments; }
 
   /// Retrieve a pointer to the template argument list.
   const TemplateArgument *data() const {
+    return const_cast<TemplateArgumentList *>(this)->data();
+  }
+
+  /// Retrieve a pointer to the template argument list.
+  TemplateArgument *data() {
     return getTrailingObjects<TemplateArgument>();
   }
 };
