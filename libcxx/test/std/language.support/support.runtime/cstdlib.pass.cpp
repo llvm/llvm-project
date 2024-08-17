@@ -8,9 +8,10 @@
 
 // test <cstdlib>
 
+#include <cassert>
 #include <cstdlib>
 #include <type_traits>
-#include <cassert>
+#include <__config>
 
 #include "test_macros.h"
 
@@ -86,6 +87,22 @@ void test_div_struct() {
   ((void)obj);
 }
 
+#if _LIBCPP_STD_VER >= 23
+#  define TEST_DIV_42_5(DIV_T, div_var)                                                                                \
+    {                                                                                                                  \
+      constexpr DIV_T d = div_var;                                                                                     \
+      static_assert(d.quot == 8);                                                                                      \
+      static_assert(d.rem == 2);                                                                                       \
+    }
+#else
+#  define TEST_DIV_42_5(DIV_T, div_var)                                                                                \
+    {                                                                                                                  \
+      const DIV_T d = div_var;                                                                                         \
+      assert(d.quot == 8);                                                                                             \
+      assert(d.rem == 2);                                                                                              \
+    }
+#endif // _LIBCPP_STD_VER
+
 void test_div() {
   { // tests member types of std::div_t, etc.
     test_div_struct<std::div_t, int>();
@@ -104,25 +121,12 @@ void test_div() {
   }
 
   { // check one basic input for correctness.
-    // (42 // 5 == 8) AND (42 % 5 == 2)
-    const auto check = [](const auto callable_div) -> void {
-      const auto div = callable_div(42, 5);
-      assert(div.quot == 8);
-      assert(div.rem == 2);
-
-#if _LIBCPP_STD_VER >= 23
-      constexpr auto div2 = callable_div(42, 5);
-      static_assert(div2.quot == 8);
-      static_assert(div2.rem == 2);
-#endif
-    };
-
     // clang-format off
-    check([](int       n, int       k) { return std::div(  n, k); });
-    check([](long      n, long      k) { return std::div(  n, k); });
-    check([](long long n, long long k) { return std::div(  n, k); });
-    check([](long      n, long      k) { return std::ldiv( n, k); });
-    check([](long long n, long long k) { return std::lldiv(n, k); });
+    TEST_DIV_42_5(std::div_t,   std::div(  42,   5  ));
+    TEST_DIV_42_5(std::ldiv_t,  std::div(  42L,  5L ));
+    TEST_DIV_42_5(std::lldiv_t, std::div(  42LL, 5LL));
+    TEST_DIV_42_5(std::ldiv_t,  std::ldiv( 42L,  5L ));
+    TEST_DIV_42_5(std::lldiv_t, std::lldiv(42LL, 5LL));
     // clang-format on
   }
 }
