@@ -253,6 +253,11 @@ AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
 }
 
+AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
+              Handler) {
+  return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+}
+
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
   return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
@@ -1181,6 +1186,10 @@ public:
                     .bind(SpanTwoParamConstructorTag));
   }
 
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)), matcher());
+  }
+
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
@@ -1485,34 +1494,39 @@ public:
       WarnedFunKind = VA_LIST;
   }
 
-  static Matcher matcher() {
-    return stmt(anyOf(
-        // Match a call to a predefined unsafe libc function (unless the call
-        // has a sole string literal argument):
-        callExpr(
-            callee(
-                functionDecl(libc_func_matchers::isPredefinedUnsafeLibcFunc())),
-            unless(allOf(hasArgument(0, expr(stringLiteral())), hasNumArgs(1))))
-            .bind(Tag),
-        // Match a call to one of the `v*printf` functions taking va-list, which
-        // cannot be checked at compile-time:
-        callExpr(callee(functionDecl(
-                     libc_func_matchers::isUnsafeVaListPrintfFunc())))
-            .bind(UnsafeVaListTag),
-        // Match a call to a `sprintf` function, which is never safe:
-        callExpr(
-            callee(functionDecl(libc_func_matchers::isUnsafeSprintfFunc())))
-            .bind(UnsafeSprintfTag),
-        // Match a call to an `snprintf` function. And first two arguments of
-        // the call (that describe a buffer) are not in safe patterns:
-        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
-                 libc_func_matchers::hasUnsafeSnprintfBuffer())
-            .bind(UnsafeSizedByTag),
-        // Match a call to a `printf` function, which can be safe if all
-        // arguments are null-terminated:
-        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
-                 libc_func_matchers::hasUnsafePrintfStringArg())
-            .bind(UnsafeStringTag)));
+  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    auto suppressIfIgnoreUnsafeLibcCall = unless(ignoreUnsafeLibcCall(Handler));
+    return stmt(
+        suppressIfIgnoreUnsafeLibcCall,
+        anyOf(
+            // Match a call to a predefined unsafe libc function (unless the
+            // call has a sole string literal argument):
+            callExpr(callee(functionDecl(
+                         libc_func_matchers::isPredefinedUnsafeLibcFunc())),
+                     unless(allOf(hasArgument(0, expr(stringLiteral())),
+                                  hasNumArgs(1))))
+                .bind(Tag),
+            // Match a call to one of the `v*printf` functions taking va-list,
+            // which cannot be checked at compile-time:
+            callExpr(callee(functionDecl(
+                         libc_func_matchers::isUnsafeVaListPrintfFunc())))
+                .bind(UnsafeVaListTag),
+            // Match a call to a `sprintf` function, which is never safe:
+            callExpr(
+                callee(functionDecl(libc_func_matchers::isUnsafeSprintfFunc())))
+                .bind(UnsafeSprintfTag),
+            // Match a call to an `snprintf` function. And first two arguments
+            // of the call (that describe a buffer) are not in safe patterns:
+            callExpr(
+                callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                libc_func_matchers::hasUnsafeSnprintfBuffer())
+                .bind(UnsafeSizedByTag),
+            // Match a call to a `printf` function, which can be safe if all
+            // arguments are null-terminated:
+            callExpr(
+                callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+                libc_func_matchers::hasUnsafePrintfStringArg())
+                .bind(UnsafeStringTag)));
   }
 
   const Stmt *getBaseStmt() const { return Call; }
@@ -1950,10 +1964,9 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
 #define WARNING_GADGET(x)                                                      \
           allOf(x ## Gadget::matcher().bind(#x),                               \
                 notInSafeBufferOptOut(&Handler)),
-#define WARNING_CONTAINER_GADGET(x)                                            \
-          allOf(x ## Gadget::matcher().bind(#x),                               \
-                notInSafeBufferOptOut(&Handler),                               \
-                unless(ignoreUnsafeBufferInContainer(&Handler))),
+#define WARNING_OPTIONAL_GADGET(x)                                            \
+          allOf(x ## Gadget::matcher(&Handler).bind(#x),                      \
+                notInSafeBufferOptOut(&Handler)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
             // Avoid a hanging comma.
             unless(stmt())

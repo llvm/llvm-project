@@ -12378,7 +12378,7 @@ def warn_unsafe_buffer_operation : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 introduces unsafe buffer access">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+  InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
 def note_unsafe_buffer_printf_call : Note<
   "%select{| change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
           "| use 'std::string::c_str' or string literal as string pointer to guarantee null-termination"

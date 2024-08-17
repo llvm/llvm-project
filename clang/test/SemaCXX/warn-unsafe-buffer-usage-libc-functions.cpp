@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
 // RUN:            -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call\
+// RUN:            -verify %s -DNO_LIBC_WARN
 
 typedef struct {} FILE;
 void memcpy();
@@ -51,6 +55,7 @@ namespace std {
   void strcpy();
 }
 
+#ifndef NO_LIBC_WARN
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   memcpy();                   // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
   std::memcpy();              // expected-warning{{function 'memcpy' introduces unsafe buffer access}}
@@ -110,3 +115,18 @@ void g(char *begin, char *end, char *p, std::span<char> s) {
   std::copy(begin, end, p); // no warn
   std::copy(s.begin(), s.end(), s.begin()); // no warn
 }
+#else
+// warning gets turned off
+// expected-no-diagnostics
+void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
+  memcpy();
+  std::memcpy();
+  __builtin_memcpy(p, q, 64);
+  __builtin___memcpy_chk(p, q, 8, 64);
+  __asan_memcpy();
+  strcpy();
+  std::strcpy();
+  strcpy_s();
+  wcscpy_s();
+}
+#endif
