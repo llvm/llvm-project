@@ -22,7 +22,6 @@
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -45,7 +44,6 @@ class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
-class CallBase;
 class Function;
 class GlobalValue;
 class InstCombiner;
@@ -60,12 +58,11 @@ class ProfileSummaryInfo;
 class RecurrenceDescriptor;
 class SCEV;
 class ScalarEvolution;
+class SmallBitVector;
 class StoreInst;
 class SwitchInst;
 class TargetLibraryInfo;
 class Type;
-class User;
-class Value;
 class VPIntrinsic;
 struct KnownBits;
 

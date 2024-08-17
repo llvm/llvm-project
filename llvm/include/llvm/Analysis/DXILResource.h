@@ -10,15 +10,17 @@
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
 class CallInst;
+class LLVMContext;
 class MDTuple;
-class TargetExtType;
+class Value;
 
 namespace dxil {
 
