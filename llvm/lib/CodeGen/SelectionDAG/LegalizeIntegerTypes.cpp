@@ -3302,7 +3302,7 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
     SDValue HiNeg =
         DAG.getSetCC(DL, CCT, LHSH, DAG.getConstant(0, DL, NVT), ISD::SETLT);
     if (N->getOpcode() == ISD::SMIN) {
-      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getConstant(-1, DL, NVT));
+      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getAllOnesConstant(DL, NVT));
     } else {
       Lo = DAG.getSelect(DL, NVT, HiNeg, DAG.getConstant(0, DL, NVT), LHSL);
     }
