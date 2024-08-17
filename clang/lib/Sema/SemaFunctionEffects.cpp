@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -40,6 +41,13 @@ enum class ViolationID : uint8_t {
   CallsExprWithoutEffect,
 };
 
+// Bits, describing the AST context in which a violation was found.
+// If none present, the context was the function body.
+using ViolationSite = unsigned;
+enum {
+  VSite_MemberInitializer = 1,
+};
+
 // Represents a violation of the rules, potentially for the entire duration of
 // the analysis phase, in order to refer to it when explaining why a caller has
 // been made unsafe by a callee. Can be transformed into either a Diagnostic
@@ -48,17 +56,19 @@ enum class ViolationID : uint8_t {
 // be inferred as holding that effect.
 struct Violation {
   FunctionEffect Effect;
-  FunctionEffect CalleeEffectPreventingInference; // Only for certain IDs.
+  FunctionEffect
+      CalleeEffectPreventingInference; // Only for certain IDs; can be None.
   ViolationID ID = ViolationID::None;
+  ViolationSite Site;
   SourceLocation Loc;
   const Decl *Callee = nullptr; // Only valid for Calls*.
 
   Violation() = default;
 
-  Violation(FunctionEffect Effect, ViolationID ID, SourceLocation Loc,
-            const Decl *Callee = nullptr,
+  Violation(FunctionEffect Effect, ViolationID ID, ViolationSite VS,
+            SourceLocation Loc, const Decl *Callee = nullptr,
             std::optional<FunctionEffect> CalleeEffect = std::nullopt)
-      : Effect(Effect), ID(ID), Loc(Loc), Callee(Callee) {
+      : Effect(Effect), ID(ID), Site(VS), Loc(Loc), Callee(Callee) {
     if (CalleeEffect)
       CalleeEffectPreventingInference = *CalleeEffect;
   }
@@ -220,9 +230,10 @@ public:
     // Not all recursive calls are detected, just enough
     // to break cycles.
     bool Recursed = false;
+    ViolationSite VSite;
 
-    DirectCall(const Decl *D, SourceLocation CallLoc)
-        : Callee(D), CallLoc(CallLoc) {}
+    DirectCall(const Decl *D, SourceLocation CallLoc, ViolationSite VSite)
+        : Callee(D), CallLoc(CallLoc), VSite(VSite) {}
   };
 
   // We always have two disjoint sets of effects to verify:
@@ -246,7 +257,7 @@ public:
   PendingFunctionAnalysis(Sema &S, const CallableInfo &CInfo,
                           FunctionEffectKindSet AllInferrableEffectsToVerify)
       : DeclaredVerifiableEffects(CInfo.Effects) {
-    // Check for effects we are not allowed to infer
+    // Check for effects we are not allowed to infer.
     FunctionEffectKindSet InferrableEffects;
 
     for (FunctionEffect effect : AllInferrableEffectsToVerify) {
@@ -258,12 +269,12 @@ public:
         // Add a Violation for this effect if a caller were to
         // try to infer it.
         InferrableEffectToFirstViolation.maybeInsert(Violation(
-            effect, ViolationID::DeclDisallowsInference,
+            effect, ViolationID::DeclDisallowsInference, 0,
             CInfo.CDecl->getLocation(), nullptr, ProblemCalleeEffect));
       }
     }
     // InferrableEffects is now the set of inferrable effects which are not
-    // prohibited
+    // prohibited.
     EffectsToInfer = FunctionEffectKindSet::difference(
         InferrableEffects, DeclaredVerifiableEffects);
   }
@@ -277,8 +288,9 @@ public:
       InferrableEffectToFirstViolation.maybeInsert(NewViol);
   }
 
-  void addUnverifiedDirectCall(const Decl *D, SourceLocation CallLoc) {
-    UnverifiedDirectCalls.emplace_back(D, CallLoc);
+  void addUnverifiedDirectCall(const Decl *D, SourceLocation CallLoc,
+                               ViolationSite VSite) {
+    UnverifiedDirectCalls.emplace_back(D, CallLoc, VSite);
   }
 
   // Analysis is complete when there are no unverified direct calls.
@@ -574,7 +586,7 @@ private:
 
       CallableInfo Callee(*Call.Callee);
       followCall(Caller, *Pending, Callee, Call.CallLoc,
-                 /*AssertNoFurtherInference=*/true);
+                 /*AssertNoFurtherInference=*/true, Call.VSite);
     }
     completeAnalysis(Caller, std::move(*Pending));
     delete Pending;
@@ -584,7 +596,7 @@ private:
   // other AST construct. PFA pertains to the caller.
   void followCall(const CallableInfo &Caller, PendingFunctionAnalysis &PFA,
                   const CallableInfo &Callee, SourceLocation CallLoc,
-                  bool AssertNoFurtherInference) {
+                  bool AssertNoFurtherInference, ViolationSite VSite) {
     const bool DirectCall = Callee.isCalledDirectly();
 
     // Initially, the declared effects; inferred effects will be added.
@@ -625,13 +637,14 @@ private:
         if (Callee.FuncType == SpecialFuncType::None)
           PFA.checkAddViolation(Inferring,
                                 {Effect, ViolationID::CallsDeclWithoutEffect,
-                                 CallLoc, Callee.CDecl});
+                                 VSite, CallLoc, Callee.CDecl});
         else
           PFA.checkAddViolation(
-              Inferring, {Effect, ViolationID::AllocatesMemory, CallLoc});
+              Inferring,
+              {Effect, ViolationID::AllocatesMemory, VSite, CallLoc});
       } else {
         // Inference is allowed and necessary; defer it.
-        PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
+        PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc, VSite);
       }
     };
 
@@ -658,6 +671,50 @@ private:
       }
     };
 
+    // For note_func_effect_call_indirect.
+    enum { Indirect_VirtualMethod, Indirect_FunctionPtr };
+
+    // Describe a call site or target using an enum mapping to a %select{}
+    // in a diagnostic.
+    auto SiteDescIndex = [](const Decl *D, const Violation *V) {
+      enum {
+        VS_Function,
+        VS_Constructor,
+        VS_Destructor,
+        VS_Lambda,
+        VS_Block,
+        VS_MemberInitializer,
+      };
+
+      if (V != nullptr && V->Site == VSite_MemberInitializer)
+        return VS_MemberInitializer;
+      if (isa<BlockDecl>(D))
+        return VS_Block;
+      if (auto *Method = dyn_cast<CXXMethodDecl>(D)) {
+        if (isa<CXXConstructorDecl>(D))
+          return VS_Constructor;
+        if (isa<CXXDestructorDecl>(D))
+          return VS_Destructor;
+        const CXXRecordDecl *Rec = Method->getParent();
+        if (Rec->isLambda())
+          return VS_Lambda;
+      }
+      return VS_Function;
+    };
+
+    // If a Violation's site is a member initializer, adds a note referring to
+    // the constructor which invoked it.
+    auto MaybeAddCtorContext = [&](const Decl *D, const Violation &V) {
+      if (V.Site == VSite_MemberInitializer) {
+        unsigned ImplicitCtor = 0;
+        if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D);
+            Ctor && Ctor->isImplicit())
+          ImplicitCtor = 1;
+        S.Diag(D->getLocation(), diag::note_func_effect_in_constructor)
+            << ImplicitCtor;
+      }
+    };
+
     // Top-level violations are warnings.
     for (const Violation &Viol1 : Viols) {
       StringRef effectName = Viol1.Effect.name();
@@ -673,12 +730,15 @@ private:
       case ViolationID::AccessesThreadLocalVariable:
       case ViolationID::AccessesObjCMethodOrProperty:
         S.Diag(Viol1.Loc, diag::warn_func_effect_violation)
-            << effectName << Viol1.diagnosticSelectIndex();
+            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
+            << Viol1.diagnosticSelectIndex();
+        MaybeAddCtorContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
-            << effectName;
+            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1);
+        MaybeAddCtorContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
 
@@ -687,7 +747,9 @@ private:
         std::string CalleeName = CalleeInfo.name(S);
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
-            << effectName << CalleeName;
+            << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
+            << SiteDescIndex(CalleeInfo.CDecl, nullptr) << CalleeName;
+        MaybeAddCtorContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
@@ -704,16 +766,17 @@ private:
 
             CallableType CType = CalleeInfo.type();
             if (CType == CallableType::Virtual)
-              S.Diag(Callee->getLocation(), diag::note_func_effect_call_virtual)
-                  << effectName;
+              S.Diag(Callee->getLocation(),
+                     diag::note_func_effect_call_indirect)
+                  << Indirect_VirtualMethod << effectName;
             else if (CType == CallableType::Unknown)
               S.Diag(Callee->getLocation(),
-                     diag::note_func_effect_call_func_ptr)
-                  << effectName;
+                     diag::note_func_effect_call_indirect)
+                  << Indirect_FunctionPtr << effectName;
             else if (CalleeInfo.Effects.contains(Viol1.Effect.oppositeKind()))
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_disallows_inference)
-                  << effectName
+                  << SiteDescIndex(CInfo.CDecl, nullptr) << effectName
                   << FunctionEffect(Viol1.Effect.oppositeKind()).name();
             else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
                      FD == nullptr || FD->getBuiltinID() == 0) {
@@ -736,11 +799,12 @@ private:
             break;
           case ViolationID::DeclDisallowsInference:
             S.Diag(Viol2.Loc, diag::note_func_effect_call_disallows_inference)
-                << effectName << Viol2.CalleeEffectPreventingInference.name();
+                << SiteDescIndex(CalleeInfo.CDecl, nullptr) << effectName
+                << Viol2.CalleeEffectPreventingInference.name();
             break;
           case ViolationID::CallsExprWithoutEffect:
-            S.Diag(Viol2.Loc, diag::note_func_effect_call_func_ptr)
-                << effectName;
+            S.Diag(Viol2.Loc, diag::note_func_effect_call_indirect)
+                << Indirect_FunctionPtr << effectName;
             break;
           case ViolationID::AllocatesMemory:
           case ViolationID::ThrowsOrCatchesExceptions:
@@ -748,12 +812,16 @@ private:
           case ViolationID::AccessesThreadLocalVariable:
           case ViolationID::AccessesObjCMethodOrProperty:
             S.Diag(Viol2.Loc, diag::note_func_effect_violation)
-                << effectName << Viol2.diagnosticSelectIndex();
+                << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
+                << Viol2.diagnosticSelectIndex();
+            MaybeAddCtorContext(CalleeInfo.CDecl, Viol2);
             break;
           case ViolationID::CallsDeclWithoutEffect:
             MaybeNextCallee.emplace(*Viol2.Callee);
             S.Diag(Viol2.Loc, diag::note_func_effect_calls_func_without_effect)
-                << effectName << MaybeNextCallee->name(S);
+                << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
+                << SiteDescIndex(Viol2.Callee, nullptr)
+                << MaybeNextCallee->name(S);
             break;
           }
           MaybeAddTemplateNote(Callee);
@@ -777,10 +845,12 @@ private:
   //
   // Violations are always routed to a PendingFunctionAnalysis.
   struct FunctionBodyASTVisitor : RecursiveASTVisitor<FunctionBodyASTVisitor> {
+    using Base = RecursiveASTVisitor<FunctionBodyASTVisitor>;
 
     Analyzer &Outer;
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
+    ViolationSite VSite = 0;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -822,10 +892,10 @@ private:
           addViolation(/*inferring=*/true, Effect, VID, Loc, Callee);
     }
 
-    void addViolation(bool Inferring, FunctionEffect Effect, ViolationID D,
+    void addViolation(bool Inferring, FunctionEffect Effect, ViolationID VID,
                       SourceLocation Loc, const Decl *Callee = nullptr) {
-      CurrentFunction.checkAddViolation(Inferring,
-                                        Violation(Effect, D, Loc, Callee));
+      CurrentFunction.checkAddViolation(
+          Inferring, Violation(Effect, VID, VSite, Loc, Callee));
     }
 
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
@@ -836,7 +906,7 @@ private:
         return;
 
       Outer.followCall(CurrentCaller, CurrentFunction, CI, CallLoc,
-                       /*AssertNoFurtherInference=*/false);
+                       /*AssertNoFurtherInference=*/false, VSite);
     }
 
     // FIXME: This is currently specific to the `nonblocking` and
@@ -1054,6 +1124,15 @@ private:
       followCall(CI, Construct->getLocation());
 
       return true;
+    }
+
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+      ViolationSite PrevVS = VSite;
+      if (Init->isAnyMemberInitializer())
+        VSite = VSite_MemberInitializer;
+      bool Result = Base::TraverseConstructorInitializer(Init);
+      VSite = PrevVS;
+      return Result;
     }
 
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {

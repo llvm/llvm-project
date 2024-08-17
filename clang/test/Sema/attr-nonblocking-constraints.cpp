@@ -69,7 +69,7 @@ void nb7()
 {
 	// Make sure we verify blocks
 	auto blk = ^() [[clang::nonblocking]] {
-		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+		throw 42; // expected-warning {{'nonblocking' block must not throw or catch exceptions}}
 	};
 }
 
@@ -77,7 +77,7 @@ void nb8()
 {
 	// Make sure we verify lambdas
 	auto lambda = []() [[clang::nonblocking]] {
-		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
+		throw 42; // expected-warning {{'nonblocking' lambda must not throw or catch exceptions}}
 	};
 }
 
@@ -228,54 +228,53 @@ void nb20() [[clang::nonblocking]] {
 
 struct S {
     int x;
-    S(int x) try : x(x) {} catch (...) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
-    S(double) : x((throw 3, 3)) {} // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+    S(int x) try : x(x) {} catch (...) {} // expected-note {{constructor cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+    S(double) : x((throw 3, 3)) {} // expected-note {{member initializer cannot be inferred 'nonblocking' because it throws or catches exceptions}} \
+                                      expected-note {{in constructor here}}
 };
 
-int badi(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+int badi(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} \
+            // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
-struct A {
-    int x = (throw 3, 3); // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
+struct A {                // expected-note {{in implicit constructor here}}
+    int x = (throw 3, 3); // expected-note {{member initializer cannot be inferred 'nonblocking' because it throws or catches exceptions}}
 };
 
 struct B {
-    int y = badi(); // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badi'}}
+    int y = badi(); // expected-note {{member initializer cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badi'}}
 };
 
 void f() [[clang::nonblocking]] {
-    S s1(3);   // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'S::S'}}
-    S s2(3.0); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'S::S'}}
-    A a;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'A::A'}}
-    B b;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'B::B'}}
+    S s1(3);   // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'S::S'}}
+    S s2(3.0); // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'S::S'}}
+    A a;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'A::A'}}
+    B b;       // expected-warning {{'nonblocking' function must not call non-'nonblocking' constructor 'B::B'}}
 }
 
-#if 0
-// FIXME: can we do better with default member initializers?
 struct T {
-	int x = badi();
-	T() [[clang::nonblocking]] {} // Warning: this calls bad().
-	T(int x) [[clang::nonblocking]] : x(x) {} // This does not.
+	int x = badi();               // expected-warning {{'nonblocking' constructor's member initializer must not call non-'nonblocking' function 'badi'}}
+	T() [[clang::nonblocking]] {} // expected-note {{in constructor here}}
+	T(int x) [[clang::nonblocking]] : x(x) {} // OK
 };
-#endif
 
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
-  static void problem1(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
-  static void problem2(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+  static void problem1();   // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+  static void problem2();   // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
-  Unsafe() { problem1(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem1'}}
-  ~Unsafe() { problem2(); } // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem2'}}
+  Unsafe() { problem1(); }  // expected-note {{constructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem1'}}
+  ~Unsafe() { problem2(); } // expected-note {{destructor cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'Unsafe::problem2'}}
 
   Unsafe(int x); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
   // Delegating initializer.
-  Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
+  Unsafe(float y) [[clang::nonblocking]] : Unsafe(int(y)) {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
 };
 
 struct DerivedFromUnsafe : public Unsafe {
-  DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
-  DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::Unsafe'}}
-  ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'Unsafe::~Unsafe'}}
+  DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
+  DerivedFromUnsafe(int x) [[clang::nonblocking]] : Unsafe(x) {} // expected-warning {{'nonblocking' constructor must not call non-'nonblocking' constructor 'Unsafe::Unsafe'}}
+  ~DerivedFromUnsafe() [[clang::nonblocking]] {} // expected-warning {{'nonblocking' destructor must not call non-'nonblocking' destructor 'Unsafe::~Unsafe'}}
 };
 
 // Contexts where there is no function call, no diagnostic.
