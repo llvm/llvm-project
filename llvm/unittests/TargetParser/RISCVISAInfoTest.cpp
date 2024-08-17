@@ -623,17 +623,17 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input : {"rv64i_xwchc"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'Xwchc' is only supported for 'rv32'");
+              "'xwchc' is only supported for 'rv32'");
   }
 
   for (StringRef Input : {"rv32id_xwchc"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'D' and 'Xwchc' extensions are incompatible");
+              "'d' and 'xwchc' extensions are incompatible");
   }
 
   for (StringRef Input : {"rv32i_zcb_xwchc"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'Xwchc' and 'Zcb' extensions are incompatible");
+              "'xwchc' and 'zcb' extensions are incompatible");
   }
 }
 
