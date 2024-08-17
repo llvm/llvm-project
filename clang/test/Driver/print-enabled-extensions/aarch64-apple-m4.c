@@ -51,7 +51,6 @@
 // CHECK-NEXT:     FEAT_SME_F64F64                                        Enable Scalable Matrix Extension (SME) F64F64 instructions
 // CHECK-NEXT:     FEAT_SME_I16I64                                        Enable Scalable Matrix Extension (SME) I16I64 instructions
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
-// CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

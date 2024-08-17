@@ -1511,7 +1511,7 @@ INSTANTIATE_TEST_SUITE_P(
                               AArch64::AEK_FP16, AArch64::AEK_PERFMON}),
         AArch64CPUTestParams(
             "apple-a12", "armv8.3-a",
-            {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_CCIDX,
+            {AArch64::AEK_CRC, AArch64::AEK_AES,
              AArch64::AEK_SHA2, AArch64::AEK_FP, AArch64::AEK_SIMD,
              AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
              AArch64::AEK_RCPC, AArch64::AEK_FP16, AArch64::AEK_JSCVT,
@@ -1652,8 +1652,7 @@ INSTANTIATE_TEST_SUITE_P(
                               AArch64::AEK_PAUTH,     AArch64::AEK_FPAC,
                               AArch64::AEK_FCMA,      AArch64::AEK_PERFMON,
                               AArch64::AEK_SME,       AArch64::AEK_SME2,
-                              AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
-                              AArch64::AEK_SSBS}),
+                              AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64}),
         AArch64CPUTestParams("exynos-m3", "armv8-a",
                              {AArch64::AEK_CRC, AArch64::AEK_AES,
                               AArch64::AEK_SHA2, AArch64::AEK_FP,
