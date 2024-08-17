@@ -4390,7 +4390,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
 
   SDValue SatMax, SatMin;
   SDValue NVTZero = DAG.getConstant(0, dl, NVT);
-  SDValue NVTNeg1 = DAG.getConstant(-1, dl, NVT);
+  SDValue NVTNeg1 = DAG.getAllOnesConstant(dl, NVT);
   EVT BoolNVT = getSetCCResultType(NVT);
 
   if (!Signed) {
