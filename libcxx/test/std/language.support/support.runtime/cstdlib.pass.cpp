@@ -88,19 +88,9 @@ void test_div_struct() {
 }
 
 #if _LIBCPP_STD_VER >= 23
-#  define TEST_DIV_42_5(DIV_T, div_var)                                                                                \
-    {                                                                                                                  \
-      constexpr DIV_T d = div_var;                                                                                     \
-      static_assert(d.quot == 8);                                                                                      \
-      static_assert(d.rem == 2);                                                                                       \
-    }
+#  define TEST_DIV_42_5(d) static_assert((d.quot == 8) and (d.rem == 2));
 #else
-#  define TEST_DIV_42_5(DIV_T, div_var)                                                                                \
-    {                                                                                                                  \
-      const DIV_T d = div_var;                                                                                         \
-      assert(d.quot == 8);                                                                                             \
-      assert(d.rem == 2);                                                                                              \
-    }
+#  define TEST_DIV_42_5(d) assert((d.quot == 8) and (d.rem == 2));
 #endif // _LIBCPP_STD_VER
 
 void test_div() {
@@ -120,13 +110,13 @@ void test_div() {
     // clang-format on
   }
 
-  { // check one basic input for correctness.
+  { // check one basic input for correctness. also check for constexpr as of C++23.
     // clang-format off
-    TEST_DIV_42_5(std::div_t,   std::div(  42,   5  ));
-    TEST_DIV_42_5(std::ldiv_t,  std::div(  42L,  5L ));
-    TEST_DIV_42_5(std::lldiv_t, std::div(  42LL, 5LL));
-    TEST_DIV_42_5(std::ldiv_t,  std::ldiv( 42L,  5L ));
-    TEST_DIV_42_5(std::lldiv_t, std::lldiv(42LL, 5LL));
+    TEST_DIV_42_5(std::div(  42,   5  ));
+    TEST_DIV_42_5(std::div(  42L,  5L ));
+    TEST_DIV_42_5(std::div(  42LL, 5LL));
+    TEST_DIV_42_5(std::ldiv( 42L,  5L ));
+    TEST_DIV_42_5(std::lldiv(42LL, 5LL));
     // clang-format on
   }
 }
