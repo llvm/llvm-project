@@ -225,14 +225,14 @@ static bool AdoptTemplateParameterList(TemplateParameterList *Params,
 }
 
 void TemplateParameterList::
-getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC) {
   if (HasConstrainedParameters)
     for (const NamedDecl *Param : *this) {
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
         if (const auto *TC = TTP->getTypeConstraint())
           AC.push_back(TC->getImmediatelyDeclaredConstraint());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-        if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
+        if (Expr *E = NTTP->getPlaceholderTypeConstraint())
           AC.push_back(E);
       }
     }
@@ -277,10 +277,10 @@ TemplateDecl::TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L,
 void TemplateDecl::anchor() {}
 
 void TemplateDecl::
-getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC) {
   TemplateParams->getAssociatedConstraints(AC);
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
-    if (const Expr *TRC = FD->getTrailingRequiresClause())
+    if (Expr *TRC = FD->getTrailingRequiresClause())
       AC.push_back(TRC);
 }
 

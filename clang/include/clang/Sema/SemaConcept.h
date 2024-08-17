@@ -163,9 +163,9 @@ struct NormalizedConstraint {
 
 private:
   static std::optional<NormalizedConstraint>
-  fromConstraintExprs(Sema &S, NamedDecl *D, ArrayRef<const Expr *> E);
+  fromConstraintExprs(Sema &S, NamedDecl *D, ArrayRef<Expr *> E);
   static std::optional<NormalizedConstraint>
-  fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E);
+  fromConstraintExpr(Sema &S, NamedDecl *D, Expr *E);
 };
 
 struct alignas(ConstraintAlignment) NormalizedConstraintPair {
@@ -191,7 +191,7 @@ struct alignas(ConstraintAlignment) FoldExpandedConstraint {
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
     Sema &S, NamedDecl *ConstrainedDecl,
-    ArrayRef<const Expr *> AssociatedConstraints);
+    ArrayRef<Expr *> AssociatedConstraints);
 
 template <typename AtomicSubsumptionEvaluator>
 bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
@@ -237,8 +237,8 @@ bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
 }
 
 template <typename AtomicSubsumptionEvaluator>
-bool subsumes(Sema &S, NamedDecl *DP, ArrayRef<const Expr *> P, NamedDecl *DQ,
-              ArrayRef<const Expr *> Q, bool &Subsumes,
+bool subsumes(Sema &S, NamedDecl *DP, ArrayRef<Expr *> P, NamedDecl *DQ,
+              ArrayRef<Expr *> Q, bool &Subsumes,
               const AtomicSubsumptionEvaluator &E) {
   // C++ [temp.constr.order] p2
   //   In order to determine if a constraint P subsumes a constraint Q, P is

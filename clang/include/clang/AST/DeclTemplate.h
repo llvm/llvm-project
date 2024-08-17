@@ -192,7 +192,7 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC);
 
   bool hasAssociatedConstraints() const;
 
@@ -428,7 +428,7 @@ public:
   /// including constraint-expressions derived from the requires-clause,
   /// trailing requires-clause (for functions and methods) and constrained
   /// template parameters.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC);
 
   bool hasAssociatedConstraints() const;
 
@@ -2143,7 +2143,7 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC) {
     TemplateParams->getAssociatedConstraints(AC);
   }
 
@@ -2915,7 +2915,7 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(llvm::SmallVectorImpl<Expr *> &AC) {
     TemplateParams->getAssociatedConstraints(AC);
   }
 

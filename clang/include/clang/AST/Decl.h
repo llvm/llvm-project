@@ -2621,7 +2621,7 @@ public:
   ///
   /// Use this instead of getTrailingRequiresClause for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(SmallVectorImpl<Expr *> &AC) {
     if (auto *TRC = getTrailingRequiresClause())
       AC.push_back(TRC);
   }

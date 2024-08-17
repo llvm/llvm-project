@@ -38,11 +38,11 @@ namespace {
 class LogicalBinOp {
   SourceLocation Loc;
   OverloadedOperatorKind Op = OO_None;
-  const Expr *LHS = nullptr;
-  const Expr *RHS = nullptr;
+  Expr *LHS = nullptr;
+  Expr *RHS = nullptr;
 
 public:
-  LogicalBinOp(const Expr *E) {
+  LogicalBinOp(Expr *E) {
     if (auto *BO = dyn_cast<BinaryOperator>(E)) {
       Op = BinaryOperator::getOverloadedOperator(BO->getOpcode());
       LHS = BO->getLHS();
@@ -63,8 +63,14 @@ public:
   bool isOr() const { return Op == OO_PipePipe; }
   explicit operator bool() const { return isAnd() || isOr(); }
 
-  const Expr *getLHS() const { return LHS; }
-  const Expr *getRHS() const { return RHS; }
+  Expr *getLHS() { return LHS; }
+  const Expr *getLHS() const {
+    return const_cast<LogicalBinOp *>(this)->getLHS();
+  }
+  Expr *getRHS() { return RHS; }
+  const Expr *getRHS() const {
+    return const_cast<LogicalBinOp *>(this)->getRHS();
+  }
   OverloadedOperatorKind getOp() const { return Op; }
 
   ExprResult recreateBinOp(Sema &SemaRef, ExprResult LHS) const {
@@ -89,7 +95,7 @@ public:
 };
 }
 
-bool Sema::CheckConstraintExpression(const Expr *ConstraintExpression,
+bool Sema::CheckConstraintExpression(Expr *ConstraintExpression,
                                      Token NextToken, bool *PossibleNonPrimary,
                                      bool IsTrailingRequiresClause) {
   // C++2a [temp.constr.atomic]p1
@@ -180,7 +186,7 @@ struct SatisfactionStackRAII {
 
 template <typename ConstraintEvaluator>
 static ExprResult
-calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
+calculateConstraintSatisfaction(Sema &S, Expr *ConstraintExpr,
                                 ConstraintSatisfaction &Satisfaction,
                                 const ConstraintEvaluator &Evaluator);
 
@@ -323,7 +329,7 @@ calculateConstraintSatisfaction(Sema &S, const CXXFoldExpr *FE,
 
 template <typename ConstraintEvaluator>
 static ExprResult
-calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
+calculateConstraintSatisfaction(Sema &S, Expr *ConstraintExpr,
                                 ConstraintSatisfaction &Satisfaction,
                                 const ConstraintEvaluator &Evaluator) {
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
@@ -1040,7 +1046,7 @@ bool Sema::FriendConstraintsDependOnEnclosingTemplate(FunctionDecl *FD) {
   assert(FD->getDescribedFunctionTemplate() &&
          "Non-function templates don't need to be checked");
 
-  SmallVector<const Expr *, 3> ACs;
+  SmallVector<Expr *, 3> ACs;
   FD->getDescribedFunctionTemplate()->getAssociatedConstraints(ACs);
 
   unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
@@ -1056,7 +1062,7 @@ bool Sema::EnsureTemplateArgumentListConstraints(
     TemplateDecl *TD, const MultiLevelTemplateArgumentList &TemplateArgsLists,
     SourceRange TemplateIDRange) {
   ConstraintSatisfaction Satisfaction;
-  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
+  llvm::SmallVector<Expr *, 3> AssociatedConstraints;
   TD->getAssociatedConstraints(AssociatedConstraints);
   if (CheckConstraintSatisfaction(TD, AssociatedConstraints, TemplateArgsLists,
                                   TemplateIDRange, Satisfaction))
@@ -1087,7 +1093,7 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();
   // Note - code synthesis context for the constraints check is created
   // inside CheckConstraintsSatisfaction.
-  SmallVector<const Expr *, 3> TemplateAC;
+  SmallVector<Expr *, 3> TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   if (TemplateAC.empty()) {
     Satisfaction.IsSatisfied = true;
@@ -1380,7 +1386,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
 
 const NormalizedConstraint *
 Sema::getNormalizedAssociatedConstraints(
-    NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints) {
+    NamedDecl *ConstrainedDecl, ArrayRef<Expr *> AssociatedConstraints) {
   // In case the ConstrainedDecl comes from modules, it is necessary to use
   // the canonical decl to avoid different atomic constraints with the 'same'
   // declarations.
@@ -1405,7 +1411,7 @@ Sema::getNormalizedAssociatedConstraints(
 
 const NormalizedConstraint *clang::getNormalizedAssociatedConstraints(
     Sema &S, NamedDecl *ConstrainedDecl,
-    ArrayRef<const Expr *> AssociatedConstraints) {
+    ArrayRef<Expr *> AssociatedConstraints) {
   return S.getNormalizedAssociatedConstraints(ConstrainedDecl,
                                               AssociatedConstraints);
 }
@@ -1535,7 +1541,7 @@ NormalizedConstraint &NormalizedConstraint::getRHS() const {
 
 std::optional<NormalizedConstraint>
 NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
-                                          ArrayRef<const Expr *> E) {
+                                          ArrayRef<Expr *> E) {
   assert(E.size() != 0);
   auto Conjunction = fromConstraintExpr(S, D, E[0]);
   if (!Conjunction)
@@ -1551,7 +1557,7 @@ NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
 }
 
 std::optional<NormalizedConstraint>
-NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
+NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, Expr *E) {
   assert(E != nullptr);
 
   // C++ [temp.constr.normal]p1.1
@@ -1575,7 +1581,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
 
     return NormalizedConstraint(S.Context, std::move(*LHS), std::move(*RHS),
                                 BO.isAnd() ? CCK_Conjunction : CCK_Disjunction);
-  } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(const_cast<Expr *>(E))) {
+  } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(E)) {
     const NormalizedConstraint *SubNF;
     {
       Sema::InstantiatingTemplate Inst(
@@ -1735,9 +1741,9 @@ NormalForm clang::makeDNF(const NormalizedConstraint &Normalized) {
 }
 
 bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
-                                  MutableArrayRef<const Expr *> AC1,
+                                  MutableArrayRef<Expr *> AC1,
                                   NamedDecl *D2,
-                                  MutableArrayRef<const Expr *> AC2,
+                                  MutableArrayRef<Expr *> AC2,
                                   bool &Result) {
   if (const auto *FD1 = dyn_cast<FunctionDecl>(D1)) {
     auto IsExpectedEntity = [](const FunctionDecl *FD) {
@@ -1797,7 +1803,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
 }
 
 bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(NamedDecl *D1,
-    ArrayRef<const Expr *> AC1, NamedDecl *D2, ArrayRef<const Expr *> AC2) {
+    ArrayRef<Expr *> AC1, NamedDecl *D2, ArrayRef<Expr *> AC2) {
   if (isSFINAEContext())
     // No need to work here because our notes would be discarded.
     return false;

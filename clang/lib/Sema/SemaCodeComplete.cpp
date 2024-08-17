@@ -5569,19 +5569,19 @@ private:
 
   // Gets all the type constraint expressions that might apply to the type
   // variables associated with DC (as returned by getTemplatedEntity()).
-  static SmallVector<const Expr *, 1>
+  static SmallVector<Expr *, 1>
   constraintsForTemplatedEntity(DeclContext *DC) {
-    SmallVector<const Expr *, 1> Result;
+    SmallVector<Expr *, 1> Result;
     if (DC == nullptr)
       return Result;
     // Primary templates can have constraints.
-    if (const auto *TD = cast<Decl>(DC)->getDescribedTemplate())
+    if (auto *TD = cast<Decl>(DC)->getDescribedTemplate())
       TD->getAssociatedConstraints(Result);
     // Partial specializations may have constraints.
-    if (const auto *CTPSD =
+    if (auto *CTPSD =
             dyn_cast<ClassTemplatePartialSpecializationDecl>(DC))
       CTPSD->getAssociatedConstraints(Result);
-    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(DC))
+    if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(DC))
       VTPSD->getAssociatedConstraints(Result);
     return Result;
   }
