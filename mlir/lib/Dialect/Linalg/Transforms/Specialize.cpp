@@ -274,12 +274,13 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   }
 
   // Broadcast
-  std::optional<SmallVector<int64_t>> equivalentToBroadcast
-          = isaBroadcastOpInterface(genericOp);
+  std::optional<SmallVector<int64_t>> equivalentToBroadcast =
+      isaBroadcastOpInterface(genericOp);
   if (equivalentToBroadcast) {
     auto dims = *equivalentToBroadcast;
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<BroadcastOp>(
-        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0], dims);
+        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
+        dims);
     return namedOp;
   }
 
