@@ -644,6 +644,86 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, SwitchInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  entry:
+    switch i32 %cond0, label %default [ i32 0, label %bb0
+                                        i32 1, label %bb1 ]
+  bb0:
+    ret void
+  bb1:
+    ret void
+  default:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMEntry = getBasicBlockByName(LLVMF, "entry");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Cond1 = F.getArg(1);
+  auto *Entry = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMEntry));
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Switch = cast<sandboxir::SwitchInst>(&*Entry->begin());
+
+  // Check setCondition().
+  auto *OrigCond = Switch->getCondition();
+  auto *NewCond = Cond1;
+  EXPECT_NE(NewCond, OrigCond);
+  Ctx.save();
+  Switch->setCondition(NewCond);
+  EXPECT_EQ(Switch->getCondition(), NewCond);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getCondition(), OrigCond);
+  // Check setDefaultDest().
+  auto *OrigDefaultDest = Switch->getDefaultDest();
+  auto *NewDefaultDest = Entry;
+  EXPECT_NE(NewDefaultDest, OrigDefaultDest);
+  Ctx.save();
+  Switch->setDefaultDest(NewDefaultDest);
+  EXPECT_EQ(Switch->getDefaultDest(), NewDefaultDest);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getDefaultDest(), OrigDefaultDest);
+  // Check setSuccessor().
+  auto *OrigSucc = Switch->getSuccessor(0);
+  auto *NewSucc = Entry;
+  EXPECT_NE(NewSucc, OrigSucc);
+  Ctx.save();
+  Switch->setSuccessor(0, NewSucc);
+  EXPECT_EQ(Switch->getSuccessor(0), NewSucc);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
+  // Check addCase().
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
+  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
+  auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  Ctx.save();
+  Switch->addCase(FortyTwo, Entry);
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  EXPECT_EQ(Switch->findCaseDest(Entry), FortyTwo);
+  EXPECT_EQ(Switch->findCaseValue(FortyTwo)->getCaseSuccessor(), Entry);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  // Check removeCase().
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(Zero));
+  EXPECT_EQ(Switch->getNumCases(), 1u);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+}
+
 TEST_F(TrackerTest, AtomicRMWSetters) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %arg) {
