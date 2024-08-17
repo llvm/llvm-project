@@ -626,6 +626,11 @@ TargetTransformInfo::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return TTIImpl->enableMemCmpExpansion(OptSize, IsZeroCmp);
 }
 
+bool TargetTransformInfo::getMemoryRefInfo(
+    SmallVectorImpl<MemoryRefInfo> &Interesting, IntrinsicInst *II) const {
+  return TTIImpl->getMemoryRefInfo(Interesting, II);
+}
+
 bool TargetTransformInfo::enableSelectOptimize() const {
   return TTIImpl->enableSelectOptimize();
 }

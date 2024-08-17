@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/MemoryRefInfo.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -960,6 +961,10 @@ public:
   };
   MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                bool IsZeroCmp) const;
+
+  // Add MemoryRefInfo of Intrinsic \p II into array \p Interesting.
+  bool getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
+                        IntrinsicInst *II) const;
 
   /// Should the Select Optimization pass be enabled and ran.
   bool enableSelectOptimize() const;
@@ -1951,6 +1956,8 @@ public:
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
+  virtual bool getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
+                                IntrinsicInst *II) const = 0;
   virtual bool enableSelectOptimize() = 0;
   virtual bool shouldTreatInstructionLikeSelect(const Instruction *I) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
@@ -2510,6 +2517,12 @@ public:
                                                bool IsZeroCmp) const override {
     return Impl.enableMemCmpExpansion(OptSize, IsZeroCmp);
   }
+
+  bool getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
+                        IntrinsicInst *II) const override {
+    return Impl.getMemoryRefInfo(Interesting, II);
+  }
+
   bool enableSelectOptimize() override {
     return Impl.enableSelectOptimize();
   }
