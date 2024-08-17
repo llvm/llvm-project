@@ -8,7 +8,7 @@
 @end
 
 void nb1(OCClass *oc) [[clang::nonblocking]] {
-	[oc method]; // expected-warning {{'nonblocking' function must not access an ObjC method or property}}
+	[oc method]; // expected-warning {{'nonblocking' function must not access ObjC methods or properties}}
 }
 void nb2(OCClass *oc) {
 	[oc method]; // expected-note {{function cannot be inferred 'nonblocking' because it accesses an ObjC method or property}}
