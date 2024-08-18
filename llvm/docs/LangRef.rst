@@ -3097,7 +3097,7 @@ as follows:
     ``<pref>`` is optional and defaults to ``<abi>``.
     The values of ``<abi>`` and ``<pref>`` must be in the range [1,2^16)
     and must be powers of two times the byte width.
-    The value of ``<<abi>>` may also be zero meaning one byte alignment.
+    The value of ``<abi>`` may also be zero meaning one byte alignment.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
