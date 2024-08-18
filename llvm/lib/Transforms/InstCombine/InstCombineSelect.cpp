@@ -679,11 +679,11 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
   Value *X, *Y;
   unsigned Bitwidth = CmpRHS->getType()->getScalarSizeInBits();
   if ((Pred != ICmpInst::ICMP_SGT ||
-       !match(CmpRHS,
-              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, -1)))) &&
+       !match(CmpRHS, m_SpecificInt_ICMP(ICmpInst::ICMP_SGE,
+                                         APInt::getAllOnes(Bitwidth)))) &&
       (Pred != ICmpInst::ICMP_SLT ||
-       !match(CmpRHS,
-              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, 0)))))
+       !match(CmpRHS, m_SpecificInt_ICMP(ICmpInst::ICMP_SGE,
+                                         APInt::getZero(Bitwidth)))))
     return nullptr;
 
   // Canonicalize so that ashr is in FalseVal.

@@ -56,7 +56,7 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot", []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformBallot "SubGroup" %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     ```
   }];
 

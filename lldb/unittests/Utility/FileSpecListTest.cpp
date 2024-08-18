@@ -133,20 +133,21 @@ TEST(SupportFileListTest, RelativePathMatchesWindows) {
 TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("/symlink_dir");
+  file_spec_list.Append(PosixSpec("/symlink_dir"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("/symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("/real_dir/foo.h"), &prefixes);
+      0, PosixSpec("/real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, (size_t)0);
 }
 
@@ -157,20 +158,21 @@ TEST(SupportFileListTest, SymlinkedAbsolutePaths) {
 TEST(SupportFileListTest, RootDirectory) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("/");
+  file_spec_list.Append(PosixSpec("/"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("/symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("/real_dir/foo.h"), &prefixes);
+      0, PosixSpec("/real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, (size_t)0);
 }
 
@@ -181,20 +183,21 @@ TEST(SupportFileListTest, RootDirectory) {
 TEST(SupportFileListTest, SymlinkedRelativePaths) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("symlink_dir");
+  file_spec_list.Append(PosixSpec("symlink_dir"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("real_dir/foo.h"), &prefixes);
+      0, PosixSpec("real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, (size_t)0);
 }
 
@@ -205,20 +208,21 @@ TEST(SupportFileListTest, SymlinkedRelativePaths) {
 TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("symlink_dir");
+  file_spec_list.Append(PosixSpec("symlink_dir"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("some_other_dir/foo.h"), &prefixes);
+      0, PosixSpec("some_other_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, UINT32_MAX);
 }
 
@@ -228,21 +232,22 @@ TEST(SupportFileListTest, RealpathOnlyMatchFileName) {
 TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("symlink_dir/foo.h"), FileSpec("real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("symlink"); // This is a string prefix of the
-                                         // symlink but not a path prefix.
+  file_spec_list.Append(PosixSpec("symlink")); // This is a string prefix of the
+                                               // symlink but not a path prefix.
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("real_dir/foo.h"), &prefixes);
+      0, PosixSpec("real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, UINT32_MAX);
 }
 
@@ -253,20 +258,21 @@ TEST(SupportFileListTest, DirectoryMatchStringPrefixButNotWholeDirectoryName) {
 TEST(SupportFileListTest, PartialBreakpointPath) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("symlink_dir/foo.h"), FileSpec("/real_dir/foo.h")));
+      PosixSpec("symlink_dir/foo.h"), PosixSpec("/real_dir/foo.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("symlink_dir");
+  file_spec_list.Append(PosixSpec("symlink_dir"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("real_dir/foo.h"), &prefixes);
+      0, PosixSpec("real_dir/foo.h"), &prefixes);
   EXPECT_EQ(ret, (size_t)0);
 }
 
@@ -277,20 +283,21 @@ TEST(SupportFileListTest, PartialBreakpointPath) {
 TEST(SupportFileListTest, DifferentBasename) {
   // Prepare FS
   llvm::IntrusiveRefCntPtr<MockSymlinkFileSystem> fs(new MockSymlinkFileSystem(
-      FileSpec("/symlink_dir/foo.h"), FileSpec("/real_dir/bar.h")));
+      PosixSpec("/symlink_dir/foo.h"), PosixSpec("/real_dir/bar.h"),
+      FileSpec::Style::posix));
 
   // Prepare RealpathPrefixes
   FileSpecList file_spec_list;
-  file_spec_list.EmplaceBack("/symlink_dir");
+  file_spec_list.Append(PosixSpec("/symlink_dir"));
   RealpathPrefixes prefixes(file_spec_list, fs);
 
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("/symlink_dir/foo.h"));
+  support_file_list.Append(PosixSpec("/symlink_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("real_dir/bar.h"), &prefixes);
+      0, PosixSpec("real_dir/bar.h"), &prefixes);
   EXPECT_EQ(ret, UINT32_MAX);
 }
 
@@ -300,11 +307,11 @@ TEST(SupportFileListTest, DifferentBasename) {
 TEST(SupportFileListTest, NoPrefixes) {
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("/real_dir/bar.h"));
+  support_file_list.Append(PosixSpec("/real_dir/bar.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("/real_dir/foo.h"), nullptr);
+      0, PosixSpec("/real_dir/foo.h"), nullptr);
   EXPECT_EQ(ret, UINT32_MAX);
 }
 
@@ -314,10 +321,10 @@ TEST(SupportFileListTest, NoPrefixes) {
 TEST(SupportFileListTest, SameFile) {
   // Prepare support file list
   SupportFileList support_file_list;
-  support_file_list.EmplaceBack(FileSpec("/real_dir/foo.h"));
+  support_file_list.Append(PosixSpec("/real_dir/foo.h"));
 
   // Test
   size_t ret = support_file_list.FindCompatibleIndex(
-      0, FileSpec("/real_dir/foo.h"), nullptr);
+      0, PosixSpec("/real_dir/foo.h"), nullptr);
   EXPECT_EQ(ret, (size_t)0);
 }

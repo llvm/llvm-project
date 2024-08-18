@@ -142,6 +142,17 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
+
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
+
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

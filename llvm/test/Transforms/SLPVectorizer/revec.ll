@@ -336,3 +336,29 @@ entry:
   store <4 x i32> %vmovl.i108, ptr %add.ptr35, align 4
   ret void
 }
+
+define void @test11(<2 x i64> %0, i64 %1, <2 x i64> %2) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> <i64 5, i64 0>, [[TMP2:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP5]], <2 x i64> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> poison, <2 x i8> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> [[TMP8]], <2 x i8> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i8> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %3 = insertelement <2 x i64> %0, i64 %1, i32 1
+  %4 = add <2 x i64> <i64 5, i64 0>, %2
+  %5 = trunc <2 x i64> %3 to <2 x i8>
+  %6 = trunc <2 x i64> %4 to <2 x i8>
+  %7 = urem <2 x i8> %5, zeroinitializer
+  %8 = urem <2 x i8> %6, zeroinitializer
+  %9 = icmp ne <2 x i8> %7, zeroinitializer
+  %10 = icmp ne <2 x i8> %8, zeroinitializer
+  ret void
+}
