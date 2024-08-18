@@ -265,10 +265,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
-  OS << PointeeStorage.BS.Pointee << " (";
-  if (isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Block: {
     const Block *B = PointeeStorage.BS.Pointee;
-    OS << "Block) {";
+    OS << "(Block) " << B << " {";
 
     if (isRoot())
       OS << "rootptr(" << PointeeStorage.BS.Base << "), ";
@@ -284,11 +284,18 @@ void Pointer::print(llvm::raw_ostream &OS) const {
       OS << B->getSize();
     else
       OS << "nullptr";
-  } else {
-    OS << "Int) {";
-    OS << PointeeStorage.Int.Value << ", " << PointeeStorage.Int.Desc;
+    OS << "}";
+  } break;
+  case Storage::Int:
+    OS << "(Int) {";
+    OS << PointeeStorage.Int.Value << " + " << Offset << ", "
+       << PointeeStorage.Int.Desc;
+    OS << "}";
+    break;
+  case Storage::Fn:
+    OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
+       << " }";
   }
-  OS << "}";
 }
 
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
