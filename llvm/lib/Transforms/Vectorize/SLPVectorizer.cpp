@@ -3583,14 +3583,14 @@ private:
 
     ScheduleData() = default;
 
-    void init(int BlockSchedulingRegionID, Value *OpVal) {
+    void init(int BlockSchedulingRegionID, Instruction *I) {
       FirstInBundle = this;
       NextInBundle = nullptr;
       NextLoadStore = nullptr;
       IsScheduled = false;
       SchedulingRegionID = BlockSchedulingRegionID;
       clearDependencies();
-      OpValue = OpVal;
+      Inst = I;
       TE = nullptr;
     }
 
@@ -3695,9 +3695,6 @@ private:
     }
 
     Instruction *Inst = nullptr;
-
-    /// Opcode of the current instruction in the schedule data.
-    Value *OpValue = nullptr;
 
     /// The TreeEntry that this instruction corresponds to.
     TreeEntry *TE = nullptr;
@@ -3815,18 +3812,6 @@ private:
       return nullptr;
     }
 
-    ScheduleData *getScheduleData(Value *V, Value *Key) {
-      if (V == Key)
-        return getScheduleData(V);
-      auto I = ExtraScheduleDataMap.find(V);
-      if (I != ExtraScheduleDataMap.end()) {
-        ScheduleData *SD = I->second.lookup(Key);
-        if (SD && isInSchedulingRegion(SD))
-          return SD;
-      }
-      return nullptr;
-    }
-
     bool isInSchedulingRegion(ScheduleData *SD) const {
       return SD->SchedulingRegionID == SchedulingRegionID;
     }
@@ -3840,8 +3825,6 @@ private:
 
       for (ScheduleData *BundleMember = SD; BundleMember;
            BundleMember = BundleMember->NextInBundle) {
-        if (BundleMember->Inst != BundleMember->OpValue)
-          continue;
 
         // Handle the def-use chain dependencies.
 
@@ -3959,11 +3942,6 @@ private:
                          function_ref<void(ScheduleData *SD)> Action) {
       if (ScheduleData *SD = getScheduleData(V))
         Action(SD);
-      auto I = ExtraScheduleDataMap.find(V);
-      if (I != ExtraScheduleDataMap.end())
-        for (auto &P : I->second)
-          if (isInSchedulingRegion(P.second))
-            Action(P.second);
     }
 
     /// Put all instructions into the ReadyList which are ready for scheduling.
@@ -4034,10 +4012,6 @@ private:
     /// Note that the mapping survives during all vectorization iterations, i.e.
     /// ScheduleData structures are recycled.
     DenseMap<Instruction *, ScheduleData *> ScheduleDataMap;
-
-    /// Attaches ScheduleData to Instruction with the leading key.
-    DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
-        ExtraScheduleDataMap;
 
     /// The ready-list for scheduling (only used for the dry-run).
     SetVector<ScheduleData *> ReadyInsts;
@@ -11898,8 +11872,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     auto *Bundle = BlocksSchedules[BB]->getScheduleData(V);
     if (Bundle && Bundle->isPartOfBundle())
       for (; Bundle; Bundle = Bundle->NextInBundle)
-        if (Bundle->OpValue == Bundle->Inst)
-          Res.second = Bundle->Inst;
+        Res.second = Bundle->Inst;
   }
 
   // LastInst can still be null at this point if there's either not an entry
@@ -15087,35 +15060,19 @@ BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
 
 bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
                                                       const InstructionsState &S) {
-  if (getScheduleData(V, isOneOf(S, V)))
-    return true;
   Instruction *I = dyn_cast<Instruction>(V);
   assert(I && "bundle member must be an instruction");
   assert(!isa<PHINode>(I) && !isVectorLikeInstWithConstOps(I) &&
          !doesNotNeedToBeScheduled(I) &&
          "phi nodes/insertelements/extractelements/extractvalues don't need to "
          "be scheduled");
-  auto &&CheckScheduleForI = [this, &S](Instruction *I) -> bool {
-    ScheduleData *ISD = getScheduleData(I);
-    if (!ISD)
-      return false;
-    assert(isInSchedulingRegion(ISD) &&
-           "ScheduleData not in scheduling region");
-    ScheduleData *SD = allocateScheduleDataChunks();
-    SD->Inst = I;
-    SD->init(SchedulingRegionID, S.OpValue);
-    ExtraScheduleDataMap[I][S.OpValue] = SD;
-    return true;
-  };
-  if (CheckScheduleForI(I))
+  if (getScheduleData(I))
     return true;
   if (!ScheduleStart) {
     // It's the first instruction in the new region.
     initScheduleData(I, I->getNextNode(), nullptr, nullptr);
     ScheduleStart = I;
     ScheduleEnd = I->getNextNode();
-    if (isOneOf(S, I) != I)
-      CheckScheduleForI(I);
     assert(ScheduleEnd && "tried to vectorize a terminator?");
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
     return true;
@@ -15154,8 +15111,6 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
            "Instruction is in wrong basic block.");
     initScheduleData(I, ScheduleStart, nullptr, FirstLoadStoreInRegion);
     ScheduleStart = I;
-    if (isOneOf(S, I) != I)
-      CheckScheduleForI(I);
     LLVM_DEBUG(dbgs() << "SLP:  extend schedule region start to " << *I
                       << "\n");
     return true;
@@ -15168,8 +15123,6 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
   initScheduleData(ScheduleEnd, I->getNextNode(), LastLoadStoreInRegion,
                    nullptr);
   ScheduleEnd = I->getNextNode();
-  if (isOneOf(S, I) != I)
-    CheckScheduleForI(I);
   assert(ScheduleEnd && "tried to vectorize a terminator?");
   LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I << "\n");
   return true;
@@ -15188,7 +15141,6 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     if (!SD) {
       SD = allocateScheduleDataChunks();
       ScheduleDataMap[I] = SD;
-      SD->Inst = I;
     }
     assert(!isInSchedulingRegion(SD) &&
            "new ScheduleData already in scheduling region");
@@ -15242,25 +15194,14 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       BundleMember->resetUnscheduledDeps();
 
       // Handle def-use chain dependencies.
-      if (BundleMember->OpValue != BundleMember->Inst) {
-        if (ScheduleData *UseSD = getScheduleData(BundleMember->Inst)) {
+      for (User *U : BundleMember->Inst->users()) {
+        if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
           BundleMember->Dependencies++;
           ScheduleData *DestBundle = UseSD->FirstInBundle;
           if (!DestBundle->IsScheduled)
             BundleMember->incrementUnscheduledDeps(1);
           if (!DestBundle->hasValidDependencies())
             WorkList.push_back(DestBundle);
-        }
-      } else {
-        for (User *U : BundleMember->Inst->users()) {
-          if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
-            BundleMember->Dependencies++;
-            ScheduleData *DestBundle = UseSD->FirstInBundle;
-            if (!DestBundle->IsScheduled)
-              BundleMember->incrementUnscheduledDeps(1);
-            if (!DestBundle->hasValidDependencies())
-              WorkList.push_back(DestBundle);
-          }
         }
       }
 
