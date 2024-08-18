@@ -4,17 +4,13 @@
 
 @__func__._Z10foo_kernelv = private unnamed_addr constant [11 x i8] c"foo_kernel\00", align 1, !dbg !0
 
-define dso_local void @_Z10foo_kernelv() #0 !dbg !20 {
+define void @_Z10foo_kernelv() !dbg !20 {
 entry:
   call void @_Z6escapePKc(ptr noundef @__func__._Z10foo_kernelv) #2, !dbg !23
   ret void, !dbg !24
 }
 
-declare dso_local void @_Z6escapePKc(ptr noundef)
-
-attributes #0 = { noinline nounwind optnone "target-cpu"="sm_86" }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind }
+declare void @_Z6escapePKc(ptr)
 
 !llvm.dbg.cu = !{!14}
 !llvm.ident = !{!18}
