@@ -10658,7 +10658,7 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
     SDValue SelectZeroOrOne =
         DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
                       DAG.getConstant(0, dl, ResVT));
-    return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
+    return DAG.getSelect(dl, ResVT, IsLT, DAG.getAllOnesConstant(dl, ResVT),
                          SelectZeroOrOne);
   }
 
