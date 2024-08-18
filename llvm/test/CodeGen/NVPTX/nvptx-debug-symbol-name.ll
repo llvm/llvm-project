@@ -2,6 +2,7 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_86 -verify-machineinstrs | %ptxas-verify %}
 
 ; CHECK: .global .align 1 .b8 __func___$__Z10foo_kernelv
+; CHECK: .b64 __func__$_Z10foo_kernelv
 
 @__func__._Z10foo_kernelv = private unnamed_addr constant [11 x i8] c"foo_kernel\00", align 1, !dbg !0
 
