@@ -44,7 +44,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -673,21 +672,6 @@ tryConvertToRename(const Diag *Diag, const Fix &Fix) {
   return std::nullopt;
 }
 
-// Add NOLINT insert as code actions
-std::optional<Fix> tryAddClangTidySuppression(const Diag *Diag) {
-  if (Diag->Source == Diag::ClangTidy) {
-    Fix F;
-    F.Message = llvm::formatv("ignore [{0}] for this line", Diag->Name);
-    TextEdit &E = F.Edits.emplace_back();
-    E.newText = llvm::formatv("// NOLINTNEXTLINE({0})\n", Diag->Name);
-    Position InsertPos = Diag->Range.start;
-    InsertPos.character = 0;
-    E.range = {InsertPos, InsertPos};
-    return F;
-  }
-  return std::nullopt;
-}
-
 } // namespace
 
 void ClangdServer::codeAction(const CodeActionInputs &Params,
@@ -717,7 +701,7 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
         return nullptr;
       };
       for (const auto &DiagRef : Params.Diagnostics) {
-        if (const auto *Diag = FindMatchedDiag(DiagRef)) {
+        if (const auto *Diag = FindMatchedDiag(DiagRef))
           for (const auto &Fix : Diag->Fixes) {
             if (auto Rename = tryConvertToRename(Diag, Fix)) {
               Result.Renames.emplace_back(std::move(*Rename));
@@ -725,11 +709,6 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
               Result.QuickFixes.push_back({DiagRef, Fix});
             }
           }
-
-          if (auto Fix = tryAddClangTidySuppression(Diag)) {
-            Result.QuickFixes.push_back({DiagRef, std::move(*Fix)});
-          }
-        }
       }
     }
 
