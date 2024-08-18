@@ -6941,9 +6941,9 @@ void Sema::AddOverloadCandidate(
     /// Inline functions with internal linkage are a common pattern in headers
     /// to avoid ODR issues.
     const bool IsInlineFunctionInGMF =
-          Function->getOwningModule() &&
-          Function->getOwningModule()->isGlobalModule() &&
-          (IsImplicitlyInstantiated || Function->isInlined());
+        Function->getOwningModule() &&
+        Function->getOwningModule()->isGlobalModule() &&
+        (IsImplicitlyInstantiated || Function->isInlined());
 
     if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
       Candidate.Viable = false;
