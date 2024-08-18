@@ -3048,6 +3048,11 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
                              BlockDesc, Source);
 }
 
+static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
+}
+
 inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   assert(T);
   assert(!S.getLangOpts().CPlusPlus23);
