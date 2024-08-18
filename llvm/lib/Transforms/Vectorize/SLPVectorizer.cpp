@@ -795,16 +795,6 @@ struct InstructionsState {
 
 } // end anonymous namespace
 
-/// Chooses the correct key for scheduling data. If \p Op has the same (or
-/// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is \p
-/// OpValue.
-static Value *isOneOf(const InstructionsState &S, Value *Op) {
-  auto *I = dyn_cast<Instruction>(Op);
-  if (I && S.isOpcodeOrAlt(I))
-    return Op;
-  return S.OpValue;
-}
-
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///
@@ -3830,20 +3820,19 @@ private:
 
         // Decrement the unscheduled counter and insert to ready list if ready.
         auto &&DecrUnsched = [this, &ReadyList](Instruction *I) {
-          doForAllOpcodes(I, [&ReadyList](ScheduleData *OpDef) {
-            if (OpDef && OpDef->hasValidDependencies() &&
-                OpDef->incrementUnscheduledDeps(-1) == 0) {
-              // There are no more unscheduled dependencies after
-              // decrementing, so we can put the dependent instruction
-              // into the ready list.
-              ScheduleData *DepBundle = OpDef->FirstInBundle;
-              assert(!DepBundle->IsScheduled &&
-                     "already scheduled bundle gets ready");
-              ReadyList.insert(DepBundle);
-              LLVM_DEBUG(dbgs()
-                         << "SLP:    gets ready (def): " << *DepBundle << "\n");
-            }
-          });
+          ScheduleData *OpDef = getScheduleData(I);
+          if (OpDef && OpDef->hasValidDependencies() &&
+              OpDef->incrementUnscheduledDeps(-1) == 0) {
+            // There are no more unscheduled dependencies after
+            // decrementing, so we can put the dependent instruction
+            // into the ready list.
+            ScheduleData *DepBundle = OpDef->FirstInBundle;
+            assert(!DepBundle->IsScheduled &&
+                   "already scheduled bundle gets ready");
+            ReadyList.insert(DepBundle);
+            LLVM_DEBUG(dbgs()
+                       << "SLP:    gets ready (def): " << *DepBundle << "\n");
+          }
         };
 
         // If BundleMember is a vector bundle, its operands may have been
@@ -3927,8 +3916,7 @@ private:
                "primary schedule data not in window?");
         assert(isInSchedulingRegion(SD->FirstInBundle) &&
                "entire bundle in window!");
-        (void)SD;
-        doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
+        SD->verify();
       }
 
       for (auto *SD : ReadyInsts) {
@@ -3938,24 +3926,17 @@ private:
       }
     }
 
-    void doForAllOpcodes(Value *V,
-                         function_ref<void(ScheduleData *SD)> Action) {
-      if (ScheduleData *SD = getScheduleData(V))
-        Action(SD);
-    }
-
     /// Put all instructions into the ReadyList which are ready for scheduling.
     template <typename ReadyListType>
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-        doForAllOpcodes(I, [&](ScheduleData *SD) {
-          if (SD->isSchedulingEntity() && SD->hasValidDependencies() &&
-              SD->isReady()) {
-            ReadyList.insert(SD);
-            LLVM_DEBUG(dbgs()
-                       << "SLP:    initially in ready list: " << *SD << "\n");
-          }
-        });
+        ScheduleData *SD = getScheduleData(I);
+        if (SD && SD->isSchedulingEntity() && SD->hasValidDependencies() &&
+            SD->isReady()) {
+          ReadyList.insert(SD);
+          LLVM_DEBUG(dbgs()
+                     << "SLP:    initially in ready list: " << *SD << "\n");
+        }
       }
     }
 
@@ -14939,7 +14920,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // initial bundle to the region.
     if (ScheduleEnd != OldScheduleEnd) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
-        doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
+        if (ScheduleData *SD = getScheduleData(I))
+          SD->clearDependencies();
       ReSchedule = true;
     }
     if (Bundle) {
@@ -15058,8 +15040,8 @@ BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
   return &(ScheduleDataChunks.back()[ChunkPos++]);
 }
 
-bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
-                                                      const InstructionsState &S) {
+bool BoUpSLP::BlockScheduling::extendSchedulingRegion(
+    Value *V, const InstructionsState &S) {
   Instruction *I = dyn_cast<Instruction>(V);
   assert(I && "bundle member must be an instruction");
   assert(!isa<PHINode>(I) && !isVectorLikeInstWithConstOps(I) &&
@@ -15350,12 +15332,12 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   assert(ScheduleStart &&
          "tried to reset schedule on block which has not been scheduled");
   for (Instruction *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-    doForAllOpcodes(I, [&](ScheduleData *SD) {
+    if (ScheduleData *SD = getScheduleData(I)) {
       assert(isInSchedulingRegion(SD) &&
              "ScheduleData not in scheduling region");
       SD->IsScheduled = false;
       SD->resetUnscheduledDeps();
-    });
+    }
   }
   ReadyInsts.clear();
 }
@@ -15390,7 +15372,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   int Idx = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
+    if (ScheduleData *SD = BS->getScheduleData(I)) {
       TreeEntry *SDTE = getTreeEntry(SD->Inst);
       (void)SDTE;
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
@@ -15401,7 +15383,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
       if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
-    });
+    }
   }
   BS->initialFillReadyList(ReadyInsts);
 
@@ -15433,11 +15415,9 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   // Check that all schedulable entities got scheduled
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
-      if (SD->isSchedulingEntity() && SD->hasValidDependencies()) {
-        assert(SD->IsScheduled && "must be scheduled at this point");
-      }
-    });
+    ScheduleData *SD = BS->getScheduleData(I);
+    if (SD && SD->isSchedulingEntity() && SD->hasValidDependencies())
+      assert(SD->IsScheduled && "must be scheduled at this point");
   }
 #endif
 
