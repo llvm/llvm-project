@@ -15,7 +15,7 @@ using namespace llvm;
 
 namespace llvm {
 class Module;
-}
+} // namespace llvm
 
 CycleInfo CycleAnalysis::run(Function &F, FunctionAnalysisManager &) {
   CycleInfo CI;

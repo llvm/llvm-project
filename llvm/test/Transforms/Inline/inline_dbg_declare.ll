@@ -44,7 +44,7 @@ entry:
 
 ; CHECK: [[x_addr_i:%.+]] = alloca float, align 4
 ; CHECK: store float {{.*}}, ptr [[x_addr_i]]
-; CHECK-NEXT: void @llvm.dbg.declare(metadata ptr [[x_addr_i]], metadata [[m23:![0-9]+]], metadata !DIExpression()), !dbg [[m24:![0-9]+]]
+; CHECK-NEXT: #dbg_declare(ptr [[x_addr_i]], [[m23:![0-9]+]], !DIExpression(), [[m24:![0-9]+]]
 
   %dst.addr = alloca ptr, align 4
   store ptr %dst, ptr %dst.addr, align 4

@@ -5,9 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+//
 // UNSUPPORTED: no-threads
 
 // <memory>
@@ -17,7 +15,7 @@
 // template <class T>
 // bool
 // atomic_compare_exchange_weak(shared_ptr<T>* p, shared_ptr<T>* v,
-//                              shared_ptr<T> w);                    // Deprecated in C++20, removed in C++26
+//                              shared_ptr<T> w);
 
 // UNSUPPORTED: c++03
 

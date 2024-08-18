@@ -76,11 +76,7 @@ struct FixupTy {
 /// idioms that are used for distinct target processor and ABI combinations.
 class TargetRewrite : public fir::impl::TargetRewritePassBase<TargetRewrite> {
 public:
-  TargetRewrite(const fir::TargetRewriteOptions &options) {
-    noCharacterConversion = options.noCharacterConversion;
-    noComplexConversion = options.noComplexConversion;
-    noStructConversion = options.noStructConversion;
-  }
+  using TargetRewritePassBase<TargetRewrite>::TargetRewritePassBase;
 
   void runOnOperation() override final {
     auto &context = getContext();
@@ -92,6 +88,9 @@ public:
 
     if (!forcedTargetCPU.empty())
       fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTuneCPU.empty())
+      fir::setTuneCPU(mod, forcedTuneCPU);
 
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
@@ -110,7 +109,8 @@ public:
 
     auto specifics = fir::CodeGenSpecifics::get(
         mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
-        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl);
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl,
+        fir::getTuneCPU(mod));
 
     setMembers(specifics.get(), &rewriter, &*dl);
 
@@ -671,16 +671,22 @@ public:
   /// Convert the type signatures on all the functions present in the module.
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
-  mlir::LogicalResult convertTypes(mlir::ModuleOp mod) {
+  llvm::LogicalResult convertTypes(mlir::ModuleOp mod) {
     mlir::MLIRContext *ctx = mod->getContext();
     auto targetCPU = specifics->getTargetCPU();
     mlir::StringAttr targetCPUAttr =
         targetCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, targetCPU);
+    auto tuneCPU = specifics->getTuneCPU();
+    mlir::StringAttr tuneCPUAttr =
+        tuneCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, tuneCPU);
     auto targetFeaturesAttr = specifics->getTargetFeatures();
 
     for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
       if (targetCPUAttr)
         fn->setAttr("target_cpu", targetCPUAttr);
+
+      if (tuneCPUAttr)
+        fn->setAttr("tune_cpu", tuneCPUAttr);
 
       if (targetFeaturesAttr)
         fn->setAttr("target_features", targetFeaturesAttr);
@@ -1255,8 +1261,3 @@ private:
   mlir::func::FuncOp stackRestoreFn = nullptr;
 };
 } // namespace
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-fir::createFirTargetRewritePass(const fir::TargetRewriteOptions &options) {
-  return std::make_unique<TargetRewrite>(options);
-}

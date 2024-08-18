@@ -864,6 +864,29 @@ LogicalResult tosa::TableOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::TableOp::verify() {
+  TensorType inputType = getInput().getType();
+  TensorType outputType = getOutput().getType();
+
+  if (inputType.hasRank() && outputType.hasRank() &&
+      inputType.getRank() != outputType.getRank())
+    return emitOpError()
+           << "expected input tensor rank to equal result tensor rank";
+
+  auto inputDims = inputType.getShape();
+  auto outputDims = outputType.getShape();
+  for (auto it : llvm::enumerate(llvm::zip(inputDims, outputDims))) {
+    int64_t dim = it.index();
+    auto [inputDim, outputDim] = it.value();
+    if (!ShapedType::isDynamic(outputDim) && outputDim != inputDim) {
+      return emitOpError() << "dim(result, " << dim << ") = " << outputDim
+                           << " doesn't match dim(input, " << dim
+                           << ") = " << inputDim;
+    }
+  }
+  return success();
+}
+
 LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TileOp::Adaptor adaptor,
@@ -955,7 +978,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   return success();
 }
 
-mlir::LogicalResult tosa::ReshapeOp::verify() {
+llvm::LogicalResult tosa::ReshapeOp::verify() {
   TensorType inputType = getInput1().getType();
   RankedTensorType outputType = getType();
 
@@ -967,10 +990,15 @@ mlir::LogicalResult tosa::ReshapeOp::verify() {
     return emitOpError() << "new shape does not match result rank";
 
   for (auto [newShapeDim, outputShapeDim] :
-       zip(getNewShape(), outputType.getShape()))
+       zip(getNewShape(), outputType.getShape())) {
     if (newShapeDim != -1 && outputShapeDim != ShapedType::kDynamic &&
         newShapeDim != outputShapeDim)
       return emitOpError() << "new shape is inconsistent with result shape";
+
+    if (newShapeDim != ShapedType::kDynamic && newShapeDim < -1)
+      return emitOpError() << "new shape has invalid tensor dimension size "
+                           << newShapeDim;
+  }
 
   if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
@@ -1116,6 +1144,12 @@ LogicalResult tosa::TransposeOp::verify() {
            "Unexpectedly found permutation tensor without rank");
     if (!isPermutationVector(constantPerms))
       return emitOpError() << "expected valid permutation tensor";
+
+    if (inputType.hasRank() && !llvm::all_of(constantPerms, [&](int64_t s) {
+          return s < inputType.getRank();
+        })) {
+      return emitOpError() << "permutation must be within input bounds";
+    }
   }
   return success();
 }

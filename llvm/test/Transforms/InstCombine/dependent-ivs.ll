@@ -537,8 +537,39 @@ exit:
   ret void
 }
 
-define void @ptr_iv_no_inbounds(ptr %base, i64 %end) {
-; CHECK-LABEL: define void @ptr_iv_no_inbounds(
+define void @ptr_iv_nuw(ptr %base, i64 %end) {
+; CHECK-LABEL: define void @ptr_iv_nuw(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[END:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_PTR:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 [[IV]]
+; CHECK-NEXT:    call void @use.p0(ptr [[IV_PTR]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.ptr = phi ptr [ %iv.ptr.next, %loop ], [ %base, %entry ]
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  call void @use.p0(ptr %iv.ptr)
+  %iv.next = add nuw nsw i64 %iv, 4
+  %iv.ptr.next = getelementptr nuw i8, ptr %base, i64 %iv.next
+  %cmp = icmp eq i64 %iv.next, %end
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_iv_no_flags(ptr %base, i64 %end) {
+; CHECK-LABEL: define void @ptr_iv_no_flags(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[END:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

@@ -2313,6 +2313,62 @@ define float @test_sin_f32(float %x) {
   ret float %y
 }
 
+declare float @llvm.tan.f32(float)
+define float @test_tan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTAN %{{[0-9]+}}
+  %y = call float @llvm.tan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.acos.f32(float)
+define float @test_acos_f32(float %x) {
+  ; CHECK-LABEL: name:            test_acos_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FACOS %{{[0-9]+}}
+  %y = call float @llvm.acos.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.asin.f32(float)
+define float @test_asin_f32(float %x) {
+  ; CHECK-LABEL: name:            test_asin_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FASIN %{{[0-9]+}}
+  %y = call float @llvm.asin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.atan.f32(float)
+define float @test_atan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_atan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN %{{[0-9]+}}
+  %y = call float @llvm.atan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.cosh.f32(float)
+define float @test_cosh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_cosh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FCOSH %{{[0-9]+}}
+  %y = call float @llvm.cosh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.sinh.f32(float)
+define float @test_sinh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_sinh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FSINH %{{[0-9]+}}
+  %y = call float @llvm.sinh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tanh.f32(float)
+define float @test_tanh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tanh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTANH %{{[0-9]+}}
+  %y = call float @llvm.tanh.f32(float %x)
+  ret float %y
+}
+
 declare float @llvm.sqrt.f32(float)
 define float @test_sqrt_f32(float %x) {
   ; CHECK-LABEL: name:            test_sqrt_f32

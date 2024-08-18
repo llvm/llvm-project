@@ -96,9 +96,7 @@ define void @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i6
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -434,9 +432,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -647,9 +643,7 @@ define void @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocapt
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -822,9 +816,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -1014,9 +1006,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -1260,9 +1250,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -1472,9 +1460,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; TF-SCALABLE:       vector.ph:
 ; TF-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TF-SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; TF-SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TF-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

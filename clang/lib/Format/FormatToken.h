@@ -77,6 +77,7 @@ namespace format {
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
+  TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
@@ -101,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -667,12 +669,16 @@ public:
     return Tok.isObjCAtKeyword(Kind);
   }
 
+  bool isAccessSpecifierKeyword() const {
+    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private);
+  }
+
   bool isAccessSpecifier(bool ColonRequired = true) const {
-    if (!isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private))
+    if (!isAccessSpecifierKeyword())
       return false;
     if (!ColonRequired)
       return true;
-    const auto NextNonComment = getNextNonComment();
+    const auto *NextNonComment = getNextNonComment();
     return NextNonComment && NextNonComment->is(tok::colon);
   }
 
@@ -1656,10 +1662,12 @@ struct AdditionalKeywords {
   /// If \c AcceptIdentifierName is true, returns true not only for keywords,
   // but also for IdentifierName tokens (aka pseudo-keywords), such as
   // ``yield``.
-  bool IsJavaScriptIdentifier(const FormatToken &Tok,
+  bool isJavaScriptIdentifier(const FormatToken &Tok,
                               bool AcceptIdentifierName = true) const {
     // Based on the list of JavaScript & TypeScript keywords here:
     // https://github.com/microsoft/TypeScript/blob/main/src/compiler/scanner.ts#L74
+    if (Tok.isAccessSpecifierKeyword())
+      return false;
     switch (Tok.Tok.getKind()) {
     case tok::kw_break:
     case tok::kw_case:
@@ -1679,9 +1687,6 @@ struct AdditionalKeywords {
     case tok::kw_import:
     case tok::kw_module:
     case tok::kw_new:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_static:
     case tok::kw_switch:
@@ -1724,6 +1729,8 @@ struct AdditionalKeywords {
   /// Returns \c true if \p Tok is a C# keyword, returns
   /// \c false if it is a anything else.
   bool isCSharpKeyword(const FormatToken &Tok) const {
+    if (Tok.isAccessSpecifierKeyword())
+      return true;
     switch (Tok.Tok.getKind()) {
     case tok::kw_bool:
     case tok::kw_break:
@@ -1750,9 +1757,6 @@ struct AdditionalKeywords {
     case tok::kw_namespace:
     case tok::kw_new:
     case tok::kw_operator:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_short:
     case tok::kw_sizeof:

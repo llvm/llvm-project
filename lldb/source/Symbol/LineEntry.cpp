@@ -199,7 +199,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
         next_line_sc.line_entry.range.GetByteSize() == 0)
       break;
 
-    if (*original_file_sp == *next_line_sc.line_entry.original_file_sp &&
+    if (original_file_sp->Equal(*next_line_sc.line_entry.original_file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet) &&
         (next_line_sc.line_entry.line == 0 ||
          line == next_line_sc.line_entry.line)) {
       // Include any line 0 entries - they indicate that this is compiler-
@@ -244,7 +245,9 @@ void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
-            original_file_sp->GetSpecOnly()))
-      file_sp->Update(*new_file_spec);
+            original_file_sp->GetSpecOnly())) {
+      file_sp = std::make_shared<SupportFile>(*new_file_spec,
+                                              original_file_sp->GetChecksum());
+    }
   }
 }

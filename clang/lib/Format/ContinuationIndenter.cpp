@@ -131,7 +131,8 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
 // Returns \c true if \c Current starts a new parameter.
 static bool startsNextParameter(const FormatToken &Current,
                                 const FormatStyle &Style) {
-  const FormatToken &Previous = *Current.Previous;
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
   if (Current.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
     return true;
@@ -144,6 +145,31 @@ static bool startsNextParameter(const FormatToken &Current,
                FormatStyle::BCIS_BeforeComma) &&
           (Previous.isNot(TT_InheritanceComma) ||
            Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
+}
+
+// Returns \c true if \c Token in an alignable binary operator
+static bool isAlignableBinaryOperator(const FormatToken &Token) {
+  // No need to align binary operators that only have two operands.
+  bool HasTwoOperands = Token.OperatorIndex == 0 && !Token.NextOperator;
+  return Token.is(TT_BinaryOperator) && !HasTwoOperands &&
+         Token.getPrecedence() > prec::Conditional &&
+         Token.getPrecedence() < prec::PointerToMember;
+}
+
+// Returns \c true if \c Current starts the next operand in a binary operation.
+static bool startsNextOperand(const FormatToken &Current) {
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
+  return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
+}
+
+// Returns \c true if \c Current is a binary operation that must break.
+static bool mustBreakBinaryOperation(const FormatToken &Current,
+                                     const FormatStyle &Style) {
+  return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+         (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
+              ? startsNextOperand
+              : isAlignableBinaryOperator)(Current);
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
@@ -803,6 +829,37 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                   tok::kw_switch);
   };
+  auto IsFunctionCallParen = [](const FormatToken &Tok) {
+    return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
+           Tok.Previous->is(tok::identifier);
+  };
+  const auto IsInTemplateString = [this](const FormatToken &Tok) {
+    if (!Style.isJavaScript())
+      return false;
+    for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
+      if (Prev->is(TT_TemplateString) && Prev->opensScope())
+        return true;
+      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+        break;
+    }
+    return false;
+  };
+  // Identifies simple (no expression) one-argument function calls.
+  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
+    if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
+      return false;
+    const auto *Previous = Tok.Previous;
+    if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
+                                         TT_LambdaDefinitionLParen) &&
+                      !IsFunctionCallParen(*Previous))) {
+      return true;
+    }
+    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok))
+      return true;
+    const auto *Next = Tok.Next;
+    return !Next || Next->isMemberAccess() ||
+           Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
+  };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
       IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
@@ -813,10 +870,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //       caaaaaaaaaaaall(
       //           caaaaaaaaaaaall(
       //               caaaaaaaaaaaaaaaaaaaaaaall(aaaaaaaaaaaaaa, aaaaaaaaa))));
-      Current.FakeLParens.size() > 0 &&
-      Current.FakeLParens.back() > prec::Unknown) {
+      !IsSimpleFunction(Current)) {
     CurrentState.NoLineBreak = true;
   }
+
   if (Previous.is(TT_TemplateString) && Previous.opensScope())
     CurrentState.NoLineBreak = true;
 
@@ -831,12 +888,16 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
+       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+      !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
+  if (mustBreakBinaryOperation(Current, Style))
+    CurrentState.NoLineBreak = true;
+
   if (startsSegmentOfBuilderTypeCall(Current) &&
       State.Column > getNewLineColumn(State)) {
     CurrentState.ContainsUnwrappedBuilder = true;
@@ -1203,6 +1264,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
+  if (mustBreakBinaryOperation(Current, Style))
+    CurrentState.BreakBeforeParameter = true;
+
   return Penalty;
 }
 
@@ -1256,6 +1320,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       return State.FirstIndent;
     }
     return CurrentState.Indent;
+  }
+  if (Current.is(TT_TrailingReturnArrow) &&
+      Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
+                       tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
+    return ContinuationIndent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
        (Current.is(tok::greater) && (Style.isProto() || Style.isTableGen()))) &&
@@ -1358,6 +1427,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithFollowing:
+    case FormatStyle::RCPS_OwnLineWithBrace:
       return CurrentState.Indent;
     default:
       break;
@@ -1712,7 +1782,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0) &&
+         PrecedenceLevel > prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
                                         TT_TableGenDAGArgListCommaToBreak)))) {

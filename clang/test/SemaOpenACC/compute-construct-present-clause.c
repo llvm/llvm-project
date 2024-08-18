@@ -52,8 +52,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc parallel present((float)ArrayParam[2])
   while(1);
 
-  // expected-error@+2{{OpenACC 'present' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop present(LocalInt)
   for(;;);
 }

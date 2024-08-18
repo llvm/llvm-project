@@ -30,7 +30,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/TilingInterface.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -44,7 +43,7 @@ namespace mlir::linalg {
 
 using MeshAxis = mesh::MeshAxis;
 using ReductionKind = mesh::ReductionKind;
-using MeshShardingAttr = mesh::MeshShardingAttr;
+using MeshSharding = mesh::MeshSharding;
 using ShardingArray = mesh::ShardingArray;
 using MeshOp = mesh::MeshOp;
 
@@ -103,19 +102,18 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
   return getReductionKind(reductionOp.value());
 }
 
-static MeshOp getMesh(Operation *op,
-                      ArrayRef<MeshShardingAttr> operandShardings,
-                      ArrayRef<MeshShardingAttr> resultShardings,
+static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
+                      ArrayRef<MeshSharding> resultShardings,
                       SymbolTableCollection &symbolTable) {
-  for (MeshShardingAttr sharding : operandShardings) {
+  for (MeshSharding sharding : operandShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
+      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
-  for (MeshShardingAttr sharding : resultShardings) {
+  for (MeshSharding sharding : resultShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
+      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
@@ -186,7 +184,7 @@ static SmallVector<Value> createDestinationPassingStyleInitOperands(
 
 static void createAllReduceForResultWithoutPartialSharding(
     Value unshardedLinalgOpResult, ArrayRef<MeshAxis> opReductionMeshAxes,
-    MeshShardingAttr resultSharding, ReductionKind reductionKind,
+    MeshSharding resultSharding, ReductionKind reductionKind,
     IRMapping &spmdizationMap, ImplicitLocOpBuilder &builder) {
   SmallVector<MeshAxis> allReduceMeshAxes;
   llvm::copy_if(opReductionMeshAxes, std::back_inserter(allReduceMeshAxes),
@@ -200,14 +198,14 @@ static void createAllReduceForResultWithoutPartialSharding(
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
   Value reducedValue = builder.create<mesh::AllReduceOp>(
-      spmdizedLinalgOpResult, resultSharding.getMesh().getValue(),
-      allReduceMeshAxes, reductionKind);
+      spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
+      reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);
 }
 
 static void createAllReduceForResultsWithoutPartialShardings(
     LinalgOp unshardedOp, ArrayRef<MeshAxis> opReductionMeshAxes,
-    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    ArrayRef<MeshSharding> resultShardings, IRMapping &spmdizationMap,
     ImplicitLocOpBuilder &builder) {
   ReductionKind reductionKind = getReductionKindOfLinalgOp(unshardedOp);
   for (auto [unshardedLinalgOpResult, resultSharding] :
@@ -220,8 +218,8 @@ static void createAllReduceForResultsWithoutPartialShardings(
 
 static void spmdizeLinalgOpWithShardedReduction(
     LinalgOp op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<MeshSharding> operandShardings,
+    ArrayRef<MeshSharding> resultShardings,
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators,
     IRMapping &spmdizationMap, SymbolTableCollection &symbolTable,
@@ -294,8 +292,8 @@ struct StructuredOpShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {

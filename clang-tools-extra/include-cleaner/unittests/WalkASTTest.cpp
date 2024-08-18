@@ -534,7 +534,7 @@ TEST(WalkAST, Enums) {
 TEST(WalkAST, InitializerList) {
   testWalk(R"cpp(
        namespace std {
-        template <typename T> struct $implicit^initializer_list {};
+        template <typename T> struct $implicit^initializer_list { const T *a, *b; };
        })cpp",
            R"cpp(
        const char* s = "";
@@ -554,6 +554,13 @@ TEST(WalkAST, Concepts) {
 TEST(WalkAST, FriendDecl) {
   testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
   testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
+}
+
+TEST(WalkAST, OperatorNewDelete) {
+  testWalk("void* $explicit^operator new(decltype(sizeof(int)), void*);",
+           "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
+  testWalk("struct A { static void $explicit^operator delete(void*); };",
+           "void foo() { A a; ^delete &a; }");
 }
 } // namespace
 } // namespace clang::include_cleaner

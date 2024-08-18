@@ -52,8 +52,7 @@ void Test() {
 #pragma acc parallel num_gangs(getS(), 1, getS(), 1)
   while(1);
 
-  // expected-error@+2{{OpenACC 'num_gangs' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'loop' directive}}
 #pragma acc loop num_gangs(1)
   for(;;);
 }

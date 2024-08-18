@@ -14,16 +14,22 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -35,14 +41,10 @@ public:
     return isPreISelGenericOpcode(MI->getOpcode());
   }
 
-  bool hasPoisonGeneratingFlags() const {
-    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
-                         FmNoNans | FmNoInfs);
-  }
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
 
   void dropPoisonGeneratingFlags() {
-    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
-               FmNoInfs);
+    clearFlags(PoisonFlags);
     assert(!hasPoisonGeneratingFlags());
   }
 };
@@ -181,6 +183,11 @@ class GAnyLoad : public GLoadStore {
 public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
+
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -853,6 +860,93 @@ class GTrunc : public GCastOp {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
+/// Represents a vscale.
+class GVScale : public GenericMachineInstr {
+public:
+  APInt getSrc() const { return getOperand(1).getCImm()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents an integer subtraction.
+class GSub : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SUB;
+  };
+};
+
+/// Represents an integer multiplication.
+class GMul : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_MUL;
+  };
+};
+
+/// Represents a shift left.
+class GShl : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+  Register getShiftReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHL;
+  };
+};
+
+/// Represents a threeway compare.
+class GSUCmp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SCMP; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SCMP:
+    case TargetOpcode::G_UCMP:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending operation.
+class GExtOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending or truncating operation.
+class GExtOrTruncOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_TRUNC:
+      return true;
+    default:
+      return false;
+    }
   };
 };
 

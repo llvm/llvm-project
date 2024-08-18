@@ -483,6 +483,8 @@ namespace cwg1696 { // cwg1696: 7
     const A &a = A(); // #cwg1696-D1-a
   };
   D1 d1 = {}; // #cwg1696-d1
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}}
+  //   since-cxx14-note@#cwg1696-D1-a {{initializing field 'a' with default member initializer}}
 
   struct D2 {
     const A &a = A(); // #cwg1696-D2-a

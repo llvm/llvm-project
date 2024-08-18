@@ -22,9 +22,9 @@ module attributes {gpu.container_module} {
       %cidX = gpu.cluster_id  x
       %cidY = gpu.cluster_id  y
       %cidZ = gpu.cluster_id  z
-      %cdimX = gpu.cluster_dim  x
-      %cdimY = gpu.cluster_dim  y
-      %cdimZ = gpu.cluster_dim  z
+      %cdimX = gpu.cluster_dim_blocks  x
+      %cdimY = gpu.cluster_dim_blocks  y
+      %cdimZ = gpu.cluster_dim_blocks  z
       %bidX = gpu.block_id  x
       %bidY = gpu.block_id  y
       %bidZ = gpu.block_id  z

@@ -174,29 +174,6 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
-static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
-  // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
-  //   ->
-  // $rbx = ADD64rr $rbx, $rax
-  const MCInstrDesc &Desc = MI.getDesc();
-  Register Reg0 = MI.getOperand(0).getReg();
-  const MachineOperand &Op1 = MI.getOperand(1);
-  if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1 ||
-      X86::isCFCMOVCC(MI.getOpcode()))
-    return false;
-  Register Reg1 = Op1.getReg();
-  if (Reg1 == Reg0)
-    return true;
-
-  // Op1 and Op2 may be commutable for ND instructions.
-  if (!Desc.isCommutable() || Desc.getNumOperands() < 3 ||
-      !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
-    return false;
-  // Opcode may change after commute, e.g. SHRD -> SHLD
-  ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
-  return true;
-}
-
 static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
@@ -208,6 +185,30 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
 
+  auto IsRedundantNewDataDest = [&](unsigned &Opc) {
+    // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
+    //   ->
+    // $rbx = ADD64rr $rbx, $rax
+    const MCInstrDesc &Desc = MI.getDesc();
+    Register Reg0 = MI.getOperand(0).getReg();
+    const MachineOperand &Op1 = MI.getOperand(1);
+    if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1 ||
+        X86::isCFCMOVCC(MI.getOpcode()))
+      return false;
+    Register Reg1 = Op1.getReg();
+    if (Reg1 == Reg0)
+      return true;
+
+    // Op1 and Op2 may be commutable for ND instructions.
+    if (!Desc.isCommutable() || Desc.getNumOperands() < 3 ||
+        !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
+      return false;
+    // Opcode may change after commute, e.g. SHRD -> SHLD
+    ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
+    Opc = MI.getOpcode();
+    return true;
+  };
+
   // EVEX_B has several meanings.
   // AVX512:
   //  register form: rounding control or SAE
@@ -218,40 +219,36 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
-  unsigned Opc = MI.getOpcode();
   bool IsND = X86II::hasNewDataDest(TSFlags);
   if (TSFlags & X86II::EVEX_B && !IsND)
     return false;
+  unsigned Opc = MI.getOpcode();
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
-  bool IsRedundantNDD = IsNDLike ? isRedundantNewDataDest(MI, ST) : false;
+  bool IsRedundantNDD = IsNDLike ? IsRedundantNewDataDest(Opc) : false;
+
+  auto GetCompressedOpc = [&](unsigned Opc) -> unsigned {
+    ArrayRef<X86TableEntry> Table = ArrayRef(X86CompressEVEXTable);
+    const auto I = llvm::lower_bound(Table, Opc);
+    if (I == Table.end() || I->OldOpc != Opc)
+      return 0;
+
+    if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
+        !performCustomAdjustments(MI, I->NewOpc))
+      return 0;
+    return I->NewOpc;
+  };
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
   // dead.
-  unsigned NFOpc = (ST.hasNF() && !IsRedundantNDD &&
-                    MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr))
-                       ? X86::getNFVariant(Opc)
-                       : 0U;
-  if (IsNDLike && !IsRedundantNDD && !NFOpc)
+  unsigned NewOpc = IsRedundantNDD
+                        ? X86::getNonNDVariant(Opc)
+                        : ((IsNDLike && ST.hasNF() &&
+                            MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr))
+                               ? X86::getNFVariant(Opc)
+                               : GetCompressedOpc(Opc));
+
+  if (!NewOpc)
     return false;
-
-  unsigned NewOpc = NFOpc;
-  if (!NewOpc) {
-    ArrayRef<X86TableEntry> Table = ArrayRef(X86CompressEVEXTable);
-
-    Opc = MI.getOpcode();
-    const auto I = llvm::lower_bound(Table, Opc);
-    if (I == Table.end() || I->OldOpc != Opc) {
-      assert(!IsNDLike && "Missing entry for ND-like instruction");
-      return false;
-    }
-
-    if (!IsNDLike) {
-      if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
-          !performCustomAdjustments(MI, I->NewOpc))
-        return false;
-    }
-    NewOpc = I->NewOpc;
-  }
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);

@@ -103,7 +103,7 @@ end subroutine
 ! CHECK-SAME:                                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable, intent_out>, uniq_name = "_QMassumed_rank_testsFtest_intentoutEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<*:f32>>>) -> !fir.heap<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<!fir.array<*:f32>>) -> i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
@@ -111,7 +111,7 @@ end subroutine
 ! CHECK:           fir.if %[[VAL_7]] {
 ! CHECK:             %[[VAL_8:.*]] = arith.constant false
 ! CHECK:             %[[VAL_9:.*]] = fir.absent !fir.box<none>
-! CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_2]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_14:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_12]], %[[VAL_8]], %[[VAL_9]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           }
 ! CHECK:           return

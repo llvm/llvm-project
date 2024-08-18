@@ -166,7 +166,13 @@ public:
 #define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
 
+// The GPU target does not support different rounding modes.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
+#else
 #define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
+#endif
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

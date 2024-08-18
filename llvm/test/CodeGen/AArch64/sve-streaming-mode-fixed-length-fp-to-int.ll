@@ -519,32 +519,32 @@ define void @fcvtzu_v4f16_v4i64(ptr %a, ptr %b) {
 define void @fcvtzu_v8f16_v8i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzu_v8f16_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    mov z3.h, z0.h[2]
-; CHECK-NEXT:    fcvtzu x8, h0
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    fcvtzu x9, h1
-; CHECK-NEXT:    fcvtzu x10, h2
-; CHECK-NEXT:    fcvtzu x11, h3
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
+; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    fcvtzu x12, h0
-; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    stp x8, x9, [sp, #32]
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    mov z2.h, z1.h[1]
 ; CHECK-NEXT:    fcvtzu x8, h1
+; CHECK-NEXT:    mov z3.h, z1.h[3]
+; CHECK-NEXT:    mov z1.h, z1.h[2]
 ; CHECK-NEXT:    fcvtzu x9, h2
-; CHECK-NEXT:    stp x11, x10, [sp, #48]
+; CHECK-NEXT:    mov z2.h, z0.h[1]
+; CHECK-NEXT:    fcvtzu x10, h3
+; CHECK-NEXT:    mov z3.h, z0.h[3]
+; CHECK-NEXT:    fcvtzu x11, h1
+; CHECK-NEXT:    mov z0.h, z0.h[2]
+; CHECK-NEXT:    stp x8, x9, [sp, #-64]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    fcvtzu x8, h2
+; CHECK-NEXT:    fcvtzu x9, h3
+; CHECK-NEXT:    stp x11, x10, [sp, #16]
 ; CHECK-NEXT:    fcvtzu x10, h0
-; CHECK-NEXT:    ldp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp x12, x8, [sp]
-; CHECK-NEXT:    stp x10, x9, [sp, #16]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    stp q2, q3, [x1]
-; CHECK-NEXT:    stp q1, q0, [x1, #32]
+; CHECK-NEXT:    ldp q2, q3, [sp]
+; CHECK-NEXT:    stp x12, x8, [sp, #32]
+; CHECK-NEXT:    stp x10, x9, [sp, #48]
+; CHECK-NEXT:    ldp q1, q0, [sp, #32]
+; CHECK-NEXT:    stp q2, q3, [x1, #32]
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 ;
@@ -598,55 +598,56 @@ define void @fcvtzu_v8f16_v8i64(ptr %a, ptr %b) {
 define void @fcvtzu_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzu_v16f16_v16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #128
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z3.h, z1.h[3]
-; CHECK-NEXT:    mov z4.h, z1.h[2]
-; CHECK-NEXT:    fcvtzu x8, h1
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    fcvtzu x10, h0
-; CHECK-NEXT:    fcvtzu x9, h2
-; CHECK-NEXT:    fcvtzu x11, h3
-; CHECK-NEXT:    fcvtzu x12, h4
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z4.h, z1.h[3]
-; CHECK-NEXT:    fcvtzu x13, h1
-; CHECK-NEXT:    mov z1.h, z1.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[1]
-; CHECK-NEXT:    stp x8, x9, [sp, #32]
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z1.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    mov z4.h, z2.h[1]
 ; CHECK-NEXT:    fcvtzu x8, h2
-; CHECK-NEXT:    fcvtzu x9, h4
-; CHECK-NEXT:    stp x12, x11, [sp, #48]
-; CHECK-NEXT:    fcvtzu x11, h1
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    mov z5.h, z2.h[3]
+; CHECK-NEXT:    mov z2.h, z2.h[2]
 ; CHECK-NEXT:    fcvtzu x12, h3
-; CHECK-NEXT:    stp x13, x8, [sp]
-; CHECK-NEXT:    fcvtzu x8, h5
-; CHECK-NEXT:    stp x11, x9, [sp, #16]
-; CHECK-NEXT:    fcvtzu x9, h2
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    fcvtzu x11, h0
+; CHECK-NEXT:    fcvtzu x9, h4
+; CHECK-NEXT:    mov z4.h, z3.h[1]
+; CHECK-NEXT:    fcvtzu x10, h5
+; CHECK-NEXT:    mov z5.h, z3.h[3]
+; CHECK-NEXT:    fcvtzu x11, h2
+; CHECK-NEXT:    mov z2.h, z3.h[2]
+; CHECK-NEXT:    stp x8, x9, [sp, #-128]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 128
+; CHECK-NEXT:    fcvtzu x8, h4
+; CHECK-NEXT:    fcvtzu x9, h5
+; CHECK-NEXT:    stp x11, x10, [sp, #16]
+; CHECK-NEXT:    fcvtzu x10, h2
+; CHECK-NEXT:    mov z3.h, z1.h[1]
+; CHECK-NEXT:    mov z4.h, z1.h[3]
+; CHECK-NEXT:    fcvtzu x11, h1
+; CHECK-NEXT:    mov z1.h, z1.h[2]
+; CHECK-NEXT:    mov z2.h, z0.h[1]
+; CHECK-NEXT:    stp x12, x8, [sp, #64]
+; CHECK-NEXT:    fcvtzu x12, h3
+; CHECK-NEXT:    fcvtzu x8, h4
+; CHECK-NEXT:    stp x10, x9, [sp, #80]
+; CHECK-NEXT:    fcvtzu x9, h1
+; CHECK-NEXT:    mov z3.h, z0.h[3]
+; CHECK-NEXT:    fcvtzu x10, h0
 ; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    stp x10, x12, [sp, #96]
-; CHECK-NEXT:    ldp q3, q4, [sp]
-; CHECK-NEXT:    fcvtzu x10, h1
-; CHECK-NEXT:    fcvtzu x12, h2
-; CHECK-NEXT:    stp x9, x8, [sp, #112]
+; CHECK-NEXT:    stp x11, x12, [sp, #32]
+; CHECK-NEXT:    fcvtzu x11, h2
+; CHECK-NEXT:    fcvtzu x12, h3
+; CHECK-NEXT:    stp x9, x8, [sp, #48]
 ; CHECK-NEXT:    fcvtzu x8, h0
-; CHECK-NEXT:    ldp q0, q1, [sp, #32]
-; CHECK-NEXT:    ldp q6, q7, [sp, #96]
-; CHECK-NEXT:    stp x11, x10, [sp, #64]
-; CHECK-NEXT:    stp x8, x12, [sp, #80]
-; CHECK-NEXT:    ldp q5, q2, [sp, #64]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q3, q4, [x1, #32]
-; CHECK-NEXT:    stp q6, q7, [x1, #64]
-; CHECK-NEXT:    stp q5, q2, [x1, #96]
+; CHECK-NEXT:    ldp q0, q1, [sp]
+; CHECK-NEXT:    ldp q3, q4, [sp, #64]
+; CHECK-NEXT:    stp x10, x11, [sp, #96]
+; CHECK-NEXT:    ldp q6, q7, [sp, #32]
+; CHECK-NEXT:    stp x8, x12, [sp, #112]
+; CHECK-NEXT:    ldp q5, q2, [sp, #96]
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q3, q4, [x1, #96]
+; CHECK-NEXT:    stp q5, q2, [x1, #64]
 ; CHECK-NEXT:    add sp, sp, #128
 ; CHECK-NEXT:    ret
 ;
@@ -2262,32 +2263,32 @@ define void @fcvtzs_v4f16_v4i64(ptr %a, ptr %b) {
 define void @fcvtzs_v8f16_v8i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzs_v8f16_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    mov z3.h, z0.h[2]
-; CHECK-NEXT:    fcvtzs x8, h0
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    fcvtzs x9, h1
-; CHECK-NEXT:    fcvtzs x10, h2
-; CHECK-NEXT:    fcvtzs x11, h3
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
+; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    fcvtzs x12, h0
-; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    stp x8, x9, [sp, #32]
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    mov z2.h, z1.h[1]
 ; CHECK-NEXT:    fcvtzs x8, h1
+; CHECK-NEXT:    mov z3.h, z1.h[3]
+; CHECK-NEXT:    mov z1.h, z1.h[2]
 ; CHECK-NEXT:    fcvtzs x9, h2
-; CHECK-NEXT:    stp x11, x10, [sp, #48]
+; CHECK-NEXT:    mov z2.h, z0.h[1]
+; CHECK-NEXT:    fcvtzs x10, h3
+; CHECK-NEXT:    mov z3.h, z0.h[3]
+; CHECK-NEXT:    fcvtzs x11, h1
+; CHECK-NEXT:    mov z0.h, z0.h[2]
+; CHECK-NEXT:    stp x8, x9, [sp, #-64]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    fcvtzs x8, h2
+; CHECK-NEXT:    fcvtzs x9, h3
+; CHECK-NEXT:    stp x11, x10, [sp, #16]
 ; CHECK-NEXT:    fcvtzs x10, h0
-; CHECK-NEXT:    ldp q2, q3, [sp, #32]
-; CHECK-NEXT:    stp x12, x8, [sp]
-; CHECK-NEXT:    stp x10, x9, [sp, #16]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    stp q2, q3, [x1]
-; CHECK-NEXT:    stp q1, q0, [x1, #32]
+; CHECK-NEXT:    ldp q2, q3, [sp]
+; CHECK-NEXT:    stp x12, x8, [sp, #32]
+; CHECK-NEXT:    stp x10, x9, [sp, #48]
+; CHECK-NEXT:    ldp q1, q0, [sp, #32]
+; CHECK-NEXT:    stp q2, q3, [x1, #32]
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 ;
@@ -2341,55 +2342,56 @@ define void @fcvtzs_v8f16_v8i64(ptr %a, ptr %b) {
 define void @fcvtzs_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzs_v16f16_v16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #128
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z3.h, z1.h[3]
-; CHECK-NEXT:    mov z4.h, z1.h[2]
-; CHECK-NEXT:    fcvtzs x8, h1
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    fcvtzs x10, h0
-; CHECK-NEXT:    fcvtzs x9, h2
-; CHECK-NEXT:    fcvtzs x11, h3
-; CHECK-NEXT:    fcvtzs x12, h4
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z4.h, z1.h[3]
-; CHECK-NEXT:    fcvtzs x13, h1
-; CHECK-NEXT:    mov z1.h, z1.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[1]
-; CHECK-NEXT:    stp x8, x9, [sp, #32]
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z1.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    mov z4.h, z2.h[1]
 ; CHECK-NEXT:    fcvtzs x8, h2
-; CHECK-NEXT:    fcvtzs x9, h4
-; CHECK-NEXT:    stp x12, x11, [sp, #48]
-; CHECK-NEXT:    fcvtzs x11, h1
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    mov z5.h, z2.h[3]
+; CHECK-NEXT:    mov z2.h, z2.h[2]
 ; CHECK-NEXT:    fcvtzs x12, h3
-; CHECK-NEXT:    stp x13, x8, [sp]
-; CHECK-NEXT:    fcvtzs x8, h5
-; CHECK-NEXT:    stp x11, x9, [sp, #16]
-; CHECK-NEXT:    fcvtzs x9, h2
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    fcvtzs x11, h0
+; CHECK-NEXT:    fcvtzs x9, h4
+; CHECK-NEXT:    mov z4.h, z3.h[1]
+; CHECK-NEXT:    fcvtzs x10, h5
+; CHECK-NEXT:    mov z5.h, z3.h[3]
+; CHECK-NEXT:    fcvtzs x11, h2
+; CHECK-NEXT:    mov z2.h, z3.h[2]
+; CHECK-NEXT:    stp x8, x9, [sp, #-128]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 128
+; CHECK-NEXT:    fcvtzs x8, h4
+; CHECK-NEXT:    fcvtzs x9, h5
+; CHECK-NEXT:    stp x11, x10, [sp, #16]
+; CHECK-NEXT:    fcvtzs x10, h2
+; CHECK-NEXT:    mov z3.h, z1.h[1]
+; CHECK-NEXT:    mov z4.h, z1.h[3]
+; CHECK-NEXT:    fcvtzs x11, h1
+; CHECK-NEXT:    mov z1.h, z1.h[2]
+; CHECK-NEXT:    mov z2.h, z0.h[1]
+; CHECK-NEXT:    stp x12, x8, [sp, #64]
+; CHECK-NEXT:    fcvtzs x12, h3
+; CHECK-NEXT:    fcvtzs x8, h4
+; CHECK-NEXT:    stp x10, x9, [sp, #80]
+; CHECK-NEXT:    fcvtzs x9, h1
+; CHECK-NEXT:    mov z3.h, z0.h[3]
+; CHECK-NEXT:    fcvtzs x10, h0
 ; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    stp x10, x12, [sp, #96]
-; CHECK-NEXT:    ldp q3, q4, [sp]
-; CHECK-NEXT:    fcvtzs x10, h1
-; CHECK-NEXT:    fcvtzs x12, h2
-; CHECK-NEXT:    stp x9, x8, [sp, #112]
+; CHECK-NEXT:    stp x11, x12, [sp, #32]
+; CHECK-NEXT:    fcvtzs x11, h2
+; CHECK-NEXT:    fcvtzs x12, h3
+; CHECK-NEXT:    stp x9, x8, [sp, #48]
 ; CHECK-NEXT:    fcvtzs x8, h0
-; CHECK-NEXT:    ldp q0, q1, [sp, #32]
-; CHECK-NEXT:    ldp q6, q7, [sp, #96]
-; CHECK-NEXT:    stp x11, x10, [sp, #64]
-; CHECK-NEXT:    stp x8, x12, [sp, #80]
-; CHECK-NEXT:    ldp q5, q2, [sp, #64]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q3, q4, [x1, #32]
-; CHECK-NEXT:    stp q6, q7, [x1, #64]
-; CHECK-NEXT:    stp q5, q2, [x1, #96]
+; CHECK-NEXT:    ldp q0, q1, [sp]
+; CHECK-NEXT:    ldp q3, q4, [sp, #64]
+; CHECK-NEXT:    stp x10, x11, [sp, #96]
+; CHECK-NEXT:    ldp q6, q7, [sp, #32]
+; CHECK-NEXT:    stp x8, x12, [sp, #112]
+; CHECK-NEXT:    ldp q5, q2, [sp, #96]
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q3, q4, [x1, #96]
+; CHECK-NEXT:    stp q5, q2, [x1, #64]
 ; CHECK-NEXT:    add sp, sp, #128
 ; CHECK-NEXT:    ret
 ;

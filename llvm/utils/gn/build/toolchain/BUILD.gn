@@ -187,6 +187,7 @@ template("stage2_unix_toolchain") {
       forward_variables_from(invoker.toolchain_args, "*")
 
       clang_base_path = root_build_dir
+      llvm_enable_zstd = false
     }
 
     deps = [

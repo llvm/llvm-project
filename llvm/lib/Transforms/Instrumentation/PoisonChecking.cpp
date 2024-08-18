@@ -62,6 +62,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;

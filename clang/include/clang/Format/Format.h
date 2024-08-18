@@ -533,7 +533,7 @@ struct FormatStyle {
     OAS_Align,
     /// Horizontally align operands of binary and ternary expressions.
     ///
-    /// This is similar to ``AO_Align``, except when
+    /// This is similar to ``OAS_Align``, except when
     /// ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
     /// that the wrapped operand is aligned with the operand on the first line.
     /// \code
@@ -2231,6 +2231,41 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
+  /// Different ways to break binary operations.
+  enum BreakBinaryOperationsStyle : int8_t {
+    /// Don't break binary operations
+    /// \code
+    ///    aaa + bbbb * ccccc - ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_Never,
+
+    /// Binary operations will either be all on the same line, or each operation
+    /// will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb *
+    ///    ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_OnePerLine,
+
+    /// Binary operations of a particular precedence that exceed the column
+    /// limit will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb * ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_RespectPrecedence
+  };
+
+  /// The break constructor initializers style to use.
+  /// \version 20
+  BreakBinaryOperationsStyle BreakBinaryOperations;
+
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
     /// Break constructor initializers before the colon and after the commas.
@@ -2823,7 +2858,8 @@ struct FormatStyle {
   PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
-  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  /// ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  /// or ``WithFollowing``.
   ///
   /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
@@ -3095,20 +3131,49 @@ struct FormatStyle {
   bool JavaScriptWrapImports;
   // clang-format on
 
-  /// Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
-  /// \version 17
-  bool KeepEmptyLinesAtEOF;
-
-  /// If true, the empty line at the start of blocks is kept.
+  /// Options regarding which empty lines are kept.
+  ///
+  /// For example, the config below will remove empty lines at start of the
+  /// file, end of the file, and start of blocks.
+  ///
   /// \code
-  ///    true:                                  false:
-  ///    if (foo) {                     vs.     if (foo) {
-  ///                                             bar();
-  ///      bar();                               }
-  ///    }
+  ///   KeepEmptyLines:
+  ///     AtEndOfFile: false
+  ///     AtStartOfBlock: false
+  ///     AtStartOfFile: false
   /// \endcode
+  struct KeepEmptyLinesStyle {
+    /// Keep empty lines at end of file.
+    bool AtEndOfFile;
+    /// Keep empty lines at start of a block.
+    /// \code
+    ///    true:                                  false:
+    ///    if (foo) {                     vs.     if (foo) {
+    ///                                             bar();
+    ///      bar();                               }
+    ///    }
+    /// \endcode
+    bool AtStartOfBlock;
+    /// Keep empty lines at start of file.
+    bool AtStartOfFile;
+    bool operator==(const KeepEmptyLinesStyle &R) const {
+      return AtEndOfFile == R.AtEndOfFile &&
+             AtStartOfBlock == R.AtStartOfBlock &&
+             AtStartOfFile == R.AtStartOfFile;
+    }
+  };
+  /// Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
+  /// consecutive empty lines are kept.
+  /// \version 19
+  KeepEmptyLinesStyle KeepEmptyLines;
+
+  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// \version 17
+  // bool KeepEmptyLinesAtEOF;
+
+  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
   /// \version 3.7
-  bool KeepEmptyLinesAtTheStartOfBlocks;
+  // bool KeepEmptyLinesAtTheStartOfBlocks;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -3880,22 +3945,45 @@ struct FormatStyle {
   /// ``IndentRequires`` option is only used if the ``requires`` is put on the
   /// start of a line.
   enum RequiresClausePositionStyle : int8_t {
-    /// Always put the ``requires`` clause on its own line.
+    /// Always put the ``requires`` clause on its own line (possibly followed by
+    /// a semicolon).
     /// \code
     ///   template <typename T>
-    ///   requires C<T>
+    ///     requires C<T>
     ///   struct Foo {...
     ///
     ///   template <typename T>
-    ///   requires C<T>
+    ///   void bar(T t)
+    ///     requires C<T>;
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
     ///   void bar(T t) {...
     ///
     ///   template <typename T>
     ///   void baz(T t)
-    ///   requires C<T>
+    ///     requires C<T>
     ///   {...
     /// \endcode
     RCPS_OwnLine,
+    /// As with ``OwnLine``, except, unless otherwise prohibited, place a
+    /// following open brace (of a function definition) to follow on the same
+    /// line.
+    /// \code
+    ///   void bar(T t)
+    ///     requires C<T> {
+    ///     return;
+    ///   }
+    ///
+    ///   void bar(T t)
+    ///     requires C<T> {}
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
+    ///   void baz(T t) {
+    ///     ...
+    /// \endcode
+    RCPS_OwnLineWithBrace,
     /// Try to put the clause together with the preceding part of a declaration.
     /// For class templates: stick to the template declaration.
     /// For function templates: stick to the template declaration.
@@ -4650,10 +4738,22 @@ struct FormatStyle {
   ///   # Should be declared this way:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     Other: true
   /// \endcode
   struct SpacesInParensCustom {
+    /// Override any of the following options to prevent addition of space
+    /// when both opening and closing parentheses use multiple parentheses.
+    /// \code
+    ///   true:
+    ///   __attribute__(( noreturn ))
+    ///   __decltype__(( x ))
+    ///   if (( a = b ))
+    /// \endcode
+    ///  false:
+    ///    Uses the applicable option.
+    bool ExceptDoubleParentheses;
     /// Put a space in parentheses only inside conditional statements
     /// (``for/if/while/switch...``).
     /// \code
@@ -4664,8 +4764,9 @@ struct FormatStyle {
     bool InConditionalStatements;
     /// Put a space in C style casts.
     /// \code
-    ///    true:                                  false:
-    ///    x = ( int32 )y                 vs.     x = (int32)y
+    ///   true:                                  false:
+    ///   x = ( int32 )y                  vs.    x = (int32)y
+    ///   y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
     /// \endcode
     bool InCStyleCasts;
     /// Insert a space in empty parentheses, i.e. ``()``.
@@ -4681,23 +4782,26 @@ struct FormatStyle {
     bool InEmptyParentheses;
     /// Put a space in parentheses not covered by preceding options.
     /// \code
-    ///    true:                                  false:
-    ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+    ///   true:                                 false:
+    ///   t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
     /// \endcode
     bool Other;
 
     SpacesInParensCustom()
-        : InConditionalStatements(false), InCStyleCasts(false),
-          InEmptyParentheses(false), Other(false) {}
+        : ExceptDoubleParentheses(false), InConditionalStatements(false),
+          InCStyleCasts(false), InEmptyParentheses(false), Other(false) {}
 
-    SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
+    SpacesInParensCustom(bool ExceptDoubleParentheses,
+                         bool InConditionalStatements, bool InCStyleCasts,
                          bool InEmptyParentheses, bool Other)
-        : InConditionalStatements(InConditionalStatements),
+        : ExceptDoubleParentheses(ExceptDoubleParentheses),
+          InConditionalStatements(InConditionalStatements),
           InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
-      return InConditionalStatements == R.InConditionalStatements &&
+      return ExceptDoubleParentheses == R.ExceptDoubleParentheses &&
+             InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
              InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
@@ -4715,6 +4819,7 @@ struct FormatStyle {
   ///   # Example of usage:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     InEmptyParentheses: true
   /// \endcode
@@ -4991,6 +5096,7 @@ struct FormatStyle {
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
+           BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
@@ -5033,10 +5139,7 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLinesAtEOF == R.KeepEmptyLinesAtEOF &&
-           KeepEmptyLinesAtTheStartOfBlocks ==
-               R.KeepEmptyLinesAtTheStartOfBlocks &&
-           Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -5387,10 +5490,11 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                               StringRef FallbackStyle, StringRef Code = "",
-                               llvm::vfs::FileSystem *FS = nullptr,
-                               bool AllowUnknownOptions = false);
+Expected<FormatStyle>
+getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+         StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
+         bool AllowUnknownOptions = false,
+         llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.
@@ -5430,9 +5534,7 @@ bool isClangFormatOff(StringRef Comment);
 } // end namespace format
 } // end namespace clang
 
-namespace std {
 template <>
-struct is_error_code_enum<clang::format::ParseError> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<clang::format::ParseError> : std::true_type {};
 
 #endif // LLVM_CLANG_FORMAT_FORMAT_H

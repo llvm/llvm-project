@@ -79,7 +79,7 @@ public:
   void CompleteTentativeDefinition(VarDecl *D) override final {
     Consumer->CompleteTentativeDefinition(D);
   }
-  void CompleteExternalDeclaration(VarDecl *D) override final {
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override final {
     Consumer->CompleteExternalDeclaration(D);
   }
   void AssignInheritanceModel(CXXRecordDecl *RD) override final {
@@ -413,7 +413,8 @@ void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
     if (!ND)
       continue;
     // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo())
+    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
+        !D->getLangOpts().CPlusPlus)
       getCI()->getSema().IdResolver.RemoveDecl(ND);
   }
 }

@@ -355,11 +355,12 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
-                                const lldb_private::FileSpec &outfile,
-                                lldb::SaveCoreStyle &core_style,
+                                lldb_private::SaveCoreOptions &options,
                                 lldb_private::Status &error) {
-  core_style = eSaveCoreFull;
-  return SaveMiniDump(process_sp, outfile, error);
+  // Outfile and process_sp are validated by PluginManager::SaveCore
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+  return SaveMiniDump(process_sp, options, error);
 }
 
 bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {

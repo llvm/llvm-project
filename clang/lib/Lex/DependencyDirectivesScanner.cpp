@@ -62,22 +62,19 @@ struct DirectiveWithTokens {
 struct Scanner {
   Scanner(StringRef Input,
           SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
-          DiagnosticsEngine *Diags, SourceLocation InputSourceLoc,
-          const LangOptions &LangOpts)
+          DiagnosticsEngine *Diags, SourceLocation InputSourceLoc)
       : Input(Input), Tokens(Tokens), Diags(Diags),
-        InputSourceLoc(InputSourceLoc),
-        LangOpts(getLangOptsForDepScanning(LangOpts)),
-        TheLexer(InputSourceLoc, this->LangOpts, Input.begin(), Input.begin(),
+        InputSourceLoc(InputSourceLoc), LangOpts(getLangOptsForDepScanning()),
+        TheLexer(InputSourceLoc, LangOpts, Input.begin(), Input.begin(),
                  Input.end()) {}
 
-  static LangOptions
-  getLangOptsForDepScanning(const LangOptions &invocationLangOpts) {
-    LangOptions LangOpts(invocationLangOpts);
+  static LangOptions getLangOptsForDepScanning() {
+    LangOptions LangOpts;
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
-    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"" and
-    // R"()" literals.
+    LangOpts.RawStringLiterals = true;
+    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
 
@@ -91,8 +88,8 @@ private:
   [[nodiscard]] dependency_directives_scan::Token &
   lexToken(const char *&First, const char *const End);
 
-  dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
-                                                        const char *const End);
+  [[nodiscard]] dependency_directives_scan::Token &
+  lexIncludeFilename(const char *&First, const char *const End);
 
   void skipLine(const char *&First, const char *const End);
   void skipDirective(StringRef Name, const char *&First, const char *const End);
@@ -547,7 +544,7 @@ Scanner::lexIncludeFilename(const char *&First, const char *const End) {
 void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   while (true) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
-    if (Tok.is(tok::eod))
+    if (Tok.is(tok::eod) || Tok.is(tok::eof))
       break;
   }
 }
@@ -663,7 +660,18 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   // an import.
 
   switch (*First) {
-  case ':':
+  case ':': {
+    // `module :` is never the start of a valid module declaration.
+    if (Id == "module") {
+      skipLine(First, End);
+      return false;
+    }
+    // `import:(type)name` is a valid ObjC method decl, so check one more token.
+    (void)lexToken(First, End);
+    if (!tryLexIdentifierOrSkipLine(First, End))
+      return false;
+    break;
+  }
   case '<':
   case '"':
     break;
@@ -703,7 +711,7 @@ bool Scanner::lex_Pragma(const char *&First, const char *const End) {
   SmallVector<dependency_directives_scan::Token> DiscardTokens;
   const char *Begin = Buffer.c_str();
   Scanner PragmaScanner{StringRef(Begin, Buffer.size()), DiscardTokens, Diags,
-                        InputSourceLoc, LangOptions()};
+                        InputSourceLoc};
 
   PragmaScanner.TheLexer.setParsingPreprocessorDirective(true);
   if (PragmaScanner.lexPragma(Begin, Buffer.end()))
@@ -904,7 +912,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp___include_macros:
   case pp_include_next:
   case pp_import:
-    lexIncludeFilename(First, End);
+    // Ignore missing filenames in include or import directives.
+    if (lexIncludeFilename(First, End).is(tok::eod)) {
+      return false;
+    }
     break;
   default:
     break;
@@ -953,10 +964,9 @@ bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
 
 bool clang::scanSourceForDependencyDirectives(
     StringRef Input, SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
-    SmallVectorImpl<Directive> &Directives, const LangOptions &LangOpts,
-    DiagnosticsEngine *Diags, SourceLocation InputSourceLoc) {
-  return Scanner(Input, Tokens, Diags, InputSourceLoc, LangOpts)
-      .scan(Directives);
+    SmallVectorImpl<Directive> &Directives, DiagnosticsEngine *Diags,
+    SourceLocation InputSourceLoc) {
+  return Scanner(Input, Tokens, Diags, InputSourceLoc).scan(Directives);
 }
 
 void clang::printDependencyDirectivesAsSource(

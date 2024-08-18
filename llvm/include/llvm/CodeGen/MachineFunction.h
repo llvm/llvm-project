@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_MACHINEFUNCTION_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
+#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -59,7 +59,6 @@ class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
 class MachineJumpTableInfo;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
@@ -217,22 +216,21 @@ public:
   }
 
   MachineFunctionProperties &reset(const MachineFunctionProperties &MFP) {
-    Properties.reset(MFP.Properties);
+    Properties &= ~MFP.Properties;
     return *this;
   }
 
   // Returns true if all properties set in V (i.e. required by a pass) are set
   // in this.
   bool verifyRequiredProperties(const MachineFunctionProperties &V) const {
-    return !V.Properties.test(Properties);
+    return (Properties | ~V.Properties).all();
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
   void print(raw_ostream &OS) const;
 
 private:
-  BitVector Properties =
-      BitVector(static_cast<unsigned>(Property::LastProperty)+1);
+  std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
 };
 
 struct SEHHandler {
@@ -261,7 +259,6 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
-  MachineModuleInfo &MMI;
 
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
@@ -295,6 +292,10 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
+
+  // MBBNumbering epoch, incremented after renumbering to detect use of old
+  // block numbers.
+  unsigned MBBNumberingEpoch = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -396,15 +397,15 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
 
   /// \}
 
-  /// Clear all the members of this MachineFunction, but the ones used
-  /// to initialize again the MachineFunction.
-  /// More specifically, this deallocates all the dynamically allocated
-  /// objects and get rid of all the XXXInfo data structure, but keep
-  /// unchanged the references to Fn, Target, MMI, and FunctionNumber.
+  /// Clear all the members of this MachineFunction, but the ones used to
+  /// initialize again the MachineFunction.  More specifically, this deallocates
+  /// all the dynamically allocated objects and get rids of all the XXXInfo data
+  /// structure, but keeps unchanged the references to Fn, Target, and
+  /// FunctionNumber.
   void clear();
   /// Allocate and initialize the different members.
   /// In particular, the XXXInfo data structure.
-  /// \pre Fn, Target, MMI, and FunctionNumber are properly set.
+  /// \pre Fn, Target, and FunctionNumber are properly set.
   void init();
 
 public:
@@ -633,8 +634,8 @@ public:
   const static unsigned int DebugOperandMemNumber;
 
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                  const TargetSubtargetInfo &STI, unsigned FunctionNum,
-                  MachineModuleInfo &MMI);
+                  const TargetSubtargetInfo &STI, MCContext &Ctx,
+                  unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
   MachineFunction &operator=(const MachineFunction &) = delete;
   ~MachineFunction();
@@ -666,7 +667,6 @@ public:
 
   GISelChangeObserver *getObserver() const { return Observer; }
 
-  MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }
 
   /// Returns the Section this function belongs to.
@@ -859,6 +859,11 @@ public:
 
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
+
+  /// Return the numbering "epoch" of block numbers, incremented after each
+  /// numbering. Intended for asserting that no renumbering was performed when
+  /// used by, e.g., preserved analyses.
+  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
 
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
@@ -1408,6 +1413,13 @@ template <> struct GraphTraits<MachineFunction*> :
   }
 
   static unsigned       size       (MachineFunction *F) { return F->size(); }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
@@ -1427,6 +1439,13 @@ template <> struct GraphTraits<const MachineFunction*> :
   static unsigned       size       (const MachineFunction *F)  {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -1439,11 +1458,25 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   public GraphTraits<Inverse<const MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
+  }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

@@ -41,8 +41,6 @@ namespace {
 
     bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
-
-    void addTargetSectionFlags(MCContext &Ctx, MCSectionELF &Sec) override;
   };
 
 } // end anonymous namespace
@@ -316,24 +314,6 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     return ELF::R_ARM_THM_ALU_ABS_G1_NC;
   case ARM::fixup_arm_thumb_lower_0_7:
     return ELF::R_ARM_THM_ALU_ABS_G0_NC;
-  }
-}
-
-void ARMELFObjectWriter::addTargetSectionFlags(MCContext &Ctx,
-                                               MCSectionELF &Sec) {
-  // The mix of execute-only and non-execute-only at link time is
-  // non-execute-only. To avoid the empty implicitly created .text
-  // section from making the whole .text section non-execute-only, we
-  // mark it execute-only if it is empty and there is at least one
-  // execute-only section in the object.
-  MCSectionELF *TextSection =
-      static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
-  if (Sec.getKind().isExecuteOnly() && !TextSection->hasInstructions()) {
-    for (auto &F : TextSection->getFragmentList())
-      if (auto *DF = dyn_cast<MCDataFragment>(&F))
-        if (!DF->getContents().empty())
-          return;
-    TextSection->setFlags(TextSection->getFlags() | ELF::SHF_ARM_PURECODE);
   }
 }
 

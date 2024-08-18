@@ -83,7 +83,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: kernel_fpmode_i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GFX6-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
 ; GFX6-NEXT:    s_and_b32 s4, 0x7f3ff, s4
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -95,7 +95,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX7-LABEL: kernel_fpmode_i32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GFX7-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 19)
 ; GFX7-NEXT:    s_and_b32 s4, 0x7f3ff, s4
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -107,7 +107,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX8-LABEL: kernel_fpmode_i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 19)
 ; GFX8-NEXT:    s_and_b32 s2, 0x7f3ff, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
@@ -119,7 +119,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX9-LABEL: kernel_fpmode_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
 ; GFX9-NEXT:    s_and_b32 s2, 0x87f3ff, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -130,7 +130,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX10-LABEL: kernel_fpmode_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX10-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_and_b32 s2, 0x87f3ff, s2
@@ -141,7 +141,7 @@ define amdgpu_kernel void @kernel_fpmode_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX11-LABEL: kernel_fpmode_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 24)
 ; GFX11-NEXT:    s_and_b32 s2, 0x87f3ff, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2

@@ -532,7 +532,7 @@ func.func @scalar_generic_fusion
 //  CHECK-SAME:     ins(%[[ARG1]] : tensor<i32>)
 //       CHECK:     tensor.extract %[[ARG0]]
 //       CHECK:     linalg.yield
-//       CHECK   return %[[T0]]
+//       CHECK:  return %[[T0]]
 
 // -----
 

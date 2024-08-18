@@ -1150,7 +1150,7 @@ let test_builder () =
     (* CHECK: ret{{.*}}P1
      *)
     let ret = build_ret p1 atentry in
-    position_before ret atentry
+    position_before_dbg_records ret atentry
   end;
 
   (* see test/Feature/exception.ll *)

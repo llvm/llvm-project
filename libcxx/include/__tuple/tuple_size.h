@@ -43,7 +43,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<__enable_if_tuple_size_imp< volatile _Tp,
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS
-    tuple_size<__enable_if_tuple_size_imp<const volatile _Tp, integral_constant<size_t, sizeof(tuple_size<_Tp>)>>>
+tuple_size<__enable_if_tuple_size_imp<const volatile _Tp, integral_constant<size_t, sizeof(tuple_size<_Tp>)>>>
     : public integral_constant<size_t, tuple_size<_Tp>::value> {};
 
 #else

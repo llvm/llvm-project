@@ -13090,9 +13090,9 @@ bool ARMAsmParser::isMnemonicVPTPredicable(StringRef Mnemonic,
       "vshrn",      "vsli",     "vsri",      "vstrb",      "vstrd",
       "vstrw",      "vsub"};
 
-  return std::any_of(
-      std::begin(predicable_prefixes), std::end(predicable_prefixes),
-      [&Mnemonic](const char *prefix) { return Mnemonic.starts_with(prefix); });
+  return any_of(predicable_prefixes, [&Mnemonic](const char *prefix) {
+    return Mnemonic.starts_with(prefix);
+  });
 }
 
 std::unique_ptr<ARMOperand> ARMAsmParser::defaultCondCodeOp() {

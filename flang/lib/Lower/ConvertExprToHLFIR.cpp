@@ -75,7 +75,7 @@ public:
   hlfir::EntityWithAttributes
   gen(const CharacterDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](const auto &x) -> hlfir::EntityWithAttributes {
           return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
         },
@@ -88,7 +88,7 @@ public:
   hlfir::EntityWithAttributes
   gen(const RealDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](const auto &x) -> hlfir::EntityWithAttributes {
           return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
         },
@@ -101,7 +101,7 @@ public:
   hlfir::EntityWithAttributes
   gen(const OtherDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](const auto &x) -> hlfir::EntityWithAttributes {
           return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
         },
@@ -169,7 +169,7 @@ public:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
         dataRef.u);
   }
@@ -364,7 +364,7 @@ private:
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::Substring &substring) {
     PartInfo partInfo;
-    mlir::Type baseStringType = std::visit(
+    mlir::Type baseStringType = Fortran::common::visit(
         [&](const auto &x) { return visit(x, partInfo); }, substring.parent());
     assert(partInfo.typeParams.size() == 1 && "expect base string length");
     // Compute the substring lower and upper bound.
@@ -436,8 +436,8 @@ private:
 
   mlir::Type visit(const Fortran::evaluate::DataRef &dataRef,
                    PartInfo &partInfo) {
-    return std::visit([&](const auto &x) { return visit(x, partInfo); },
-                      dataRef.u);
+    return Fortran::common::visit(
+        [&](const auto &x) { return visit(x, partInfo); }, dataRef.u);
   }
 
   mlir::Type
@@ -892,7 +892,7 @@ hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
     bool vectorSubscriptDesignatorToValue) {
   // Expr<SomeType> plumbing to unwrap Designator<T> and call
   // gen(Designator<T>.u).
-  return std::visit(
+  return Fortran::common::visit(
       [&](const auto &x) -> hlfir::EntityWithAttributes {
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
@@ -904,7 +904,7 @@ hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
                            .u,
                        vectorSubscriptDesignatorToValue);
           } else {
-            return std::visit(
+            return Fortran::common::visit(
                 [&](const auto &preciseKind) {
                   using TK =
                       typename std::decay_t<decltype(preciseKind)>::Result;
@@ -1426,7 +1426,8 @@ public:
           return hlfir::EntityWithAttributes{match->second};
       }
     }
-    return std::visit([&](const auto &x) { return gen(x); }, expr.u);
+    return Fortran::common::visit([&](const auto &x) { return gen(x); },
+                                  expr.u);
   }
 
 private:
@@ -1594,7 +1595,7 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
-    return std::visit([&](const auto &x) { return gen(x); }, op.u);
+    return Fortran::common::visit([&](const auto &x) { return gen(x); }, op.u);
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::TypeParamInquiry &) {

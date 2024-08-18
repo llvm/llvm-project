@@ -442,7 +442,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
       if (!live[B->getBlockID()]) {
         if (B->pred_begin() == B->pred_end()) {
           const Stmt *Term = B->getTerminatorStmt();
-          if (Term && isa<CXXTryStmt>(Term))
+          if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
             // can otherwise seem dead.  Avoid noting them as dead.
             count += reachable_code::ScanReachableFromBlock(B, live);
@@ -1100,7 +1100,7 @@ namespace {
       // issue a warn_fallthrough_attr_unreachable for them.
       for (const auto *B : *Cfg) {
         const Stmt *L = B->getLabel();
-        if (L && isa<SwitchCase>(L) && ReachableBlocks.insert(B).second)
+        if (isa_and_nonnull<SwitchCase>(L) && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
       }
 
@@ -1128,7 +1128,7 @@ namespace {
         if (!P) continue;
 
         const Stmt *Term = P->getTerminatorStmt();
-        if (Term && isa<SwitchStmt>(Term))
+        if (isa_and_nonnull<SwitchStmt>(Term))
           continue; // Switch statement, good.
 
         const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
@@ -1327,7 +1327,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
         B = *B->succ_begin();
         Term = B->getTerminatorStmt();
       }
-      if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
+      if (!(B->empty() && isa_and_nonnull<BreakStmt>(Term))) {
         Preprocessor &PP = S.getPreprocessor();
         StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
         SmallString<64> TextToInsert(AnnotationSpelling);
@@ -2231,6 +2231,7 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
+    NamedDecl *D = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
       Loc = ASE->getBase()->getExprLoc();
       Range = ASE->getBase()->getSourceRange();
@@ -2261,6 +2262,12 @@ public:
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
+      } else if (isa<MemberExpr>(Operation)) {
+        // note_unsafe_buffer_operation doesn't have this mode yet.
+        assert(!IsRelatedToDecl && "Not implemented yet!");
+        auto ME = dyn_cast<MemberExpr>(Operation);
+        D = ME->getMemberDecl();
+        MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
         if (!isa<PointerType>(destType))
@@ -2285,7 +2292,12 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
-      S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      if (D) {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation)
+            << MsgParam << D << Range;
+      } else {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      }
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
       }

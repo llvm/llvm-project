@@ -13,9 +13,10 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace fputil {
 
@@ -114,6 +115,6 @@ template <typename T> LIBC_INLINE T round_result_slightly_up(T value_rn) {
 
 } // namespace fputil
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H

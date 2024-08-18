@@ -665,16 +665,7 @@ DWARFFormValue::getAsSectionedAddress() const {
   return getAsSectionedAddress(Value, Form, U);
 }
 
-std::optional<uint64_t> DWARFFormValue::getAsReference() const {
-  if (auto R = getAsRelativeReference())
-    return R->Unit ? R->Unit->getOffset() + R->Offset : R->Offset;
-  return std::nullopt;
-}
-
-std::optional<DWARFFormValue::UnitOffset>
-DWARFFormValue::getAsRelativeReference() const {
-  if (!isFormClass(FC_Reference))
-    return std::nullopt;
+std::optional<uint64_t> DWARFFormValue::getAsRelativeReference() const {
   switch (Form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
@@ -683,11 +674,30 @@ DWARFFormValue::getAsRelativeReference() const {
   case DW_FORM_ref_udata:
     if (!U)
       return std::nullopt;
-    return UnitOffset{const_cast<DWARFUnit*>(U), Value.uval};
-  case DW_FORM_ref_addr:
-  case DW_FORM_ref_sig8:
+    return Value.uval;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<uint64_t> DWARFFormValue::getAsDebugInfoReference() const {
+  if (Form == DW_FORM_ref_addr)
+    return Value.uval;
+  return std::nullopt;
+}
+
+std::optional<uint64_t> DWARFFormValue::getAsSignatureReference() const {
+  if (Form == DW_FORM_ref_sig8)
+    return Value.uval;
+  return std::nullopt;
+}
+
+std::optional<uint64_t> DWARFFormValue::getAsSupplementaryReference() const {
+  switch (Form) {
   case DW_FORM_GNU_ref_alt:
-    return UnitOffset{nullptr, Value.uval};
+  case DW_FORM_ref_sup4:
+  case DW_FORM_ref_sup8:
+    return Value.uval;
   default:
     return std::nullopt;
   }

@@ -27,7 +27,7 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) {
 ; AVX512BWVL-LABEL: test_div7_32i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
-; AVX512BWVL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512BWVL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37]
 ; AVX512BWVL-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512BWVL-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BWVL-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
@@ -41,7 +41,7 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) {
 ; AVX512BW-LABEL: test_div7_32i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
-; AVX512BW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37]
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BW-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
@@ -58,16 +58,13 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) {
 define <32 x i8> @test_mul_32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256BW-LABEL: test_mul_32i8:
 ; AVX256BW:       # %bb.0:
-; AVX256BW-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; AVX256BW-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; AVX256BW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; AVX256BW-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX256BW-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX256BW-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX256BW-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX256BW-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
-; AVX256BW-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX256BW-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; AVX256BW-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX256BW-NEXT:    vpand %ymm1, %ymm2, %ymm3
+; AVX256BW-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
+; AVX256BW-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX256BW-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX256BW-NEXT:    vpsllw $8, %ymm0, %ymm0
+; AVX256BW-NEXT:    vpternlogq $248, %ymm2, %ymm3, %ymm0
 ; AVX256BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: test_mul_32i8:

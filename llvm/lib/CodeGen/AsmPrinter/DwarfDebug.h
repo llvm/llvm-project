@@ -435,6 +435,9 @@ class DwarfDebug : public DebugHandlerBase {
   ///Allow emission of the .debug_loc section.
   bool UseLocSection = true;
 
+  /// Allow emission of .debug_aranges section
+  bool UseARangesSection = false;
+
   /// Generate DWARF v4 type units.
   bool GenerateTypeUnits;
 
@@ -726,6 +729,9 @@ public:
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
+
+  /// Process beginning of code alignment.
+  void beginCodeAlignment(const MachineBasicBlock &MBB) override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);

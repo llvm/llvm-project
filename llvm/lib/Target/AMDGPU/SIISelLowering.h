@@ -145,6 +145,7 @@ private:
 
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
@@ -253,9 +254,9 @@ public:
   bool shouldExpandVectorDynExt(SDNode *N) const;
 
 private:
-  // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
-  // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
-  // pointed to by Offsets.
+  // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
+  // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
+  // array pointed to by Offsets.
   void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
                         SDValue *Offsets, Align Alignment = Align(4)) const;
 

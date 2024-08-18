@@ -52,8 +52,8 @@ struct XRayInstrumentation : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineLoopInfo>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -170,7 +170,9 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
 
     if (!IgnoreLoops) {
       // Get MachineDominatorTree or compute it on the fly if it's unavailable
-      auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+      auto *MDTWrapper =
+          getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+      auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
         ComputedMDT.getBase().recalculate(MF);
@@ -178,10 +180,11 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Get MachineLoopInfo or compute it on the fly if it's unavailable
-      auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+      auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+      auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.getBase().analyze(MDT->getBase());
+        ComputedMLI.analyze(MDT->getBase());
         MLI = &ComputedMLI;
       }
 
@@ -264,6 +267,6 @@ char XRayInstrumentation::ID = 0;
 char &llvm::XRayInstrumentationID = XRayInstrumentation::ID;
 INITIALIZE_PASS_BEGIN(XRayInstrumentation, "xray-instrumentation",
                       "Insert XRay ops", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(XRayInstrumentation, "xray-instrumentation",
                     "Insert XRay ops", false, false)

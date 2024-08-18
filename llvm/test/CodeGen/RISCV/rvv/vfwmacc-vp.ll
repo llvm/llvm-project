@@ -85,11 +85,8 @@ define <vscale x 1 x float> @vfmacc_vv_nxv1f32_tu(<vscale x 1 x half> %a, <vscal
 define <vscale x 1 x float> @vfmacc_vv_nxv1f32_masked__tu(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfmacc_vv_nxv1f32_masked__tu:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vmv1r.v v11, v10
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfwmacc.vv v11, v8, v9, v0.t
-; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
-; ZVFH-NEXT:    vmerge.vvm v10, v10, v11, v0
+; ZVFH-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; ZVFH-NEXT:    vfwmacc.vv v10, v8, v9, v0.t
 ; ZVFH-NEXT:    vmv1r.v v8, v10
 ; ZVFH-NEXT:    ret
 ;

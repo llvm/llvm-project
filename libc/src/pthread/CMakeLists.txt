@@ -523,6 +523,193 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlock_init
+  SRCS
+    pthread_rwlock_init.cpp
+  HDRS
+    pthread_rwlock_init.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.CPP.new
+)
+
+add_entrypoint_object(
+  pthread_rwlock_tryrdlock
+  SRCS
+    pthread_rwlock_tryrdlock.cpp
+  HDRS
+    pthread_rwlock_tryrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_trywrlock
+  SRCS
+    pthread_rwlock_trywrlock.cpp
+  HDRS
+    pthread_rwlock_trywrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_clockrdlock
+  SRCS
+    pthread_rwlock_clockrdlock.cpp
+  HDRS
+    pthread_rwlock_clockrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_clockwrlock
+  SRCS
+    pthread_rwlock_clockwrlock.cpp
+  HDRS
+    pthread_rwlock_clockwrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_timedrdlock
+  SRCS
+    pthread_rwlock_timedrdlock.cpp
+  HDRS
+    pthread_rwlock_timedrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_timedwrlock
+  SRCS
+    pthread_rwlock_timedwrlock.cpp
+  HDRS
+    pthread_rwlock_timedwrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_rdlock
+  SRCS
+    pthread_rwlock_rdlock.cpp
+  HDRS
+    pthread_rwlock_rdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_wrlock
+  SRCS
+    pthread_rwlock_wrlock.cpp
+  HDRS
+    pthread_rwlock_wrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_unlock
+  SRCS
+    pthread_rwlock_unlock.cpp
+  HDRS
+    pthread_rwlock_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_destroy
+  SRCS
+    pthread_rwlock_destroy.cpp
+  HDRS
+    pthread_rwlock_destroy.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_spin_init
+  SRCS
+    pthread_spin_init.cpp
+  HDRS
+    pthread_spin_init.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_destroy
+  SRCS
+    pthread_spin_destroy.cpp
+  HDRS
+    pthread_spin_destroy.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_lock
+  SRCS
+    pthread_spin_lock.cpp
+  HDRS
+    pthread_spin_lock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_trylock
+  SRCS
+    pthread_spin_trylock.cpp
+  HDRS
+    pthread_spin_trylock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
+  pthread_spin_unlock
+  SRCS
+    pthread_spin_unlock.cpp
+  HDRS
+    pthread_spin_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.spin_lock
+    libc.src.__support.threads.identifier
+    libc.hdr.errno_macros
+)
+
+add_entrypoint_object(
   pthread_once
   SRCS
     pthread_once.cpp

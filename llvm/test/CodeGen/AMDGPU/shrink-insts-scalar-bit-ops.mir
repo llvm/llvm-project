@@ -55,3 +55,25 @@ body:             |
     S_ENDPGM 0, implicit $sgpr4
 
 ...
+
+# Make sure we don't clobber the live value in scc by replacing the
+# s_mov_b32 imm with s_not_b32 ~imm
+---
+name:            scalar_immediate_bitwise_not_live_scc
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr4, $sgpr5
+    ; CHECK-LABEL: name: scalar_immediate_bitwise_not_live_scc
+    ; CHECK: liveins: $sgpr4, $sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_CMP_EQ_U32 killed renamable $sgpr4, killed renamable $sgpr5, implicit-def $scc
+    ; CHECK-NEXT: $sgpr6 = S_MOV_B32 -1065353217
+    ; CHECK-NEXT: $sgpr7 = S_CSELECT_B32 1, 2, implicit $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr6
+    S_CMP_EQ_U32 killed renamable $sgpr4, killed renamable $sgpr5, implicit-def $scc
+    $sgpr6 = S_MOV_B32 -1065353217
+    $sgpr7 = S_CSELECT_B32 1, 2, implicit $scc
+    S_ENDPGM 0, implicit $sgpr6
+
+...

@@ -72,6 +72,14 @@ void LLVMPassBuilderOptionsSetVerifyEach(LLVMPassBuilderOptionsRef Options,
 void LLVMPassBuilderOptionsSetDebugLogging(LLVMPassBuilderOptionsRef Options,
                                            LLVMBool DebugLogging);
 
+/**
+ * Specify a custom alias analysis pipeline for the PassBuilder to be used
+ * instead of the default one. The string argument is not copied; the caller
+ * is responsible for ensuring it outlives the PassBuilderOptions instance.
+ */
+void LLVMPassBuilderOptionsSetAAPipeline(LLVMPassBuilderOptionsRef Options,
+                                         const char *AAPipeline);
+
 void LLVMPassBuilderOptionsSetLoopInterleaving(
     LLVMPassBuilderOptionsRef Options, LLVMBool LoopInterleaving);
 

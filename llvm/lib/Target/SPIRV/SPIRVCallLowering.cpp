@@ -243,11 +243,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
-    if (isUntypedPointerTy(ElementTy))
-      ElementTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
-                                getPointerAddressSpace(ElementTy));
+    Type *ElementTy =
+        toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
@@ -257,12 +254,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
-  if (isUntypedPointerTy(OriginalArgType)) {
-    OriginalArgType =
-        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
-                              getPointerAddressSpace(OriginalArgType));
-  }
-  return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+  return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
+                                  ArgAccessQual);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -379,15 +372,15 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-  MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
+  MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
     if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
-      TypedPointerType *DerivedTy =
-          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      TypedPointerType *DerivedTy = TypedPointerType::get(
+          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
       GR->addReturnType(&F, DerivedTy);
       FRetTy = DerivedTy;
     }
@@ -410,7 +403,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
-    MRI->setRegClass(VRegs[i][0], &SPIRV::IDRegClass);
+    MRI->setRegClass(VRegs[i][0], &SPIRV::iIDRegClass);
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
         .addDef(VRegs[i][0])
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
@@ -565,7 +558,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
       Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-      MRI->setRegClass(Reg, &SPIRV::IDRegClass);
+      MRI->setRegClass(Reg, &SPIRV::iIDRegClass);
       ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
     }
@@ -603,7 +596,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Make sure there's a valid return reg, even for functions returning void.
   if (!ResVReg.isValid())
-    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::IDRegClass);
+    ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
   SPIRVType *RetType = GR->assignTypeToVReg(OrigRetTy, ResVReg, MIRBuilder);
 
   // Emit the call instruction and its args.

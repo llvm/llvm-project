@@ -9,6 +9,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
@@ -40,9 +41,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -115,9 +118,18 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
   };
 
   std::string ErrorMessage;
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects,
-                                /* SecondsToWait */ 0,
-                                /*MemoryLimit*/ 0, &ErrorMessage))
+  int SecondsToWait = 60;
+  if (std::optional<std::string> Str =
+          llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
+    if (!llvm::to_integer(*Str, SecondsToWait))
+      return llvm::createStringError(std::error_code(),
+                                     "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
+                                     "an integer, got '" +
+                                         *Str + "'");
+    SecondsToWait = std::min(SecondsToWait, 0); // infinite
+  }
+  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
+                                /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),
                                    Executable + ": " + ErrorMessage);
 
@@ -195,11 +207,13 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.PosTargetFeature))
+        MArch.push_back(Ext.UserVisibleName.str());
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.NegTargetFeature))
+        MArch.push_back(("no" + Ext.UserVisibleName).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
     if (FeatureSet.contains(ArchInfo->ArchFeature))
@@ -221,11 +235,13 @@ static void getARMMultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.Feature))
+        MArch.push_back(Ext.Name.str());
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.NegFeature))
+        MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
 
@@ -254,6 +270,19 @@ static void getARMMultilibFlags(const Driver &D,
   }
 }
 
+static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                  const llvm::opt::ArgList &Args,
+                                  Multilib::flags_list &Result) {
+  std::string Arch = riscv::getRISCVArch(Args, Triple);
+  // Canonicalize arch for easier matching
+  auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+      Arch, /*EnableExperimentalExtensions*/ true);
+  if (!llvm::errorToBool(ISAInfo.takeError()))
+    Result.push_back("-march=" + (*ISAInfo)->toString());
+
+  Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
+}
+
 Multilib::flags_list
 ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   using namespace clang::driver::options;
@@ -273,6 +302,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
     getARMMultilibFlags(D, Triple, Args, Result);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    getRISCVMultilibFlags(D, Triple, Args, Result);
     break;
   default:
     break;
@@ -811,6 +844,12 @@ std::optional<std::string> ToolChain::getStdlibPath() const {
   return getTargetSubDirPath(P);
 }
 
+std::optional<std::string> ToolChain::getStdlibIncludePath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "include");
+  return getTargetSubDirPath(P);
+}
+
 ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   path_list Paths;
 
@@ -1021,11 +1060,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
+    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return Triple.getTriple();
 
     if (Triple.isArm64e())
-      return getTripleString();
+      return Triple.getTriple();
 
     // FIXME: older versions of ld64 expect the "arm64" component in the actual
     // triple string and query it to determine whether an LTO file can be
@@ -1370,7 +1410,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
-      getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::thumb || getTriple().isWasm() ||
       getTriple().isAArch64() || getTriple().isRISCV() ||
       getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;

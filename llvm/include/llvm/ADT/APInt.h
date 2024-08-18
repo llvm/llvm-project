@@ -30,6 +30,7 @@ class StringRef;
 class hash_code;
 class raw_ostream;
 struct Align;
+class DynamicAPInt;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -78,13 +79,11 @@ class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
-  /// This enum is used to hold the constants we needed for APInt.
-  enum : unsigned {
-    /// Byte size of a word.
-    APINT_WORD_SIZE = sizeof(WordType),
-    /// Bits in a word.
-    APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
-  };
+  /// Byte size of a word.
+  static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
+
+  /// Bits in a word.
+  static constexpr unsigned APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT;
 
   enum class Rounding {
     DOWN,
@@ -1894,6 +1893,9 @@ private:
 
   friend struct DenseMapInfo<APInt, void>;
   friend class APSInt;
+
+  // Make DynamicAPInt a friend so it can access BitWidth directly.
+  friend DynamicAPInt;
 
   /// This constructor is used only internally for speed of construction of
   /// temporaries. It is unsafe since it takes ownership of the pointer, so it

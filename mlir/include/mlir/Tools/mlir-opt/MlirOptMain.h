@@ -14,7 +14,6 @@
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
 #include "mlir/Debug/CLOptionsSetup.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -120,6 +119,13 @@ public:
     return success();
   }
 
+  /// List the registered passes and return.
+  MlirOptMainConfig &listPasses(bool list) {
+    listPassesFlag = list;
+    return *this;
+  }
+  bool shouldListPasses() const { return listPassesFlag; }
+
   /// Enable running the reproducer information stored in resources (if
   /// present).
   MlirOptMainConfig &runReproducer(bool enableReproducer) {
@@ -219,6 +225,9 @@ protected:
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
+
+  /// List the registered passes and return.
+  bool listPassesFlag = false;
 
   /// Enable running the reproducer.
   bool runReproducerFlag = false;

@@ -481,7 +481,8 @@ static bool optimizeToShortImmediateForm(MCInst &MI) {
     return false;
 #include "X86EncodingOptimizationForImmediate.def"
   }
-  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
+  unsigned SkipOperands = X86::isCCMPCC(MI.getOpcode()) ? 2 : 0;
+  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1 - SkipOperands);
   if (LastOp.isExpr()) {
     const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
     if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)

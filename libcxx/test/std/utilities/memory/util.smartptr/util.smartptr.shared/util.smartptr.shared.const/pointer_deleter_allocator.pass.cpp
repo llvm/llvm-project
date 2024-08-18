@@ -35,7 +35,7 @@ int A::count = 0;
 // Invalid constructor SFINAE for std::shared_ptr's array ctors
 static_assert( std::is_constructible<std::shared_ptr<int>,  int*, test_deleter<int>, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int>,  int*, bad_deleter, test_allocator<int> >::value, "");
-static_assert( std::is_constructible<std::shared_ptr<Base>,  Derived*, test_deleter<Base>, test_allocator<Base> >::value, "");
+static_assert( std::is_constructible<std::shared_ptr<base>,  derived*, test_deleter<base>, test_allocator<base> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<A>,  int*, test_deleter<A>, test_allocator<A> >::value, "");
 
 #if TEST_STD_VER >= 17
@@ -143,7 +143,7 @@ int main(int, char**)
     assert(test_deleter<A>::dealloc_count == 1);
 
     {
-        MoveDeleter<int> d(0);
+        move_deleter<int> d(0);
         std::shared_ptr<int> p2(new int, std::move(d), std::allocator<int>());
         std::shared_ptr<int> p3(nullptr, std::move(d), std::allocator<int>());
     }
@@ -160,9 +160,9 @@ int main(int, char**)
 
         // Make sure that we can construct a shared_ptr where the element type and pointer type
         // aren't "convertible" but are "compatible".
-        static_assert(!std::is_constructible<std::shared_ptr<Derived[4]>,
-                                             Base[4], test_deleter<Derived[4]>,
-                                             test_allocator<Derived[4]> >::value, "");
+        static_assert(!std::is_constructible<std::shared_ptr<derived[4]>,
+                                             base[4], test_deleter<derived[4]>,
+                                             test_allocator<derived[4]> >::value, "");
     }
 
   return 0;

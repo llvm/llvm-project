@@ -1296,7 +1296,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TZ) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDIC, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TZ), getI32Imm(LZ));
   }
@@ -1318,7 +1318,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> (30 - LZ)) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(30 - LZ), getI32Imm(LZ));
   }
@@ -1331,7 +1331,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TO) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TO), getI32Imm(LZ));
   }
@@ -6102,8 +6102,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                    EVT OperandTy) {
       SDValue GA = TocEntry->getOperand(0);
       SDValue TocBase = TocEntry->getOperand(1);
-      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
-      transferMemOperands(TocEntry, MN);
+      SDNode *MN = nullptr;
+      if (OpCode == PPC::ADDItoc || OpCode == PPC::ADDItoc8)
+        // toc-data access doesn't involve in loading from got, no need to
+        // keep memory operands.
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, TocBase, GA);
+      else {
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+        transferMemOperands(TocEntry, MN);
+      }
       ReplaceNode(TocEntry, MN);
     };
 

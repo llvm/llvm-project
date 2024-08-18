@@ -20,4 +20,5 @@ add_llvm_target_unittest(AMDGPUTests
   AMDGPUUnitTests.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  PALMetadata.cpp
   )

@@ -270,11 +270,13 @@ static bool IsTypeCompatible(
     const DeclTypeSpec &type1, const DerivedTypeSpec &derivedType2) {
   if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
     if (type1.category() == DeclTypeSpec::Category::TypeDerived) {
-      return &derivedType1->typeSymbol() == &derivedType2.typeSymbol();
+      return evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+          *derivedType1, derivedType2);
     } else if (type1.category() == DeclTypeSpec::Category::ClassDerived) {
       for (const DerivedTypeSpec *parent{&derivedType2}; parent;
            parent = parent->typeSymbol().GetParentTypeSpec()) {
-        if (&derivedType1->typeSymbol() == &parent->typeSymbol()) {
+        if (evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+                *derivedType1, *parent)) {
           return true;
         }
       }
@@ -539,7 +541,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   // Shape related checks
   if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
-        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+        "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
   }
   if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
@@ -600,14 +602,17 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
-    if (auto whyNot{WhyNotDefinable(name_.source, subpScope,
-            {DefinabilityFlag::PointerDefinition,
-                DefinabilityFlag::AcceptAllocatable},
-            *allocateObject_.typedExpr->v)}) {
+    DefinabilityFlags flags{DefinabilityFlag::PointerDefinition,
+        DefinabilityFlag::AcceptAllocatable};
+    if (allocateInfo_.gotSource) {
+      flags.set(DefinabilityFlag::SourcedAllocation);
+    }
+    if (auto whyNot{WhyNotDefinable(
+            name_.source, subpScope, flags, *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
     }
   }

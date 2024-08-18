@@ -77,6 +77,26 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::ConstantPool, PtrVT, Custom);
+  setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+  setOperationAction(ISD::BlockAddress, PtrVT, Custom);
+  setOperationAction(ISD::JumpTable, PtrVT, Custom);
+
+  // Expand jump table branches as address arithmetic followed by an
+  // indirect jump.
+  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
+
+  setOperationAction(ISD::BR_CC, MVT::i32, Legal);
+  setOperationAction(ISD::BR_CC, MVT::i64, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+
+  setOperationAction(ISD::SELECT, MVT::i32, Expand);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SETCC, MVT::i32, Expand);
+
+  setCondCodeAction(ISD::SETGT, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETUGT, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
@@ -86,6 +106,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
+}
+
+bool XtensaTargetLowering::isOffsetFoldingLegal(
+    const GlobalAddressSDNode *GA) const {
+  // The Xtensa target isn't yet aware of offsets.
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,7 +356,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Memcpy = DAG.getMemcpy(
           Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
           /*isVolatile=*/false, /*AlwaysInline=*/false,
-          /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
+          /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
       MemOpChains.push_back(Memcpy);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
@@ -496,6 +522,50 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(XtensaISD::RET, DL, MVT::Other, RetOps);
 }
 
+static unsigned getBranchOpcode(ISD::CondCode Cond) {
+  switch (Cond) {
+  case ISD::SETEQ:
+    return Xtensa::BEQ;
+  case ISD::SETNE:
+    return Xtensa::BNE;
+  case ISD::SETLT:
+    return Xtensa::BLT;
+  case ISD::SETLE:
+    return Xtensa::BGE;
+  case ISD::SETGT:
+    return Xtensa::BLT;
+  case ISD::SETGE:
+    return Xtensa::BGE;
+  case ISD::SETULT:
+    return Xtensa::BLTU;
+  case ISD::SETULE:
+    return Xtensa::BGEU;
+  case ISD::SETUGT:
+    return Xtensa::BLTU;
+  case ISD::SETUGE:
+    return Xtensa::BGEU;
+  default:
+    llvm_unreachable("Unknown branch kind");
+  }
+}
+
+SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getOperand(0).getValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TrueValue = Op.getOperand(2);
+  SDValue FalseValue = Op.getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
+
+  unsigned BrOpcode = getBranchOpcode(CC);
+  SDValue TargetCC = DAG.getConstant(BrOpcode, DL, MVT::i32);
+
+  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                     FalseValue, TargetCC);
+}
+
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
                                              SelectionDAG &DAG) const {
   const ConstantSDNode *CN = cast<ConstantSDNode>(Op);
@@ -517,6 +587,72 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
     return CP;
   }
   return Op;
+}
+
+SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(Op);
+  auto PtrVT = Op.getValueType();
+  const GlobalValue *GV = G->getGlobal();
+
+  SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
+  SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+
+  return CPWrap;
+}
+
+SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = Node->getBlockAddress();
+  EVT PtrVT = Op.getValueType();
+
+  XtensaConstantPoolValue *CPV =
+      XtensaConstantPoolConstant::Create(BA, 0, XtensaCP::CPBlockAddress);
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+  SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+
+  return CPWrap;
+}
+
+SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Table = Op.getOperand(1);
+  SDValue Index = Op.getOperand(2);
+  SDLoc DL(Op);
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Table);
+  MachineFunction &MF = DAG.getMachineFunction();
+  const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
+  const DataLayout &TD = DAG.getDataLayout();
+  EVT PtrVT = Table.getValueType();
+  unsigned EntrySize = MJTI->getEntrySize(TD);
+
+  Index = DAG.getNode(ISD::MUL, DL, Index.getValueType(), Index,
+                      DAG.getConstant(EntrySize, DL, Index.getValueType()));
+  SDValue Addr = DAG.getNode(ISD::ADD, DL, Index.getValueType(), Index, Table);
+  SDValue LD =
+      DAG.getLoad(PtrVT, DL, Chain, Addr,
+                  MachinePointerInfo::getJumpTable(DAG.getMachineFunction()));
+
+  return DAG.getNode(XtensaISD::BR_JT, DL, MVT::Other, LD.getValue(1), LD,
+                     TargetJT);
+}
+
+SDValue XtensaTargetLowering::LowerJumpTable(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+  EVT PtrVT = Op.getValueType();
+
+  // Create a constant pool entry for the callee address
+  XtensaConstantPoolValue *CPV =
+      XtensaConstantPoolJumpTable::Create(*DAG.getContext(), JT->getIndex());
+
+  // Get the address of the callee into a register
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+
+  return getAddrPCRel(CPAddr, DAG);
 }
 
 SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
@@ -580,10 +716,20 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   case ISD::Constant:
     return LowerImmediate(Op, DAG);
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  case ISD::BlockAddress:
+    return LowerBlockAddress(Op, DAG);
+  case ISD::JumpTable:
+    return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
+  case ISD::SELECT_CC:
+    return LowerSELECT_CC(Op, DAG);
   case ISD::STACKSAVE:
     return LowerSTACKSAVE(Op, DAG);
   case ISD::STACKRESTORE:
@@ -597,12 +743,94 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
 
 const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
+  case XtensaISD::BR_JT:
+    return "XtensaISD::BR_JT";
   case XtensaISD::CALL:
     return "XtensaISD::CALL";
   case XtensaISD::PCREL_WRAPPER:
     return "XtensaISD::PCREL_WRAPPER";
   case XtensaISD::RET:
     return "XtensaISD::RET";
+  case XtensaISD::SELECT_CC:
+    return "XtensaISD::SELECT_CC";
   }
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Custom insertion
+//===----------------------------------------------------------------------===//
+
+MachineBasicBlock *
+XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineOperand &LHS = MI.getOperand(1);
+  MachineOperand &RHS = MI.getOperand(2);
+  MachineOperand &TrueValue = MI.getOperand(3);
+  MachineOperand &FalseValue = MI.getOperand(4);
+  unsigned BrKind = MI.getOperand(5).getImm();
+
+  // To "insert" a SELECT_CC instruction, we actually have to insert
+  // CopyMBB and SinkMBB  blocks and add branch to MBB. We build phi
+  // operation in SinkMBB like phi (TrueVakue,FalseValue), where TrueValue
+  // is passed from MMB and FalseValue is passed from CopyMBB.
+  //   MBB
+  //   |   \
+  //   |   CopyMBB
+  //   |   /
+  //   SinkMBB
+  // The incoming instruction knows the
+  // destination vreg to set, the condition code register to branch on, the
+  // true/false values to select between, and a branch opcode to use.
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
+
+  MachineFunction *F = MBB->getParent();
+  MachineBasicBlock *CopyMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *SinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
+
+  F->insert(It, CopyMBB);
+  F->insert(It, SinkMBB);
+
+  // Transfer the remainder of MBB and its successor edges to SinkMBB.
+  SinkMBB->splice(SinkMBB->begin(), MBB,
+                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  MBB->addSuccessor(CopyMBB);
+  MBB->addSuccessor(SinkMBB);
+
+  BuildMI(MBB, DL, TII.get(BrKind))
+      .addReg(LHS.getReg())
+      .addReg(RHS.getReg())
+      .addMBB(SinkMBB);
+
+  CopyMBB->addSuccessor(SinkMBB);
+
+  //  SinkMBB:
+  //   %Result = phi [ %FalseValue, CopyMBB ], [ %TrueValue, MBB ]
+  //  ...
+
+  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(Xtensa::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(FalseValue.getReg())
+      .addMBB(CopyMBB)
+      .addReg(TrueValue.getReg())
+      .addMBB(MBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return SinkMBB;
+}
+
+MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  case Xtensa::SELECT:
+    return emitSelectCC(MI, MBB);
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
+  }
 }

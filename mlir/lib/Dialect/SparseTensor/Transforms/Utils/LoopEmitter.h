@@ -221,6 +221,11 @@ public:
   /// Getters.
   ///
   SmallVector<Value> getValPosits(TensorId tid) const {
+    // Returns the iterator if we are generating sparse (co)iterate-based loops.
+    if (emitStrategy == SparseEmitStrategy::kSparseIterator)
+      return {spIterVals[tid].back()};
+
+    // Returns {[batch coords], last-level position}.
     SmallVector<Value> batchCrds = iters[tid].back().back()->getBatchCrds();
     Value lastLvlPos = iters[tid].back().back()->getCurPosition().front();
     batchCrds.push_back(lastLvlPos);
@@ -418,6 +423,13 @@ private:
   // Loop Sequence Stack, stores the universal index for the current loop
   // sequence. and a list of tid level that the loop sequence traverse.
   std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
+
+  //
+  // EXPERIMENTAL:
+  // Fields for generating sparse-iterator-based loop.
+  //
+
+  std::vector<std::vector<Value>> spIterVals;
 };
 
 } // namespace sparse_tensor

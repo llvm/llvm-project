@@ -63,7 +63,7 @@ namespace {
     HexagonRDFOpt() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineDominanceFrontier>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -109,7 +109,7 @@ char HexagonRDFOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
@@ -302,7 +302,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
     RDFCount++;
   }
 
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
   const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();

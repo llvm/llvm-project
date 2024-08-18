@@ -197,7 +197,7 @@ define i1 @is_pow2_non_zero_ult_2(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ult_2(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -212,7 +212,7 @@ define i1 @is_pow2_non_zero_eq_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_eq_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -227,7 +227,7 @@ define i1 @is_pow2_non_zero_ugt_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ugt_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -242,7 +242,7 @@ define i1 @is_pow2_non_zero_ne_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ne_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

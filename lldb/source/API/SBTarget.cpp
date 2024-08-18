@@ -1147,7 +1147,7 @@ void SBTarget::GetBreakpointNames(SBStringList &names) {
 
     std::vector<std::string> name_vec;
     target_sp->GetBreakpointNames(name_vec);
-    for (auto name : name_vec)
+    for (const auto &name : name_vec)
       names.AppendString(name.c_str());
   }
 }
@@ -1789,6 +1789,11 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
         target_sp->GetImages().FindFunctions(RegularExpression(name_ref),
                                              function_options, *sb_sc_list);
         break;
+      case eMatchTypeRegexInsensitive:
+        target_sp->GetImages().FindFunctions(
+            RegularExpression(name_ref, llvm::Regex::RegexFlags::IgnoreCase),
+            function_options, *sb_sc_list);
+        break;
       case eMatchTypeStartsWith:
         regexstr = llvm::Regex::escape(name) + ".*";
         target_sp->GetImages().FindFunctions(RegularExpression(regexstr),
@@ -1935,6 +1940,11 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
     case eMatchTypeRegex:
       target_sp->GetImages().FindGlobalVariables(RegularExpression(name_ref),
                                                  max_matches, variable_list);
+      break;
+    case eMatchTypeRegexInsensitive:
+      target_sp->GetImages().FindGlobalVariables(
+          RegularExpression(name_ref, llvm::Regex::IgnoreCase), max_matches,
+          variable_list);
       break;
     case eMatchTypeStartsWith:
       regexstr = "^" + llvm::Regex::escape(name) + ".*";

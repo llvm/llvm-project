@@ -34,6 +34,21 @@ def SIEncodingFamily {
 }
 
 //===----------------------------------------------------------------------===//
+// Subtarget info
+//===----------------------------------------------------------------------===//
+
+class GFXGen<Predicate pred, string dn, string suffix, int sub> {
+  Predicate AssemblerPredicate = pred;
+  string DecoderNamespace = dn;
+  string Suffix = suffix;
+  int Subtarget = sub;
+}
+
+def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+
+//===----------------------------------------------------------------------===//
 // SI DAG Nodes
 //===----------------------------------------------------------------------===//
 
@@ -71,14 +86,6 @@ def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
 def SDTAtomic2_f32 : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,2>, SDTCisFP<0>, SDTCisPtrTy<1>
 ]>;
-
-def SIatomic_fmin : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMIN", SDTAtomic2_f32,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
-def SIatomic_fmax : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMAX", SDTAtomic2_f32,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
 
 // load_d16_{lo|hi} ptr, tied_input
 def SIload_d16 : SDTypeProfile<1, 2, [
@@ -222,7 +229,6 @@ defm SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
 defm SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
 defm SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
 defm SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
-defm SIbuffer_atomic_fadd_bf16 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD_BF16">;
 defm SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
 defm SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 defm SIbuffer_atomic_cond_sub_u32 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32">;
@@ -298,13 +304,11 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
-  SDTFPRoundOp
->;
+def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
 
-def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
-  SDTFPRoundOp
->;
+def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
 
 //===----------------------------------------------------------------------===//
 // ValueType helpers
@@ -313,13 +317,6 @@ def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
 class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
-
-//===----------------------------------------------------------------------===//
-// PatFrags for global memory operations
-//===----------------------------------------------------------------------===//
-
-defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
-defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -709,15 +706,24 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
   >;
 
   let AddressSpaces = StoreAddress_local.AddrSpaces in {
-    defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                 IsInt>;
+
+    if IsInt then {
+      defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _local_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+     }
   }
 
   let AddressSpaces = StoreAddress_region.AddrSpaces in {
-    defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                  IsInt>;
+    if IsInt then {
+      defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _region_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+    }
   }
 }
 
@@ -734,8 +740,8 @@ defm atomic_load_umin : SIAtomicM0Glue2 <"LOAD_UMIN">;
 defm atomic_load_umax : SIAtomicM0Glue2 <"LOAD_UMAX">;
 defm atomic_swap : SIAtomicM0Glue2 <"SWAP">;
 defm atomic_load_fadd : SIAtomicM0Glue2 <"LOAD_FADD", 0, SDTAtomic2_f32, 0>;
-defm atomic_load_fmin : SIAtomicM0Glue2 <"LOAD_FMIN", 1, SDTAtomic2_f32, 0>;
-defm atomic_load_fmax : SIAtomicM0Glue2 <"LOAD_FMAX", 1, SDTAtomic2_f32, 0>;
+defm atomic_load_fmin : SIAtomicM0Glue2 <"LOAD_FMIN", 0, SDTAtomic2_f32, 0>;
+defm atomic_load_fmax : SIAtomicM0Glue2 <"LOAD_FMAX", 0, SDTAtomic2_f32, 0>;
 
 def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
@@ -820,7 +826,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
-}]>;
+}]> {
+  let GISelPredicateCode = [{return true;}];
+}
 
 def NegateImm : SDNodeXForm<imm, [{
   return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
@@ -1007,18 +1015,28 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
-                      string name = NAME>
-    : CustomOperand<Type, Optional, name> {
+class NamedIntOperand<string prefix, bit Optional = 1, string name = NAME>
+    : CustomOperand<i32, Optional, name> {
+  string Prefix = prefix;
+
   let PredicateMethod =
     "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
     "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
+
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
+
+  bit PrintInHex = 0;
+  bit AlwaysPrint = 0;
+  let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "
+                    "const MCSubtargetInfo &STI, raw_ostream &O) { "
+                    "printNamedInt(MI, OpNo, STI, O, \""#Prefix#"\", "#
+                    !if(PrintInHex, "true", "false")#", "#
+                    !if(AlwaysPrint, "true", "false")#"); }";
 }
 
 class NamedBitOperand<string Id, string Name = NAME>
@@ -1057,10 +1075,11 @@ class ArrayOperand0<string Id, string Name = NAME>
 
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
-def Offset : NamedIntOperand<i32, "offset">;
+let PrintMethod = "printOffset" in
+def Offset : NamedIntOperand<"offset">;
 let Validator = "isUInt<8>" in {
-def Offset0 : NamedIntOperand<i8, "offset0">;
-def Offset1 : NamedIntOperand<i8, "offset1">;
+def Offset0 : NamedIntOperand<"offset0">;
+def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
@@ -1095,8 +1114,10 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 def FORMAT : CustomOperand<i8>;
 
-def DMask : NamedIntOperand<i16, "dmask">;
-def Dim : CustomOperand<i8>;
+let PrintInHex = 1 in
+def DMask : NamedIntOperand<"dmask">;
+
+def Dim : CustomOperand<i8, /*optional=*/1>;
 
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
 def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
@@ -1114,43 +1135,47 @@ def IndexKey8bit : CustomOperand<i32, 1>;
 def dpp8 : CustomOperand<i32, 0, "DPP8">;
 def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
-let DefaultValue = "0xf" in {
-def DppRowMask : NamedIntOperand<i32, "row_mask">;
-def DppBankMask : NamedIntOperand<i32, "bank_mask">;
+let DefaultValue = "0xf", PrintInHex = 1, AlwaysPrint = 1 in {
+def DppRowMask : NamedIntOperand<"row_mask">;
+def DppBankMask : NamedIntOperand<"bank_mask">;
 }
-def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl"> {
+def DppBoundCtrl : NamedIntOperand<"bound_ctrl"> {
   let ConvertMethod = "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }";
+  let PrintMethod = "printDppBoundCtrl";
 }
 
-let DecoderMethod = "decodeDpp8FI" in
-def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
-def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
+let DecoderMethod = "decodeDpp8FI", PrintMethod = "printDppFI" in
+def Dpp8FI : NamedIntOperand<"fi", 1, "DppFI">;
+let PrintMethod = "printDppFI" in
+def Dpp16FI : NamedIntOperand<"fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
-def CBSZ : NamedIntOperand<i32, "cbsz"> {
+def CBSZ : NamedIntOperand<"cbsz"> {
   let Validator = "isUInt<3>";
 }
-def ABID : NamedIntOperand<i32, "abid"> {
+def ABID : NamedIntOperand<"abid"> {
   let Validator = "isUInt<4>";
 }
 def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
-def WaitVDST : NamedIntOperand<i8, "wait_vdst"> {
+let AlwaysPrint = 1 in {
+def WaitVDST : NamedIntOperand<"wait_vdst"> {
   let Validator = "isUInt<4>";
 }
-def WaitEXP : NamedIntOperand<i8, "wait_exp"> {
+def WaitEXP : NamedIntOperand<"wait_exp"> {
   let Validator = "isUInt<3>";
 }
-def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst"> {
+def WaitVAVDst : NamedIntOperand<"wait_va_vdst"> {
   let Validator = "isUInt<4>";
 }
-def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc"> {
+def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
   let Validator = "isUInt<1>";
 }
+} // End AlwaysPrint = 1
 
-def ByteSel : NamedIntOperand<i8, "byte_sel"> {
+def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
@@ -2233,13 +2258,12 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 // Return an AGPR+VGPR operand class for the given VGPR register class.
 class getLdStRegisterOperand<RegisterClass RC> {
   RegisterOperand ret =
-    !if(!eq(RC.Size, 32), AVLdSt_32,
-      !if(!eq(RC.Size, 64), AVLdSt_64,
-        !if(!eq(RC.Size, 96), AVLdSt_96,
-          !if(!eq(RC.Size, 128), AVLdSt_128,
-            !if(!eq(RC.Size, 160), AVLdSt_160,
-              RegisterOperand<VReg_1> // invalid register
-    )))));
+    !cond(!eq(RC.Size, 32)   : AVLdSt_32,
+          !eq(RC.Size, 64)   : AVLdSt_64,
+          !eq(RC.Size, 96)   : AVLdSt_96,
+          !eq(RC.Size, 128)  : AVLdSt_128,
+          !eq(RC.Size, 160)  : AVLdSt_160,
+          !eq(RC.Size, 1024) : AVLdSt_1024);
 }
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
@@ -2271,6 +2295,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
+  field bit IsInvalidSingleUseConsumer = 0;
+  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];

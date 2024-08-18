@@ -33,6 +33,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -457,9 +458,9 @@ public:
   /// Constructs a IndexBitcodeWriter object for the given combined index,
   /// writing to the provided \p Buffer. When writing a subset of the index
   /// for a distributed backend, provide a \p ModuleToSummariesForIndex map.
-  /// If provided, \p ModuleToDecSummaries specifies the set of summaries for
-  /// which the corresponding functions or aliased functions should be imported
-  /// as a declaration (but not definition) for each module.
+  /// If provided, \p DecSummaries specifies the set of summaries for which
+  /// the corresponding functions or aliased functions should be imported as a
+  /// declaration (but not definition) for each module.
   IndexBitcodeWriter(BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
                      const ModuleSummaryIndex &Index,
                      const GVSummaryPtrSet *DecSummaries = nullptr,
@@ -726,6 +727,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:
     return bitc::ATTR_KIND_ELEMENTTYPE;
+  case Attribute::HybridPatchable:
+    return bitc::ATTR_KIND_HYBRID_PATCHABLE;
   case Attribute::InlineHint:
     return bitc::ATTR_KIND_INLINE_HINT;
   case Attribute::InReg:
@@ -838,6 +841,10 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_THREAD;
   case Attribute::SanitizeMemory:
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
+  case Attribute::SanitizeNumericalStability:
+    return bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY;
+  case Attribute::SanitizeRealtime:
+    return bitc::ATTR_KIND_SANITIZE_REALTIME;
   case Attribute::SpeculativeLoadHardening:
     return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
   case Attribute::SwiftError:
@@ -878,6 +885,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
   case Attribute::Range:
     return bitc::ATTR_KIND_RANGE;
+  case Attribute::Initializes:
+    return bitc::ATTR_KIND_INITIALIZES;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -909,9 +918,10 @@ static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
 }
 
 static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
-                              const ConstantRange &CR) {
+                              const ConstantRange &CR, bool EmitBitWidth) {
   unsigned BitWidth = CR.getBitWidth();
-  Record.push_back(BitWidth);
+  if (EmitBitWidth)
+    Record.push_back(BitWidth);
   if (BitWidth > 64) {
     Record.push_back(CR.getLower().getActiveWords() |
                      (uint64_t(CR.getUpper().getActiveWords()) << 32));
@@ -962,11 +972,20 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
-      } else {
-        assert(Attr.isConstantRangeAttribute());
+      } else if (Attr.isConstantRangeAttribute()) {
         Record.push_back(7);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        emitConstantRange(Record, Attr.getValueAsConstantRange());
+        emitConstantRange(Record, Attr.getValueAsConstantRange(),
+                          /*EmitBitWidth=*/true);
+      } else {
+        assert(Attr.isConstantRangeListAttribute());
+        Record.push_back(8);
+        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
+        ArrayRef<ConstantRange> Val = Attr.getValueAsConstantRangeList();
+        Record.push_back(Val.size());
+        Record.push_back(Val[0].getBitWidth());
+        for (auto &CR : Val)
+          emitConstantRange(Record, CR, /*EmitBitWidth=*/false);
       }
     }
 
@@ -1071,8 +1090,9 @@ void ModuleBitcodeWriter::writeTypeTable() {
     case Type::FP128TyID:     Code = bitc::TYPE_CODE_FP128;     break;
     case Type::PPC_FP128TyID: Code = bitc::TYPE_CODE_PPC_FP128; break;
     case Type::LabelTyID:     Code = bitc::TYPE_CODE_LABEL;     break;
-    case Type::MetadataTyID:  Code = bitc::TYPE_CODE_METADATA;  break;
-    case Type::X86_MMXTyID:   Code = bitc::TYPE_CODE_X86_MMX;   break;
+    case Type::MetadataTyID:
+      Code = bitc::TYPE_CODE_METADATA;
+      break;
     case Type::X86_AMXTyID:   Code = bitc::TYPE_CODE_X86_AMX;   break;
     case Type::TokenTyID:     Code = bitc::TYPE_CODE_TOKEN;     break;
     case Type::IntegerTyID:
@@ -2798,11 +2818,11 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Record.push_back(getOptimizationFlags(GO));
         if (std::optional<ConstantRange> Range = GO->getInRange()) {
           Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
-          emitConstantRange(Record, *Range);
+          emitConstantRange(Record, *Range, /*EmitBitWidth=*/true);
         }
-        for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
-          Record.push_back(VE.getTypeID(C->getOperand(i)->getType()));
-          Record.push_back(VE.getValueID(C->getOperand(i)));
+        for (const Value *Op : CE->operands()) {
+          Record.push_back(VE.getTypeID(Op->getType()));
+          Record.push_back(VE.getValueID(Op));
         }
         break;
       }
@@ -2988,8 +3008,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     auto &GEPInst = cast<GetElementPtrInst>(I);
     Vals.push_back(getOptimizationFlags(&I));
     Vals.push_back(VE.getTypeID(GEPInst.getSourceElementType()));
-    for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
-      pushValueAndType(I.getOperand(i), InstID, Vals);
+    for (const Value *Op : I.operands())
+      pushValueAndType(Op, InstID, Vals);
     break;
   }
   case Instruction::ExtractValue: {
@@ -3058,8 +3078,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
         if (!pushValueAndType(I.getOperand(0), InstID, Vals))
           AbbrevToUse = FUNCTION_INST_RET_VAL_ABBREV;
       } else {
-        for (unsigned i = 0, e = NumOperands; i != e; ++i)
-          pushValueAndType(I.getOperand(i), InstID, Vals);
+        for (const Value *Op : I.operands())
+          pushValueAndType(Op, InstID, Vals);
       }
     }
     break;
@@ -3092,8 +3112,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Vals.push_back(VE.getTypeID(I.getOperand(0)->getType()));
     // Encode the address operand as relative, but not the basic blocks.
     pushValue(I.getOperand(0), InstID, Vals);
-    for (unsigned i = 1, e = I.getNumOperands(); i != e; ++i)
-      Vals.push_back(VE.getValueID(I.getOperand(i)));
+    for (const Value *Op : drop_begin(I.operands()))
+      Vals.push_back(VE.getValueID(Op));
     break;
 
   case Instruction::Invoke: {
@@ -4174,10 +4194,9 @@ static void writeFunctionHeapProfileRecords(
     // Per module alloc versions should always have a single entry of
     // value 0.
     assert(!PerModule || (AI.Versions.size() == 1 && AI.Versions[0] == 0));
-    if (!PerModule) {
-      Record.push_back(AI.MIBs.size());
+    Record.push_back(AI.MIBs.size());
+    if (!PerModule)
       Record.push_back(AI.Versions.size());
-    }
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
       Record.push_back(MIB.StackIdIndices.size());
@@ -4187,6 +4206,11 @@ static void writeFunctionHeapProfileRecords(
     if (!PerModule) {
       for (auto V : AI.Versions)
         Record.push_back(V);
+    }
+    assert(AI.TotalSizes.empty() || AI.TotalSizes.size() == AI.MIBs.size());
+    if (!AI.TotalSizes.empty()) {
+      for (auto Size : AI.TotalSizes)
+        Record.push_back(Size);
     }
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
                                 : bitc::FS_COMBINED_ALLOC_INFO,
@@ -4417,7 +4441,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 
   Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_ALLOC_INFO));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   // n x (alloc type, numstackids, numstackids x stackidindex)
+  // optional: nummib x total size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -4561,6 +4587,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
   // nummib x (alloc type, numstackids, numstackids x stackidindex),
   // numver x version
+  // optional: nummib x total size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -4568,7 +4595,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
     if (DecSummaries == nullptr)
       return false;
-    return DecSummaries->contains(GVS);
+    return DecSummaries->count(GVS);
   };
 
   // The aliases are emitted as a post-pass, and will point to the value
@@ -4660,7 +4687,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     writeFunctionHeapProfileRecords(
         Stream, FS, CallsiteAbbrev, AllocAbbrev,
         /*PerModule*/ false,
-        /*GetValueId*/ [&](const ValueInfo &VI) -> unsigned {
+        /*GetValueId*/
+        [&](const ValueInfo &VI) -> unsigned {
           std::optional<unsigned> ValueID = GetValueId(VI);
           // This can happen in shared index files for distributed ThinLTO if
           // the callee function summary is not included. Record 0 which we
@@ -4670,7 +4698,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
             return 0;
           return *ValueID;
         },
-        /*GetStackIndex*/ [&](unsigned I) {
+        /*GetStackIndex*/
+        [&](unsigned I) {
           // Get the corresponding index into the list of StackIds actually
           // being written for this combined index (which may be a subset in
           // the case of distributed indexes).
@@ -5316,6 +5345,8 @@ static const char *getSectionNameForBitcode(const Triple &T) {
     llvm_unreachable("GOFF is not yet implemented");
     break;
   case Triple::SPIRV:
+    if (T.getVendor() == Triple::AMD)
+      return ".llvmbc";
     llvm_unreachable("SPIRV is not yet implemented");
     break;
   case Triple::XCOFF:
@@ -5341,6 +5372,8 @@ static const char *getSectionNameForCommandline(const Triple &T) {
     llvm_unreachable("GOFF is not yet implemented");
     break;
   case Triple::SPIRV:
+    if (T.getVendor() == Triple::AMD)
+      return ".llvmcmd";
     llvm_unreachable("SPIRV is not yet implemented");
     break;
   case Triple::XCOFF:

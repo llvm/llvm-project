@@ -38,6 +38,7 @@ public:
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
   static bool DisableStructurizer;
+  static bool EnableStructurizerWorkarounds;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
@@ -52,14 +53,7 @@ public:
     return TLOF.get();
   }
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
-                             CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
-
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
@@ -76,7 +70,7 @@ public:
 
   bool splitModule(Module &M, unsigned NumParts,
                    function_ref<void(std::unique_ptr<Module> MPart)>
-                       ModuleCallback) const override;
+                       ModuleCallback) override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -103,6 +97,12 @@ public:
   bool useIPRA() const override {
     return true;
   }
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
