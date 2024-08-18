@@ -86,14 +86,17 @@ protected:
 
 public:
   ExprKind getKind() const { return kind_; }
+  std::function<ExprValue()> getExpr() const;
 };
 
 class ConstantExpr : public ScriptExpr {
 public:
   ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
-  ConstantExpr(uint64_t val)
-      : ScriptExpr(ExprKind::Constant), val_(ExprValue(val)) {}
-  ExprValue getVal() const { return val_; }
+  // ConstantExpr(uint64_t val)
+  //     : ScriptExpr(ExprKind::Constant), val_(val) {}
+  std::function<ExprValue()> getVal() const {
+    return [=] { return val_; };
+  }
 
 private:
   ExprValue val_;
@@ -122,6 +125,7 @@ private:
 
 class BinaryExpr : public ScriptExpr {
 public:
+  enum class Opcode { LNot, Minus, Not, Plus };
   static const BinaryExpr *create();
 
 private:

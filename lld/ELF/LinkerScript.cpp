@@ -131,6 +131,17 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
+std::function<ExprValue()> ScriptExpr::getExpr() const {
+  switch (kind_) {
+  case ExprKind::Constant:
+    return static_cast<const ConstantExpr *>(this)->getVal();
+  case ExprKind::Dynamic:
+    return static_cast<const DynamicExpr *>(this)->getImpl();
+  default:
+    return [] { return ExprValue(0); };
+  };
+}
+
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
                                               StringRef location) {
   OutputDesc *&secRef = nameToOutputSection[CachedHashStringRef(name)];

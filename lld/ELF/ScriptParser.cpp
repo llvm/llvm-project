@@ -104,7 +104,7 @@ private:
   SymbolAssignment *readAssignment(StringRef tok);
   void readSort();
   Expr readAssert();
-  DynamicExpr readConstant();
+  ScriptExpr readConstant();
   DynamicExpr getPageSize();
 
   Expr readMemoryAssignment(StringRef, StringRef, StringRef);
@@ -1332,13 +1332,14 @@ DynamicExpr ScriptParser::getPageSize() {
   });
 }
 
-DynamicExpr ScriptParser::readConstant() {
+ScriptExpr ScriptParser::readConstant() {
   StringRef s = readParenName();
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
     return DynamicExpr::create([] { return config->maxPageSize; });
   setError("unknown constant: " + s);
+  // return ConstantExpr(ExprValue(0));
   return DynamicExpr::create([] { return 0; });
 }
 
@@ -1537,7 +1538,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "ASSERT")
     return readAssert();
   if (tok == "CONSTANT")
-    return readConstant().getImpl();
+    return readConstant().getExpr();
   if (tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
     Expr e = readExpr();
