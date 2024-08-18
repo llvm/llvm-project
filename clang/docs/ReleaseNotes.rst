@@ -193,6 +193,9 @@ Attribute Changes in Clang
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
 
+- ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
+  where they were previously silently ignored.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
