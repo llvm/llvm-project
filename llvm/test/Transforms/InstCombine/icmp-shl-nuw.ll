@@ -90,3 +90,75 @@ define <2 x i1> @icmp_ugt_16x2(<2 x i32>) {
   %d = icmp ugt <2 x i32> %c, <i32 1048575, i32 1048575>
   ret <2 x i1> %d
 }
+
+define i1 @fold_icmp_shl_nuw_c1(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c1(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 15
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 2, [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lshr = lshr i32 %x, 12
+  %and = and i32 %lshr, 15
+  %shl = shl nuw i32 2, %and
+  %cmp = icmp ult i32 %shl, 4
+  ret i1 %cmp
+}
+
+define i1 @fold_icmp_shl_nuw_c2(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 16, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 64
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i32 16, %x
+  %cmp = icmp ult i32 %shl, 64
+  ret i1 %cmp
+}
+
+define i1 @fold_icmp_shl_nuw_c2_non_pow2(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_non_pow2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 48, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 192
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i32 48, %x
+  %cmp = icmp ult i32 %shl, 192
+  ret i1 %cmp
+}
+
+define i1 @fold_icmp_shl_nuw_c2_div_non_pow2(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_div_non_pow2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 2, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 60
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i32 2, %x
+  %cmp = icmp ult i32 %shl, 60
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @fold_icmp_shl_nuw_c2_indivisible(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_nuw_c2_indivisible(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 16, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i32 16, %x
+  %cmp = icmp ult i32 %shl, 63
+  ret i1 %cmp
+}
+
+define i1 @fold_icmp_shl_c2_without_nuw(i32 %x) {
+; CHECK-LABEL: @fold_icmp_shl_c2_without_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 16, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 64
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i32 16, %x
+  %cmp = icmp ult i32 %shl, 64
+  ret i1 %cmp
+}
