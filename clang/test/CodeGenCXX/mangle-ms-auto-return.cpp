@@ -367,3 +367,17 @@ void test_template_auto_address_space_ptr() {
   AutoPtrAddressSpaceT<int>();
   // CHECK: call {{.*}} @"??$AutoPtrAddressSpaceT@H@@YA?A?<auto>@@XZ"
 }
+
+template<class T>
+auto&& AutoReferenceCollapseT(T& x) { return static_cast<T&>(x); }
+
+auto&& AutoReferenceCollapse(int& x) { return static_cast<int&>(x); }
+
+void test2() {
+  int x = 1;
+  auto&& rref0 = AutoReferenceCollapseT(x);
+  // CHECK: call {{.*}} @"??$AutoReferenceCollapseT@H@@YA$$QEA_PAEAH@Z"
+
+  auto&& rref1 = AutoReferenceCollapse(x);
+  // CHECK: call {{.*}} @"?AutoReferenceCollapse@@YA@AEAH@Z"
+}
