@@ -34,7 +34,7 @@ struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Range range;
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator = _Allocator();
 
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+#  if !defined(__cpp_aggregate_paren_init)
   // This explicit constructor is required because AppleClang 15 hasn't
   // implemented P0960R3.
   template <std::ranges::range _Range2, class _Allocator2 = std::allocator<std::byte>>
