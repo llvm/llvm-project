@@ -2,11 +2,6 @@
 
 ; CHECK: .global .align 1 .b8 __func___$__Z10foo_kernelv
 
-; ModuleID = 'test_module'
-source_filename = "test_module.cu"
-target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
-target triple = "nvptx64-nvidia-cuda"
-
 @__func__._Z10foo_kernelv = private unnamed_addr constant [11 x i8] c"foo_kernel\00", align 1, !dbg !0
 
 define dso_local void @_Z10foo_kernelv() #0 !dbg !20 {
