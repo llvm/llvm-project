@@ -433,6 +433,51 @@ static bool interp__builtin_iszero(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_signbit(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame, const Function *F,
+                                    const CallExpr *Call) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  pushInteger(S, Arg.isNegative(), Call->getType());
+  return true;
+}
+
+static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *F,
+                                       const CallExpr *Call) {
+  const Floating &RHS = S.Stk.peek<Floating>();
+  const Floating &LHS = S.Stk.peek<Floating>(align(2u * primSize(PT_Float)));
+  unsigned ID = F->getBuiltinID();
+
+  pushInteger(
+      S,
+      [&] {
+        switch (ID) {
+        case Builtin::BI__builtin_isgreater:
+          return LHS > RHS;
+        case Builtin::BI__builtin_isgreaterequal:
+          return LHS >= RHS;
+        case Builtin::BI__builtin_isless:
+          return LHS < RHS;
+        case Builtin::BI__builtin_islessequal:
+          return LHS <= RHS;
+        case Builtin::BI__builtin_islessgreater: {
+          ComparisonCategoryResult cmp = LHS.compare(RHS);
+          return cmp == ComparisonCategoryResult::Less ||
+                 cmp == ComparisonCategoryResult::Greater;
+        }
+        case Builtin::BI__builtin_isunordered:
+          return LHS.compare(RHS) == ComparisonCategoryResult::Unordered;
+        default:
+          llvm_unreachable("Unexpected builtin ID: Should be a floating point "
+                           "comparison function");
+        }
+      }(),
+      Call->getType());
+  return true;
+}
+
 /// First parameter to __builtin_isfpclass is the floating value, the
 /// second one is an integral value.
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
@@ -1311,6 +1356,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_iszero:
     if (!interp__builtin_iszero(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl:
+    if (!interp__builtin_signbit(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered:
+    if (!interp_floating_comparison(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_isfpclass:

@@ -166,6 +166,10 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- The floating point comparison builtins (``__builtin_isgreater``,
+  ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
+  ``__builtin_signbit`` can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -218,6 +222,8 @@ Improvements to Clang's diagnostics
   to specialize template type aliases.
 
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
+
+- Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
 Improvements to Clang's time-trace
 ----------------------------------

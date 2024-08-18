@@ -145,3 +145,6 @@ contact : mhalk (Michael Halkenhaeuser)
 ---
 revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo for AMDAttributor
 ---
+revert: breadks rocSPARSE build
+1aa8a6f6 [VPlan] Compute cost for most opcodes in VPWidenRecipe
+---

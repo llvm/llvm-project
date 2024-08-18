@@ -2443,9 +2443,9 @@ SDValue SelectionDAG::expandVAArg(SDNode *Node) {
     VAList = getNode(ISD::ADD, dl, VAList.getValueType(), VAList,
                      getConstant(MA->value() - 1, dl, VAList.getValueType()));
 
-    VAList =
-        getNode(ISD::AND, dl, VAList.getValueType(), VAList,
-                getConstant(-(int64_t)MA->value(), dl, VAList.getValueType()));
+    VAList = getNode(
+        ISD::AND, dl, VAList.getValueType(), VAList,
+        getSignedConstant(-(int64_t)MA->value(), dl, VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg

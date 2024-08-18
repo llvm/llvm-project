@@ -9513,10 +9513,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     } else {
       // We may lose precision, so we have to use XXSPLTI32DX.
 
-      uint32_t Hi =
-          (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
-      uint32_t Lo =
-          (uint32_t)(APSplatBits.getZExtValue() & 0xFFFFFFFF);
+      uint32_t Hi = Hi_32(APSplatBits.getZExtValue());
+      uint32_t Lo = Lo_32(APSplatBits.getZExtValue());
       SDValue SplatNode = DAG.getUNDEF(MVT::v2i64);
 
       if (!Hi || !Lo)
@@ -9660,8 +9658,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                   dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
-  int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
-                    (32-SplatBitSize));
+  int32_t SextVal = SignExtend32(SplatBits, SplatBitSize);
   if (SextVal >= -16 && SextVal <= 15)
     return getCanonicalConstSplat(SextVal, SplatSize, Op.getValueType(), DAG,
                                   dl);
