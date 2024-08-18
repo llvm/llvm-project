@@ -49,8 +49,6 @@ include(CheckCompilerVersion)
 include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-
 if (ANDROID OR DRAGONFLY OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
   set(HAVE_DLFCN_H 1)
   set(HAVE_ERRNO_H 1)
@@ -474,6 +472,7 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 if( LLVM_USING_GLIBC )
   add_compile_definitions(_GNU_SOURCE)
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
