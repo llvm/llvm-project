@@ -3081,7 +3081,7 @@ as follows:
 ``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
     In addition to the usual requirements for alignment values,
-    the value of ``<abi>`` may also be zero meaning one byte alignment.
+    the value of ``<abi>`` can also be zero, which means one byte alignment.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
