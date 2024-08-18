@@ -99,7 +99,21 @@ void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
   while (st.KeepRunning()) {
     c.clear();
     for (auto it = in.begin(); it != end; ++it) {
-      benchmark::DoNotOptimize(&(*c.insert(*it).first));
+      benchmark::DoNotOptimize(c.insert(*it));
+    }
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class... GenInputs>
+void BM_EmplaceValue(benchmark::State& st, Container c, GenInputs... gen) {
+  auto num  = st.range(0);
+  auto args = std::make_tuple(gen(num)...);
+  while (st.KeepRunning()) {
+    c.clear();
+    for (decltype(num) i = 0; i < num; ++i) {
+      benchmark::DoNotOptimize(
+          std::apply([&c, i](auto&&... args) -> decltype(auto) { return c.emplace(args[i]...); }, args));
     }
     benchmark::ClobberMemory();
   }

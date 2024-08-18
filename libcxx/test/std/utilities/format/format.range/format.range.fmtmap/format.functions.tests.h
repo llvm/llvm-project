@@ -754,7 +754,7 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_status(TestFunction check, ExceptionTest check_exception) {
-  std::unordered_multimap<status, status> input{{status::foobar, status::foo}, {status::foobar, status::bar}};
+  std::multimap<status, status> input{{status::foobar, status::foo}, {status::foobar, status::bar}};
 
   check(SV("{0xaa55: 0xaaaa, 0xaa55: 0x5555}"), SV("{}"), input);
   check(SV("{0xaa55: 0xaaaa, 0xaa55: 0x5555}^42"), SV("{}^42"), input);
