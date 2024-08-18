@@ -274,6 +274,8 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
+
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
