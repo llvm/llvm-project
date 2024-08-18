@@ -656,15 +656,9 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 // Inv
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inv(InterpState &S, CodePtr OpPC) {
-  using BoolT = PrimConv<PT_Bool>::T;
-  const T &Val = S.Stk.pop<T>();
-  const unsigned Bits = Val.bitWidth();
-  Boolean R;
-  Boolean::inv(BoolT::from(Val, Bits), &R);
-
-  S.Stk.push<BoolT>(R);
+inline bool Inv(InterpState &S, CodePtr OpPC) {
+  const auto &Val = S.Stk.pop<Boolean>();
+  S.Stk.push<Boolean>(!Val);
   return true;
 }
 

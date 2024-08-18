@@ -5112,7 +5112,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visitBool(SubExpr))
       return false;
 
-    if (!this->emitInvBool(E))
+    if (!this->emitInv(E))
       return false;
 
     if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
@@ -5231,7 +5231,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!this->emitComplexBoolCast(SubExpr))
       return false;
-    if (!this->emitInvBool(E))
+    if (!this->emitInv(E))
       return false;
     if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
       return this->emitCast(PT_Bool, ET, E);
