@@ -135,10 +135,7 @@ template <typename F, typename T, size_t N>
 
   uint64_t result;
   for (size_t i = 0; i < inputs1.size(); i++) {
-    auto arg1 = inputs1[i];
-    auto arg2 = inputs2[i];
-    asm("" ::"r"(arg1), "r"(arg2));
-    result = f(arg1, arg2);
+    result = f(inputs1[i], inputs2[i]);
     asm("" ::"r"(result));
   }
 
