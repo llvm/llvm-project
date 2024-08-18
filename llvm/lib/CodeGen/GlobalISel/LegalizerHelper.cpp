@@ -2521,6 +2521,25 @@ LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+static bool extendCtlzNot(const MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI, LLT WideTy) {
+  Register Src;
+  if (!mi_match(MI.getOperand(1).getReg(), MRI, m_Not(m_Reg(Src))))
+    return false;
+
+  auto ExtSrc = MIRBuilder.buildAnyExt(WideTy, Src);
+
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT CurTy = MRI.getType(SrcReg);
+  unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
+  auto LShift = MIRBuilder.buildShl(WideTy, ExtSrc,
+                                    MIRBuilder.buildConstant(WideTy, SizeDiff));
+  auto Not = MIRBuilder.buildNot(WideTy, LShift);
+  MIRBuilder.buildCTLZ_ZERO_UNDEF(MI.getOperand(0), Not);
+
+  return true;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   switch (MI.getOpcode()) {
@@ -2614,6 +2633,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
     unsigned NewOpc = MI.getOpcode();
+
+    if ((MI.getOpcode() == TargetOpcode::G_CTLZ) &&
+        extendCtlzNot(MI, MIRBuilder, MRI, WideTy)) {
+      MI.eraseFromParent();
+      return Legalized;
+    }
     if (NewOpc == TargetOpcode::G_CTTZ) {
       // The count is the same in the larger type except if the original
       // value was zero.  This can be handled by setting the bit just off

@@ -2311,6 +2311,26 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSizeInBits())
     return false;
 
+  // Do not despeculate if we have (ctlz/cttz (xor op -1)) if the operand is
+  // promoted as legalisation should be later able to transform it to:
+  //
+  // ctlz:
+  // (ctlz_zero_undef (lshift (xor (extend op) -1)
+  //                          lshiftamount))
+  //
+  // cttz:
+  // (cttz_zero_undef (xor (zeroextend op) -1))
+  //
+  // Despeculation is not only useless but also not wanted with SelectionDAG
+  // as XOR and CTLZ/CTTZ would be in different basic blocks.
+  EVT VTy = TLI->getValueType(*DL, Ty);
+  int ISDOpcode = IntrinsicID == Intrinsic::ctlz ? ISD::CTLZ : ISD::CTTZ;
+  if (match(CountZeros->getOperand(0), m_Not(m_Value())) &&
+      (TLI->getTypeAction(CountZeros->getContext(), VTy) ==
+           TargetLowering::TypePromoteInteger ||
+       TLI->getOperationAction(ISDOpcode, VTy) == TargetLowering::Promote))
+    return false;
+
   // Bail if the value is never zero.
   Use &Op = CountZeros->getOperandUse(0);
   if (isKnownNonZero(Op, *DL))
