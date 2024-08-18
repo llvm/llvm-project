@@ -1463,8 +1463,8 @@ static uint64_t getOffsetFromIndices(const User &U, const DataLayout &DL) {
     for (auto Idx : IVI->indices())
       Indices.push_back(ConstantInt::get(Int32Ty, Idx));
   } else {
-    for (unsigned i = 1; i < U.getNumOperands(); ++i)
-      Indices.push_back(U.getOperand(i));
+    for (Value *Op : drop_begin(U.operands()))
+      Indices.push_back(Op);
   }
 
   return 8 * static_cast<uint64_t>(
