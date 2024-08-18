@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_86 < %s | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_86 -verify-machineinstrs | %ptxas-verify %}
 
 ; CHECK: .global .align 1 .b8 __func___$__Z10foo_kernelv
 
