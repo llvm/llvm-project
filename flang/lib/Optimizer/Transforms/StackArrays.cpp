@@ -457,10 +457,12 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     if (lattice)
       (void)point.join(*lattice);
   };
+
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
   func->walk(
       [&](mlir::omp::TerminatorOp child) { joinOperationLattice(child); });
+  func->walk([&](mlir::omp::YieldOp child) { joinOperationLattice(child); });
 
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
