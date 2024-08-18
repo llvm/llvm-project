@@ -1006,9 +1006,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
         "IFunc resolver must return a pointer", &GI);
 
-  const Type *ResolverFuncTy =
-      GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
+  Check(ResolverTy == PointerType::get(Context, GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 
@@ -4142,8 +4140,10 @@ void Verifier::verifyRangeMetadata(const Value &I, const MDNode *Range,
     ConstantInt *High =
         mdconst::dyn_extract<ConstantInt>(Range->getOperand(2 * i + 1));
     Check(High, "The upper limit must be an integer!", High);
-    Check(High->getType() == Low->getType() &&
-          High->getType() == Ty->getScalarType(),
+
+    Check(High->getType() == Low->getType(), "Range pair types must match!",
+          &I);
+    Check(High->getType() == Ty->getScalarType(),
           "Range types must match instruction type!", &I);
 
     APInt HighV = High->getValue();

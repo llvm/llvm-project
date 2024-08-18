@@ -2771,3 +2771,37 @@ entry:
   %vzip.i = shufflevector <16 x i8> %lane, <16 x i8> %lane3, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   ret <16 x i8> %vzip.i
 }
+
+define <8 x i16> @PR104482(<16 x i8> %i) {
+; SSE2-LABEL: PR104482:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR104482:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15],zero,xmm0[14],zero,xmm0[13],zero,xmm0[12],zero,xmm0[11],zero,xmm0[10],zero,xmm0[9],zero,xmm0[8],zero
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR104482:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15],zero,xmm0[14],zero,xmm0[13],zero,xmm0[12],zero,xmm0[11],zero,xmm0[10],zero,xmm0[9],zero,xmm0[8],zero
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR104482:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15],zero,xmm0[14],zero,xmm0[13],zero,xmm0[12],zero,xmm0[11],zero,xmm0[10],zero,xmm0[9],zero,xmm0[8],zero
+; AVX-NEXT:    retq
+  %i7 = shufflevector <16 x i8> %i, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+  %1 = bitcast <16 x i8> %i7 to <8 x i16>
+  %i10 = shufflevector <8 x i16> %1, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+  %i11 = shufflevector <8 x i16> %i10, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %i12 = shufflevector <8 x i16> %i11, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x i16> %i12
+}

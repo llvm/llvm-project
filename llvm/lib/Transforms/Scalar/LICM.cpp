@@ -2767,8 +2767,9 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     unsigned OpIdx = U->getOperandNo();
     auto *LHS = OpIdx == 0 ? Mul : Ins->getOperand(0);
     auto *RHS = OpIdx == 1 ? Mul : Ins->getOperand(1);
-    auto *NewBO = BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
-                                         Ins->getName() + ".reass", Ins);
+    auto *NewBO =
+        BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
+                               Ins->getName() + ".reass", Ins->getIterator());
     NewBO->copyIRFlags(Ins);
     if (VariantOp == Ins)
       VariantOp = NewBO;
@@ -2822,9 +2823,9 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   assert(Preheader && "Loop is not in simplify form?");
 
   auto *Inv = BinaryOperator::Create(Opcode, C1, C2, "invariant.op",
-                                     Preheader->getTerminator());
-  auto *NewBO =
-      BinaryOperator::Create(Opcode, LV, Inv, BO->getName() + ".reass", BO);
+                                     Preheader->getTerminator()->getIterator());
+  auto *NewBO = BinaryOperator::Create(
+      Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
 
   // Copy NUW for ADDs if both instructions have it.
   if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&

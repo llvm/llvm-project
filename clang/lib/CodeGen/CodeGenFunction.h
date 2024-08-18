@@ -1313,8 +1313,8 @@ public:
                                      CodeGenFunction &CGF) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store =
-        new llvm::StoreInst(value, addr.emitRawPointer(CGF), &block->back());
+    auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
+                                     block->back().getIterator());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
@@ -3304,10 +3304,6 @@ public:
   FindFlexibleArrayMemberFieldAndOffset(ASTContext &Ctx, const RecordDecl *RD,
                                         const FieldDecl *FAMDecl,
                                         uint64_t &Offset);
-
-  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
-  /// \p nullptr if either the attribute or the field doesn't exist.
-  const FieldDecl *FindCountedByField(const FieldDecl *FD);
 
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,

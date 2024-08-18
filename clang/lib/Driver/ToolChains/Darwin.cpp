@@ -2927,14 +2927,12 @@ static bool sdkSupportsBuiltinModules(
     const Darwin::DarwinPlatformKind &TargetPlatform,
     const Darwin::DarwinEnvironmentKind &TargetEnvironment,
     const std::optional<DarwinSDKInfo> &SDKInfo) {
-  switch (TargetEnvironment) {
-  case Darwin::NativeEnvironment:
-  case Darwin::Simulator:
-  case Darwin::MacCatalyst:
+  if (TargetEnvironment == Darwin::NativeEnvironment ||
+      TargetEnvironment == Darwin::Simulator ||
+      TargetEnvironment == Darwin::MacCatalyst) {
     // Standard xnu/Mach/Darwin based environments
     // depend on the SDK version.
-    break;
-  default:
+  } else {
     // All other environments support builtin modules from the start.
     return true;
   }

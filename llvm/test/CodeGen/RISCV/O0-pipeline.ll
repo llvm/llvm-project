@@ -41,6 +41,7 @@
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
+; CHECK-NEXT:       RISC-V Landing Pad Setup
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass

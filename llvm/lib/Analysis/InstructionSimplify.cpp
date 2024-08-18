@@ -30,6 +30,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"

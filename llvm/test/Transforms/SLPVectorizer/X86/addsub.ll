@@ -68,42 +68,17 @@ entry:
 define void @addsub_freeze() #0 {
 ; CHECK-LABEL: @addsub_freeze(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @d, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @e, align 4
-; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[ADD1]]
-; CHECK-NEXT:    [[FREEZE_ADD2:%.*]] = freeze i32 [[ADD2]]
-; CHECK-NEXT:    store i32 [[FREEZE_ADD2]], ptr @a, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[ADD3]], [[ADD4]]
-; CHECK-NEXT:    [[FREEZE_SUB:%.*]] = freeze i32 [[SUB]]
-; CHECK-NEXT:    store i32 [[FREEZE_SUB]], ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[ADD7:%.*]] = add nsw i32 [[ADD5]], [[ADD6]]
-; CHECK-NEXT:    [[FREEZE_ADD7:%.*]] = freeze i32 [[ADD7]]
-; CHECK-NEXT:    store i32 [[FREEZE_ADD7]], ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[SUB10:%.*]] = sub nsw i32 [[ADD8]], [[ADD9]]
-; CHECK-NEXT:    [[FREEZE_SUB10:%.*]] = freeze i32 [[SUB10]]
-; CHECK-NEXT:    store i32 [[FREEZE_SUB10]], ptr getelementptr inbounds ([4 x i32], ptr @a, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @c, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @d, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr @e, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @a, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

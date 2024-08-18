@@ -157,8 +157,6 @@ def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2BitPerm()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
-def HasB16B16        : Predicate<"Subtarget->hasB16B16()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureB16B16), "b16b16">;
 def HasSMEandIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
@@ -172,6 +170,8 @@ def HasSMEFA64       : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF
                                  AssemblerPredicateWithAll<(all_of FeatureSMEFA64), "sme-fa64">;
 def HasSMEI16I64     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
+def HasSMEB16B16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEB16B16), "sme-b16b16">;
 def HasSME2andIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
@@ -1874,7 +1874,7 @@ let Predicates = [HasPAuth] in {
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
-    let Size = 48; // 12 fixed + 36 variable, for pointer offset, and discriminator
+    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
     let Defs = [X16,X17];
   }
 
@@ -1913,11 +1913,6 @@ let Predicates = [HasPAuth] in {
                                 tcGPR64:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPR64:$AddrDisc)>;
-
-  def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
-               Sched<[WriteI, ReadI]> {
-    let Defs = [X16];
-  }
 }
 
 // v9.5-A pointer authentication extensions
@@ -2219,7 +2214,7 @@ def s64imm_32bit : ImmLeaf<i64, [{
 }]>;
 
 def trunc_imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getTargetConstant((uint32_t)N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def gi_trunc_imm : GICustomOperandRenderer<"renderTruncImm">,
@@ -5425,64 +5420,75 @@ def VImm7FFF: PatLeaf<(AArch64movi_msl (i32 127), (i32 264))>;
 def VImm8000: PatLeaf<(AArch64mvni_msl (i32 127), (i32 264))>;
 
 // trunc(umin(X, 255)) -> UQXTRN v8i8
-def : Pat<(v8i8 (trunc (umin (v8i16 V128:$Vn), (v8i16 VImmFF)))),
+def : Pat<(v8i8 (truncusat_u (v8i16 V128:$Vn))),
           (UQXTNv8i8 V128:$Vn)>;
 // trunc(umin(X, 65535)) -> UQXTRN v4i16
-def : Pat<(v4i16 (trunc (umin (v4i32 V128:$Vn), (v4i32 VImmFFFF)))),
+def : Pat<(v4i16 (truncusat_u (v4i32 V128:$Vn))),
           (UQXTNv4i16 V128:$Vn)>;
+// trunc(umin(X, 4294967295)) -> UQXTRN v2i32
+def : Pat<(v2i32 (truncusat_u (v2i64 V128:$Vn))),
+          (UQXTNv2i32 V128:$Vn)>;
 // trunc(smin(smax(X, -128), 128)) -> SQXTRN
-//  with reversed min/max
-def : Pat<(v8i8 (trunc (smin (smax (v8i16 V128:$Vn), (v8i16 VImm80)),
-                             (v8i16 VImm7F)))),
-          (SQXTNv8i8 V128:$Vn)>;
-def : Pat<(v8i8 (trunc (smax (smin (v8i16 V128:$Vn), (v8i16 VImm7F)),
-                             (v8i16 VImm80)))),
+def : Pat<(v8i8 (truncssat_s (v8i16 V128:$Vn))),
           (SQXTNv8i8 V128:$Vn)>;
 // trunc(smin(smax(X, -32768), 32767)) -> SQXTRN
-//  with reversed min/max
-def : Pat<(v4i16 (trunc (smin (smax (v4i32 V128:$Vn), (v4i32 VImm8000)),
-                              (v4i32 VImm7FFF)))),
+def : Pat<(v4i16 (truncssat_s (v4i32 V128:$Vn))),
           (SQXTNv4i16 V128:$Vn)>;
-def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
-                              (v4i32 VImm8000)))),
-          (SQXTNv4i16 V128:$Vn)>;
+// trunc(smin(smax(X, -2147483648), 2147483647)) -> SQXTRN
+def : Pat<(v2i32 (truncssat_s (v2i64 V128:$Vn))),
+          (SQXTNv2i32 V128:$Vn)>;
+// trunc(umin(smax(X, 0), 255)) -> SQXTUN
+def : Pat<(v8i8 (truncssat_u (v8i16 V128:$Vn))),
+          (SQXTUNv8i8 V128:$Vn)>;
+// trunc(umin(smax(X, 0), 65535)) -> SQXTUN
+def : Pat<(v4i16 (truncssat_u (v4i32 V128:$Vn))),
+          (SQXTUNv4i16 V128:$Vn)>;
+// trunc(umin(smax(X, 0), 4294967295)) -> SQXTUN
+def : Pat<(v2i32 (truncssat_u (v2i64 V128:$Vn))),
+          (SQXTUNv2i32 V128:$Vn)>;
 
-// concat_vectors(Vd, trunc(umin(X, 255))) -> UQXTRN(Vd, Vn)
+// truncusat_u
+// concat_vectors(Vd, truncusat_u(Vn)) ~> UQXTRN(Vd, Vn)
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
-                 (v8i8 (trunc (umin (v8i16 V128:$Vn), (v8i16 VImmFF)))))),
+                 (v8i8 (truncusat_u (v8i16 V128:$Vn))))),
           (UQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-// concat_vectors(Vd, trunc(umin(X, 65535))) -> UQXTRN(Vd, Vn)
 def : Pat<(v8i16 (concat_vectors
                  (v4i16 V64:$Vd),
-                 (v4i16 (trunc (umin (v4i32 V128:$Vn), (v4i32 VImmFFFF)))))),
+                 (v4i16 (truncusat_u (v4i32 V128:$Vn))))),
           (UQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 V64:$Vd),
+                 (v2i32 (truncusat_u (v2i64 V128:$Vn))))),
+          (UQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
-// concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
-// with reversed min/max
+// concat_vectors(Vd, truncssat_s(Vn)) ~> SQXTN2(Vd, Vn)
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
-                 (v8i8 (trunc (smin (smax (v8i16 V128:$Vn), (v8i16 VImm80)),
-                                          (v8i16 VImm7F)))))),
+                 (v8i8 (truncssat_s (v8i16 V128:$Vn))))),
           (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (truncssat_s (v4i32 V128:$Vn))))),
+          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 V64:$Vd),
+                 (v2i32 (truncssat_s (v2i64 V128:$Vn))))),
+          (SQXTNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
+// concat_vectors(Vd, truncssat_u(Vn)) ~> SQXTUN2(Vd, Vn)
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
-                 (v8i8 (trunc (smax (smin (v8i16 V128:$Vn), (v8i16 VImm7F)),
-                                          (v8i16 VImm80)))))),
-          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-
-// concat_vectors(Vd, trunc(smin(smax Vm, -32768), 32767) ~> SQXTN2(Vd, Vn)
-// with reversed min/max
+                 (v8i8 (truncssat_u (v8i16 V128:$Vn))))),
+          (SQXTUNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 def : Pat<(v8i16 (concat_vectors
                  (v4i16 V64:$Vd),
-                 (v4i16 (trunc (smin (smax (v4i32 V128:$Vn), (v4i32 VImm8000)),
-                                           (v4i32 VImm7FFF)))))),
-          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
-def : Pat<(v8i16 (concat_vectors
-                 (v4i16 V64:$Vd),
-                 (v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
-                                           (v4i32 VImm8000)))))),
-          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+                 (v4i16 (truncssat_u (v4i32 V128:$Vn))))),
+          (SQXTUNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 V64:$Vd),
+                 (v2i32 (truncssat_u (v2i64 V128:$Vn))))),
+          (SQXTUNv4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
 
 // Select BSWAP vector instructions into REV instructions
 def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
@@ -10142,7 +10148,7 @@ let Predicates = [HasD128] in {
 // 2023 Architecture Extensions:
 //===----------------------------===//
 
-let Predicates = [HasFP8] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
   defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
@@ -10152,12 +10158,22 @@ let Predicates = [HasFP8] in {
   defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
 } // End let Predicates = [HasFP8]
 
-let Predicates = [HasFAMINMAX] in {
+let Predicates = [HasNEON, HasFAMINMAX] in {
  defm FAMAX : SIMDThreeSameVectorFP<0b0, 0b1, 0b011, "famax", null_frag>;
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
-} // End let Predicates = [HasFAMAXMIN]
 
-let Predicates = [HasFP8FMA] in {
+ foreach Ty = [v4f16, v8f16, v2f32, v4f32, v2f64] in {
+  // Replace min(abs(a), abs(b)) with famin(a, b)
+  def : Pat<(Ty (fminimum (fabs Ty:$Rn), (fabs Ty:$Rm))),
+            (!cast<Instruction>("FAMIN"#Ty) Ty:$Rn, Ty:$Rm)>;
+
+  // Replace max(abs(a), abs(b)) with famax(a, b)
+  def : Pat<(Ty (fmaximum (fabs Ty:$Rn), (fabs Ty:$Rm))),
+            (!cast<Instruction>("FAMAX"#Ty) Ty:$Rn, Ty:$Rm)>;
+ }
+} // End let Predicates = [HasNEON, HasFAMINMAX]
+
+let Uses = [FPMR, FPCR], Predicates = [HasFP8FMA] in {
  defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
  defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
  defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
@@ -10173,12 +10189,12 @@ let Predicates = [HasFP8FMA] in {
  defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
 } // End let Predicates = [HasFP8FMA]
 
-let Predicates = [HasFP8DOT2] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT2] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
 } // End let Predicates = [HasFP8DOT2]
 
-let Predicates = [HasFP8DOT4] in {
+let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]

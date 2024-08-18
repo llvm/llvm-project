@@ -992,8 +992,13 @@ void SignalContext::InitPcSpBp() {
   sp = (uptr)context_record->Rsp;
 #    endif
 #  else
+#    if SANITIZER_ARM
+  bp = (uptr)context_record->R11;
+  sp = (uptr)context_record->Sp;
+#    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;
+#    endif
 #  endif
 }
 

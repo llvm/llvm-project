@@ -10,13 +10,13 @@
 #define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 
 #define CUDA_REPORT_IF_ERROR(expr) \
-  [](CUresult result) { \
-    if (!result) \
+  [](cudaError_t err) { \
+    if (err == cudaSuccess) \
       return; \
-    const char *name = nullptr; \
-    cuGetErrorName(result, &name); \
+    const char *name = cudaGetErrorName(err); \
     if (!name) \
       name = "<unknown>"; \
     Terminator terminator{__FILE__, __LINE__}; \
@@ -25,7 +25,10 @@
 
 namespace Fortran::runtime::cuda {
 
-void CUFRegisterAllocator();
+extern "C" {
+
+void RTDECL(CUFRegisterAllocator)();
+}
 
 void *CUFAllocPinned(std::size_t);
 void CUFFreePinned(void *);

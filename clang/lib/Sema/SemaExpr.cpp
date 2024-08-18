@@ -25,6 +25,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -305,6 +306,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       return true;
 
   }
+
+  if (auto *Concept = dyn_cast<ConceptDecl>(D);
+      Concept && CheckConceptUseInDefinition(Concept, Loc))
+    return true;
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
     // Lambdas are only default-constructible or assignable in C++2a onwards.
@@ -10135,7 +10140,10 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
           VecType->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         return true;
       if (VecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
         SVEorRVV = 1;
         return true;
       }
@@ -10167,7 +10175,13 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
                 VectorKind::SveFixedLengthPredicate)
           return true;
         if (SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-            SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+            SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+            SecondVecType->getVectorKind() ==
+                VectorKind::RVVFixedLengthMask_1 ||
+            SecondVecType->getVectorKind() ==
+                VectorKind::RVVFixedLengthMask_2 ||
+            SecondVecType->getVectorKind() ==
+                VectorKind::RVVFixedLengthMask_4) {
           SVEorRVV = 1;
           return true;
         }

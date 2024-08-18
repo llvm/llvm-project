@@ -11,18 +11,9 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
 )
 
-option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
-
-# Enable support for plugins, which need access to symbols from flang-new
-if(FLANG_PLUGIN_SUPPORT)
-  set(export_symbols EXPORT_SYMBOLS_FOR_PLUGINS)
-endif()
-
 add_flang_tool(flang-new
   driver.cpp
   fc1_main.cpp
-
-  ${export_symbols}
 )
 
 target_link_libraries(flang-new
@@ -36,5 +27,12 @@ clang_target_link_libraries(flang-new
   clangDriver
   clangBasic
 )
+
+option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
+
+# Enable support for plugins, which need access to symbols from flang-new
+if(FLANG_PLUGIN_SUPPORT)
+  export_executable_symbols_for_plugins(flang-new)
+endif()
 
 install(TARGETS flang-new DESTINATION "${CMAKE_INSTALL_BINDIR}")
