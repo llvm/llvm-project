@@ -37,7 +37,7 @@ The compiler will also insert calls to a module constructor:
    __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
 
 With an additional ``...=trace-pc,indirect-calls`` flag
-``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+``__sanitizer_cov_trace_pc_indir(void *callee)`` will be inserted on every indirect call.
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
 
