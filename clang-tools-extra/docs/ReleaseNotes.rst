@@ -118,7 +118,7 @@ Changes in existing checks
 
 - Improved :doc:`readablility-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
-  Added option `UseUpperCaseLiteralSuffix` to  to select the
+  by adding the option `UseUpperCaseLiteralSuffix` to select the
   case of the literal suffix in fixes.
 
 Removed checks
