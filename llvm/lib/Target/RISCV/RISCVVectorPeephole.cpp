@@ -82,7 +82,6 @@ char RISCVVectorPeephole::ID = 0;
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
 
-
 /// Given two VL operands, returns the one known to be the smallest or nullptr
 /// if unknown.
 static const MachineOperand *getKnownMinVL(const MachineOperand *LHS,
@@ -161,8 +160,7 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
   if (ActiveElementsAffectResult || Src->mayRaiseFPException())
     return false;
 
-  MachineOperand &SrcVL =
-    Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
+  MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
   const MachineOperand *MinVL = getKnownMinVL(&VL, &SrcVL);
   if (!MinVL || MinVL == &SrcVL)
     return false;
