@@ -15570,8 +15570,7 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       ComplexValue LHS = Result;
       APSInt Den = RHS.getComplexIntReal() * RHS.getComplexIntReal() +
         RHS.getComplexIntImag() * RHS.getComplexIntImag();
-      if ((RHS.getComplexIntReal() == 0 && RHS.getComplexIntImag() == 0) ||
-          Den.isZero())
+      if (Den.isZero())
         return Error(E, diag::note_expr_divide_by_zero);
 
       Result.getComplexIntReal() =
