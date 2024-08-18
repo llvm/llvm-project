@@ -168,6 +168,7 @@ add_llvm_component_library(LLVMSupport
   Debug.cpp
   DebugCounter.cpp
   DeltaAlgorithm.cpp
+  DeltaTree.cpp
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
@@ -218,6 +219,8 @@ add_llvm_component_library(LLVMSupport
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
+  RewriteBuffer.cpp
+  RewriteRope.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
   RISCVISAUtils.cpp
