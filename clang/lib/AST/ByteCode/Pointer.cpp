@@ -654,5 +654,5 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{this->Desc, FieldOffset};
+  return IntPointer{this->Desc, this->Value + FieldOffset};
 }
