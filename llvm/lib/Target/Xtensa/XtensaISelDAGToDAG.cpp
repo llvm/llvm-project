@@ -67,7 +67,7 @@ public:
       Valid = isValidAddrOffset(Scale, OffsetVal);
 
       if (Valid) {
-        // If the first operand is a FI, get the TargetFI Node
+        // If the first operand is a FI, get the TargetFI Node.
         if (FrameIndexSDNode *FIN =
                 dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
           Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
@@ -139,7 +139,7 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
     SDValue N1 = Node->getOperand(1);
     auto *C = dyn_cast<ConstantSDNode>(N1);
     // If C is constant in range [1..31] then we can generate SLLI
-    // instruction using pattern matching, otherwise generate SLL
+    // instruction using pattern matching, otherwise generate SLL.
     if (!C || C->isZero()) {
       SDNode *SSL = CurDAG->getMachineNode(Xtensa::SSL, DL, MVT::Glue, N1);
       SDNode *SLL =
@@ -155,7 +155,7 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
     auto *C = dyn_cast<ConstantSDNode>(N1);
 
     // If C is constant then we can generate SRLI
-    // instruction using pattern matching or EXTUI, otherwise generate SRL
+    // instruction using pattern matching or EXTUI, otherwise generate SRL.
     if (C) {
       if (isUInt<4>(C->getZExtValue()))
         break;
@@ -178,7 +178,7 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
     SDValue N1 = Node->getOperand(1);
     auto *C = dyn_cast<ConstantSDNode>(N1);
     // If C is constant then we can generate SRAI
-    // instruction using pattern matching, otherwise generate SRA
+    // instruction using pattern matching, otherwise generate SRA.
     if (!C) {
       SDNode *SSR = CurDAG->getMachineNode(Xtensa::SSR, DL, MVT::Glue, N1);
       SDNode *SRA =
