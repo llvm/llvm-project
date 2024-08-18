@@ -1766,6 +1766,8 @@ static bool
 allBBPathsGoThroughCold(BasicBlock *BB,
                         SmallDenseMap<BasicBlock *, bool, 16> &Visited) {
   // If BB contains a cold callsite this path through the CG is cold.
+  // Ignore whether the instructions actually are guranteed to transfer
+  // execution. Divergent behavior is considered unlikely.
   if (any_of(*BB, [](Instruction &I) {
         if (auto *CB = dyn_cast<CallBase>(&I))
           return CB->hasFnAttr(Attribute::Cold);
