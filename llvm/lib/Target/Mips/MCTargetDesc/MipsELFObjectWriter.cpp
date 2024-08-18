@@ -166,10 +166,9 @@ static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
                                                const ELFRelocationEntry &R,
                                                unsigned MatchingType) {
   if (X.R.Type == MatchingType && X.R.OriginalSymbol == R.OriginalSymbol) {
-    if (!X.Matched &&
-        X.R.OriginalAddend == R.OriginalAddend)
+    if (!X.Matched && X.R.Addend == R.Addend)
       return FindBest_PerfectMatch;
-    else if (X.R.OriginalAddend >= R.OriginalAddend)
+    else if (X.R.Addend >= R.Addend)
       return FindBest_Match;
   }
   return FindBest_NoMatch;
@@ -183,8 +182,8 @@ static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
 /// - It is not already involved in a match.
 static bool compareMatchingRelocs(const MipsRelocationEntry &Candidate,
                                   const MipsRelocationEntry &PreviousBest) {
-  if (Candidate.R.OriginalAddend != PreviousBest.R.OriginalAddend)
-    return Candidate.R.OriginalAddend < PreviousBest.R.OriginalAddend;
+  if (Candidate.R.Addend != PreviousBest.R.Addend)
+    return Candidate.R.Addend < PreviousBest.R.Addend;
   return PreviousBest.Matched && !Candidate.Matched;
 }
 
