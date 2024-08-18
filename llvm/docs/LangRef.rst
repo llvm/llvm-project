@@ -3106,6 +3106,7 @@ as follows:
       of functions, and is a multiple of ``<abi>``.
     * ``n``: The alignment of function pointers is a multiple of the explicit
       alignment specified on the function, and is a multiple of ``<abi>``.
+
     The values of ``<abi>`` and ``<pref>`` must be in the range [1,2^16)
     and must be powers of two times the byte width.
 ``m:<mangling>``
