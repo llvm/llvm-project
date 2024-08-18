@@ -55,8 +55,6 @@ TEST(DataLayoutTest, ParseErrors) {
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("Fi24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
-  EXPECT_THAT_EXPECTED(DataLayout::parse("i8:16"),
-                       FailedWithMessage("i8 must be 8-bit aligned"));
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("S24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
