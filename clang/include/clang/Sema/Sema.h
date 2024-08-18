@@ -13329,7 +13329,9 @@ public:
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
-                      const MultiLevelTemplateArgumentList &TemplateArgs);
+                      const MultiLevelTemplateArgumentList &TemplateArgs,
+                      DeclContext *InstantiatingFunctionDC = nullptr);
+
   // Unlike the above, this does not evaluates constraints.
   ExprResult SubstConstraintExprWithoutSatisfaction(
       Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);

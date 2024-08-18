@@ -1345,6 +1345,16 @@ namespace {
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
 
+    // Whether to instantiate function parameters in one transformation.
+    // The DeclContext is the context where the instantiated parameter would
+    // belong.
+    DeclContext *FunctionDCForParameterDeclInstantiation;
+
+    LocalInstantiationScope *ParameterInstantiationScope;
+  private:
+    bool instantiateParameterToScope(ParmVarDecl *OldParm,
+                                     LocalInstantiationScope &Scope);
+
   public:
     typedef TreeTransform<TemplateInstantiator> inherited;
 
@@ -1357,8 +1367,16 @@ namespace {
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
     }
-    bool getEvaluateConstraints() {
+    bool getEvaluateConstraints() const {
       return EvaluateConstraints;
+    }
+
+    void setInstantiatingFunctionDC(DeclContext *FunctionDC) {
+      FunctionDCForParameterDeclInstantiation = FunctionDC;
+    }
+
+    void setParameterInstantiationScope(LocalInstantiationScope *Scope) {
+      ParameterInstantiationScope = Scope;
     }
 
     /// Determine whether the given type \p T has already been
@@ -1397,12 +1415,25 @@ namespace {
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
                                  bool &ShouldExpand, bool &RetainExpansion,
                                  std::optional<unsigned> &NumExpansions) {
-      return getSema().CheckParameterPacksForExpansion(EllipsisLoc,
-                                                       PatternRange, Unexpanded,
-                                                       TemplateArgs,
-                                                       ShouldExpand,
-                                                       RetainExpansion,
-                                                       NumExpansions);
+      if (ParameterInstantiationScope) {
+        for (UnexpandedParameterPack ParmPack : Unexpanded) {
+          NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
+          if (!VD)
+            continue;
+          if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(VD);
+              PVD &&
+              PVD->getDeclContext() ==
+                  FunctionDCForParameterDeclInstantiation &&
+              !ParameterInstantiationScope->findInstantiationUnsafe(PVD)) {
+            // Fall through to the default lookup even if we have failed to
+            // instantiate anything. We're likely to crash thereafter.
+            instantiateParameterToScope(PVD, *ParameterInstantiationScope);
+          }
+        }
+      }
+      return getSema().CheckParameterPacksForExpansion(
+          EllipsisLoc, PatternRange, Unexpanded, TemplateArgs, ShouldExpand,
+          RetainExpansion, NumExpansions);
     }
 
     void ExpandingFunctionParameterPack(ParmVarDecl *Pack) {
@@ -1836,7 +1867,66 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
     // template parameter.
   }
 
+  if (auto *PVD = dyn_cast<ParmVarDecl>(D);
+      PVD && PVD->getDeclContext() == FunctionDCForParameterDeclInstantiation &&
+      !ParameterInstantiationScope->findInstantiationUnsafe(PVD)) {
+    // Fall through to the default lookup even if we have failed to instantiate
+    // anything. We're likely to crash thereafter.
+    instantiateParameterToScope(PVD, *ParameterInstantiationScope);
+  }
+
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
+}
+
+bool TemplateInstantiator::instantiateParameterToScope(
+    ParmVarDecl *OldParm, LocalInstantiationScope &Scope) {
+  // The current context / instantiation scope might have been changed by lambda
+  // expressions. So resume them before we substitute into parameters.
+  llvm::SaveAndRestore CurrentScope(SemaRef.CurrentInstantiationScope, &Scope);
+  Sema::ContextRAII Context(SemaRef, FunctionDCForParameterDeclInstantiation);
+  std::optional<unsigned> NumExpansions;
+  unsigned IndexAdjustment = 0;
+  if (OldParm->isParameterPack()) {
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    TypeLoc TL = OldParm->getTypeSourceInfo()->getTypeLoc();
+    PackExpansionTypeLoc ExpansionTL = TL.castAs<PackExpansionTypeLoc>();
+    TypeLoc Pattern = ExpansionTL.getPatternLoc();
+    SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+
+    assert(!Unexpanded.empty() &&
+           "A pack Decl doesn't contain anything unexpanded?");
+
+    bool ShouldExpand = false;
+    bool RetainExpansion = false;
+    std::optional<unsigned> OrigNumExpansions =
+        ExpansionTL.getTypePtr()->getNumExpansions();
+    NumExpansions = OrigNumExpansions;
+    if (SemaRef.CheckParameterPacksForExpansion(
+            ExpansionTL.getEllipsisLoc(), Pattern.getSourceRange(), Unexpanded,
+            TemplateArgs, ShouldExpand, RetainExpansion, NumExpansions))
+      return true;
+
+    assert(ShouldExpand && !RetainExpansion &&
+           "Shouldn't retain an expansion here!");
+    Scope.MakeInstantiatedLocalArgPack(OldParm);
+
+    for (unsigned I = 0; I != *NumExpansions; ++I) {
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+      ParmVarDecl *NewParm = SemaRef.SubstParmVarDecl(
+          OldParm, TemplateArgs, /*indexAdjustment=*/IndexAdjustment++,
+          NumExpansions, /*ExpectParameterPack=*/false,
+          /*EvaluateConstraints=*/false);
+      if (!NewParm)
+        return true;
+    }
+
+    return false;
+  }
+  ParmVarDecl *NewParm = SemaRef.SubstParmVarDecl(
+      OldParm, TemplateArgs,
+      /*indexAdjustment=*/IndexAdjustment, std::nullopt,
+      /*ExpectParameterPack=*/false);
+  return !NewParm;
 }
 
 Decl *TemplateInstantiator::TransformDefinition(SourceLocation Loc, Decl *D) {
@@ -4259,10 +4349,17 @@ Sema::SubstExpr(Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs) {
 
 ExprResult
 Sema::SubstConstraintExpr(Expr *E,
-                          const MultiLevelTemplateArgumentList &TemplateArgs) {
-  // FIXME: should call SubstExpr directly if this function is equivalent or
-  //        should it be different?
-  return SubstExpr(E, TemplateArgs);
+                          const MultiLevelTemplateArgumentList &TemplateArgs,
+                          DeclContext *InstantiatingFunctionDC) {
+  if (!E)
+    return E;
+
+  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
+                                    DeclarationName());
+  Instantiator.setInstantiatingFunctionDC(InstantiatingFunctionDC);
+  Instantiator.setParameterInstantiationScope(CurrentInstantiationScope);
+
+  return Instantiator.TransformExpr(E);
 }
 
 ExprResult Sema::SubstConstraintExprWithoutSatisfaction(
@@ -4346,7 +4443,7 @@ static const Decl *getCanonicalParmVarDecl(const Decl *D) {
 
 
 llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
-LocalInstantiationScope::findInstantiationOf(const Decl *D) {
+LocalInstantiationScope::findInstantiationUnsafe(const Decl *D) {
   D = getCanonicalParmVarDecl(D);
   for (LocalInstantiationScope *Current = this; Current;
        Current = Current->Outer) {
@@ -4371,6 +4468,14 @@ LocalInstantiationScope::findInstantiationOf(const Decl *D) {
       break;
   }
 
+  return nullptr;
+}
+
+llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
+LocalInstantiationScope::findInstantiationOf(const Decl *D) {
+  auto *Result = findInstantiationUnsafe(D);
+  if (Result)
+    return Result;
   // If we're performing a partial substitution during template argument
   // deduction, we may not have values for template parameters yet.
   if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||

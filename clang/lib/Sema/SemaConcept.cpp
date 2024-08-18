@@ -470,10 +470,27 @@ static ExprResult calculateConstraintSatisfaction(
 
         SatisfactionStackRAII StackRAII(S, Template, ID);
 
+        DeclContext *FunctionDC = nullptr;
+        if (auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(Template)) {
+          FunctionDecl *FD = FTD->getTemplatedDecl();
+          FunctionDC = FD;
+          // The function has been instantiated. Don't bother to instantiate its
+          // parameters then.
+          if (FD->getTemplateInstantiationPattern(/*ForDefinition=*/false))
+            FunctionDC = nullptr;
+          else if (FunctionTemplateDecl *FromMemTempl =
+                       FTD->getInstantiatedFromMemberTemplate()) {
+            while (FromMemTempl->getInstantiatedFromMemberTemplate())
+              FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
+            FunctionDC = FromMemTempl->getTemplatedDecl();
+          }
+        }
+
         // We do not want error diagnostics escaping here.
         Sema::SFINAETrap Trap(S);
         SubstitutedExpression =
-            S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL);
+            S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL,
+                                  /*InstantiatingFunctionDC=*/FunctionDC);
 
         if (SubstitutedExpression.isInvalid() || Trap.hasErrorOccurred()) {
           // C++2a [temp.constr.atomic]p1
@@ -1122,102 +1139,6 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
                                      PointOfInstantiation, Satisfaction);
 }
 
-namespace {
-
-// We employ a TreeTransform because RAV couldn't recurse into a bunch of
-// Exprs e.g. SizeOfPackExpr, CXXFoldExpr, etc.
-// FIXME: Could we do the Decl instantiation as we substitute into
-// the constraint expressions?
-class InstantiateReferencedParameter
-    : public TreeTransform<InstantiateReferencedParameter> {
-  const MultiLevelTemplateArgumentList &TemplateArgs;
-
-  llvm::SmallPtrSet<ParmVarDecl *, 4> InstantiatedDecls;
-
-  FunctionDecl *PrimaryTemplatedFunction;
-
-  using inherited = TreeTransform<InstantiateReferencedParameter>;
-
-  bool instantiateParameterToScope(ParmVarDecl *OldParm,
-                                   LocalInstantiationScope &Scope) {
-    // The current context might have been changed by lambda expressions. So
-    // resume it before we substitute into parameters.
-    Sema::ContextRAII Context(SemaRef, PrimaryTemplatedFunction);
-    std::optional<unsigned> NumExpansions;
-    ParmVarDecl *NewParm = nullptr;
-    unsigned IndexAdjustment = 0;
-    if (OldParm->isParameterPack()) {
-      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-      TypeLoc TL = OldParm->getTypeSourceInfo()->getTypeLoc();
-      PackExpansionTypeLoc ExpansionTL = TL.castAs<PackExpansionTypeLoc>();
-      TypeLoc Pattern = ExpansionTL.getPatternLoc();
-      SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
-
-      assert(!Unexpanded.empty() &&
-             "A pack Decl doesn't contain anything unexpanded?");
-
-      bool ShouldExpand = false;
-      bool RetainExpansion = false;
-      std::optional<unsigned> OrigNumExpansions =
-          ExpansionTL.getTypePtr()->getNumExpansions();
-      NumExpansions = OrigNumExpansions;
-      if (SemaRef.CheckParameterPacksForExpansion(
-              ExpansionTL.getEllipsisLoc(), Pattern.getSourceRange(),
-              Unexpanded, TemplateArgs, ShouldExpand, RetainExpansion,
-              NumExpansions))
-        return true;
-
-      assert(ShouldExpand && !RetainExpansion &&
-             "Shouldn't retain an expansion here!");
-      Scope.MakeInstantiatedLocalArgPack(OldParm);
-
-      for (unsigned I = 0; I != *NumExpansions; ++I) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
-        ParmVarDecl *NewParm = SemaRef.SubstParmVarDecl(
-            OldParm, TemplateArgs, /*indexAdjustment=*/IndexAdjustment++,
-            NumExpansions, /*ExpectParameterPack=*/false,
-            /*EvaluateConstraints=*/false);
-        if (!NewParm)
-          return true;
-      }
-
-      return false;
-    }
-    NewParm = SemaRef.SubstParmVarDecl(OldParm, TemplateArgs,
-                                       /*indexAdjustment=*/IndexAdjustment,
-                                       std::nullopt,
-                                       /*ExpectParameterPack=*/false);
-    if (!NewParm)
-      return true;
-    Scope.InstantiatedLocal(OldParm, NewParm);
-    return false;
-  }
-
-public:
-  InstantiateReferencedParameter(
-      Sema &SemaRef, const MultiLevelTemplateArgumentList &TemplateArgs,
-      FunctionDecl *PrimaryTemplatedFunction)
-      : inherited(SemaRef), TemplateArgs(TemplateArgs),
-        PrimaryTemplatedFunction(PrimaryTemplatedFunction) {}
-
-  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
-    if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(D);
-        PVD && PVD->getDeclContext() == PrimaryTemplatedFunction &&
-        !InstantiatedDecls.contains(PVD)) {
-      instantiateParameterToScope(PVD, *SemaRef.CurrentInstantiationScope);
-      InstantiatedDecls.insert(PVD);
-    }
-    return D;
-  }
-
-  void TraverseConstraintExprs(ArrayRef<const Expr *> Exprs) {
-    for (auto *E : Exprs)
-      TransformExpr(const_cast<Expr *>(E));
-  }
-};
-
-} // namespace
-
 bool Sema::CheckFunctionConstraintsWithoutInstantiation(
     SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
     ArrayRef<TemplateArgument> TemplateArgs,
@@ -1247,17 +1168,6 @@ bool Sema::CheckFunctionConstraintsWithoutInstantiation(
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
 
-  FunctionDecl *PatternDecl = FD;
-
-  if (FunctionTemplateDecl *FromMemTempl =
-          Template->getInstantiatedFromMemberTemplate()) {
-    while (FromMemTempl->getInstantiatedFromMemberTemplate())
-      FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
-    PatternDecl = FromMemTempl->getTemplatedDecl();
-  }
-
-  InstantiateReferencedParameter(*this, MLTAL, PatternDecl)
-      .TraverseConstraintExprs(TemplateAC);
 
   Qualifiers ThisQuals;
   CXXRecordDecl *Record = nullptr;
