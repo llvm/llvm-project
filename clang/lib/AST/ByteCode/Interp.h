@@ -1853,6 +1853,17 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
+  // This is much simpler for integral pointers, so handle them first.
+  if (Ptr.isIntegralPointer()) {
+    uint64_t V = Ptr.getIntegerRepresentation();
+    uint64_t O = static_cast<uint64_t>(Offset) * Ptr.elemSize();
+    if constexpr (Op == ArithOp::Add)
+      S.Stk.push<Pointer>(V + O, Ptr.asIntPointer().Desc);
+    else
+      S.Stk.push<Pointer>(V - O, Ptr.asIntPointer().Desc);
+    return true;
+  }
+
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
   uint64_t Index;
   if (Ptr.isOnePastEnd())
