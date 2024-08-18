@@ -15615,12 +15615,12 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
       }
     } else {
-      if (RHS.getComplexIntReal() == 0 && RHS.getComplexIntImag() == 0)
-        return Error(E, diag::note_expr_divide_by_zero);
-
       ComplexValue LHS = Result;
       APSInt Den = RHS.getComplexIntReal() * RHS.getComplexIntReal() +
         RHS.getComplexIntImag() * RHS.getComplexIntImag();
+      if (Den.isZero())
+        return Error(E, diag::note_expr_divide_by_zero);
+
       Result.getComplexIntReal() =
         (LHS.getComplexIntReal() * RHS.getComplexIntReal() +
          LHS.getComplexIntImag() * RHS.getComplexIntImag()) / Den;
