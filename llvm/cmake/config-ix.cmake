@@ -3,6 +3,34 @@ if( WIN32 AND NOT CYGWIN )
   set(PURE_WINDOWS 1)
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "AIX")
+  set(AIX 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  set(FREEBSD 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+  set(HAIKU 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(LINUX 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
+  set(NETBSD 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+  set(OPENBSD 1)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+  set(SOLARIS 1)
+endif()
+
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
@@ -16,6 +44,8 @@ include(CMakePushCheckState)
 include(CheckCompilerVersion)
 include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
+
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
   # Used by check_symbol_exists:
@@ -40,28 +70,83 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
-# include checks
-check_include_file(dlfcn.h HAVE_DLFCN_H)
-check_include_file(errno.h HAVE_ERRNO_H)
-check_include_file(fcntl.h HAVE_FCNTL_H)
-check_include_file(link.h HAVE_LINK_H)
-check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
-if( NOT PURE_WINDOWS )
-  check_include_file(pthread.h HAVE_PTHREAD_H)
+if (AIX OR ANDROID OR APPLE OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_DLFCN_H 1)
 endif()
-check_include_file(signal.h HAVE_SIGNAL_H)
-check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
-check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
-check_include_file(sys/param.h HAVE_SYS_PARAM_H)
-check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
-check_include_file(sys/stat.h HAVE_SYS_STAT_H)
-check_include_file(sys/time.h HAVE_SYS_TIME_H)
-check_include_file(sys/types.h HAVE_SYS_TYPES_H)
-check_include_file(sysexits.h HAVE_SYSEXITS_H)
-check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file(unistd.h HAVE_UNISTD_H)
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_ERRNO_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR HAIKU OR FREEBSD OR LINUX OR SOLARIS)
+  set(HAVE_FCNTL_H 1)
+endif()
+
+if (ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_FENV_H 1)
+endif()
+
+if (ANDROID OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_LINK_H 1)
+endif()
+
+if (APPLE OR LLVM_USING_GLIBC)
+  set(HAVE_MACH_MACH_H 1)
+endif()
+
+if (APPLE OR LLVM_USING_GLIBC)
+  set(HAVE_MALLOC_MALLOC_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR OPENBSD OR SOLARIS)
+  set(HAVE_PTHREAD_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_SIGNAL_H 1)
+endif()
+
+if (ANDROID OR APPLE OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_SYS_IOCTL_H 1)
+endif()
+
+if (ANDROID OR APPLE OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_SYS_MMAN_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_SYS_PARAM_H 1)
+endif()
+
+if (ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_SYS_RESOURCE_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_SYS_STAT_H 1)
+endif()
+
+if (ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_SYS_TIME_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_SYS_TYPES_H 1)
+endif()
+
+if (ANDROID OR APPLE OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD)
+  set(HAVE_SYSEXITS_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR SOLARIS)
+  set(HAVE_TERMIOS_H 1)
+endif()
+
+if (AIX OR ANDROID OR APPLE OR CYGWIN OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+  set(HAVE_UNISTD_H 1)
+endif()
+
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_include_file(fenv.h HAVE_FENV_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
@@ -76,7 +161,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
@@ -339,7 +423,6 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 if( LLVM_USING_GLIBC )
   add_compile_definitions(_GNU_SOURCE)
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
