@@ -45,30 +45,6 @@ def riscv_clmul   : SDNode<"RISCVISD::CLMUL",   SDTIntBinOp>;
 def riscv_clmulh  : SDNode<"RISCVISD::CLMULH",  SDTIntBinOp>;
 def riscv_clmulr  : SDNode<"RISCVISD::CLMULR",  SDTIntBinOp>;
 
-def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
-  let Name = "UImmLog2XLenHalf";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidUImmLog2XLenHalf";
-}
-
-def shfl_uimm : RISCVOp, ImmLeaf<XLenVT, [{
-  if (Subtarget->is64Bit())
-    return isUInt<5>(Imm);
-  return isUInt<4>(Imm);
-}]> {
-  let ParserMatchClass = UImmLog2XLenHalfAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_UIMM_SHFL";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    if (STI.getTargetTriple().isArch64Bit())
-      return  isUInt<5>(Imm);
-    return isUInt<4>(Imm);
-  }];
-}
-
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
   return CurDAG->getTargetConstant(llvm::countr_one(N->getZExtValue()),
