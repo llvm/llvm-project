@@ -4855,27 +4855,29 @@ multiclass avx512_binop_all<bits<8> opc, string OpcodeStr,
                             X86SchedWriteWidths sched,
                             AVX512VLVectorVTInfo _SrcVTInfo,
                             AVX512VLVectorVTInfo _DstVTInfo,
-                            SDNode OpNode, Predicate prd,  bit IsCommutable = 0> {
+                            SDNode OpNode, Predicate prd,
+                            X86VectorVTInfo _VTInfo512 = _SrcVTInfo.info512,
+                            X86VectorVTInfo _VTInfo256 = _SrcVTInfo.info256,
+                            X86VectorVTInfo _VTInfo128 = _SrcVTInfo.info128> {
   let Predicates = [prd] in
     defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, sched.ZMM, OpNode,
                                  _SrcVTInfo.info512, _DstVTInfo.info512,
-                                 v8i64_info, IsCommutable>,
-                                  EVEX_V512, EVEX_CD8<64, CD8VF>, REX_W;
+                                 _VTInfo512>, EVEX_V512;
   let Predicates = [HasVLX, prd] in {
     defm NAME#Z256 : avx512_binop_rm2<opc, OpcodeStr, sched.YMM, OpNode,
                                       _SrcVTInfo.info256, _DstVTInfo.info256,
-                                      v4i64x_info, IsCommutable>,
-                                      EVEX_V256, EVEX_CD8<64, CD8VF>, REX_W;
+                                      _VTInfo256>, EVEX_V256;
     defm NAME#Z128 : avx512_binop_rm2<opc, OpcodeStr, sched.XMM, OpNode,
                                       _SrcVTInfo.info128, _DstVTInfo.info128,
-                                      v2i64x_info, IsCommutable>,
-                                     EVEX_V128, EVEX_CD8<64, CD8VF>, REX_W;
+                                      _VTInfo128>, EVEX_V128;
   }
 }
 
 defm VPMULTISHIFTQB : avx512_binop_all<0x83, "vpmultishiftqb", SchedWriteVecALU,
-                                avx512vl_i8_info, avx512vl_i8_info,
-                                X86multishift, HasVBMI, 0>, T8;
+                                       avx512vl_i8_info, avx512vl_i8_info,
+                                       X86multishift, HasVBMI, v8i64_info,
+                                       v4i64x_info, v2i64x_info>, T8,
+                                       EVEX_CD8<64, CD8VF>, REX_W;
 
 multiclass avx512_packs_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             X86VectorVTInfo _Src, X86VectorVTInfo _Dst,
@@ -12670,34 +12672,12 @@ defm VP2INTERSECTD : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i32_info>;
 defm VP2INTERSECTQ : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i64_info>, REX_W;
 }
 
-multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
-                             X86SchedWriteWidths sched,
-                             AVX512VLVectorVTInfo _SrcVTInfo,
-                             AVX512VLVectorVTInfo _DstVTInfo,
-                             SDNode OpNode, Predicate prd,
-                             bit IsCommutable = 0> {
-  let Predicates = [prd] in
-    defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, sched.ZMM, OpNode,
-                                   _SrcVTInfo.info512, _DstVTInfo.info512,
-                                   _SrcVTInfo.info512, IsCommutable>,
-                                   EVEX_V512, EVEX_CD8<32, CD8VF>;
-  let Predicates = [HasVLX, prd] in {
-    defm NAME#Z256 : avx512_binop_rm2<opc, OpcodeStr, sched.YMM, OpNode,
-                                      _SrcVTInfo.info256, _DstVTInfo.info256,
-                                      _SrcVTInfo.info256, IsCommutable>,
-                                     EVEX_V256, EVEX_CD8<32, CD8VF>;
-    defm NAME#Z128 : avx512_binop_rm2<opc, OpcodeStr, sched.XMM, OpNode,
-                                      _SrcVTInfo.info128, _DstVTInfo.info128,
-                                      _SrcVTInfo.info128, IsCommutable>,
-                                      EVEX_V128, EVEX_CD8<32, CD8VF>;
-  }
-}
-
 let ExeDomain = SSEPackedSingle in
-defm VCVTNE2PS2BF16 : avx512_binop_all2<0x72, "vcvtne2ps2bf16",
-                                        SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
-                                        avx512vl_f32_info, avx512vl_bf16_info,
-                                        X86cvtne2ps2bf16, HasBF16, 0>, T8, XD;
+defm VCVTNE2PS2BF16 : avx512_binop_all<0x72, "vcvtne2ps2bf16",
+                                       SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
+                                       avx512vl_f32_info, avx512vl_bf16_info,
+                                       X86cvtne2ps2bf16, HasBF16>, T8, XD,
+                                       EVEX_CD8<32, CD8VF>;
 
 // Truncate Float to BFloat16
 multiclass avx512_cvtps2bf16<bits<8> opc, string OpcodeStr,

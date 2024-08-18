@@ -47,6 +47,8 @@ public:
   bool match(SDValue N, unsigned Opcode) const {
     return N->getOpcode() == Opcode;
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 template <typename Pattern, typename MatchContext>
@@ -390,7 +392,8 @@ template <unsigned OpIdx, typename... OpndPreds> struct Operands_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     // Returns false if there are more operands than predicates;
-    return N->getNumOperands() == OpIdx;
+    // Ignores the last two operands if both the Context and the Node are VP
+    return Ctx.getNumOperands(N) == OpIdx;
   }
 };
 
@@ -424,8 +427,9 @@ template <bool ExcludeChain> struct EffectiveOperands {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) {
-    const unsigned TotalNumOps = N->getNumOperands();
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx) {
+    const unsigned TotalNumOps = Ctx.getNumOperands(N);
     FirstIndex = TotalNumOps;
     for (unsigned I = 0; I < TotalNumOps; ++I) {
       // Count the number of non-chain and non-glue nodes (we ignore chain
@@ -444,7 +448,9 @@ template <> struct EffectiveOperands<false> {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx)
+      : Size(Ctx.getNumOperands(N)) {}
 };
 
 // === Ternary operations ===
@@ -463,7 +469,7 @@ struct TernaryOpc_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
                Op1.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
@@ -515,7 +521,7 @@ struct BinaryOpc_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
       return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
               RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
@@ -667,7 +673,7 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
       return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
     }
@@ -735,6 +741,14 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToUI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_UINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
 }
 
 // === Constants ===

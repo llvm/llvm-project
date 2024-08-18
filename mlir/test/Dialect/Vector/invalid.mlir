@@ -1862,3 +1862,16 @@ func.func @invalid_step_2d() {
   vector.step : vector<2x4xf32>
   return
 }
+
+// -----
+
+func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
+  // expected-error @+1 {{'vector.matrix_multiply' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[4]xf64>'}}
+  %c = vector.matrix_multiply %a, %b {
+    lhs_rows = 2: i32,
+    lhs_columns = 2: i32 ,
+    rhs_columns = 2: i32 }
+  : (vector<[4]xf64>, vector<4xf64>) -> vector<4xf64>
+
+  return
+}

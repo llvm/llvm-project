@@ -91,10 +91,10 @@ SwitchTypeMatcher::~SwitchTypeMatcher() {
     delete C.second;
 }
 
-CheckPredicateMatcher::CheckPredicateMatcher(
-    const TreePredicateFn &pred, const SmallVectorImpl<unsigned> &Ops)
+CheckPredicateMatcher::CheckPredicateMatcher(const TreePredicateFn &pred,
+                                             ArrayRef<unsigned> Ops)
     : Matcher(CheckPredicate), Pred(pred.getOrigPatFragRecord()),
-      Operands(Ops.begin(), Ops.end()) {}
+      Operands(Ops) {}
 
 TreePredicateFn CheckPredicateMatcher::getPredicate() const {
   return TreePredicateFn(Pred);

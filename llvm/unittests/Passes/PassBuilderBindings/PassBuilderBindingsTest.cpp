@@ -60,6 +60,7 @@ TEST_F(PassBuilderCTest, Basic) {
   LLVMPassBuilderOptionsSetLoopUnrolling(Options, 1);
   LLVMPassBuilderOptionsSetVerifyEach(Options, 1);
   LLVMPassBuilderOptionsSetDebugLogging(Options, 0);
+  LLVMPassBuilderOptionsSetAAPipeline(Options, "basic-aa");
   if (LLVMErrorRef E = LLVMRunPasses(Module, "default<O2>", TM, Options)) {
     char *Msg = LLVMGetErrorMessage(E);
     LLVMConsumeError(E);

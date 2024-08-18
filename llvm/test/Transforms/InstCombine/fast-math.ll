@@ -709,13 +709,15 @@ define double @sqrt_intrinsic_three_args5(double %x, double %y) {
   ret double %sqrt
 }
 
-define double @sqrt_intrinsic_three_args6(double %x, double %y) {
+define double @sqrt_intrinsic_three_args6(double %x, ptr %yp) {
 ; CHECK-LABEL: @sqrt_intrinsic_three_args6(
+; CHECK-NEXT:    [[Y:%.*]] = load double, ptr [[YP:%.*]], align 8
 ; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y:%.*]])
+; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y]])
 ; CHECK-NEXT:    [[SQRT:%.*]] = fmul fast double [[FABS]], [[SQRT1]]
 ; CHECK-NEXT:    ret double [[SQRT]]
 ;
+  %y = load double, ptr %yp ; thwart complexity-based canonicalization
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %y, %mul
   %sqrt = call fast double @llvm.sqrt.f64(double %mul2)
