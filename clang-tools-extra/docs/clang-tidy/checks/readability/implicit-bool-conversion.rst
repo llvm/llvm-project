@@ -137,7 +137,7 @@ Options
 .. option::  UseUpperCaseLiteralSuffix
 
    When `true`, the replacements will use an uppercase literal suffix in the
-   provided fixes. Default a lowercase literal suffix is used.
+   provided fixes. Default is `false`.
 
     Example
 
