@@ -31,7 +31,7 @@ struct a {
     // expected-note@-1 {{candidate function}}
 };
 template void a<int>::no_candidate();
-// expected-error@-1 {{no candidate for explicit instantiation of 'no_candidate'}}
+// expected-error@-1 {{no viable candidate for explicit instantiation of 'no_candidate'}}
 
 template void a<int>::ambiguous();
 // expected-error@-1 {{partial ordering for explicit instantiation of 'ambiguous' is ambiguous}}
