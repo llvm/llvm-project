@@ -161,6 +161,10 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- The floating point comparison builtins (``__builtin_isgreater``,
+  ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
+  ``__builtin_signbit`` can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
