@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-project( libclc VERSION 0.2.0 LANGUAGES CXX C)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(libclc VERSION 0.2.0 LANGUAGES CXX C)
+endif()
+set(LLVM_SUBPROJECT_TITLE "libclc")
 
 set(CMAKE_CXX_STANDARD 17)
 
 # Add path for custom modules
-list( INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake/modules" )
+list( INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
 
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 set( LIBCLC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
@@ -49,12 +52,12 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
     message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
   endif()
 
-  # Import required tools as targets
+  # Import required tools
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
     foreach( tool IN ITEMS clang llvm-as llvm-link opt )
       find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-      add_executable( libclc::${tool} IMPORTED GLOBAL )
-      set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
+      set( ${tool}_exe ${LLVM_TOOL_${tool}} )
+      set( ${tool}_target )
     endforeach()
   endif()
 else()
@@ -71,9 +74,10 @@ else()
   endif()
 
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
-    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-      add_executable(libclc::${tool} ALIAS ${tool})
-    endforeach()
+    setup_host_tool( clang CLANG clang_exe clang_target )
+    setup_host_tool( llvm-as LLVM_AS llvm-as_exe llvm-as_target )
+    setup_host_tool( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
+    setup_host_tool( opt OPT opt_exe opt_target )
   endif()
 endif()
 
@@ -88,14 +92,13 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     find_program( LLVM_CUSTOM_TOOL_${tool} ${tool}
       PATHS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    add_executable( libclc::${tool} IMPORTED GLOBAL )
-    set_target_properties( libclc::${tool} PROPERTIES
-      IMPORTED_LOCATION ${LLVM_CUSTOM_TOOL_${tool}} )
+    set( ${tool}_exe ${LLVM_CUSTOM_TOOL_${tool}} )
+    set( ${tool}_target )
   endforeach()
 endif()
 
 foreach( tool IN ITEMS clang opt llvm-as llvm-link )
-  if( NOT TARGET libclc::${tool} )
+  if( NOT EXISTS "${${tool}_exe}" AND NOT TARGET "${${tool}_target}" )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
 endforeach()
@@ -165,8 +168,11 @@ set(LLVM_LINK_COMPONENTS
 )
 if( LIBCLC_STANDALONE_BUILD )
   add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
+  set( prepare_builtins_exe prepare_builtins )
+  set( prepare_builtins_target prepare_builtins )
 else()
   add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+  setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
 endif()
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
@@ -211,7 +217,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
-       INPUTS ${PROJECT_SOURCE_DIR}/generic/lib/${file}.ll
+       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/${file}.ll
     )
     install( FILES $<TARGET_PROPERTY:${file},TARGET_FILE> ARCHIVE
       DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
@@ -219,18 +225,20 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 endif()
 
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
+file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
 add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
+set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
   OUTPUT clspv-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
+set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 enable_testing()
 
@@ -264,7 +272,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   foreach( l ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS} )
     foreach( s "SOURCES" "SOURCES_${LLVM_MAJOR}.${LLVM_MINOR}" )
       file( TO_CMAKE_PATH ${l}/lib/${s} file_loc )
-      file( TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/${file_loc} loc )
+      file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
       # Prepend the location to give higher priority to
       # specialized implementation
       if( EXISTS ${loc} )
@@ -339,7 +347,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list( APPEND build_flags
       -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
-      -I${PROJECT_SOURCE_DIR}/generic/include
+      -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
       # FIXME: Fix libclc to not require disabling this noisy warning
       -Wno-bitwise-conditional-parentheses
     )
@@ -360,9 +368,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         # the path (e.g., ironing out any ".."), then make it relative to the
         # root directory again, and use that relative path component for the
         # binary path.
-        get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR} )
-        file( RELATIVE_PATH root_rel_path ${PROJECT_SOURCE_DIR} ${abs_path} )
-        set( input_file ${PROJECT_SOURCE_DIR}/${file} )
+        get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
+        file( RELATIVE_PATH root_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${abs_path} )
+        set( input_file ${CMAKE_CURRENT_SOURCE_DIR}/${file} )
         set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
       endif()
 
@@ -373,16 +381,23 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         INPUT ${input_file}
         OUTPUT ${output_file}
         EXTRA_OPTS "${mcpu}" -fno-builtin -nostdlib
-                   "${build_flags}" -I${PROJECT_SOURCE_DIR}/${file_dir}
+                   "${build_flags}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
+        DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
       )
       list( APPEND bytecode_files ${output_file} )
     endforeach()
 
-    set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
+    set( builtins_comp_lib_tgt builtins.comp.${arch_suffix} )
+    add_custom_target( ${builtins_comp_lib_tgt}
+      DEPENDS ${bytecode_files}
+    )
+    set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
+    set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
     link_bc(
       TARGET ${builtins_link_lib_tgt}
       INPUTS ${bytecode_files}
+      DEPENDENCIES ${builtins_comp_lib_tgt}
     )
 
     set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
@@ -391,9 +406,10 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
         COMMAND libclc::llvm-spirv ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${builtins_link_lib}
+        DEPENDS ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
@@ -401,15 +417,16 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
       # Add opt target
       add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
-        COMMAND libclc::opt ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
+        COMMAND ${opt_exe} ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
           ${builtins_link_lib}
-        DEPENDS libclc::opt ${builtins_link_lib}
+        DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
       )
       set_target_properties( ${builtins_opt_lib_tgt}
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
+                   FOLDER "libclc/Device IR/Opt"
       )
 
       set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
@@ -417,15 +434,16 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Add prepare target
       set( obj_suffix ${arch_suffix}.bc )
       add_custom_command( OUTPUT ${obj_suffix}
-        COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
-        DEPENDS ${builtins_opt_lib} prepare_builtins )
+        COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
+        DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
+      set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
       # nvptx-- targets don't include workitem builtins
       if( NOT clang_triple MATCHES ".*ptx.*--$" )
         add_test( NAME external-calls-${obj_suffix}
           COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
-          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} )
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
       endif()
 
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
@@ -434,6 +452,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         add_custom_target( ${alias_suffix} ALL
           COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
           DEPENDS prepare-${obj_suffix} )
+        set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/Device IR/Aliases" )
         install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
       endforeach( a )
     endif()

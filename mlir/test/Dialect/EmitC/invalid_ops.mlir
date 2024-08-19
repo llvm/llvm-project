@@ -170,7 +170,7 @@ func.func @add_float_pointer(%arg0: f32, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @div_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.div' op operand #0 must be floating-point type supported by EmitC or integer type supported by EmitC or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.div' op operand #0 must be floating-point type supported by EmitC or integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.div" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -178,7 +178,7 @@ func.func @div_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @mul_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point type supported by EmitC or integer type supported by EmitC or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point type supported by EmitC or integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.mul" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -186,7 +186,7 @@ func.func @mul_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @rem_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer type supported by EmitC or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.rem" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -194,7 +194,7 @@ func.func @rem_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @rem_float(%arg0: f32, %arg1: f32) {
-    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer type supported by EmitC or index or EmitC opaque type, but got 'f32'}}
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer, index or opaque type supported by EmitC, but got 'f32'}}
     %1 = "emitc.rem" (%arg0, %arg1) : (f32, f32) -> f32
     return
 }
@@ -227,7 +227,7 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for, emitc.switch'}}
   emitc.yield
   return
 }
@@ -235,7 +235,7 @@ func.func @test_misplaced_yield() {
 // -----
 
 func.func @test_assign_to_non_variable(%arg1: f32, %arg2: f32) {
-  // expected-error @+1 {{'emitc.assign' op requires first operand (<block argument> of type 'f32' at index: 1) to be a Variable or subscript}}
+  // expected-error @+1 {{'emitc.assign' op requires first operand (<block argument> of type 'f32' at index: 1) to be a get_global, member, member of pointer, subscript or variable}}
   emitc.assign %arg1 : f32 to %arg2 : f32
   return
 }
@@ -448,5 +448,107 @@ emitc.global @myglobal : !emitc.array<2xf32>
 func.func @use_global() {
   // expected-error @+1 {{'emitc.get_global' op result type 'f32' does not match type '!emitc.array<2xf32>' of the global @myglobal}}
   %0 = emitc.get_global @myglobal : f32
+  return
+}
+
+// -----
+
+func.func @member(%arg0: i32) {
+  // expected-error @+1 {{'emitc.member' op operand #0 must be EmitC opaque type, but got 'i32'}}
+  %0 = "emitc.member" (%arg0) {member = "a"} : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @member_of_ptr(%arg0: i32) {
+  // expected-error @+1 {{'emitc.member_of_ptr' op operand #0 must be EmitC opaque type or EmitC pointer type, but got 'i32}}
+  %0 = "emitc.member_of_ptr" (%arg0) {member = "a"} : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i16} : () -> i16
+
+  // expected-error@+1 {{'emitc.switch' op expected region to end with emitc.yield, but got emitc.call_opaque}}
+  emitc.switch %0 : i16
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+  }
+  case 5 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i32} : () -> i32
+
+  emitc.switch %0 : i32
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected integer value}}
+  case {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i8} : () -> i8
+
+  emitc.switch %0 : i8
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 3 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected 'default'}}
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i64} : () -> i64
+
+  // expected-error@+1 {{'emitc.switch' op has duplicate case value: 2}}
+  emitc.switch %0 : i64
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 2 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
   return
 }

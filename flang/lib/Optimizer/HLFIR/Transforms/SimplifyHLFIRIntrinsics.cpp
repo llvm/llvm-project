@@ -35,7 +35,7 @@ class TransposeAsElementalConversion
 public:
   using mlir::OpRewritePattern<hlfir::TransposeOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = transpose.getLoc();

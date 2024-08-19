@@ -16,7 +16,7 @@ define i32 @main(i32 %argc, ptr %argv) norecurse !dbg !18 {
 ; CHECK: alloca ptr
 ; Make sure the metadata is sane. Currently, we just drop the metadata,
 ; so it points to nothing.
-; CHECK: call void @llvm.dbg.value(metadata !2,
+; CHECK: #dbg_value(!2,
 ; CHECK: !2 = !{}
 entry:
   call void @llvm.dbg.value(metadata i32 %argc, metadata !22, metadata !23), !dbg !24

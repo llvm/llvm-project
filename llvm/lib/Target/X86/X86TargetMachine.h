@@ -66,8 +66,7 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                              raw_pwrite_stream *, CodeGenFileType,

@@ -180,8 +180,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}float8_extelt:
-; GCN-DAG: s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GCN-DAG: s_load_dword [[S0:s[0-9]+]], s[0:1], 0x2c
+; GCN-DAG: s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-DAG: s_load_dword [[S0:s[0-9]+]], s[2:3], 0x2c
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 1.0
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 2.0
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40400000
@@ -411,10 +411,10 @@ entry:
 
 ; GCN-LABEL: {{^}}bit4_extelt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0x2c
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s2, s2, 3
+; GCN-NEXT:    s_lshl_b32 s2, s4, 3
 ; GCN-NEXT:    s_lshr_b32 s2, 0x1000100, s2
 ; GCN-NEXT:    s_and_b32 s2, s2, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0

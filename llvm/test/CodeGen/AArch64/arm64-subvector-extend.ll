@@ -951,10 +951,8 @@ define <1 x i128> @sext_v1x64(<1 x i64> %arg) {
 ; CHECK-SD-LABEL: sext_v1x64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    asr x1, x8, #63
-; CHECK-SD-NEXT:    mov.d v0[1], x1
 ; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    asr x1, x0, #63
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v1x64:

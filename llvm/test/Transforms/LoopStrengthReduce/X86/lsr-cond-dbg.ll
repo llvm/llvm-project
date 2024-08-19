@@ -12,7 +12,7 @@
 ; CHECK-LABEL: i:
 ; CHECK-NOT: icmp
 ; CHECK: [[COND:%.*]] = icmp eq i8
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i1 [[COND]]
+; CHECK-NEXT: #dbg_value(i1 [[COND]]
 ; CHECK-NEXT: br i1 [[COND]]
 
 

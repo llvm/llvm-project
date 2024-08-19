@@ -34,7 +34,7 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
     "openmp-enable-delayed-privatization",
     llvm::cl::desc(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
     "openmp-enable-delayed-privatization-staging",
@@ -325,7 +325,7 @@ void insertChildMapInfoIntoParent(
 
 semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
   semantics::Symbol *sym = nullptr;
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (auto *arrayEle =

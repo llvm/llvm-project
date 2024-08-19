@@ -115,9 +115,9 @@ DiagnosedSilenceableFailure transform::MatchStructuredOp::matchOperation(
 
 void transform::MatchStructuredOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getCurrent(), effects);
+  onlyReadsHandle(getCurrentMutable(), effects);
   onlyReadsPayload(effects);
-  producesHandle(getOutputs(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 LogicalResult transform::MatchStructuredOp::verify() {
@@ -707,7 +707,7 @@ LogicalResult transform::MatchStructuredResultOp::verify() {
 
 void transform::MatchStructuredYieldOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getHandles(), effects);
+  onlyReadsHandle(getHandlesMutable(), effects);
   onlyReadsPayload(effects);
 }
 

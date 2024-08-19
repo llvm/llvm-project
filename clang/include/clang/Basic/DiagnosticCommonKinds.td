@@ -275,6 +275,9 @@ def err_too_large_for_fixed_point : Error<
 def err_unimplemented_conversion_with_fixed_point_type : Error<
   "conversion between fixed point and %0 is not yet supported">;
 
+def err_requires_positive_value : Error<
+  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
+
 // SEH
 def err_seh_expected_handler : Error<
   "expected '__except' or '__finally' block">;
@@ -363,6 +366,15 @@ def warn_target_unrecognized_env : Warning<
   InGroup<InvalidCommandLineArgument>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
+
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls can not be tail called on PPC|"
+  "indirect calls can not be tail called on PPC|"
+  "external calls can not be tail called on PPC}0"
+  >;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

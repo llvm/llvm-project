@@ -436,9 +436,10 @@ public:
 
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       if (E->isGLValue())
-        return CGF.Builder.CreateLoad(Address(
-            Result, CGF.ConvertTypeForMem(E->getType()),
-            CGF.getContext().getTypeAlignInChars(E->getType())));
+        return CGF.EmitLoadOfScalar(
+            Address(Result, CGF.convertTypeForLoadStore(E->getType()),
+                    CGF.getContext().getTypeAlignInChars(E->getType())),
+            /*Volatile*/ false, E->getType(), E->getExprLoc());
       return Result;
     }
     return Visit(E->getSubExpr());
@@ -506,6 +507,7 @@ public:
   }
 
   Value *VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E);
+  Value *VisitEmbedExpr(EmbedExpr *E);
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
@@ -1796,6 +1798,12 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
                                                      "usn_addr_cast");
 }
 
+Value *ScalarExprEmitter::VisitEmbedExpr(EmbedExpr *E) {
+  assert(E->getDataElementCount() == 1);
+  auto It = E->begin();
+  return Builder.getInt((*It)->getValue());
+}
+
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   // Vector Mask Case
   if (E->getNumSubExprs() == 2) {
@@ -1937,7 +1945,26 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     }
   }
 
-  return EmitLoadOfLValue(E);
+  llvm::Value *Result = EmitLoadOfLValue(E);
+
+  // If -fdebug-info-for-profiling is specified, emit a pseudo variable and its
+  // debug info for the pointer, even if there is no variable associated with
+  // the pointer's expression.
+  if (CGF.CGM.getCodeGenOpts().DebugInfoForProfiling && CGF.getDebugInfo()) {
+    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Result)) {
+      if (llvm::GetElementPtrInst *GEP =
+              dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
+        if (llvm::Instruction *Pointer =
+                dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
+          QualType Ty = E->getBase()->getType();
+          if (!E->isArrow())
+            Ty = CGF.getContext().getPointerType(Ty);
+          CGF.getDebugInfo()->EmitPseudoVariable(Builder, Pointer, Ty);
+        }
+      }
+    }
+  }
+  return Result;
 }
 
 Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -2347,7 +2374,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
       return EmitLoadOfLValue(DestLV, CE->getExprLoc());
     }
-    return Builder.CreateBitCast(Src, DstTy);
+
+    llvm::Value *Result = Builder.CreateBitCast(Src, DstTy);
+    return CGF.authPointerToPointerCast(Result, E->getType(), DestTy);
   }
   case CK_AddressSpaceConversion: {
     Expr::EvalResult Result;
@@ -2497,6 +2526,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       if (DestTy.mayBeDynamicClass())
         IntToPtr = Builder.CreateLaunderInvariantGroup(IntToPtr);
     }
+
+    IntToPtr = CGF.authPointerToPointerCast(IntToPtr, E->getType(), DestTy);
     return IntToPtr;
   }
   case CK_PointerToIntegral: {
@@ -2512,6 +2543,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         PtrExpr = Builder.CreateStripInvariantGroup(PtrExpr);
     }
 
+    PtrExpr = CGF.authPointerToPointerCast(PtrExpr, E->getType(), DestTy);
     return Builder.CreatePtrToInt(PtrExpr, ConvertType(DestTy));
   }
   case CK_ToVoid: {
@@ -2809,9 +2841,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
           isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
       llvm::Value *amt = llvm::ConstantFP::get(
           VMContext, llvm::APFloat(static_cast<float>(1.0)));
-      llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getAddress(), amt,
-                                  llvm::AtomicOrdering::SequentiallyConsistent);
+      llvm::AtomicRMWInst *old =
+          CGF.emitAtomicRMWInst(aop, LV.getAddress(), amt,
+                                llvm::AtomicOrdering::SequentiallyConsistent);
+
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
@@ -3551,9 +3584,9 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
             EmitScalarConversion(OpInfo.RHS, E->getRHS()->getType(), LHSTy,
                                  E->getExprLoc()),
             LHSTy);
-        Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getAddress(), Amt,
-            llvm::AtomicOrdering::SequentiallyConsistent);
+
+        llvm::AtomicRMWInst *OldVal =
+            CGF.emitAtomicRMWInst(AtomicOp, LHSLV.getAddress(), Amt);
 
         // Since operation is atomic, the result type is guaranteed to be the
         // same as the input in LLVM terms.
@@ -5338,28 +5371,9 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
     CGF.EmitVariablyModifiedType(Ty);
 
   Address ArgValue = Address::invalid();
-  Address ArgPtr = CGF.EmitVAArg(VE, ArgValue);
+  RValue ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
-  llvm::Type *ArgTy = ConvertType(VE->getType());
-
-  // If EmitVAArg fails, emit an error.
-  if (!ArgPtr.isValid()) {
-    CGF.ErrorUnsupported(VE, "va_arg expression");
-    return llvm::UndefValue::get(ArgTy);
-  }
-
-  // FIXME Volatility.
-  llvm::Value *Val = Builder.CreateLoad(ArgPtr);
-
-  // If EmitVAArg promoted the type, we must truncate it.
-  if (ArgTy != Val->getType()) {
-    if (ArgTy->isPointerTy() && !Val->getType()->isPointerTy())
-      Val = Builder.CreateIntToPtr(Val, ArgTy);
-    else
-      Val = Builder.CreateTrunc(Val, ArgTy);
-  }
-
-  return Val;
+  return ArgPtr.getScalarVal();
 }
 
 Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {

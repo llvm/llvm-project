@@ -34,7 +34,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -63,10 +62,9 @@ public:
   virtual ~IRBuilderDefaultInserter();
 
   virtual void InsertHelper(Instruction *I, const Twine &Name,
-                            BasicBlock *BB,
                             BasicBlock::iterator InsertPt) const {
-    if (BB)
-      I->insertInto(BB, InsertPt);
+    if (InsertPt.isValid())
+      I->insertInto(InsertPt.getNodeParent(), InsertPt);
     I->setName(Name);
   }
 };
@@ -83,9 +81,8 @@ public:
       : Callback(std::move(Callback)) {}
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     Callback(I);
   }
 };
@@ -143,7 +140,7 @@ public:
   /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
-    Inserter.InsertHelper(I, Name, BB, InsertPt);
+    Inserter.InsertHelper(I, Name, InsertPt);
     AddMetadataToInst(I);
     return I;
   }
@@ -1018,12 +1015,32 @@ public:
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
   }
 
+  /// Create call to the minimumnum intrinsic.
+  Value *CreateMinimumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, nullptr,
+                                 Name);
+  }
+
+  /// Create call to the maximum intrinsic.
+  Value *CreateMaximumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, nullptr,
+                                 Name);
+  }
+
   /// Create call to the copysign intrinsic.
   Value *CreateCopySign(Value *LHS, Value *RHS,
                         Instruction *FMFSource = nullptr,
                         const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::copysign, LHS, RHS, FMFSource,
                                  Name);
+  }
+
+  /// Create call to the ldexp intrinsic.
+  Value *CreateLdexp(Value *Src, Value *Exp, Instruction *FMFSource = nullptr,
+                     const Twine &Name = "") {
+    assert(!IsFPConstrained && "TODO: Support strictfp");
+    return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
+                           {Src, Exp}, FMFSource, Name);
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
@@ -1051,7 +1068,7 @@ public:
 
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
                            {}, nullptr, Name);
   }
@@ -1772,14 +1789,14 @@ public:
 
   AllocaInst *CreateAlloca(Type *Ty, unsigned AddrSpace,
                            Value *ArraySize = nullptr, const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
   }
 
   AllocaInst *CreateAlloca(Type *Ty, Value *ArraySize = nullptr,
                            const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     unsigned AddrSpace = DL.getAllocaAddrSpace();
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
@@ -1817,7 +1834,7 @@ public:
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
                               bool isVolatile, const Twine &Name = "") {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = DL.getABITypeAlign(Ty);
     }
     return Insert(new LoadInst(Ty, Ptr, Twine(), isVolatile, *Align), Name);
@@ -1826,7 +1843,7 @@ public:
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                 bool isVolatile = false) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = DL.getABITypeAlign(Val->getType());
     }
     return Insert(new StoreInst(Val, Ptr, isVolatile, *Align));
@@ -1843,7 +1860,7 @@ public:
                       AtomicOrdering FailureOrdering,
                       SyncScope::ID SSID = SyncScope::System) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(New->getType()));
     }
 
@@ -1856,7 +1873,7 @@ public:
                                  AtomicOrdering Ordering,
                                  SyncScope::ID SSID = SyncScope::System) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
@@ -1897,16 +1914,17 @@ public:
   }
 
   Value *CreateConstGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0, unsigned Idx1,
-                            const Twine &Name = "") {
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NWFlags = GEPNoWrapFlags::none()) {
     Value *Idxs[] = {
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags))
       return V;
 
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
   }
 
   Value *CreateConstInBoundsGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1970,7 +1988,9 @@ public:
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
                          const Twine &Name = "") {
-    return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
+    GEPNoWrapFlags NWFlags =
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap();
+    return CreateConstGEP2_32(Ty, Ptr, 0, Idx, Name, NWFlags);
   }
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",

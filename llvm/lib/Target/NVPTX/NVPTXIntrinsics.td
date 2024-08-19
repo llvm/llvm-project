@@ -335,6 +335,48 @@ def INT_FENCE_SC_CLUSTER:
        MEMBAR<"fence.sc.cluster;", int_nvvm_fence_sc_cluster>,
        Requires<[hasPTX<78>, hasSM<90>]>;
 
+// Proxy fence (uni-directional)
+// fence.proxy.tensormap.release variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins),
+                  "fence.proxy.tensormap::generic.release." # Scope # ";", [(Intr)]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CTA:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_release_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_CLUSTER:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_release_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_GPU:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_release_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_SYS:
+      FENCE_PROXY_TENSORMAP_GENERIC_RELEASE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_release_sys>;
+
+// fence.proxy.tensormap.acquire variants
+
+class FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins Int64Regs:$addr),
+                  "fence.proxy.tensormap::generic.acquire." # Scope # " [$addr], 128;",
+                  [(Intr Int64Regs:$addr, (i32 128))]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CTA :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cta",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cta>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CLUSTER :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"cluster",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_cluster>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_GPU :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"gpu",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_gpu>;
+def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_SYS :
+      FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<"sys",
+        int_nvvm_fence_proxy_tensormap_generic_acquire_sys>;
+
 //-----------------------------------
 // Async Copy Functions
 //-----------------------------------
@@ -2475,6 +2517,7 @@ defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen, useShortPtrLocal>
 defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen, useShortPtrShared>;
 defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen, False>;
 defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen, useShortPtrConst>;
+defm cvta_param  : NG_TO_G<"param", int_nvvm_ptr_param_to_gen, False>;
 
 defm cvta_to_local  : G_TO_NG<"local", int_nvvm_ptr_gen_to_local, useShortPtrLocal>;
 defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared, useShortPtrShared>;
@@ -6724,6 +6767,7 @@ class WMMA_MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                   # FragC.regstring # ";";
 }
 
+let isConvergent = true in {
 defset list<WMMA_INSTR> WMMAs  = {
   foreach layout_a = ["row", "col"] in {
     foreach layout_b = ["row", "col"] in {
@@ -6745,6 +6789,7 @@ defset list<WMMA_INSTR> WMMAs  = {
     } // layout_b
   } // layout_a
 } // defset
+}
 
 // MMA
 class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
@@ -6774,6 +6819,7 @@ class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                   # FragC.regstring # ";";
 }
 
+let isConvergent = true in {
 defset list<WMMA_INSTR> MMAs  = {
   foreach layout_a = ["row", "col"] in {
     foreach layout_b = ["row", "col"] in {
@@ -6793,6 +6839,7 @@ defset list<WMMA_INSTR> MMAs  = {
     } // layout_b
   } // layout_a
 } // defset
+}
 
 //
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16

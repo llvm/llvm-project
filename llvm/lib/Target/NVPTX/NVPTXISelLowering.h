@@ -62,6 +62,9 @@ enum NodeType : unsigned {
   BFI,
   PRMT,
   DYNAMIC_STACKALLOC,
+  BrxStart,
+  BrxItem,
+  BrxEnd,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -580,6 +583,11 @@ public:
     return true;
   }
 
+  // The default is the same as pointer type, but brx.idx only accepts i32
+  MVT getJumpTableRegTy(const DataLayout &) const override { return MVT::i32; }
+
+  unsigned getJumpTableEncoding() const override;
+
   bool enableAggressiveFMAFusion(EVT VT) const override { return true; }
 
   // The default is to transform llvm.ctlz(x, false) (where false indicates that
@@ -637,8 +645,18 @@ private:
 
   SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
+                           std::optional<MVT> RegisterVT) const override;
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;

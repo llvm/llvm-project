@@ -216,7 +216,7 @@ private:
                                    CombineInfo &Paired, bool Modify = false);
   static bool widthsFit(const GCNSubtarget &STI, const CombineInfo &CI,
                         const CombineInfo &Paired);
-  static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
+  unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
                                                      const CombineInfo &Paired);
   const TargetRegisterClass *
@@ -352,7 +352,10 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX2:
@@ -362,7 +365,10 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 2;
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX3_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX3:
@@ -372,7 +378,10 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
@@ -382,7 +391,10 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return 8;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -495,18 +507,30 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM_ec:
     return S_BUFFER_LOAD_IMM;
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM_ec:
     return S_BUFFER_LOAD_SGPR_IMM;
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return S_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -579,18 +603,30 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM_ec:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM_ec:
     return AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM;
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     return AMDGPU::S_LOAD_DWORD_IMM;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
@@ -691,6 +727,10 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM_ec:
     Result.SOffset = true;
     [[fallthrough]];
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
@@ -698,11 +738,19 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM_ec:
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
+  case AMDGPU::S_LOAD_DWORDX8_IMM_ec:
     Result.SBase = true;
     return Result;
   case AMDGPU::DS_READ_B32:
@@ -1212,8 +1260,14 @@ void SILoadStoreOptimizer::copyToDestRegs(
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, OpName);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, OpName);
+  auto *Dest0 = TII->getNamedOperand(*CI.I, OpName);
+  auto *Dest1 = TII->getNamedOperand(*Paired.I, OpName);
+
+  // The constrained sload instructions in S_LOAD_IMM class will have
+  // `early-clobber` flag in the dst operand. Remove the flag before using the
+  // MOs in copies.
+  Dest0->setIsEarlyClobber(false);
+  Dest1->setIsEarlyClobber(false);
 
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest0) // Copy to same destination including flags and sub reg.
@@ -1657,6 +1711,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
   return New;
 }
 
+static bool needsConstrainedOpcode(const GCNSubtarget &STM,
+                                   ArrayRef<MachineMemOperand *> MMOs,
+                                   unsigned Width) {
+  // Conservatively returns true if not found the MMO.
+  return STM.isXNACKEnabled() &&
+         (MMOs.size() != 1 || MMOs[0]->getAlign().value() < Width * 4);
+}
+
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
                                             const CombineInfo &Paired) {
   const unsigned Width = CI.Width + Paired.Width;
@@ -1674,45 +1736,72 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
 
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
-  case S_BUFFER_LOAD_IMM:
+  case S_BUFFER_LOAD_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
     case 2:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM;
     case 3:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM;
     case 4:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM;
     case 8:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
     }
-  case S_BUFFER_LOAD_SGPR_IMM:
+  }
+  case S_BUFFER_LOAD_SGPR_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
     case 2:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM;
     case 3:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM;
     case 4:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM;
     case 8:
-      return AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM_ec
+                                 : AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
     }
-  case S_LOAD_IMM:
+  }
+  case S_LOAD_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
+    bool NeedsConstrainedOpc =
+        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
     case 2:
-      return AMDGPU::S_LOAD_DWORDX2_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX2_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX2_IMM;
     case 3:
-      return AMDGPU::S_LOAD_DWORDX3_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX3_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX3_IMM;
     case 4:
-      return AMDGPU::S_LOAD_DWORDX4_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX4_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX4_IMM;
     case 8:
-      return AMDGPU::S_LOAD_DWORDX8_IMM;
+      return NeedsConstrainedOpc ? AMDGPU::S_LOAD_DWORDX8_IMM_ec
+                                 : AMDGPU::S_LOAD_DWORDX8_IMM;
     }
+  }
   case GLOBAL_LOAD:
     switch (Width) {
     default:
@@ -2028,6 +2117,9 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
     BaseLo = *Src0;
   }
 
+  if (!BaseLo.isReg())
+    return;
+
   Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);
   Src1 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src1);
 
@@ -2039,6 +2131,9 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
 
   uint64_t Offset1 = Src1->getImm();
   BaseHi = *Src0;
+
+  if (!BaseHi.isReg())
+    return;
 
   Addr.Base.LoReg = BaseLo.getReg();
   Addr.Base.HiReg = BaseHi.getReg();

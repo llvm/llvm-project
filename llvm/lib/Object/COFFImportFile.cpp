@@ -12,6 +12,8 @@
 
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -52,24 +54,36 @@ StringRef COFFImportFile::getFileFormatName() const {
   }
 }
 
-StringRef COFFImportFile::getExportName() const {
-  const coff_import_header *hdr = getCOFFImportHeader();
-  StringRef name = Data.getBuffer().substr(sizeof(*hdr)).split('\0').first;
-
+static StringRef applyNameType(ImportNameType Type, StringRef name) {
   auto ltrim1 = [](StringRef s, StringRef chars) {
     return !s.empty() && chars.contains(s[0]) ? s.substr(1) : s;
   };
 
-  switch (hdr->getNameType()) {
-  case IMPORT_ORDINAL:
-    name = "";
-    break;
+  switch (Type) {
   case IMPORT_NAME_NOPREFIX:
     name = ltrim1(name, "?@_");
     break;
   case IMPORT_NAME_UNDECORATE:
     name = ltrim1(name, "?@_");
     name = name.substr(0, name.find('@'));
+    break;
+  default:
+    break;
+  }
+  return name;
+}
+
+StringRef COFFImportFile::getExportName() const {
+  const coff_import_header *hdr = getCOFFImportHeader();
+  StringRef name = Data.getBuffer().substr(sizeof(*hdr)).split('\0').first;
+
+  switch (hdr->getNameType()) {
+  case IMPORT_ORDINAL:
+    name = "";
+    break;
+  case IMPORT_NAME_NOPREFIX:
+  case IMPORT_NAME_UNDECORATE:
+    name = applyNameType(static_cast<ImportNameType>(hdr->getNameType()), name);
     break;
   case IMPORT_NAME_EXPORTAS: {
     // Skip DLL name
@@ -667,6 +681,13 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
 
   auto addExports = [&](ArrayRef<COFFShortExport> Exp,
                         MachineTypes M) -> Error {
+    StringMap<std::string> RegularImports;
+    struct Deferred {
+      std::string Name;
+      ImportType ImpType;
+      const COFFShortExport *Export;
+    };
+    SmallVector<Deferred, 0> Renames;
     for (const COFFShortExport &E : Exp) {
       if (E.Private)
         continue;
@@ -684,16 +705,10 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         Name = std::string(SymbolName);
       } else {
         Expected<std::string> ReplacedName =
-            replace(SymbolName, E.Name, E.ExtName);
+            object::replace(SymbolName, E.Name, E.ExtName);
         if (!ReplacedName)
           return ReplacedName.takeError();
         Name.swap(*ReplacedName);
-      }
-
-      if (!E.ImportName.empty() && Name != E.ImportName) {
-        Members.push_back(OF.createWeakExternal(E.ImportName, Name, false, M));
-        Members.push_back(OF.createWeakExternal(E.ImportName, Name, true, M));
-        continue;
       }
 
       ImportNameType NameType;
@@ -703,6 +718,30 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       } else if (!E.ExportAs.empty()) {
         NameType = IMPORT_NAME_EXPORTAS;
         ExportName = E.ExportAs;
+      } else if (!E.ImportName.empty()) {
+        // If we need to import from a specific ImportName, we may need to use
+        // a weak alias (which needs another import to point at). But if we can
+        // express ImportName based on the symbol name and a specific NameType,
+        // prefer that over an alias.
+        if (Machine == IMAGE_FILE_MACHINE_I386 &&
+            applyNameType(IMPORT_NAME_UNDECORATE, Name) == E.ImportName)
+          NameType = IMPORT_NAME_UNDECORATE;
+        else if (Machine == IMAGE_FILE_MACHINE_I386 &&
+                 applyNameType(IMPORT_NAME_NOPREFIX, Name) == E.ImportName)
+          NameType = IMPORT_NAME_NOPREFIX;
+        else if (isArm64EC(M)) {
+          NameType = IMPORT_NAME_EXPORTAS;
+          ExportName = E.ImportName;
+        } else if (Name == E.ImportName)
+          NameType = IMPORT_NAME;
+        else {
+          Deferred D;
+          D.Name = Name;
+          D.ImpType = ImportType;
+          D.Export = &E;
+          Renames.push_back(D);
+          continue;
+        }
       } else {
         NameType = getNameType(SymbolName, E.Name, M, MinGW);
       }
@@ -722,8 +761,24 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         }
       }
 
+      RegularImports[applyNameType(NameType, Name)] = Name;
       Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
                                              NameType, ExportName, M));
+    }
+    for (const auto &D : Renames) {
+      auto It = RegularImports.find(D.Export->ImportName);
+      if (It != RegularImports.end()) {
+        // We have a regular import entry for a symbol with the name we
+        // want to reference; produce an alias pointing at that.
+        StringRef Symbol = It->second;
+        if (D.ImpType == IMPORT_CODE)
+          Members.push_back(OF.createWeakExternal(Symbol, D.Name, false, M));
+        Members.push_back(OF.createWeakExternal(Symbol, D.Name, true, M));
+      } else {
+        Members.push_back(OF.createShortImport(D.Name, D.Export->Ordinal,
+                                               D.ImpType, IMPORT_NAME_EXPORTAS,
+                                               D.Export->ImportName, M));
+      }
     }
     return Error::success();
   };

@@ -64,6 +64,11 @@ myst_heading_slug_func = make_slug
 
 autodoc_default_options = {"special-members": True}
 
+# The suffix of source filenames.
+source_suffix = {
+    ".rst": "restructuredtext",
+}
+
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
 if not building_man_page:
@@ -83,14 +88,12 @@ if not building_man_page:
     # a list of builtin themes.
     html_theme = "furo"
 
+    # Since man pages do not use markdown, we do not need to register a markdown
+    # parser.
+    source_suffix[".md"] = "markdown"
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
-
-# The suffix of source filenames.
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -163,7 +166,11 @@ html_theme = "furo"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+html_theme_options = {
+    "source_repository": "https://github.com/llvm/llvm-project",
+    "source_branch": "main",
+    "source_directory": "lldb/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []

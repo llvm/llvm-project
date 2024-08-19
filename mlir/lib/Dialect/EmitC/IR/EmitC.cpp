@@ -68,7 +68,7 @@ bool mlir::emitc::isSupportedEmitCType(Type type) {
     return !llvm::isa<emitc::ArrayType>(elemType) &&
            isSupportedEmitCType(elemType);
   }
-  if (type.isIndex())
+  if (type.isIndex() || emitc::isPointerWideType(type))
     return true;
   if (llvm::isa<IntegerType>(type))
     return isSupportedIntegerType(type);
@@ -110,7 +110,7 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
   return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
-         isSupportedIntegerType(type);
+         isSupportedIntegerType(type) || isPointerWideType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -124,6 +124,11 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
     }
   }
   return false;
+}
+
+bool mlir::emitc::isPointerWideType(Type type) {
+  return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
+      type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -141,6 +146,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 
   Type resultType = op->getResult(0).getType();
   Type attrType = cast<TypedAttr>(value).getType();
+
+  if (isPointerWideType(resultType) && attrType.isIndex())
+    return success();
 
   if (resultType != attrType)
     return op->emitOpError()
@@ -205,9 +213,11 @@ LogicalResult emitc::AssignOp::verify() {
   Value variable = getVar();
   Operation *variableDef = variable.getDefiningOp();
   if (!variableDef ||
-      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
+      !llvm::isa<emitc::GetGlobalOp, emitc::MemberOp, emitc::MemberOfPtrOp,
+                 emitc::SubscriptOp, emitc::VariableOp>(variableDef))
     return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable or subscript";
+                         << ") to be a get_global, member, member of pointer, "
+                            "subscript or variable";
 
   Value value = getValue();
   if (variable.getType() != value.getType())
@@ -226,10 +236,11 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return ((llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(input)) &&
-          (llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(output)));
+  return (
+      (emitc::isIntegerIndexOrOpaqueType(input) ||
+       emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
+      (emitc::isIntegerIndexOrOpaqueType(output) ||
+       emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1083,6 +1094,138 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType << " does not match type " << global.getType()
            << " of the global @" << getName();
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the case regions and values.
+static ParseResult
+parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
+    if (parser.parseInteger(value) ||
+        parser.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = parser.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+/// Print the case regions and values.
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
+static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
+                                  const Twine &name) {
+  auto yield = dyn_cast<emitc::YieldOp>(region.front().back());
+  if (!yield)
+    return op.emitOpError("expected region to end with emitc.yield, but got ")
+           << region.front().back().getName();
+
+  if (yield.getNumOperands() != 0) {
+    return (op.emitOpError("expected each region to return ")
+            << "0 values, but " << name << " returns "
+            << yield.getNumOperands())
+               .attachNote(yield.getLoc())
+           << "see yield operation here";
+  }
+
+  return success();
+}
+
+LogicalResult emitc::SwitchOp::verify() {
+  if (!isIntegerIndexOrOpaqueType(getArg().getType()))
+    return emitOpError("unsupported type ") << getArg().getType();
+
+  if (getCases().size() != getCaseRegions().size()) {
+    return emitOpError("has ")
+           << getCaseRegions().size() << " case regions but "
+           << getCases().size() << " case values";
+  }
+
+  DenseSet<int64_t> valueSet;
+  for (int64_t value : getCases())
+    if (!valueSet.insert(value).second)
+      return emitOpError("has duplicate case value: ") << value;
+
+  if (failed(verifyRegion(*this, getDefaultRegion(), "default region")))
+    return failure();
+
+  for (auto [idx, caseRegion] : llvm::enumerate(getCaseRegions()))
+    if (failed(verifyRegion(*this, caseRegion, "case region #" + Twine(idx))))
+      return failure();
+
+  return success();
+}
+
+unsigned emitc::SwitchOp::getNumCases() { return getCases().size(); }
+
+Block &emitc::SwitchOp::getDefaultBlock() { return getDefaultRegion().front(); }
+
+Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
+  assert(idx < getNumCases() && "case index out-of-bounds");
+  return getCaseRegions()[idx].front();
+}
+
+void SwitchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
+  llvm::copy(getRegions(), std::back_inserter(successors));
+}
+
+void SwitchOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &successors) {
+  FoldAdaptor adaptor(operands, *this);
+
+  // If a constant was not provided, all regions are possible successors.
+  auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
+  if (!arg) {
+    llvm::copy(getRegions(), std::back_inserter(successors));
+    return;
+  }
+
+  // Otherwise, try to find a case with a matching value. If not, the
+  // default region is the only successor.
+  for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
+    if (caseValue == arg.getInt()) {
+      successors.emplace_back(&caseRegion);
+      return;
+    }
+  }
+  successors.emplace_back(&getDefaultRegion());
+}
+
+void SwitchOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  auto operandValue = llvm::dyn_cast_or_null<IntegerAttr>(operands.front());
+  if (!operandValue) {
+    // All regions are invoked at most once.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
+  unsigned liveIndex = getNumRegions() - 1;
+  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+
+  liveIndex = iteratorToInt != getCases().end()
+                  ? std::distance(getCases().begin(), iteratorToInt)
+                  : liveIndex;
+
+  for (unsigned regIndex = 0, regNum = getNumRegions(); regIndex < regNum;
+       ++regIndex)
+    bounds.emplace_back(/*lb=*/0, /*ub=*/regIndex == liveIndex);
 }
 
 //===----------------------------------------------------------------------===//

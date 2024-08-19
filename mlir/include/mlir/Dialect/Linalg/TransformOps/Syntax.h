@@ -12,7 +12,6 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
-class ParseResult;
 class OpAsmParser;
 class OpAsmPrinter;
 class Type;

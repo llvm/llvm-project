@@ -13,12 +13,10 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_UTILS_H
 #define MLIR_ANALYSIS_PRESBURGER_UTILS_H
 
-#include "mlir/Support/LLVM.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include <optional>
 
 namespace mlir {

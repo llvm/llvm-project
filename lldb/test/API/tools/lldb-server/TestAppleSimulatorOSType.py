@@ -39,7 +39,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             for device in devices:
                 if "availability" in device and device["availability"] != "(available)":
                     continue
-                if "isAvailable" in device and device["isAvailable"] != True:
+                if "isAvailable" in device and not device["isAvailable"]:
                     continue
                 if deviceRuntime and runtime < deviceRuntime:
                     continue

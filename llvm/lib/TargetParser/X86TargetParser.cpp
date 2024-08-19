@@ -171,14 +171,14 @@ constexpr FeatureBitset FeaturesClearwaterforest =
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | Feature3DNOW | Feature3DNOWA;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeaturePRFCHW;
 
 // K6 processor.
 constexpr FeatureBitset FeaturesK6 = FeatureX87 | FeatureCMPXCHG8B | FeatureMMX;
 
 // K7 and K8 architecture processors.
 constexpr FeatureBitset FeaturesAthlon =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | Feature3DNOW | Feature3DNOWA;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeaturePRFCHW;
 constexpr FeatureBitset FeaturesAthlonXP =
     FeaturesAthlon | FeatureFXSR | FeatureSSE;
 constexpr FeatureBitset FeaturesK8 =
@@ -256,8 +256,8 @@ constexpr ProcInfo Processors[] = {
   // i486-generation processors.
   { {"i486"}, CK_i486, ~0U, FeatureX87, '\0', false },
   { {"winchip-c6"}, CK_WinChipC6, ~0U, FeaturesPentiumMMX, '\0', false },
-  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
-  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
+  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
+  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
   // i586-generation processors, P5 microarchitecture based.
   { {"i586"}, CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
   { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B, 'B', false },
@@ -386,8 +386,8 @@ constexpr ProcInfo Processors[] = {
   { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false },
   // K6 architecture processors.
   { {"k6"}, CK_K6, ~0U, FeaturesK6, '\0', false },
-  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
-  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
+  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
+  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
   // K7 architecture processors.
   { {"athlon"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
   { {"athlon-tbird"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
@@ -493,6 +493,7 @@ constexpr FeatureBitset ImpliedFeaturesFXSR = {};
 constexpr FeatureBitset ImpliedFeaturesINVPCID = {};
 constexpr FeatureBitset ImpliedFeaturesLWP = {};
 constexpr FeatureBitset ImpliedFeaturesLZCNT = {};
+constexpr FeatureBitset ImpliedFeaturesMMX = {};
 constexpr FeatureBitset ImpliedFeaturesMWAITX = {};
 constexpr FeatureBitset ImpliedFeaturesMOVBE = {};
 constexpr FeatureBitset ImpliedFeaturesMOVDIR64B = {};
@@ -520,6 +521,8 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -533,11 +536,6 @@ constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
 constexpr FeatureBitset ImpliedFeaturesXSAVEOPT = FeatureXSAVE;
 constexpr FeatureBitset ImpliedFeaturesXSAVES = FeatureXSAVE;
-
-// MMX->3DNOW->3DNOWA chain.
-constexpr FeatureBitset ImpliedFeaturesMMX = {};
-constexpr FeatureBitset ImpliedFeatures3DNOW = FeatureMMX;
-constexpr FeatureBitset ImpliedFeatures3DNOWA = Feature3DNOW;
 
 // SSE/AVX/AVX512F chain.
 constexpr FeatureBitset ImpliedFeaturesSSE = {};
@@ -622,6 +620,9 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 =
+    FeatureAVX10_2 | FeatureAVX10_1_512;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
@@ -631,6 +632,7 @@ constexpr FeatureBitset ImpliedFeaturesNDD = {};
 constexpr FeatureBitset ImpliedFeaturesCCMP = {};
 constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
+constexpr FeatureBitset ImpliedFeaturesZU = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},

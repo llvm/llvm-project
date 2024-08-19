@@ -64,6 +64,18 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *);
     };                                                                         \
   }
 
+#define REDUCTION_VALUE_OPERATION_MODEL(T)                                     \
+  template <>                                                                  \
+  constexpr TypeBuilderFunc                                                    \
+  getModel<Fortran::runtime::ValueReductionOperation<T>>() {                   \
+    return [](mlir::MLIRContext *context) -> mlir::Type {                      \
+      TypeBuilderFunc f{getModel<T>()};                                        \
+      auto refTy = fir::ReferenceType::get(f(context));                        \
+      return mlir::FunctionType::get(context, {f(context), f(context)},        \
+                                     refTy);                                   \
+    };                                                                         \
+  }
+
 #define REDUCTION_CHAR_OPERATION_MODEL(T)                                      \
   template <>                                                                  \
   constexpr TypeBuilderFunc                                                    \
@@ -481,17 +493,27 @@ constexpr TypeBuilderFunc getModel<void>() {
 }
 
 REDUCTION_REF_OPERATION_MODEL(std::int8_t)
+REDUCTION_VALUE_OPERATION_MODEL(std::int8_t)
 REDUCTION_REF_OPERATION_MODEL(std::int16_t)
+REDUCTION_VALUE_OPERATION_MODEL(std::int16_t)
 REDUCTION_REF_OPERATION_MODEL(std::int32_t)
+REDUCTION_VALUE_OPERATION_MODEL(std::int32_t)
 REDUCTION_REF_OPERATION_MODEL(std::int64_t)
+REDUCTION_VALUE_OPERATION_MODEL(std::int64_t)
 REDUCTION_REF_OPERATION_MODEL(Fortran::common::int128_t)
+REDUCTION_VALUE_OPERATION_MODEL(Fortran::common::int128_t)
 
 REDUCTION_REF_OPERATION_MODEL(float)
+REDUCTION_VALUE_OPERATION_MODEL(float)
 REDUCTION_REF_OPERATION_MODEL(double)
+REDUCTION_VALUE_OPERATION_MODEL(double)
 REDUCTION_REF_OPERATION_MODEL(long double)
+REDUCTION_VALUE_OPERATION_MODEL(long double)
 
 REDUCTION_REF_OPERATION_MODEL(std::complex<float>)
+REDUCTION_VALUE_OPERATION_MODEL(std::complex<float>)
 REDUCTION_REF_OPERATION_MODEL(std::complex<double>)
+REDUCTION_VALUE_OPERATION_MODEL(std::complex<double>)
 
 REDUCTION_CHAR_OPERATION_MODEL(char)
 REDUCTION_CHAR_OPERATION_MODEL(char16_t)

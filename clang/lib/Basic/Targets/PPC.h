@@ -44,8 +44,9 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefinePwr8 = 1 << 12,
     ArchDefinePwr9 = 1 << 13,
     ArchDefinePwr10 = 1 << 14,
-    ArchDefineFuture = 1 << 15,
-    ArchDefineA2 = 1 << 16,
+    ArchDefinePwr11 = 1 << 15,
+    ArchDefineFuture = 1 << 16,
+    ArchDefineA2 = 1 << 17,
     ArchDefineE500 = 1 << 18
   } ArchDefineTypes;
 
@@ -82,6 +83,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
   bool HasAIXShLibTLSModelOpt = false;
+  bool UseLongCalls = false;
 
 protected:
   std::string ABI;
@@ -165,11 +167,16 @@ public:
                          ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
+              .Cases("power11", "pwr11",
+                     ArchDefinePwr11 | ArchDefinePwr10 | ArchDefinePwr9 |
+                         ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
+                         ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                         ArchDefinePpcgr | ArchDefinePpcsq)
               .Case("future",
-                    ArchDefineFuture | ArchDefinePwr10 | ArchDefinePwr9 |
-                        ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
-                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefineFuture | ArchDefinePwr11 | ArchDefinePwr10 |
+                        ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                        ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("8548", "e500", ArchDefineE500)
               .Default(ArchDefineNone);
     }
@@ -191,6 +198,7 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   void addP10SpecificFeatures(llvm::StringMap<bool> &Features) const;
+  void addP11SpecificFeatures(llvm::StringMap<bool> &Features) const;
   void addFutureSpecificFeatures(llvm::StringMap<bool> &Features) const;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -305,9 +313,11 @@ public:
               // asm statements)
       Info.setAllowsMemory();
       break;
-    case 'R': // AIX TOC entry
     case 'a': // Address operand that is an indexed or indirect from a
               // register (`p' is preferable for asm statements)
+              // TODO: Add full support for this constraint
+      return false;
+    case 'R': // AIX TOC entry
     case 'S': // Constant suitable as a 64-bit mask operand
     case 'T': // Constant suitable as a 32-bit mask operand
     case 'U': // System V Release 4 small data area reference

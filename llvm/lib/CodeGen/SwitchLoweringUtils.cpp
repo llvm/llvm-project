@@ -104,7 +104,8 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   // for the Case Statement'" (1994), but builds the MinPartitions array in
   // reverse order to make it easier to reconstruct the partitions in ascending
   // order. In the choice between two optimal partitionings, it picks the one
-  // which yields more jump tables.
+  // which yields more jump tables. The algorithm is described in
+  // https://arxiv.org/pdf/1910.02351v2
 
   // MinPartitions[i] is the minimum nbr of partitions of Clusters[i..N-1].
   SmallVector<unsigned, 8> MinPartitions(N);

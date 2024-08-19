@@ -44,6 +44,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
@@ -1151,7 +1153,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
       llvm::DINodeArray());
   StructType *FrameTy = Shape.FrameTy;
   SmallVector<Metadata *, 16> Elements;
-  DataLayout Layout = F.getParent()->getDataLayout();
+  DataLayout Layout = F.getDataLayout();
 
   DenseMap<Value *, DILocalVariable *> DIVarCache;
   cacheDIVar(FrameData, DIVarCache);
@@ -1298,7 +1300,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                   FrameDataInfo &FrameData) {
   LLVMContext &C = F.getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   StructType *FrameTy = [&] {
     SmallString<32> Name(F.getName());
     Name.append(".Frame");
@@ -2856,7 +2858,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
   bool ShouldUseLifetimeStartInfo =
       (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
        Shape.ABI != coro::ABI::RetconOnce);
-  AllocaUseVisitor Visitor{AI->getModule()->getDataLayout(), DT, Shape, Checker,
+  AllocaUseVisitor Visitor{AI->getDataLayout(), DT, Shape, Checker,
                            ShouldUseLifetimeStartInfo};
   Visitor.visitPtr(*AI);
   if (!Visitor.getShouldLiveOnFrame())

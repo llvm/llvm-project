@@ -527,13 +527,13 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-LABEL: buildvec_mask_v128i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV64-NEXT:    addi a0, a0, %lo(.LCPI20_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI20_0)(a0)
+; RV64-NEXT:    lui a1, %hi(.LCPI20_1)
+; RV64-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v0, (a0), zero
-; RV64-NEXT:    lui a0, %hi(.LCPI20_1)
-; RV64-NEXT:    ld a0, %lo(.LCPI20_1)(a0)
+; RV64-NEXT:    vmv.v.x v0, a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v0, a0
+; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_v128i1:

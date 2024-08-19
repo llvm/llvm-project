@@ -334,6 +334,50 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
   return
 }
 
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice(
+// CHECK-SAME:                                  %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                  %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                  %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[MASK:.*]] = arith.constant dense<true> : vector<[4]xi1>
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice_with_mask(
+// CHECK-SAME:                                            %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                            %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                            %[[MASK:.*]]: vector<[4]xi1>,
+// CHECK-SAME:                                            %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice_with_mask(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %mask: vector<[4]xi1>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0], %mask { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_vertical_slice
+// CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical>
+func.func @transfer_write_vertical_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+   %slice = arm_sme.move_tile_slice_to_vector %vector[%slice_index] layout<vertical>
+            : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // vector.broadcast
 //===----------------------------------------------------------------------===//
@@ -1080,7 +1124,7 @@ func.func @vector_insert_element_f64(%el: f64, %row: index, %col: index) -> vect
 }
 
 //===----------------------------------------------------------------------===//
-// vector.extract
+// vector.extract --> arm_sme.move_tile_slice_to_vector
 //===----------------------------------------------------------------------===//
 
 // -----
@@ -1275,4 +1319,38 @@ func.func @vector_extract_element_f64(%row: index, %col: index) -> f64 {
   %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
   %el = vector.extract %tile[%row, %col] : f64 from vector<[2]x[2]xf64>
   return %el : f64
+}
+
+//===----------------------------------------------------------------------===//
+// vector.extract --> arm_sve.psel
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @dynamic_vector_extract_mask_to_psel(
+// CHECK-SAME:    %[[A:.*]]:  index, %[[B:.*]]: index, %[[INDEX:.*]]: index)
+func.func @dynamic_vector_extract_mask_to_psel(%a: index, %b: index, %index: index) -> vector<[8]xi1>
+{
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[4]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[8]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[INDEX]]] : vector<[8]xi1>, vector<[4]xi1>
+  %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<[4]x[8]xi1>
+  return %slice : vector<[8]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_extract_mask_to_psel(
+// CHECK-SAME:                               %[[A:.*]]: index,
+// CHECK-SAME:                               %[[B:.*]]: index)
+func.func @vector_extract_mask_to_psel(%a: index, %b: index) -> vector<[2]xi1>
+{
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[16]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[2]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[C1]]] : vector<[2]xi1>, vector<[16]xi1>
+  %mask = vector.create_mask %a, %b : vector<[16]x[2]xi1>
+  %slice = vector.extract %mask[1] : vector<[2]xi1> from vector<[16]x[2]xi1>
+  return %slice : vector<[2]xi1>
 }

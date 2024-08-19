@@ -2,7 +2,7 @@
 
 // -----
 func.func @test_create_nd_tdesc_vc_1(%src: memref<24xf32>) {
-  // expected-error@+1 {{Expecting the rank of shape, strides, offsets, source memref type (if source is a memref) and TensorDesc should match with each other. They currenlty are 2D.}}
+  // expected-error@+1 {{Expecting the TensorDesc rank is up to 2 and not greater than the ranks of shape, strides, offsets or the memref source}}
   %1 = xegpu.create_nd_tdesc %src[0] : memref<24xf32> -> !xegpu.tensor_desc<8x16xf32>
   return
 }
@@ -49,6 +49,15 @@ func.func @test_load_nd_vc_2(%src: memref<16xf16>) {
   // expected-error@+1 {{Expects a non-scattered TensorDesc.}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>}>
       : !xegpu.tensor_desc<8x2xf16, #xegpu.tdesc_attr<scattered=true>> -> vector<8x2xf16>
+  return
+}
+
+// -----
+func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<16xf16>
+  // expected-warning@+1 {{Invalid Packed Attr.}}
+  %2 = xegpu.load_nd %1 <{packed, l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+        : !xegpu.tensor_desc<16xf16> -> vector<16xf16>
   return
 }
 
@@ -159,29 +168,23 @@ func.func @test_store_scatter_vc_2(%src: ui64) {
 }
 
 // -----
-func.func @test_dpas_vc_1(%a : vector<8x4x2xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{K-dimension or vnni-factor mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x4x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+func.func @test_dpas_vc_1(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+  // expected-error@+1 {{K-dimension mismatch}}
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @test_dpas_vc_2(%a : vector<8x16xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{lhs and rhs rank does not match for dpas op, or their rank is not 3}}
-  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+func.func @test_dpas_vc_2(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
+  // expected-error@+1 {{expecting lhs to be a 2D vector, and rhs to be either 2D or 3D (packed) vector}}
+  %1 = xegpu.dpas %a, %b : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @test_dpas_vc_3(%a : vector<8x16xf16>, %b: vector<16x16xf16>) {
-  // expected-error@+1 {{lhs and rhs rank does not match for dpas op, or their rank is not 3}}
-  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-  return
-}
-
-// -----
-func.func @test_dpas_vc_4(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>, %c : vector<8x16xf16>) {
-  // expected-error@+1 {{Accumulator and Result for dpas op should have the same type}}
-  %1 = xegpu.dpas %a, %b, %c : vector<8x8x2xf16>, vector<8x16x2xf16>, vector<8x16xf16> -> vector<8x16xf32>
-  return
+func.func @test_atomic_rmw(%src: ui64, %value : vector<16x8xf32>, %mask : vector<16xi1>) {
+  %1 = xegpu.create_tdesc %src[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] {chunk_size = 8}: ui64 -> !xegpu.tensor_desc<16x8xf32, #xegpu.tdesc_attr<scattered = true>>
+  // expected-error@+1 {{failed to verify that all of {tensorDesc, mask, value, result} have same shape}}
+  xegpu.atomic_rmw addf %1, %mask, %value: !xegpu.tensor_desc<16x8xf32, #xegpu.tdesc_attr<scattered = true>>, vector<16xi1>, vector<16x8xf32> -> vector<16x8xf32>
+  gpu.return
 }

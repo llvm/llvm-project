@@ -9,9 +9,13 @@
 #include "src/stdlib/atexit.h"
 #include "hdr/types/atexithandler_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/exit_handler.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+constinit ExitCallbackList atexit_callbacks;
+Mutex handler_list_mtx(false, false, false, false);
 
 extern "C" {
 
@@ -32,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, atexit, (__atexithandler_t callback)) {
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

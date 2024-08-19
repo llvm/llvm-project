@@ -73,6 +73,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;
@@ -852,24 +853,24 @@ def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
 
 class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+  (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
 class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
-  (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i32 (EXTRACT_SUBREG VReg_64:$value, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$value, sub1)), $offset0, $offset1,
               (i1 0))
 >;
 
 class DS128Bit8ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+  (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
 class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
-  (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i64 (EXTRACT_SUBREG VReg_128:$value, sub0_sub1)),
               (i64 (EXTRACT_SUBREG VReg_128:$value, sub2_sub3)), $offset0, $offset1,
               (i1 0))
@@ -1082,6 +1083,12 @@ defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_U32, DS_MAX_U32, i32, "atomic_load_umax
 defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_F32, DS_MIN_F32, f32, "atomic_load_fmin">;
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax">;
 
+
+let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
+defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
+}
+
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
 }
@@ -1136,16 +1143,6 @@ def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
 defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
-
-def : GCNPat <
-  (v2i16 (int_amdgcn_ds_fadd_v2bf16 i32:$ptr, v2i16:$src)),
-  (DS_PK_ADD_RTN_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
->;
-let AddedComplexity = 1 in
-def : GCNPat <
-  (v2i16 (int_amdgcn_ds_fadd_v2bf16_noret i32:$ptr, v2i16:$src)),
-  (DS_PK_ADD_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
->;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in

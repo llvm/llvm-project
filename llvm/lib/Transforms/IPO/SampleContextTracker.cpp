@@ -624,7 +624,7 @@ void SampleContextTracker::createContextLessProfileMap(
     FunctionSamples *FProfile = Node->getFunctionSamples();
     // Profile's context can be empty, use ContextNode's func name.
     if (FProfile)
-      ContextLessProfiles.Create(Node->getFuncName()).merge(*FProfile);
+      ContextLessProfiles.create(Node->getFuncName()).merge(*FProfile);
   }
 }
 } // namespace llvm

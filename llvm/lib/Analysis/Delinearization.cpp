@@ -131,7 +131,7 @@ struct SCEVCollectAddRecMultiplies {
     if (auto *Mul = dyn_cast<SCEVMulExpr>(S)) {
       bool HasAddRec = false;
       SmallVector<const SCEV *, 0> Operands;
-      for (const auto *Op : Mul->operands()) {
+      for (const SCEV *Op : Mul->operands()) {
         const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(Op);
         if (Unknown && !isa<CallInst>(Unknown->getValue())) {
           Operands.push_back(Op);
@@ -294,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
 
   // Remove duplicates.
   array_pod_sort(Terms.begin(), Terms.end());
-  Terms.erase(std::unique(Terms.begin(), Terms.end()), Terms.end());
+  Terms.erase(llvm::unique(Terms), Terms.end());
 
   // Put larger terms first.
   llvm::sort(Terms, [](const SCEV *LHS, const SCEV *RHS) {

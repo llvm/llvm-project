@@ -74,8 +74,7 @@ private:
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);
 
-  uint16_t getAmdhsaKernelCodeProperties(
-      const MachineFunction &MF) const;
+  const MCExpr *getAmdhsaKernelCodeProperties(const MachineFunction &MF) const;
 
   AMDGPU::MCKernelDescriptor
   getAmdhsaKernelDescriptor(const MachineFunction &MF,
@@ -83,7 +82,6 @@ private:
 
   void initTargetStreamer(Module &M);
 
-  static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
   SmallString<128> getMCExprStr(const MCExpr *Value);
 
 public:
@@ -111,8 +109,7 @@ public:
 
   /// tblgen'erated driver function for lowering simple MI->MC pseudo
   /// instructions.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   /// Implemented in AMDGPUMCInstLower.cpp
   void emitInstruction(const MachineInstr *MI) override;

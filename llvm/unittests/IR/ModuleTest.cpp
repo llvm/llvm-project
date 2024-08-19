@@ -8,6 +8,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
@@ -84,6 +85,21 @@ TEST(ModuleTest, setModuleFlag) {
   EXPECT_EQ(Val1, M.getModuleFlag(Key));
   M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
   EXPECT_EQ(Val2, M.getModuleFlag(Key));
+}
+
+TEST(ModuleTest, setModuleFlagInt) {
+  LLVMContext Context;
+  Module M("M", Context);
+  StringRef Key = "Key";
+  uint32_t Val1 = 1;
+  uint32_t Val2 = 2;
+  EXPECT_EQ(nullptr, M.getModuleFlag(Key));
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto A1 = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  EXPECT_EQ(Val1, A1->getZExtValue());
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  auto A2 = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  EXPECT_EQ(Val2, A2->getZExtValue());
 }
 
 const char *IRString = R"IR(

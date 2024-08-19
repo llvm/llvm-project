@@ -11,7 +11,13 @@ func.func @array_types(
   // CHECK-SAME: !emitc.array<30x!emitc.ptr<i32>>,
   %arg2: !emitc.array<30x!emitc.ptr<i32>>,
   // CHECK-SAME: !emitc.array<30x!emitc.opaque<"int">>
-  %arg3: !emitc.array<30x!emitc.opaque<"int">>
+  %arg3: !emitc.array<30x!emitc.opaque<"int">>,
+  // CHECK-SAME: !emitc.array<30x!emitc.size_t>
+  %arg4: !emitc.array<30x!emitc.size_t>,
+  // CHECK-SAME: !emitc.array<30x!emitc.ssize_t>
+  %arg5: !emitc.array<30x!emitc.ssize_t>,
+  // CHECK-SAME: !emitc.array<30x!emitc.ptrdiff_t>
+  %arg6: !emitc.array<30x!emitc.ptrdiff_t>
 ) {
   return
 }
@@ -50,6 +56,18 @@ func.func @pointer_types() {
   %1 = emitc.call_opaque "f"(%0) : (!emitc.ptr<i32>) -> (!emitc.ptr<!emitc.ptr<i32>>)
   // CHECK-NEXT: !emitc.ptr<!emitc.opaque<"int">>
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<!emitc.opaque<"int">>]} : () -> ()
+
+  return
+}
+
+// CHECK-LABEL: func @size_types() 
+func.func @size_types() {
+  // CHECK-NEXT: !emitc.ssize_t
+  emitc.call_opaque "f"() {template_args = [!emitc.ssize_t]} : () -> ()
+  // CHECK-NEXT: !emitc.size_t
+  emitc.call_opaque "f"() {template_args = [!emitc.size_t]} : () -> ()
+  // CHECK-NEXT: !emitc.ptrdiff_t
+  emitc.call_opaque "f"() {template_args = [!emitc.ptrdiff_t]} : () -> ()
 
   return
 }

@@ -13,8 +13,9 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 
-#include "llvm/Support/TypeSize.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
@@ -41,6 +42,8 @@ public:
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                           int FI) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
                                          Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;
@@ -155,6 +158,10 @@ private:
                           int64_t RealignmentPadding, StackOffset AllocSize,
                           bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
                           StackOffset InitialOffset, bool FollowupAllocs) const;
+  /// Make a determination whether a Hazard slot is used and create it if
+  /// needed.
+  void determineStackHazardSlot(MachineFunction &MF,
+                                BitVector &SavedRegs) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,
@@ -172,6 +179,9 @@ private:
   inlineStackProbeLoopExactMultiple(MachineBasicBlock::iterator MBBI,
                                     int64_t NegProbeSize,
                                     Register TargetReg) const;
+
+  void emitRemarks(const MachineFunction &MF,
+                   MachineOptimizationRemarkEmitter *ORE) const override;
 };
 
 } // End llvm namespace

@@ -12,6 +12,9 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "gtest/gtest.h"
 
+#include <cerrno>
+#include <sys/resource.h>
+
 using namespace lldb_private;
 
 namespace {
@@ -86,4 +89,23 @@ TEST_F(HostTest, GetProcessInfo) {
   ProcessInstanceInfo::timespec next_user_time = Info.GetUserTime();
   ASSERT_TRUE(user_time.tv_sec <= next_user_time.tv_sec ||
               user_time.tv_usec <= next_user_time.tv_usec);
+
+  struct rlimit rlim;
+  EXPECT_EQ(getrlimit(RLIMIT_NICE, &rlim), 0);
+  // getpriority can return -1 so we zero errno first
+  errno = 0;
+  int prio = getpriority(PRIO_PROCESS, PRIO_PROCESS);
+  ASSERT_TRUE((prio < 0 && errno == 0) || prio >= 0);
+  ASSERT_EQ(Info.GetPriorityValue(), prio);
+  // If we can't raise our nice level then this test can't be performed.
+  int max_incr = PRIO_MAX - rlim.rlim_cur;
+  if (max_incr < prio) {
+    EXPECT_EQ(setpriority(PRIO_PROCESS, PRIO_PROCESS, prio - 1), 0);
+    ASSERT_TRUE(Host::GetProcessInfo(getpid(), Info));
+    ASSERT_TRUE(Info.GetPriorityValue().has_value());
+    ASSERT_EQ(Info.GetPriorityValue().value(), prio - 1);
+    EXPECT_EQ(setpriority(PRIO_PROCESS, PRIO_PROCESS, prio), 0);
+  }
+  ASSERT_TRUE(Info.IsZombie().has_value());
+  ASSERT_FALSE(Info.IsZombie().value());
 }

@@ -20,14 +20,13 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -512,10 +511,10 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices->push_back(r);
+      lbIndices->emplace_back(r);
     } else if (atIneq(r, pos) <= -1) {
       // Upper bound.
-      ubIndices->push_back(r);
+      ubIndices->emplace_back(r);
     }
   }
 
@@ -529,7 +528,7 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (containsConstraintDependentOnRange(r, /*isEq=*/true))
       continue;
-    eqIndices->push_back(r);
+    eqIndices->emplace_back(r);
   }
 }
 
@@ -792,7 +791,7 @@ IntMatrix IntegerRelation::getBoundedDirections() const {
   // processes all the inequalities.
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     if (simplex.isBoundedAlongConstraint(i))
-      boundedIneqs.push_back(i);
+      boundedIneqs.emplace_back(i);
   }
 
   // The direction vector is given by the coefficients and does not include the
@@ -1516,7 +1515,7 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
 
   appendVar(VarKind::Local);
 
-  SmallVector<DynamicAPInt, 8> dividendCopy(dividend.begin(), dividend.end());
+  SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
   addInequality(
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
@@ -1569,7 +1568,7 @@ LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
 
 void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
   for (unsigned s = pos, t = pos, e = pos + num; s < e; s++) {
-    if (failed(constantFoldVar(t)))
+    if (constantFoldVar(t).failed())
       t++;
   }
 }
@@ -1948,7 +1947,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
       // Use Gaussian elimination here (since we have an equality).
       LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
-      assert(succeeded(ret) && "Gaussian elimination guaranteed to succeed");
+      assert(ret.succeeded() && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
       LLVM_DEBUG(dump());
       return;
@@ -1982,13 +1981,13 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, pos) == 0) {
       // Var does not appear in bound.
-      nbIndices.push_back(r);
+      nbIndices.emplace_back(r);
     } else if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices.push_back(r);
+      lbIndices.emplace_back(r);
     } else {
       // Upper bound.
-      ubIndices.push_back(r);
+      ubIndices.emplace_back(r);
     }
   }
 
@@ -2029,8 +2028,8 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
           continue;
         assert(lbCoeff >= 1 && ubCoeff >= 1 && "bounds wrongly identified");
         DynamicAPInt lcm = llvm::lcm(lbCoeff, ubCoeff);
-        ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
-                       atIneq(lbPos, l) * (lcm / lbCoeff));
+        ineq.emplace_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
+                          atIneq(lbPos, l) * (lcm / lbCoeff));
         assert(lcm > 0 && "lcm should be positive!");
         if (lcm != 1)
           allLCMsAreOne = false;
@@ -2058,7 +2057,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      ineq.push_back(atIneq(nbPos, l));
+      ineq.emplace_back(atIneq(nbPos, l));
     }
     newRel.addInequality(ineq);
   }
@@ -2073,7 +2072,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      eq.push_back(atEq(r, l));
+      eq.emplace_back(atEq(r, l));
     }
     newRel.addEquality(eq);
   }
@@ -2265,8 +2264,8 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
                    std::negate<DynamicAPInt>());
     std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
 
-    boundingLbs.push_back(newLb);
-    boundingUbs.push_back(newUb);
+    boundingLbs.emplace_back(newLb);
+    boundingUbs.emplace_back(newUb);
   }
 
   // Clear all constraints and add the lower/upper bounds for the bounding box.
@@ -2310,7 +2309,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbIneqIndices.push_back(r);
+      nbIneqIndices.emplace_back(r);
   }
 
   for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
@@ -2321,7 +2320,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbEqIndices.push_back(r);
+      nbEqIndices.emplace_back(r);
   }
 }
 

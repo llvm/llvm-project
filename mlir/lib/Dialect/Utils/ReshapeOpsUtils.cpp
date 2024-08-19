@@ -42,7 +42,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   while (sourceDim < sourceShape.size()) {
     unsigned targetDim = reassociationMap.size();
     // If we have mapped all the target dimensions stop and handle the remaining
-    // tail of size-1 dimensions explictly.
+    // tail of size-1 dimensions explicitly.
     if (targetDim == targetShape.size())
       break;
 
