@@ -380,13 +380,16 @@ public:
     return sampleprof_error::success;
   }
 
-  /// Read sample profiles for the given functions. Currently it's only used for
-  /// extended binary format to load the profiles on-demand.
+  /// Read sample profiles for the given functions.
   std::error_code read(const DenseSet<StringRef> &FuncsToUse) {
-    if (std::error_code EC = read(FuncsToUse, Profiles))
+    DenseSet<StringRef> S;
+    for (StringRef F : FuncsToUse)
+      if (Profiles.find(FunctionId(F)) == Profiles.end())
+        S.insert(F);
+    if (std::error_code EC = read(S, Profiles))
       return EC;
     return sampleprof_error::success;
-  };
+  }
 
   /// Read sample profiles for the given functions and write them to the given
   /// profile map. Currently it's only used for extended binary format to load
@@ -394,7 +397,7 @@ public:
   virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
                                SampleProfileMap &Profiles) {
     return sampleprof_error::not_implemented;
-  };
+  }
 
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
@@ -564,7 +567,7 @@ protected:
   std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
-  std::pair<const uint8_t *, const uint8_t *> LBRProfileSecRange;
+  std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
