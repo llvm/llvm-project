@@ -66,7 +66,7 @@ public:
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
-  static SymbolListTy getSortedStubs(DenseMap<MCSymbol *, StubValueTy> &);
+  static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
 
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
@@ -100,7 +100,7 @@ class MachineModuleInfo {
   MachineModuleInfoImpl *ObjFileMMI;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
-  DenseMap<const Function *, std::unique_ptr<MachineFunction>> MachineFunctions;
+  DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
   unsigned NextFnNum = 0;
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
@@ -153,14 +153,16 @@ public:
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
-  template <typename Ty> Ty &getObjFileInfo() {
+  template<typename Ty>
+  Ty &getObjFileInfo() {
     if (ObjFileMMI == nullptr)
       ObjFileMMI = new Ty(*this);
-    return *static_cast<Ty *>(ObjFileMMI);
+    return *static_cast<Ty*>(ObjFileMMI);
   }
 
-  template <typename Ty> const Ty &getObjFileInfo() const {
-    return const_cast<MachineModuleInfo *>(this)->getObjFileInfo<Ty>();
+  template<typename Ty>
+  const Ty &getObjFileInfo() const {
+    return const_cast<MachineModuleInfo*>(this)->getObjFileInfo<Ty>();
   }
 
   /// \}

@@ -137,7 +137,9 @@ public:
     return true;
   }
 
-  StringRef getPassName() const override { return "Free MachineFunction"; }
+  StringRef getPassName() const override {
+    return "Free MachineFunction";
+  }
 };
 
 } // end anonymous namespace
@@ -156,7 +158,7 @@ MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM) {
+    : ImmutablePass(ID), MMI(TM, ExtContext) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
