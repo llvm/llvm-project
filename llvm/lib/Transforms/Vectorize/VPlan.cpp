@@ -1680,11 +1680,11 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   }
 }
 
-VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
+VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
   assert(count_if(VPlans,
                   [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
              1 &&
-         "Best VF has not a single VPlan.");
+         "Multiple VPlans for VF.");
 
   for (const VPlanPtr &Plan : VPlans) {
     if (Plan->hasVF(VF))
