@@ -23,6 +23,11 @@
 #include <mutex>
 #include <unistd.h>
 
+#ifndef HAVE_GETTID
+#include <sys/syscall.h>
+pid_t gettid() { return ((pid_t)syscall(SYS_gettid)); }
+#endif
+
 using namespace lldb_private;
 
 namespace {
