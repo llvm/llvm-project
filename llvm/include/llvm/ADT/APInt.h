@@ -17,7 +17,6 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -1679,13 +1678,6 @@ public:
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
-#ifdef HAS_IEE754_FLOAT128
-  float128 bitsToQuad() const {
-    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
-    return llvm::bit_cast<float128>(ul);
-  }
-#endif
-
   /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
@@ -1883,6 +1875,12 @@ public:
   /// Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }
 
+  /// Get the word corresponding to a bit position
+  /// \returns the corresponding word for the specified bit position.
+  uint64_t getWord(unsigned bitPosition) const {
+    return isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)];
+  }
+
 private:
   /// This union is used to store the integer value. When the
   /// integer bit-width <= 64, it uses VAL, otherwise it uses pVal.
@@ -1946,12 +1944,6 @@ private:
     else
       U.pVal[getNumWords() - 1] &= mask;
     return *this;
-  }
-
-  /// Get the word corresponding to a bit position
-  /// \returns the corresponding word for the specified bit position.
-  uint64_t getWord(unsigned bitPosition) const {
-    return isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)];
   }
 
   /// Utility method to change the bit width of this APInt to new bit width,
