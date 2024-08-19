@@ -3024,6 +3024,34 @@ controlled by the execution mask. An undefined location description together
 with ``DW_OP_LLVM_extend`` is used to indicate the lane was not active on entry
 to the subprogram. See :ref:`amdgpu-dwarf-dw-at-llvm-lane-pc` for an example.
 
+.. _amdgpu-dwarf-base-type-conversions:
+
+Base Type Conversions
+---------------------
+
+For AMDGPU expressions, ``DW_OP_convert`` may be used to convert between
+``DW_ATE_address``-encoded base types in different address spaces.
+
+Conversions are defined as in :ref:`amdgpu-address-spaces` when all relevant
+conditions described there are met, and otherwise result in an evaluation
+error.
+
+.. note::
+
+  For a target which does not support a particular address space, converting to
+  or from that address space is always an evaluation error.
+
+  For targets which support the generic address space, converting from
+  ``DW_ASPACE_AMDGPU_generic`` to ``DW_ASPACE_LLVM_none`` is always defined and
+  requires no change to the literal value of the address.
+
+  Converting from ``DW_ASPACE_AMDGPU_generic`` to any of
+  ``DW_ASPACE_AMDGPU_local``, ``DW_ASPACE_AMDGPU_private_wave`` or
+  ``DW_ASPACE_AMDGPU_private_lane`` is defined when the relevant hardware
+  support is present and setup has been completed. Conversion to
+  ``DW_ASPACE_AMDGPU_private_lane`` additionally requires the context to
+  include the active lane.
+
 Debugger Information Entry Attributes
 -------------------------------------
 
