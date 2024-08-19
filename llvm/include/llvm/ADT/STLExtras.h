@@ -1847,7 +1847,7 @@ OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
 /// begin/end explicitly.
 template <typename R, typename T>
 void replace(R &&Range, const T &OldValue, const T &NewValue) {
-  return std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
+  std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
 }
 
 /// Provide wrappers to std::move which take ranges instead of having to
@@ -1982,6 +1982,8 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+/// Provide wrappers to std::min_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto min_element(R &&Range) {
   return std::min_element(adl_begin(Range), adl_end(Range));
 }
@@ -1990,6 +1992,8 @@ template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
   return std::min_element(adl_begin(Range), adl_end(Range), C);
 }
 
+/// Provide wrappers to std::max_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto max_element(R &&Range) {
   return std::max_element(adl_begin(Range), adl_end(Range));
 }
