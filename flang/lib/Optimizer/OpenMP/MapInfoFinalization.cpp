@@ -1,4 +1,4 @@
-//===- OMPMapInfoFinalization.cpp -----------------------------------------===//
+//===- MapInfoFinalization.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,9 +46,9 @@ namespace flangomp {
 } // namespace flangomp
 
 namespace {
-class OMPMapInfoFinalizationPass
-    : public flangomp::impl::OMPMapInfoFinalizationPassBase<
-          OMPMapInfoFinalizationPass> {
+class MapInfoFinalizationPass
+    : public flangomp::impl::MapInfoFinalizationPassBase<
+          MapInfoFinalizationPass> {
 
   void genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                fir::FirOpBuilder &builder,
@@ -244,7 +244,7 @@ class OMPMapInfoFinalizationPass
       // all users appropriately, making sure to only add a single member link
       // per new generation for the original originating descriptor MapInfoOp.
       assert(llvm::hasSingleElement(op->getUsers()) &&
-             "OMPMapInfoFinalization currently only supports single users "
+             "MapInfoFinalization currently only supports single users "
              "of a MapInfoOp");
 
       if (!op.getMembers().empty()) {

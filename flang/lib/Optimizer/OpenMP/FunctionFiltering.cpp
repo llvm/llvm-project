@@ -1,4 +1,4 @@
-//===- OMPFunctionFiltering.cpp -------------------------------------------===//
+//===- FunctionFiltering.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,11 +29,10 @@ namespace flangomp {
 using namespace mlir;
 
 namespace {
-class OMPFunctionFilteringPass
-    : public flangomp::impl::OMPFunctionFilteringBase<
-          OMPFunctionFilteringPass> {
+class FunctionFilteringPass
+    : public flangomp::impl::FunctionFilteringBase<FunctionFilteringPass> {
 public:
-  OMPFunctionFilteringPass() = default;
+  FunctionFilteringPass() = default;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();

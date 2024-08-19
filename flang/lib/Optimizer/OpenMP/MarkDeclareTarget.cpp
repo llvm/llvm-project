@@ -1,4 +1,4 @@
-//===- OMPMarkDeclareTarget.cpp -------------------------------------------===//
+//===- MarkDeclareTarget.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,9 +28,8 @@ namespace flangomp {
 } // namespace flangomp
 
 namespace {
-class OMPMarkDeclareTargetPass
-    : public flangomp::impl::OMPMarkDeclareTargetPassBase<
-          OMPMarkDeclareTargetPass> {
+class MarkDeclareTargetPass
+    : public flangomp::impl::MarkDeclareTargetPassBase<MarkDeclareTargetPass> {
 
   void markNestedFuncs(mlir::omp::DeclareTargetDeviceType parentDevTy,
                        mlir::omp::DeclareTargetCaptureClause parentCapClause,
