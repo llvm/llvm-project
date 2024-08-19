@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMipo
   InferFunctionAttrs.cpp
   Inliner.cpp
   Internalize.cpp
+  InterProceduralGraph.cpp
   LoopExtractor.cpp
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
