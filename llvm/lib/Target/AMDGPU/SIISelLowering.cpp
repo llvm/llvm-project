@@ -15992,16 +15992,12 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::amdgcn_mbcnt_hi: {
       const GCNSubtarget &ST =
           DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-      // These return at most the (wavefront size - 1) + src1
-      // As long as src1 is an immediate we can calc known bits
-      KnownBits Src1Known = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
-      unsigned Src1ValBits = Src1Known.countMaxActiveBits();
-      unsigned MaxActiveBits = std::max(Src1ValBits, ST.getWavefrontSizeLog2());
-      // Cater for potential carry
-      MaxActiveBits += Src1ValBits ? 1 : 0;
-      unsigned Size = Op.getValueType().getSizeInBits();
-      if (MaxActiveBits < Size)
-        Known.Zero.setHighBits(Size - MaxActiveBits);
+      // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+      // most 31 + src1.
+      Known.Zero.setBitsFrom(
+          IID == Intrinsic::amdgcn_mbcnt_lo ? ST.getWavefrontSizeLog2() : 5);
+      KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+      Known = KnownBits::add(Known, Known2);
       return;
     }
     }
@@ -16036,7 +16032,8 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
+    Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
+    switch (IID) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
       break;
@@ -16048,9 +16045,15 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       break;
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
-      // These return at most the wavefront size - 1.
-      unsigned Size = MRI.getType(R).getSizeInBits();
-      Known.Zero.setHighBits(Size - getSubtarget()->getWavefrontSizeLog2());
+      // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+      // most 31 + src1.
+      Known.Zero.setBitsFrom(IID == Intrinsic::amdgcn_mbcnt_lo
+                                 ? getSubtarget()->getWavefrontSizeLog2()
+                                 : 5);
+      KnownBits Known2;
+      KB.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
+                              Depth + 1);
+      Known = KnownBits::add(Known, Known2);
       break;
     }
     case Intrinsic::amdgcn_groupstaticsize: {

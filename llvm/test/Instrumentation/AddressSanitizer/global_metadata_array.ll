@@ -1,10 +1,10 @@
-; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix=CHECK %s
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefix=CHECK %s
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefix=CHECK %s
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: rm -rf %t && split-file %s %t
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix=CHECK %s
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefix=CHECK %s
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefix=CHECK %s
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
-; RUN: opt < empty.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix=ELF-NOGC %s
+; RUN: opt < %t/empty.ll -passes=asan -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefix=ELF-NOGC %s
 
 ;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
