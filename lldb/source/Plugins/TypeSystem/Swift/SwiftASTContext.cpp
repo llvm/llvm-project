@@ -1791,7 +1791,11 @@ void SwiftASTContext::AddExtraClangCC1Args(
   llvm::SmallVector<const char *> clangArgs;
   clangArgs.reserve(source.size());
   llvm::for_each(source, [&](const std::string &Arg) {
-    clangArgs.push_back(Arg.c_str());
+    // Workaround for the extra driver argument embedded in the swiftmodule by
+    // some swift compiler version. It always starts with `--target=` and it is
+    // not a valid cc1 option.
+    if (!StringRef(Arg).starts_with("--target="))
+      clangArgs.push_back(Arg.c_str());
   });
 
   std::string diags;
