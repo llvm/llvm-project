@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -66,11 +65,10 @@ void mlir::math::populateLegalizeToF32TypeConverter(
 
 void mlir::math::populateLegalizeToF32ConversionTarget(
     ConversionTarget &target, TypeConverter &typeConverter) {
-  target.addDynamicallyLegalDialect<MathDialect>(
-      [&typeConverter](Operation *op) -> bool {
-        return typeConverter.isLegal(op);
-      });
-  target.addLegalOp<scf::IfOp>();
+  target.markUnknownOpDynamicallyLegal([&typeConverter](Operation *op) -> bool {
+    if (isa<MathDialect>(op->getDialect())) return typeConverter.isLegal(op);
+    return true;
+  });
   target.addLegalOp<FmaOp>();
   target.addLegalOp<arith::ExtFOp, arith::TruncFOp>();
 }
