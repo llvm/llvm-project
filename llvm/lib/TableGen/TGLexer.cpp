@@ -44,6 +44,25 @@ constexpr PreprocessorDir PreprocessorDirs[] = {{tgtok::Ifdef, "ifdef"},
                                                 {tgtok::Endif, "endif"},
                                                 {tgtok::Define, "define"}};
 
+// Returns a pointer past the end of a valid macro name at the start of `Str`.
+// Valid macro names match the regular expression [a-zA-Z_][0-9a-zA-Z_]*.
+static const char *lexMacroName(StringRef Str) {
+  assert(!Str.empty());
+
+  // Macro names start with [a-zA-Z_].
+  const char *Next = Str.begin();
+  if (*Next != '_' && !isalpha(*Next))
+    return Next;
+  // Eat the first character of the name.
+  ++Next;
+
+  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
+  const char *End = Str.end();
+  while (Next != End && (isalpha(*Next) || isdigit(*Next) || *Next == '_'))
+    ++Next;
+  return Next;
+}
+
 TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   CurBuffer = SrcMgr.getMainFileID();
   CurBuf = SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer();
@@ -54,9 +73,16 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   PrepIncludeStack.push_back(
       std::make_unique<std::vector<PreprocessorControlDesc>>());
 
-  // Put all macros defined in the command line into the DefinedMacros set.
-  for (const std::string &MacroName : Macros)
+  // Add all macros defined on the command line to the DefinedMacros set.
+  // Check invalid macro names and print fatal error if we find one.
+  for (StringRef MacroName : Macros) {
+    const char *End = lexMacroName(MacroName);
+    if (End != MacroName.end())
+      PrintFatalError("Invalid macro name `" + MacroName +
+                      "` specified on command line");
+
     DefinedMacros.insert(MacroName);
+  }
 }
 
 SMLoc TGLexer::getLoc() const {
@@ -699,9 +725,8 @@ bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   return false;
 }
 
-tgtok::TokKind TGLexer::lexPreprocessor(
-    tgtok::TokKind Kind, bool ReturnNextLiveToken) {
-
+tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
+                                        bool ReturnNextLiveToken) {
   // We must be looking at a preprocessing directive.  Eat it!
   if (!prepEatPreprocessorDirective(Kind))
     PrintFatalError("lexPreprocessor() called for unknown "
@@ -901,14 +926,7 @@ StringRef TGLexer::prepLexMacroName() {
     ++CurPtr;
 
   TokStart = CurPtr;
-  // Macro names start with [a-zA-Z_].
-  if (*CurPtr != '_' && !isalpha(*CurPtr))
-    return "";
-
-  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
-  while (isalpha(*CurPtr) || isdigit(*CurPtr) || *CurPtr == '_')
-    ++CurPtr;
-
+  CurPtr = lexMacroName(StringRef(CurPtr, CurBuf.end() - CurPtr));
   return StringRef(TokStart, CurPtr - TokStart);
 }
 
