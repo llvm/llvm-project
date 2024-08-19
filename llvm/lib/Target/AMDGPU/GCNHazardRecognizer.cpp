@@ -1110,13 +1110,12 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
       const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
       // Assume inline asm reads the dst
       if (Dst)
-        return true;
+        return IA->modifiesRegister(Dst->getReg(), &TRI) || IA->readsRegister(Dst->getReg(), &TRI);
 
       if (MI.isInlineAsm()) {
         // If MI is inline asm, assume it has dst forwarding hazard
-        for (auto &Op :
-             drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-          if (Op.isReg() && IA->modifiesRegister(Op.getReg(), &TRI)) {
+        for (auto &Def : MI.all_defs()) {
+          if (IA->modifiesRegister(Def.getReg(), &TRI) || IA->readsRegister(Def.getReg(), &TRI)) {
             return true;
           }
         }
