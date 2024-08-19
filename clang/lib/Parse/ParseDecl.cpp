@@ -8030,7 +8030,8 @@ void Parser::ParseParameterDeclarationClause(
       // Skip until the the end of the parameter list, ignoring
       // parameters that would overflow.
       if (ParamInfo.size() == Type::FunctionTypeNumParamsLimit) {
-        Diag(ParmDeclarator.getBeginLoc(), diag::err_function_parameter_limit_exceeded);
+        Diag(ParmDeclarator.getBeginLoc(),
+             diag::err_function_parameter_limit_exceeded);
         SkipUntil(tok::r_paren, SkipUntilFlags::StopBeforeMatch);
         break;
       }
