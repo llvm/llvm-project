@@ -13477,7 +13477,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   // WebAssembly tables can't be used to initialise a variable.
-  if (Init && !Init->getType().isNull() &&
+  if (!Init->getType().isNull() &&
       Init->getType()->isWebAssemblyTableType()) {
     Diag(Init->getExprLoc(), diag::err_wasm_table_art) << 0;
     VDecl->setInvalidDecl();
@@ -13682,10 +13682,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
     Init = Result.getAs<Expr>();
 
-    if (!Init) {
-      VDecl->setInvalidDecl();
-      return;
-    }
+    assert(Init && "Should have a valid initializer at this point");
 
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
