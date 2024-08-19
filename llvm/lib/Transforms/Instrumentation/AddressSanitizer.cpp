@@ -642,6 +642,10 @@ static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
   }
 }
 
+static Twine genName(StringRef suffix) {
+  return Twine(kAsanGenPrefix) + suffix;
+}
+
 namespace {
 /// Helper RAII class to post-process inserted asan runtime calls during a
 /// pass on a single Function. Upon end of scope, detects and applies the
@@ -2243,7 +2247,7 @@ void ModuleAddressSanitizer::SetComdatForGlobalMetadata(
       // If G is unnamed, it must be internal. Give it an artificial name
       // so we can put it in a comdat.
       assert(G->hasLocalLinkage());
-      G->setName(Twine(kAsanGenPrefix) + "_anon_global");
+      G->setName(genName("anon_global"));
     }
 
     if (!InternalSuffix.empty() && G->hasLocalLinkage()) {
@@ -2538,10 +2542,10 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
   // We shouldn't merge same module names, as this string serves as unique
   // module ID in runtime.
   GlobalVariable *ModuleName =
-      n != 0
-          ? createPrivateGlobalForString(M, M.getModuleIdentifier(),
-                                         /*AllowMerging*/ false, kAsanGenPrefix)
-          : nullptr;
+      n != 0 ? createPrivateGlobalForString(M, M.getModuleIdentifier(),
+                                            /*AllowMerging*/ false,
+                                            genName("module"))
+             : nullptr;
 
   for (size_t i = 0; i < n; i++) {
     GlobalVariable *G = GlobalsToChange[i];
@@ -2556,7 +2560,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     std::string NameForGlobal = G->getName().str();
     GlobalVariable *Name =
         createPrivateGlobalForString(M, llvm::demangle(NameForGlobal),
-                                     /*AllowMerging*/ true, kAsanGenPrefix);
+                                     /*AllowMerging*/ true, genName("global"));
 
     Type *Ty = G->getValueType();
     const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
@@ -3583,7 +3587,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       IntptrPtrTy);
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
-                                   /*AllowMerging*/ true, kAsanGenPrefix);
+                                   /*AllowMerging*/ true, genName("stack"));
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].
