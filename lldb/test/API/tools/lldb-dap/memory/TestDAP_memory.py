@@ -12,9 +12,9 @@ import os
 
 
 class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
-    def test_read_memory(self):
+    def test_readMemory(self):
         """
-        Tests the 'read_memory' request
+        Tests the 'readMemory' request
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
@@ -30,26 +30,26 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         rawptr_ref = locals["rawptr"]["memoryReference"]
 
         # We can read the complete string
-        mem = self.dap_server.request_read_memory(rawptr_ref, 0, 5)["body"]
+        mem = self.dap_server.request_readMemory(rawptr_ref, 0, 5)["body"]
         self.assertEqual(mem["unreadableBytes"], 0)
         self.assertEqual(b64decode(mem["data"]), b"dead\0")
 
         # Use an offset
-        mem = self.dap_server.request_read_memory(rawptr_ref, 2, 3)["body"]
+        mem = self.dap_server.request_readMemory(rawptr_ref, 2, 3)["body"]
         self.assertEqual(b64decode(mem["data"]), b"ad\0")
 
         # Use a negative offset
-        mem = self.dap_server.request_read_memory(rawptr_ref, -1, 6)["body"]
+        mem = self.dap_server.request_readMemory(rawptr_ref, -1, 6)["body"]
         self.assertEqual(b64decode(mem["data"])[1:], b"dead\0")
 
         # Reads of size 0 are successful
         # VS-Code sends those in order to check if a `memoryReference` can actually be dereferenced.
-        mem = self.dap_server.request_read_memory(rawptr_ref, 0, 0)
+        mem = self.dap_server.request_readMemory(rawptr_ref, 0, 0)
         self.assertEqual(mem["success"], True)
         self.assertEqual(mem["body"]["data"], "")
 
         # Reads at offset 0x0 fail
-        mem = self.dap_server.request_read_memory("0x0", 0, 6)
+        mem = self.dap_server.request_readMemory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
         self.assertEqual(mem["message"], "Memory region is not readable")
 

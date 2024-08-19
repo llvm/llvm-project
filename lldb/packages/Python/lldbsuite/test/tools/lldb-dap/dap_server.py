@@ -691,7 +691,7 @@ class DebugCommunication(object):
         for inst in instructions:
             self.disassembled_instructions[inst["address"]] = inst
 
-    def request_read_memory(self, memoryReference, offset, count):
+    def request_readMemory(self, memoryReference, offset, count):
         args_dict = {
             "memoryReference": memoryReference,
             "offset": offset,
