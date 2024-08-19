@@ -4690,14 +4690,15 @@ void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
 /// requires some more plumbing on the Swift side to properly handle generic
 /// specializations.
 static swift::Type ConvertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
-  return t.transform([](swift::Type t) -> swift::Type {
-    if (auto *silFn = t->getAs<swift::SILFunctionType>()) {
+  return t.transformRec([](swift::TypeBase *t) -> std::optional<swift::Type> {
+    if (auto *silFn = swift::dyn_cast<swift::SILFunctionType>(t)) {
       // FIXME: Verify ExtInfo state is correct, not working by accident.
       swift::FunctionType::ExtInfo info;
-      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType,
-                                      info);
+      return swift::Type(
+          swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType,
+                                   info));
     }
-    return t;
+    return std::nullopt;
   });
 }
 
