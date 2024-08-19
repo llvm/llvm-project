@@ -2048,15 +2048,15 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
     auto AS = LangAS::Default;
     switch (A->getAllocatorType()) {
-      // Use the default allocator here as by default local vars are
-      // threadlocal.
     case OMPAllocateDeclAttr::OMPNullMemAlloc:
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
-    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
     case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-      // Follow the user decision - use default allocation.
-      return Address::invalid();
+      AS = LangAS::opencl_global;
+      break;
+    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
+      AS = LangAS::opencl_private;
+      break;
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
       return Address::invalid();
@@ -2208,12 +2208,14 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   case OMPAllocateDeclAttr::OMPNullMemAlloc:
   case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
   // Not supported, fallback to the default mem space.
-  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
   case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
   case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
   case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
   case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-    AS = LangAS::Default;
+    AS = LangAS::opencl_global;
+    return true;
+  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
+    AS = LangAS::opencl_private;
     return true;
   case OMPAllocateDeclAttr::OMPConstMemAlloc:
     AS = LangAS::cuda_constant;

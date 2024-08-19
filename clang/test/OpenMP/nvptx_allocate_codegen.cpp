@@ -87,10 +87,9 @@ void bar() {
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[B:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, ptr @_ZZ4mainE1a, align 4
-// CHECK1-NEXT:    store double 3.000000e+00, ptr [[B]], align 8
+// CHECK1-NEXT:    store double 3.000000e+00, ptr addrspacecast (ptr addrspace(1) @b1 to ptr), align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
@@ -98,7 +97,7 @@ void bar() {
 // CHECK1-LABEL: define {{[^@]+}}@_Z3fooIiET_v
 // CHECK1-SAME: () #[[ATTR1:[0-9]+]] comdat {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZN2STIiE1mE, align 4
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @_ZN2STIiE1mE to ptr), align 4
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr @v, align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr @v, align 4
 // CHECK1-NEXT:    ret i32 [[TMP1]]
@@ -120,13 +119,12 @@ void bar() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK1-NEXT:    [[BAR_A:%.*]] = alloca float, align 4
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load float, ptr [[BAR_A]], align 4
+// CHECK1-NEXT:    [[TMP0:%.*]] = load float, ptr @bar_a, align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
 // CHECK1-NEXT:    store double [[CONV]], ptr addrspacecast (ptr addrspace(3) @bar_b to ptr), align 8
-// CHECK1-NEXT:    call void @_Z3bazRf(ptr noundef nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR7]]
+// CHECK1-NEXT:    call void @_Z3bazRf(ptr noundef nonnull align 4 dereferenceable(4) @bar_a) #[[ATTR7]]
 // CHECK1-NEXT:    ret void
 //
 //
