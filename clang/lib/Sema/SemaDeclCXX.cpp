@@ -7057,10 +7057,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
           return false;
 
         for (const CXXBaseSpecifier &B : RD->bases())
-          if (!Check(B.getType(), Check))
+          if (B.getType() != T && !Check(B.getType(), Check))
             return false;
         for (const FieldDecl *FD : RD->fields())
-          if (!Check(FD->getType(), Check))
+          if (FD->getType() != T && !Check(FD->getType(), Check))
             return false;
         return true;
       };
