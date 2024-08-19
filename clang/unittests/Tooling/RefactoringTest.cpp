@@ -13,7 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -648,8 +648,7 @@ TEST_F(FlushRewrittenFilesTest, StoresChangesOnDisk) {
 }
 
 namespace {
-template <typename T>
-class TestVisitor : public clang::RecursiveASTVisitor<T> {
+class TestVisitor : public DynamicRecursiveASTVisitor {
 public:
   bool runOver(StringRef Code) {
     return runToolOnCode(std::make_unique<TestAction>(this), Code);
@@ -699,9 +698,9 @@ void expectReplacementAt(const Replacement &Replace,
   EXPECT_EQ(Length, Replace.getLength());
 }
 
-class ClassDeclXVisitor : public TestVisitor<ClassDeclXVisitor> {
+class ClassDeclXVisitor : public TestVisitor {
 public:
-  bool VisitCXXRecordDecl(CXXRecordDecl *Record) {
+  bool VisitCXXRecordDecl(CXXRecordDecl *Record) override {
     if (Record->getName() == "X") {
       Replace = Replacement(*SM, Record, "");
     }
@@ -722,9 +721,9 @@ TEST(Replacement, ReplacesAtSpellingLocation) {
   expectReplacementAt(ClassDeclX.Replace, "input.cc", 17, 7);
 }
 
-class CallToFVisitor : public TestVisitor<CallToFVisitor> {
+class CallToFVisitor : public TestVisitor {
 public:
-  bool VisitCallExpr(CallExpr *Call) {
+  bool VisitCallExpr(CallExpr *Call) override {
     if (Call->getDirectCallee()->getName() == "F") {
       Replace = Replacement(*SM, Call, "");
     }
@@ -746,10 +745,9 @@ TEST(Replacement, TemplatedFunctionCall) {
   expectReplacementAt(CallToF.Replace, "input.cc", 43, 8);
 }
 
-class NestedNameSpecifierAVisitor
-    : public TestVisitor<NestedNameSpecifierAVisitor> {
+class NestedNameSpecifierAVisitor : public TestVisitor {
 public:
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) override {
     if (NNSLoc.getNestedNameSpecifier()) {
       if (const NamespaceDecl* NS = NNSLoc.getNestedNameSpecifier()->getAsNamespace()) {
         if (NS->getName() == "a") {
@@ -757,8 +755,7 @@ public:
         }
       }
     }
-    return TestVisitor<NestedNameSpecifierAVisitor>::TraverseNestedNameSpecifierLoc(
-        NNSLoc);
+    return TestVisitor::TraverseNestedNameSpecifierLoc(NNSLoc);
   }
   Replacement Replace;
 };

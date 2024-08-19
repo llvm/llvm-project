@@ -171,6 +171,8 @@ public:
   virtual bool TraverseConceptTypeRequirement(concepts::TypeRequirement *R);
   virtual bool TraverseConceptExprRequirement(concepts::ExprRequirement *R);
   virtual bool TraverseConceptNestedRequirement(concepts::NestedRequirement *R);
+  virtual bool TraverseConceptReference(ConceptReference *CR);
+  virtual bool VisitConceptReference(ConceptReference *CR) { return true; }
 
   /// Visit a node.
   virtual bool VisitAttr(Attr *A) { return true; }

@@ -11,14 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestVisitor.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendAction.h"
+#include "clang/Tooling/Tooling.h"
+#include "gtest/gtest.h"
+#include <CRTPTestVisitor.h>
 
 using namespace clang;
 
 namespace {
-
-class RecordingVisitor : public TestVisitor<RecordingVisitor> {
-
+class RecordingVisitor : public CRTPTestVisitor<RecordingVisitor> {
   bool VisitPostOrder;
 
 public:

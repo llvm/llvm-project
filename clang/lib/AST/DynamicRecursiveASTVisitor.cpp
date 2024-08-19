@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements an AST visitor that does not require any template
-// instantiation to allow users to override this behaviour.
+// instantiation to allow users to override its behaviour.
 //
 //===----------------------------------------------------------------------===//
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -81,6 +81,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
     return Visitor.TraverseConceptNestedRequirement(R);
   }
 
+  bool TraverseConceptReference(ConceptReference *CR) {
+    return Visitor.TraverseConceptReference(CR);
+  }
+
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
     return Visitor.TraverseCXXBaseSpecifier(Base);
   }
@@ -100,6 +104,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     return Visitor.TraverseNestedNameSpecifierLoc(NNS);
+  }
+
+  bool VisitConceptReference(ConceptReference *CR) {
+    return Visitor.VisitConceptReference(CR);
   }
 
   bool dataTraverseStmtPre(Stmt *S) { return Visitor.dataTraverseStmtPre(S); }
@@ -270,6 +278,12 @@ bool DynamicRecursiveASTVisitor::TraverseConceptNestedRequirement(
   return Impl(*this)
       .RecursiveASTVisitor<Impl>::TraverseConceptNestedRequirement(R);
 }
+
+bool DynamicRecursiveASTVisitor::TraverseConceptReference(
+    ConceptReference *CR) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptReference(CR);
+}
+
 
 bool DynamicRecursiveASTVisitor::TraverseCXXBaseSpecifier(
     const CXXBaseSpecifier &Base) {

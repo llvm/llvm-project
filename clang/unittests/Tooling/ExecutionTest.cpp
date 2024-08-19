@@ -9,7 +9,7 @@
 #include "clang/Tooling/Execution.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -32,10 +32,8 @@ namespace {
 // each function declaration.
 class ASTConsumerWithResult
     : public ASTConsumer,
-      public RecursiveASTVisitor<ASTConsumerWithResult> {
+      public DynamicRecursiveASTVisitor {
 public:
-  using ASTVisitor = RecursiveASTVisitor<ASTConsumerWithResult>;
-
   explicit ASTConsumerWithResult(ExecutionContext *Context) : Context(Context) {
     assert(Context != nullptr);
   }
@@ -44,12 +42,12 @@ public:
     TraverseDecl(Context.getTranslationUnitDecl());
   }
 
-  bool TraverseFunctionDecl(clang::FunctionDecl *Decl) {
+  bool TraverseFunctionDecl(clang::FunctionDecl *Decl) override {
     Context->reportResult(Decl->getNameAsString(),
                           Context->getRevision() + ":" + Context->getCorpus() +
                               ":" + Context->getCurrentCompilationUnit() +
                               "/1");
-    return ASTVisitor::TraverseFunctionDecl(Decl);
+    return DynamicRecursiveASTVisitor::TraverseFunctionDecl(Decl);
   }
 
 private:
