@@ -3594,7 +3594,7 @@ namespace {
 /// others. Pretend that all local typedefs are always referenced, to not warn
 /// on this. This isn't necessary if f has internal linkage, or the typedef
 /// is private.
-class LocalTypedefNameReferencer : public DynamicRecursiveASTVisitor {
+class LocalTypedefNameReferencer final : public DynamicRecursiveASTVisitor {
 public:
   LocalTypedefNameReferencer(Sema &S) : S(S) {}
   bool VisitRecordType(RecordType *RT) override;

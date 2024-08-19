@@ -710,7 +710,7 @@ static bool isObjCTypeParamDependent(QualType Type) {
   // It is illegal to typedef parameterized types inside an interface. Therefore
   // an Objective-C type can only be dependent on a type parameter when the type
   // parameter structurally present in the type itself.
-  class IsObjCTypeParamDependentTypeVisitor
+  class IsObjCTypeParamDependentTypeVisitor final
       : public DynamicRecursiveASTVisitor  {
   public:
     IsObjCTypeParamDependentTypeVisitor() = default;

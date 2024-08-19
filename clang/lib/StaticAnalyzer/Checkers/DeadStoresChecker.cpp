@@ -32,7 +32,7 @@ using namespace ento;
 namespace {
 
 /// A simple visitor to record what VarDecls occur in EH-handling code.
-class EHCodeVisitor : public DynamicRecursiveASTVisitor {
+class EHCodeVisitor final : public DynamicRecursiveASTVisitor {
 public:
   bool inEH;
   llvm::DenseSet<const VarDecl *> &S;

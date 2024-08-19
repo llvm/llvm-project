@@ -23,7 +23,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class CastToStructVisitor : public DynamicRecursiveASTVisitor {
+class CastToStructVisitor final : public DynamicRecursiveASTVisitor {
   BugReporter &BR;
   const CheckerBase *Checker;
   AnalysisDeclContext *AC;

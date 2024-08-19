@@ -22,7 +22,7 @@ using namespace trans;
 
 namespace {
 
-class ZeroOutInDeallocRemover : public DynamicRecursiveASTVisitor {
+class ZeroOutInDeallocRemover final : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
   llvm::DenseMap<ObjCPropertyDecl*, ObjCPropertyImplDecl*> SynthesizedProperties;

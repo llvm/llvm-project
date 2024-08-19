@@ -28,7 +28,7 @@ using namespace clang;
 
 namespace {
   /// A class that collects unexpanded parameter packs.
-class CollectUnexpandedParameterPacksVisitor
+class CollectUnexpandedParameterPacksVisitor final
     : public DynamicRecursiveASTVisitor {
   SmallVectorImpl<UnexpandedParameterPack> &Unexpanded;
 

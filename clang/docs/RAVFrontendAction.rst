@@ -150,7 +150,7 @@ Now we can combine all of the above into a small example program:
 
       using namespace clang;
 
-      class FindNamedClassVisitor : public DynamicRecursiveASTVisitor {
+      class FindNamedClassVisitor final : public DynamicRecursiveASTVisitor {
       public:
         explicit FindNamedClassVisitor(ASTContext *Context)
           : Context(Context) {}

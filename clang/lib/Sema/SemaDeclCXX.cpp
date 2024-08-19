@@ -2499,7 +2499,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
   assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
          "expected an immediate function");
   assert(FD->hasBody() && "expected the function to have a body");
-  struct ImmediateEscalatingExpressionsVisitor : DynamicRecursiveASTVisitor {
+  struct ImmediateEscalatingExpressionsVisitor final : DynamicRecursiveASTVisitor {
     Sema &SemaRef;
 
     const FunctionDecl *ImmediateFn;
@@ -18742,7 +18742,7 @@ void Sema::CheckDelegatingCtorCycles() {
 
 namespace {
   /// AST visitor that finds references to the 'this' expression.
-class FindCXXThisExpr : public DynamicRecursiveASTVisitor {
+class FindCXXThisExpr final : public DynamicRecursiveASTVisitor {
   Sema &S;
 
 public:

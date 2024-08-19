@@ -27,7 +27,7 @@ using namespace trans;
 
 namespace {
 
-class APIChecker : public DynamicRecursiveASTVisitor {
+class APIChecker final : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
   Selector getReturnValueSel, setReturnValueSel;

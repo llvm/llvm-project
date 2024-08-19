@@ -211,7 +211,7 @@ StringRef trans::getNilString(MigrationPass &Pass) {
 
 namespace {
 
-class ReferenceClear : public DynamicRecursiveASTVisitor {
+class ReferenceClear final : public DynamicRecursiveASTVisitor {
   ExprSet &Refs;
 public:
   ReferenceClear(ExprSet &refs) : Refs(refs) { }
@@ -221,7 +221,7 @@ public:
   }
 };
 
-class ReferenceCollector : public DynamicRecursiveASTVisitor {
+class ReferenceCollector final : public DynamicRecursiveASTVisitor {
   ValueDecl *Dcl;
   ExprSet &Refs;
 
@@ -236,7 +236,7 @@ public:
   }
 };
 
-class RemovablesCollector : public DynamicRecursiveASTVisitor {
+class RemovablesCollector final : public DynamicRecursiveASTVisitor {
   ExprSet &Removables;
 
 public:
@@ -317,7 +317,7 @@ void trans::collectRemovables(Stmt *S, ExprSet &exprs) {
 
 namespace {
 
-class ASTTransform : public DynamicRecursiveASTVisitor {
+class ASTTransform final : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
 
 public:

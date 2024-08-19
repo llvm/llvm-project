@@ -717,7 +717,7 @@ bool isBodyLikeChildStmt(const Stmt *S, const Stmt *Parent) {
   }
 }
 
-class StmtUSEFinder : public DynamicRecursiveASTVisitor {
+class StmtUSEFinder final : public DynamicRecursiveASTVisitor {
   const Stmt *Target;
 
 public:
@@ -733,7 +733,7 @@ public:
 
 /// Traverses the AST and finds the last statement that used a given
 /// declaration.
-class LastDeclUSEFinder : public DynamicRecursiveASTVisitor {
+class LastDeclUSEFinder final : public DynamicRecursiveASTVisitor {
   const Decl *D;
 
 public:
@@ -761,7 +761,7 @@ public:
 /// to a partially available declaration. Whenever we encounter an \c if of the
 /// form: \c if(@available(...)), we use the version from the condition to visit
 /// the then statement.
-class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
+class DiagnoseUnguardedAvailability final : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
   Decl *Ctx;
 

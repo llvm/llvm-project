@@ -23,7 +23,7 @@ using namespace trans;
 namespace {
 
 /// Collects all the places where GC attributes __strong/__weak occur.
-class GCAttrsCollector : public DynamicRecursiveASTVisitor {
+class GCAttrsCollector final : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
   bool FullyMigratable;
   std::vector<ObjCPropertyDecl *> &AllProps;

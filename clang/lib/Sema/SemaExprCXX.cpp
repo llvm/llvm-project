@@ -8762,7 +8762,7 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 }
 
 namespace {
-class FindTypoExprs : public DynamicRecursiveASTVisitor {
+class FindTypoExprs final : public DynamicRecursiveASTVisitor {
   llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs;
 
 public:

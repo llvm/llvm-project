@@ -45,7 +45,7 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : DynamicRecursiveASTVisitor {
+    struct LocalVisitor final : DynamicRecursiveASTVisitor {
       const NoUncountedMemberChecker *Checker;
       explicit LocalVisitor(const NoUncountedMemberChecker *Checker)
           : Checker(Checker) {

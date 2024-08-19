@@ -31,7 +31,7 @@ using namespace trans;
 
 namespace {
 
-class ARCAssignChecker : public DynamicRecursiveASTVisitor {
+class ARCAssignChecker final : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
   llvm::DenseSet<VarDecl *> ModifiedVars;
 

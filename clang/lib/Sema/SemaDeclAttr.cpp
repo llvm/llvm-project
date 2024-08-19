@@ -723,7 +723,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
-class ArgumentDependenceChecker : public DynamicRecursiveASTVisitor {
+class ArgumentDependenceChecker final : public DynamicRecursiveASTVisitor {
 #ifndef NDEBUG
   const CXXRecordDecl *ClassType;
 #endif

@@ -1191,7 +1191,7 @@ namespace {
 class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
 
   // A helper class, which walks the AST
-  class MethodCrawler : public DynamicRecursiveASTVisitor {
+  class MethodCrawler final : public DynamicRecursiveASTVisitor {
     BugReporter &BR;
     const CheckerBase *Checker;
     AnalysisDeclContext *AC;

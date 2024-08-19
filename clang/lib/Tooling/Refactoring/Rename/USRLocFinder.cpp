@@ -152,7 +152,7 @@ NestedNameSpecifier *GetNestedNameForType(TypeLoc TL) {
 //
 // This class will traverse the AST and find every AST node whose USR is in the
 // given USRs' set.
-class RenameLocFinder : public DynamicRecursiveASTVisitor {
+class RenameLocFinder final : public DynamicRecursiveASTVisitor {
 public:
   RenameLocFinder(llvm::ArrayRef<std::string> USRs, ASTContext &Context)
       : USRSet(USRs.begin(), USRs.end()), Context(Context) {}

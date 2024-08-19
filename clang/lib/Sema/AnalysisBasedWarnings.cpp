@@ -1067,7 +1067,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
 }
 
 namespace {
-  class FallthroughMapper : public DynamicRecursiveASTVisitor {
+  class FallthroughMapper final : public DynamicRecursiveASTVisitor {
   public:
     FallthroughMapper(Sema &S)
       : FoundSwitchStatements(false),
@@ -2473,7 +2473,7 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
 
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
-class CallableVisitor : public DynamicRecursiveASTVisitor {
+class CallableVisitor final : public DynamicRecursiveASTVisitor {
 private:
   llvm::function_ref<void(const Decl *)> Callback;
 

@@ -87,7 +87,7 @@ struct MemoizedMatchResult {
 
 // A RecursiveASTVisitor that traverses all children or all descendants of
 // a node.
-class MatchChildASTVisitor : public DynamicRecursiveASTVisitor {
+class MatchChildASTVisitor final : public DynamicRecursiveASTVisitor {
 public:
   // Creates an AST visitor that matches 'matcher' on all children or
   // descendants of a traversed node. max_depth is the maximum depth
@@ -408,8 +408,8 @@ private:
 
 // Controls the outermost traversal of the AST and allows to match multiple
 // matchers.
-class MatchASTVisitor : public DynamicRecursiveASTVisitor,
-                        public ASTMatchFinder {
+class MatchASTVisitor final : public DynamicRecursiveASTVisitor,
+                              public ASTMatchFinder {
 public:
   MatchASTVisitor(const MatchFinder::MatchersByType *Matchers,
                   const MatchFinder::MatchFinderOptions &Options)

@@ -19,7 +19,7 @@ using namespace index;
 
 namespace {
 
-class TypeIndexer : public DynamicRecursiveASTVisitor {
+class TypeIndexer final : public DynamicRecursiveASTVisitor {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;

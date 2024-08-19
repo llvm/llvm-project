@@ -426,7 +426,7 @@ const Expr *getCondition(const Stmt *S) {
 /// of the AST will end up in the results.
 /// Results might have duplicate names, if this is a problem, convert to
 /// string sets afterwards.
-class NamesCollector : public DynamicRecursiveASTVisitor {
+class NamesCollector final : public DynamicRecursiveASTVisitor {
 public:
   static constexpr unsigned EXPECTED_NUMBER_OF_NAMES = 5;
   using NameCollection =

@@ -308,7 +308,7 @@ namespace {
     return true;
   }
 
-  class ObjCMigrator : public DynamicRecursiveASTVisitor {
+  class ObjCMigrator final : public DynamicRecursiveASTVisitor {
     ObjCMigrateASTConsumer &Consumer;
     ParentMap &PMap;
 
@@ -354,7 +354,7 @@ namespace {
     }
   };
 
-  class BodyMigrator : public DynamicRecursiveASTVisitor {
+  class BodyMigrator final : public DynamicRecursiveASTVisitor {
     ObjCMigrateASTConsumer &Consumer;
     std::unique_ptr<ParentMap> PMap;
 
@@ -1672,7 +1672,7 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
 }
 
 namespace {
-class SuperInitChecker : public DynamicRecursiveASTVisitor {
+class SuperInitChecker final : public DynamicRecursiveASTVisitor {
 public:
   SuperInitChecker() {
     ShouldVisitTemplateInstantiations = false;

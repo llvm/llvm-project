@@ -6228,7 +6228,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 }
 
 namespace {
-struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
+struct MarkUsedTemplateParameterVisitor final : DynamicRecursiveASTVisitor {
   llvm::SmallBitVector &Used;
   unsigned Depth;
 

@@ -76,7 +76,7 @@ inline bool fullyContains(SourceRange Larger, SourceRange Smaller,
          isLessOrEqual(Smaller.getEnd(), Larger.getEnd(), SM);
 }
 
-class CacheInitializer : public DynamicRecursiveASTVisitor {
+class CacheInitializer final : public DynamicRecursiveASTVisitor {
 public:
   static void initialize(const Decl *D, Ranges &ToInit) {
     CacheInitializer(ToInit).TraverseDecl(const_cast<Decl *>(D));

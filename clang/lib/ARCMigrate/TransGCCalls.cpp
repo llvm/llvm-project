@@ -17,7 +17,7 @@ using namespace trans;
 
 namespace {
 
-class GCCollectableCallsChecker : public DynamicRecursiveASTVisitor {
+class GCCollectableCallsChecker final : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
   IdentifierInfo *NSMakeCollectableII;
   IdentifierInfo *CFMakeCollectableII;

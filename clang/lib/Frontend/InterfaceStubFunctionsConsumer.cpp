@@ -242,7 +242,7 @@ public:
       : Instance(Instance), InFile(InFile), Format(Format) {}
 
   void HandleTranslationUnit(ASTContext &context) override {
-    struct Visitor : DynamicRecursiveASTVisitor {
+    struct Visitor final : DynamicRecursiveASTVisitor {
       bool VisitNamedDecl(NamedDecl *ND) override {
         if (const auto *FD = dyn_cast<FunctionDecl>(ND))
           if (FD->isLateTemplateParsed()) {

@@ -44,7 +44,7 @@ OpenACCComputeConstruct *OpenACCComputeConstruct::Create(
 }
 
 void OpenACCComputeConstruct::findAndSetChildLoops() {
-  struct LoopConstructFinder : DynamicRecursiveASTVisitor {
+  struct LoopConstructFinder final : DynamicRecursiveASTVisitor {
     OpenACCComputeConstruct *Construct = nullptr;
 
     LoopConstructFinder(OpenACCComputeConstruct *Construct)

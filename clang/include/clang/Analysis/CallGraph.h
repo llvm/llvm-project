@@ -40,7 +40,7 @@ class Stmt;
 /// The call graph extends itself with the given declarations by implementing
 /// the recursive AST visitor, which constructs the graph by visiting the given
 /// declarations.
-class CallGraph : public DynamicRecursiveASTVisitor {
+class CallGraph final : public DynamicRecursiveASTVisitor {
   friend class CallGraphNode;
 
   using FunctionMapTy =

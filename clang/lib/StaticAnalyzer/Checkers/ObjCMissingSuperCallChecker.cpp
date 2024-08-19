@@ -38,7 +38,7 @@ struct SelectorDescriptor {
 // FindSuperCallVisitor - Identify specific calls to the superclass.
 //===----------------------------------------------------------------------===//
 
-class FindSuperCallVisitor : public DynamicRecursiveASTVisitor {
+class FindSuperCallVisitor final : public DynamicRecursiveASTVisitor {
 public:
   explicit FindSuperCallVisitor(Selector S) : DoesCallSuper(false), Sel(S) {}
 

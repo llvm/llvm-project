@@ -143,7 +143,7 @@ public:
   }
 };
 
-class EmptyStatementsRemover : public DynamicRecursiveASTVisitor {
+class EmptyStatementsRemover final : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
 public:

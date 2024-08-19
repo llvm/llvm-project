@@ -356,7 +356,7 @@ static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
   return true;
 }
 
-void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {  
+void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   auto *VD = cast<ValueDecl>(D);
   if (!isLegalTypeForHLSLSV_DispatchThreadID(VD->getType())) {
     Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
@@ -552,7 +552,7 @@ namespace {
 /// and of all exported functions, and any functions that are referenced
 /// from this AST. In other words, any functions that are reachable from
 /// the entry points.
-class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
+class DiagnoseHLSLAvailability final : public DynamicRecursiveASTVisitor {
 
   Sema &SemaRef;
 

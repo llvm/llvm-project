@@ -2546,7 +2546,7 @@ namespace {
 
 /// A class which looks for a use of a certain level of template
 /// parameter.
-struct DependencyChecker : DynamicRecursiveASTVisitor {
+struct DependencyChecker final : DynamicRecursiveASTVisitor {
   unsigned Depth;
 
   // Whether we're looking for a use of a template parameter that makes the

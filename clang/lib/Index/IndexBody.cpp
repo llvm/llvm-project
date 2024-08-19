@@ -21,7 +21,7 @@ using namespace clang::index;
 
 namespace {
 
-class BodyIndexer : public DynamicRecursiveASTVisitor {
+class BodyIndexer final : public DynamicRecursiveASTVisitor {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;

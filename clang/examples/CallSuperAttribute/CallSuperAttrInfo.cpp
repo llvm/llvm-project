@@ -41,7 +41,7 @@ bool isMarkedAsCallSuper(const CXXMethodDecl *D) {
   return MarkedMethods.contains(D);
 }
 
-class MethodUsageVisitor : public DynamicRecursiveASTVisitor {
+class MethodUsageVisitor final : public DynamicRecursiveASTVisitor {
 public:
   bool IsOverriddenUsed = false;
   explicit MethodUsageVisitor(
@@ -68,7 +68,7 @@ private:
   llvm::SmallPtrSet<const CXXMethodDecl *, 16> &MustCalledMethods;
 };
 
-class CallSuperVisitor : public DynamicRecursiveASTVisitor {
+class CallSuperVisitor final : public DynamicRecursiveASTVisitor {
 public:
   CallSuperVisitor(DiagnosticsEngine &Diags) : Diags(Diags) {
     WarningSuperNotCalled = Diags.getCustomDiagID(

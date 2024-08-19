@@ -23,7 +23,7 @@ using namespace trans;
 
 namespace {
 
-class LocalRefsCollector : public DynamicRecursiveASTVisitor {
+class LocalRefsCollector final : public DynamicRecursiveASTVisitor {
   SmallVectorImpl<DeclRefExpr *> &Refs;
 
 public:
@@ -52,7 +52,7 @@ struct CaseInfo {
     : SC(S), Range(Range), State(St_Unchecked) {}
 };
 
-class CaseCollector : public DynamicRecursiveASTVisitor {
+class CaseCollector final : public DynamicRecursiveASTVisitor {
   ParentMap &PMap;
   SmallVectorImpl<CaseInfo> &Cases;
 

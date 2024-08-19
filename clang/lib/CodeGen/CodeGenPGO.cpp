@@ -156,7 +156,7 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
-struct MapRegionCounters : DynamicRecursiveASTVisitor {
+struct MapRegionCounters final : DynamicRecursiveASTVisitor {
   /// The next counter value to assign.
   unsigned NextCounter;
   /// The function hash.

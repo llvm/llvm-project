@@ -21,7 +21,7 @@ namespace clang {
 
 namespace {
 
-struct Builder : DynamicRecursiveASTVisitor {
+struct Builder final : DynamicRecursiveASTVisitor {
   ASTImporterLookupTable &LT;
   Builder(ASTImporterLookupTable &LT) : LT(LT) {
     ShouldVisitTemplateInstantiations = true;

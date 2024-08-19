@@ -15,7 +15,7 @@ namespace clang {
 namespace analysis {
 namespace {
 
-class CloneDetectionVisitor : public DynamicRecursiveASTVisitor {
+class CloneDetectionVisitor final : public DynamicRecursiveASTVisitor {
 
   CloneDetector &Detector;
 

@@ -187,7 +187,7 @@ static bool isNodeExcluded(const SourceManager &SrcMgr, T *N) {
 
 namespace {
 // Sets Height, Parent and Children for each node.
-struct PreorderVisitor : DynamicRecursiveASTVisitor {
+struct PreorderVisitor final : DynamicRecursiveASTVisitor {
   int Id = 0, Depth = 0;
   NodeId Parent;
   SyntaxTree::Impl &Tree;

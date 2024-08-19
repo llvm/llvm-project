@@ -36,10 +36,10 @@ using namespace trans;
 
 namespace {
 
-class RootBlockObjCVarRewriter : public DynamicRecursiveASTVisitor {
+class RootBlockObjCVarRewriter final : public DynamicRecursiveASTVisitor {
   llvm::DenseSet<VarDecl *> &VarsToChange;
 
-  class BlockVarChecker : public DynamicRecursiveASTVisitor {
+  class BlockVarChecker final : public DynamicRecursiveASTVisitor {
     VarDecl *Var;
 
   public:
@@ -106,7 +106,7 @@ private:
   }
 };
 
-class BlockObjCVarRewriter : public DynamicRecursiveASTVisitor {
+class BlockObjCVarRewriter final : public DynamicRecursiveASTVisitor {
   llvm::DenseSet<VarDecl *> &VarsToChange;
 
 public:

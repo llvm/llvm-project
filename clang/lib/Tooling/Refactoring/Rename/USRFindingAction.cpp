@@ -60,7 +60,7 @@ namespace {
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
 // Decl refers to class and adds USRs of all overridden methods if Decl refers
 // to virtual method.
-class AdditionalUSRFinder : public DynamicRecursiveASTVisitor {
+class AdditionalUSRFinder final : public DynamicRecursiveASTVisitor {
 public:
   AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context)
       : FoundDecl(FoundDecl), Context(Context) {

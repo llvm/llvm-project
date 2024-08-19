@@ -81,7 +81,7 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
 namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
-class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
+class MatchDescendantVisitor final : public DynamicRecursiveASTVisitor {
 public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones

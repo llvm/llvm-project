@@ -3951,7 +3951,7 @@ namespace {
   };
 
   // Make sure we're not referencing non-imported vars or functions.
-  struct DLLImportFunctionVisitor : DynamicRecursiveASTVisitor {
+  struct DLLImportFunctionVisitor final : DynamicRecursiveASTVisitor {
     bool SafeToInline = true;
 
     DLLImportFunctionVisitor() { ShouldVisitImplicitCode = true; }

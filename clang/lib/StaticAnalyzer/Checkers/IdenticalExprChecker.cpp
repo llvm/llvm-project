@@ -32,7 +32,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class FindIdenticalExprVisitor : public DynamicRecursiveASTVisitor {
+class FindIdenticalExprVisitor final : public DynamicRecursiveASTVisitor {
   BugReporter &BR;
   const CheckerBase *Checker;
   AnalysisDeclContext *AC;

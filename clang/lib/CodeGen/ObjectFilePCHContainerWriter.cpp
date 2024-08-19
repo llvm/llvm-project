@@ -58,7 +58,7 @@ class PCHContainerGenerator : public ASTConsumer {
   std::shared_ptr<PCHBuffer> Buffer;
 
   /// Visit every type and emit debug info for it.
-  struct DebugTypeVisitor : DynamicRecursiveASTVisitor {
+  struct DebugTypeVisitor final : DynamicRecursiveASTVisitor {
     clang::CodeGen::CGDebugInfo &DI;
     ASTContext &Ctx;
     DebugTypeVisitor(clang::CodeGen::CGDebugInfo &DI, ASTContext &Ctx)

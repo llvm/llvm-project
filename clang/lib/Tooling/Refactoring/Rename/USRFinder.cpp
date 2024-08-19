@@ -97,7 +97,7 @@ namespace {
 
 /// Recursively visits each NamedDecl node to find the declaration with a
 /// specific name.
-class NamedDeclFindingVisitor : public DynamicRecursiveASTVisitor {
+class NamedDeclFindingVisitor final : public DynamicRecursiveASTVisitor {
 public:
   explicit NamedDeclFindingVisitor(StringRef Name) : Name(Name) {}
 

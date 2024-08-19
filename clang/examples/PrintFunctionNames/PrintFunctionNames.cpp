@@ -52,7 +52,7 @@ public:
     // The advantage of doing this in HandleTranslationUnit() is that all
     // codegen (when using -add-plugin) is completely finished and this can't
     // affect the compiler output.
-    struct Visitor : DynamicRecursiveASTVisitor {
+    struct Visitor final : DynamicRecursiveASTVisitor {
       const std::set<std::string> &ParsedTemplates;
       Visitor(const std::set<std::string> &ParsedTemplates)
           : ParsedTemplates(ParsedTemplates) {}

@@ -5446,7 +5446,7 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
     case TemplateArgument::Pack:
       return ReferencesAnonymousEntity(TA.getPackAsArray());
     case TemplateArgument::Type: {
-      struct ReferencesAnonymous : DynamicRecursiveASTVisitor {
+      struct ReferencesAnonymous final : DynamicRecursiveASTVisitor {
         bool RefAnon = false;
         bool VisitRecordType(RecordType *RT) override {
           if (ReferencesAnonymousEntity(RT)) {
@@ -5469,7 +5469,7 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
   });
 }
 namespace {
-struct ReconstitutableType : DynamicRecursiveASTVisitor {
+struct ReconstitutableType final : DynamicRecursiveASTVisitor {
   bool Reconstitutable = true;
   bool VisitVectorType(VectorType *FT) override {
     Reconstitutable = false;

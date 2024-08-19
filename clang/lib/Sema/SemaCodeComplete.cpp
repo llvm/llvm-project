@@ -5424,7 +5424,7 @@ private:
 
   // This visitor infers members of T based on traversing expressions/types
   // that involve T. It is invoked with code known to be valid for T.
-  class ValidVisitor : public DynamicRecursiveASTVisitor {
+  class ValidVisitor final : public DynamicRecursiveASTVisitor {
     ConceptInfo *Outer;
     const TemplateTypeParmType *T;
 

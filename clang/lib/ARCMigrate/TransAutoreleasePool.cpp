@@ -39,7 +39,7 @@ using namespace trans;
 
 namespace {
 
-class ReleaseCollector : public DynamicRecursiveASTVisitor {
+class ReleaseCollector final : public DynamicRecursiveASTVisitor {
   Decl *Dcl;
   SmallVectorImpl<ObjCMessageExpr *> &Releases;
 
@@ -244,7 +244,7 @@ private:
     }
   };
 
-  class NameReferenceChecker : public DynamicRecursiveASTVisitor {
+  class NameReferenceChecker final : public DynamicRecursiveASTVisitor {
     ASTContext &Ctx;
     SourceRange ScopeRange;
     SourceLocation &referenceLoc, &declarationLoc;

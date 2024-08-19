@@ -476,7 +476,7 @@ static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
     }
   if (!CoroStmt)
     return false;
-  struct Checker : DynamicRecursiveASTVisitor {
+  struct Checker final : DynamicRecursiveASTVisitor {
     const Stmt *DeadStmt;
     bool CoroutineSubStmt = false;
     Checker(const Stmt *S) : DeadStmt(S) {

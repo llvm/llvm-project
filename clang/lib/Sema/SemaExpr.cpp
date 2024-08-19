@@ -5368,7 +5368,7 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
   return false;
 }
 
-struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
+struct ImmediateCallVisitor final : DynamicRecursiveASTVisitor {
   const ASTContext &Context;
   ImmediateCallVisitor(const ASTContext &Ctx) : Context(Ctx) {
     ShouldVisitImplicitCode = true;
@@ -17533,7 +17533,7 @@ HandleImmediateInvocations(Sema &SemaRef,
         RemoveNestedImmediateInvocation(SemaRef, Rec, It);
   } else if (Rec.ImmediateInvocationCandidates.size() == 1 &&
              Rec.ReferenceToConsteval.size()) {
-    struct SimpleRemove : DynamicRecursiveASTVisitor {
+    struct SimpleRemove final : DynamicRecursiveASTVisitor {
       llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet;
       SimpleRemove(llvm::SmallPtrSetImpl<DeclRefExpr *> &S) : DRSet(S) {}
       bool VisitDeclRefExpr(DeclRefExpr *E) override {
@@ -19826,7 +19826,7 @@ namespace {
   // TreeTransforms rebuilding the type in a new context. Rather than
   // duplicating the TreeTransform logic, we should consider reusing it here.
   // Currently that causes problems when rebuilding LambdaExprs.
-class MarkReferencedDecls : public DynamicRecursiveASTVisitor {
+class MarkReferencedDecls final : public DynamicRecursiveASTVisitor {
   Sema &S;
   SourceLocation Loc;
 
