@@ -1078,4 +1078,17 @@ void ECExportThunkChunk::writeTo(uint8_t *buf) const {
   write32le(buf + 10, target->getRVA() - rva - 14);
 }
 
+size_t CHPERedirectionChunk::getSize() const {
+  return exportThunks.size() * sizeof(chpe_redirection_entry);
+}
+
+void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
+  auto entries = reinterpret_cast<chpe_redirection_entry *>(buf);
+
+  for (uint32_t i = 0; i < exportThunks.size(); i++) {
+    entries[i].Source = exportThunks[i].first->getRVA();
+    entries[i].Destination = exportThunks[i].second->getRVA();
+  }
+}
+
 } // namespace lld::coff
