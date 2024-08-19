@@ -48,23 +48,11 @@ static TargetMachine *unwrap(LLVMTargetMachineRef P) {
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMPassBuilderOptions,
                                    LLVMPassBuilderOptionsRef)
 
-LLVMErrorRef RunPasses(LLVMModuleRef M, LLVMValueRef F, const char *Passes,
-                       LLVMTargetMachineRef TM,
-                       LLVMPassBuilderOptionsRef Options) {
-  TargetMachine *Machine = unwrap(TM);
-  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
+                              TargetMachine *Machine,
+                              LLVMPassBuilderOptions *PassOpts) {
   bool Debug = PassOpts->DebugLogging;
   bool VerifyEach = PassOpts->VerifyEach;
-
-  // Determine what to run passes on.
-  Module *Mod;
-  Function *Fun = nullptr;
-  if (F) {
-    Fun = unwrap<Function>(F);
-    Mod = Fun->getParent();
-  } else {
-    Mod = unwrap(M);
-  }
 
   PassInstrumentationCallbacks PIC;
   PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
@@ -113,13 +101,19 @@ LLVMErrorRef RunPasses(LLVMModuleRef M, LLVMValueRef F, const char *Passes,
 LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
                            LLVMTargetMachineRef TM,
                            LLVMPassBuilderOptionsRef Options) {
-  return RunPasses(M, nullptr, Passes, TM, Options);
+  TargetMachine *Machine = unwrap(TM);
+  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+  Module *Mod = unwrap(M);
+  return runPasses(Mod, nullptr, Passes, Machine, PassOpts);
 }
 
 LLVMErrorRef LLVMRunPassesOnFunction(LLVMValueRef F, const char *Passes,
                                      LLVMTargetMachineRef TM,
                                      LLVMPassBuilderOptionsRef Options) {
-  return RunPasses(nullptr, F, Passes, TM, Options);
+  TargetMachine *Machine = unwrap(TM);
+  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+  Function *Fun = unwrap<Function>(F);
+  return runPasses(Fun->getParent(), Fun, Passes, Machine, PassOpts);
 }
 
 LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions() {
