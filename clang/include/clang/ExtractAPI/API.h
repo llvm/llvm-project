@@ -19,13 +19,21 @@
 #define LLVM_CLANG_EXTRACTAPI_API_H
 
 #include "clang/AST/Availability.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <iterator>
@@ -319,8 +327,6 @@ public:
   /// Append \p Other children chain into ours and empty out Other's record
   /// chain.
   void stealRecordChain(RecordContext &Other);
-
-  void removeFromRecordChain(APIRecord *Record);
 
   APIRecord::RecordKind getKind() const { return Kind; }
 
@@ -1420,14 +1426,9 @@ public:
   typename std::enable_if_t<std::is_base_of_v<APIRecord, RecordTy>, RecordTy> *
   createRecord(StringRef USR, StringRef Name, CtorArgsContTy &&...CtorArgs);
 
-  auto getTopLevelRecords() const {
-    return llvm::iterator_range<decltype(TopLevelRecords)::iterator>(
-        TopLevelRecords);
+  ArrayRef<const APIRecord *> getTopLevelRecords() const {
+    return TopLevelRecords;
   }
-
-  void removeRecord(StringRef USR);
-
-  void removeRecord(APIRecord *Record);
 
   APISet(const llvm::Triple &Target, Language Lang,
          const std::string &ProductName)
@@ -1455,7 +1456,7 @@ private:
   // lives in the BumpPtrAllocator.
   using APIRecordStoredPtr = std::unique_ptr<APIRecord, APIRecordDeleter>;
   llvm::DenseMap<StringRef, APIRecordStoredPtr> USRBasedLookupTable;
-  llvm::SmallPtrSet<const APIRecord *, 32> TopLevelRecords;
+  std::vector<const APIRecord *> TopLevelRecords;
 
 public:
   const std::string ProductName;
@@ -1481,7 +1482,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
             dyn_cast_if_present<RecordContext>(Record->Parent.Record))
       ParentContext->addToRecordChain(Record);
     else
-      TopLevelRecords.insert(Record);
+      TopLevelRecords.push_back(Record);
   } else {
     Record = dyn_cast<RecordTy>(Result.first->second.get());
   }
