@@ -66,7 +66,8 @@ void mlir::math::populateLegalizeToF32TypeConverter(
 void mlir::math::populateLegalizeToF32ConversionTarget(
     ConversionTarget &target, TypeConverter &typeConverter) {
   target.markUnknownOpDynamicallyLegal([&typeConverter](Operation *op) -> bool {
-    if (isa<MathDialect>(op->getDialect())) return typeConverter.isLegal(op);
+    if (isa<MathDialect>(op->getDialect()))
+      return typeConverter.isLegal(op);
     return true;
   });
   target.addLegalOp<FmaOp>();
