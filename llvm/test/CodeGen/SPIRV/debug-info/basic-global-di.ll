@@ -5,9 +5,9 @@
 
 ; CHECK-MIR-DAG: [[type_void:%[0-9]+\:type]] = OpTypeVoid
 ; CHECK-MIR-DAG: [[type_i32:%[0-9]+\:type\(s32\)]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[dwarf_version:%[0-9]+\:id\(s32\)]] = OpConstantI [[type_i32]], 5
-; CHECK-MIR-DAG: [[source_language:%[0-9]+\:id\(s32\)]] = OpConstantI [[type_i32]], 3
-; CHECK-MIR-DAG: [[debug_info_version:%[0-9]+\:id\(s32\)]] = OpConstantI [[type_i32]], 21
+; CHECK-MIR-DAG: [[dwarf_version:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
+; CHECK-MIR-DAG: [[source_language:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
+; CHECK-MIR-DAG: [[debug_info_version:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 21
 ; CHECK-MIR-DAG: [[filename_str:%[0-9]+\:id\(s32\)]] = OpString 1094795567, 1094795585, 792805697, 1111638594, 1111638594, 1128481583, 1128481603, 1697596227, 1886216568, 1663985004, 0
 ; CHECK-MIR-DAG: [[debug_source:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 35, [[filename_str]]
 ; CHECK-MIR-DAG: [[debug_compilation_unit:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 1, [[source_language]], [[dwarf_version]], [[debug_source]], [[debug_info_version]]
