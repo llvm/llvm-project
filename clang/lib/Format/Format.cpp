@@ -137,13 +137,13 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BinPackParametersStyle> {
   static void enumeration(IO &IO, FormatStyle::BinPackParametersStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::BPPS_Never);
-    IO.enumCase(Value, "Always", FormatStyle::BPPS_Always);
     IO.enumCase(Value, "OnePerLine", FormatStyle::BPPS_OnePerLine);
+    IO.enumCase(Value, "BinPack", FormatStyle::BPPS_BinPack);
+    IO.enumCase(Value, "AlwaysOnePerLine", FormatStyle::BPPS_AlwaysOnePerLine);
 
     // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::BPPS_Always);
-    IO.enumCase(Value, "false", FormatStyle::BPPS_Never);
+    IO.enumCase(Value, "true", FormatStyle::BPPS_BinPack);
+    IO.enumCase(Value, "false", FormatStyle::BPPS_OnePerLine);
   }
 };
 
@@ -1473,7 +1473,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BinPackArguments = true;
-  LLVMStyle.BinPackParameters = FormatStyle::BPPS_Always;
+  LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
@@ -1848,7 +1848,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-    ChromiumStyle.BinPackParameters = FormatStyle::BPPS_Never;
+    ChromiumStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
     ChromiumStyle.DerivePointerAlignment = false;
     if (Language == FormatStyle::LK_ObjC)
       ChromiumStyle.ColumnLimit = 80;
@@ -1863,7 +1863,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BinPackArguments = false;
-  MozillaStyle.BinPackParameters = FormatStyle::BPPS_Never;
+  MozillaStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;

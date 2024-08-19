@@ -5477,7 +5477,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 
   // Ignores the first parameter as this will be handled separately by
   // BreakFunctionDefinitionParameters or AlignAfterOpenBracket.
-  if (FormatStyle::BPPS_OnePerLine == Style.BinPackParameters &&
+  if (FormatStyle::BPPS_AlwaysOnePerLine == Style.BinPackParameters &&
       Line.MightBeFunctionDecl && !Left.opensScope() &&
       startsNextParameter(Right, Style)) {
     return true;

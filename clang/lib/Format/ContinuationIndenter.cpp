@@ -419,7 +419,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
         (Previous.NestingLevel == 1 ||
-         Style.BinPackParameters == FormatStyle::BPPS_Always)) ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack)) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -1932,12 +1932,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters == FormatStyle::BPPS_Always) ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
         (State.Line->Type != LT_ObjCDecl &&
-         Style.BinPackParameters == FormatStyle::BPPS_Always) ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =

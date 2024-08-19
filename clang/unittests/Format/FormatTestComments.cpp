@@ -364,24 +364,17 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
                    "aaaa, bbbbb);"));
 
   FormatStyle BreakAlways = getLLVMStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_OnePerLine;
-  EXPECT_EQ("SomeFunction(a,\n"
-            "             b, // comment\n"
-            "             c,\n"
-            "             d);",
-            format("SomeFunction(a,\n"
-                   "          b, // comment\n"
-                   "      c, d);",
-                   BreakAlways));
-  EXPECT_EQ("SomeFunction(a,\n"
-            "             b,\n"
-            "             // comment\n"
-            "             c);",
-            format("SomeFunction(a,\n"
-                   "          b,\n"
-                   "  // comment\n"
-                   "      c);",
-                   BreakAlways));
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("int SomeFunction(a,\n"
+               "                 b, // comment\n"
+               "                 c,\n"
+               "                 d);",
+               BreakAlways);
+  verifyFormat("int SomeFunction(a,\n"
+               "                 b,\n"
+               "                 // comment\n"
+               "                 c);",
+               BreakAlways);
 }
 
 TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
@@ -423,19 +416,25 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
   verifyFormat("f(/* aaaaaaaaaaaaaaaaaa = */\n"
                "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
-  FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_Never;
-  verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
-               "         /* parameter 2 */ aaaaaa,\n"
-               "         /* parameter 3 */ aaaaaa,\n"
-               "         /* parameter 4 */ aaaaaa);",
-               NoBinPacking);
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
-  verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
-               "         /* parameter 2 */ aaaaaa,\n"
-               "         /* parameter 3 */ aaaaaa,\n"
-               "         /* parameter 4 */ aaaaaa);",
-               NoBinPacking);
+  FormatStyle BinPack = getLLVMStyle();
+  verifyFormat(
+      "int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb, /* 2nd */ int ccccccccccc,\n"
+      "                  /* 3rd */ int dddddddddddd);",
+      BinPack);
+
+  FormatStyle OnePerLine = getLLVMStyle();
+  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("int a(/* 1st */ int b, /* 2nd */ int c);", OnePerLine);
+  verifyFormat("int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb,\n"
+               "                  /* 2nd */ int ccccccccccc,\n"
+               "                  /* 3rd */ int dddddddddddd);",
+               OnePerLine);
+
+  FormatStyle AlwaysOnePerLine = getLLVMStyle();
+  AlwaysOnePerLine.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("int a(/* 1st */ int b,\n"
+               "      /* 2nd */ int c);",
+               AlwaysOnePerLine);
 
   // Aligning block comments in macros.
   verifyGoogleFormat("#define A        \\\n"
@@ -2475,7 +2474,7 @@ TEST_F(FormatTestComments, BlockComments) {
                    getLLVMStyleWithColumns(50)));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_Never;
+  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   EXPECT_EQ("someFunction(1, /* comment 1 */\n"
             "             2, /* comment 2 */\n"
             "             3, /* comment 3 */\n"

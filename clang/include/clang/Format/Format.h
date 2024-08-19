@@ -659,7 +659,7 @@ struct FormatStyle {
 
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
-  /// the next line even if ``BinPackParameters`` is ``Never``.
+  /// the next line even if ``BinPackParameters`` is ``OnePerLine``.
   /// \code
   ///   true:
   ///   void myFunction(
@@ -1203,20 +1203,20 @@ struct FormatStyle {
     ///           int b,
     ///           int ccccccccccccccccccccccccccccccccccccc);
     /// \endcode
-    BPPS_Never,
+    BPPS_OnePerLine,
     /// Bin-pack parameters.
     /// \code
     ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
     ///           int ccccccccccccccccccccccccccccccccccccccccccc);
     /// \endcode
-    BPPS_Always,
+    BPPS_BinPack,
     /// Always put each parameter on its own line.
     /// \code
     ///    void f(int a,
     ///           int b,
     ///           int c);
     /// \endcode
-    BPPS_OnePerLine,
+    BPPS_AlwaysOnePerLine,
   };
 
   /// The bin pack parameters style to use.
@@ -3429,7 +3429,7 @@ struct FormatStyle {
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
   /// If ``Auto`` (the default), delegates to the value in
-  /// ``BinPackParameters``. If that is ``Always``, bin-packs Objective-C
+  /// ``BinPackParameters``. If that is ``BinPack``, bin-packs Objective-C
   /// protocol conformance list items into as few lines as possible
   /// whenever they go over ``ColumnLimit``.
   ///
@@ -3441,13 +3441,13 @@ struct FormatStyle {
   /// onto individual lines whenever they go over ``ColumnLimit``.
   ///
   /// \code{.objc}
-  ///    Always (or Auto, if BinPackParameters==Always):
+  ///    Always (or Auto, if BinPackParameters==BinPack):
   ///    @interface ccccccccccccc () <
   ///        ccccccccccccc, ccccccccccccc,
   ///        ccccccccccccc, ccccccccccccc> {
   ///    }
   ///
-  ///    Never (or Auto, if BinPackParameters!=Always):
+  ///    Never (or Auto, if BinPackParameters!=BinPack):
   ///    @interface ddddddddddddd () <
   ///        ddddddddddddd,
   ///        ddddddddddddd,
