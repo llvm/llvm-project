@@ -1626,7 +1626,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   ICmpInst::Predicate LTPred, GTPred;
   if (match(&I,
             m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
-                    m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B)))))) {
+                    m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B))))) &&
+      A->getType()->isIntOrIntVectorTy()) {
     if (ICmpInst::isGT(LTPred)) {
       std::swap(LTPred, GTPred);
       std::swap(A, B);
