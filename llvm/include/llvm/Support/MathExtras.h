@@ -493,16 +493,16 @@ template <typename U, typename V, typename T = common_uint<U, V>>
 constexpr T alignToPowerOf2(U Value, V Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
-  T CeilDiv = divideCeil(Value, Align);
-  return CeilDiv * Align;
+  T NegAlign = static_cast<T>(0) - Align;
+  return (Value + (Align - 1)) & NegAlign;
 }
 
 /// Fallback when arguments aren't integral.
 constexpr uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
-  uint64_t CeilDiv = divideCeil(Value, Align);
-  return CeilDiv * Align;
+  uint64_t NegAlign = static_cast<uint64_t>(0) - Align;
+  return (Value + (Align - 1)) & NegAlign;
 }
 
 /// If non-zero \p Skew is specified, the return value will be a minimal integer
