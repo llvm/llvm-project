@@ -243,6 +243,16 @@ defm VOTE_SYNC_ANY : VOTE_SYNC<Int1Regs, "any.pred", int_nvvm_vote_any_sync>;
 defm VOTE_SYNC_UNI : VOTE_SYNC<Int1Regs, "uni.pred", int_nvvm_vote_uni_sync>;
 defm VOTE_SYNC_BALLOT : VOTE_SYNC<Int32Regs, "ballot.b32", int_nvvm_vote_ballot_sync>;
 
+// elect.sync
+def INT_ELECT_SYNC_I : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins i32imm:$mask),
+            "elect.sync \t$dest|$pred, $mask;",
+            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync imm:$mask))]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+def INT_ELECT_SYNC_R : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins Int32Regs:$mask),
+            "elect.sync \t$dest|$pred, $mask;",
+            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync Int32Regs:$mask))]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+
 multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntOp,
                           Operand ImmOp> {
   def ii : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, ImmOp:$value),
