@@ -33,8 +33,9 @@ func main() {
   //% self.expect("script lldb.frame.FindVariable('nsobject').GetObjectDescription()", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   var anyobject: AnyObject = 1234 as NSNumber //% self.expect("po any", substrs = ['1234'])
   var notification = Notification(name: Notification.Name(rawValue: "JustANotification"), object: nil)
-  print("yay I am done!") //% self.expect("po notification", substrs=['JustANotification'])
-   //% self.expect("po notification", matching=False, substrs=['super'])
+  var lines = "one\ndue" //% self.expect("po notification", substrs=['JustANotification'])
+  //% self.expect("po notification", matching=False, substrs=['super'])
+  print("yay I am done!") //% self.expect("po lines", startstr='one\ndue')
 }
 
 main()
