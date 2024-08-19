@@ -26,9 +26,6 @@ struct BPFRegisterInfo : public BPFGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
-  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
-                                       CallingConv::ID) const override;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
