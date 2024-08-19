@@ -10331,10 +10331,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
   auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
-  // On most uarchs vrgather.vv is quadratic in LMUL because each output
-  // register may read from LMUL registers. However to reverse a vector each
-  // output register only needs to read from one register. So decompose it into
-  // LMUL * M1 vrgather.vvs, so we get O(LMUL) performance instead of O(LMUL^2).
+  // On some uarchs vrgather.vv will read from every input register for each
+  // output register, regardless of the indices. However to reverse a vector
+  // each output register only needs to read from one register. So decompose it
+  // into LMUL * M1 vrgather.vvs, so we get O(LMUL) performance instead of
+  // O(LMUL^2).
   //
   // vsetvli a1, zero, e64, m4, ta, ma
   // vrgatherei16.vv v12, v8, v16
@@ -10344,7 +10345,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   // vrgather.vv v14, v9, v16
   // vrgather.vv v13, v10, v16
   // vrgather.vv v12, v11, v16
-  if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+  if (!Subtarget.hasOptimizedVectorGather() &&
+      ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
       ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
     auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
     Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);

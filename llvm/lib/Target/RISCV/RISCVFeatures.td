@@ -1357,6 +1357,11 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+def TuneOptimizedVectorGather
+   : SubtargetFeature<"optimized-vector-gather", "HasOptimizedVectorGather",
+                      "true", "At LMUL > 1 vrgather.vv doesn't read from"
+                      "registers that have no indices">;
+
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
                       "true", "Experimental intrinsics">;
