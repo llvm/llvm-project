@@ -181,7 +181,7 @@ private:
 class SummaryStatistics {
 public:
   explicit SummaryStatistics(std::string name, std::string impl_type)
-      : m_total_time(), m_impl_type(impl_type), m_name(name), m_count(0) {}
+      : m_total_time(), m_impl_type(std::move(impl_type)), m_name(std::move(name)), m_count(0) {}
 
   std::string GetName() const { return m_name; };
   double GetTotalTime() const { return m_total_time.get().count(); }
