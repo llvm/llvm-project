@@ -178,6 +178,7 @@ private:
 };
 
 /// A class that represents statistics about a TypeSummaryProviders invocations
+/// \note All members of this class need to be accessed in a thread safe manner
 class SummaryStatistics {
 public:
   explicit SummaryStatistics(std::string name, std::string impl_type)
@@ -234,16 +235,15 @@ public:
   SummaryStatisticsSP
   GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
-    auto iterator = m_summary_stats_map.find(provider.GetName());
-    if (iterator != m_summary_stats_map.end())
+    if (auto iterator = m_summary_stats_map.find(provider.GetName());
+         iterator != m_summary_stats_map.end())
       return iterator->second;
-    else {
-      auto it = m_summary_stats_map.try_emplace(
-          provider.GetName(),
-          std::make_shared<SummaryStatistics>(provider.GetName(),
-                                              provider.GetSummaryKindName()));
-      return it.first->second;
-    }
+
+    auto it = m_summary_stats_map.try_emplace(
+        provider.GetName(),
+        std::make_shared<SummaryStatistics>(provider.GetName(),
+                                            provider.GetSummaryKindName()));
+    return it.first->second;
   }
 
   llvm::json::Value ToJSON();

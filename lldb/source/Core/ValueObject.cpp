@@ -616,8 +616,7 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
                                                 // the synthetic children being
                                                 // up-to-date (e.g. ${svar%#})
 
-    TargetSP target_sp = GetExecutionContextRef().GetTargetSP();
-    if (target_sp) {
+    if (TargetSP target_sp = GetExecutionContextRef().GetTargetSP()) {
       // Get Shared pointer to the summary statistics container
       SummaryStatisticsSP stats_sp =
           target_sp->GetSummaryStatisticsCache()
