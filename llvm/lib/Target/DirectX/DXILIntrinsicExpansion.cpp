@@ -70,6 +70,7 @@ static Value *expandAbs(CallInst *Orig) {
 }
 
 // Create DXIL dot intrinsics for floating point dot operations
+// placing the dot product of A and B values in the position indicated by Orig
 static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();

@@ -1475,8 +1475,8 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-// Since pre-1.6 SPIRV has no integer dot implementation, expand by piecewise
-// multiplying and adding the results
+// Since pre-1.6 SPIRV has no integer dot implementation,
+// expand by piecewise multiplying and adding the results
 bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
