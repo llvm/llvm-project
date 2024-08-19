@@ -2052,9 +2052,11 @@ public:
   /// first operand does not have an associated mask.
   bool isNormalized() const { return getNumOperands() % 2; }
 
-  /// Return the number of incoming values, taking into account that the first
-  /// incoming value has no mask.
-  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
+  /// Return the number of incoming values, taking into account when normalized
+  /// the first incoming value will have no mask.
+  unsigned getNumIncomingValues() const {
+    return (getNumOperands() + isNormalized()) / 2;
+  }
 
   /// Return incoming value number \p Idx.
   VPValue *getIncomingValue(unsigned Idx) const {
