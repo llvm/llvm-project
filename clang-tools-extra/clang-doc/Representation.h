@@ -455,6 +455,8 @@ struct EnumValueInfo {
   // Stores the user-supplied initialization expression for this enumeration
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
+
+  std::vector<CommentInfo> Description; /// Comment description of this field.
 };
 
 // TODO: Expand to allow for documenting templating.

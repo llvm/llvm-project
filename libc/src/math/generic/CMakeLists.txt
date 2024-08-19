@@ -1367,6 +1367,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -4229,6 +4230,17 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
 )
 
+add_entrypoint_object(
+  atan2l
+  SRCS
+    atan2l.cpp
+  HDRS
+    ../atan2l.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    .atan2
+)
 
 add_entrypoint_object(
   scalbln

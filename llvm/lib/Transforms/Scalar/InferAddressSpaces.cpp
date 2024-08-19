@@ -240,7 +240,8 @@ class InferAddressSpacesImpl {
       SmallVectorImpl<const Use *> *PoisonUsesToFix) const;
   unsigned joinAddressSpaces(unsigned AS1, unsigned AS2) const;
 
-  unsigned getPredicatedAddrSpace(const Value &V, Value *Opnd) const;
+  unsigned getPredicatedAddrSpace(const Value &PtrV,
+                                  const Value *UserCtx) const;
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
@@ -909,18 +910,19 @@ void InferAddressSpacesImpl::inferAddressSpaces(
   }
 }
 
-unsigned InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &V,
-                                                        Value *Opnd) const {
-  const Instruction *I = dyn_cast<Instruction>(&V);
-  if (!I)
+unsigned
+InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &Ptr,
+                                               const Value *UserCtx) const {
+  const Instruction *UserCtxI = dyn_cast<Instruction>(UserCtx);
+  if (!UserCtxI)
     return UninitializedAddressSpace;
 
-  Opnd = Opnd->stripInBoundsOffsets();
-  for (auto &AssumeVH : AC.assumptionsFor(Opnd)) {
+  const Value *StrippedPtr = Ptr.stripInBoundsOffsets();
+  for (auto &AssumeVH : AC.assumptionsFor(StrippedPtr)) {
     if (!AssumeVH)
       continue;
     CallInst *CI = cast<CallInst>(AssumeVH);
-    if (!isValidAssumeForContext(CI, I, DT))
+    if (!isValidAssumeForContext(CI, UserCtxI, DT))
       continue;
 
     const Value *Ptr;
@@ -989,7 +991,7 @@ bool InferAddressSpacesImpl::updateAddressSpace(
           OperandAS = PtrOperand->getType()->getPointerAddressSpace();
           if (OperandAS == FlatAddrSpace) {
             // Check AC for assumption dominating V.
-            unsigned AS = getPredicatedAddrSpace(V, PtrOperand);
+            unsigned AS = getPredicatedAddrSpace(*PtrOperand, &V);
             if (AS != UninitializedAddressSpace) {
               LLVM_DEBUG(dbgs()
                          << "  deduce operand AS from the predicate addrspace "
