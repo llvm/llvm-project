@@ -1029,6 +1029,8 @@ Experimental extensions
     zicfiss              1.0
     zacas                1.0
     zalasr               0.1
+    zvbc32e              0.7
+    zvkgs                0.7
     smmpm                1.0
     smnpm                1.0
     ssnpm                1.0
