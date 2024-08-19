@@ -8,7 +8,6 @@
 
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
