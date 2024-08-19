@@ -14304,9 +14304,7 @@ the instruction in the code sequence that references the table.
                                                            1. buffer/global/flat_load
                                                               ``scope:SCOPE_SYS``
 
-                                                           2. ``s_wait_bvhcnt 0x0``
-                                                              ``s_wait_samplecnt 0x0``
-                                                              ``s_wait_loadcnt 0x0``
+                                                           2. ``s_wait_loadcnt 0x0``
 
                                                             - Must happen before
                                                               any following volatile
@@ -14390,9 +14388,7 @@ the instruction in the code sequence that references the table.
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                                                         2.  ``s_wait_loadcnt 0x0``
 
                                                            - If CU wavefront execution
                                                              mode, omit.
@@ -14439,13 +14435,11 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     load atomic  acquire      - workgroup    - generic  1. flat_load ``scope:SCOPE_SE``
+     load atomic  acquire      - workgroup    - generic  1. flat_load
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                                                         2. | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
@@ -14478,9 +14472,7 @@ the instruction in the code sequence that references the table.
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                                                         2.  ``s_wait_loadcnt 0x0``
 
                                                            - Must happen before
                                                              following
@@ -14490,7 +14482,7 @@ the instruction in the code sequence that references the table.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. ``global_inv scope:``
+                                                         3. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
@@ -14507,9 +14499,7 @@ the instruction in the code sequence that references the table.
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                                                         2. | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``
@@ -14521,7 +14511,7 @@ the instruction in the code sequence that references the table.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. ``global_inv scope:``
+                                                         3. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
@@ -14544,8 +14534,6 @@ the instruction in the code sequence that references the table.
                                                              use ``th:TH_ATOMIC_RETURN``
 
                                                          2. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -14600,12 +14588,11 @@ the instruction in the code sequence that references the table.
                                                              use ``th:TH_ATOMIC_RETURN``
 
                                                          2. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If CU wavefront execution mode,
                                                              omit all for atomics without
@@ -14639,8 +14626,6 @@ the instruction in the code sequence that references the table.
                                                              use ``th:TH_ATOMIC_RETURN``
 
                                                          2. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -14653,7 +14638,7 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         3. ``global_inv scope:``
+                                                         3. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
@@ -14673,8 +14658,6 @@ the instruction in the code sequence that references the table.
                                                              use ``th:TH_ATOMIC_RETURN``
 
                                                          2. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **Atomic without return:**
@@ -14691,7 +14674,7 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         3. ``global_inv scope:``
+                                                         3. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
@@ -14883,13 +14866,13 @@ the instruction in the code sequence that references the table.
                                                              store that is being
                                                              released.
 
-                                                          2. | ``s_wait_bvhcnt 0x0``
-                                                             | ``s_wait_samplecnt 0x0``
-                                                             | ``s_wait_storecnt 0x0``
-                                                             | ``s_wait_loadcnt 0x0``
-                                                             | ``s_wait_dscnt 0x0``
-                                                             | **CU wavefront execution mode:**
-                                                             | ``s_wait_dscnt 0x0``
+                                                         2. | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
+                                                            | **CU wavefront execution mode:**
+                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
                                                            - The waits can be
@@ -14922,7 +14905,7 @@ the instruction in the code sequence that references the table.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_store
+                                                         3. buffer/global/flat_store
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
@@ -14973,7 +14956,7 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          3. ds_store
-     store atomic release      - agent        - global   1. ``global_wb scope:``
+     store atomic release      - agent        - global   1. ``global_wb``
                                - system       - generic
                                                               - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                               - In combination with the waits
@@ -15261,7 +15244,7 @@ the instruction in the code sequence that references the table.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - agent        *none*     1. ``global_wb scope:``
+     fence        release      - agent        *none*     1. ``global_wb``
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - In combination with the waits
@@ -15401,8 +15384,6 @@ the instruction in the code sequence that references the table.
                                                              ``th:TH_ATOMIC_RETURN``.
 
                                                          4. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -15443,7 +15424,8 @@ the instruction in the code sequence that references the table.
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt_dscnt 0x0``
+                                                            | ``s_wait_loadcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
                                                             | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
@@ -15562,8 +15544,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_dscnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **CU wavefront execution mode:**
@@ -15589,7 +15569,7 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     atomicrmw    acq_rel      - agent        - global   1. ``global_wb scope:``
+     atomicrmw    acq_rel      - agent        - global   1. ``global_wb``
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - In combination with the waits
@@ -15648,8 +15628,6 @@ the instruction in the code sequence that references the table.
                                                              ``th:TH_ATOMIC_RETURN``.
 
                                                          4. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -15663,10 +15641,9 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         5. ``global_inv scope:``
+                                                         5. ``global_inv``
 
-                                                           - If agent scope, ``scope:SCOPE_DEV``
-                                                           - If system scope, ``scope:SCOPE_SYS``
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
                                                              any following
                                                              global/generic
@@ -15677,7 +15654,7 @@ the instruction in the code sequence that references the table.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb scope:``
+     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb``
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - In combination with the waits
@@ -15736,8 +15713,6 @@ the instruction in the code sequence that references the table.
                                                              ``th:TH_ATOMIC_RETURN``.
 
                                                          4. | **Atomic with return:**
-                                                            | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_sampleecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **Atomic without return:**
@@ -15756,7 +15731,7 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         5. ``global_inv scope:``
+                                                         5. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - Must happen before
@@ -15898,7 +15873,7 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     fence        acq_rel      - agent        *none*     1.  ``global_wb scope:``
+     fence        acq_rel      - agent        *none*     1.  ``global_wb``
                                - system
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - In combination with the waits
