@@ -2119,7 +2119,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     assert(selRef && "Expected all selector names to already be already be "
                      "present in __objc_selrefs");
     symVA = selRef->getVA();
-    assert(selRef->data.size() == sizeof(target->wordSize) &&
+    assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
   } else if (reloc->referent.is<Symbol *>()) {
     auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
