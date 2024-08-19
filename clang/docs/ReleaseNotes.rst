@@ -125,12 +125,6 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
