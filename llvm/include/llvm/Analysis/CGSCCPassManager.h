@@ -311,7 +311,10 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor>,
+      public AdaptorMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+  friend AdaptorMixin<ModuleToPostOrderCGSCCPassAdaptor>;
+
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
@@ -441,7 +444,10 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public PassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public PassInfoMixin<CGSCCToFunctionPassAdaptor>,
+      public AdaptorMixin<CGSCCToFunctionPassAdaptor> {
+  friend AdaptorMixin<CGSCCToFunctionPassAdaptor>;
+
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 

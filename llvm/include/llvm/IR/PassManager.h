@@ -218,6 +218,22 @@ public:
 
   static bool isRequired() { return true; }
 
+  /// Erase all passes that satisfy the predicate \p Pred.
+  /// For internal use only!
+  void eraseIf(function_ref<bool(StringRef)> Pred) {
+    for (auto I = Passes.begin(); I != Passes.end();) {
+      auto &P = *I;
+      P->eraseIf(Pred);
+      bool IsSpecial = P->name().ends_with("PassAdaptor") ||
+                       P->name().contains("PassManager");
+      bool PredResult = Pred(P->name());
+      if ((!IsSpecial && PredResult) || (IsSpecial && P->isEmpty()))
+        I = Passes.erase(I);
+      else
+        ++I;
+    }
+  }
+
 protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
@@ -797,6 +813,28 @@ extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 
+/// Simple mix-in for pass adaptor. If adaptor contains only a single pass
+/// instance in it, then it can inherit this mix-in to get default `isEmpty()`
+/// and `eraseIf` implementation. This mix-in must have access to the `Pass`
+/// member in adaptor.
+template <typename DerivedT> struct AdaptorMixin {
+  bool isEmpty() const { return derived().Pass == nullptr; }
+
+  void eraseIf(function_ref<bool(StringRef)> Pred) {
+    StringRef PassName = derived().Pass->name();
+    if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+      derived().Pass->eraseIf(Pred);
+      if (derived().Pass->isEmpty())
+        derived().Pass.reset();
+    } else if (Pred(PassName)) {
+      derived().Pass.reset();
+    }
+  }
+
+private:
+  DerivedT &derived() { return *static_cast<Derived *>(this); }
+};
+
 /// Trivial adaptor that maps from a module to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
@@ -821,7 +859,10 @@ using ModuleAnalysisManagerFunctionProxy =
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
 class ModuleToFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToFunctionPassAdaptor> {
+    : public PassInfoMixin<ModuleToFunctionPassAdaptor>,
+      public AdaptorMixin<ModuleToFunctionPassAdaptor> {
+  friend AdaptorMixin<ModuleToFunctionPassAdaptor>;
+
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 

@@ -191,7 +191,10 @@ private:
 };
 
 class FunctionToMachineFunctionPassAdaptor
-    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
+    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor>,
+      public AdaptorMixin<FunctionToMachineFunctionPassAdaptor> {
+  friend AdaptorMixin<FunctionToMachineFunctionPassAdaptor>;
+
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
