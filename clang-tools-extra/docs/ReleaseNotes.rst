@@ -496,6 +496,10 @@ Changes in existing checks
   ``static_cast``. Fixed false positives in C++20 spaceship operator by ignoring
   casts in implicit and defaulted functions.
 
+- Improved :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check to not crash when
+  redeclaration have fewer parameters than expected.
+
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
