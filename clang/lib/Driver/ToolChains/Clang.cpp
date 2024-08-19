@@ -2920,7 +2920,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   auto setComplexRange = [&](LangOptions::ComplexRangeKind NewRange) {
     // Warn if user expects to perform full implementation of complex
-    // multiplication or division in the presence of nan or ninf flags.
+    // multiplication or division in the presence of nnan or ninf flags.
     if (Range != NewRange)
       EmitComplexRangeDiag(D,
                            !GccRangeComplexOption.empty()
@@ -3079,7 +3079,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
       StringRef Val = A->getValue();
       if (OFastEnabled && Val != "aggressive") {
-        // Only -ffp-model=aggressive is compatible with OFast, ignore.
+        // Only -ffp-model=aggressive is compatible with -OFast, ignore.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + Val) << "-Ofast";
         break;
