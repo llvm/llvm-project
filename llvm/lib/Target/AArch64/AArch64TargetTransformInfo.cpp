@@ -1073,6 +1073,32 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with its operand
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryReplace(InstCombiner &IC, IntrinsicInst &II,
+                                   bool hasInactiveVector) {
+  int PredOperand = hasInactiveVector ? 1 : 0;
+  int ReplaceOperand = hasInactiveVector ? 0 : 1;
+  if (match(II.getOperand(PredOperand), m_ZeroInt())) {
+    IC.replaceInstUsesWith(II, II.getOperand(ReplaceOperand));
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
+// Simplify unary operation where predicate has all inactive lanes or try to
+// replace with  _x form when all lanes are active
+static std::optional<Instruction *>
+instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
+  if (isAllActivePredicate(II.getOperand(1)) &&
+      !isa<llvm::UndefValue>(II.getOperand(0))) {
+    Value *Undef = llvm::UndefValue::get(II.getType());
+    return IC.replaceOperand(II, 0, Undef);
+  }
+  return instCombineSVENoActiveUnaryReplace(IC, II, true);
+}
+
 // Erase unary operation where predicate has all inactive lanes
 static std::optional<Instruction *>
 instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
@@ -2104,7 +2130,41 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-
+  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f64:
+  case Intrinsic::aarch64_sve_fcvt_f32f16:
+  case Intrinsic::aarch64_sve_fcvt_f32f64:
+  case Intrinsic::aarch64_sve_fcvt_f64f16:
+  case Intrinsic::aarch64_sve_fcvt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtlt_f32f16:
+  case Intrinsic::aarch64_sve_fcvtlt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtx_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtzs:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f32:
+  case Intrinsic::aarch64_sve_fcvtzu:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_scvtf:
+  case Intrinsic::aarch64_sve_scvtf_f16i32:
+  case Intrinsic::aarch64_sve_scvtf_f16i64:
+  case Intrinsic::aarch64_sve_scvtf_f32i64:
+  case Intrinsic::aarch64_sve_scvtf_f64i32:
+  case Intrinsic::aarch64_sve_ucvtf:
+  case Intrinsic::aarch64_sve_ucvtf_f16i32:
+  case Intrinsic::aarch64_sve_ucvtf_f16i64:
+  case Intrinsic::aarch64_sve_ucvtf_f32i64:
+  case Intrinsic::aarch64_sve_ucvtf_f64i32:
+    return instCombineSVEAllOrNoActiveUnary(IC, II);
   case Intrinsic::aarch64_sve_st1_scatter:
   case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
   case Intrinsic::aarch64_sve_st1_scatter_sxtw:
