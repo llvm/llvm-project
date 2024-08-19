@@ -1997,16 +1997,21 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 
 Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
                                                  BuiltinCheckKind Kind) {
-  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
-          && "Unsupported builtin check kind");
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero ||
+          Kind == BCK_AssumePassedFalse) &&
+         "Unsupported builtin check kind");
 
-  Value *ArgValue = EmitScalarExpr(E);
+  Value *ArgValue =
+      Kind == BCK_AssumePassedFalse ? EvaluateExprAsBool(E) : EmitScalarExpr(E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
   SanitizerScope SanScope(this);
-  Value *Cond = Builder.CreateICmpNE(
-      ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
+  Value *Cond =
+      Kind == BCK_AssumePassedFalse
+          ? ArgValue
+          : Builder.CreateICmpNE(
+                ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
   EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
@@ -3428,7 +3433,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->HasSideEffects(getContext()))
       return RValue::get(nullptr);
 
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue =
+        EmitCheckedArgForBuiltin(E->getArg(0), BCK_AssumePassedFalse);
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
     Builder.CreateCall(FnAssume, ArgValue);
     return RValue::get(nullptr);
