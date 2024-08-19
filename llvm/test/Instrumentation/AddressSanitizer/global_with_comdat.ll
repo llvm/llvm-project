@@ -46,9 +46,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; NOCOMDAT: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, align 32
 
 ; Check emitted location descriptions:
-; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
+; CHECK: [[VARNAME:@___asan_gen_global[.0-9]*]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
 ; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint (ptr @__odr_asan_gen_global to i64){{.*}} section "asan_globals"{{.*}}, comdat($global), !associated
-; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @___asan_gen_ to i64){{.*}} section "asan_globals"{{.*}}, comdat($.str.{{.*}}), !associated
+; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @___asan_gen_global{{[.0-9]*}} to i64){{.*}} section "asan_globals"{{.*}}, comdat($.str.{{.*}}), !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.
