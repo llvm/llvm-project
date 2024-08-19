@@ -7014,27 +7014,32 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
-  bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxUserVF);
-  if (!UserVF.isZero() && UserVFIsLegal) {
-    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-           "VF needs to be a power of two");
-    // Collect the instructions (and their associated costs) that will be more
-    // profitable to scalarize.
-    CM.collectInLoopReductions();
-    if (CM.selectUserVectorizationFactor(UserVF)) {
-      LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-      buildVPlansWithVPRecipes(UserVF, UserVF);
-      if (!hasPlanWithVF(UserVF)) {
-        LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << UserVF
-                          << ".\n");
-        return std::nullopt;
-      }
+  if (!UserVF.isZero()) {
+    if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
+      reportVectorizationInfo(
+          "UserVF ignored because it may be larger than the maximal safe VF",
+          "InvalidUserVF", ORE, OrigLoop);
+    } else {
+      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
+             "VF needs to be a power of two");
+      // Collect the instructions (and their associated costs) that will be more
+      // profitable to scalarize.
+      CM.collectInLoopReductions();
+      if (CM.selectUserVectorizationFactor(UserVF)) {
+        LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        buildVPlansWithVPRecipes(UserVF, UserVF);
+        if (!hasPlanWithVF(UserVF)) {
+          LLVM_DEBUG(dbgs()
+                     << "LV: No VPlan could be built for " << UserVF << ".\n");
+          return std::nullopt;
+        }
 
-      LLVM_DEBUG(printPlans(dbgs()));
-      return {{UserVF, 0, 0}};
-    } else
-      reportVectorizationInfo("UserVF ignored because of invalid costs.",
-                              "InvalidCost", ORE, OrigLoop);
+        LLVM_DEBUG(printPlans(dbgs()));
+        return {{UserVF, 0, 0}};
+      } else
+        reportVectorizationInfo("UserVF ignored because of invalid costs.",
+                                "InvalidCost", ORE, OrigLoop);
+    }
   }
 
   // Collect the Vectorization Factor Candidates.
