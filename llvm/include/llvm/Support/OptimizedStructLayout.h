@@ -36,10 +36,11 @@
 #define LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 
 #include "llvm/Support/Alignment.h"
-#include "llvm/ADT/ArrayRef.h"
 #include <utility>
 
 namespace llvm {
+
+template <typename T> class MutableArrayRef;
 
 /// A field in a structure.
 struct OptimizedStructLayoutField {

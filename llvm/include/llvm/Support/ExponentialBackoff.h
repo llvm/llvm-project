@@ -12,8 +12,6 @@
 #ifndef LLVM_EXPONENTIALBACKOFF_H
 #define LLVM_EXPONENTIALBACKOFF_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
 #include <chrono>
 #include <random>
 

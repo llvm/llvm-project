@@ -14,7 +14,6 @@
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
 #include "llvm/ADT/bit.h"
-#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits>
 #include <cstdint>

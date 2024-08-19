@@ -15,7 +15,6 @@
 namespace llvm {
 
 class Error;
-class StringRef;
 
 namespace cl {
 class OptionCategory;

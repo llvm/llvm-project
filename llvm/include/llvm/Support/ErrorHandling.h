@@ -14,8 +14,6 @@
 #ifndef LLVM_SUPPORT_ERRORHANDLING_H
 #define LLVM_SUPPORT_ERRORHANDLING_H
 
-#include "llvm/Support/Compiler.h"
-
 namespace llvm {
   class StringRef;
   class Twine;

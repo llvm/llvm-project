@@ -17,19 +17,18 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/thread.h"
 
 #include <future>
 
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <utility>
 
 namespace llvm {
 
+class thread;
 class ThreadPoolTaskGroup;
 
 /// This defines the abstract base interface for a ThreadPool allowing

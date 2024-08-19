@@ -12,6 +12,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/Debug.h"
 
 namespace lld {
 namespace wasm {

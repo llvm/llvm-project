@@ -20,7 +20,6 @@
 #define LLVM_SUPPORT_COMMANDLINE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -31,7 +30,6 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <climits>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
@@ -44,8 +42,6 @@ namespace llvm {
 namespace vfs {
 class FileSystem;
 }
-
-class StringSaver;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.

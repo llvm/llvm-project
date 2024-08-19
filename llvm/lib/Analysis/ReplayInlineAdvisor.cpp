@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>

@@ -15,7 +15,7 @@
 #define LLVM_SUPPORT_PGOOPTIONS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/Support/Error.h"
+#include <string>
 
 namespace llvm {
 

@@ -28,6 +28,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"

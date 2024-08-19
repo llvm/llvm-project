@@ -3,6 +3,7 @@
 #include "DebugOptions.h"
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;

@@ -59,7 +59,6 @@ extern llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
 extern llvm::cl::opt<double> IterativeBFIPrecision;
 
 class BranchProbabilityInfo;
-class Function;
 class Loop;
 class LoopInfo;
 class MachineBasicBlock;

@@ -18,8 +18,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
-#include <system_error>
-
 namespace llvm {
 
   /// DiffFilesWithTolerance - Compare the two files specified, returning 0 if

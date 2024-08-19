@@ -14,7 +14,6 @@
 #include <utility> // for std::pair
 
 namespace llvm {
-class StringRef;
 
 /// Class that manages the creation of a lock file to aid
 /// implicit coordination between different processes.

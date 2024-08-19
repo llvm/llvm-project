@@ -12,7 +12,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Testing/ADT/StringMapEntry.h"
 #include <ostream>
 #include <sstream>
 

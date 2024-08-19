@@ -14,13 +14,15 @@
 #ifndef LLVM_SUPPORT_CACHEPRUNING_H
 #define LLVM_SUPPORT_CACHEPRUNING_H
 
-#include "llvm/Support/MemoryBuffer.h"
 #include <chrono>
+#include <memory>
 #include <optional>
+#include <vector>
 
 namespace llvm {
 
 template <typename T> class Expected;
+class MemoryBuffer;
 class StringRef;
 
 /// Policy for the pruneCache() function. A default constructed

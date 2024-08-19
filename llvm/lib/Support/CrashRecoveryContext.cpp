@@ -8,6 +8,7 @@
 
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/Signals.h"

@@ -8,6 +8,7 @@
 
 #include "llvm/Testing/ADT/StringMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Testing/ADT/StringMapEntry.h"
 
 #include "gtest/gtest.h"
 #include <sstream>

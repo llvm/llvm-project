@@ -19,6 +19,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-ref-type-mem2local"

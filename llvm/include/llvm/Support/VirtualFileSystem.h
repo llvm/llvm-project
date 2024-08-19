@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/FileSystem.h"

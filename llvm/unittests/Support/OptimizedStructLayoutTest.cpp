@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

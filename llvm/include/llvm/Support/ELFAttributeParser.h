@@ -18,7 +18,6 @@
 #include <unordered_map>
 
 namespace llvm {
-class StringRef;
 class ScopedPrinter;
 
 class ELFAttributeParser {

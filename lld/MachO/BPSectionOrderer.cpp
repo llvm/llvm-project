@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BalancedPartitioning.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/xxhash.h"

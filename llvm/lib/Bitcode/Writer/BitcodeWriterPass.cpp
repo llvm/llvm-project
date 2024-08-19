@@ -16,6 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 extern bool WriteNewDbgInfoFormatToBitcode;

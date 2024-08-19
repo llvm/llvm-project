@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
 
 #define DEBUG_TYPE "dwarfdump"

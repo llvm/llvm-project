@@ -21,7 +21,6 @@
 
 namespace llvm {
 class MemoryBuffer;
-class StringRef;
 
 namespace vfs {
 class FileSystem;
