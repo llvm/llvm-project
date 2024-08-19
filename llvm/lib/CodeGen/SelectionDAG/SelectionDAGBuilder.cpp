@@ -5232,7 +5232,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // readnone, but the lowering code will expect the chain based on the
   // definition.
   const Function *F = I.getCalledFunction();
-  bool HasChain = !F->doesNotAccessMemory();
+  bool HasChain = !F->doesNotAccessMemory() || !F->willReturn();
   bool OnlyLoad =
       HasChain && F->onlyReadsMemory() && F->willReturn() && F->doesNotThrow();
 
