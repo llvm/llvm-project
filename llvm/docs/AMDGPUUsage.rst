@@ -14220,7 +14220,7 @@ may change between kernel dispatch executions. See
 
 For kernarg backing memory:
 
-* CP invalidates caches start of each kernel dispatch.
+* CP invalidates caches at the start of each kernel dispatch.
 * On dGPU the kernarg backing memory is accessed as MTYPE UC (uncached) to avoid
   needing to invalidate the L2 cache.
 * On APU the kernarg backing memory is accessed as MTYPE CC (cache coherent) and
@@ -14689,9 +14689,7 @@ the instruction in the code sequence that references the table.
 
      fence        acquire      - singlethread *none*     *none*
                                - wavefront
-     fence        acquire      - workgroup    *none*     1. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
-                                                            | ``s_wait_storecnt 0x0``
+     fence        acquire      - workgroup    *none*     1. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **CU wavefront execution mode:**
@@ -14703,13 +14701,17 @@ the instruction in the code sequence that references the table.
                                                            - See :ref:`amdgpu-fence-as` for
                                                              more details on fencing specific
                                                              address spaces.
+                                                           - Note: we don't have to use
+                                                             ``s_wait_samplecnt 0x0`` or
+                                                             ``s_wait_bvhcnt 0x0`` because
+                                                             there are no atomic sample or
+                                                             BVH instructions that the fence
+                                                             could pair with.
                                                            - The waits can be
                                                              independently moved
                                                              according to the
                                                              following rules:
-                                                           - ``s_wait_loadcnt 0x0``,
-                                                             ``s_wait_samplecnt 0x0`` and
-                                                             ``s_wait_bvhcnt 0x0``
+                                                           - ``s_wait_loadcnt 0x0``
                                                              must happen after
                                                              any preceding
                                                              global/generic load
@@ -14771,9 +14773,7 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     fence        acquire      - agent        *none*     1.  | ``s_wait_bvhcnt 0x0``
-                               - system                      | ``s_wait_samplecnt 0x0``
-                                                             | ``s_wait_storecnt 0x0``
+     fence        acquire      - agent        *none*     1.  | ``s_wait_storecnt 0x0``
                                                              | ``s_wait_loadcnt 0x0``
                                                              | ``s_wait_dscnt 0x0``
 
@@ -14783,13 +14783,17 @@ the instruction in the code sequence that references the table.
                                                            - See :ref:`amdgpu-fence-as` for
                                                              more details on fencing specific
                                                              address spaces.
+                                                           - Note: we don't have to use
+                                                             ``s_wait_samplecnt 0x0`` or
+                                                             ``s_wait_bvhcnt 0x0`` because
+                                                             there are no atomic sample or
+                                                             BVH instructions that the fence
+                                                             could pair with.
                                                            - The waits can be
                                                              independently moved
                                                              according to the
                                                              following rules:
-                                                           - ``s_wait_loadcnt 0x0``,
-                                                             ``s_wait_samplecnt 0x0`` and
-                                                             ``s_wait_bvhcnt 0x0``
+                                                           - ``s_wait_loadcnt 0x0``
                                                              must happen after
                                                              any preceding
                                                              global/generic load
