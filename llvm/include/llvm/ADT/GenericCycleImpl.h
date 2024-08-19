@@ -187,7 +187,7 @@ template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
       }
     }
     dbgs() << "\n";
-    assert(false && "Unreachable block in cycle");
+    llvm_unreachable("Unreachable block in cycle");
   }
 
   verifyCycleNest();
