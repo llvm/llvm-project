@@ -142,7 +142,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                        p2, p3,  p4,  p5,  p6};
 
   auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
-  auto allWritablePtrs = {p0, p1, p3, p4, p5, p6};
 
   for (auto Opc : TypeFoldingSupportingOpcs)
     getActionDefinitionsBuilder(Opc).custom();
@@ -173,10 +172,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_UNMERGE_VALUES).alwaysLegal();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
-      .legalIf(all(typeInSet(0, allWritablePtrs), typeInSet(1, allPtrs)));
+      .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
   getActionDefinitionsBuilder(G_MEMSET).legalIf(
-      all(typeInSet(0, allWritablePtrs), typeInSet(1, allIntScalars)));
+      all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
       .legalForCartesianProduct(allPtrs, allPtrs);
@@ -232,14 +231,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_ATOMICRMW_MAX, G_ATOMICRMW_MIN,
                                G_ATOMICRMW_SUB, G_ATOMICRMW_XOR,
                                G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
-      .legalForCartesianProduct(allIntScalars, allWritablePtrs);
+      .legalForCartesianProduct(allIntScalars, allPtrs);
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB, G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
-      .legalForCartesianProduct(allFloatScalars, allWritablePtrs);
+      .legalForCartesianProduct(allFloatScalars, allPtrs);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
-      .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allWritablePtrs);
+      .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allPtrs);
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.

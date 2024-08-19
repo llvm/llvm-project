@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
 
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs

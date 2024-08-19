@@ -193,14 +193,24 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
+      MachineRegisterInfo *MRI = MIB.getMRI();
       if (GR->getSPIRVTypeForVReg(Source) == AssignedPtrType) {
         // Erase Def's assign type instruction if we are going to replace Def.
-        if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MIB.getMRI()))
+        if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MRI))
           ToErase.push_back(AssignMI);
-        MIB.getMRI()->replaceRegWith(Def, Source);
+        MRI->replaceRegWith(Def, Source);
       } else {
         GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
         MIB.buildBitcast(Def, Source);
+        // MachineVerifier requires that bitcast must change the type.
+        // Change AddressSpace if needed to hint that Def and Source points to
+        // different types: this doesn't change actual code generation.
+        LLT DefType = MRI->getType(Def);
+        if (DefType == MRI->getType(Source))
+          MRI->setType(Def,
+                       LLT::pointer((DefType.getAddressSpace() + 1) %
+                                        SPIRVSubtarget::MaxLegalAddressSpace,
+                                    GR->getPointerSize()));
       }
     }
   }

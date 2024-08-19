@@ -295,7 +295,7 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   Register Res = DT.find(ConstInt, &MF);
   if (!Res.isValid()) {
     unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
-    LLT LLTy = LLT::scalar(EmitIR ? BitWidth : 32); // lev
+    LLT LLTy = LLT::scalar(BitWidth);
     Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
     MF.getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     assignTypeToVReg(LLVMIntTy, Res, MIRBuilder,
