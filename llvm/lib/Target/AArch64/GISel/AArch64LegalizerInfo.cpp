@@ -264,7 +264,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         const auto &Ty = Query.Types[0];
         return (Ty == v8s16 || Ty == v4s16) && HasFP16;
       })
-      .customFor({s128})
+      .lowerFor({s128})
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .minScalarOrElt(0, MinFPScalar)
       .clampNumElements(0, v4s16, v8s16)
@@ -1360,8 +1360,6 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizePrefetch(MI, Helper);
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToCNeg(MI);
-  case TargetOpcode::G_FABS:
-    return legalizeFABS(MI, MRI, MIRBuilder);
   case TargetOpcode::G_ICMP:
     return legalizeICMP(MI, MRI, MIRBuilder);
   }
@@ -1419,25 +1417,6 @@ bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
                            Cast64.getReg(0)});
     MI.eraseFromParent();
   }
-  return true;
-}
-
-bool AArch64LegalizerInfo::legalizeFABS(MachineInstr &MI,
-                                        MachineRegisterInfo &MRI,
-                                        MachineIRBuilder &MIRBuilder) const {
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register DstReg = MI.getOperand(0).getReg();
-
-  constexpr LLT S128 = LLT::scalar(128);
-  if (MRI.getType(SrcReg) != S128 || MRI.getType(DstReg) != S128)
-    return false;
-
-  MIRBuilder.buildAnd(
-      DstReg, SrcReg,
-      MIRBuilder.buildConstant(
-          S128, APInt::getSignedMaxValue(128)));
-
-  MI.eraseFromParent();
   return true;
 }
 
