@@ -26,6 +26,8 @@ class Module;
 namespace lldb_private {
 
 /// Wraps an ExternalASTSource into an ExternalSemaSource.
+///
+/// Assumes shared ownership of the underlying source.
 class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
   llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
@@ -251,8 +253,7 @@ class SemaSourceWithPriorities : public clang::ExternalSemaSource {
 
 private:
   /// The sources ordered in decreasing priority.
-  llvm::SmallVector<clang::ExternalSemaSource*, 2>
-      Sources;
+  llvm::SmallVector<clang::ExternalSemaSource *, 2> Sources;
 
 public:
   /// Construct a SemaSourceWithPriorities with a 'high quality' source that

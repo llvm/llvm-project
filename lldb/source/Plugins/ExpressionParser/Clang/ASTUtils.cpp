@@ -8,6 +8,8 @@
 
 #include "ASTUtils.h"
 
+lldb_private::ExternalASTSourceWrapper::~ExternalASTSourceWrapper() = default;
+
 void lldb_private::ExternalASTSourceWrapper::PrintStats() {
   m_Source->PrintStats();
 }
