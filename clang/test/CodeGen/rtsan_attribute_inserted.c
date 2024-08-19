@@ -1,4 +1,4 @@
-// RUN: %clang     -target x86_64-unknown-linux -fsanitize=realtime %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1  -triple x86_64-unknown-linux -fsanitize=realtime %s -emit-llvm -o - %s | FileCheck %s
 
 float process(float *a) [[clang::nonblocking]] { return *a; }
 
