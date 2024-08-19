@@ -44,6 +44,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI simd() noexcept = default;
 
+  // explicit conversion from and to implementation-defined types
+  explicit _LIBCPP_HIDE_FROM_ABI operator _Storage() const;
+  explicit _LIBCPP_HIDE_FROM_ABI simd(const _Storage& __s) : __s_(__s) {}
+
   // broadcast constructor
   template <class _Up, enable_if_t<__can_broadcast_v<value_type, __remove_cvref_t<_Up>>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}

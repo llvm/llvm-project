@@ -41,6 +41,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI simd_mask() noexcept = default;
 
+  // explicit conversion from and to implementation-defined types
+  explicit _LIBCPP_HIDE_FROM_ABI operator _Storage() const;
+  explicit _LIBCPP_HIDE_FROM_ABI simd_mask(const _Storage& __s) : __s_(__s) {}
+
   // broadcast constructor
   _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
 
