@@ -533,26 +533,19 @@ static void setResourceClassFlagsFromDeclResourceClass(
 
 template <typename T>
 static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
+  assert(VD && "VD should not be null");
+  const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
+  if (!TheRecordDecl)
+    return nullptr;
 
-  if (VD) {
-    const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
-    if (!TheRecordDecl)
-      return nullptr;
-
-    // the resource attr could be on the record decl itself or on one of
-    // its fields (the resource handle, most commonly)
-    const auto *Attr = TheRecordDecl->getAttr<T>();
-    if (!Attr) {
-      for (auto *FD : TheRecordDecl->fields()) {
-        Attr = FD->getAttr<T>();
-        if (Attr)
-          break;
-      }
-    }
-    return Attr;
+  // get the attr from the handle member, a field of the record decl
+  const T *Attr = nullptr;
+  for (FieldDecl *FD : TheRecordDecl->fields()) {
+    Attr = FD->getAttr<T>();
+    if (Attr)
+      break;
   }
-  llvm_unreachable("VD should not be null");
-  return nullptr;
+  return Attr;
 }
 
 static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
@@ -574,24 +567,23 @@ static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
   RecordDecl *SubRecordDecl = TheRecordTy->getDecl();
   bool resClassSet = false;
   // if the member's base type is a ClassTemplateSpecializationDecl,
-  // check if it has a resource class attr
+  // check if it has a member handle with a resource class attr
+  // this is necessary while resources like RWBuffer are defined externally
   if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(SubRecordDecl)) {
     auto TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
     TheRecordDecl = TheRecordDecl->getCanonicalDecl();
-    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
-    if (!Attr) {
-      for (auto *FD : TheRecordDecl->fields()) {
-        Attr = FD->getAttr<HLSLResourceClassAttr>();
-        if (Attr)
-          break;
-      }
+    const HLSLResourceClassAttr *Attr = nullptr;
+    for (FieldDecl *FD : TheRecordDecl->fields()) {
+      Attr = FD->getAttr<HLSLResourceClassAttr>();
+      if (Attr)
+        break;
     }
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
     setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     resClassSet = true;
   }
-  // otherwise, check if the member has a resource class attr
-  else if (auto *Attr = SubRecordDecl->getAttr<HLSLResourceClassAttr>()) {
+  // otherwise, check if the member of the UDT has a resource class attr
+  else if (const auto *Attr = SubRecordDecl->getAttr<HLSLResourceClassAttr>()) {
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
     setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     resClassSet = true;

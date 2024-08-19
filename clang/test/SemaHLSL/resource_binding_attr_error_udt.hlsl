@@ -123,3 +123,9 @@ struct Eg13{
 // expected-warning@+2{{binding type 'u' only applies to types containing uav resources}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg13 e13 : register(u9) : register(u10) : register(u11);
+
+struct Eg14{
+ RWBuffer<int> r1;  
+};
+// expected-warning@+1{{binding type 't' only applies to types containing srv resources}}
+Eg14 e14 : register(t9);
