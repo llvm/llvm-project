@@ -4066,13 +4066,15 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       if (LIS) {
         LiveInterval &DefLI = LIS->getInterval(DefReg);
         LiveRange::Segment *OldSeg = DefLI.getSegmentContaining(NewIdx);
+        assert(OldSeg && "segment not found for instruction in LiveInterval");
 
         if (OldSeg->end == NewIdx.getRegSlot()) {
-          DefLI.removeSegment(OldSeg->start, NewIdx.getRegSlot(), true);
+          DefLI.removeSegment(*OldSeg, true);
 
           for (auto &SR : DefLI.subranges()) {
             LiveRange::Segment *OldSegSR = SR.getSegmentContaining(NewIdx);
-            SR.removeSegment(OldSegSR->start, NewIdx.getRegSlot(), true);
+            if (OldSegSR->end == NewIdx.getRegSlot())
+              SR.removeSegment(*OldSegSR, true);
           }
 
           DefLI.removeEmptySubRanges();
