@@ -690,14 +690,14 @@ inlineOmpRegionCleanup(llvm::SmallVectorImpl<Region *> &cleanupRegions,
                                           : &builder.GetInsertBlock()->back();
     if (potentialTerminator && potentialTerminator->isTerminator())
       builder.SetInsertPoint(potentialTerminator);
-    llvm::Value *prviateVarValue =
+    llvm::Value *privateVarValue =
         shouldLoadCleanupRegionArg
             ? builder.CreateLoad(
                   moduleTranslation.convertType(entry.getArgument(0).getType()),
                   privateVariables[i])
             : privateVariables[i];
 
-    moduleTranslation.mapValue(entry.getArgument(0), prviateVarValue);
+    moduleTranslation.mapValue(entry.getArgument(0), privateVarValue);
 
     if (failed(inlineConvertOmpRegions(*cleanupRegion, regionName, builder,
                                        moduleTranslation)))
@@ -1424,35 +1424,106 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     }
   };
 
-  SmallVector<omp::PrivateClauseOp> privatizerClones;
-  SmallVector<llvm::Value *> privateVariables;
+  SmallVector<omp::PrivateClauseOp> mlirPrivatizerClones;
+  SmallVector<llvm::Value *> llvmPrivateVars;
 
   // TODO: Perform appropriate actions according to the data-sharing
   // attribute (shared, private, firstprivate, ...) of variables.
   // Currently shared and private are supported.
   auto privCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                    llvm::Value &, llvm::Value &vPtr,
-                    llvm::Value *&replacementValue) -> InsertPointTy {
-    replacementValue = &vPtr;
+                    llvm::Value &, llvm::Value &llvmOmpRegionInput,
+                    llvm::Value *&llvmReplacementValue) -> InsertPointTy {
+    llvmReplacementValue = &llvmOmpRegionInput;
 
     // If this is a private value, this lambda will return the corresponding
     // mlir value and its `PrivateClauseOp`. Otherwise, empty values are
     // returned.
-    auto [privVar, privatizerClone] =
+    auto [mlirPrivVar, mlirPrivatizerClone] =
         [&]() -> std::pair<mlir::Value, omp::PrivateClauseOp> {
       if (!opInst.getPrivateVars().empty()) {
-        auto privateVars = opInst.getPrivateVars();
-        auto privateSyms = opInst.getPrivateSyms();
+        auto mlirPrivVars = opInst.getPrivateVars();
+        auto mlirPrivSyms = opInst.getPrivateSyms();
 
-        for (auto [privVar, privatizerAttr] :
-             llvm::zip_equal(privateVars, *privateSyms)) {
+        // Try to find a privatizer that corresponds to the LLVM value being
+        // privatized.
+        for (auto [mlirPrivVar, mlirPrivatizerAttr] :
+             llvm::zip_equal(mlirPrivVars, *mlirPrivSyms)) {
           // Find the MLIR private variable corresponding to the LLVM value
           // being privatized.
-          llvm::Value *llvmPrivVar = moduleTranslation.lookupValue(privVar);
-          if (llvmPrivVar != &vPtr)
+          llvm::Value *mlirToLLVMPrivVar =
+              moduleTranslation.lookupValue(mlirPrivVar);
+
+          // Check if the LLVM value being privatized matches the LLVM value
+          // mapped to privVar. In some cases, this is not trivial ...
+          auto isMatch = [&]() {
+            if (mlirToLLVMPrivVar == nullptr)
+              return false;
+
+            // If both values are trivially equal, we found a match.
+            if (mlirToLLVMPrivVar == &llvmOmpRegionInput)
+              return true;
+
+            // Otherwise, we check if both llvmOmpRegionInputPtr and
+            // mlirToLLVMPrivVar refer to the same memory (through a load/store
+            // pair). This happens if a struct (i.e. multi-field value) is being
+            // privatized.
+            //
+            // For example, if the privatized value is defined by:
+            // ```
+            //   %priv_val = alloca { ptr, i64 }, align 8
+            // ```
+            //
+            // The initialization of this value (outside the omp region) will be
+            // something like this:
+            //
+            // clang-format off
+            // ```
+            //   %partially_init_priv_val = insertvalue { ptr, i64 } undef,
+            //                              ptr %some_ptr, 0
+            //   %fully_init_priv_val = insertvalue { ptr, i64 } %partially_init_priv_val,
+            //                          i64 %some_i64, 1
+            //   ...
+            //   store { ptr, i64 } %fully_init_priv_val, ptr %priv_val, align 8
+            // ```
+            // clang-format on
+            //
+            // Now, we enter the OMP region, in order to access this privatized
+            // value, we need to load from the allocated memory:
+            // ```
+            // omp.par.entry:
+            //   %priv_val_load = load { ptr, i64 }, ptr %priv_val, align 8
+            // ```
+            //
+            // The 2 LLVM values tracked here map as follows:
+            // - `mlirToLLVMPrivVar`     -> `%fully_init_priv_val`
+            // - `llvmOmpRegionInputPtr` -> `%priv_val_load`
+            //
+            // Even though they eventually refer to the same memory reference
+            // (the memory being privatized), they are 2 distinct LLVM values.
+            // Therefore, we need to discover their correspondence by finding
+            // out if they store into and load from the same mem ref.
+            auto *llvmOmpRegionInputPtrLoad =
+                llvm::dyn_cast_if_present<llvm::LoadInst>(&llvmOmpRegionInput);
+
+            if (llvmOmpRegionInputPtrLoad == nullptr)
+              return false;
+
+            for (auto &use : mlirToLLVMPrivVar->uses()) {
+              auto *mlirToLLVMPrivVarStore =
+                  llvm::dyn_cast_if_present<llvm::StoreInst>(use.getUser());
+              if (mlirToLLVMPrivVarStore &&
+                  (llvmOmpRegionInputPtrLoad->getPointerOperand() ==
+                   mlirToLLVMPrivVarStore->getPointerOperand()))
+                return true;
+            }
+
+            return false;
+          };
+
+          if (!isMatch())
             continue;
 
-          SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(privatizerAttr);
+          SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(mlirPrivatizerAttr);
           omp::PrivateClauseOp privatizer =
               SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                   opInst, privSym);
@@ -1480,24 +1551,24 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
               counter);
 
           clone.setSymName(cloneName);
-          return {privVar, clone};
+          return {mlirPrivVar, clone};
         }
       }
 
       return {mlir::Value(), omp::PrivateClauseOp()};
     }();
 
-    if (privVar) {
-      Region &allocRegion = privatizerClone.getAllocRegion();
+    if (mlirPrivVar) {
+      Region &allocRegion = mlirPrivatizerClone.getAllocRegion();
 
       // If this is a `firstprivate` clause, prepare the `omp.private` op by:
-      if (privatizerClone.getDataSharingType() ==
+      if (mlirPrivatizerClone.getDataSharingType() ==
           omp::DataSharingClauseType::FirstPrivate) {
         auto oldAllocBackBlock = std::prev(allocRegion.end());
         omp::YieldOp oldAllocYieldOp =
             llvm::cast<omp::YieldOp>(oldAllocBackBlock->getTerminator());
 
-        Region &copyRegion = privatizerClone.getCopyRegion();
+        Region &copyRegion = mlirPrivatizerClone.getCopyRegion();
 
         mlir::IRRewriter copyCloneBuilder(&moduleTranslation.getContext());
         // 1. Cloning the `copy` region to the end of the `alloc` region.
@@ -1524,7 +1595,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       // This way, the body of the privatizer will be changed from using the
       // region/block argument to the value being privatized.
       auto allocRegionArg = allocRegion.getArgument(0);
-      replaceAllUsesInRegionWith(allocRegionArg, privVar, allocRegion);
+      replaceAllUsesInRegionWith(allocRegionArg, mlirPrivVar, allocRegion);
 
       auto oldIP = builder.saveIP();
       builder.restoreIP(allocaIP);
@@ -1535,15 +1606,15 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         opInst.emitError("failed to inline `alloc` region of an `omp.private` "
                          "op in the parallel region");
         bodyGenStatus = failure();
-        privatizerClone.erase();
+        mlirPrivatizerClone.erase();
       } else {
         assert(yieldedValues.size() == 1);
-        replacementValue = yieldedValues.front();
+        llvmReplacementValue = yieldedValues.front();
 
         // Keep the LLVM replacement value and the op clone in case we need to
         // emit cleanup (i.e. deallocation) logic.
-        privateVariables.push_back(replacementValue);
-        privatizerClones.push_back(privatizerClone);
+        llvmPrivateVars.push_back(llvmReplacementValue);
+        mlirPrivatizerClones.push_back(mlirPrivatizerClone);
       }
 
       builder.restoreIP(oldIP);
@@ -1571,13 +1642,14 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       bodyGenStatus = failure();
 
     SmallVector<Region *> privateCleanupRegions;
-    llvm::transform(privatizerClones, std::back_inserter(privateCleanupRegions),
+    llvm::transform(mlirPrivatizerClones,
+                    std::back_inserter(privateCleanupRegions),
                     [](omp::PrivateClauseOp privatizer) {
                       return &privatizer.getDeallocRegion();
                     });
 
     if (failed(inlineOmpRegionCleanup(
-            privateCleanupRegions, privateVariables, moduleTranslation, builder,
+            privateCleanupRegions, llvmPrivateVars, moduleTranslation, builder,
             "omp.private.dealloc", /*shouldLoadCleanupRegionArg=*/false)))
       bodyGenStatus = failure();
 
@@ -1604,7 +1676,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       ompBuilder->createParallel(ompLoc, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
 
-  for (mlir::omp::PrivateClauseOp privatizerClone : privatizerClones)
+  for (mlir::omp::PrivateClauseOp privatizerClone : mlirPrivatizerClones)
     privatizerClone.erase();
 
   return bodyGenStatus;
@@ -3233,12 +3305,19 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOpSupported(opInst))
     return failure();
 
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapVars = targetOp.getMapVars();
   llvm::Function *llvmOutlinedFn = nullptr;
+
+  // TODO: It can also be false if a compile-time constant `false` IF clause is
+  // specified.
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult bodyGenStatus = success();
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
@@ -3306,14 +3385,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   auto argAccessorCB = [&](llvm::Argument &arg, llvm::Value *input,
                            llvm::Value *&retVal, InsertPointTy allocaIP,
                            InsertPointTy codeGenIP) {
-    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-
     // We just return the unaltered argument for the host function
     // for now, some alterations may be required in the future to
     // keep host fallback functions working identically to the device
     // version (e.g. pass ByCopy values should be treated as such on
     // host and device, currently not always the case)
-    if (!ompBuilder->Config.isTargetDevice()) {
+    if (!isTargetDevice) {
       retVal = cast<llvm::Value>(&arg);
       return codeGenIP;
     }
@@ -3339,9 +3416,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                   moduleTranslation, dds);
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
-      ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
-      defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB,
-      dds));
+      ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
+      defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
+      argAccessorCB, dds));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
@@ -3710,6 +3787,23 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
                     bitEnumContainsAll(flags, Requires::unified_shared_memory));
                 config.setHasRequiresDynamicAllocators(
                     bitEnumContainsAll(flags, Requires::dynamic_allocators));
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.target_triples",
+            [&](Attribute attr) {
+              if (auto triplesAttr = dyn_cast<ArrayAttr>(attr)) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.TargetTriples.clear();
+                config.TargetTriples.reserve(triplesAttr.size());
+                for (Attribute tripleAttr : triplesAttr) {
+                  if (auto tripleStrAttr = dyn_cast<StringAttr>(tripleAttr))
+                    config.TargetTriples.emplace_back(tripleStrAttr.getValue());
+                  else
+                    return failure();
+                }
                 return success();
               }
               return failure();

@@ -146,11 +146,6 @@ private:
   /// virtual registers and offsets.
   ValueToVRegInfo VMap;
 
-  // N.b. it's not completely obvious that this will be sufficient for every
-  // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
-  // lives.
-  DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
-
   // One BasicBlock can be translated to multiple MachineBasicBlocks.  For such
   // BasicBlocks translated to multiple MachineBasicBlocks, MachinePreds retains
   // a mapping between the edges arriving at the BasicBlock to the corresponding

@@ -358,10 +358,15 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
         }
       }
     }
-    result.flags = result.value.Normalize(isNegative, expo, nearest);
-  } else if (IsInfinite() && upward == isNegative) {
-    result.value = isNegative ? HUGE().Negate() : HUGE(); // largest mag finite
-  } else {
+    result.value.Normalize(isNegative, expo, nearest);
+  } else if (IsInfinite()) {
+    if (upward == isNegative) {
+      result.value =
+          isNegative ? HUGE().Negate() : HUGE(); // largest mag finite
+    } else {
+      result.value = *this;
+    }
+  } else { // NaN
     result.flags.set(RealFlag::InvalidArgument);
     result.value = *this;
   }
@@ -526,10 +531,16 @@ RealFlags Real<W, P>::Normalize(bool negative, int exponent,
         (rounding.mode == common::RoundingMode::Up && !negative) ||
         (rounding.mode == common::RoundingMode::Down && negative)) {
       word_ = Word{maxExponent}.SHIFTL(significandBits); // Inf
+      if constexpr (!isImplicitMSB) {
+        word_ = word_.IBSET(significandBits - 1);
+      }
     } else {
       // directed rounding: round to largest finite value rather than infinity
       // (x86 does this, not sure whether it's standard behavior)
-      word_ = Word{word_.MASKR(word_.bits - 1)}.IBCLR(significandBits);
+      word_ = Word{word_.MASKR(word_.bits - 1)};
+      if constexpr (isImplicitMSB) {
+        word_ = word_.IBCLR(significandBits);
+      }
     }
     if (negative) {
       word_ = word_.IBSET(bits - 1);

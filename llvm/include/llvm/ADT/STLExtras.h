@@ -1843,6 +1843,13 @@ OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
                            NewValue);
 }
 
+/// Provide wrappers to std::replace which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, typename T>
+void replace(R &&Range, const T &OldValue, const T &NewValue) {
+  std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
+}
+
 /// Provide wrappers to std::move which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename OutputIt>
@@ -1975,6 +1982,8 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+/// Provide wrappers to std::min_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto min_element(R &&Range) {
   return std::min_element(adl_begin(Range), adl_end(Range));
 }
@@ -1983,6 +1992,8 @@ template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
   return std::min_element(adl_begin(Range), adl_end(Range), C);
 }
 
+/// Provide wrappers to std::max_element which take ranges instead of having to
+/// pass begin/end explicitly.
 template <typename R> auto max_element(R &&Range) {
   return std::max_element(adl_begin(Range), adl_end(Range));
 }
@@ -2025,6 +2036,12 @@ template <typename Range> auto unique(Range &&R) {
 template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
   return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
                     adl_end(RRange));
+}
+
+template <typename L, typename R, typename BinaryPredicate>
+bool equal(L &&LRange, R &&RRange, BinaryPredicate P) {
+  return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
+                    adl_end(RRange), P);
 }
 
 /// Returns true if all elements in Range are equal or when the Range is empty.
@@ -2360,7 +2377,7 @@ public:
   detail::index_iterator end() const { return {End}; }
 };
 
-/// Given two or more input ranges, returns a new range whose values are are
+/// Given two or more input ranges, returns a new range whose values are
 /// tuples (A, B, C, ...), such that A is the 0-based index of the item in the
 /// sequence, and B, C, ..., are the values from the original input ranges. All
 /// input ranges are required to have equal lengths. Note that the returned
