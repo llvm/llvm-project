@@ -8026,7 +8026,7 @@ void Parser::ParseParameterDeclarationClause(
         ConsumeToken();
       }
 
-      // FunctionTypeBitfields::NumParams can only hold so much.
+      // We can only store so many parameters
       // Skip until the the end of the parameter list, ignoring
       // parameters that would overflow.
       if (ParamInfo.size() == Type::FunctionTypeNumParamsLimit) {
