@@ -1463,8 +1463,14 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
   [[maybe_unused]] SPIRVType *VecType =
       GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
 
-  assert(GR.getScalarOrVectorComponentCount(VecType) > 1 &&
+  assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
+	 GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
+
+  [[maybe_unused]] SPIRVType *EltType =
+      GR.getSPIRVTypeForVReg(VecType->getOperand(1).getReg());
+
+  assert(EltType->getOpcode() == SPIRV::OpTypeFloat);
 
   MachineBasicBlock &BB = *I.getParent();
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpDot))
@@ -1498,7 +1504,8 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                     .addUse(Vec1)
                     .constrainAllUses(TII, TRI, RBI);
 
-  assert(GR.getScalarOrVectorComponentCount(VecType) > 1 &&
+  assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
+	 GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
 
   Register Res = MRI->createVirtualRegister(&SPIRV::IDRegClass);

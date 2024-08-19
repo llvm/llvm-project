@@ -69,8 +69,9 @@ static Value *expandAbs(CallInst *Orig) {
                                  "dx.max");
 }
 
-// Create DXIL dot intrinsics for floating point dot operations
-// placing the dot product of A and B values in the position indicated by Orig
+// Create the appropriate DXIL float dot intrinsic for the given operands A and B
+// The appropriate opcode will be determined by the size of the operands
+// The dot product is placed in the position indicated by Orig
 static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();
@@ -102,6 +103,14 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
                                  ArrayRef<Value *>{A, B}, nullptr, "dot");
 }
+
+// Create the appropriate DXIL float dot intrinsic for the operands of Orig
+// The appropriate opcode will be determined by the size of the operands
+// The dot product is placed in the position indicated by Orig
+static Value *expandFloatDotIntrinsic(CallInst *Orig) {
+  return expandFloatDotIntrinsic(Orig, Orig->getOperand(0), Orig->getOperand(1));
+}
+
 
 // Expand integer dot product to multiply and add ops
 static Value *expandIntegerDotIntrinsic(CallInst *Orig,
@@ -384,8 +393,7 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandNormalizeIntrinsic(Orig);
     break;
   case Intrinsic::dx_fdot:
-    Result =
-        expandFloatDotIntrinsic(Orig, Orig->getOperand(0), Orig->getOperand(1));
+    Result = expandFloatDotIntrinsic(Orig);
     break;
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
