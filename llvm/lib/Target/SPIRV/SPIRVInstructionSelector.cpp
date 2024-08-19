@@ -371,6 +371,16 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 64 bits (for SPIR-V IDs).
       MRI->setType(I.getOperand(0).getReg(), LLT::scalar(64));
+/*
+      Register Reg = I.getOperand(0).getReg();
+      LLT RegType = MRI->getType(Reg);
+      if (RegType.isScalar())
+        MRI->setType(Reg, LLT::scalar(64));
+      else if (RegType.isPointer())
+        MRI->setType(Reg, LLT::pointer(RegType.getAddressSpace(), 64));
+      else if (RegType.isVector())
+        MRI->setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
+*/
     }
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
@@ -2486,7 +2496,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
 
   // Build log2(x).
-  Register VarReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  Register VarReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   bool Result =
       BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
           .addDef(VarReg)

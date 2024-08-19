@@ -59,30 +59,30 @@ multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0
 }
 
 multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 1, bit genI = 1, bit genF = 0, bit genV = 0> {
-  if genF then {
-    def SFSCond: TernOpTyped<name, opCode, iID, fID, node>;
-    def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
+  if genP then {
+    def SPSCond: TernOpTyped<name, opCode, iID, pID, node>;
+    def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
   }
   if genI then {
     def SISCond: TernOpTyped<name, opCode, iID, iID, node>;
     def SIVCond: TernOpTyped<name, opCode, vID, iID, node>;
   }
-  if genP then {
-    def SPSCond: TernOpTyped<name, opCode, iID, pID, node>;
-    def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
+  if genF then {
+    def SFSCond: TernOpTyped<name, opCode, iID, fID, node>;
+    def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
   }
   if genV then {
-    if genF then {
-      def VFSCond: TernOpTyped<name, opCode, iID, vfID, node>;
-      def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
+    if genP then {
+      def VPSCond: TernOpTyped<name, opCode, iID, vpID, node>;
+      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
     }
     if genI then {
       def VISCond: TernOpTyped<name, opCode, iID, vID, node>;
       def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
     }
-    if genP then {
-      def VPSCond: TernOpTyped<name, opCode, iID, vpID, node>;
-      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
+    if genF then {
+      def VFSCond: TernOpTyped<name, opCode, iID, vfID, node>;
+      def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
     }
   }
 }
