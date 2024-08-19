@@ -1168,7 +1168,6 @@ bool Sema::CheckFunctionConstraintsWithoutInstantiation(
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
 
-
   Qualifiers ThisQuals;
   CXXRecordDecl *Record = nullptr;
   if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {

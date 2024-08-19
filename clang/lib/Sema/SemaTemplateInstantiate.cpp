@@ -1351,6 +1351,7 @@ namespace {
     DeclContext *FunctionDCForParameterDeclInstantiation;
 
     LocalInstantiationScope *ParameterInstantiationScope;
+
   private:
     bool instantiateParameterToScope(ParmVarDecl *OldParm,
                                      LocalInstantiationScope &Scope);
@@ -1367,9 +1368,7 @@ namespace {
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
     }
-    bool getEvaluateConstraints() const {
-      return EvaluateConstraints;
-    }
+    bool getEvaluateConstraints() const { return EvaluateConstraints; }
 
     void setInstantiatingFunctionDC(DeclContext *FunctionDC) {
       FunctionDCForParameterDeclInstantiation = FunctionDC;
@@ -4440,7 +4439,6 @@ static const Decl *getCanonicalParmVarDecl(const Decl *D) {
   }
   return D;
 }
-
 
 llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
 LocalInstantiationScope::findInstantiationUnsafe(const Decl *D) {
