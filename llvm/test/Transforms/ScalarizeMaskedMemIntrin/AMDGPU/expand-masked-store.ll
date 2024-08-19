@@ -108,6 +108,54 @@ define void @scalarize_v2i32_p3(ptr addrspace(3) %p, <2 x i1> %mask, <2 x i32> %
   ret void
 }
 
+define void @scalarize_v2i32_lane_mask(ptr %p, <2 x i32> %data) {
+; CHECK-LABEL: define void @scalarize_v2i32_lane_mask(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[DATA:%.*]]) {
+; CHECK-NEXT:    [[ITEM_ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ult i32 [[ITEM_ID]], 16
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MASK_SPLAT_FIRST:%.*]] = extractelement <2 x i1> [[MASK_SPLAT]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_SPLAT_FIRST]], label %[[COND_STORE:.*]], label %[[BB1:.*]]
+; CHECK:       [[COND_STORE]]:
+; CHECK-NEXT:    store <2 x i32> [[DATA]], ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+  %item.id = call i32 @llvm.amdgcn.workitem.id.x()
+  %mask = icmp ult i32 %item.id, 16
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %data, ptr %p, i32 8, <2 x i1> %mask.splat)
+  ret void
+}
+
+define void @scalarize_v2i32_group_mask(ptr %p, <2 x i32> %data) {
+; CHECK-LABEL: define void @scalarize_v2i32_group_mask(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[DATA:%.*]]) {
+; CHECK-NEXT:    [[ITEM_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ult i32 [[ITEM_ID]], 4
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MASK_SPLAT_FIRST:%.*]] = extractelement <2 x i1> [[MASK_SPLAT]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_SPLAT_FIRST]], label %[[COND_STORE:.*]], label %[[BB1:.*]]
+; CHECK:       [[COND_STORE]]:
+; CHECK-NEXT:    store <2 x i32> [[DATA]], ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+  %group.id = call i32 @llvm.amdgcn.workgroup.id.x()
+  %mask = icmp ult i32 %group.id, 4
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %data, ptr %p, i32 8, <2 x i1> %mask.splat)
+  ret void
+}
+
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
 declare void @llvm.masked.store.v2f16.p0(<2 x half>, ptr, i32, <2 x i1>)
 declare void @llvm.masked.store.v2i32.p3(<2 x i32>, ptr addrspace(3), i32, <2 x i1>)
+declare noundef i32 @llvm.amdgcn.workitem.id.x()
+declare noundef i32 @llvm.amdgcn.workgroup.id.x()

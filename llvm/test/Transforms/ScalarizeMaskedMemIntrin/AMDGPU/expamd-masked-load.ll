@@ -115,6 +115,56 @@ define <2 x i32> @scalarize_v2i32_p3(ptr addrspace(3) %p, <2 x i1> %mask, <2 x i
   ret <2 x i32> %ret
 }
 
+define <2 x i32> @scalarize_v2i32_lane_mask(ptr %p, <2 x i32> %passthrough) {
+; CHECK-LABEL: define <2 x i32> @scalarize_v2i32_lane_mask(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[PASSTHROUGH:%.*]]) {
+; CHECK-NEXT:    [[ITEM_ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ult i32 [[ITEM_ID]], 16
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MASK_SPLAT_FIRST:%.*]] = extractelement <2 x i1> [[MASK_SPLAT]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_SPLAT_FIRST]], label %[[COND_LOAD:.*]], label %[[BB1:.*]]
+; CHECK:       [[COND_LOAD]]:
+; CHECK-NEXT:    [[RET_COND_LOAD:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[RET:%.*]] = phi <2 x i32> [ [[RET_COND_LOAD]], %[[COND_LOAD]] ], [ [[PASSTHROUGH]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %item.id = call i32 @llvm.amdgcn.workitem.id.x()
+  %mask = icmp ult i32 %item.id, 16
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  %ret = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, i32 8, <2 x i1> %mask.splat, <2 x i32> %passthrough)
+  ret <2 x i32> %ret
+}
+
+define <2 x i32> @scalarize_v2i32_group_mask(ptr %p, <2 x i32> %passthrough) {
+; CHECK-LABEL: define <2 x i32> @scalarize_v2i32_group_mask(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[PASSTHROUGH:%.*]]) {
+; CHECK-NEXT:    [[GROUP_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ult i32 [[GROUP_ID]], 4
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MASK_SPLAT_FIRST:%.*]] = extractelement <2 x i1> [[MASK_SPLAT]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_SPLAT_FIRST]], label %[[COND_LOAD:.*]], label %[[BB1:.*]]
+; CHECK:       [[COND_LOAD]]:
+; CHECK-NEXT:    [[RET_COND_LOAD:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[RET:%.*]] = phi <2 x i32> [ [[RET_COND_LOAD]], %[[COND_LOAD]] ], [ [[PASSTHROUGH]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %group.id = call i32 @llvm.amdgcn.workgroup.id.x()
+  %mask = icmp ult i32 %group.id, 4
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  %ret = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, i32 8, <2 x i1> %mask.splat, <2 x i32> %passthrough)
+  ret <2 x i32> %ret
+}
+
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare <2 x half> @llvm.masked.load.v2f16.p0(ptr, i32, <2 x i1>, <2 x half>)
 declare <2 x i32> @llvm.masked.load.v2i32.p3(ptr addrspace(3), i32, <2 x i1>, <2 x i32>)
+declare noundef i32 @llvm.amdgcn.workitem.id.x()
+declare noundef i32 @llvm.amdgcn.workgroup.id.x()
