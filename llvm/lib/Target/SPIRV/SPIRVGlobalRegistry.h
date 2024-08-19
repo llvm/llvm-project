@@ -550,6 +550,9 @@ public:
   SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
+
+  const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
+  LLT getRegType(SPIRVType *SpvType) const;
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

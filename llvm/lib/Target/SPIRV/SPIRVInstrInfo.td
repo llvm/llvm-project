@@ -17,12 +17,12 @@ include "SPIRVSymbolicOperands.td"
 let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
   def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs iID:$dst_id), (ins ID:$src)>;
-  def GET_fID: Pseudo<(outs fID:$dst_id), (ins ID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins ID:$src)>;
-  def GET_vID: Pseudo<(outs vID:$dst_id), (ins ID:$src)>;
-  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins ID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins ID:$src)>;
+  def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
+  def GET_fID: Pseudo<(outs fID:$dst_id), (ins fID:$src)>;
+  def GET_pID: Pseudo<(outs pID:$dst_id), (ins pID:$src)>;
+  def GET_vID: Pseudo<(outs vID:$dst_id), (ins vID:$src)>;
+  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins vfID:$src)>;
+  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
@@ -36,14 +36,14 @@ class BinOp<string name, bits<16> opCode, list<dag> pattern=[]>
                   "$dst = "#name#" $src_ty $src $src2", pattern>;
 
 class BinOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
                   "$dst = "#name#" $src_ty $src $src2",
-                  [(set iID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
+                  [(set CID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
 
 class TernOpTyped<string name, bits<16> opCode, RegisterClass CCond, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
                   "$dst = "#name#" $src_ty $cond $src1 $src2",
-                  [(set iID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
+                  [(set CID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
 
 multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0, bit genV = 0> {
   if genF then
@@ -91,8 +91,8 @@ class UnOp<string name, bits<16> opCode, list<dag> pattern=[]>
                 : Op<opCode, (outs ID:$dst), (ins TYPE:$type, ID:$src),
                   "$dst = "#name#" $type $src", pattern>;
 class UnOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs iID:$dst), (ins TYPE:$src_ty, CID:$src),
-                  "$dst = "#name#" $src_ty $src", [(set iID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CID:$src),
+                  "$dst = "#name#" $src_ty $src", [(set CID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
 
 class SimpleOp<string name, bits<16> opCode>: Op<opCode, (outs), (ins), name>;
 

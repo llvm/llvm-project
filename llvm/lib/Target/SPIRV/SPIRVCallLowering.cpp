@@ -403,7 +403,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
-    MRI->setRegClass(VRegs[i][0], &SPIRV::iIDRegClass);
+    MRI->setRegClass(VRegs[i][0], GR->getRegClass(ArgTypeVRegs[i]));
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
         .addDef(VRegs[i][0])
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));

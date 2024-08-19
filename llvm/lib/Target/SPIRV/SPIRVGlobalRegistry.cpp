@@ -1438,3 +1438,54 @@ Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
                                    *ST.getRegisterInfo(), *ST.getRegBankInfo());
   return Res;
 }
+
+const TargetRegisterClass *
+SPIRVGlobalRegistry::getRegClass(SPIRVType *SpvType) const {
+  unsigned Opcode = SpvType->getOpcode();
+  switch (Opcode) {
+  case SPIRV::OpTypeFloat:
+    return &SPIRV::fIDRegClass;
+  case SPIRV::OpTypePointer:
+    return &SPIRV::pIDRegClass;
+  case SPIRV::OpTypeVector: {
+    SPIRVType *ElemType = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
+    if (ElemOpcode == SPIRV::OpTypeFloat)
+      return &SPIRV::vfIDRegClass;
+    if (ElemOpcode == SPIRV::OpTypePointer)
+      return &SPIRV::vpIDRegClass;
+    return &SPIRV::vIDRegClass;
+  }
+  }
+  return &SPIRV::iIDRegClass;
+}
+
+LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
+  unsigned Opcode = SpvType ? SpvType->getOpcode() : 0;
+  switch (Opcode) {
+  case SPIRV::OpTypeInt:
+  case SPIRV::OpTypeFloat:
+  case SPIRV::OpTypeBool:
+    return LLT::scalar(getScalarOrVectorBitWidth(SpvType));
+  case SPIRV::OpTypePointer:
+    return LLT::pointer(0, getPointerSize());
+  case SPIRV::OpTypeVector: {
+    SPIRVType *ElemType = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
+    LLT ET;
+    switch (ElemType ? ElemType->getOpcode() : 0) {
+    case SPIRV::OpTypePointer:
+      ET = LLT::pointer(0, getPointerSize());
+      break;
+    case SPIRV::OpTypeInt:
+    case SPIRV::OpTypeFloat:
+    case SPIRV::OpTypeBool:
+      ET = LLT::scalar(getScalarOrVectorBitWidth(ElemType));
+      break;
+    default:
+      ET = LLT::scalar(64);
+    }
+    return LLT::fixed_vector(2, ET);
+  }
+  }
+  return LLT::scalar(64);
+}

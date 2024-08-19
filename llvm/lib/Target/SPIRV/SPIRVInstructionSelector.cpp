@@ -305,8 +305,16 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   HasVRegsReset = &MF;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I)
-    MRI.setType(Register::index2VirtReg(I), LLT::scalar(64));
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    LLT RegType = MRI.getType(Reg);
+    if (RegType.isScalar())
+      MRI.setType(Reg, LLT::scalar(64));
+    else if (RegType.isPointer())
+      MRI.setType(Reg, LLT::pointer(RegType.getAddressSpace(), 64));
+    else if (RegType.isVector())
+      MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
+  }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
       if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
@@ -356,7 +364,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
         if (Res)
           return Res;
       }
-      MRI->setRegClass(DstReg, &SPIRV::iIDRegClass);
+      MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
       I.removeFromParent();
       return true;
@@ -994,7 +1002,7 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
     if (!ResType) {
       // There was no "assign type" actions, let's fix this now
       ResType = ScalarType;
-      MRI->setRegClass(ResVReg, &SPIRV::iIDRegClass);
+      MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
       MRI->setType(ResVReg, LLT::scalar(GR.getScalarOrVectorBitWidth(ResType)));
       GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
     }
@@ -1855,12 +1863,17 @@ bool SPIRVInstructionSelector::selectExt(Register ResVReg,
     return selectSelect(ResVReg, ResType, I, IsSigned);
 
   SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
-  if (SrcType == ResType)
+  if (SrcType == ResType) {
+    const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(ResVReg);
+    const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+    if (DstRC != SrcRC && SrcRC)
+      MRI->setRegClass(ResVReg, SrcRC);
     return BuildMI(*I.getParent(), I, I.getDebugLoc(),
                    TII.get(TargetOpcode::COPY))
         .addDef(ResVReg)
         .addUse(SrcReg)
         .constrainAllUses(TII, TRI, RBI);
+  }
 
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -1899,12 +1912,17 @@ bool SPIRVInstructionSelector::selectTrunc(Register ResVReg,
   const SPIRVType *ArgType = GR.getSPIRVTypeForVReg(IntReg);
   if (GR.isScalarOrVectorOfType(ResVReg, SPIRV::OpTypeBool))
     return selectIntToBool(IntReg, ResVReg, I, ArgType, ResType);
-  if (ArgType == ResType)
+  if (ArgType == ResType) {
+    const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(ResVReg);
+    const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(IntReg);
+    if (DstRC != SrcRC && SrcRC)
+      MRI->setRegClass(ResVReg, SrcRC);
     return BuildMI(*I.getParent(), I, I.getDebugLoc(),
                    TII.get(TargetOpcode::COPY))
         .addDef(ResVReg)
         .addUse(IntReg)
         .constrainAllUses(TII, TRI, RBI);
+  }
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);

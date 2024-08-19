@@ -326,28 +326,6 @@ inline bool getIsFloat(SPIRVType *SpvType, const SPIRVGlobalRegistry &GR) {
                                ->getOpcode() == SPIRV::OpTypeFloat;
 }
 
-static const TargetRegisterClass *getRegClass(SPIRVType *SpvType,
-                                              const SPIRVGlobalRegistry &GR) {
-  unsigned Opcode = SpvType->getOpcode();
-  switch (Opcode) {
-  case SPIRV::OpTypeFloat:
-    return &SPIRV::fIDRegClass;
-  case SPIRV::OpTypePointer:
-    return &SPIRV::pIDRegClass;
-  case SPIRV::OpTypeVector: {
-    SPIRVType *ElemType =
-        GR.getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
-    unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
-    if (ElemOpcode == SPIRV::OpTypeFloat)
-      return &SPIRV::vfIDRegClass;
-    if (ElemOpcode == SPIRV::OpTypePointer)
-      return &SPIRV::vpIDRegClass;
-    return &SPIRV::vIDRegClass;
-  }
-  }
-  return &SPIRV::iIDRegClass;
-}
-
 static std::pair<Register, unsigned>
 createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
                const SPIRVGlobalRegistry &GR) {
@@ -373,7 +351,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
     NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
   }
   Register IdReg = MRI.createGenericVirtualRegister(NewT);
-  MRI.setRegClass(IdReg, getRegClass(SpvType, GR));
+  MRI.setRegClass(IdReg, GR.getRegClass(SpvType));
   return {IdReg, GetIdOp};
 }
 
@@ -396,7 +374,7 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
   if (auto *RC = MRI.getRegClassOrNull(Reg)) {
     MRI.setRegClass(NewReg, RC);
   } else {
-    auto RegClass = getRegClass(SpvType, *GR);
+    auto RegClass = GR->getRegClass(SpvType);
     MRI.setRegClass(NewReg, RegClass);
     MRI.setRegClass(Reg, RegClass);
   }
