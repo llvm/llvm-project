@@ -137,6 +137,18 @@ _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnor
   return __x != 0;
 }
 
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(float __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(double __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
+}
+
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(long double __x) _NOEXCEPT {
+  return __builtin_isnormal(__x);
+}
+
 // isgreater
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
