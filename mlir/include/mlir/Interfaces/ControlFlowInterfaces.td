@@ -347,7 +347,18 @@ def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
   let description = [{
     This interface provides information for select-like operations, i.e.,
     operations that forward specific operands to the output, depending on a
-    condition.
+    binary condition.
+
+    If the value of the condition is 1, then the `true` operand is returned,
+    and the third operand is ignored, even if it was poison.
+
+    If the value of the condition is 0, then the `false` operand is returned,
+    and the second operand is ignored, even if it was poison.
+
+    If the condition is poison, then poison is returned.
+
+    Implementing operations can also accept shaped conditions, in which case
+    the operation works element-wise.
   }];
   let cppNamespace = "::mlir";
 
