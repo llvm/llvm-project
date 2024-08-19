@@ -742,10 +742,12 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   using evaluate::Ascii;
   using AsciiExpr = evaluate::Expr<Ascii>;
   object.set_init(evaluate::AsGenericExpr(AsciiExpr{name}));
-  Symbol &symbol{*scope
-          .try_emplace(SaveObjectName((fir::kNameStringSeparator + name).str()),
-              Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
-          .first->second};
+  Symbol &symbol{
+      *scope
+           .try_emplace(
+               SaveObjectName((fir::kNameStringSeparator + name).str()),
+               Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
+           .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
       AsciiExpr{evaluate::Designator<Ascii>{symbol}});
@@ -835,7 +837,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SaveDerivedPointerTarget(scope,
             SaveObjectName((fir::kLenParameterSeparator + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
-                    .str()),
+                               .str()),
             std::move(lenParams),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(lenParams.size())}));
@@ -860,7 +862,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SaveDerivedPointerTarget(scope,
             SaveObjectName((fir::kBoundsSeparator + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
-                    .str()),
+                               .str()),
             std::move(bounds), evaluate::ConstantSubscripts{2, rank}));
   } else {
     AddValue(
@@ -884,7 +886,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
           SaveObjectInit(scope,
               SaveObjectName((fir::kComponentInitSeparator + distinctName +
                   fir::kNameSeparator + symbol.name().ToString())
-                      .str()),
+                                 .str()),
               object));
     }
   }
@@ -935,7 +937,7 @@ bool RuntimeTableBuilder::InitializeDataPointer(
   if (object.init().has_value()) {
     SourceName ptrDtName{SaveObjectName((fir::kDataPtrInitSeparator +
         distinctName + fir::kNameSeparator + symbol.name().ToString())
-            .str())};
+                                            .str())};
     Symbol &ptrDtSym{
         *scope.try_emplace(ptrDtName, Attrs{}, UnknownDetails{}).first->second};
     SetReadOnlyCompilerCreatedFlags(ptrDtSym);
@@ -970,7 +972,7 @@ bool RuntimeTableBuilder::InitializeDataPointer(
         SaveObjectInit(scope,
             SaveObjectName((fir::kComponentInitSeparator + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
-                    .str()),
+                               .str()),
             ptrInitObj));
     return true;
   } else {
