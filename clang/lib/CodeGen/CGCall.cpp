@@ -4142,12 +4142,24 @@ static void emitWriteback(CodeGenFunction &CGF,
         CGF.EmitStoreThroughLValue(TmpVal, srcLV);
       else {
         llvm::Value *Val = CGF.Builder.CreateLoad(TmpVal.getAggregateAddress());
-        CGF.EmitAggregateStore(Val, srcLV.getAddress(), false);
+        CGF.CreateCoercedStore(
+            Val, srcLV.getAddress(),
+            llvm::TypeSize::getFixed(
+                CGF.getContext()
+                    .getTypeSizeInChars(writeback.CastExpr->getType())
+                    .getQuantity()),
+            false);
       }
     } else {
       llvm::Value *Val = CGF.Builder.CreateLoad(writeback.Temporary);
       if (srcLV.isSimple()) {
-        CGF.EmitAggregateStore(Val, srcLV.getAddress(), false);
+        CGF.CreateCoercedStore(
+            Val, srcLV.getAddress(),
+            llvm::TypeSize::getFixed(
+                CGF.getContext()
+                    .getTypeSizeInChars(writeback.CastExpr->getType())
+                    .getQuantity()),
+            false);
       } else {
         RValue TmpVal = RValue::get(Val);
         CGF.EmitStoreThroughLValue(TmpVal, srcLV);

@@ -156,10 +156,10 @@ void init(out S s) {
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
 // CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
 // CHECK: [[RetVal:%.*]] = load %struct.S, ptr [[Tmp]]
-// CHECK: [[XAddr:%.*]] = getelementptr inbounds %struct.S, ptr [[S]], i32 0, i32 0
+// CHECK: [[XAddr:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 0
 // CHECK: [[XVal:%.*]] = extractvalue %struct.S [[RetVal]], 0
 // CHECK: store i32 [[XVal]], ptr [[XAddr]]
-// CHECK: [[YAddr:%.*]] = getelementptr inbounds %struct.S, ptr [[S]], i32 0, i32 1
+// CHECK: [[YAddr:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 1
 // CHECK: [[YVal:%.*]] = extractvalue %struct.S [[RetVal]], 1
 // CHECK: store float [[YVal]], ptr [[YAddr]]
 
