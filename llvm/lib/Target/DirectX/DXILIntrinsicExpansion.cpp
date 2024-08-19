@@ -47,7 +47,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
-  case Intrinsic::dx_saturate:
     return true;
   }
   return false;
