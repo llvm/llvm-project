@@ -8025,6 +8025,16 @@ void Parser::ParseParameterDeclarationClause(
         // Consume the keyword.
         ConsumeToken();
       }
+
+      // FunctionTypeBitfields::NumParams can only hold so much.
+      // Skip until the the end of the parameter list, ignoring
+      // parameters that would overflow.
+      if (ParamInfo.size() == Type::FunctionTypeNumParamsLimit) {
+        Diag(ParmDeclarator.getBeginLoc(), diag::err_function_parameter_limit_exceeded);
+        SkipUntil(tok::r_paren, SkipUntilFlags::StopBeforeMatch);
+        break;
+      }
+
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
       Decl *Param =

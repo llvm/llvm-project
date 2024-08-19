@@ -9311,6 +9311,9 @@ def note_constinit_missing_here : Note<
 def err_dimension_expr_not_constant_integer : Error<
   "dimension expression does not evaluate to a constant unsigned int">;
 
+def err_function_parameter_limit_exceeded : Error<
+  "too many function parameters; subsequent parameters are skipped">;
+
 def err_typecheck_cond_incompatible_operands_null : Error<
   "non-pointer operand type %0 incompatible with %select{NULL|nullptr}1">;
 def ext_empty_struct_union : Extension<
