@@ -87,6 +87,9 @@ static const char *getOverloadTypeName(OverloadKind Kind) {
 }
 
 static OverloadKind getOverloadKind(Type *Ty) {
+  if (!Ty)
+    return OverloadKind::VOID;
+
   Type::TypeID T = Ty->getTypeID();
   switch (T) {
   case Type::VoidTyID:
@@ -379,11 +382,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   uint16_t ValidTyMask = Prop->Overloads[*OlIndexOrErr].ValidTys;
 
-  // If we don't have an overload type, use the function's return type. This is
-  // a bit of a hack, but it's necessary to get the type suffix on unoverloaded
-  // DXIL ops correct, like `dx.op.threadId.i32`.
-  OverloadKind Kind =
-      getOverloadKind(OverloadTy ? OverloadTy : DXILOpFT->getReturnType());
+  OverloadKind Kind = getOverloadKind(OverloadTy);
 
   // Check if the operation supports overload types and OverloadTy is valid
   // per the specified types for the operation
@@ -424,7 +423,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   return B.CreateCall(DXILFn, OpArgs);
 }
 
-CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> &Args,
+CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
                                   Type *RetTy) {
   Expected<CallInst *> Result = tryCreateOp(OpCode, Args, RetTy);
   if (Error E = Result.takeError())

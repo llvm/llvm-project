@@ -19,6 +19,8 @@ using namespace llvm;
 
 namespace {
 
+class DataLayoutTest : public ::testing::Test {};
+
 // TODO: Split into multiple TESTs.
 TEST(DataLayoutTest, ParseErrors) {
   EXPECT_THAT_EXPECTED(
@@ -31,26 +33,6 @@ TEST(DataLayoutTest, ParseErrors) {
       DataLayout::parse("n0"),
       FailedWithMessage("Zero width native integer type in datalayout string"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p16777216:64:64:64"),
-      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("a1:64"),
-      FailedWithMessage("Sized aggregate specification in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("a:"),
-      FailedWithMessage("Trailing separator in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p:48:52"),
-      FailedWithMessage("number of bits must be a byte width multiple"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("e-p"),
-      FailedWithMessage(
-          "Missing size specification for pointer in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("e-p:64"),
-      FailedWithMessage(
-          "Missing alignment specification for pointer in datalayout string"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse("m"),
       FailedWithMessage("Expected mangling specifier in datalayout string"));
   EXPECT_THAT_EXPECTED(
@@ -58,52 +40,9 @@ TEST(DataLayoutTest, ParseErrors) {
       FailedWithMessage("Unexpected trailing characters after mangling "
                         "specifier in datalayout string"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("f"),
-      FailedWithMessage(
-          "Missing alignment specification in datalayout string"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse(":32"),
       FailedWithMessage(
           "Expected token before separator in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:64:16"),
-      FailedWithMessage(
-          "Preferred alignment cannot be less than the ABI alignment"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:16:16777216"),
-      FailedWithMessage(
-          "Invalid preferred alignment, must be a 16bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:16777216:16777216"),
-      FailedWithMessage("Invalid ABI alignment, must be a 16bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i16777216:16:16"),
-      FailedWithMessage("Invalid bit width, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p:32:32:16"),
-      FailedWithMessage(
-          "Preferred alignment cannot be less than the ABI alignment"));
-  EXPECT_THAT_EXPECTED(DataLayout::parse("p:0:32:32"),
-                       FailedWithMessage("Invalid pointer size of 0 bytes"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p:64:24:64"),
-      FailedWithMessage("Pointer ABI alignment must be a power of 2"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p:64:64:24"),
-      FailedWithMessage("Pointer preferred alignment must be a power of 2"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("p:64:64:64:128"),
-      FailedWithMessage("Index width cannot be larger than pointer width"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("v128:0:128"),
-      FailedWithMessage(
-          "ABI alignment specification must be >0 for non-aggregate types"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i32:24:32"),
-      FailedWithMessage("Invalid ABI alignment, must be a power of 2"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i32:32:24"),
-      FailedWithMessage("Invalid preferred alignment, must be a power of 2"));
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("A16777216"),
       FailedWithMessage("Invalid address space, must be a 24-bit integer"));
@@ -117,9 +56,6 @@ TEST(DataLayoutTest, ParseErrors) {
       DataLayout::parse("Fi24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i8:16"),
-      FailedWithMessage("Invalid ABI alignment, i8 must be naturally aligned"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse("S24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
 }
@@ -132,6 +68,399 @@ TEST(DataLayout, LayoutStringFormat) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("empty specification is not allowed"));
+}
+
+class DataLayoutPrimitiveSpecificationTest
+    : public DataLayoutTest,
+      public ::testing::WithParamInterface<char> {
+  char Specifier;
+
+public:
+  DataLayoutPrimitiveSpecificationTest() : Specifier(GetParam()) {}
+
+  std::string format(StringRef Str) const {
+    std::string Res = Str.str();
+    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    return Res;
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(PrmitiveSpecifiers,
+                         DataLayoutPrimitiveSpecificationTest,
+                         ::testing::Values('i', 'f', 'v'));
+
+TEST_P(DataLayoutPrimitiveSpecificationTest, ParsePrimitiveSpec) {
+  for (StringRef Str :
+       {"!1:16", "!8:8:8", "!16:32:64", "!16777215:32768:32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)), Succeeded());
+
+  for (StringRef Str : {"!", "!1", "!32:32:32:32", "!16:32:64:128"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(format("malformed specification, must be of the form "
+                                 "\"!<size>:<abi>[:<pref>]\"")));
+
+  // size
+  for (StringRef Str : {"!:8", "!:16:16", "!:32:64"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                         FailedWithMessage("size component cannot be empty"));
+
+  for (StringRef Str :
+       {"!0:8", "!0x8:8", "!x:8:8", "!0:16:32", "!16777216:64:64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("size must be a non-zero 24-bit integer"));
+
+  // ABI alignment
+  for (StringRef Str : {"!8:", "!16::16", "!32::64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"!1:x", "!8:8x:8", "!16:65536:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"!8:0", "!16:0:16", "!32:0:64"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                         FailedWithMessage("ABI alignment must be non-zero"));
+
+  for (StringRef Str : {"!1:1", "!8:4", "!16:6:16", "!32:24:64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
+
+  // preferred alignment
+  for (StringRef Str : {"!1:8:", "!16:16:", "!64:32:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment component cannot be empty"));
+
+  for (StringRef Str : {"!1:8:x", "!8:8:0x8", "!16:32:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"!8:8:0", "!32:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
+  for (StringRef Str : {"!1:8:12", "!8:8:17", "!16:32:40"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "preferred alignment must be a power of two times the byte width"));
+
+  for (StringRef Str : {"!1:16:8", "!64:32:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
+
+  // Additional check for byte-sized integer.
+  if (GetParam() == 'i') {
+    for (StringRef Str : {"!8:16", "!8:16:8", "!8:16:32"})
+      EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                           FailedWithMessage("i8 must be 8-bit aligned"));
+  }
+}
+
+TEST(DataLayoutTest, ParseAggregateSpec) {
+  for (StringRef Str : {"a:8", "a:0:16", "a0:32:64", "a:32768:32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"a", "a0", "a:32:32:32", "a0:32:64:128"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be of the form "
+                          "\"a:<abi>[:<pref>]\""));
+
+  // size
+  for (StringRef Str : {"a1:8", "a0x0:8", "ax:16:32"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("size must be zero"));
+
+  // ABI alignment
+  for (StringRef Str : {"a:", "a0:", "a::32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"a:x", "a0:0x0", "a:65536", "a0:65536:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"a:1", "a:4", "a:9:16", "a0:24:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
+
+  // preferred alignment
+  for (StringRef Str : {"a:8:", "a0:16:", "a0:0:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment component cannot be empty"));
+
+  for (StringRef Str : {"a:16:x", "a0:8:0x8", "a:16:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"a:0:0", "a0:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
+  for (StringRef Str : {"a:8:12", "a:16:17", "a0:32:40"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment must be a power of two times the byte width"));
+
+  for (StringRef Str : {"a:16:8", "a0:32:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
+}
+
+TEST(DataLayout, ParsePointerSpec) {
+  for (StringRef Str :
+       {"p:16:8", "p:16:16:64", "p:32:64:64:32", "p0:32:64", "p42:64:32:32",
+        "p16777215:32:32:64:8", "p16777215:16777215:32768:32768:16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str :
+       {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32", "p0:32:32:32:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be of the form "
+                          "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>]]\""));
+
+  // address space
+  for (StringRef Str : {"p0x0:32:32", "px:32:32:32", "p16777216:32:32:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
+
+  // pointer size
+  for (StringRef Str : {"p::32", "p0::32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("pointer size component cannot be empty"));
+
+  for (StringRef Str : {"p:0:32", "p0:0x1:32:32", "p42:16777216:32:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("pointer size must be a non-zero 24-bit integer"));
+
+  // ABI alignment
+  for (StringRef Str : {"p:32:", "p0:32::32", "p42:32::32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"p:32:x", "p0:32:0x20:32", "p42:32:65536:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"p:32:0", "p0:32:0:32", "p42:32:0:32:32"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("ABI alignment must be non-zero"));
+
+  for (StringRef Str : {"p:32:4", "p42:32:24:32", "p0:32:65535:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
+
+  // preferred alignment
+  for (StringRef Str : {"p:32:32:", "p0:32:32:", "p42:32:32::32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment component cannot be empty"));
+
+  for (StringRef Str : {"p:32:32:x", "p0:32:32:0x20", "p42:32:32:65536:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"p:32:32:0", "p0:32:32:0", "p42:32:32:0:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
+  for (StringRef Str : {"p:32:32:4", "p0:32:32:24", "p42:32:32:65535:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment must be a power of two times the byte width"));
+
+  for (StringRef Str : {"p:64:64:32", "p0:16:32:16:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
+
+  // index size
+  for (StringRef Str : {"p:32:32:32:", "p0:32:32:32:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("index size component cannot be empty"));
+
+  for (StringRef Str :
+       {"p:32:32:32:0", "p0:32:32:32:0x20", "p42:32:32:32:16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("index size must be a non-zero 24-bit integer"));
+
+  for (StringRef Str : {"p:16:16:16:17", "p0:32:64:64:64", "p42:16:64:64:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("index size cannot be larger than the pointer size"));
+}
+
+TEST(DataLayout, ParseNonIntegralAddrSpace) {
+  for (StringRef Str : {"ni:1", "ni:16777215", "ni:1:16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"ni", "ni42", "nix"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be of the form "
+                          "\"ni:<address space>[:<address space>]...\""));
+
+  for (StringRef Str : {"ni:", "ni::42", "ni:42:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space component cannot be empty"));
+
+  for (StringRef Str : {"ni:x", "ni:42:0x1", "ni:16777216", "ni:42:16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
+
+  for (StringRef Str : {"ni:0", "ni:42:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space 0 cannot be non-integral"));
+}
+
+TEST(DataLayout, GetPointerSizeInBits) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 64, 64, 64},
+      {"p:16:32", 16, 16, 16},
+      {"p0:32:64", 32, 32, 32},
+      {"p1:16:32", 64, 16, 64},
+      {"p1:31:32-p2:15:16:16:14", 64, 31, 15},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getPointerSizeInBits(0), V0) << Layout;
+    EXPECT_EQ(DL.getPointerSizeInBits(1), V1) << Layout;
+    EXPECT_EQ(DL.getPointerSizeInBits(2), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, GetPointerSize) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 8, 8, 8},
+      {"p:16:32", 2, 2, 2},
+      {"p0:32:64", 4, 4, 4},
+      {"p1:17:32", 8, 3, 8},
+      {"p1:31:64-p2:23:8:16:9", 8, 4, 3},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getPointerSize(0), V0) << Layout;
+    EXPECT_EQ(DL.getPointerSize(1), V1) << Layout;
+    EXPECT_EQ(DL.getPointerSize(2), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, GetIndexSizeInBits) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 64, 64, 64},
+      {"p:16:32", 16, 16, 16},
+      {"p0:32:64", 32, 32, 32},
+      {"p1:16:32:32:10", 64, 10, 64},
+      {"p1:31:32:64:20-p2:17:16:16:15", 64, 20, 15},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getIndexSizeInBits(0), V0) << Layout;
+    EXPECT_EQ(DL.getIndexSizeInBits(1), V1) << Layout;
+    EXPECT_EQ(DL.getIndexSizeInBits(2), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, GetIndexSize) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 8, 8, 8},
+      {"p:16:32", 2, 2, 2},
+      {"p0:27:64", 4, 4, 4},
+      {"p1:19:32:64:5", 8, 1, 8},
+      {"p1:33:32:64:23-p2:21:8:16:13", 8, 3, 2},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getIndexSize(0), V0) << Layout;
+    EXPECT_EQ(DL.getIndexSize(1), V1) << Layout;
+    EXPECT_EQ(DL.getIndexSize(2), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, GetPointerABIAlignment) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 8, 8, 8},
+      {"p:16:32", 4, 4, 4},
+      {"p0:16:32:64", 4, 4, 4},
+      {"p1:32:16:64", 8, 2, 8},
+      {"p1:33:16:32:15-p2:23:8:16:9", 8, 2, 1},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getPointerABIAlignment(0).value(), V0) << Layout;
+    EXPECT_EQ(DL.getPointerABIAlignment(1).value(), V1) << Layout;
+    EXPECT_EQ(DL.getPointerABIAlignment(2).value(), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, GetPointerPrefAlignment) {
+  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
+      {"", 8, 8, 8},
+      {"p:16:32", 4, 4, 4},
+      {"p0:8:16:32", 4, 4, 4},
+      {"p1:32:8:16", 8, 2, 8},
+      {"p1:33:8:16:31-p2:23:8:32:17", 8, 2, 4},
+  };
+  for (auto [Layout, V0, V1, V2] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getPointerPrefAlignment(0).value(), V0) << Layout;
+    EXPECT_EQ(DL.getPointerPrefAlignment(1).value(), V1) << Layout;
+    EXPECT_EQ(DL.getPointerPrefAlignment(2).value(), V2) << Layout;
+  }
+}
+
+TEST(DataLayout, IsNonIntegralAddressSpace) {
+  DataLayout Default;
+  EXPECT_THAT(Default.getNonIntegralAddressSpaces(), ::testing::SizeIs(0));
+  EXPECT_FALSE(Default.isNonIntegralAddressSpace(0));
+  EXPECT_FALSE(Default.isNonIntegralAddressSpace(1));
+
+  DataLayout Custom = cantFail(DataLayout::parse("ni:2:16777215"));
+  EXPECT_THAT(Custom.getNonIntegralAddressSpaces(),
+              ::testing::ElementsAreArray({2U, 16777215U}));
+  EXPECT_FALSE(Custom.isNonIntegralAddressSpace(0));
+  EXPECT_FALSE(Custom.isNonIntegralAddressSpace(1));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(Custom.isNonIntegralAddressSpace(16777215));
 }
 
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
