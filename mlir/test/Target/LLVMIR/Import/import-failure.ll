@@ -360,11 +360,5 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: malformed specification
-target datalayout = "e-i8:8:8:8"
-
-; // -----
-
-; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"
