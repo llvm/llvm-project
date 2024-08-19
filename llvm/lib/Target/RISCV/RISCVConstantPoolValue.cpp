@@ -21,71 +21,61 @@
 
 using namespace llvm;
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C, RISCVCPKind Kind)
-    : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind) {}
+RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty, const GlobalValue *GV)
+    : MachineConstantPoolValue(Ty), GV(GV), Kind(RISCVCPKind::GlobalValue) {}
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty, RISCVCPKind Kind)
-    : MachineConstantPoolValue(Ty), Kind(Kind) {}
+RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C, StringRef S)
+    : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), S(S),
+      Kind(RISCVCPKind::ExtSymbol) {}
+
+RISCVConstantPoolValue *RISCVConstantPoolValue::Create(const GlobalValue *GV) {
+  return new RISCVConstantPoolValue(GV->getType(), GV);
+}
+
+RISCVConstantPoolValue *RISCVConstantPoolValue::Create(LLVMContext &C,
+                                                       StringRef s) {
+  return new RISCVConstantPoolValue(C, s);
+}
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
                                                       Align Alignment) {
-  llvm_unreachable("Shouldn't be calling this directly!");
+  const std::vector<MachineConstantPoolEntry> &Constants = CP->getConstants();
+  for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
+    if (Constants[i].isMachineConstantPoolEntry() &&
+        Constants[i].getAlign() >= Alignment) {
+      auto *CPV =
+          static_cast<RISCVConstantPoolValue *>(Constants[i].Val.MachineCPVal);
+      if (equals(CPV))
+        return i;
+    }
+  }
+
+  return -1;
 }
 
-RISCVConstantPoolConstant::RISCVConstantPoolConstant(Type *Ty,
-                                                     const Constant *GV,
-                                                     RISCVCPKind Kind)
-    : RISCVConstantPoolValue(Ty, Kind), CVal(GV) {}
-
-RISCVConstantPoolConstant *
-RISCVConstantPoolConstant::Create(const GlobalValue *GV) {
-  return new RISCVConstantPoolConstant(GV->getType(), GV,
-                                       RISCVCPKind::GlobalValue);
+void RISCVConstantPoolValue::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
+  if (isGlobalValue())
+    ID.AddPointer(GV);
+  else {
+    assert(isExtSymbol() && "unrecognized constant pool type");
+    ID.AddString(S);
+  }
 }
 
-RISCVConstantPoolConstant *
-RISCVConstantPoolConstant::Create(const BlockAddress *BA) {
-  return new RISCVConstantPoolConstant(BA->getType(), BA,
-                                       RISCVCPKind::BlockAddress);
+void RISCVConstantPoolValue::print(raw_ostream &O) const {
+  if (isGlobalValue())
+    O << GV->getName();
+  else {
+    assert(isExtSymbol() && "unrecognized constant pool type");
+    O << S;
+  }
 }
 
-int RISCVConstantPoolConstant::getExistingMachineCPValue(
-    MachineConstantPool *CP, Align Alignment) {
-  return getExistingMachineCPValueImpl<RISCVConstantPoolConstant>(CP,
-                                                                  Alignment);
+bool RISCVConstantPoolValue::equals(const RISCVConstantPoolValue *A) const {
+  if (isGlobalValue() && A->isGlobalValue())
+    return GV == A->GV;
+  else if (isExtSymbol() && A->isExtSymbol())
+    return S == A->S;
+
+  return false;
 }
-
-void RISCVConstantPoolConstant::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
-  ID.AddPointer(CVal);
-}
-
-void RISCVConstantPoolConstant::print(raw_ostream &O) const {
-  O << CVal->getName();
-}
-
-const GlobalValue *RISCVConstantPoolConstant::getGlobalValue() const {
-  return dyn_cast_or_null<GlobalValue>(CVal);
-}
-
-const BlockAddress *RISCVConstantPoolConstant::getBlockAddress() const {
-  return dyn_cast_or_null<BlockAddress>(CVal);
-}
-
-RISCVConstantPoolSymbol::RISCVConstantPoolSymbol(LLVMContext &C, StringRef s)
-    : RISCVConstantPoolValue(C, RISCVCPKind::ExtSymbol), S(s) {}
-
-RISCVConstantPoolSymbol *RISCVConstantPoolSymbol::Create(LLVMContext &C,
-                                                         StringRef s) {
-  return new RISCVConstantPoolSymbol(C, s);
-}
-
-int RISCVConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                       Align Alignment) {
-  return getExistingMachineCPValueImpl<RISCVConstantPoolSymbol>(CP, Alignment);
-}
-
-void RISCVConstantPoolSymbol::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
-  ID.AddString(S);
-}
-
-void RISCVConstantPoolSymbol::print(raw_ostream &O) const { O << S; }

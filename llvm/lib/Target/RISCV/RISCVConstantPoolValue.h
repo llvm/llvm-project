@@ -26,82 +26,26 @@ class LLVMContext;
 
 /// A RISCV-specific constant pool value.
 class RISCVConstantPoolValue : public MachineConstantPoolValue {
-protected:
-  enum class RISCVCPKind { ExtSymbol, GlobalValue, BlockAddress };
+  const GlobalValue *GV;
+  const StringRef S;
 
-  RISCVConstantPoolValue(LLVMContext &C, RISCVCPKind Kind);
-
-  RISCVConstantPoolValue(Type *Ty, RISCVCPKind Kind);
-
-  template <typename Derived>
-  int getExistingMachineCPValueImpl(MachineConstantPool *CP, Align Alignment) {
-    const std::vector<MachineConstantPoolEntry> &Constants = CP->getConstants();
-    for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
-      if (Constants[i].isMachineConstantPoolEntry() &&
-          Constants[i].getAlign() >= Alignment) {
-        auto *CPV = static_cast<RISCVConstantPoolValue *>(
-            Constants[i].Val.MachineCPVal);
-        if (Derived *APC = dyn_cast<Derived>(CPV))
-          if (cast<Derived>(this)->equals(APC))
-            return i;
-      }
-    }
-
-    return -1;
-  }
+  RISCVConstantPoolValue(Type *Ty, const GlobalValue *GV);
+  RISCVConstantPoolValue(LLVMContext &C, StringRef s);
 
 private:
+  enum class RISCVCPKind { ExtSymbol, GlobalValue };
   RISCVCPKind Kind;
 
 public:
   ~RISCVConstantPoolValue() = default;
 
-  bool isExtSymbol() const { return Kind == RISCVCPKind::ExtSymbol; }
+  static RISCVConstantPoolValue *Create(const GlobalValue *GV);
+  static RISCVConstantPoolValue *Create(LLVMContext &C, StringRef s);
+
   bool isGlobalValue() const { return Kind == RISCVCPKind::GlobalValue; }
-  bool isBlockAddress() const { return Kind == RISCVCPKind::BlockAddress; }
+  bool isExtSymbol() const { return Kind == RISCVCPKind::ExtSymbol; }
 
-  int getExistingMachineCPValue(MachineConstantPool *CP,
-                                Align Alignment) override;
-
-  void addSelectionDAGCSEId(FoldingSetNodeID &ID) override {}
-};
-
-class RISCVConstantPoolConstant : public RISCVConstantPoolValue {
-  const Constant *CVal;
-
-  RISCVConstantPoolConstant(Type *Ty, const Constant *GV, RISCVCPKind Kind);
-
-public:
-  static RISCVConstantPoolConstant *Create(const GlobalValue *GV);
-  static RISCVConstantPoolConstant *Create(const BlockAddress *BA);
-
-  const GlobalValue *getGlobalValue() const;
-  const BlockAddress *getBlockAddress() const;
-
-  int getExistingMachineCPValue(MachineConstantPool *CP,
-                                Align Alignment) override;
-
-  void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
-
-  void print(raw_ostream &O) const override;
-
-  bool equals(const RISCVConstantPoolConstant *A) const {
-    return CVal == A->CVal;
-  }
-
-  static bool classof(const RISCVConstantPoolValue *RCPV) {
-    return RCPV->isGlobalValue() || RCPV->isBlockAddress();
-  }
-};
-
-class RISCVConstantPoolSymbol : public RISCVConstantPoolValue {
-  const StringRef S;
-
-  RISCVConstantPoolSymbol(LLVMContext &C, StringRef s);
-
-public:
-  static RISCVConstantPoolSymbol *Create(LLVMContext &C, StringRef s);
-
+  const GlobalValue *getGlobalValue() const { return GV; }
   StringRef getSymbol() const { return S; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
@@ -111,11 +55,7 @@ public:
 
   void print(raw_ostream &O) const override;
 
-  bool equals(const RISCVConstantPoolSymbol *A) const { return S == A->S; }
-
-  static bool classof(const RISCVConstantPoolValue *RCPV) {
-    return RCPV->isExtSymbol();
-  }
+  bool equals(const RISCVConstantPoolValue *A) const;
 };
 
 } // end namespace llvm

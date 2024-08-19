@@ -1095,11 +1095,11 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   MCSymbol *MCSym;
 
   if (RCPV->isGlobalValue()) {
-    auto *GV = cast<RISCVConstantPoolConstant>(RCPV)->getGlobalValue();
+    auto *GV = RCPV->getGlobalValue();
     MCSym = getSymbol(GV);
   } else {
     assert(RCPV->isExtSymbol() && "unrecognized constant pool value");
-    auto Sym = cast<RISCVConstantPoolSymbol>(RCPV)->getSymbol();
+    auto Sym = RCPV->getSymbol();
     MCSym = GetExternalSymbolSymbol(Sym);
   }
 
