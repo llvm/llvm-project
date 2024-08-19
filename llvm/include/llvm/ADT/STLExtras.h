@@ -1843,6 +1843,13 @@ OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
                            NewValue);
 }
 
+/// Provide wrappers to std::replace which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, typename T>
+void replace(R &&Range, const T &OldValue, const T &NewValue) {
+  return std::replace(adl_begin(Range), adl_end(Range), OldValue, NewValue);
+}
+
 /// Provide wrappers to std::move which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename OutputIt>
