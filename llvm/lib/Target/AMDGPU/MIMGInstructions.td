@@ -511,12 +511,12 @@ class VIMAGE_NoSampler_gfx13<mimgopc op, string opcode,
                              bit enableDisasm=0>
   : VIMAGE_NoSampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm>;
 
-class VSAMPLE_Sampler<int op, string opcode, RegisterClass DataRC, dag RsrcIns,
+class VSAMPLE_Sampler<int op, string opcode, RegisterClass DataRC, dag RsrcIns, dag SampIns,
                             int num_addrs, GFXGen gfxGen, MIMGEncoding enc, RegisterClass Addr3RC = VGPR_32,
                             bit enableDisasm=0>
   : VSAMPLE<op, (outs DataRC:$vdata), num_addrs, gfxGen.AssemblerPredicate, enc, !if(enableDisasm, gfxGen.DecoderNamespace, ""), Addr3RC> {
   let InOperandList = !con(AddrIns, RsrcIns,
-                           !if(BaseOpcode.Sampler, (ins SReg_128:$samp), (ins)),
+                           !if(BaseOpcode.Sampler, SampIns, (ins)),
                            (ins DMask:$dmask, Dim:$dim, UNorm:$unorm,
                                 CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe,
                                 LWE:$lwe),
@@ -530,12 +530,12 @@ class VSAMPLE_Sampler<int op, string opcode, RegisterClass DataRC, dag RsrcIns,
 class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
                             bit enableDisasm=0>
-  : VSAMPLE_Sampler<op.GFX12, opcode, DataRC, (ins SReg_256:$rsrc), num_addrs, GFX12Gen, MIMGEncGfx12, Addr3RC, enableDisasm>;
+  : VSAMPLE_Sampler<op.GFX12, opcode, DataRC, (ins SReg_256:$rsrc), (ins SReg_128:$samp), num_addrs, GFX12Gen, MIMGEncGfx12, Addr3RC, enableDisasm>;
 
 class VSAMPLE_Sampler_gfx13<mimgopc op, string opcode, RegisterClass DataRC,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
                             bit enableDisasm=0>
-  : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm>;
+  : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), (ins RsrcReg128Op:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm>;
 
 class VSAMPLE_Sampler_nortn<int op, string opcode, dag RsrcIns, GFXGen gfxGen, MIMGEncoding enc,
                             int num_addrs, RegisterClass Addr3RC = VGPR_32,
