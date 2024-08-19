@@ -1364,6 +1364,9 @@ class Base(unittest.TestCase):
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
+    def isAArch64GCS(self):
+        return self.isAArch64() and "gcs" in self.getCPUInfo()
+
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
