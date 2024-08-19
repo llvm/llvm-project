@@ -1221,7 +1221,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
     decl_map->InstallDiagnosticManager(diagnostic_manager);
 
-    IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source =
+    clang::ExternalASTSource * ast_source =
         decl_map->CreateProxy();
 
     if (ast_context.getExternalSource()) {
@@ -1229,7 +1229,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
           new ExternalASTSourceWrapper(ast_context.getExternalSource());
 
       auto *ast_source_wrapper =
-          new ExternalASTSourceWrapper(ast_source.get(), true);
+          new ExternalASTSourceWrapper(ast_source);
 
       auto *multiplexer =
           new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);

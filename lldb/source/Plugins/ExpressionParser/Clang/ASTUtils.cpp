@@ -8,11 +8,6 @@
 
 #include "ASTUtils.h"
 
-lldb_private::ExternalASTSourceWrapper::~ExternalASTSourceWrapper() {
-  if (m_owns_source)
-    m_Source->Release();
-}
-
 void lldb_private::ExternalASTSourceWrapper::PrintStats() {
   m_Source->PrintStats();
 }

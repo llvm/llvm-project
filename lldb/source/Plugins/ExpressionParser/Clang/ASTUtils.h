@@ -14,6 +14,7 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <optional>
 
 namespace clang {
@@ -26,15 +27,11 @@ namespace lldb_private {
 
 /// Wraps an ExternalASTSource into an ExternalSemaSource.
 class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
-  ExternalASTSource *m_Source;
-  
-  ///< If true, means that this class is responsible for
-  ///< decrementing the use count of m_Source.
-  bool m_owns_source = false;
+  llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
-  ExternalASTSourceWrapper(ExternalASTSource *Source, bool owns_source = false)
-      : m_Source(Source), m_owns_source(owns_source) {
+  explicit ExternalASTSourceWrapper(ExternalASTSource *Source)
+      : m_Source(Source) {
     assert(m_Source && "Can't wrap nullptr ExternalASTSource");
   }
 
