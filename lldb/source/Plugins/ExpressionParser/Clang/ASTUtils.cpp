@@ -8,7 +8,10 @@
 
 #include "ASTUtils.h"
 
-lldb_private::ExternalASTSourceWrapper::~ExternalASTSourceWrapper() = default;
+lldb_private::ExternalASTSourceWrapper::~ExternalASTSourceWrapper() {
+  if (m_owns_source)
+    m_Source->Release();
+}
 
 void lldb_private::ExternalASTSourceWrapper::PrintStats() {
   m_Source->PrintStats();
@@ -18,7 +21,10 @@ lldb_private::ASTConsumerForwarder::~ASTConsumerForwarder() = default;
 
 void lldb_private::ASTConsumerForwarder::PrintStats() { m_c->PrintStats(); }
 
-lldb_private::SemaSourceWithPriorities::~SemaSourceWithPriorities() = default;
+lldb_private::SemaSourceWithPriorities::~SemaSourceWithPriorities() {
+  for (auto * Source : Sources)
+    Source->Release();
+}
 
 void lldb_private::SemaSourceWithPriorities::PrintStats() {
   for (size_t i = 0; i < Sources.size(); ++i)
