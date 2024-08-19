@@ -2090,10 +2090,17 @@ bool SITargetLowering::isNonGlobalAddrSpace(unsigned AS) {
 
 bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
-  // Flat -> private/local is a simple truncate.
-  // Flat -> global is no-op
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
+    if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+        Subtarget->hasGloballyAddressableScratch()) {
+      // Flat -> private requires subtracting src_flat_scratch_base_lo.
+      return false;
+    }
+
+    // Flat -> private/local is a simple truncate.
+    // Flat -> global is no-op
     return true;
+  }
 
   const GCNTargetMachine &TM =
       static_cast<const GCNTargetMachine &>(getTargetMachine());
@@ -7420,6 +7427,18 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
         DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
+
+      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          Subtarget->hasGloballyAddressableScratch()) {
+        // flat -> private with globally addressable scratch: subtract
+        // src_flat_scratch_base_lo.
+        SDValue FlatScratchBaseLo(
+            DAG.getMachineNode(
+                AMDGPU::S_MOV_B32, SL, MVT::i32,
+                DAG.getRegister(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO, MVT::i32)),
+            0);
+        Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, FlatScratchBaseLo);
+      }
 
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
