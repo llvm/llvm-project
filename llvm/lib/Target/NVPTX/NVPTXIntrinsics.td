@@ -1524,6 +1524,33 @@ def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
 def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
           (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
 
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn Float32Regs:$a, Float32Regs:$b),
+          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu Float32Regs:$a, Float32Regs:$b),
+          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn Float32Regs:$a, Float32Regs:$b),
+          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu Float32Regs:$a, Float32Regs:$b),
+          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
+
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn Int32Regs:$a),
+          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu Int32Regs:$a),
+          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn Int32Regs:$a),
+          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu Int32Regs:$a),
+          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn Int16Regs:$a),
+          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu Int16Regs:$a),
+          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
+          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
+          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
+
 //
 // Bitcast
 //
