@@ -1310,6 +1310,13 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
       StringRef ExpStr = cast<MDString>(Node->getOperand(0))->getString();
       MCSymbol *ExpSym = MMI->getContext().getOrCreateSymbol(ExpStr);
       MCSymbol *Sym = MMI->getContext().getOrCreateSymbol(GA.getName());
+
+      OutStreamer->beginCOFFSymbolDef(ExpSym);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
+
       OutStreamer->beginCOFFSymbolDef(Sym);
       OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
       OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION

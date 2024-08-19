@@ -648,6 +648,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // TRAP can be lowered to PTX trap
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  // DEBUGTRAP can be lowered to PTX brkpt
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
   // Register custom handling for vector loads/stores
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
