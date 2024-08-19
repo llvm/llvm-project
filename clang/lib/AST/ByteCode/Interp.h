@@ -656,15 +656,9 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 // Inv
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inv(InterpState &S, CodePtr OpPC) {
-  using BoolT = PrimConv<PT_Bool>::T;
-  const T &Val = S.Stk.pop<T>();
-  const unsigned Bits = Val.bitWidth();
-  Boolean R;
-  Boolean::inv(BoolT::from(Val, Bits), &R);
-
-  S.Stk.push<BoolT>(R);
+inline bool Inv(InterpState &S, CodePtr OpPC) {
+  const auto &Val = S.Stk.pop<Boolean>();
+  S.Stk.push<Boolean>(!Val);
   return true;
 }
 
@@ -1852,6 +1846,17 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // Arrays of unknown bounds cannot have pointers into them.
   if (!CheckArray(S, OpPC, Ptr))
     return false;
+
+  // This is much simpler for integral pointers, so handle them first.
+  if (Ptr.isIntegralPointer()) {
+    uint64_t V = Ptr.getIntegerRepresentation();
+    uint64_t O = static_cast<uint64_t>(Offset) * Ptr.elemSize();
+    if constexpr (Op == ArithOp::Add)
+      S.Stk.push<Pointer>(V + O, Ptr.asIntPointer().Desc);
+    else
+      S.Stk.push<Pointer>(V - O, Ptr.asIntPointer().Desc);
+    return true;
+  }
 
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
   uint64_t Index;

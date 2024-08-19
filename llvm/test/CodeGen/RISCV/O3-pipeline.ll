@@ -45,6 +45,7 @@
 ; CHECK-NEXT:         Canonicalize Freeze Instructions in Loops
 ; CHECK-NEXT:         Induction Variable Users
 ; CHECK-NEXT:         Loop Strength Reduction
+; CHECK-NEXT:         Loop Terminator Folding
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Merge contiguous icmps into a memcmp
