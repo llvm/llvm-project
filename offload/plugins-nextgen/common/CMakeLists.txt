@@ -11,13 +11,15 @@ add_dependencies(PluginCommon intrinsics_gen)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
-foreach(target IN LISTS supported_jit_targets)
-  if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)
-	  target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${target}")
-    llvm_map_components_to_libnames(llvm_libs ${target})
-    target_link_libraries(PluginCommon PRIVATE ${llvm_libs})
-  endif()
-endforeach()
+if (NOT LLVM_LINK_LLVM_DYLIB)
+  foreach(target IN LISTS supported_jit_targets)
+    if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)
+      target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${target}")
+      llvm_map_components_to_libnames(llvm_libs ${target})
+      target_link_libraries(PluginCommon PRIVATE ${llvm_libs})
+    endif()
+  endforeach()
+endif()
 
 # Include the RPC server from the `libc` project if availible.
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
