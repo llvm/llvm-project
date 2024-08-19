@@ -91,7 +91,7 @@ BasicBlock::iterator llvm::PrepareToSplitEntryBlock(BasicBlock &BB,
 // Create a constant for Str so that we can pass it to the run-time lib.
 GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
                                                    bool AllowMerging,
-                                                   const char *NamePrefix) {
+                                                   Twine NamePrefix) {
   Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
   // We use private linkage for module-local strings. If they can be merged
   // with another one, we set the unnamed_addr attribute.
