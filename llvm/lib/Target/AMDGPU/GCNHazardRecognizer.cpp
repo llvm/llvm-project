@@ -982,7 +982,9 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
       const MachineOperand *ForwardedDst = getDstSelForwardingOperand(MI, ST);
       if (ForwardedDst) {
         return consumesDstSelForwardingOperand(VALU, ForwardedDst, TRI);
-      } else if (MI.isInlineAsm()) {
+      }
+
+      if (MI.isInlineAsm()) {
         // Assume inline asm has dst forwarding hazard
         for (auto &Def : MI.all_defs()) {
           if (consumesDstSelForwardingOperand(VALU, &Def, TRI))
@@ -1098,35 +1100,35 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
         WaitStatesNeeded =
             std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
       }
-
-      if (ST.hasDstSelForwardingHazard()) {
-        const int Shift16DefWaitstates = 1;
-
-        auto IsShift16BitDefFn = [this, &IA](const MachineInstr &MI) {
-          const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
-          // Assume inline asm reads the dst
-          if (Dst)
-            return true;
-
-          if (MI.isInlineAsm()) {
-            // If MI is inline asm, assume it has dst forwarding hazard
-            for (auto &Op :
-                 drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-              if (Op.isReg() && IA->modifiesRegister(Op.getReg(), &TRI)) {
-                return true;
-              }
-            }
-          }
-
-          return false;
-        };
-
-        int WaitStatesNeededForDef =
-            Shift16DefWaitstates -
-            getWaitStatesSince(IsShift16BitDefFn, Shift16DefWaitstates);
-        WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
-      }
     }
+  }
+
+  if (ST.hasDstSelForwardingHazard()) {
+    const int Shift16DefWaitstates = 1;
+
+    auto IsShift16BitDefFn = [this, &IA](const MachineInstr &MI) {
+      const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
+      // Assume inline asm reads the dst
+      if (Dst)
+        return true;
+
+      if (MI.isInlineAsm()) {
+        // If MI is inline asm, assume it has dst forwarding hazard
+        for (auto &Op :
+             drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
+          if (Op.isReg() && IA->modifiesRegister(Op.getReg(), &TRI)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    int WaitStatesNeededForDef =
+        Shift16DefWaitstates -
+        getWaitStatesSince(IsShift16BitDefFn, Shift16DefWaitstates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
   }
 
   return WaitStatesNeeded;
