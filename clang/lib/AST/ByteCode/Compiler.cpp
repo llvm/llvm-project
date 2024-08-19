@@ -327,6 +327,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_NullToPointer:
   case CK_NullToMemberPointer: {
+    if (!this->discard(SubExpr))
+      return false;
     if (DiscardResult)
       return true;
 
