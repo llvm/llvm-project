@@ -537,6 +537,17 @@ getSpecifiedHLSLAttrFromVarDeclOrRecordDecl(VarDecl *VD,
       return nullptr;
   }
 
+  // make a lambda that loops over the field members and checks for the
+  // templated attribute
+  auto f = [](RecordDecl *TheRecordDecl) -> const T * {
+    for (auto *FD : TheRecordDecl->fields()) {
+      const T *Attr = FD->getAttr<T>();
+      if (Attr)
+        return Attr;
+    }
+    return nullptr;
+  };
+
   if (TheRecordDecl) {
     // if the member's base type is a ClassTemplateSpecializationDecl,
     // check if it has a member handle with a resource class attr
@@ -545,26 +556,11 @@ getSpecifiedHLSLAttrFromVarDeclOrRecordDecl(VarDecl *VD,
       auto TheCXXRecordDecl =
           TDecl->getSpecializedTemplate()->getTemplatedDecl();
       TheCXXRecordDecl = TheCXXRecordDecl->getCanonicalDecl();
-      const auto *Attr = TheCXXRecordDecl->getAttr<T>();
-      if (!Attr) {
-        for (auto *FD : TheCXXRecordDecl->fields()) {
-          Attr = FD->getAttr<T>();
-          if (Attr)
-            break;
-        }
-      }
-      return Attr;
+
+      return f(TheCXXRecordDecl);
     }
 
-    const auto *Attr = TheRecordDecl->getAttr<T>();
-    if (!Attr) {
-      for (auto *FD : TheRecordDecl->fields()) {
-        Attr = FD->getAttr<T>();
-        if (Attr)
-          break;
-      }
-    }
-    return Attr;
+    return f(TheRecordDecl);
   }
   llvm_unreachable("TheRecordDecl should not be null");
   return nullptr;
