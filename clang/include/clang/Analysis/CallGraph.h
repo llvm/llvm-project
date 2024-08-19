@@ -134,7 +134,7 @@ public:
   }
 
   // We are only collecting the declarations, so do not step into the bodies.
-  bool TraverseStmt(Stmt *S, DataRecursionQueue*) override { return true; }
+  bool TraverseStmt(Stmt *S) override { return true; }
 
 private:
   /// Add the given declaration to the call graph.

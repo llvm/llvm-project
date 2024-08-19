@@ -2584,7 +2584,7 @@ struct DependencyChecker : DynamicRecursiveASTVisitor {
     return false;
   }
 
-  bool TraverseStmt(Stmt *S, DataRecursionQueue *Q = nullptr) override {
+  bool TraverseStmt(Stmt *S) override {
     // Prune out non-type-dependent expressions if requested. This can
     // sometimes result in us failing to find a template parameter reference
     // (if a value-dependent expression creates a dependent type), but this
@@ -2592,7 +2592,7 @@ struct DependencyChecker : DynamicRecursiveASTVisitor {
     if (auto *E = dyn_cast_or_null<Expr>(S))
       if (IgnoreNonTypeDependent && !E->isTypeDependent())
         return true;
-    return DynamicRecursiveASTVisitor::TraverseStmt(S, Q);
+    return DynamicRecursiveASTVisitor::TraverseStmt(S);
   }
 
   bool TraverseTypeLoc(TypeLoc TL) override {

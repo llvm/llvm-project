@@ -170,7 +170,7 @@ public:
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
 
-  bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) override {
+  bool TraverseStmt(Stmt *Node) override {
     if (!Node)
       return true;
     if (!match(*Node))

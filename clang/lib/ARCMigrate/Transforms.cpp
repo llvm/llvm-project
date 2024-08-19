@@ -335,7 +335,7 @@ public:
     return DynamicRecursiveASTVisitor::TraverseObjCImplementationDecl(D);
   }
 
-  bool TraverseStmt(Stmt *rootS, DataRecursionQueue * = nullptr) override {
+  bool TraverseStmt(Stmt *rootS) override {
     if (!rootS)
       return true;
 

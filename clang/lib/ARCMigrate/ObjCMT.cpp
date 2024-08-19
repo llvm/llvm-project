@@ -364,7 +364,7 @@ namespace {
       ShouldWalkTypesOfTypeLocs = false;
     }
 
-    bool TraverseStmt(Stmt *S, DataRecursionQueue * = nullptr) override {
+    bool TraverseStmt(Stmt *S) override {
       PMap.reset(new ParentMap(S));
       ObjCMigrator(Consumer, *PMap).TraverseStmt(S);
       return true;

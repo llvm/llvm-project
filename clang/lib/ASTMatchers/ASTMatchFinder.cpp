@@ -174,11 +174,7 @@ public:
     return StmtToTraverse;
   }
 
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) override {
-    // If we need to keep track of the depth, we can't perform data recursion.
-    if (CurrentDepth == 0 || (CurrentDepth <= MaxDepth && MaxDepth < INT_MAX))
-      Queue = nullptr;
-
+  bool TraverseStmt(Stmt *StmtNode) override {
     ScopedIncrement ScopedDepth(&CurrentDepth);
     Stmt *StmtToTraverse = getStmtToTraverse(StmtNode);
     if (!StmtToTraverse)
@@ -189,7 +185,7 @@ public:
 
     if (!match(*StmtToTraverse))
       return false;
-    return DynamicRecursiveASTVisitor::TraverseStmt(StmtToTraverse, Queue);
+    return DynamicRecursiveASTVisitor::TraverseStmt(StmtToTraverse);
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
@@ -498,7 +494,7 @@ public:
   }
 
   bool TraverseDecl(Decl *DeclNode) override;
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) override;
+  bool TraverseStmt(Stmt *StmtNode) override;
   bool TraverseType(QualType TypeNode) override;
   bool TraverseTypeLoc(TypeLoc TypeNode) override;
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) override;
@@ -507,7 +503,7 @@ public:
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& TAL) override;
   bool TraverseAttr(Attr *AttrNode) override;
 
-  bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) override {
+  bool dataTraverseNode(Stmt *S) override {
     if (auto *RF = dyn_cast<CXXForRangeStmt>(S)) {
       {
         ASTNodeNotAsIsSourceScope RAII(this, true);
@@ -578,7 +574,7 @@ public:
           TraverseType(E);
 
         if (Expr *NE = T->getNoexceptExpr())
-          TraverseStmt(NE, Queue);
+          TraverseStmt(NE);
 
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
@@ -588,7 +584,7 @@ public:
       TraverseStmt(LE->getBody());
       return true;
     }
-    return DynamicRecursiveASTVisitor::dataTraverseNode(S, Queue);
+    return DynamicRecursiveASTVisitor::dataTraverseNode(S);
   }
 
   // Matches children or descendants of 'Node' with 'BaseMatcher'.
@@ -1463,7 +1459,7 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   return DynamicRecursiveASTVisitor::TraverseDecl(DeclNode);
 }
 
-bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
+bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode) {
   if (!StmtNode) {
     return true;
   }
@@ -1472,7 +1468,7 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
 
   ASTNodeNotSpelledInSourceScope RAII(this, ScopedTraversal);
   match(*StmtNode);
-  return DynamicRecursiveASTVisitor::TraverseStmt(StmtNode, Queue);
+  return DynamicRecursiveASTVisitor::TraverseStmt(StmtNode);
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {

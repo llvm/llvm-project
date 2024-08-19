@@ -779,7 +779,7 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseStmt(Stmt *S, DataRecursionQueue* = nullptr) override {
+  bool TraverseStmt(Stmt *S) override {
     if (!S)
       return true;
     StmtStack.push_back(S);

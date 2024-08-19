@@ -233,7 +233,7 @@ public:
                                     ParentDC, SymbolRoleSet(), Relations);
   }
 
-  bool TraverseStmt(Stmt *S, DataRecursionQueue* = nullptr) override {
+  bool TraverseStmt(Stmt *S) override {
     IndexCtx.indexBody(S, Parent, ParentDC);
     return true;
   }

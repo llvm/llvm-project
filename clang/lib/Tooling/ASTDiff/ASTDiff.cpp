@@ -237,7 +237,7 @@ struct PreorderVisitor : DynamicRecursiveASTVisitor {
     PostTraverse(SavedState);
     return true;
   }
-  bool TraverseStmt(Stmt *S, DataRecursionQueue* = nullptr) override {
+  bool TraverseStmt(Stmt *S) override {
     if (auto *E = dyn_cast_or_null<Expr>(S))
       S = E->IgnoreImplicit();
     if (isNodeExcluded(Tree.AST.getSourceManager(), S))

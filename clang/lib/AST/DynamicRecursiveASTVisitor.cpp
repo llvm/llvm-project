@@ -41,8 +41,8 @@ struct Impl : RecursiveASTVisitor<Impl> {
   bool TraverseDecl(Decl *D) { return Visitor.TraverseDecl(D); }
   bool TraverseType(QualType T) { return Visitor.TraverseType(T); }
   bool TraverseTypeLoc(TypeLoc TL) { return Visitor.TraverseTypeLoc(TL); }
-  bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr) {
-    return Visitor.TraverseStmt(S, Queue);
+  bool TraverseStmt(Stmt *S) {
+    return Visitor.TraverseStmt(S);
   }
 
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
@@ -112,8 +112,14 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   bool dataTraverseStmtPre(Stmt *S) { return Visitor.dataTraverseStmtPre(S); }
   bool dataTraverseStmtPost(Stmt *S) { return Visitor.dataTraverseStmtPost(S); }
-  bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
-    return Visitor.dataTraverseNode(S, Queue);
+
+  // TraverseStmt() always passes in a queue, so we have no choice but to
+  // accept it as a parameter here.
+  bool dataTraverseNode(Stmt *S, DataRecursionQueue* = nullptr) {
+    // But since don't support postorder traversal, we don't need it, so
+    // simply discard it here. This way, derived classes don't need to worry
+    // about including it as a parameter that they never use.
+    return Visitor.dataTraverseNode(S);
   }
 
   /// Visit a node.
@@ -218,9 +224,8 @@ bool DynamicRecursiveASTVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                                                                       Init);
 }
 
-bool DynamicRecursiveASTVisitor::TraverseStmt(Stmt *S,
-                                              DataRecursionQueue *Queue) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseStmt(S, Queue);
+bool DynamicRecursiveASTVisitor::TraverseStmt(Stmt *S) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseStmt(S);
 }
 
 bool DynamicRecursiveASTVisitor::TraverseTemplateArgument(
@@ -308,8 +313,8 @@ bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
       NNS);
 }
 
-bool DynamicRecursiveASTVisitor::dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::dataTraverseNode(S, Queue);
+bool DynamicRecursiveASTVisitor::dataTraverseNode(Stmt *S) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::dataTraverseNode(S, nullptr);
 }
 
 /*

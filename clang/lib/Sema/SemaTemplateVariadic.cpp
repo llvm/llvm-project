@@ -128,10 +128,10 @@ public:
 
   /// Suppress traversal into statements and expressions that
   /// do not contain unexpanded parameter packs.
-  bool TraverseStmt(Stmt *S, DataRecursionQueue *Q = nullptr) override {
+  bool TraverseStmt(Stmt *S) override {
     Expr *E = dyn_cast_or_null<Expr>(S);
     if ((E && E->containsUnexpandedParameterPack()) || InLambda)
-      return DynamicRecursiveASTVisitor::TraverseStmt(S, Q);
+      return DynamicRecursiveASTVisitor::TraverseStmt(S);
 
     return true;
   }
