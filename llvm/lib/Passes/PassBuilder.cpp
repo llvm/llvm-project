@@ -432,6 +432,16 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+  AddFastRegAllocCallback = [](MachineFunctionPassManager &MFPM) {
+    MFPM.addPass(PHIEliminationPass());
+    MFPM.addPass(TwoAddressInstructionPass());
+    MFPM.addPass(RegAllocFastPass());
+  };
+  AddOptimizedRegAllocCallback = [](PassBuilder &,
+                                    MachineFunctionPassManager &) {
+    // TODO: Add related passes here.
+  };
+
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

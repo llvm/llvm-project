@@ -24,13 +24,40 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/CodeGenPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/FinalizeISel.h"
+#include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/LocalStackSlotAllocation.h"
+#include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Passes/CodeGenPassBuilder.h" // Dummy passes only!
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
@@ -79,11 +106,13 @@
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/Transforms/Scalar/AnnotationRemarks.h"
 #include "llvm/Transforms/Scalar/BDCE.h"
 #include "llvm/Transforms/Scalar/CallSiteSplitting.h"
+#include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
@@ -109,6 +138,7 @@
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopSink.h"
+#include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
@@ -116,14 +146,18 @@
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
+#include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Transforms/Scalar/NewGVN.h"
+#include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
+#include "llvm/Transforms/Scalar/TLSVariableHoist.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
@@ -133,6 +167,8 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
+#include "llvm/Transforms/Utils/LowerGlobalDtors.h"
+#include "llvm/Transforms/Utils/LowerInvoke.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
@@ -311,6 +347,8 @@ namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 extern cl::opt<bool> EnableInferAlignmentPass;
+
+extern cl::opt<std::string> FSRemappingFile;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
@@ -391,6 +429,85 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
   for (auto &C : PipelineEarlySimplificationEPCallbacks)
     C(MPM, Level);
+}
+void PassBuilder::invokeGCLoweringEPCallbacks(FunctionPassManager &FPM) {
+  for (auto &C : GCLoweringEPCallbacks)
+    C(FPM);
+}
+
+void PassBuilder::invokeISelPrepareEPCallbacks(ModulePassManager &MPM) {
+  for (auto &C : ISelPrepareEPCallbacks)
+    C(MPM);
+}
+void PassBuilder::invokeMachineSSAOptimizationEarlyEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : MachineSSAOptimizationEarlyEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokeMachineSSAOptimizationLastEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : MachineSSAOptimizationLastEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokePreRegAllocEPCallbacks(MachineFunctionPassManager &MFPM,
+                                               CodeGenOptLevel Level) {
+  for (auto &C : PreRegAllocEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokePreRegBankSelectEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : PreRegBankSelectEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokePreGlobalInstructionSelectEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : PreGlobalInstructionSelectEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokePostGlobalInstructionSelectEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : PostGlobalInstructionSelectEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokeILPOptsEPCallbacks(MachineFunctionPassManager &MFPM,
+                                           CodeGenOptLevel Level) {
+  for (auto &C : ILPOptsEPCallbacks)
+    C(MFPM, Level);
+}
+void PassBuilder::invokeMachineLateOptimizationEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : MachineLateOptimizationEPCallbacks)
+    C(MFPM, Level);
+}
+
+void PassBuilder::invokeMIEmitEPCallbacks(MachineFunctionPassManager &MFPM,
+                                          CodeGenOptLevel Level) {
+  for (auto &C : MIEmitEPCallbacks)
+    C(MFPM, Level);
+}
+
+void PassBuilder::invokePreEmitEPCallbacks(MachineFunctionPassManager &MFPM,
+                                           CodeGenOptLevel Level) {
+  for (auto &C : PreEmitEPCallbacks)
+    C(MFPM, Level);
+}
+
+void PassBuilder::invokePostRegAllocEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : PostRegAllocEPCallbacks)
+    C(MFPM, Level);
+}
+
+void PassBuilder::invokePreSched2EPCallbacks(MachineFunctionPassManager &MFPM,
+                                             CodeGenOptLevel Level) {
+  for (auto &C : PreSched2EPCallbacks)
+    C(MFPM, Level);
+}
+
+void PassBuilder::invokePostBBSectionsEPCallbacks(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  for (auto &C : PostBBSectionsEPCallbacks)
+    C(MFPM, Level);
 }
 
 // Helper to add AnnotationRemarksPass.
@@ -2220,4 +2337,579 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
     TM->registerDefaultAliasAnalyses(AA);
 
   return AA;
+}
+
+// Find the Profile remapping file name. The internal option takes the
+// precedence before getting from TargetMachine.
+static std::string getFSRemappingFile(const TargetMachine *TM,
+                                      const CGPassBuilderOption &Options) {
+  if (!Options.FSRemappingFile.empty())
+    return Options.FSRemappingFile;
+  const std::optional<PGOOptions> &PGOOpt = TM->getPGOOption();
+  if (PGOOpt == std::nullopt || PGOOpt->Action != PGOOptions::SampleUse)
+    return std::string();
+  return PGOOpt->ProfileRemappingFile;
+}
+
+// Find the FSProfile file name. The internal option takes the precedence
+// before getting from TargetMachine.
+static std::string getFSProfileFile(const TargetMachine *TM,
+                                    const CGPassBuilderOption &Options) {
+  if (!Options.FSProfileFile.empty())
+    return Options.FSProfileFile;
+  const std::optional<PGOOptions> &PGOOpt = TM->getPGOOption();
+  if (PGOOpt == std::nullopt || PGOOpt->Action != PGOOptions::SampleUse)
+    return std::string();
+  return PGOOpt->ProfileFile;
+}
+
+Error PassBuilder::addExceptionHandlingPasses(FunctionPassManager &FPM) {
+  const MCAsmInfo *MCAI = TM->getMCAsmInfo();
+  if (!MCAI)
+    return make_error<StringError>("No MCAsmInfo!", inconvertibleErrorCode());
+  switch (MCAI->getExceptionHandlingType()) {
+  case ExceptionHandling::SjLj:
+    // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
+    // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
+    // catch info can get misplaced when a selector ends up more than one block
+    // removed from the parent invoke(s). This could happen when a landing
+    // pad is shared by multiple invokes and is also a target of a normal
+    // edge from elsewhere.
+    FPM.addPass(SjLjEHPreparePass(TM));
+    [[fallthrough]];
+  case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::ARM:
+  case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
+    FPM.addPass(DwarfEHPreparePass(TM));
+    break;
+  case ExceptionHandling::WinEH:
+    // We support using both GCC-style and MSVC-style exceptions on Windows, so
+    // add both preparation passes. Each pass will only actually run if it
+    // recognizes the personality function.
+    FPM.addPass(WinEHPreparePass());
+    FPM.addPass(DwarfEHPreparePass(TM));
+    break;
+  case ExceptionHandling::Wasm:
+    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
+    // on catchpads and cleanuppads because it does not outline them into
+    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
+    // should remove PHIs there.
+    FPM.addPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/true));
+    FPM.addPass(WasmEHPreparePass());
+    break;
+  case ExceptionHandling::None:
+    FPM.addPass(LowerInvokePass());
+
+    // The lower invoke pass may create unreachable code. Remove it.
+    FPM.addPass(UnreachableBlockElimPass());
+    break;
+  }
+  return Error::success();
+}
+
+Error PassBuilder::addInstructionSelectorPasses(
+    MachineFunctionPassManager &MFPM, const CGPassBuilderOption &Options) {
+  CodeGenOptLevel OptLevel = TM->getOptLevel();
+
+  // Core ISel
+  // Enable FastISel with -fast-isel, but allow that to be overridden.
+  TM->setO0WantsFastISel(Options.EnableFastISelOption.value_or(true));
+  // Determine an instruction selector.
+  enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
+  SelectorType Selector;
+
+  Options.EnableFastISelOption.value_or(false);
+  if (Options.EnableFastISelOption.value_or(false))
+    Selector = SelectorType::FastISel;
+
+  else if (Options.EnableGlobalISelOption.value_or(false) ||
+           (TM->Options.EnableGlobalISel &&
+            !Options.EnableGlobalISelOption.value_or(false)))
+    Selector = SelectorType::GlobalISel;
+  else if (OptLevel == CodeGenOptLevel::None && TM->getO0WantsFastISel())
+    Selector = SelectorType::FastISel;
+  else
+    Selector = SelectorType::SelectionDAG;
+
+  // Set consistently TM.Options.EnableFastISel and EnableGlobalISel.
+  if (Selector == SelectorType::FastISel) {
+    TM->setFastISel(true);
+    TM->setGlobalISel(false);
+  } else if (Selector == SelectorType::GlobalISel) {
+    TM->setFastISel(false);
+    TM->setGlobalISel(true);
+  }
+
+  // Add instruction selector passes.
+  if (Selector == SelectorType::GlobalISel) {
+    MFPM.addPass(IRTranslatorPass());
+    MFPM.addPass(LegalizerPass());
+
+    // Before running the register bank selector, ask the target if it
+    // wants to run some passes.
+    invokePreRegBankSelectEPCallbacks(MFPM, OptLevel);
+    MFPM.addPass(RegBankSelectPass());
+
+    invokePreGlobalInstructionSelectEPCallbacks(MFPM, OptLevel);
+    MFPM.addPass(InstructionSelectPass());
+    invokePostGlobalInstructionSelectEPCallbacks(MFPM, OptLevel);
+
+    // Pass to reset the MachineFunction if the ISel failed.
+    MFPM.addPass(ResetMachineFunctionPass(
+        TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag,
+        TM->Options.GlobalISelAbort == GlobalISelAbortMode::Enable));
+
+    // Provide a fallback path when we do not want to abort on
+    // not-yet-supported input.
+    if (TM->Options.GlobalISelAbort != GlobalISelAbortMode::Enable) {
+      if (!AddInstSelectorCallback)
+        return make_error<StringError>("No InstSelectorCallback!",
+                                       inconvertibleErrorCode());
+      AddInstSelectorCallback(MFPM, OptLevel);
+    }
+  } else {
+    if (!AddInstSelectorCallback)
+      return make_error<StringError>("No InstSelectorCallback!",
+                                     inconvertibleErrorCode());
+    AddInstSelectorCallback(MFPM, OptLevel);
+  }
+  return Error::success();
+}
+
+void PassBuilder::addMachineSSAOptimizationPasses(
+    MachineFunctionPassManager &MFPM, CodeGenOptLevel Level) {
+  // Pre-ra tail duplication.
+  MFPM.addPass(EarlyTailDuplicatePass());
+
+  // Optimize PHIs before DCE: removing dead PHI cycles may make more
+  // instructions dead.
+  MFPM.addPass(OptimizePHIsPass());
+
+  // This pass merges large allocas. StackSlotColoring is a different pass
+  // which merges spill slots.
+  MFPM.addPass(StackColoringPass());
+
+  // If the target requests it, assign local variables to stack slots relative
+  // to one another and simplify frame index references where possible.
+  MFPM.addPass(LocalStackSlotAllocationPass());
+
+  // With optimization, dead code should already be eliminated. However
+  // there is one known exception: lowered code for arguments that are only
+  // used by tail calls, where the tail calls reuse the incoming stack
+  // arguments directly (see t11 in test/CodeGen/X86/sibcall.ll).
+  MFPM.addPass(DeadMachineInstructionElimPass());
+
+  // Allow targets to insert passes that improve instruction level parallelism,
+  // like if-conversion. Such passes will typically need dominator trees and
+  // loop info, just like LICM and CSE below.
+  invokeILPOptsEPCallbacks(MFPM, Level);
+
+  MFPM.addPass(EarlyMachineLICMPass());
+  MFPM.addPass(MachineCSEPass());
+
+  MFPM.addPass(MachineSinkingPass());
+
+  MFPM.addPass(PeepholeOptimizerPass());
+  // Clean-up the dead code that may have been generated by peephole
+  // rewriting.
+  MFPM.addPass(DeadMachineInstructionElimPass());
+}
+
+Error PassBuilder::setStartStop(ModulePassManager &MPM) {
+  auto StartStopInfoOrErr = TargetPassConfig::getStartStopInfo(*PIC);
+  if (!StartStopInfoOrErr)
+    return StartStopInfoOrErr.takeError();
+  auto &SSI = *StartStopInfoOrErr;
+
+  bool Started = SSI.StartPass.empty(), Stopped = false;
+  // Return true if pass is skipped.
+  auto Filter = [&, StartInstanceNum = 0u,
+                 StopInstanceNum = 0u](StringRef Name) mutable {
+    if (!Started) {
+      if (PIC->getPassNameForClassName(Name) == SSI.StartPass)
+        ++StartInstanceNum;
+      if (StartInstanceNum == SSI.StartInstanceNum) {
+        Started = true;
+        return SSI.StartAfter;
+      }
+      return true;
+    }
+
+    if (!Stopped) {
+      if (!SSI.StopPass.empty() &&
+          PIC->getPassNameForClassName(Name) == SSI.StopPass)
+        ++StopInstanceNum;
+      if (StopInstanceNum == SSI.StopInstanceNum) {
+        Stopped = true;
+        return !SSI.StopAfter;
+      }
+      return false;
+    }
+
+    return !Started || Stopped;
+  };
+
+  MPM.eraseIf(Filter);
+  if (!Started) {
+    return make_error<StringError>(
+        "Can't find start pass \"" + SSI.StartPass + "\".",
+        std::make_error_code(std::errc::invalid_argument));
+  }
+  if (!Stopped && !SSI.StopPass.empty()) {
+    return make_error<StringError>(
+        "Can't find stop pass \"" + SSI.StopPass + "\".",
+        std::make_error_code(std::errc::invalid_argument));
+  }
+  return Error::success();
+}
+
+Error PassBuilder::addRegisterAllocatorPasses(
+    MachineFunctionPassManager &MFPM, const CGPassBuilderOption &Options) {
+  CodeGenOptLevel Level = TM->getOptLevel();
+  const bool OptimizeRegAlloc =
+      Options.OptimizeRegAlloc.value_or(Level != CodeGenOptLevel::None);
+
+  if (OptimizeRegAlloc) {
+    AddOptimizedRegAllocCallback(*this, MFPM);
+  } else {
+    AddFastRegAllocCallback(MFPM);
+  }
+  return Error::success();
+}
+
+Error PassBuilder::addRegAllocPass(MachineFunctionPassManager &MFPM,
+                                   StringRef Filter) {
+  return Error::success();
+}
+
+Expected<ModulePassManager> PassBuilder::buildDefaultCodeGenPipeline(
+    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    MCContext &Ctx) {
+  if (!TM)
+    return make_error<StringError>("Need a TargetMachine instance!",
+                                   inconvertibleErrorCode());
+
+  CGPassBuilderOption Options = getCGPassBuilderOption();
+  CodeGenPassPipelineTunningCallback(Options);
+  CodeGenOptLevel OptLevel = TM->getOptLevel();
+
+  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
+
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
+  MachineFunctionPassManager MFPM;
+
+  // IR part
+  MPM.addPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
+  MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  MPM.addPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
+  if (TM->useEmulatedTLS())
+    MPM.addPass(LowerEmuTLSPass());
+  MPM.addPass(PreISelIntrinsicLoweringPass(TM));
+
+  // For MachO, lower @llvm.global_dtors into @llvm.global_ctors with
+  // __cxa_atexit() calls to avoid emitting the deprecated __mod_term_func.
+  if (TM->getTargetTriple().isOSBinFormatMachO() &&
+      !Options.DisableAtExitBasedGlobalDtorLowering)
+    MPM.addPass(LowerGlobalDtorsPass());
+
+  FPM.addPass(ExpandLargeDivRemPass(TM));
+  FPM.addPass(ExpandLargeFpConvertPass(TM));
+
+  // Extension point?
+
+  // Run loop strength reduction before anything else.
+  if (OptLevel != CodeGenOptLevel::None) {
+    if (!Options.DisableLSR)
+      FPM.addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+                                                  /*UseMemorySSA=*/true));
+    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
+    // loads and compares. ExpandMemCmpPass then tries to expand those calls
+    // into optimally-sized loads and compares. The transforms are enabled by a
+    // target lowering hook.
+    if (!Options.DisableMergeICmps)
+      FPM.addPass(MergeICmpsPass());
+    FPM.addPass(ExpandMemCmpPass(TM));
+  }
+
+  // Run GC lowering passes for builtin collectors
+  FPM.addPass(GCLoweringPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.addPass(ShadowStackGCLoweringPass());
+  FPM = FunctionPassManager();
+  invokeGCLoweringEPCallbacks(FPM);
+
+  // Make sure that no unreachable blocks are instruction selected.
+  FPM.addPass(UnreachableBlockElimPass());
+
+  if (OptLevel != CodeGenOptLevel::None) {
+    if (!Options.DisableConstantHoisting)
+      FPM.addPass(ConstantHoistingPass());
+    if (!Options.DisableReplaceWithVecLib)
+      FPM.addPass(ReplaceWithVeclib());
+    if (!Options.DisablePartialLibcallInlining)
+      FPM.addPass(PartiallyInlineLibCallsPass());
+  }
+
+  // Instrument function entry after all inlining.
+  FPM.addPass(EntryExitInstrumenterPass(/*PostInlining=*/true));
+
+  // Add scalarization of target's unsupported masked memory intrinsics pass.
+  // the unsupported intrinsic will be replaced with a chain of basic blocks,
+  // that stores/loads element one-by-one if the appropriate mask bit is set.
+  FPM.addPass(ScalarizeMaskedMemIntrinPass());
+
+  // Expand reduction intrinsics into shuffle sequences if the target wants to.
+  // Allow disabling it for testing purposes.
+  if (!Options.DisableExpandReductions)
+    FPM.addPass(ExpandReductionsPass());
+
+  if (OptLevel != CodeGenOptLevel::None) {
+    FPM.addPass(TLSVariableHoistPass());
+
+    // Convert conditional moves to conditional jumps when profitable.
+    if (!Options.DisableSelectOptimize)
+      FPM.addPass(SelectOptimizePass(TM));
+
+    // CodeGen prepare
+    if (!Options.DisableCGP)
+      FPM.addPass(CodeGenPreparePass(TM));
+  }
+
+  // Turn exception handling constructs into something the code generators can
+  // handle.
+  if (auto Err = addExceptionHandlingPasses(FPM))
+    return std::move(Err);
+
+  { // Pre isel extension
+    ModulePassManager ISelPreparePasses;
+    invokeISelPrepareEPCallbacks(ISelPreparePasses);
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    MPM.addPass(std::move(ISelPreparePasses));
+  }
+
+  if (OptLevel != CodeGenOptLevel::None)
+    FPM.addPass(ObjCARCContractPass());
+  FPM.addPass(CallBrPreparePass());
+  // Add both the safe stack and the stack protection passes: each of them will
+  // only protect functions that have corresponding attributes.
+  FPM.addPass(SafeStackPass(TM));
+  FPM.addPass(StackProtectorPass(TM));
+
+  if (PrintMIR) {
+    if (Options.RequiresCodeGenSCCOrder)
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+          createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+    else
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    MPM.addPass(PrintMIRPreparePass(Out));
+    FPM = FunctionPassManager();
+  }
+
+  if (auto Err = addInstructionSelectorPasses(MFPM, Options))
+    return std::move(Err);
+
+  // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
+  // FinalizeISel.
+  MFPM.addPass(FinalizeISelPass());
+
+  // Add passes that optimize machine instructions in SSA form.
+  if (OptLevel != CodeGenOptLevel::None) {
+    invokeMachineSSAOptimizationEarlyEPCallbacks(MFPM, OptLevel);
+    addMachineSSAOptimizationPasses(MFPM, OptLevel);
+    invokeMachineSSAOptimizationLastEPCallbacks(MFPM, OptLevel);
+  } else {
+    MFPM.addPass(LocalStackSlotAllocationPass());
+  }
+
+  if (TM->Options.EnableIPRA)
+    MFPM.addPass(RegUsageInfoPropagationPass());
+
+  // Run pre-ra passes.
+  invokePreRegAllocEPCallbacks(MFPM, OptLevel);
+
+  if (EnableFSDiscriminator) {
+    MFPM.addPass(
+        MIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass::Pass1));
+    const std::string ProfileFile = getFSProfileFile(TM, Options);
+    if (!ProfileFile.empty() && !Options.DisableRAFSProfileLoader)
+      MFPM.addPass(MIRProfileLoaderNewPass(
+          ProfileFile, getFSRemappingFile(TM, Options),
+          sampleprof::FSDiscriminatorPass::Pass1, nullptr));
+  }
+
+  if (auto Err = addRegisterAllocatorPasses(MFPM, Options))
+    return std::move(Err);
+
+  invokePostRegAllocEPCallbacks(MFPM, OptLevel);
+
+  MFPM.addPass(RemoveRedundantDebugValuesPass());
+  MFPM.addPass(FixupStatepointCallerSavedPass());
+
+  // Insert prolog/epilog code.  Eliminate abstract frame index references...
+  if (OptLevel != CodeGenOptLevel::None) {
+    MFPM.addPass(PostRAMachineSinkingPass());
+    MFPM.addPass(ShrinkWrapPass());
+  }
+
+  if (!Options.DisablePrologEpilogInserterPass)
+    MFPM.addPass(PrologEpilogInserterPass());
+  /// Add passes that optimize machine instructions after register allocation.
+  if (OptLevel != CodeGenOptLevel::None)
+    invokeMachineLateOptimizationEPCallbacks(MFPM, OptLevel);
+
+  // Expand pseudo instructions before second scheduling pass.
+  MFPM.addPass(ExpandPostRAPseudosPass());
+
+  // Run pre-sched2 passes.
+  invokePreSched2EPCallbacks(MFPM, OptLevel);
+
+  if (Options.EnableImplicitNullChecks)
+    MFPM.addPass(ImplicitNullChecksPass());
+
+  // Second pass scheduler.
+  // Let Target optionally insert this pass by itself at some other
+  // point.
+  if (OptLevel != CodeGenOptLevel::None &&
+      !TM->targetSchedulesPostRAScheduling()) {
+    if (Options.MISchedPostRA)
+      MFPM.addPass(PostMachineSchedulerPass());
+    else
+      MFPM.addPass(PostRASchedulerPass());
+  }
+
+  // GC, replacement for GCMachineCodeAnalysis
+  MFPM.addPass(GCMachineCodeInsertionPass());
+
+  // Basic block placement.
+  if (OptLevel != CodeGenOptLevel::None) {
+    if (EnableFSDiscriminator) {
+      MFPM.addPass(
+          MIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass::Pass2));
+      const std::string ProfileFile = getFSProfileFile(TM, Options);
+      if (!ProfileFile.empty() && !Options.DisableLayoutFSProfileLoader)
+        MFPM.addPass(MIRProfileLoaderNewPass(
+            ProfileFile, getFSRemappingFile(TM, Options),
+            sampleprof::FSDiscriminatorPass::Pass2, nullptr));
+    }
+    MFPM.addPass(MachineBlockPlacementPass());
+  }
+
+  // Insert before XRay Instrumentation.
+  MFPM.addPass(FEntryInserterPass());
+  MFPM.addPass(XRayInstrumentationPass());
+  MFPM.addPass(PatchableFunctionPass());
+
+  invokePreEmitEPCallbacks(MFPM, OptLevel);
+
+  if (TM->Options.EnableIPRA)
+    // Collect register usage information and produce a register mask of
+    // clobbered registers, to be used to optimize call sites.
+    MFPM.addPass(RegUsageInfoCollectorPass());
+
+  // FIXME: Some backends are incompatible with running the verifier after
+  // addPreEmitPass.  Maybe only pass "false" here for those targets?
+  MFPM.addPass(FuncletLayoutPass());
+
+  MFPM.addPass(StackMapLivenessPass());
+  MFPM.addPass(LiveDebugValuesPass());
+  MFPM.addPass(MachineSanitizerBinaryMetadata());
+
+  if (TM->Options.EnableMachineOutliner && OptLevel != CodeGenOptLevel::None &&
+      Options.EnableMachineOutliner != RunOutliner::NeverOutline) {
+    bool RunOnAllFunctions =
+        (Options.EnableMachineOutliner == RunOutliner::AlwaysOutline);
+    bool AddOutliner =
+        RunOnAllFunctions || TM->Options.SupportsDefaultOutlining;
+    if (AddOutliner) {
+      FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+      if (Options.RequiresCodeGenSCCOrder)
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      else
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      MPM.addPass(MachineOutlinerPass(RunOnAllFunctions));
+      FPM = FunctionPassManager();
+      MFPM = MachineFunctionPassManager();
+    }
+  }
+
+  if (Options.GCEmptyBlocks)
+    MFPM.addPass(GCEmptyBasicBlocksPass());
+
+  if (EnableFSDiscriminator)
+    MFPM.addPass(
+        MIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass::PassLast));
+
+  bool NeedsBBSections =
+      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
+  // Machine function splitter uses the basic block sections feature. Both
+  // cannot be enabled at the same time. We do not apply machine function
+  // splitter if -basic-block-sections is requested.
+  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
+                           Options.EnableMachineFunctionSplitter)) {
+    const std::string ProfileFile = getFSProfileFile(TM, Options);
+    if (!ProfileFile.empty()) {
+      if (EnableFSDiscriminator) {
+        MFPM.addPass(MIRProfileLoaderNewPass(
+            ProfileFile, getFSRemappingFile(TM, Options),
+            sampleprof::FSDiscriminatorPass::PassLast, nullptr));
+      } else {
+        // Sample profile is given, but FSDiscriminator is not
+        // enabled, this may result in performance regression.
+        WithColor::warning()
+            << "Using AutoFDO without FSDiscriminator for MFS may regress "
+               "performance.\n";
+      }
+    }
+    MFPM.addPass(MachineFunctionSplitterPass());
+  }
+  // We run the BasicBlockSections pass if either we need BB sections or BB
+  // address map (or both).
+  if (NeedsBBSections || TM->Options.BBAddrMap) {
+    if (TM->getBBSectionsType() == llvm::BasicBlockSection::List)
+      MFPM.addPass(BasicBlockPathCloningPass());
+    MFPM.addPass(BasicBlockSectionsPass());
+  }
+
+  invokePostBBSectionsEPCallbacks(MFPM, OptLevel);
+
+  if (!Options.DisableCFIFixup && TM->Options.EnableCFIFixup)
+    MFPM.addPass(CFIFixupPass());
+
+  MFPM.addPass(StackFrameLayoutAnalysisPass());
+
+  // Add passes that directly emit MI after all other MI passes.
+  invokeMIEmitEPCallbacks(MFPM, OptLevel);
+
+  if (PrintMIR)
+    MFPM.addPass(PrintMIRPass(Out));
+
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+  if (Options.RequiresCodeGenSCCOrder)
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+  else
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  MPM.eraseIf([&](StringRef Name) { return DisabledPasses.contains(Name); });
+  if (auto Err = setStartStop(MPM))
+    return std::move(Err);
+  return std::move(MPM);
+}
+
+Error PassBuilder::buildDefaultCodeGenPipeline(ModulePassManager &MPM,
+                                               raw_pwrite_stream &Out,
+                                               raw_pwrite_stream *DwoOut,
+                                               CodeGenFileType FileType,
+                                               MCContext &Ctx) {
+  Expected<ModulePassManager> MPMOrErr =
+      buildDefaultCodeGenPipeline(Out, DwoOut, FileType, Ctx);
+  if (!MPMOrErr)
+    return MPMOrErr.takeError();
+  MPM.addPass(std::move(*MPMOrErr));
+  return Error::success();
 }
