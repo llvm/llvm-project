@@ -152,13 +152,13 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
+    : ImmutablePass(ID), MMI(std::make_unique<MachineModuleInfo>(TM)) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
+    : ImmutablePass(ID), MMI(std::make_unique<MachineModuleInfo>(TM, ExtContext)) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
@@ -193,10 +193,10 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 }
 
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
-  MMI.initialize();
-  MMI.TheModule = &M;
+  MMI->initialize();
+  MMI->TheModule = &M;
   LLVMContext &Ctx = M.getContext();
-  MMI.getContext().setDiagnosticHandler(
+  MMI->getContext().setDiagnosticHandler(
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
                  const SourceMgr &SrcMgr,
                  std::vector<const MDNode *> &LocInfos) {
@@ -210,7 +210,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
 }
 
 bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
-  MMI.finalize();
+  MMI->finalize();
   return false;
 }
 

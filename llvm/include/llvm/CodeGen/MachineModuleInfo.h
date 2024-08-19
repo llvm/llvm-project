@@ -169,7 +169,8 @@ public:
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
-  MachineModuleInfo MMI;
+  std::unique_ptr<MachineModuleInfo> MMI =
+      std::make_unique<MachineModuleInfo>();
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -182,8 +183,8 @@ public:
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;
 
-  MachineModuleInfo &getMMI() { return MMI; }
-  const MachineModuleInfo &getMMI() const { return MMI; }
+  MachineModuleInfo &getMMI() { return *MMI; }
+  const MachineModuleInfo &getMMI() const { return *MMI; }
 };
 
 /// An analysis that produces \c MachineModuleInfo for a module.
