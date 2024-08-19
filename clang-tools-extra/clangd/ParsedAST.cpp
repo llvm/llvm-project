@@ -425,20 +425,29 @@ clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
 
   auto StartCurLine = CodeTilDiag.find_last_of('\n') + 1;
   auto CurLine = CodeTilDiag.substr(StartCurLine);
-  elog("CurLine: '{0}'", CurLine);
   auto Indent = CurLine.take_while([](char C) { return std::isspace(C); });
 
+  auto ExistingNoLintNextLineInsertPos = std::optional<int>();
   if (StartCurLine > 0) {
     auto StartPrevLine = CodeTilDiag.find_last_of('\n', StartCurLine - 1) + 1;
     auto PrevLine =
         CodeTilDiag.substr(StartPrevLine, StartCurLine - StartPrevLine - 1);
-    elog("PrevLine: '{0}'", PrevLine);
+    auto NLPos = PrevLine.find("NOLINTNEXTLINE(");
+    if (NLPos != StringRef::npos) {
+      ExistingNoLintNextLineInsertPos =
+          std::make_optional(PrevLine.find(")", NLPos));
+    }
   }
 
-  E.newText = llvm::formatv("{0}// NOLINTNEXTLINE({1})\n", Indent, RuleName);
-
   auto InsertPos = sourceLocToPosition(SrcMgr, DiagLoc);
-  InsertPos.character = 0;
+  if (ExistingNoLintNextLineInsertPos) {
+    E.newText = llvm::formatv(", {0}", RuleName);
+    InsertPos.line -= 1;
+    InsertPos.character = *ExistingNoLintNextLineInsertPos;
+  } else {
+    E.newText = llvm::formatv("{0}// NOLINTNEXTLINE({1})\n", Indent, RuleName);
+    InsertPos.character = 0;
+  }
   E.range = {InsertPos, InsertPos};
 
   return {F};
