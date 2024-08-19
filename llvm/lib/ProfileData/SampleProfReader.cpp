@@ -731,7 +731,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
-    LBRProfileSecRange = std::make_pair(Data, End);
+    ProfileSecRange = std::make_pair(Data, End);
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
@@ -801,8 +801,8 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
                                        SampleProfileMap &Profiles) {
-  Data = LBRProfileSecRange.first;
-  End = LBRProfileSecRange.second;
+  Data = ProfileSecRange.first;
+  End = ProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
@@ -960,7 +960,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
 
   // When LoadFuncsToBeUsed is false, we are using LLVM tool, need to read all
   // profiles.
-  const uint8_t *Start = Data;
   if (!LoadFuncsToBeUsed) {
     while (Data < End) {
       if (std::error_code EC = readFuncProfile(Data))
