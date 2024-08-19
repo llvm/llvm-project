@@ -5112,7 +5112,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   RawAddress SRetAlloca = RawAddress::invalid();
   llvm::Value *UnusedReturnSizePtr = nullptr;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
-    if (IsVirtualFunctionPointerThunk && RetAI.isIndirect()) {
+    // For virtual function pointer thunks and musttail calls, we must always
+    // forward an incoming SRet pointer to the callee, because a local alloca
+    // would be de-allocated before the call. These cases both guarantee that
+    // there will be an incoming SRet argument of the correct type.
+    if ((IsVirtualFunctionPointerThunk || IsMustTail) && RetAI.isIndirect()) {
       SRetPtr = makeNaturalAddressForPointer(CurFn->arg_begin() +
                                                  IRFunctionArgs.getSRetArgNo(),
                                              RetTy, CharUnits::fromQuantity(1));
