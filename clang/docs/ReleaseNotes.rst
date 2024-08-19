@@ -65,6 +65,15 @@ C++ Specific Potentially Breaking Changes
   `-Wno-enum-constexpr-conversion`, to allow for a transition period for users.
   Now, in Clang 20, **it is no longer possible to suppress the diagnostic**.
 
+- Extraneous template headers are now ill-formed by default.
+  This error can be disable with ``-Wno-error=extraneous-template-head``.
+
+  .. code-block:: c++
+
+    template <> // error: extraneous template head
+    template <typename T>
+    void f();
+    
 ABI Changes in This Version
 ---------------------------
 
@@ -81,6 +90,9 @@ Clang Python Bindings Potentially Breaking Changes
 - Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
   statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
+- For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
+  but after the end of the ``SourceRange``, ``SourceRange.__contains__``
+  used to incorrectly return ``True``. (#GH22617), (#GH52827)
 
 What's New in Clang |release|?
 ==============================
@@ -117,6 +129,8 @@ C++2c Feature Support
 - Add ``__builtin_is_virtual_base_of`` intrinsic, which supports
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
+- Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -147,6 +161,10 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- The floating point comparison builtins (``__builtin_isgreater``,
+  ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
+  ``__builtin_signbit`` can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -175,6 +193,9 @@ Attribute Changes in Clang
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
 
+- ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
+  where they were previously silently ignored.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -199,6 +220,8 @@ Improvements to Clang's diagnostics
   to specialize template type aliases.
 
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
+
+- Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -245,9 +268,16 @@ Bug Fixes to C++ Support
   specialization of a conversion function template.
 - Correctly diagnose attempts to use a concept name in its own definition;
   A concept name is introduced to its scope sooner to match the C++ standard. (#GH55875)
+- Properly reject defaulted relational operators with invalid types for explicit object parameters,
+  e.g., ``bool operator==(this int, const Foo&)`` (#GH100329), and rvalue reference parameters.
+- Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
+- Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
+- Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,6 +332,12 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
+  Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
+  Clang now follows the MSVC behavior in this scenario.
+  When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
+  allowed as VS2013 and prior allow it.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
@@ -348,6 +384,8 @@ clang-format
 
 libclang
 --------
+- Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
+  whether the first one comes strictly before the second in the source code.
 
 Static Analyzer
 ---------------
