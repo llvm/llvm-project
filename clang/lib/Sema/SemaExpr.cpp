@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -19826,14 +19827,15 @@ namespace {
   // TreeTransforms rebuilding the type in a new context. Rather than
   // duplicating the TreeTransform logic, we should consider reusing it here.
   // Currently that causes problems when rebuilding LambdaExprs.
-class MarkReferencedDecls final : public DynamicRecursiveASTVisitor {
+class MarkReferencedDecls final
+  : public RecursiveASTVisitor<MarkReferencedDecls> {
   Sema &S;
   SourceLocation Loc;
 
 public:
   MarkReferencedDecls(Sema &S, SourceLocation Loc) : S(S), Loc(Loc) {}
 
-  bool TraverseTemplateArgument(const TemplateArgument &Arg) override;
+  bool TraverseTemplateArgument(const TemplateArgument &Arg);
 };
 }
 
@@ -19851,7 +19853,7 @@ bool MarkReferencedDecls::TraverseTemplateArgument(
     }
   }
 
-  return DynamicRecursiveASTVisitor::TraverseTemplateArgument(Arg);
+  return RecursiveASTVisitor::TraverseTemplateArgument(Arg);
 }
 
 void Sema::MarkDeclarationsReferencedInType(SourceLocation Loc, QualType T) {
