@@ -4388,7 +4388,7 @@ Simple Constants
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g. 1.23421e+2), identifiers for special
-    values like ``qnan``, or a more precise hexadecimal notation (see below).
+    values like ``nan``, or a more precise hexadecimal notation (see below).
     The assembler requires the exact decimal value of a floating-point
     constant. For example, the assembler accepts 1.25 but rejects 1.3
     because 1.3 is a repeating decimal in binary. Floating-point constants
@@ -4428,17 +4428,28 @@ hexadecimal formats are big-endian (sign bit at the left).
 Some of the special floating point values can be represented by the following
 identifiers:
 
-    +-----------+---------------------------------------------------+
-    | Name      | Description                                       |
-    +===========+===================================================+
-    | ``qnan``  | Positive quiet NaN w/ payload equals to zero      |
-    +-----------+---------------------------------------------------+
-    | ``snan``  | Positive signaling NaN w/ payload equals to zero  |
-    +-----------+---------------------------------------------------+
-    | ``pinf``  | Positive infinity                                 |
-    +-----------+---------------------------------------------------+
-    | ``ninf``  | Negative infinity                                 |
-    +-----------+---------------------------------------------------+
+    +-------------------+---------------------------------------------------+
+    | Name              | Description                                       |
+    +===================+===================================================+
+    | ``nan``           | Positive quiet NaN w/ payload equal to zero       |
+    +-------------------+---------------------------------------------------+
+    | ``qnan(payload)`` | Positive quiet NaN w/ custom payload              |
+    +-------------------+---------------------------------------------------+
+    | ``snan(payload)`` | Positive signaling NaN w/ custom payload          |
+    +-------------------+---------------------------------------------------+
+    | ``pinf``          | Positive infinity                                 |
+    +-------------------+---------------------------------------------------+
+    | ``ninf``          | Negative infinity                                 |
+    +-------------------+---------------------------------------------------+
+
+Please be careful when specifying the payload of ``snan`` and ``qnan``: the parser
+always uses a ``double`` to carry floating point constants before converting it to
+the target type. In some conversion cases, converting to ``float`` for instance,
+it "truncates" the significand bits (where the payloads are stored) from LSB
+rather than MSB. And if this conversion leads to any precision lost, it throws
+an error. For example, a value like ``float qnan(12)`` will give you an error
+because the lower 29 bits are lost after conversion and the new payload is now
+zero, which is considered a precision lost.
 
 There are no constants of type x86_amx.
 

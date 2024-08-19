@@ -84,19 +84,13 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
 
   // Special floating point constants.
   const APFloat *APFloatVal;
-  V = parseConstantValue("double qnan", Error, M);
+  V = parseConstantValue("double nan", Error, M);
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isDoubleTy());
   ASSERT_TRUE(isa<ConstantFP>(V));
   APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
-  EXPECT_TRUE(APFloatVal->isNaN() && !APFloatVal->isSignaling());
-
-  V = parseConstantValue("double snan", Error, M);
-  ASSERT_TRUE(V);
-  EXPECT_TRUE(V->getType()->isDoubleTy());
-  ASSERT_TRUE(isa<ConstantFP>(V));
-  APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
-  EXPECT_TRUE(APFloatVal->isNaN() && APFloatVal->isSignaling());
+  EXPECT_TRUE(
+      APFloatVal->bitwiseIsEqual(APFloat::getQNaN(APFloat::IEEEdouble())));
 
   V = parseConstantValue("double pinf", Error, M);
   ASSERT_TRUE(V);
