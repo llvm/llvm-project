@@ -1043,6 +1043,10 @@ getAllTypeConstraints(const llvm::RecordKeeper &records) {
   std::vector<Constraint> result;
   for (llvm::Record *def :
        records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
+    // Ignore constraints defined outside of the top-level file.
+    if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
     Constraint constr(def);
     // Generate C++ function only if "cppFunctionName" is set.
     if (!constr.getCppFunctionName())
