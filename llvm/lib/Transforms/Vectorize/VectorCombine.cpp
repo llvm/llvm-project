@@ -2498,100 +2498,85 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
 /// instruction. Move ZExt if it is profitable
 bool VectorCombine::shrinkType(llvm::Instruction &I) {
   Value *ZExted, *OtherOperand;
-  if (match(&I, m_c_BinOp(m_ZExt(m_Value(ZExted)), m_Value(OtherOperand)))) {
-    if (I.getOpcode() != Instruction::And && I.getOpcode() != Instruction::Or &&
-        I.getOpcode() != Instruction::Xor && I.getOpcode() != Instruction::LShr)
-      return false;
+  if (!match(&I, m_c_BitwiseLogic(m_ZExt(m_Value(ZExted)),
+                                  m_Value(OtherOperand))) &&
+      !match(&I, m_LShr(m_ZExt(m_Value(ZExted)), m_Value(OtherOperand))))
+    return false;
 
-    // In case of LShr extraction, ZExtOperand should be applied to the first
-    // operand
-    if (I.getOpcode() == Instruction::LShr && I.getOperand(1) != OtherOperand)
-      return false;
+  Instruction *ZExtOperand =
+      cast<Instruction>(I.getOperand(I.getOperand(0) == OtherOperand ? 1 : 0));
 
-    Instruction *ZExtOperand = cast<Instruction>(
-        I.getOperand(I.getOperand(0) == OtherOperand ? 1 : 0));
+  auto *BigTy = cast<FixedVectorType>(I.getType());
+  auto *SmallTy = cast<FixedVectorType>(ZExted->getType());
+  unsigned BW = SmallTy->getElementType()->getPrimitiveSizeInBits();
 
-    auto *BigTy = cast<FixedVectorType>(I.getType());
-    auto *SmallTy = cast<FixedVectorType>(ZExted->getType());
-    auto BW = SmallTy->getElementType()->getPrimitiveSizeInBits();
+  // Check that the expression overall uses at most the same number of bits as
+  // ZExted
+  KnownBits KB = computeKnownBits(&I, *DL);
+  unsigned IBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
+  if (IBW > BW)
+    return false;
 
-    // Check that the expression overall uses at most the same number of bits as
-    // ZExted
-    auto KB = computeKnownBits(&I, *DL);
-    auto IBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
-    if (IBW > BW)
-      return false;
+  // Calculate costs of leaving current IR as it is and moving ZExt operation
+  // later, along with adding truncates if needed
+  InstructionCost ZExtCost = TTI.getCastInstrCost(
+      Instruction::ZExt, BigTy, SmallTy,
+      TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
+  InstructionCost CurrentCost = ZExtCost;
+  InstructionCost ShrinkCost = 0;
 
-    bool HasUNZExtableUser = false;
-
-    // Calculate costs of leaving current IR as it is and moving ZExt operation
-    // later, along with adding truncates if needed
-    InstructionCost ZExtCost = TTI.getCastInstrCost(
-        Instruction::ZExt, BigTy, SmallTy,
-        TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
-    InstructionCost CurrentCost = ZExtCost;
-    InstructionCost ShrinkCost = 0;
-
-    for (User *U : ZExtOperand->users()) {
-      auto *UI = cast<Instruction>(U);
-      if (UI == &I) {
-        CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
-        ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
-        ShrinkCost += ZExtCost;
-        continue;
-      }
-
-      if (!Instruction::isBinaryOp(UI->getOpcode())) {
-        HasUNZExtableUser = true;
-        continue;
-      }
-
-      // Check if we can propagate ZExt through its other users
-      auto KB = computeKnownBits(UI, *DL);
-      auto UBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
-      if (UBW <= BW) {
-        CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
-        ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
-        ShrinkCost += ZExtCost;
-      } else {
-        HasUNZExtableUser = true;
-      }
+  // Calculate total cost and check that we can propagate through all ZExt users
+  for (User *U : ZExtOperand->users()) {
+    auto *UI = cast<Instruction>(U);
+    if (UI == &I) {
+      CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
+      ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
+      ShrinkCost += ZExtCost;
+      continue;
     }
 
-    // ZExt can't remove, add extra cost
-    if (HasUNZExtableUser)
-      ShrinkCost += ZExtCost;
-
-    // If the other instruction operand is not a constant, we'll need to
-    // generate a truncate instruction. So we have to adjust cost
-    if (!isa<Constant>(OtherOperand))
-      ShrinkCost += TTI.getCastInstrCost(
-          Instruction::Trunc, SmallTy, BigTy,
-          TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
-
-    // If the cost of shrinking types and leaving the IR is the same, we'll lean
-    // towards modifying the IR because shrinking opens opportunities for other
-    // shrinking optimisations.
-    if (ShrinkCost > CurrentCost)
+    if (!Instruction::isBinaryOp(UI->getOpcode()))
       return false;
 
-    auto *Op0 = ZExted;
-    if (auto *OI = dyn_cast<Instruction>(OtherOperand))
-      Builder.SetInsertPoint(OI->getNextNode());
-    auto *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
-    Builder.SetInsertPoint(&I);
-    // Keep the order of operands the same
-    if (I.getOperand(0) == OtherOperand)
-      std::swap(Op0, Op1);
-    auto *NewBinOp =
-        Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(), Op0, Op1);
-    cast<Instruction>(NewBinOp)->copyIRFlags(&I);
-    cast<Instruction>(NewBinOp)->copyMetadata(I);
-    auto *NewZExtr = Builder.CreateZExt(NewBinOp, BigTy);
-    replaceValue(I, *NewZExtr);
-    return true;
+    // Check if we can propagate ZExt through its other users
+    KB = computeKnownBits(UI, *DL);
+    unsigned UBW = KB.getBitWidth() - KB.Zero.countLeadingOnes();
+    if (UBW > BW)
+      return false;
+
+    CurrentCost += TTI.getArithmeticInstrCost(UI->getOpcode(), BigTy);
+    ShrinkCost += TTI.getArithmeticInstrCost(UI->getOpcode(), SmallTy);
+    ShrinkCost += ZExtCost;
   }
-  return false;
+
+  // If the other instruction operand is not a constant, we'll need to
+  // generate a truncate instruction. So we have to adjust cost
+  if (!isa<Constant>(OtherOperand))
+    ShrinkCost += TTI.getCastInstrCost(
+        Instruction::Trunc, SmallTy, BigTy,
+        TargetTransformInfo::CastContextHint::None, TTI::TCK_RecipThroughput);
+
+  // If the cost of shrinking types and leaving the IR is the same, we'll lean
+  // towards modifying the IR because shrinking opens opportunities for other
+  // shrinking optimisations.
+  if (ShrinkCost > CurrentCost)
+    return false;
+
+  Value *Op0 = ZExted;
+  if (auto *OI = dyn_cast<Instruction>(OtherOperand))
+    Builder.SetInsertPoint(OI->getNextNode());
+  Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
+  Builder.SetInsertPoint(&I);
+  // Keep the order of operands the same
+  if (I.getOperand(0) == OtherOperand)
+    std::swap(Op0, Op1);
+  Value *NewBinOp =
+      Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(), Op0, Op1);
+  cast<Instruction>(NewBinOp)->copyIRFlags(&I);
+  cast<Instruction>(NewBinOp)->copyMetadata(I);
+  Value *NewZExtr = Builder.CreateZExt(NewBinOp, BigTy);
+  replaceValue(I, *NewZExtr);
+  return true;
 }
 
 /// This is the entry point for all transforms. Pass manager differences are
