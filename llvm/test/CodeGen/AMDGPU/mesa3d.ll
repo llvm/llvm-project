@@ -1,15 +1,14 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,ALL %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,ALL %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,ALL %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
 ; SPI_TMPRING_SIZE.WAVESIZE = 5
 ; GFX10: .long 165608
-; GFX10-NEXT: .long (((alignto(scratch_ps.private_seg_size*32, 1024))/1024)&8191)<<12
+; GFX10-NEXT: .long 20480
 
 ; SPI_TMPRING_SIZE.WAVESIZE = 17
 ; GFX11: .long 165608
-; 11XFG-TXEN: .long 69632
-; GFX11-NEXT:.long (((alignto(scratch_ps.private_seg_size*32, 256))/256)&32767)<<12
+; GFX11-NEXT: .long 69632
 
 ; GCN-LABEL: {{^}}scratch_ps:
 ; GCN: s_load_dwordx2 s[4:5], s[0:1], 0x0{{$}}
@@ -24,5 +23,3 @@ entry:
   store volatile i32 2, ptr addrspace(5) %ptr
   ret void
 }
-
-; ALL: .set scratch_ps.private_seg_size, 132

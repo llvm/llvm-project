@@ -42,7 +42,7 @@ private:
   int32_t MaxSGPR = 0;
 
   MCContext &OutContext;
-  bool finalized;
+  bool Finalized;
 
   void assignResourceInfoExpr(int64_t localValue, ResourceInfoKind RIK,
                               AMDGPUMCExpr::VariantKind Kind,
@@ -54,7 +54,7 @@ private:
 
 public:
   MCResourceInfo(MCContext &OutContext)
-      : OutContext(OutContext), finalized(false) {}
+      : OutContext(OutContext), Finalized(false) {}
   void addMaxVGPRCandidate(int32_t candidate) {
     MaxVGPR = std::max(MaxVGPR, candidate);
   }

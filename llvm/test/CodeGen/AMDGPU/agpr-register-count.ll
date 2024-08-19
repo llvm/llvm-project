@@ -2,10 +2,9 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX90A %s
 
 ; GCN-LABEL: {{^}}kernel_32_agprs:
-; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_32_agprs.num_agpr, kernel_32_agprs.num_vgpr), 1, 0)
-; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_32_agprs.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GFX908: .set kernel_32_agprs.num_vgpr, 9
-; GFX908: .set kernel_32_agprs.num_agpr, 32
+; GFX908: .amdhsa_next_free_vgpr 32
+; GFX90A: .amdhsa_next_free_vgpr 44
+; GFX90A: .amdhsa_accum_offset 12
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
@@ -25,9 +24,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_0_agprs:
-; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_0_agprs.num_agpr, kernel_0_agprs.num_vgpr), 1, 0)
-; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_0_agprs.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GCN:    .set kernel_0_agprs.num_vgpr, 1
+; GCN:    .amdhsa_next_free_vgpr 1
+; GFX90A: .amdhsa_accum_offset 4
 ; GCN:    NumVgprs: 1
 ; GCN:    NumAgprs: 0
 ; GCN:    TotalNumVgprs: 1
@@ -44,10 +42,9 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_40_vgprs:
-; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_40_vgprs.num_agpr, kernel_40_vgprs.num_vgpr), 1, 0)
-; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_40_vgprs.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GCN: .set kernel_40_vgprs.num_vgpr, 40
-; GFX90A: .set kernel_40_vgprs.num_agpr, 16
+; GFX908: .amdhsa_next_free_vgpr 40
+; GFX90A: .amdhsa_next_free_vgpr 56
+; GFX90A: .amdhsa_accum_offset 40
 ; GCN:    NumVgprs: 40
 ; GCN:    NumAgprs: 16
 ; GFX908: TotalNumVgprs: 40
@@ -102,10 +99,9 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_max_gprs:
-; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_max_gprs.num_agpr, kernel_max_gprs.num_vgpr), 1, 0)
-; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_max_gprs.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GCN:    .set kernel_max_gprs.num_vgpr, 256
-; GFX90A: .set kernel_max_gprs.num_agpr, 256
+; GFX908: .amdhsa_next_free_vgpr 256
+; GFX90A: .amdhsa_next_free_vgpr 512
+; GFX90A: .amdhsa_accum_offset 256
 ; GCN:    NumVgprs: 256
 ; GCN:    NumAgprs: 256
 ; GFX908: TotalNumVgprs: 256
@@ -125,10 +121,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}kernel_call_func_32_agprs:
-; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_call_func_32_agprs.num_agpr, kernel_call_func_32_agprs.num_vgpr), 1, 0)
-; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_call_func_32_agprs.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GCN: .set kernel_call_func_32_agprs.num_vgpr, max(0, func_32_agprs.num_vgpr)
-; GCN: .set kernel_call_func_32_agprs.num_agpr, max(0, func_32_agprs.num_agpr)
+; GFX908: .amdhsa_next_free_vgpr 32
+; GFX90A: .amdhsa_accum_offset 12
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32

@@ -2,12 +2,12 @@
 ; RUN: FileCheck -check-prefix=REMARK %s < %t
 
 ; STDERR: remark: foo.cl:27:0: Function Name: test_kernel
-; STDERR-NEXT: remark: foo.cl:27:0:     SGPRs: test_kernel.num_sgpr+(extrasgprs(test_kernel.uses_vcc, test_kernel.uses_flat_scratch, 1))
-; STDERR-NEXT: remark: foo.cl:27:0:     VGPRs: test_kernel.num_vgpr
-; STDERR-NEXT: remark: foo.cl:27:0:     AGPRs: test_kernel.num_agpr
-; STDERR-NEXT: remark: foo.cl:27:0:     ScratchSize [bytes/lane]: test_kernel.private_seg_size
+; STDERR-NEXT: remark: foo.cl:27:0:     SGPRs: 28
+; STDERR-NEXT: remark: foo.cl:27:0:     VGPRs: 9
+; STDERR-NEXT: remark: foo.cl:27:0:     AGPRs: 43
+; STDERR-NEXT: remark: foo.cl:27:0:     ScratchSize [bytes/lane]: 0
 ; STDERR-NEXT: remark: foo.cl:27:0:     Dynamic Stack: False
-; STDERR-NEXT: remark: foo.cl:27:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(test_kernel.num_sgpr+(extrasgprs(test_kernel.uses_vcc, test_kernel.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_kernel.num_agpr, test_kernel.num_vgpr), 1, 0))
+; STDERR-NEXT: remark: foo.cl:27:0:     Occupancy [waves/SIMD]: 5
 ; STDERR-NEXT: remark: foo.cl:27:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:27:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:27:0:     LDS Size [bytes/block]: 512
@@ -19,7 +19,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          'Function Name: '
-; REMARK-NEXT:   - FunctionName:    test_kernel
+; REMARK-NEXT:   - FunctionName:      test_kernel
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -28,7 +28,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    SGPRs: '
-; REMARK-NEXT:   - NumSGPR:         'test_kernel.num_sgpr+(extrasgprs(test_kernel.uses_vcc, test_kernel.uses_flat_scratch, 1))'
+; REMARK-NEXT:   - NumSGPR:         '28'
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -37,7 +37,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    VGPRs: '
-; REMARK-NEXT:   - NumVGPR:         test_kernel.num_vgpr
+; REMARK-NEXT:   - NumVGPR:         '9'
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -46,7 +46,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    AGPRs: '
-; REMARK-NEXT:   - NumAGPR:         test_kernel.num_agpr
+; REMARK-NEXT:   - NumAGPR:         '43'
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -55,17 +55,17 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    ScratchSize [bytes/lane]: '
-; REMARK-NEXT:   - ScratchSize:     test_kernel.private_seg_size
-; REMARK-NEXT: ...
+; REMARK-NEXT:   - ScratchSize:     '0'
+; REMARK-NEXT: ..
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
 ; REMARK-NEXT: Name:            DynamicStack
 ; REMARK-NEXT: DebugLoc:        { File: foo.cl, Line: 27, Column: 0 }
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String:          '    Dynamic Stack: '
-; REMARK-NEXT:   - DynamicStack:    'False'
-; REMARK-NEXT: ...
+; REMARK-NEXT:   - String: ' Dynamic Stack:
+; REMARK-NEXT:   - DynamicStack: 'False'
+; REMARK-NEXT: ..
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
 ; REMARK-NEXT: Name:            Occupancy
@@ -73,7 +73,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    Occupancy [waves/SIMD]: '
-; REMARK-NEXT:   - Occupancy:       'occupancy(10, 4, 256, 8, 8, max(test_kernel.num_sgpr+(extrasgprs(test_kernel.uses_vcc, test_kernel.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_kernel.num_agpr, test_kernel.num_vgpr), 1, 0))'
+; REMARK-NEXT:   - Occupancy:       '5'
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -122,12 +122,12 @@ define void @test_func() !dbg !6 {
 }
 
 ; STDERR: remark: foo.cl:8:0: Function Name: empty_kernel
-; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs: empty_kernel.num_sgpr+(extrasgprs(empty_kernel.uses_vcc, empty_kernel.uses_flat_scratch, 1))
-; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: empty_kernel.num_vgpr
-; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: empty_kernel.num_agpr
-; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: empty_kernel.private_seg_size
+; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs: 4
+; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 0
+; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: 0
+; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     Dynamic Stack: False
-; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(empty_kernel.num_sgpr+(extrasgprs(empty_kernel.uses_vcc, empty_kernel.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(empty_kernel.num_agpr, empty_kernel.num_vgpr), 1, 0))
+; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: 8
 ; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     LDS Size [bytes/block]: 0
@@ -141,11 +141,11 @@ define void @empty_func() !dbg !8 {
 }
 
 ; STDERR: remark: foo.cl:64:0: Function Name: test_indirect_call
-; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs: test_indirect_call.num_sgpr+(extrasgprs(test_indirect_call.uses_vcc, test_indirect_call.uses_flat_scratch, 1))
+; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs: test_indirect_call.num_sgpr+6
 ; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs: test_indirect_call.num_vgpr
 ; STDERR-NEXT: remark: foo.cl:64:0:     AGPRs: test_indirect_call.num_agpr
-; STDERR-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: test_indirect_call.private_seg_size
-; STDERR-NEXT: remark: foo.cl:64:0:     Dynamic Stack: False
+; STDERR-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
+; STDERR-NEXT: remark: foo.cl:64:0:     Dynamic Stack: True
 ; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(test_indirect_call.num_sgpr+(extrasgprs(test_indirect_call.uses_vcc, test_indirect_call.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_indirect_call.num_agpr, test_indirect_call.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
@@ -159,11 +159,11 @@ define amdgpu_kernel void @test_indirect_call() !dbg !9 {
 }
 
 ; STDERR: remark: foo.cl:74:0: Function Name: test_indirect_w_static_stack
-; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs: test_indirect_w_static_stack.num_sgpr+(extrasgprs(test_indirect_w_static_stack.uses_vcc, test_indirect_w_static_stack.uses_flat_scratch, 1))
+; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs: test_indirect_w_static_stack.num_sgpr+6
 ; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs: test_indirect_w_static_stack.num_vgpr
 ; STDERR-NEXT: remark: foo.cl:74:0:     AGPRs: test_indirect_w_static_stack.num_agpr
-; STDERR-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: test_indirect_w_static_stack.private_seg_size
-; STDERR-NEXT: remark: foo.cl:74:0:     Dynamic Stack: False
+; STDERR-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
+; STDERR-NEXT: remark: foo.cl:74:0:     Dynamic Stack: True
 ; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 8, 8, max(test_indirect_w_static_stack.num_sgpr+(extrasgprs(test_indirect_w_static_stack.uses_vcc, test_indirect_w_static_stack.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(test_indirect_w_static_stack.num_agpr, test_indirect_w_static_stack.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TONGA %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=CARRIZO %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs -o - | FileCheck --check-prefix=CONFIG --check-prefix=TYPICAL %s
 
 ; Test that we don't try to produce a COFF file on windows
 ; RUN: llc < %s -mtriple=amdgcn-pc-mingw -verify-machineinstrs -filetype=obj | llvm-readobj -S --symbols --file-headers - | FileCheck --check-prefix=ELF %s
@@ -20,9 +20,8 @@
 
 ; CONFIG: .section .AMDGPU.config
 ; CONFIG-NEXT: .long   45096
-; TYPICAL-NEXT: .long (((((alignto(max(max(totalnumvgprs(test.num_agpr, max(totalnumvgprs(test.num_agpr, test.num_vgpr), 1)), 1, 0), 1), 4))/4)-1)&63)<<0)|(((((alignto(max(max(max(test.num_sgpr+(extrasgprs(test.uses_vcc, test.uses_flat_scratch, 0)), 0), 1, 0), 1), 8))/8)-1)&15)<<6)
-; TONGA-NEXT: .long   (((((alignto(max(max(totalnumvgprs(test.num_agpr, max(totalnumvgprs(test.num_agpr, test.num_vgpr), 1)), 1, 0), 1), 4))/4)-1)&63)<<0)|(((((alignto(max(96, 1), 8))/8)-1)&15)<<6)
-; CARRIZO-NEXT: .long (((((alignto(max(max(totalnumvgprs(test.num_agpr, max(totalnumvgprs(test.num_agpr, test.num_vgpr), 1)), 1, 0), 1), 4))/4)-1)&63)<<0)|(((((alignto(max(max(max(test.num_sgpr+(extrasgprs(test.uses_vcc, test.uses_flat_scratch, 1)), 0), 1, 0), 1), 8))/8)-1)&15)<<6)
+; TYPICAL-NEXT: .long   0
+; TONGA-NEXT: .long   704
 ; CONFIG: .p2align 8
 ; CONFIG: test:
 define amdgpu_ps void @test(i32 %p) #0 {

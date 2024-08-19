@@ -222,14 +222,10 @@ ret:
 }
 
 ; GCN-LABEL: {{^}}usage_direct_recursion:
-; GCN: .amdhsa_private_segment_fixed_size usage_direct_recursion.private_seg_size
-; GCN: .set usage_direct_recursion.private_seg_size, 0+(max(16384, direct_recursion_use_stack.private_seg_size))
-; GCN: ScratchSize: 18448
+; GCN: .amdhsa_private_segment_fixed_size 18448
 ;
 ; GCN-V5-LABEL: {{^}}usage_direct_recursion:
-; GCN-V5: .amdhsa_private_segment_fixed_size usage_direct_recursion.private_seg_size
-; GCN-V5: .set usage_direct_recursion.private_seg_size, 0+(max(direct_recursion_use_stack.private_seg_size))
-; GCN-V5: ScratchSize: 2064
+; GCN-V5: .amdhsa_private_segment_fixed_size 2064{{$}}
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void

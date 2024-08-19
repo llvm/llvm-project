@@ -75,10 +75,10 @@ bb.2:
   store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
-; DEFAULTSIZE: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align4.private_seg_size
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 16
 ; DEFAULTSIZE: ; ScratchSize: 16
 
-; ASSUME1024: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align4.private_seg_size
+; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
 ; ASSUME1024: ; ScratchSize: 1040
 
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
@@ -137,10 +137,10 @@ bb.1:
   ret void
 }
 
-; DEFAULTSIZE: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 64
 ; DEFAULTSIZE: ; ScratchSize: 64
 
-; ASSUME1024: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size
+; ASSUME1024: .amdhsa_private_segment_fixed_size 1088
 ; ASSUME1024: ; ScratchSize: 1088
 
 

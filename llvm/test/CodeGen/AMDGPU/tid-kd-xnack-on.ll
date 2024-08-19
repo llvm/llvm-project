@@ -6,9 +6,8 @@
 
 define amdgpu_kernel void @kern() #0 {
 ; ASM-LABEL: kern:
-; ASM: .amdhsa_next_free_sgpr (max(kern.num_sgpr+(extrasgprs(kern.uses_vcc, kern.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kern.uses_vcc, kern.uses_flat_scratch, 1))
+; ASM: .amdhsa_next_free_sgpr 5
 ; ASM: .amdhsa_reserve_xnack_mask 1
-; ASM: .set kern.num_sgpr, 5
 
 ; Verify that an extra SGPR block is reserved with XNACK "on" tid setting.
 ; OBJ: Contents of section .rodata:

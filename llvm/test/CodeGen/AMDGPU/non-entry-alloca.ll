@@ -110,14 +110,13 @@ bb.2:
   store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
-; DEFAULTSIZE: .set kernel_non_entry_block_static_alloca_uniformly_reached_align4.private_seg_size, 4112
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4112
 ; DEFAULTSIZE: ; ScratchSize: 4112
-; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack ((41|((kernel_non_entry_block_static_alloca_uniformly_reached_align4.has_dyn_sized_stack|kernel_non_entry_block_static_alloca_uniformly_reached_align4.has_recursion)<<11))&2048)>>11
-; DEFAULTSIZE-V5: .set kernel_non_entry_block_static_alloca_uniformly_reached_align4.private_seg_size, 16
-; DEFAULTSIZE-V5: .set kernel_non_entry_block_static_alloca_uniformly_reached_align4.has_dyn_sized_stack, 1
+; DEFAULTSIZE-V5: .amdhsa_private_segment_fixed_size 16
+; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack 1
 ; DEFAULTSIZE-V5: ; ScratchSize: 16
 
-; ASSUME1024: .set kernel_non_entry_block_static_alloca_uniformly_reached_align4.private_seg_size, 1040
+; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
 ; ASSUME1024: ; ScratchSize: 1040
 
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
@@ -206,16 +205,13 @@ bb.1:
   ret void
 }
 
-; DEFAULTSIZE: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size
-; DEFAULTSIZE: .set kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size, 4160
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4160
 ; DEFAULTSIZE: ; ScratchSize: 4160
-; DEFAULTSIZE-V5: .amdhsa_private_segment_fixed_size kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size
-; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack ((59|((kernel_non_entry_block_static_alloca_uniformly_reached_align64.has_dyn_sized_stack|kernel_non_entry_block_static_alloca_uniformly_reached_align64.has_recursion)<<11))&2048)>>11
-; DEFAULTSIZE-V5: .set kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size, 64
-; DEFAULTSIZE-V5: .set kernel_non_entry_block_static_alloca_uniformly_reached_align64.has_dyn_sized_stack, 1
+; DEFAULTSIZE-V5: .amdhsa_private_segment_fixed_size 64
+; DEFAULTSIZE-V5: .amdhsa_uses_dynamic_stack 1
 ; DEFAULTSIZE-V5: ; ScratchSize: 64
 
-; ASSUME1024: .set kernel_non_entry_block_static_alloca_uniformly_reached_align64.private_seg_size, 1088
+; ASSUME1024: .amdhsa_private_segment_fixed_size 1088
 ; ASSUME1024: ; ScratchSize: 1088
 
 

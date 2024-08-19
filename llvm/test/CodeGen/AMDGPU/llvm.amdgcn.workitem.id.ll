@@ -12,7 +12,7 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 
 ; MESA: .section .AMDGPU.config
 ; MESA: .long 47180
-; MESA-NEXT: .long ((((alignto(test_workitem_id_x.private_seg_size*64, 1024))/1024)>0)||(test_workitem_id_x.has_dyn_sized_stack|test_workitem_id_x.has_recursion))|132{{$}}
+; MESA-NEXT: .long 132{{$}}
 
 ; ALL-LABEL: {{^}}test_workitem_id_x:
 ; MESA3D: enable_vgpr_workitem_id = 0
@@ -29,7 +29,7 @@ define amdgpu_kernel void @test_workitem_id_x(ptr addrspace(1) %out) #1 {
 
 ; MESA: .section .AMDGPU.config
 ; MESA: .long 47180
-; MESA-NEXT: .long ((((alignto(test_workitem_id_y.private_seg_size*64, 1024))/1024)>0)||(test_workitem_id_y.has_dyn_sized_stack|test_workitem_id_y.has_recursion))|2180{{$}}
+; MESA-NEXT: .long 2180{{$}}
 
 ; ALL-LABEL: {{^}}test_workitem_id_y:
 ; MESA3D: enable_vgpr_workitem_id = 1
@@ -47,7 +47,7 @@ define amdgpu_kernel void @test_workitem_id_y(ptr addrspace(1) %out) #1 {
 
 ; MESA: .section .AMDGPU.config
 ; MESA: .long 47180
-; MESA-NEXT: .long ((((alignto(test_workitem_id_z.private_seg_size*64, 1024))/1024)>0)||(test_workitem_id_z.has_dyn_sized_stack|test_workitem_id_z.has_recursion))|4228{{$}}
+; MESA-NEXT: .long 4228{{$}}
 
 ; ALL-LABEL: {{^}}test_workitem_id_z:
 ; MESA3D: enable_vgpr_workitem_id = 2

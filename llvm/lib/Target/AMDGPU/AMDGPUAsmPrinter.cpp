@@ -630,6 +630,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
+  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
+      ResourceUsage->getResourceInfo();
+  RI->gatherResourceInfo(MF, Info);
+
   if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
   }
@@ -662,9 +666,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                            STM.hasMAIInsts());
 
   {
-    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-        ResourceUsage->getResourceInfo();
-    RI->gatherResourceInfo(MF, Info);
     using RIK = MCResourceInfo::ResourceInfoKind;
     getTargetStreamer()->EmitMCResourceInfo(
         RI->getSymbol(MF.getName(), RIK::RIK_NumVGPR),
@@ -922,16 +923,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack =
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
-
-  const uint64_t MaxScratchPerWorkitem =
-      STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
-  uint64_t ScratchSize;
-  if (TryGetMCExprValue(ProgInfo.ScratchSize, ScratchSize) &&
-      ScratchSize > MaxScratchPerWorkitem) {
-    DiagnosticInfoStackSize DiagStackSize(MF.getFunction(), ScratchSize,
-                                          MaxScratchPerWorkitem, DS_Error);
-    MF.getFunction().getContext().diagnose(DiagStackSize);
-  }
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 

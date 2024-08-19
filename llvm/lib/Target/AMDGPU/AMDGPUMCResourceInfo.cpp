@@ -22,26 +22,28 @@
 using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK) {
+  auto GOCS = [this, FuncName](StringRef Suffix) {
+    return OutContext.getOrCreateSymbol(FuncName + Twine(Suffix));
+  };
   switch (RIK) {
   case RIK_NumVGPR:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".num_vgpr"));
+    return GOCS(".num_vgpr");
   case RIK_NumAGPR:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".num_agpr"));
+    return GOCS(".num_agpr");
   case RIK_NumSGPR:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".num_sgpr"));
+    return GOCS(".num_sgpr");
   case RIK_PrivateSegSize:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".private_seg_size"));
+    return GOCS(".private_seg_size");
   case RIK_UsesVCC:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".uses_vcc"));
+    return GOCS(".uses_vcc");
   case RIK_UsesFlatScratch:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".uses_flat_scratch"));
+    return GOCS(".uses_flat_scratch");
   case RIK_HasDynSizedStack:
-    return OutContext.getOrCreateSymbol(FuncName +
-                                        Twine(".has_dyn_sized_stack"));
+    return GOCS(".has_dyn_sized_stack");
   case RIK_HasRecursion:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".has_recursion"));
+    return GOCS(".has_recursion");
   case RIK_HasIndirectCall:
-    return OutContext.getOrCreateSymbol(FuncName + Twine(".has_indirect_call"));
+    return GOCS(".has_indirect_call");
   }
   llvm_unreachable("Unexpected ResourceInfoKind.");
 }
@@ -69,8 +71,8 @@ void MCResourceInfo::assignMaxRegs() {
 }
 
 void MCResourceInfo::finalize() {
-  assert(!finalized && "Cannot finalize ResourceInfo again.");
-  finalized = true;
+  assert(!Finalized && "Cannot finalize ResourceInfo again.");
+  Finalized = true;
   assignMaxRegs();
 }
 
@@ -87,25 +89,26 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol() {
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
-    int64_t localValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
+    int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF,
     const SmallVectorImpl<const Function *> &Callees) {
-  const MCConstantExpr *localConstExpr =
-      MCConstantExpr::create(localValue, OutContext);
-  const MCExpr *SymVal = localConstExpr;
+  const MCConstantExpr *LocalConstExpr =
+      MCConstantExpr::create(LocalValue, OutContext);
+  const MCExpr *SymVal = LocalConstExpr;
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
     // Avoid recursive symbol assignment.
-    SmallSet<StringRef, 8> Seen;
-    ArgExprs.push_back(localConstExpr);
-    Seen.insert(MF.getName());
+    SmallPtrSet<const Function *, 8> Seen;
+    ArgExprs.push_back(LocalConstExpr);
+    const Function &F = MF.getFunction();
+    Seen.insert(&F);
 
     for (const Function *Callee : Callees) {
-      if (Seen.contains(Callee->getName()))
+      if (Seen.contains(Callee))
         continue;
-      Seen.insert(Callee->getName());
-      MCSymbol *calleeValSym = getSymbol(Callee->getName(), RIK);
-      ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));
+      Seen.insert(Callee);
+      MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK);
+      ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }
     SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
   }
@@ -117,9 +120,9 @@ void MCResourceInfo::gatherResourceInfo(
     const MachineFunction &MF,
     const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI) {
   // Worst case VGPR use for non-hardware-entrypoints.
-  MCSymbol *maxVGPRSym = getMaxVGPRSymbol();
-  MCSymbol *maxAGPRSym = getMaxAGPRSymbol();
-  MCSymbol *maxSGPRSym = getMaxSGPRSymbol();
+  MCSymbol *MaxVGPRSym = getMaxVGPRSymbol();
+  MCSymbol *MaxAGPRSym = getMaxAGPRSymbol();
+  MCSymbol *MaxSGPRSym = getMaxSGPRSymbol();
 
   if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
     addMaxVGPRCandidate(FRI.NumVGPR);
@@ -127,7 +130,7 @@ void MCResourceInfo::gatherResourceInfo(
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
   }
 
-  auto setMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
+  auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
       assignResourceInfoExpr(numRegs, RIK, AMDGPUMCExpr::AGVK_Max, MF,
@@ -141,9 +144,9 @@ void MCResourceInfo::gatherResourceInfo(
     }
   };
 
-  setMaxReg(maxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
-  setMaxReg(maxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
-  setMaxReg(maxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
+  SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
+  SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
 
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize
@@ -172,9 +175,9 @@ void MCResourceInfo::gatherResourceInfo(
         ->setVariableValue(localConstExpr);
   }
 
-  auto setToLocal = [&](int64_t localValue, ResourceInfoKind RIK) {
+  auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
     MCSymbol *Sym = getSymbol(MF.getName(), RIK);
-    Sym->setVariableValue(MCConstantExpr::create(localValue, OutContext));
+    Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 
   if (!FRI.HasIndirectCall) {
@@ -192,12 +195,12 @@ void MCResourceInfo::gatherResourceInfo(
                            ResourceInfoKind::RIK_HasIndirectCall,
                            AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
   } else {
-    setToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
-    setToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
-    setToLocal(FRI.HasDynamicallySizedStack,
+    SetToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
+    SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
+    SetToLocal(FRI.HasDynamicallySizedStack,
                ResourceInfoKind::RIK_HasDynSizedStack);
-    setToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
-    setToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
+    SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
+    SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
   }
 }
 

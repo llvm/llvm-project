@@ -35,8 +35,7 @@
 
 ; FIXME: Creating the emergency stack slots causes us to over-estimate scratch
 ; by 4 bytes.
-; HSA-ALLOCA: .amdhsa_private_segment_fixed_size mova_same_clause.private_seg_size
-; HSA-ALLOCA: .set mova_same_clause.private_seg_size, 24
+; HSA-ALLOCA: .amdhsa_private_segment_fixed_size 24
 
 ; HSA-ALLOCA: s_add_i32 s12, s12, s17
 ; HSA-ALLOCA-DAG: s_mov_b32 flat_scratch_lo, s13
