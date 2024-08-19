@@ -4630,7 +4630,13 @@ LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst);
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool SingleThread);
 
 /**
- * Returns the synchronization scope ID of an atomic instruction
+ * Returns whether an instruction is an atomic instruction, e.g., atomicrmw,
+ * cmpxchg, fence, or loads and stores with atomic ordering.
+ */
+LLVMBool LLVMIsAtomic(LLVMValueRef Inst);
+
+/**
+ * Returns the synchronization scope ID of an atomic instruction.
  */
 unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst);
 

@@ -4368,13 +4368,16 @@ int LLVMGetMaskValue(LLVMValueRef SVInst, unsigned Elt) {
 
 int LLVMGetUndefMaskElem(void) { return PoisonMaskElem; }
 
-LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
-  return getAtomicSyncScopeID(unwrap<Instruction>(AtomicInst)).value() ==
-         SyncScope::SingleThread;
+LLVMBool LLVMIsAtomic(LLVMValueRef Inst) {
+  return unwrap<Instruction>(Inst)->isAtomic();
 }
 
-unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst) {
-  return getAtomicSyncScopeID(unwrap<Instruction>(AtomicInst)).value();
+LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
+  // Backwards compatibility: return false for non-atomic instructions
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  if (!I->isAtomic())
+    return 0;
+  return getAtomicSyncScopeID(I).value() == SyncScope::SingleThread;
 }
 
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
@@ -4382,8 +4385,16 @@ void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
   setAtomicSyncScopeID(unwrap<Instruction>(AtomicInst), SSID);
 }
 
+unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst) {
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  assert(I->isAtomic() && "Expected an atomic instruction");
+  return getAtomicSyncScopeID(I).value();
+}
+
 void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID) {
-  setAtomicSyncScopeID(unwrap<Instruction>(AtomicInst), SSID);
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  assert(I->isAtomic() && "Expected an atomic instruction");
+  setAtomicSyncScopeID(I, SSID);
 }
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst)  {

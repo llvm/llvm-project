@@ -755,11 +755,13 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
-        if (IsAtomicSingleThread)
-          LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
-        else
-          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
+        if (LLVMIsAtomic(Src)) {
+          LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
+          if (IsAtomicSingleThread)
+            LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
+          else
+            LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
+        }
         break;
       }
       case LLVMStore: {
@@ -769,11 +771,13 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
-        if (IsAtomicSingleThread)
-          LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
-        else
-          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
+        if (LLVMIsAtomic(Src)) {
+          LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
+          if (IsAtomicSingleThread)
+            LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
+          else
+            LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
+        }
         break;
       }
       case LLVMGetElementPtr: {
