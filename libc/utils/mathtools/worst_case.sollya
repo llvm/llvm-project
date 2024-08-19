@@ -1,0 +1,45 @@
+// Implement WorstCase functions to compute the worst case for x mod C, with
+// the exponent of x ranges from emin to emax, and precision of x is p.
+// Adapted to Sollya from the Maple function in 
+//   J-M. Muller, "Elementary Functions", 3rd ed, Section 11.3.2.
+verbosity=0;
+procedure WorstCase(p, emin, emax, C, ndigits) {
+    epsilonmin = 12345.0;
+    Digits = ndigits;
+
+    powerofBoverC = 2^(emin - p) / C;
+    for e from emin - p + 1 to emax - p + 1 do {
+        powerofBoverC = 2 * powerofBoverC;
+        a = floor(powerofBoverC);
+        Plast = a;
+        r = round(1/(powerofBoverC - a), ndigits, RN);
+        a = floor(r);
+        Qlast = 1;
+        Q = a;
+        P = Plast * a + 1;
+        while (Q < 2^p - 1) do {
+            r = round(1/(r - a), ndigits, RN);
+            a = floor(r);
+            NewQ = Q * a + Qlast;
+            NewP = P * a + Plast;
+            Qlast = Q;
+            Plast = P;
+            Q = NewQ;
+            P = NewP;
+        };
+        epsilon = C * abs(Plast - Qlast * powerofBoverC);
+        if (epsilon < epsilonmin) then {
+            epsilonmin = epsilon;
+            numbermin = Qlast;
+            expmin = e;
+        };
+    };
+    display=decimal!;
+    print("numbermin : ", numbermin);
+    print("expmin    : ", expmin);
+    display=hexadecimal!;
+    print("Worst case: ", numbermin * 2^expmin);
+    display=decimal!;
+    ell = round(log2(epsilonmin), ndigits, RN);
+    print("numberofdigits : ", ell);
+};
