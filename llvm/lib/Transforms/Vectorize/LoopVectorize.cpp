@@ -7290,7 +7290,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
   VectorizationFactor LegacyVF = selectVectorizationFactor();
-  assert(BestFactor.Width == LegacyVF.Width && " VPlan cost model and legacy cost model disagreed");
+  assert(BestFactor.Width == LegacyVF.Width &&
+         " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be non-zero.");
 #endif
