@@ -15760,8 +15760,8 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
       // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
       // most 31 + src1.
-      Known.Zero.setHighBits(
-          ST.isWave64() && IID == Intrinsic::amdgcn_mbcnt_lo ? 26 : 27);
+      Known.Zero.setBitsFrom(
+          IID == Intrinsic::amdgcn_mbcnt_lo ? ST.getWavefrontSizeLog2() : 5);
       KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
       Known = KnownBits::add(Known, Known2);
       return;
@@ -15813,9 +15813,9 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     case Intrinsic::amdgcn_mbcnt_hi: {
       // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
       // most 31 + src1.
-      Known.Zero.setHighBits(
-          getSubtarget()->isWave64() && IID == Intrinsic::amdgcn_mbcnt_lo ? 26
-                                                                          : 27);
+      Known.Zero.setBitsFrom(IID == Intrinsic::amdgcn_mbcnt_lo
+                                 ? getSubtarget()->getWavefrontSizeLog2()
+                                 : 5);
       KnownBits Known2;
       KB.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
                               Depth + 1);
