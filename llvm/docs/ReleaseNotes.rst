@@ -163,6 +163,16 @@ Changes to the C API
 * It is now also possible to run the new pass manager on a single function, by calling
   ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
 
+* Support for creating instructions with custom synchronization scopes has been added:
+
+  * ``LLVMGetSyncScopeID`` and ``LLVMGetSyncScopeIDInContext`` to map a synchronization
+    scope name to an ID, and ``LLVMGetSyncScopeName`` to map an ID back to a name.
+  * ``LLVMBuildFenceSyncScope``, ``LLVMBuildAtomicRMWSyncScope`` and
+    ``LLVMBuildAtomicCmpXchgSyncScope`` versions of the existing builder functions
+    with an additional synchronization scope ID parameter.
+  * ``LLVMGetAtomicSyncScopeID`` and ``LLVMSetAtomicSyncScopeID`` to get and set the
+    synchronization scope of any atomic instruction.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

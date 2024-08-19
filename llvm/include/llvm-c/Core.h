@@ -647,6 +647,26 @@ unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
 
 /**
+ * Maps a synchronization scope name to a ID unique within this context.
+ */
+unsigned LLVMGetSyncScopeIDInContext(LLVMContextRef C, const char *Name,
+                                     unsigned SLen);
+
+/**
+ * Maps a synchronization scope name to a unique ID.
+ *
+ * This is equivalent to calling LLVMGetSyncScopeIDInContext with
+ * LLVMGetGlobalContext() as the context parameter.
+ */
+unsigned LLVMGetSyncScopeID(const char *Name, unsigned SLen);
+
+/**
+ * Maps a synchronization scope ID to its name.
+ */
+const char *LLVMGetSyncScopeName(LLVMContextRef C, unsigned ID,
+                                 unsigned *Length);
+
+/**
  * Return an unique id given the name of a enum attribute,
  * or 0 if no attribute by that name exists.
  *
@@ -4578,15 +4598,28 @@ LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef, LLVMTypeRef ElemTy,
                                const char *Name);
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering ordering,
                             LLVMBool singleThread, const char *Name);
+LLVMValueRef LLVMBuildFenceSyncScope(LLVMBuilderRef B,
+                                     LLVMAtomicOrdering ordering, unsigned SSID,
+                                     const char *Name);
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B, LLVMAtomicRMWBinOp op,
                                 LLVMValueRef PTR, LLVMValueRef Val,
                                 LLVMAtomicOrdering ordering,
                                 LLVMBool singleThread);
+LLVMValueRef LLVMBuildAtomicRMWSyncScope(LLVMBuilderRef B,
+                                         LLVMAtomicRMWBinOp op,
+                                         LLVMValueRef PTR, LLVMValueRef Val,
+                                         LLVMAtomicOrdering ordering,
+                                         unsigned SSID);
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMValueRef Cmp, LLVMValueRef New,
                                     LLVMAtomicOrdering SuccessOrdering,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool SingleThread);
+LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                             LLVMValueRef Cmp, LLVMValueRef New,
+                                             LLVMAtomicOrdering SuccessOrdering,
+                                             LLVMAtomicOrdering FailureOrdering,
+                                             unsigned SSID);
 
 /**
  * Get the number of elements in the mask of a ShuffleVector instruction.
@@ -4610,6 +4643,16 @@ int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst);
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool SingleThread);
+
+/**
+ * Returns the synchronization scope ID of an atomic instruction
+ */
+unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst);
+
+/**
+ * Sets the synchronization scope ID of an atomic instruction.
+ */
+void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID);
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst);
 void LLVMSetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst,
