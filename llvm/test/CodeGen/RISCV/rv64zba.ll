@@ -3025,3 +3025,32 @@ entry:
   %4 = getelementptr i128, ptr %0, i64 %3
   ret ptr %4
 }
+
+; Negative to make sure the peephole added for srai_srli_slli and
+; srai_srli_sh3add doesn't break this.
+define i64 @srai_andi(i64 %x) nounwind {
+; CHECK-LABEL: srai_andi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srai a0, a0, 8
+; CHECK-NEXT:    andi a0, a0, -8
+; CHECK-NEXT:    ret
+entry:
+  %y = ashr i64 %x, 8
+  %z = and i64 %y, -8
+  ret i64 %z
+}
+
+; Negative to make sure the peephole added for srai_srli_slli and
+; srai_srli_sh3add doesn't break this.
+define i64 @srai_lui_and(i64 %x) nounwind {
+; CHECK-LABEL: srai_and:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srai a0, a0, 8
+; CHECK-NEXT:    lui a1, 1048574
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %y = ashr i64 %x, 8
+  %z = and i64 %y, -8192
+  ret i64 %z
+}
