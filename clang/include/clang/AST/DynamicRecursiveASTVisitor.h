@@ -41,15 +41,15 @@ protected:
   DynamicRecursiveASTVisitor() = default;
 
 public:
+  virtual void anchor();
+
   // Copying/moving a polymorphic type is a bad idea.
   DynamicRecursiveASTVisitor(DynamicRecursiveASTVisitor &&) = delete;
   DynamicRecursiveASTVisitor(const DynamicRecursiveASTVisitor &) = delete;
   DynamicRecursiveASTVisitor &operator=(DynamicRecursiveASTVisitor &&) = delete;
   DynamicRecursiveASTVisitor &
   operator=(const DynamicRecursiveASTVisitor &) = delete;
-
-  // Declared out of line as a vtable anchor.
-  virtual ~DynamicRecursiveASTVisitor();
+  virtual ~DynamicRecursiveASTVisitor() = default;
 
   /// Recursively visits an entire AST, starting from the TranslationUnitDecl.
   /// \returns false if visitation was terminated early.

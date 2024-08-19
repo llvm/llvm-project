@@ -196,8 +196,7 @@ struct Impl : RecursiveASTVisitor<Impl> {
 };
 } // namespace
 
-// Declared out of line to serve as a vtable anchor.
-DynamicRecursiveASTVisitor::~DynamicRecursiveASTVisitor() = default;
+void DynamicRecursiveASTVisitor::anchor() { }
 
 bool DynamicRecursiveASTVisitor::TraverseAST(ASTContext &AST) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseAST(AST);
