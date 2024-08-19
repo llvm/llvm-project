@@ -30,7 +30,8 @@ void MachineModuleInfo::initialize() {
 }
 
 void MachineModuleInfo::finalize() {
-  Context.reset();
+  if (Context)
+    Context->reset();
   // We don't clear the ExternalContext.
 
   delete ObjFileMMI;
@@ -38,31 +39,30 @@ void MachineModuleInfo::finalize() {
 }
 
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
-    : TM(std::move(MMI.TM)),
-      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
+    : TM(std::move(MMI.TM)), Context(std::move(MMI.Context)),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
-  Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
+    : TM(*TM),
+      Context(std::make_unique<MCContext>(
+          TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+          TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false)) {
+  Context->setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
                                      MCContext *ExtContext)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false),
+    : TM(*TM),
+      Context(std::make_unique<MCContext>(
+          TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+          TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false)),
       ExternalContext(ExtContext) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
+  Context->setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
 
@@ -137,9 +137,7 @@ public:
     return true;
   }
 
-  StringRef getPassName() const override {
-    return "Free MachineFunction";
-  }
+  StringRef getPassName() const override { return "Free MachineFunction"; }
 };
 
 } // end anonymous namespace
@@ -152,13 +150,13 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM)
-    : ImmutablePass(ID), MMI(std::make_unique<MachineModuleInfo>(TM)) {
+    : ImmutablePass(ID), MMI(TM) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(std::make_unique<MachineModuleInfo>(TM, ExtContext)) {
+    : ImmutablePass(ID), MMI(TM) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
@@ -193,10 +191,10 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 }
 
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
-  MMI->initialize();
-  MMI->TheModule = &M;
+  MMI.initialize();
+  MMI.TheModule = &M;
   LLVMContext &Ctx = M.getContext();
-  MMI->getContext().setDiagnosticHandler(
+  MMI.getContext().setDiagnosticHandler(
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
                  const SourceMgr &SrcMgr,
                  std::vector<const MDNode *> &LocInfos) {
@@ -210,7 +208,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
 }
 
 bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
-  MMI->finalize();
+  MMI.finalize();
   return false;
 }
 

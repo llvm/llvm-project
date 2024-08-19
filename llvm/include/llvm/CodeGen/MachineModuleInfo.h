@@ -66,7 +66,7 @@ public:
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
-  static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
+  static SymbolListTy getSortedStubs(DenseMap<MCSymbol *, StubValueTy> &);
 
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
@@ -86,7 +86,7 @@ class MachineModuleInfo {
   const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
-  MCContext Context;
+  std::unique_ptr<MCContext> Context;
   // This is an external context, that if assigned, will be used instead of the
   // internal context.
   MCContext *ExternalContext = nullptr;
@@ -100,7 +100,7 @@ class MachineModuleInfo {
   MachineModuleInfoImpl *ObjFileMMI;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
-  DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
+  DenseMap<const Function *, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
   unsigned NextFnNum = 0;
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
@@ -124,10 +124,10 @@ public:
   const LLVMTargetMachine &getTarget() const { return TM; }
 
   const MCContext &getContext() const {
-    return ExternalContext ? *ExternalContext : Context;
+    return ExternalContext ? *ExternalContext : *Context;
   }
   MCContext &getContext() {
-    return ExternalContext ? *ExternalContext : Context;
+    return ExternalContext ? *ExternalContext : *Context;
   }
 
   const Module *getModule() const { return TheModule; }
@@ -153,24 +153,21 @@ public:
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
-  template<typename Ty>
-  Ty &getObjFileInfo() {
+  template <typename Ty> Ty &getObjFileInfo() {
     if (ObjFileMMI == nullptr)
       ObjFileMMI = new Ty(*this);
-    return *static_cast<Ty*>(ObjFileMMI);
+    return *static_cast<Ty *>(ObjFileMMI);
   }
 
-  template<typename Ty>
-  const Ty &getObjFileInfo() const {
-    return const_cast<MachineModuleInfo*>(this)->getObjFileInfo<Ty>();
+  template <typename Ty> const Ty &getObjFileInfo() const {
+    return const_cast<MachineModuleInfo *>(this)->getObjFileInfo<Ty>();
   }
 
   /// \}
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
-  std::unique_ptr<MachineModuleInfo> MMI =
-      std::make_unique<MachineModuleInfo>();
+  MachineModuleInfo MMI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -183,8 +180,8 @@ public:
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;
 
-  MachineModuleInfo &getMMI() { return *MMI; }
-  const MachineModuleInfo &getMMI() const { return *MMI; }
+  MachineModuleInfo &getMMI() { return MMI; }
+  const MachineModuleInfo &getMMI() const { return MMI; }
 };
 
 /// An analysis that produces \c MachineModuleInfo for a module.
