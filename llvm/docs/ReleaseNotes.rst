@@ -163,6 +163,9 @@ Changes to the C API
 * It is now also possible to run the new pass manager on a single function, by calling
   ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
 
+* Metadata APIs (``LLVMHasMetadata``, ``LLVMGetMetadata``, ``LLVMSetMetadata``) now
+  support global object inputs.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

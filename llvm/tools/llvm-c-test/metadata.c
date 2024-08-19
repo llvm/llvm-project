@@ -33,16 +33,26 @@ int llvm_add_named_metadata_operand(void) {
 int llvm_set_metadata(void) {
   LLVMBuilderRef Builder = LLVMCreateBuilder();
 
-  // This used to trigger an assertion
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+  LLVMTypeRef FT = LLVMFunctionType(LLVMVoidType(), NULL, 0, 0);
+  LLVMValueRef F = LLVMAddFunction(M, "Fun", FT);
+  LLVMBasicBlockRef BB = LLVMAppendBasicBlock(F, "Entry");
+  LLVMPositionBuilderAtEnd(Builder, BB);
   LLVMValueRef Return = LLVMBuildRetVoid(Builder);
 
+  // This used to trigger an assertion because of MDNode canonicalization
   const char Name[] = "kind";
   LLVMValueRef Int = LLVMConstInt(LLVMInt32Type(), 0, 0);
   LLVMSetMetadata(Return, LLVMGetMDKindID(Name, strlen(Name)),
                   LLVMMDNode(&Int, 1));
 
+  // Test support of global objects (e.g., Function)
+  assert(!LLVMHasMetadata(F));
+  LLVMSetMetadata(F, LLVMGetMDKindID(Name, strlen(Name)), LLVMMDNode(&Int, 1));
+  assert(LLVMHasMetadata(F));
+
   LLVMDisposeBuilder(Builder);
-  LLVMDeleteInstruction(Return);
+  LLVMDisposeModule(M);
 
   return 0;
 }

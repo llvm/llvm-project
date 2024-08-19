@@ -1062,15 +1062,27 @@ void LLVMReplaceAllUsesWith(LLVMValueRef OldVal, LLVMValueRef NewVal) {
   unwrap(OldVal)->replaceAllUsesWith(unwrap(NewVal));
 }
 
-int LLVMHasMetadata(LLVMValueRef Inst) {
-  return unwrap<Instruction>(Inst)->hasMetadata();
+int LLVMHasMetadata(LLVMValueRef Ref) {
+  Value *Val = unwrap<Value>(Ref);
+  if (auto I = dyn_cast<Instruction>(Val))
+    return I->hasMetadata();
+  else if (auto GO = dyn_cast<GlobalObject>(Val))
+    return GO->hasMetadata();
+  else
+    assert(0 && "Expected an instruction or a global object");
 }
 
-LLVMValueRef LLVMGetMetadata(LLVMValueRef Inst, unsigned KindID) {
-  auto *I = unwrap<Instruction>(Inst);
-  assert(I && "Expected instruction");
-  if (auto *MD = I->getMetadata(KindID))
-    return wrap(MetadataAsValue::get(I->getContext(), MD));
+LLVMValueRef LLVMGetMetadata(LLVMValueRef Ref, unsigned KindID) {
+  Value *Val = unwrap<Value>(Ref);
+  if (auto *I = dyn_cast<Instruction>(Val)) {
+    if (auto *MD = I->getMetadata(KindID))
+      return wrap(MetadataAsValue::get(I->getContext(), MD));
+  } else if (auto *GO = dyn_cast<GlobalObject>(Val)) {
+    if (auto *MD = GO->getMetadata(KindID))
+      return wrap(MetadataAsValue::get(GO->getContext(), MD));
+  } else {
+    assert(0 && "Expected an instruction or a global object");
+  }
   return nullptr;
 }
 
@@ -1088,10 +1100,16 @@ static MDNode *extractMDNode(MetadataAsValue *MAV) {
   return MDNode::get(MAV->getContext(), MD);
 }
 
-void LLVMSetMetadata(LLVMValueRef Inst, unsigned KindID, LLVMValueRef Val) {
-  MDNode *N = Val ? extractMDNode(unwrap<MetadataAsValue>(Val)) : nullptr;
+void LLVMSetMetadata(LLVMValueRef Ref, unsigned KindID, LLVMValueRef MAV) {
+  Value *Val = unwrap<Value>(Ref);
+  MDNode *N = MAV ? extractMDNode(unwrap<MetadataAsValue>(MAV)) : nullptr;
 
-  unwrap<Instruction>(Inst)->setMetadata(KindID, N);
+  if (auto *I = dyn_cast<Instruction>(Val))
+    I->setMetadata(KindID, N);
+  else if (auto *GO = dyn_cast<GlobalObject>(Val))
+    GO->setMetadata(KindID, N);
+  else
+    assert(0 && "Expected an instruction or a global object");
 }
 
 struct LLVMOpaqueValueMetadataEntry {
