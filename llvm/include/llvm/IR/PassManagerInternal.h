@@ -59,6 +59,8 @@ struct PassConcept {
   /// To opt-in, pass should implement `static bool isRequired()`. It's no-op
   /// to have `isRequired` always return false since that is the default.
   virtual bool isRequired() const = 0;
+
+  virtual void eraseIf(function_ref<bool(StringRef)> Pred) = 0;
 };
 
 /// A template wrapper used to implement the polymorphic API.
@@ -113,6 +115,24 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   }
 
   bool isRequired() const override { return passIsRequiredImpl<PassT>(); }
+
+  template <typename T>
+  using has_erase_if_t = decltype(std::declval<T &>().eraseIf(
+      std::declval<function_ref<bool(StringRef)>>()));
+
+  template <typename T>
+  std::enable_if_t<is_detected<has_erase_if_t, T>::value>
+  eraseIfImpl(function_ref<bool(StringRef)> Pred) {
+    Pass.eraseIf(Pred);
+  }
+
+  template <typename T>
+  std::enable_if_t<!is_detected<has_erase_if_t, T>::value>
+  eraseIfImpl(function_ref<bool(StringRef)>) {}
+
+  void eraseIf(function_ref<bool(StringRef)> Pred) override {
+    eraseIfImpl<PassT>(Pred);
+  }
 
   PassT Pass;
 };

@@ -218,6 +218,18 @@ public:
 
   static bool isRequired() { return true; }
 
+  /// Erase all passes that satisfy the predicate \p Pred.
+  /// For internal use only!
+  void eraseIf(function_ref<bool(StringRef)> Pred) {
+    for (auto I = Passes.begin(); I != Passes.end();) {
+      (*I)->eraseIf(Pred);
+      if (Pred((*I)->name()) && !(*I)->isRequired())
+        I = Passes.erase(I);
+      else
+        ++I;
+    }
+  }
+
 protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
@@ -835,6 +847,8 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
+
+  void eraseIf(function_ref<bool(StringRef)> Pred) { Pass->eraseIf(Pred); }
 
 private:
   std::unique_ptr<PassConceptT> Pass;

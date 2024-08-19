@@ -207,6 +207,8 @@ public:
 
   static bool isRequired() { return true; }
 
+  void eraseIf(function_ref<bool(StringRef)> Pred) { Pass->eraseIf(Pred); }
+
 private:
   std::unique_ptr<PassConceptT> Pass;
 };

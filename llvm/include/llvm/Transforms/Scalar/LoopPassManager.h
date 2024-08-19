@@ -425,6 +425,8 @@ public:
 
   static bool isRequired() { return true; }
 
+  void eraseIf(function_ref<bool(StringRef)> Pred) { Pass->eraseIf(Pred); }
+
   bool isLoopNestMode() const { return LoopNestMode; }
 
 private:
