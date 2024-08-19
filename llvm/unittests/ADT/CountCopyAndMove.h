@@ -52,7 +52,8 @@ struct CountCopyAndMove {
   }
 
   static int TotalConstructions() {
-    return DefaultConstructions + ValueConstructions + MoveConstructions + CopyConstructions;
+    return DefaultConstructions + ValueConstructions + MoveConstructions +
+           CopyConstructions;
   }
 
   static int TotalCopies() { return CopyConstructions + CopyAssignments; }
