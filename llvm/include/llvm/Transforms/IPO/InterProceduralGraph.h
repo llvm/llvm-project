@@ -4,9 +4,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/CallGraphWrapperPass.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
@@ -51,7 +50,7 @@ public:
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
     // Function to check if the pass is required
-    static bool isRequired();
+    //static bool isRequired();
 };
 
 } // namespace llvm

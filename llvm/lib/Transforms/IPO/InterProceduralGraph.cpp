@@ -4,7 +4,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/CallGraphWrapperPass.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
@@ -94,7 +93,7 @@ struct InterproceduralGraph {
 
 class InterproceduralGraphPass : public PassInfoMixin<InterproceduralGraphPass> {
 public:
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
+     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
         InterproceduralGraph IPG;
 
         CallGraph &CG = AM.getResult<CallGraphAnalysis>(M);
@@ -113,7 +112,7 @@ public:
         return PreservedAnalyses::none();
     }
 
-    static bool isRequired() { return true; }
+    //static bool isRequired() { return true; }
 };
 
 } // end of anonymous namespace
