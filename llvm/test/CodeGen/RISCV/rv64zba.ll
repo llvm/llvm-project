@@ -3043,7 +3043,7 @@ entry:
 ; Negative to make sure the peephole added for srai_srli_slli and
 ; srai_srli_sh3add doesn't break this.
 define i64 @srai_lui_and(i64 %x) nounwind {
-; CHECK-LABEL: srai_and:
+; CHECK-LABEL: srai_lui_and:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    srai a0, a0, 8
 ; CHECK-NEXT:    lui a1, 1048574
