@@ -24,6 +24,9 @@ public:
   // returns port number or 0 if error
   uint16_t GetLocalPortNumber() const;
 
+  // returns port numbers of all listening sockets
+  std::set<uint16_t> GetLocalPortNumbers() const;
+
   // returns ip address string or empty string if error
   std::string GetLocalIPAddress() const;
 

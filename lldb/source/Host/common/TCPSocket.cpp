@@ -17,6 +17,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/WindowsError.h"
@@ -92,6 +93,25 @@ uint16_t TCPSocket::GetLocalPortNumber() const {
       return sock_addr.GetPort();
   }
   return 0;
+}
+
+// Return all the port numbers that is being used by the socket.
+std::set<uint16_t> TCPSocket::GetLocalPortNumbers() const {
+  std::set<uint16_t> ports;
+  if (m_socket != kInvalidSocketValue) {
+    SocketAddress sock_addr;
+    socklen_t sock_addr_len = sock_addr.GetMaxLength();
+    if (::getsockname(m_socket, sock_addr, &sock_addr_len) == 0)
+      ports.insert(sock_addr.GetPort());
+  } else if (!m_listen_sockets.empty()) {
+    SocketAddress sock_addr;
+    socklen_t sock_addr_len = sock_addr.GetMaxLength();
+    for (auto listen_socket : m_listen_sockets) {
+      if (::getsockname(listen_socket.first, sock_addr, &sock_addr_len) == 0)
+        ports.insert(sock_addr.GetPort());
+    }
+  }
+  return ports;
 }
 
 std::string TCPSocket::GetLocalIPAddress() const {
@@ -196,49 +216,66 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   if (!host_port)
     return Status(host_port.takeError());
 
+  llvm::SmallVector<uint16_t, 2> ports;
+  ports.push_back(host_port->port);
+
+  llvm::SmallVector<llvm::StringRef, 2> extra_ports;
+  name.split(extra_ports, ',', -1, false);
+  if (extra_ports.size() > 1) {
+    for (auto i = extra_ports.begin() + 1; i != extra_ports.end(); ++i) {
+      uint16_t port;
+      if (!llvm::to_integer(*i, port, 10))
+        return Status("invalid extra port number %s", i->str().c_str());
+      ports.push_back(port);
+    }
+  }
+
   if (host_port->hostname == "*")
     host_port->hostname = "0.0.0.0";
   std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
       host_port->hostname.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (SocketAddress &address : addresses) {
-    int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
-                                  m_child_processes_inherit, error);
-    if (error.Fail() || fd < 0)
-      continue;
+    for (size_t i = 0; i < ports.size(); ++i) {
+      int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
+                                    m_child_processes_inherit, error);
+      if (error.Fail() || fd < 0)
+        continue;
 
-    // enable local address reuse
-    int option_value = 1;
-    set_socket_option_arg_type option_value_p =
-        reinterpret_cast<set_socket_option_arg_type>(&option_value);
-    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
-                     sizeof(option_value)) == -1) {
-      CLOSE_SOCKET(fd);
-      continue;
+      // enable local address reuse
+      int option_value = 1;
+      set_socket_option_arg_type option_value_p =
+          reinterpret_cast<set_socket_option_arg_type>(&option_value);
+      if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
+                       sizeof(option_value)) == -1) {
+        CLOSE_SOCKET(fd);
+        continue;
+      }
+
+      SocketAddress listen_address = address;
+      if (!listen_address.IsLocalhost())
+        listen_address.SetToAnyAddress(address.GetFamily(), ports[i]);
+      else
+        listen_address.SetPort(ports[i]);
+
+      int err =
+          ::bind(fd, &listen_address.sockaddr(), listen_address.GetLength());
+      if (err != -1)
+        err = ::listen(fd, backlog);
+
+      if (err == -1) {
+        error = GetLastSocketError();
+        CLOSE_SOCKET(fd);
+        continue;
+      }
+
+      if (ports[i] == 0) {
+        socklen_t sa_len = address.GetLength();
+        if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
+          ports[i] = address.GetPort();
+      }
+
+      m_listen_sockets[fd] = address;
     }
-
-    SocketAddress listen_address = address;
-    if(!listen_address.IsLocalhost())
-      listen_address.SetToAnyAddress(address.GetFamily(), host_port->port);
-    else
-      listen_address.SetPort(host_port->port);
-
-    int err =
-        ::bind(fd, &listen_address.sockaddr(), listen_address.GetLength());
-    if (err != -1)
-      err = ::listen(fd, backlog);
-
-    if (err == -1) {
-      error = GetLastSocketError();
-      CLOSE_SOCKET(fd);
-      continue;
-    }
-
-    if (host_port->port == 0) {
-      socklen_t sa_len = address.GetLength();
-      if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
-        host_port->port = address.GetPort();
-    }
-    m_listen_sockets[fd] = address;
   }
 
   if (m_listen_sockets.empty()) {

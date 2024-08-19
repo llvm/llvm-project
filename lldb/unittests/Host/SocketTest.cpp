@@ -136,6 +136,19 @@ TEST_P(SocketTest, TCPListen0GetPort) {
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
 }
 
+TEST_P(SocketTest, TCPListen00GetPort) {
+  if (!HostSupportsIPv4())
+    return;
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
+      Socket::TcpListen("10.10.12.3:0,0", false);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_TRUE(sock.get()->IsValid());
+  std::set<uint16_t> ports = sock.get()->GetLocalPortNumbers();
+  ASSERT_EQ(2, ports.size());
+  EXPECT_NE(*ports.begin(), 0);
+  EXPECT_NE(*std::next(ports.begin()), 0);
+}
+
 TEST_P(SocketTest, TCPGetConnectURI) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
