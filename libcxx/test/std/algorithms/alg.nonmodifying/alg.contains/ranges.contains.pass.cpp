@@ -66,8 +66,7 @@ constexpr void test_iterators() {
   { // simple tests
     ValueT a[] = {1, 2, 3, 4, 5, 6};
     {
-      auto whole                            = std::ranges::subrange(Iter(a), Sent(Iter(a + 6)));
-      std::same_as<bool> decltype(auto) ret = std::ranges::contains(whole.begin(), whole.end(), 3);
+      std::same_as<bool> decltype(auto) ret = std::ranges::contains(Iter(a), Sent(Iter(a + 6)), 3);
       assert(ret);
     }
     {
@@ -80,8 +79,7 @@ constexpr void test_iterators() {
   { // check that a range with a single element works
     ValueT a[] = {32};
     {
-      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 1)));
-      bool ret   = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 1)), 32);
       assert(ret);
     }
     {
@@ -94,8 +92,7 @@ constexpr void test_iterators() {
   { // check that an empty range works
     std::array<ValueT, 0> a = {};
     {
-      auto whole = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
-      bool ret   = std::ranges::contains(whole.begin(), whole.end(), 1);
+      bool ret = std::ranges::contains(Iter(a.data()), Sent(Iter(a.data())), 1);
       assert(!ret);
     }
     {
@@ -108,8 +105,7 @@ constexpr void test_iterators() {
   { // check that the first element matches
     ValueT a[] = {32, 3, 2, 1, 0, 23, 21, 9, 40, 100};
     {
-      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 10)));
-      bool ret   = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 10)), 32);
       assert(ret);
     }
     {
@@ -122,8 +118,7 @@ constexpr void test_iterators() {
   { // check that the last element matches
     ValueT a[] = {3, 22, 1, 43, 99, 0, 56, 100, 32};
     {
-      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
-      bool ret   = std::ranges::contains(whole.begin(), whole.end(), 32);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 9)), 32);
       assert(ret);
     }
     {
@@ -136,8 +131,7 @@ constexpr void test_iterators() {
   { // no match
     ValueT a[] = {13, 1, 21, 4, 5};
     {
-      auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
-      bool ret   = std::ranges::contains(whole.begin(), whole.end(), 10);
+      bool ret = std::ranges::contains(Iter(a), Sent(Iter(a + 5)), 10);
       assert(!ret);
     }
     {
