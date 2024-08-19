@@ -23,7 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace flangomp {
-#define GEN_PASS_DEF_OMPMARKDECLARETARGETPASS
+#define GEN_PASS_DEF_MARKDECLARETARGETPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 

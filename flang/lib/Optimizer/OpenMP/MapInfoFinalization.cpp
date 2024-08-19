@@ -41,7 +41,7 @@
 #include <iterator>
 
 namespace flangomp {
-#define GEN_PASS_DEF_OMPMAPINFOFINALIZATIONPASS
+#define GEN_PASS_DEF_MAPINFOFINALIZATIONPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 

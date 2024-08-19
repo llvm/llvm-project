@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace flangomp {
-#define GEN_PASS_DEF_OMPFUNCTIONFILTERING
+#define GEN_PASS_DEF_FUNCTIONFILTERING
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
