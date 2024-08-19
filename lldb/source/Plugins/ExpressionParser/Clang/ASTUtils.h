@@ -295,10 +295,6 @@ public:
 
   ~SemaSourceWithPriorities() override;
 
-  void addSource(clang::ExternalSemaSource &source) {
-    Sources.push_back(&source);
-  }
-
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.
   //===--------------------------------------------------------------------===//
