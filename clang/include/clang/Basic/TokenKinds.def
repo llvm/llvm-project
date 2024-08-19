@@ -661,7 +661,7 @@ KEYWORD(out                         , KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
 // HLSL Type traits
-TYPE_TRAIT_1(__builtin_is_intangible, IsIntangibleType, KEYHLSL)
+TYPE_TRAIT_1(__builtin_hlsl_is_intangible, IsIntangibleType, KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
