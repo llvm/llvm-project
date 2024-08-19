@@ -2,6 +2,8 @@
 // RUN: | FileCheck --check-prefixes=CHECK-64,CHECK %s
 // RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{index-bitwidth=32}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{force-opencl-address-spaces}))" -split-input-file -verify-diagnostics %s \
+// RUN: | FileCheck --check-prefixes=OPENCL %s
 
 gpu.module @builtins {
   // CHECK-64:        llvm.func spir_funccc @_Z14get_num_groupsj(i32) -> i64 attributes {
@@ -512,6 +514,18 @@ gpu.module @kernels {
 // CHECK-SAME:                                          {{.*}}: !llvm.ptr<3>
 // CHECK-SAME:                                          {{.*}}: !llvm.ptr
   gpu.func @address_spaces(%arg0: memref<f32, #gpu.address_space<global>>, %arg1: memref<f32, #gpu.address_space<workgroup>>, %arg2: memref<f32, #gpu.address_space<private>>) {
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @kernels {
+// OPENCL-LABEL:   llvm.func spir_funccc @no_address_spaces(
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+  gpu.func @no_address_spaces(%arg0: memref<f32>, %arg1: memref<f32, #gpu.address_space<global>>, %arg2: memref<f32>) {
     gpu.return
   }
 }
