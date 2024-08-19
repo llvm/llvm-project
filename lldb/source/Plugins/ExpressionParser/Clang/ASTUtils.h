@@ -137,11 +137,11 @@ public:
                                       BaseOffsets, VirtualBaseOffsets);
   }
 
-  /// This gets called when Sema is reconciling undefined but used functions.
+  /// This gets called when Sema is reconciling undefined but used decls.
   /// For LLDB's use-case, we never provide Clang with function definitions,
   /// instead we rely on linkage names and symbol resolution to call the
   /// correct funcitons during JITting. So this implementation clears
-  /// any "undefined" functions Clang found while parsing.
+  /// any "undefined" FunctionDecls that Clang found while parsing.
   ///
   /// \param[in,out] Undefined A set of used decls for which Clang has not
   ///                          been provided a definition with.
