@@ -1505,6 +1505,7 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
     LLVM_DEBUG(dbgs() << "LSV: SCEV diff is zero; not vectorizing\n");
     return std::nullopt;
   }
+
   if (DistScev != SE.getCouldNotCompute()) {
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
