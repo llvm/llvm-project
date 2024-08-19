@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600TargetMachine.h"
-#include "AMDGPUTargetMachine.h"
 #include "R600.h"
 #include "R600CodeGenPassBuilder.h"
 #include "R600MachineScheduler.h"
