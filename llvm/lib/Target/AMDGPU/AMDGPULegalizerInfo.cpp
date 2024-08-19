@@ -2365,11 +2365,28 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+    auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
+      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS && ST.hasGloballyAddressableScratch()) {
+        // flat -> private with globally addressable scratch: subtract
+        // src_flat_scratch_base_lo.
+        const LLT S32 = LLT::scalar(32);
+        Register SrcLo = B.buildExtract(S32, Src, 0).getReg(0);
+        Register FlatScratchBaseLo =
+            B.buildInstr(AMDGPU::S_MOV_B32, {S32},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)})
+            .getReg(0);
+        Register Sub = B.buildSub(S32, SrcLo, FlatScratchBaseLo).getReg(0);
+        return B.buildBitcast(Dst, Sub).getReg(0);
+      }
+
+      // Extract low 32-bits of the pointer.
+      return B.buildExtract(Dst, Src, 0).getReg(0);
+    };
+
     // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
     // G_ADDRSPACE_CAST we need to guess.
     if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
-      // Extract low 32-bits of the pointer.
-      B.buildExtract(Dst, Src, 0);
+      castFlatToLocalOrPrivate(Dst);
       MI.eraseFromParent();
       return true;
     }
@@ -2380,7 +2397,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     auto FlatNull = B.buildConstant(SrcTy, 0);
 
     // Extract low 32-bits of the pointer.
-    auto PtrLo32 = B.buildExtract(DstTy, Src, 0);
+    auto PtrLo32 = castFlatToLocalOrPrivate(DstTy);
 
     auto CmpRes =
         B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, FlatNull.getReg(0));

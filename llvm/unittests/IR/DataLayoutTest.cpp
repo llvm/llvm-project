@@ -19,6 +19,8 @@ using namespace llvm;
 
 namespace {
 
+class DataLayoutTest : public ::testing::Test {};
+
 // TODO: Split into multiple TESTs.
 TEST(DataLayoutTest, ParseErrors) {
   EXPECT_THAT_EXPECTED(
@@ -31,12 +33,6 @@ TEST(DataLayoutTest, ParseErrors) {
       DataLayout::parse("n0"),
       FailedWithMessage("Zero width native integer type in datalayout string"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("a1:64"),
-      FailedWithMessage("Sized aggregate specification in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("a:"),
-      FailedWithMessage("Trailing separator in datalayout string"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse("m"),
       FailedWithMessage("Expected mangling specifier in datalayout string"));
   EXPECT_THAT_EXPECTED(
@@ -44,37 +40,9 @@ TEST(DataLayoutTest, ParseErrors) {
       FailedWithMessage("Unexpected trailing characters after mangling "
                         "specifier in datalayout string"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("f"),
-      FailedWithMessage(
-          "Missing alignment specification in datalayout string"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse(":32"),
       FailedWithMessage(
           "Expected token before separator in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:64:16"),
-      FailedWithMessage(
-          "Preferred alignment cannot be less than the ABI alignment"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:16:16777216"),
-      FailedWithMessage(
-          "Invalid preferred alignment, must be a 16bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i64:16777216:16777216"),
-      FailedWithMessage("Invalid ABI alignment, must be a 16bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i16777216:16:16"),
-      FailedWithMessage("Invalid bit width, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("v128:0:128"),
-      FailedWithMessage(
-          "ABI alignment specification must be >0 for non-aggregate types"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i32:24:32"),
-      FailedWithMessage("Invalid ABI alignment, must be a power of 2"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i32:32:24"),
-      FailedWithMessage("Invalid preferred alignment, must be a power of 2"));
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("A16777216"),
       FailedWithMessage("Invalid address space, must be a 24-bit integer"));
@@ -88,9 +56,6 @@ TEST(DataLayoutTest, ParseErrors) {
       DataLayout::parse("Fi24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
   EXPECT_THAT_EXPECTED(
-      DataLayout::parse("i8:16"),
-      FailedWithMessage("Invalid ABI alignment, i8 must be naturally aligned"));
-  EXPECT_THAT_EXPECTED(
       DataLayout::parse("S24"),
       FailedWithMessage("Alignment is neither 0 nor a power of 2"));
 }
@@ -103,6 +68,165 @@ TEST(DataLayout, LayoutStringFormat) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("empty specification is not allowed"));
+}
+
+class DataLayoutPrimitiveSpecificationTest
+    : public DataLayoutTest,
+      public ::testing::WithParamInterface<char> {
+  char Specifier;
+
+public:
+  DataLayoutPrimitiveSpecificationTest() : Specifier(GetParam()) {}
+
+  std::string format(StringRef Str) const {
+    std::string Res = Str.str();
+    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    return Res;
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(PrmitiveSpecifiers,
+                         DataLayoutPrimitiveSpecificationTest,
+                         ::testing::Values('i', 'f', 'v'));
+
+TEST_P(DataLayoutPrimitiveSpecificationTest, ParsePrimitiveSpec) {
+  for (StringRef Str :
+       {"!1:16", "!8:8:8", "!16:32:64", "!16777215:32768:32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)), Succeeded());
+
+  for (StringRef Str : {"!", "!1", "!32:32:32:32", "!16:32:64:128"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(format("malformed specification, must be of the form "
+                                 "\"!<size>:<abi>[:<pref>]\"")));
+
+  // size
+  for (StringRef Str : {"!:8", "!:16:16", "!:32:64"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                         FailedWithMessage("size component cannot be empty"));
+
+  for (StringRef Str :
+       {"!0:8", "!0x8:8", "!x:8:8", "!0:16:32", "!16777216:64:64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("size must be a non-zero 24-bit integer"));
+
+  // ABI alignment
+  for (StringRef Str : {"!8:", "!16::16", "!32::64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"!1:x", "!8:8x:8", "!16:65536:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"!8:0", "!16:0:16", "!32:0:64"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                         FailedWithMessage("ABI alignment must be non-zero"));
+
+  for (StringRef Str : {"!1:1", "!8:4", "!16:6:16", "!32:24:64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
+
+  // preferred alignment
+  for (StringRef Str : {"!1:8:", "!16:16:", "!64:32:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment component cannot be empty"));
+
+  for (StringRef Str : {"!1:8:x", "!8:8:0x8", "!16:32:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"!8:8:0", "!32:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
+  for (StringRef Str : {"!1:8:12", "!8:8:17", "!16:32:40"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "preferred alignment must be a power of two times the byte width"));
+
+  for (StringRef Str : {"!1:16:8", "!64:32:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
+
+  // Additional check for byte-sized integer.
+  if (GetParam() == 'i') {
+    for (StringRef Str : {"!8:16", "!8:16:8", "!8:16:32"})
+      EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)),
+                           FailedWithMessage("i8 must be 8-bit aligned"));
+  }
+}
+
+TEST(DataLayoutTest, ParseAggregateSpec) {
+  for (StringRef Str : {"a:8", "a:0:16", "a0:32:64", "a:32768:32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"a", "a0", "a:32:32:32", "a0:32:64:128"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be of the form "
+                          "\"a:<abi>[:<pref>]\""));
+
+  // size
+  for (StringRef Str : {"a1:8", "a0x0:8", "ax:16:32"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("size must be zero"));
+
+  // ABI alignment
+  for (StringRef Str : {"a:", "a0:", "a::32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"a:x", "a0:0x0", "a:65536", "a0:65536:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"a:1", "a:4", "a:9:16", "a0:24:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
+
+  // preferred alignment
+  for (StringRef Str : {"a:8:", "a0:16:", "a0:0:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment component cannot be empty"));
+
+  for (StringRef Str : {"a:16:x", "a0:8:0x8", "a:16:65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"a:0:0", "a0:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
+  for (StringRef Str : {"a:8:12", "a:16:17", "a0:32:40"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment must be a power of two times the byte width"));
+
+  for (StringRef Str : {"a:16:8", "a0:32:16"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "preferred alignment cannot be less than the ABI alignment"));
 }
 
 TEST(DataLayout, ParsePointerSpec) {
