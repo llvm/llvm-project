@@ -114,14 +114,13 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
         // once a way to deal with the byref/byval impedance mismatch is
         // identified.
         return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
-      else
-        // Force copying aggregate type in kernel arguments by value when
-        // compiling CUDA targeting SPIR-V. This is required for the object
-        // copied to be valid on the device.
-        // This behavior follows the CUDA spec
-        // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-        // and matches the NVPTX implementation.
-        return getNaturalAlignIndirect(Ty, /* byval */ true);
+      // Force copying aggregate type in kernel arguments by value when
+      // compiling CUDA targeting SPIR-V. This is required for the object
+      // copied to be valid on the device.
+      // This behavior follows the CUDA spec
+      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+      // and matches the NVPTX implementation.
+      return getNaturalAlignIndirect(Ty, /* byval */ true);
     }
   }
   return classifyArgumentType(Ty);
