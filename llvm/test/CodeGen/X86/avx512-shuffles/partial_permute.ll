@@ -2749,12 +2749,9 @@ define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask0(ptr %vp, <2 x i64>
 define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm2
-; CHECK-NEXT:    vpunpcklqdq (%rdi), %ymm2, %ymm2 # ymm2 = ymm2[0],mem[0],ymm2[2],mem[2]
-; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; CHECK-NEXT:    vmovdqa 48(%rdi), %xmm2
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1}
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vpunpcklqdq 16(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[0],mem[0]
 ; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 2>
@@ -2766,12 +2763,9 @@ define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %
 define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm1
-; CHECK-NEXT:    vpunpcklqdq (%rdi), %ymm1, %ymm1 # ymm1 = ymm1[0],mem[0],ymm1[2],mem[2]
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vmovdqa 48(%rdi), %xmm1
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; CHECK-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vpunpcklqdq 16(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[0],mem[0]
 ; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 2>

@@ -227,7 +227,7 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for, emitc.switch'}}
   emitc.yield
   return
 }
@@ -464,5 +464,91 @@ func.func @member(%arg0: i32) {
 func.func @member_of_ptr(%arg0: i32) {
   // expected-error @+1 {{'emitc.member_of_ptr' op operand #0 must be EmitC opaque type or EmitC pointer type, but got 'i32}}
   %0 = "emitc.member_of_ptr" (%arg0) {member = "a"} : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i16} : () -> i16
+
+  // expected-error@+1 {{'emitc.switch' op expected region to end with emitc.yield, but got emitc.call_opaque}}
+  emitc.switch %0 : i16
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+  }
+  case 5 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i32} : () -> i32
+
+  emitc.switch %0 : i32
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected integer value}}
+  case {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i8} : () -> i8
+
+  emitc.switch %0 : i8
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 3 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected 'default'}}
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.variable"(){value = 1 : i64} : () -> i64
+
+  // expected-error@+1 {{'emitc.switch' op has duplicate case value: 2}}
+  emitc.switch %0 : i64
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 2 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.variable"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
   return
 }

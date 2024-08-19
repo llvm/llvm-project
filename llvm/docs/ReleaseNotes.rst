@@ -111,6 +111,7 @@ Changes to the RISC-V Backend
 * Fixed length vector support using RVV instructions now requires VLEN>=64. This
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -150,6 +151,11 @@ Changes to the C API
   * ``LLVMX86_MMXTypeKind``
   * ``LLVMX86MMXTypeInContext``
   * ``LLVMX86MMXType``
+
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
