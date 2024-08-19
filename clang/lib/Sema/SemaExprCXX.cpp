@@ -6194,10 +6194,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       if (Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
                                    diag::err_incomplete_type))
         return true;
-    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
-      if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
+          Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
                                    diag::err_incomplete_type))
-        return true;
+      return true;
 
     DiagnoseVLAInCXXTypeTrait(
         Self, Lhs, tok::kw___builtin_is_scalarized_layout_compatible);
