@@ -1169,12 +1169,35 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
   reportUnknownAbiError(newSection, newTag);
 }
 
+static void mergeX3RegUse(DenseMap<unsigned, unsigned>::iterator it,
+                          const InputSectionBase *oldSection,
+                          const InputSectionBase *newSection,
+                          unsigned int oldTag, unsigned int newTag) {
+  // X3/GP register usage are incompatible and cannot be merged, with the
+  // exception of the UNKNOWN or 0 value.
+  using RISCVAttrs::RISCVX3RegUse::X3RegUsage;
+  if (newTag == X3RegUsage::UNKNOWN)
+    return;
+  if (oldTag == X3RegUsage::UNKNOWN) {
+    it->getSecond() = newTag;
+    return;
+  }
+  if (oldTag != newTag) {
+    error(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
+          " but " + toString(newSection) +
+          " has x3_reg_usage=" + Twine(newTag));
+    return;
+  }
+  // TODO: do we need to check the tags are < 2047?
+}
+
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   using RISCVAttrs::RISCVAtomicAbiTag;
   RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
   const InputSectionBase *firstAtomicAbi = nullptr;
+  const InputSectionBase *firstX3RegUse = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1231,6 +1254,18 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
             mergeAtomic(r.first, firstAtomicAbi, sec,
                         static_cast<RISCVAtomicAbiTag>(r.first->getSecond()),
                         static_cast<RISCVAtomicAbiTag>(*i));
+        }
+        continue;
+
+      case llvm::RISCVAttrs::AttrType::X3_REG_USAGE:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (r.second) {
+            firstX3RegUse = sec;
+          } else {
+            mergeX3RegUse(r.first, firstX3RegUse, sec, r.first->getSecond(),
+                          *i);
+          }
         }
         continue;
       }

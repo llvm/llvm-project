@@ -84,6 +84,22 @@
 # RUN: ld.lld diff_stack_align.o atomic_abi_A7.o -o atomic_abi_A7_none
 # RUN: llvm-readobj -A atomic_abi_A7_none | FileCheck %s --check-prefix=NONE_A7
 
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64  x3_reg_usage_unknown.s -o x3_reg_usage_unknown.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64  x3_reg_usage_gp.s -o x3_reg_usage_gp.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64  x3_reg_usage_scs.s -o x3_reg_usage_scs.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64  x3_reg_usage_tmp.s -o x3_reg_usage_tmp.o
+
+# RUN: not ld.lld x3_reg_usage_scs.o x3_reg_usage_gp.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=X3_REG_SCS_GP --implicit-check-not=error:
+# X3_REG_SCS_GP: error: x3_reg_usage_scs.o:(.riscv.attributes) has x3_reg_usage=2 but x3_reg_usage_gp.o:(.riscv.attributes) has x3_reg_usage=1
+
+# RUN: not ld.lld x3_reg_usage_scs.o x3_reg_usage_tmp.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=X3_REG_SCS_TMP --implicit-check-not=error:
+# X3_REG_SCS_TMP: error: x3_reg_usage_scs.o:(.riscv.attributes) has x3_reg_usage=2 but x3_reg_usage_tmp.o:(.riscv.attributes) has x3_reg_usage=3
+
+
+# RUN: ld.lld x3_reg_usage_scs.o x3_reg_usage_unknown.o -o x3_reg_usage_scs_unknown
+# RUN: llvm-readobj -A x3_reg_usage_scs_unknown | FileCheck %s --check-prefix=X3_REG_SCS_UKNOWN
+
 ## The deprecated priv_spec is not handled as GNU ld does.
 ## Differing priv_spec attributes lead to an absent attribute.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 diff_priv_spec.s -o diff_priv_spec.o
@@ -497,6 +513,36 @@
 # A6S_A7-NEXT:     }
 # A6S_A7-NEXT:   }
 # A6S_A7-NEXT: }
+
+#--- x3_reg_usage_unknown.s
+.attribute x3_reg_usage, 0
+
+#--- x3_reg_usage_gp.s
+.attribute x3_reg_usage, 1
+
+#--- x3_reg_usage_scs.s
+.attribute x3_reg_usage, 2
+
+#--- x3_reg_usage_tmp.s
+.attribute x3_reg_usage, 3
+
+#      X3_REG_SCS_UKNOWN: BuildAttributes {
+# X3_REG_SCS_UKNOWN-NEXT:   FormatVersion: 0x41
+# X3_REG_SCS_UKNOWN-NEXT:   Section 1 {
+# X3_REG_SCS_UKNOWN-NEXT:     SectionLength: 17
+# X3_REG_SCS_UKNOWN-NEXT:     Vendor: riscv
+# X3_REG_SCS_UKNOWN-NEXT:     Tag: Tag_File (0x1)
+# X3_REG_SCS_UKNOWN-NEXT:     Size: 7
+# X3_REG_SCS_UKNOWN-NEXT:     FileAttributes {
+# X3_REG_SCS_UKNOWN-NEXT:       Attribute {
+# X3_REG_SCS_UKNOWN-NEXT:         Tag: 16
+# X3_REG_SCS_UKNOWN-NEXT:         Value: 2
+# X3_REG_SCS_UKNOWN-NEXT:         TagName: x3_reg_usage
+# X3_REG_SCS_UKNOWN-NEXT:         Description: X3 reg usage is 2
+# X3_REG_SCS_UKNOWN-NEXT:       }
+# X3_REG_SCS_UKNOWN-NEXT:     }
+# X3_REG_SCS_UKNOWN-NEXT:   }
+# X3_REG_SCS_UKNOWN-NEXT: }
 
 #--- unknown13.s
 .attribute 13, "0"

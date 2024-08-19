@@ -41,11 +41,21 @@ const RISCVAttributeParser::DisplayHandler
             RISCVAttrs::ATOMIC_ABI,
             &RISCVAttributeParser::atomicAbi,
         },
+        {
+            RISCVAttrs::X3_REG_USAGE,
+            &RISCVAttributeParser::x3RegUsage,
+        },
 };
 
 Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
   uint64_t Value = de.getULEB128(cursor);
   printAttribute(Tag, Value, "Atomic ABI is " + utostr(Value));
+  return Error::success();
+}
+
+Error RISCVAttributeParser::x3RegUsage(unsigned Tag) {
+  uint64_t Value = de.getULEB128(cursor);
+  printAttribute(Tag, Value, "X3 reg usage is " + utostr(Value));
   return Error::success();
 }
 

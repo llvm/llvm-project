@@ -36,3 +36,6 @@
 
 .attribute atomic_abi, "16"
 # CHECK: [[@LINE-1]]:24: error: expected numeric constant
+
+.attribute x3_reg_usage, "16"
+# CHECK: [[@LINE-1]]:26: error: expected numeric constant

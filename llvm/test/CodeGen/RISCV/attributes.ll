@@ -273,6 +273,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-sspm %s -o - | FileCheck --check-prefix=RV64SSPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssqosid %s -o - | FileCheck --check-prefix=RV64SSQOSID %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-unknown %s -o - | FileCheck --check-prefix=X3UNKNOWN %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-gp %s -o - | FileCheck --check-prefix=X3GP %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-scs %s -o - | FileCheck --check-prefix=X3SCS %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-tmp %s -o - | FileCheck --check-prefix=X3TMP %s
+
+; RUN: not --crash llc -mtriple=riscv64 -mattr=+x3-tmp,+x3-gp < %s  2>&1 | FileCheck --check-prefix=X3ERR %s
 
 ; Tests for profile features.
 ; RUN: llc -mtriple=riscv32 -mattr=+rvi20u32 %s -o - | FileCheck --check-prefix=RVI20U32 %s
@@ -559,6 +565,11 @@
 ; RV64SSPM: .attribute 5, "rv64i2p1_sspm1p0"
 ; RV64SUPM: .attribute 5, "rv64i2p1_supm1p0"
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
+; X3UNKNOWN: .attribute 16, 0
+; X3GP: .attribute 16, 1
+; X3SCS: .attribute 16, 2
+; X3TMP: .attribute 16, 3
+; X3ERR: LLVM ERROR: Cannot set multiple ABIs for X3/GP
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
 ; RVI20U64: .attribute 5, "rv64i2p1"

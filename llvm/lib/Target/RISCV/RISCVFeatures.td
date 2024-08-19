@@ -1410,3 +1410,24 @@ def FeatureForcedSWShadowStack : SubtargetFeature<
     "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
     "Implement shadow stack with software.">;
 def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;
+
+def FeatureX3Unknown : SubtargetFeature<"x3-unknown", "X3Unknown", "true",
+    "X3 register has an unknown purpose.">;
+
+def FeatureX3GP : SubtargetFeature<"x3-gp", "X3GP", "true",
+    "X3 register is used as global pointer">;
+
+def FeatureX3SCS : SubtargetFeature<"x3-scs", "X3SCS", "true",
+    "X3 register is used as SCS poitner">;
+
+def FeatureX3Tmp : SubtargetFeature<"x3-tmp", "X3Tmp", "true",
+    "X3 register is used as a temporary register.">;
+
+def FeatureX3RegisterUsage
+    : SubtargetFeature<"x3-reg-usage", "HasX3Usage", "true", "Has the purpose of X3 been defined.">;
+
+def HasX3Usage
+    : Predicate<"Subtarget->HasXReg3Usage()">,
+      AssemblerPredicate<(any_of FeatureX3Unknown, FeatureX3GP, FeatureX3SCS,
+                          FeatureX3Tmp), "Has the purpose of X3 been defined.">;
+

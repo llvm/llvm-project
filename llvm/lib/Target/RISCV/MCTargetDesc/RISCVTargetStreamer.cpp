@@ -91,6 +91,24 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
             : RISCVAttrs::RISCVAtomicAbiTag::A6S);
     emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
+
+  bool HasX3Gp = STI.hasFeature(RISCV::FeatureX3GP);
+  bool HasX3Scs = STI.hasFeature(RISCV::FeatureX3SCS);
+  bool HasX3Tmp = STI.hasFeature(RISCV::FeatureX3Tmp);
+  if ((HasX3Gp + HasX3Scs + HasX3Tmp) > 1)
+    report_fatal_error("Cannot set multiple ABIs for X3/GP");
+
+  unsigned X3AbiTag;
+  if (HasX3Gp)
+    X3AbiTag = RISCVAttrs::RISCVX3RegUse::GP;
+  else if (HasX3Scs)
+    X3AbiTag = RISCVAttrs::RISCVX3RegUse::SCS;
+  else if (HasX3Tmp)
+    X3AbiTag = RISCVAttrs::RISCVX3RegUse::TMP;
+  else
+    X3AbiTag = RISCVAttrs::RISCVX3RegUse::UNKNOWN;
+
+  emitAttribute(RISCVAttrs::X3_REG_USAGE, X3AbiTag);
 }
 
 // This part is for ascii assembly output
