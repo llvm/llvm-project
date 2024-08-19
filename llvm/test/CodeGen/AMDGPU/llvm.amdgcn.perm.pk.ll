@@ -14,7 +14,6 @@ define void @test_perm_pk16_b4_u4(i32 %a, i32 %b, <2 x i32> %c, ptr %out) {
 ; GFX1210-NEXT:    v_perm_pk16_b4_u4 v[0:1], v0, v1, v[2:3]
 ; GFX1210-NEXT:    flat_store_b64 v[4:5], v[0:1]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call <2 x i32> @llvm.amdgcn.perm.pk16.b4.u4(i32 %a, i32 %b, <2 x i32> %c)
@@ -34,7 +33,6 @@ define void @test_perm_pk16_b6_u4(i32 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1210-SDAG-NEXT:    v_perm_pk16_b6_u4 v[0:2], v0, v[2:3], v[8:9]
 ; GFX1210-SDAG-NEXT:    flat_store_b96 v[6:7], v[0:2]
 ; GFX1210-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1210-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -49,7 +47,6 @@ define void @test_perm_pk16_b6_u4(i32 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1210-GISEL-NEXT:    v_perm_pk16_b6_u4 v[0:2], v0, v[8:9], v[2:3]
 ; GFX1210-GISEL-NEXT:    flat_store_b96 v[4:5], v[0:2]
 ; GFX1210-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call <3 x i32> @llvm.amdgcn.perm.pk16.b6.u4(i32 %a, i64 %b, <2 x i32> %c)
@@ -65,7 +62,6 @@ define void @test_perm_pk16_b8_u4(i64 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1210-NEXT:    v_perm_pk16_b8_u4 v[0:3], v[0:1], v[2:3], v[4:5]
 ; GFX1210-NEXT:    flat_store_b128 v[6:7], v[0:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call <4 x i32> @llvm.amdgcn.perm.pk16.b8.u4(i64 %a, i64 %b, <2 x i32> %c)

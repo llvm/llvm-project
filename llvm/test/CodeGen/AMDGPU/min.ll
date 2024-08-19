@@ -222,7 +222,6 @@ define amdgpu_kernel void @s_test_imin_sle_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -308,7 +307,6 @@ define amdgpu_kernel void @s_test_imin_sle_v1i32(ptr addrspace(1) %out, <1 x i32
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -435,7 +433,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i32(ptr addrspace(1) %out, <4 x i32
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s7, s11
 ; GFX1210-NEXT:    s_min_i32 s3, s6, s10
 ; GFX1210-NEXT:    s_min_i32 s4, s4, s8
@@ -571,7 +568,6 @@ define amdgpu_kernel void @s_test_imin_sle_i8(ptr addrspace(1) %out, [8 x i32], 
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_sext_i32_i8 s2, s4
 ; GFX1210-NEXT:    s_sext_i32_i8 s3, s5
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -1535,7 +1531,6 @@ define amdgpu_kernel void @s_test_imin_slt_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -1640,7 +1635,6 @@ define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s4, s6
 ; GFX1210-NEXT:    s_min_i32 s3, s5, s7
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -1735,7 +1729,6 @@ define amdgpu_kernel void @s_test_imin_slt_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s2, 8
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -1828,7 +1821,6 @@ define amdgpu_kernel void @s_test_imin_sle_imm_i32(ptr addrspace(1) %out, i32 %a
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_i32 s2, s2, 8
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -2421,7 +2413,6 @@ define amdgpu_kernel void @s_test_umin_ule_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_u32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -2793,7 +2784,6 @@ define amdgpu_kernel void @s_test_umin_ult_i32(ptr addrspace(1) %out, i32 %a, i3
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_u32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -2951,7 +2941,6 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_load_b32 s5, s[6:7], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_cmp_lt_u32 s4, s5
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s6
@@ -3120,7 +3109,6 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_load_u16 s5, s[6:7], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_cmp_lt_u32 s4, s5
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s6
@@ -3215,7 +3203,6 @@ define amdgpu_kernel void @s_test_umin_ult_v1i32(ptr addrspace(1) %out, <1 x i32
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_u32 s2, s2, s3
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
@@ -3405,7 +3392,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_min_u32 s2, s7, s15
 ; GFX1210-NEXT:    s_min_u32 s3, s6, s14
 ; GFX1210-NEXT:    s_min_u32 s6, s11, s19
@@ -3844,7 +3830,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspac
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_and_b32 s2, s4, 0xffff
 ; GFX1210-NEXT:    s_and_b32 s3, s5, 0xffff
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -3973,7 +3958,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_sext_i32_i16 s2, s4
 ; GFX1210-NEXT:    s_sext_i32_i16 s3, s5
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -4102,7 +4086,6 @@ define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i1
 ; GFX1210-NEXT:    s_load_b96 s[0:2], s[2:3], 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_sext_i32_i16 s3, s2
 ; GFX1210-NEXT:    s_ashr_i32 s2, s2, 16
 ; GFX1210-NEXT:    s_wait_alu 0xfffe

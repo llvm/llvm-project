@@ -151,7 +151,6 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1210-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-NEXT:    global_store_b16 v[0:1], v3, off scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_storecnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float

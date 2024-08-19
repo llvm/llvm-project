@@ -64,10 +64,8 @@ define amdgpu_kernel void @s_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_pack_ll_b32_b16 s2, 0x40a0, s2
@@ -139,10 +137,8 @@ define amdgpu_kernel void @s_insertelement_v2bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_pack_ll_b32_b16 s2, s2, 0x40a0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -1078,7 +1074,6 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_load_b64 v[0:1], v2, s[6:7] scale_offset
 ; GFX1210-NEXT:    s_lshl_b32 s1, s1, 4
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_pack_ll_b32_b16 s2, s0, s0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_lshl_b64 s[0:1], 0xffff, s1
@@ -1416,7 +1411,6 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_load_b128 v[0:3], v4, s[6:7] scale_offset
 ; GFX1210-NEXT:    s_cmp_eq_u32 s1, 6
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX1210-NEXT:    s_cmp_eq_u32 s1, 7
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -1955,7 +1949,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX1210-NEXT:    global_load_b128 v[0:3], v8, s[6:7]
 ; GFX1210-NEXT:    global_load_b128 v[4:7], v8, s[6:7] offset:16
 ; GFX1210-NEXT:    s_cmp_eq_u32 s1, 6
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX1210-NEXT:    s_cmp_eq_u32 s1, 7
 ; GFX1210-NEXT:    s_wait_loadcnt 0x1
