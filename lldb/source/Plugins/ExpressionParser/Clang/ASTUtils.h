@@ -261,9 +261,8 @@ public:
   /// as a fallback.
   ///
   /// This class assumes shared ownership of the sources provided to it.
-  SemaSourceWithPriorities(
-      clang::ExternalSemaSource * high_quality_source,
-      clang::ExternalSemaSource * low_quality_source) {
+  SemaSourceWithPriorities(clang::ExternalSemaSource *high_quality_source,
+                           clang::ExternalSemaSource *low_quality_source) {
     assert(high_quality_source);
     assert(low_quality_source);
 

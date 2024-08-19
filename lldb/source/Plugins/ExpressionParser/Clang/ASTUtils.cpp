@@ -19,7 +19,7 @@ lldb_private::ASTConsumerForwarder::~ASTConsumerForwarder() = default;
 void lldb_private::ASTConsumerForwarder::PrintStats() { m_c->PrintStats(); }
 
 lldb_private::SemaSourceWithPriorities::~SemaSourceWithPriorities() {
-  for (auto * Source : Sources)
+  for (auto *Source : Sources)
     Source->Release();
 }
 
