@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// In MSVC mode, there's a slightly different number of errors printed for
-// each of these, so it doesn't add up to the exact expected count of 18.
-// XFAIL: msvc
-
 // <compare>
 
 // Ensure we reject all cases where an argument other than a literal 0 is used
