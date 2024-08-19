@@ -13520,7 +13520,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     Init = Result.getAs<Expr>();
 
     // Assert that Init is non-null only if no errors have occurred.
-    assert((!Result.isInvalid() && Init) && "Should have a valid initializer at this point");
+    assert((!Result.isInvalid() && Init) &&
+           "Should have a valid initializer at this point");
 
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
