@@ -7250,7 +7250,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::getBestVF() {
+ElementCount LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
@@ -9959,7 +9959,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      ElementCount BestVF = LVP.getBestVF();
+      ElementCount BestVF = LVP.computeBestVF();
       assert(BestVF.isScalar() &&
              "VPlan cost model and legacy cost model disagreed");
       VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
@@ -9974,7 +9974,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      ElementCount BestVF = LVP.getBestVF();
+      ElementCount BestVF = LVP.computeBestVF();
       LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << BestVF << "\n");
       assert(VF.Width == BestVF &&
              "VPlan cost model and legacy cost model disagreed");
