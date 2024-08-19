@@ -13,7 +13,7 @@ define <3 x i64> @long3() {
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd1, %rd1};
 ; CHECK-NEXT:    st.param.b64 [func_retval0+16], %rd1;
 ; CHECK-NEXT:    ret;
-  ret <3 x i64> zeroinitializer
+        ret <3 x i64> zeroinitializer
 }
 
 define <1 x i64> @long1() {
@@ -25,7 +25,7 @@ define <1 x i64> @long1() {
 ; CHECK-NEXT:    mov.u64 %rd1, 0;
 ; CHECK-NEXT:    st.param.b64 [func_retval0+0], %rd1;
 ; CHECK-NEXT:    ret;
-  ret <1 x i64> zeroinitializer
+        ret <1 x i64> zeroinitializer
 }
 
 define <6 x i32> @int6() {
@@ -38,7 +38,7 @@ define <6 x i32> @int6() {
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0+0], {%r1, %r1, %r1, %r1};
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0+16], {%r1, %r1};
 ; CHECK-NEXT:    ret;
-  ret <6 x i32> zeroinitializer
+        ret <6 x i32> zeroinitializer
 }
 
 define <5 x i32> @int5() {
@@ -51,7 +51,7 @@ define <5 x i32> @int5() {
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0+0], {%r1, %r1, %r1, %r1};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+16], %r1;
 ; CHECK-NEXT:    ret;
-  ret <5 x i32> zeroinitializer
+        ret <5 x i32> zeroinitializer
 }
 
 define <3 x i32> @int3() {
@@ -64,7 +64,7 @@ define <3 x i32> @int3() {
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0+0], {%r1, %r1};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r1;
 ; CHECK-NEXT:    ret;
-  ret <3 x i32> zeroinitializer
+        ret <3 x i32> zeroinitializer
 }
 
 define <1 x i32> @int1() {
@@ -76,7 +76,7 @@ define <1 x i32> @int1() {
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
-  ret <1 x i32> zeroinitializer
+        ret <1 x i32> zeroinitializer
 }
 
 define <12 x i16> @short12() {
@@ -90,7 +90,7 @@ define <12 x i16> @short12() {
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <12 x i16> zeroinitializer
+        ret <12 x i16> zeroinitializer
 }
 
 define <11 x i16> @short11() {
@@ -105,7 +105,7 @@ define <11 x i16> @short11() {
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b16 [func_retval0+20], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <11 x i16> zeroinitializer
+        ret <11 x i16> zeroinitializer
 }
 
 define <10 x i16> @short10() {
@@ -119,7 +119,7 @@ define <10 x i16> @short10() {
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <10 x i16> zeroinitializer
+        ret <10 x i16> zeroinitializer
 }
 
 define <9 x i16> @short9() {
@@ -133,7 +133,7 @@ define <9 x i16> @short9() {
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b16 [func_retval0+16], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <9 x i16> zeroinitializer
+        ret <9 x i16> zeroinitializer
 }
 
 define <7 x i16> @short7() {
@@ -147,7 +147,7 @@ define <7 x i16> @short7() {
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b16 [func_retval0+12], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <7 x i16> zeroinitializer
+        ret <7 x i16> zeroinitializer
 }
 
 define <6 x i16> @short6() {
@@ -160,7 +160,7 @@ define <6 x i16> @short6() {
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <6 x i16> zeroinitializer
+        ret <6 x i16> zeroinitializer
 }
 
 define <5 x i16> @short5() {
@@ -173,7 +173,7 @@ define <5 x i16> @short5() {
 ; CHECK-NEXT:    st.param.v4.b16 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b16 [func_retval0+8], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <5 x i16> zeroinitializer
+        ret <5 x i16> zeroinitializer
 }
 
 define <3 x i16> @short3() {
@@ -186,7 +186,7 @@ define <3 x i16> @short3() {
 ; CHECK-NEXT:    st.param.v2.b16 [func_retval0+0], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b16 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <3 x i16> zeroinitializer
+        ret <3 x i16> zeroinitializer
 }
 
 define <1 x i16> @short1() {
@@ -198,7 +198,7 @@ define <1 x i16> @short1() {
 ; CHECK-NEXT:    mov.u16 %rs1, 0;
 ; CHECK-NEXT:    st.param.b16 [func_retval0+0], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <1 x i16> zeroinitializer
+        ret <1 x i16> zeroinitializer
 }
 
 define <24 x i8> @byte24() {
@@ -215,7 +215,7 @@ define <24 x i8> @byte24() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+20], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <24 x i8> zeroinitializer
+        ret <24 x i8> zeroinitializer
 }
 
 define <23 x i8> @byte23() {
@@ -233,7 +233,7 @@ define <23 x i8> @byte23() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+20], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+22], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <23 x i8> zeroinitializer
+        ret <23 x i8> zeroinitializer
 }
 
 define <22 x i8> @byte22() {
@@ -250,7 +250,7 @@ define <22 x i8> @byte22() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+20], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <22 x i8> zeroinitializer
+        ret <22 x i8> zeroinitializer
 }
 
 define <21 x i8> @byte21() {
@@ -267,7 +267,7 @@ define <21 x i8> @byte21() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+20], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <21 x i8> zeroinitializer
+        ret <21 x i8> zeroinitializer
 }
 
 define <20 x i8> @byte20() {
@@ -283,7 +283,7 @@ define <20 x i8> @byte20() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <20 x i8> zeroinitializer
+        ret <20 x i8> zeroinitializer
 }
 
 define <19 x i8> @byte19() {
@@ -300,7 +300,7 @@ define <19 x i8> @byte19() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+18], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <19 x i8> zeroinitializer
+        ret <19 x i8> zeroinitializer
 }
 
 define <18 x i8> @byte18() {
@@ -316,7 +316,7 @@ define <18 x i8> @byte18() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <18 x i8> zeroinitializer
+        ret <18 x i8> zeroinitializer
 }
 
 define <17 x i8> @byte17() {
@@ -332,7 +332,7 @@ define <17 x i8> @byte17() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+16], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <17 x i8> zeroinitializer
+        ret <17 x i8> zeroinitializer
 }
 
 define <15 x i8> @byte15() {
@@ -348,7 +348,7 @@ define <15 x i8> @byte15() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+14], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <15 x i8> zeroinitializer
+        ret <15 x i8> zeroinitializer
 }
 
 define <14 x i8> @byte14() {
@@ -363,7 +363,7 @@ define <14 x i8> @byte14() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <14 x i8> zeroinitializer
+        ret <14 x i8> zeroinitializer
 }
 
 define <13 x i8> @byte13() {
@@ -378,7 +378,7 @@ define <13 x i8> @byte13() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+12], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <13 x i8> zeroinitializer
+        ret <13 x i8> zeroinitializer
 }
 
 define <12 x i8> @byte12() {
@@ -392,7 +392,7 @@ define <12 x i8> @byte12() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <12 x i8> zeroinitializer
+        ret <12 x i8> zeroinitializer
 }
 
 define <11 x i8> @byte11() {
@@ -407,7 +407,7 @@ define <11 x i8> @byte11() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+10], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <11 x i8> zeroinitializer
+        ret <11 x i8> zeroinitializer
 }
 
 define <10 x i8> @byte10() {
@@ -421,7 +421,7 @@ define <10 x i8> @byte10() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <10 x i8> zeroinitializer
+        ret <10 x i8> zeroinitializer
 }
 
 define <9 x i8> @byte9() {
@@ -435,7 +435,7 @@ define <9 x i8> @byte9() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+8], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <9 x i8> zeroinitializer
+        ret <9 x i8> zeroinitializer
 }
 
 define <7 x i8> @byte7() {
@@ -449,7 +449,7 @@ define <7 x i8> @byte7() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+4], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <7 x i8> zeroinitializer
+        ret <7 x i8> zeroinitializer
 }
 
 define <6 x i8> @byte6() {
@@ -462,7 +462,7 @@ define <6 x i8> @byte6() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+4], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <6 x i8> zeroinitializer
+        ret <6 x i8> zeroinitializer
 }
 
 define <5 x i8> @byte5() {
@@ -475,7 +475,7 @@ define <5 x i8> @byte5() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <5 x i8> zeroinitializer
+        ret <5 x i8> zeroinitializer
 }
 
 define <3 x i8> @byte3() {
@@ -487,7 +487,7 @@ define <3 x i8> @byte3() {
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
-  ret <3 x i8> zeroinitializer
+        ret <3 x i8> zeroinitializer
 }
 
 define <1 x i8> @byte1() {
@@ -499,7 +499,7 @@ define <1 x i8> @byte1() {
 ; CHECK-NEXT:    mov.u16 %rs1, 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+0], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <1 x i8> zeroinitializer
+        ret <1 x i8> zeroinitializer
 }
 
 define <192 x i1> @bit192() {
@@ -558,7 +558,7 @@ define <192 x i1> @bit192() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+184], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+188], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <192 x i1> zeroinitializer
+        ret <192 x i1> zeroinitializer
 }
 
 define <191 x i1> @bit191() {
@@ -618,7 +618,7 @@ define <191 x i1> @bit191() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+188], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+190], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <191 x i1> zeroinitializer
+        ret <191 x i1> zeroinitializer
 }
 
 define <190 x i1> @bit190() {
@@ -677,7 +677,7 @@ define <190 x i1> @bit190() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+184], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+188], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <190 x i1> zeroinitializer
+        ret <190 x i1> zeroinitializer
 }
 
 define <189 x i1> @bit189() {
@@ -736,7 +736,7 @@ define <189 x i1> @bit189() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+184], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+188], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <189 x i1> zeroinitializer
+        ret <189 x i1> zeroinitializer
 }
 
 define <188 x i1> @bit188() {
@@ -794,7 +794,7 @@ define <188 x i1> @bit188() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+180], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+184], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <188 x i1> zeroinitializer
+        ret <188 x i1> zeroinitializer
 }
 
 define <187 x i1> @bit187() {
@@ -853,7 +853,7 @@ define <187 x i1> @bit187() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+184], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+186], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <187 x i1> zeroinitializer
+        ret <187 x i1> zeroinitializer
 }
 
 define <186 x i1> @bit186() {
@@ -911,7 +911,7 @@ define <186 x i1> @bit186() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+180], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+184], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <186 x i1> zeroinitializer
+        ret <186 x i1> zeroinitializer
 }
 
 define <185 x i1> @bit185() {
@@ -969,7 +969,7 @@ define <185 x i1> @bit185() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+180], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+184], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <185 x i1> zeroinitializer
+        ret <185 x i1> zeroinitializer
 }
 
 define <184 x i1> @bit184() {
@@ -1026,7 +1026,7 @@ define <184 x i1> @bit184() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+176], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+180], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <184 x i1> zeroinitializer
+        ret <184 x i1> zeroinitializer
 }
 
 define <183 x i1> @bit183() {
@@ -1084,7 +1084,7 @@ define <183 x i1> @bit183() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+180], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+182], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <183 x i1> zeroinitializer
+        ret <183 x i1> zeroinitializer
 }
 
 define <182 x i1> @bit182() {
@@ -1141,7 +1141,7 @@ define <182 x i1> @bit182() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+176], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+180], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <182 x i1> zeroinitializer
+        ret <182 x i1> zeroinitializer
 }
 
 define <181 x i1> @bit181() {
@@ -1198,7 +1198,7 @@ define <181 x i1> @bit181() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+176], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+180], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <181 x i1> zeroinitializer
+        ret <181 x i1> zeroinitializer
 }
 
 define <180 x i1> @bit180() {
@@ -1254,7 +1254,7 @@ define <180 x i1> @bit180() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+172], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+176], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <180 x i1> zeroinitializer
+        ret <180 x i1> zeroinitializer
 }
 
 define <179 x i1> @bit179() {
@@ -1311,7 +1311,7 @@ define <179 x i1> @bit179() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+176], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+178], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <179 x i1> zeroinitializer
+        ret <179 x i1> zeroinitializer
 }
 
 define <178 x i1> @bit178() {
@@ -1367,7 +1367,7 @@ define <178 x i1> @bit178() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+172], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+176], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <178 x i1> zeroinitializer
+        ret <178 x i1> zeroinitializer
 }
 
 define <177 x i1> @bit177() {
@@ -1423,7 +1423,7 @@ define <177 x i1> @bit177() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+172], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+176], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <177 x i1> zeroinitializer
+        ret <177 x i1> zeroinitializer
 }
 
 define <176 x i1> @bit176() {
@@ -1478,7 +1478,7 @@ define <176 x i1> @bit176() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+168], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+172], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <176 x i1> zeroinitializer
+        ret <176 x i1> zeroinitializer
 }
 
 define <175 x i1> @bit175() {
@@ -1534,7 +1534,7 @@ define <175 x i1> @bit175() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+172], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+174], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <175 x i1> zeroinitializer
+        ret <175 x i1> zeroinitializer
 }
 
 define <174 x i1> @bit174() {
@@ -1589,7 +1589,7 @@ define <174 x i1> @bit174() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+168], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+172], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <174 x i1> zeroinitializer
+        ret <174 x i1> zeroinitializer
 }
 
 define <173 x i1> @bit173() {
@@ -1644,7 +1644,7 @@ define <173 x i1> @bit173() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+168], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+172], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <173 x i1> zeroinitializer
+        ret <173 x i1> zeroinitializer
 }
 
 define <172 x i1> @bit172() {
@@ -1698,7 +1698,7 @@ define <172 x i1> @bit172() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+164], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+168], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <172 x i1> zeroinitializer
+        ret <172 x i1> zeroinitializer
 }
 
 define <171 x i1> @bit171() {
@@ -1753,7 +1753,7 @@ define <171 x i1> @bit171() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+168], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+170], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <171 x i1> zeroinitializer
+        ret <171 x i1> zeroinitializer
 }
 
 define <170 x i1> @bit170() {
@@ -1807,7 +1807,7 @@ define <170 x i1> @bit170() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+164], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+168], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <170 x i1> zeroinitializer
+        ret <170 x i1> zeroinitializer
 }
 
 define <169 x i1> @bit169() {
@@ -1861,7 +1861,7 @@ define <169 x i1> @bit169() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+164], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+168], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <169 x i1> zeroinitializer
+        ret <169 x i1> zeroinitializer
 }
 
 define <168 x i1> @bit168() {
@@ -1914,7 +1914,7 @@ define <168 x i1> @bit168() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+160], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+164], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <168 x i1> zeroinitializer
+        ret <168 x i1> zeroinitializer
 }
 
 define <167 x i1> @bit167() {
@@ -1968,7 +1968,7 @@ define <167 x i1> @bit167() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+164], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+166], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <167 x i1> zeroinitializer
+        ret <167 x i1> zeroinitializer
 }
 
 define <166 x i1> @bit166() {
@@ -2021,7 +2021,7 @@ define <166 x i1> @bit166() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+160], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+164], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <166 x i1> zeroinitializer
+        ret <166 x i1> zeroinitializer
 }
 
 define <165 x i1> @bit165() {
@@ -2074,7 +2074,7 @@ define <165 x i1> @bit165() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+160], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+164], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <165 x i1> zeroinitializer
+        ret <165 x i1> zeroinitializer
 }
 
 define <164 x i1> @bit164() {
@@ -2126,7 +2126,7 @@ define <164 x i1> @bit164() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+156], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+160], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <164 x i1> zeroinitializer
+        ret <164 x i1> zeroinitializer
 }
 
 define <163 x i1> @bit163() {
@@ -2179,7 +2179,7 @@ define <163 x i1> @bit163() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+160], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+162], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <163 x i1> zeroinitializer
+        ret <163 x i1> zeroinitializer
 }
 
 define <162 x i1> @bit162() {
@@ -2231,7 +2231,7 @@ define <162 x i1> @bit162() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+156], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+160], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <162 x i1> zeroinitializer
+        ret <162 x i1> zeroinitializer
 }
 
 define <161 x i1> @bit161() {
@@ -2283,7 +2283,7 @@ define <161 x i1> @bit161() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+156], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+160], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <161 x i1> zeroinitializer
+        ret <161 x i1> zeroinitializer
 }
 
 define <160 x i1> @bit160() {
@@ -2334,7 +2334,7 @@ define <160 x i1> @bit160() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+152], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+156], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <160 x i1> zeroinitializer
+        ret <160 x i1> zeroinitializer
 }
 
 define <159 x i1> @bit159() {
@@ -2386,7 +2386,7 @@ define <159 x i1> @bit159() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+156], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+158], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <159 x i1> zeroinitializer
+        ret <159 x i1> zeroinitializer
 }
 
 define <158 x i1> @bit158() {
@@ -2437,7 +2437,7 @@ define <158 x i1> @bit158() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+152], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+156], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <158 x i1> zeroinitializer
+        ret <158 x i1> zeroinitializer
 }
 
 define <157 x i1> @bit157() {
@@ -2488,7 +2488,7 @@ define <157 x i1> @bit157() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+152], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+156], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <157 x i1> zeroinitializer
+        ret <157 x i1> zeroinitializer
 }
 
 define <156 x i1> @bit156() {
@@ -2538,7 +2538,7 @@ define <156 x i1> @bit156() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+148], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+152], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <156 x i1> zeroinitializer
+        ret <156 x i1> zeroinitializer
 }
 
 define <155 x i1> @bit155() {
@@ -2589,7 +2589,7 @@ define <155 x i1> @bit155() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+152], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+154], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <155 x i1> zeroinitializer
+        ret <155 x i1> zeroinitializer
 }
 
 define <154 x i1> @bit154() {
@@ -2639,7 +2639,7 @@ define <154 x i1> @bit154() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+148], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+152], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <154 x i1> zeroinitializer
+        ret <154 x i1> zeroinitializer
 }
 
 define <153 x i1> @bit153() {
@@ -2689,7 +2689,7 @@ define <153 x i1> @bit153() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+148], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+152], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <153 x i1> zeroinitializer
+        ret <153 x i1> zeroinitializer
 }
 
 define <152 x i1> @bit152() {
@@ -2738,7 +2738,7 @@ define <152 x i1> @bit152() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+144], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+148], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <152 x i1> zeroinitializer
+        ret <152 x i1> zeroinitializer
 }
 
 define <151 x i1> @bit151() {
@@ -2788,7 +2788,7 @@ define <151 x i1> @bit151() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+148], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+150], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <151 x i1> zeroinitializer
+        ret <151 x i1> zeroinitializer
 }
 
 define <150 x i1> @bit150() {
@@ -2837,7 +2837,7 @@ define <150 x i1> @bit150() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+144], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+148], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <150 x i1> zeroinitializer
+        ret <150 x i1> zeroinitializer
 }
 
 define <149 x i1> @bit149() {
@@ -2886,7 +2886,7 @@ define <149 x i1> @bit149() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+144], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+148], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <149 x i1> zeroinitializer
+        ret <149 x i1> zeroinitializer
 }
 
 define <148 x i1> @bit148() {
@@ -2934,7 +2934,7 @@ define <148 x i1> @bit148() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+140], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+144], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <148 x i1> zeroinitializer
+        ret <148 x i1> zeroinitializer
 }
 
 define <147 x i1> @bit147() {
@@ -2983,7 +2983,7 @@ define <147 x i1> @bit147() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+144], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+146], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <147 x i1> zeroinitializer
+        ret <147 x i1> zeroinitializer
 }
 
 define <146 x i1> @bit146() {
@@ -3031,7 +3031,7 @@ define <146 x i1> @bit146() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+140], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+144], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <146 x i1> zeroinitializer
+        ret <146 x i1> zeroinitializer
 }
 
 define <145 x i1> @bit145() {
@@ -3079,7 +3079,7 @@ define <145 x i1> @bit145() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+140], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+144], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <145 x i1> zeroinitializer
+        ret <145 x i1> zeroinitializer
 }
 
 define <144 x i1> @bit144() {
@@ -3126,7 +3126,7 @@ define <144 x i1> @bit144() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+136], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+140], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <144 x i1> zeroinitializer
+        ret <144 x i1> zeroinitializer
 }
 
 define <143 x i1> @bit143() {
@@ -3174,7 +3174,7 @@ define <143 x i1> @bit143() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+140], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+142], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <143 x i1> zeroinitializer
+        ret <143 x i1> zeroinitializer
 }
 
 define <142 x i1> @bit142() {
@@ -3221,7 +3221,7 @@ define <142 x i1> @bit142() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+136], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+140], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <142 x i1> zeroinitializer
+        ret <142 x i1> zeroinitializer
 }
 
 define <141 x i1> @bit141() {
@@ -3268,7 +3268,7 @@ define <141 x i1> @bit141() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+136], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+140], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <141 x i1> zeroinitializer
+        ret <141 x i1> zeroinitializer
 }
 
 define <140 x i1> @bit140() {
@@ -3314,7 +3314,7 @@ define <140 x i1> @bit140() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+132], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+136], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <140 x i1> zeroinitializer
+        ret <140 x i1> zeroinitializer
 }
 
 define <139 x i1> @bit139() {
@@ -3361,7 +3361,7 @@ define <139 x i1> @bit139() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+136], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+138], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <139 x i1> zeroinitializer
+        ret <139 x i1> zeroinitializer
 }
 
 define <138 x i1> @bit138() {
@@ -3407,7 +3407,7 @@ define <138 x i1> @bit138() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+132], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+136], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <138 x i1> zeroinitializer
+        ret <138 x i1> zeroinitializer
 }
 
 define <137 x i1> @bit137() {
@@ -3453,7 +3453,7 @@ define <137 x i1> @bit137() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+132], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+136], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <137 x i1> zeroinitializer
+        ret <137 x i1> zeroinitializer
 }
 
 define <136 x i1> @bit136() {
@@ -3498,7 +3498,7 @@ define <136 x i1> @bit136() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+128], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+132], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <136 x i1> zeroinitializer
+        ret <136 x i1> zeroinitializer
 }
 
 define <135 x i1> @bit135() {
@@ -3544,7 +3544,7 @@ define <135 x i1> @bit135() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+132], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+134], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <135 x i1> zeroinitializer
+        ret <135 x i1> zeroinitializer
 }
 
 define <134 x i1> @bit134() {
@@ -3589,7 +3589,7 @@ define <134 x i1> @bit134() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+128], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+132], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <134 x i1> zeroinitializer
+        ret <134 x i1> zeroinitializer
 }
 
 define <133 x i1> @bit133() {
@@ -3634,7 +3634,7 @@ define <133 x i1> @bit133() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+128], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+132], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <133 x i1> zeroinitializer
+        ret <133 x i1> zeroinitializer
 }
 
 define <132 x i1> @bit132() {
@@ -3678,7 +3678,7 @@ define <132 x i1> @bit132() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+124], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+128], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <132 x i1> zeroinitializer
+        ret <132 x i1> zeroinitializer
 }
 
 define <131 x i1> @bit131() {
@@ -3723,7 +3723,7 @@ define <131 x i1> @bit131() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+128], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+130], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <131 x i1> zeroinitializer
+        ret <131 x i1> zeroinitializer
 }
 
 define <130 x i1> @bit130() {
@@ -3767,7 +3767,7 @@ define <130 x i1> @bit130() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+124], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+128], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <130 x i1> zeroinitializer
+        ret <130 x i1> zeroinitializer
 }
 
 define <129 x i1> @bit129() {
@@ -3811,7 +3811,7 @@ define <129 x i1> @bit129() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+124], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+128], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <129 x i1> zeroinitializer
+        ret <129 x i1> zeroinitializer
 }
 
 define <127 x i1> @bit127() {
@@ -3855,7 +3855,7 @@ define <127 x i1> @bit127() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+124], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+126], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <127 x i1> zeroinitializer
+        ret <127 x i1> zeroinitializer
 }
 
 define <126 x i1> @bit126() {
@@ -3898,7 +3898,7 @@ define <126 x i1> @bit126() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+120], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+124], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <126 x i1> zeroinitializer
+        ret <126 x i1> zeroinitializer
 }
 
 define <125 x i1> @bit125() {
@@ -3941,7 +3941,7 @@ define <125 x i1> @bit125() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+120], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+124], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <125 x i1> zeroinitializer
+        ret <125 x i1> zeroinitializer
 }
 
 define <124 x i1> @bit124() {
@@ -3983,7 +3983,7 @@ define <124 x i1> @bit124() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+116], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+120], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <124 x i1> zeroinitializer
+        ret <124 x i1> zeroinitializer
 }
 
 define <123 x i1> @bit123() {
@@ -4026,7 +4026,7 @@ define <123 x i1> @bit123() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+120], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+122], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <123 x i1> zeroinitializer
+        ret <123 x i1> zeroinitializer
 }
 
 define <122 x i1> @bit122() {
@@ -4068,7 +4068,7 @@ define <122 x i1> @bit122() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+116], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+120], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <122 x i1> zeroinitializer
+        ret <122 x i1> zeroinitializer
 }
 
 define <121 x i1> @bit121() {
@@ -4110,7 +4110,7 @@ define <121 x i1> @bit121() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+116], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+120], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <121 x i1> zeroinitializer
+        ret <121 x i1> zeroinitializer
 }
 
 define <120 x i1> @bit120() {
@@ -4151,7 +4151,7 @@ define <120 x i1> @bit120() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+112], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+116], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <120 x i1> zeroinitializer
+        ret <120 x i1> zeroinitializer
 }
 
 define <119 x i1> @bit119() {
@@ -4193,7 +4193,7 @@ define <119 x i1> @bit119() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+116], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+118], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <119 x i1> zeroinitializer
+        ret <119 x i1> zeroinitializer
 }
 
 define <118 x i1> @bit118() {
@@ -4234,7 +4234,7 @@ define <118 x i1> @bit118() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+112], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+116], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <118 x i1> zeroinitializer
+        ret <118 x i1> zeroinitializer
 }
 
 define <117 x i1> @bit117() {
@@ -4275,7 +4275,7 @@ define <117 x i1> @bit117() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+112], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+116], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <117 x i1> zeroinitializer
+        ret <117 x i1> zeroinitializer
 }
 
 define <116 x i1> @bit116() {
@@ -4315,7 +4315,7 @@ define <116 x i1> @bit116() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+108], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+112], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <116 x i1> zeroinitializer
+        ret <116 x i1> zeroinitializer
 }
 
 define <115 x i1> @bit115() {
@@ -4356,7 +4356,7 @@ define <115 x i1> @bit115() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+112], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+114], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <115 x i1> zeroinitializer
+        ret <115 x i1> zeroinitializer
 }
 
 define <114 x i1> @bit114() {
@@ -4396,7 +4396,7 @@ define <114 x i1> @bit114() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+108], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+112], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <114 x i1> zeroinitializer
+        ret <114 x i1> zeroinitializer
 }
 
 define <113 x i1> @bit113() {
@@ -4436,7 +4436,7 @@ define <113 x i1> @bit113() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+108], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+112], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <113 x i1> zeroinitializer
+        ret <113 x i1> zeroinitializer
 }
 
 define <112 x i1> @bit112() {
@@ -4475,7 +4475,7 @@ define <112 x i1> @bit112() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+104], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+108], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <112 x i1> zeroinitializer
+        ret <112 x i1> zeroinitializer
 }
 
 define <111 x i1> @bit111() {
@@ -4515,7 +4515,7 @@ define <111 x i1> @bit111() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+108], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+110], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <111 x i1> zeroinitializer
+        ret <111 x i1> zeroinitializer
 }
 
 define <110 x i1> @bit110() {
@@ -4554,7 +4554,7 @@ define <110 x i1> @bit110() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+104], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+108], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <110 x i1> zeroinitializer
+        ret <110 x i1> zeroinitializer
 }
 
 define <109 x i1> @bit109() {
@@ -4593,7 +4593,7 @@ define <109 x i1> @bit109() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+104], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+108], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <109 x i1> zeroinitializer
+        ret <109 x i1> zeroinitializer
 }
 
 define <108 x i1> @bit108() {
@@ -4631,7 +4631,7 @@ define <108 x i1> @bit108() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+100], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+104], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <108 x i1> zeroinitializer
+        ret <108 x i1> zeroinitializer
 }
 
 define <107 x i1> @bit107() {
@@ -4670,7 +4670,7 @@ define <107 x i1> @bit107() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+104], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+106], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <107 x i1> zeroinitializer
+        ret <107 x i1> zeroinitializer
 }
 
 define <106 x i1> @bit106() {
@@ -4708,7 +4708,7 @@ define <106 x i1> @bit106() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+100], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+104], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <106 x i1> zeroinitializer
+        ret <106 x i1> zeroinitializer
 }
 
 define <105 x i1> @bit105() {
@@ -4746,7 +4746,7 @@ define <105 x i1> @bit105() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+100], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+104], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <105 x i1> zeroinitializer
+        ret <105 x i1> zeroinitializer
 }
 
 define <104 x i1> @bit104() {
@@ -4783,7 +4783,7 @@ define <104 x i1> @bit104() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+96], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+100], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <104 x i1> zeroinitializer
+        ret <104 x i1> zeroinitializer
 }
 
 define <103 x i1> @bit103() {
@@ -4821,7 +4821,7 @@ define <103 x i1> @bit103() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+100], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+102], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <103 x i1> zeroinitializer
+        ret <103 x i1> zeroinitializer
 }
 
 define <102 x i1> @bit102() {
@@ -4858,7 +4858,7 @@ define <102 x i1> @bit102() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+96], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+100], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <102 x i1> zeroinitializer
+        ret <102 x i1> zeroinitializer
 }
 
 define <101 x i1> @bit101() {
@@ -4895,7 +4895,7 @@ define <101 x i1> @bit101() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+96], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+100], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <101 x i1> zeroinitializer
+        ret <101 x i1> zeroinitializer
 }
 
 define <100 x i1> @bit100() {
@@ -4931,7 +4931,7 @@ define <100 x i1> @bit100() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+92], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+96], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <100 x i1> zeroinitializer
+        ret <100 x i1> zeroinitializer
 }
 
 define <99 x i1> @bit99() {
@@ -4968,7 +4968,7 @@ define <99 x i1> @bit99() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+96], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+98], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <99 x i1> zeroinitializer
+        ret <99 x i1> zeroinitializer
 }
 
 define <98 x i1> @bit98() {
@@ -5004,7 +5004,7 @@ define <98 x i1> @bit98() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+92], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+96], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <98 x i1> zeroinitializer
+        ret <98 x i1> zeroinitializer
 }
 
 define <97 x i1> @bit97() {
@@ -5040,7 +5040,7 @@ define <97 x i1> @bit97() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+92], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+96], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <97 x i1> zeroinitializer
+        ret <97 x i1> zeroinitializer
 }
 
 define <96 x i1> @bit96() {
@@ -5075,7 +5075,7 @@ define <96 x i1> @bit96() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+88], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+92], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <96 x i1> zeroinitializer
+        ret <96 x i1> zeroinitializer
 }
 
 define <95 x i1> @bit95() {
@@ -5111,7 +5111,7 @@ define <95 x i1> @bit95() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+92], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+94], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <95 x i1> zeroinitializer
+        ret <95 x i1> zeroinitializer
 }
 
 define <94 x i1> @bit94() {
@@ -5146,7 +5146,7 @@ define <94 x i1> @bit94() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+88], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+92], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <94 x i1> zeroinitializer
+        ret <94 x i1> zeroinitializer
 }
 
 define <93 x i1> @bit93() {
@@ -5181,7 +5181,7 @@ define <93 x i1> @bit93() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+88], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+92], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <93 x i1> zeroinitializer
+        ret <93 x i1> zeroinitializer
 }
 
 define <92 x i1> @bit92() {
@@ -5215,7 +5215,7 @@ define <92 x i1> @bit92() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+84], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+88], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <92 x i1> zeroinitializer
+        ret <92 x i1> zeroinitializer
 }
 
 define <91 x i1> @bit91() {
@@ -5250,7 +5250,7 @@ define <91 x i1> @bit91() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+88], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+90], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <91 x i1> zeroinitializer
+        ret <91 x i1> zeroinitializer
 }
 
 define <90 x i1> @bit90() {
@@ -5284,7 +5284,7 @@ define <90 x i1> @bit90() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+84], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+88], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <90 x i1> zeroinitializer
+        ret <90 x i1> zeroinitializer
 }
 
 define <89 x i1> @bit89() {
@@ -5318,7 +5318,7 @@ define <89 x i1> @bit89() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+84], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+88], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <89 x i1> zeroinitializer
+        ret <89 x i1> zeroinitializer
 }
 
 define <88 x i1> @bit88() {
@@ -5351,7 +5351,7 @@ define <88 x i1> @bit88() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+80], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+84], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <88 x i1> zeroinitializer
+        ret <88 x i1> zeroinitializer
 }
 
 define <87 x i1> @bit87() {
@@ -5385,7 +5385,7 @@ define <87 x i1> @bit87() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+84], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+86], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <87 x i1> zeroinitializer
+        ret <87 x i1> zeroinitializer
 }
 
 define <86 x i1> @bit86() {
@@ -5418,7 +5418,7 @@ define <86 x i1> @bit86() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+80], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+84], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <86 x i1> zeroinitializer
+        ret <86 x i1> zeroinitializer
 }
 
 define <85 x i1> @bit85() {
@@ -5451,7 +5451,7 @@ define <85 x i1> @bit85() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+80], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+84], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <85 x i1> zeroinitializer
+        ret <85 x i1> zeroinitializer
 }
 
 define <84 x i1> @bit84() {
@@ -5483,7 +5483,7 @@ define <84 x i1> @bit84() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+76], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+80], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <84 x i1> zeroinitializer
+        ret <84 x i1> zeroinitializer
 }
 
 define <83 x i1> @bit83() {
@@ -5516,7 +5516,7 @@ define <83 x i1> @bit83() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+80], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+82], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <83 x i1> zeroinitializer
+        ret <83 x i1> zeroinitializer
 }
 
 define <82 x i1> @bit82() {
@@ -5548,7 +5548,7 @@ define <82 x i1> @bit82() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+76], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+80], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <82 x i1> zeroinitializer
+        ret <82 x i1> zeroinitializer
 }
 
 define <81 x i1> @bit81() {
@@ -5580,7 +5580,7 @@ define <81 x i1> @bit81() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+76], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+80], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <81 x i1> zeroinitializer
+        ret <81 x i1> zeroinitializer
 }
 
 define <80 x i1> @bit80() {
@@ -5611,7 +5611,7 @@ define <80 x i1> @bit80() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+72], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+76], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <80 x i1> zeroinitializer
+        ret <80 x i1> zeroinitializer
 }
 
 define <79 x i1> @bit79() {
@@ -5643,7 +5643,7 @@ define <79 x i1> @bit79() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+76], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+78], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <79 x i1> zeroinitializer
+        ret <79 x i1> zeroinitializer
 }
 
 define <78 x i1> @bit78() {
@@ -5674,7 +5674,7 @@ define <78 x i1> @bit78() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+72], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+76], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <78 x i1> zeroinitializer
+        ret <78 x i1> zeroinitializer
 }
 
 define <77 x i1> @bit77() {
@@ -5705,7 +5705,7 @@ define <77 x i1> @bit77() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+72], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+76], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <77 x i1> zeroinitializer
+        ret <77 x i1> zeroinitializer
 }
 
 define <76 x i1> @bit76() {
@@ -5735,7 +5735,7 @@ define <76 x i1> @bit76() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+68], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+72], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <76 x i1> zeroinitializer
+        ret <76 x i1> zeroinitializer
 }
 
 define <75 x i1> @bit75() {
@@ -5766,7 +5766,7 @@ define <75 x i1> @bit75() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+72], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+74], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <75 x i1> zeroinitializer
+        ret <75 x i1> zeroinitializer
 }
 
 define <74 x i1> @bit74() {
@@ -5796,7 +5796,7 @@ define <74 x i1> @bit74() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+68], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+72], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <74 x i1> zeroinitializer
+        ret <74 x i1> zeroinitializer
 }
 
 define <73 x i1> @bit73() {
@@ -5826,7 +5826,7 @@ define <73 x i1> @bit73() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+68], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+72], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <73 x i1> zeroinitializer
+        ret <73 x i1> zeroinitializer
 }
 
 define <72 x i1> @bit72() {
@@ -5855,7 +5855,7 @@ define <72 x i1> @bit72() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+64], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+68], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <72 x i1> zeroinitializer
+        ret <72 x i1> zeroinitializer
 }
 
 define <71 x i1> @bit71() {
@@ -5885,7 +5885,7 @@ define <71 x i1> @bit71() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+68], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+70], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <71 x i1> zeroinitializer
+        ret <71 x i1> zeroinitializer
 }
 
 define <70 x i1> @bit70() {
@@ -5914,7 +5914,7 @@ define <70 x i1> @bit70() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+64], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+68], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <70 x i1> zeroinitializer
+        ret <70 x i1> zeroinitializer
 }
 
 define <69 x i1> @bit69() {
@@ -5943,7 +5943,7 @@ define <69 x i1> @bit69() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+64], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+68], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <69 x i1> zeroinitializer
+        ret <69 x i1> zeroinitializer
 }
 
 define <68 x i1> @bit68() {
@@ -5971,7 +5971,7 @@ define <68 x i1> @bit68() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+60], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+64], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <68 x i1> zeroinitializer
+        ret <68 x i1> zeroinitializer
 }
 
 define <67 x i1> @bit67() {
@@ -6000,7 +6000,7 @@ define <67 x i1> @bit67() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+64], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+66], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <67 x i1> zeroinitializer
+        ret <67 x i1> zeroinitializer
 }
 
 define <66 x i1> @bit66() {
@@ -6028,7 +6028,7 @@ define <66 x i1> @bit66() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+60], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+64], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <66 x i1> zeroinitializer
+        ret <66 x i1> zeroinitializer
 }
 
 define <65 x i1> @bit65() {
@@ -6056,7 +6056,7 @@ define <65 x i1> @bit65() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+60], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+64], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <65 x i1> zeroinitializer
+        ret <65 x i1> zeroinitializer
 }
 
 define <63 x i1> @bit63() {
@@ -6084,7 +6084,7 @@ define <63 x i1> @bit63() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+60], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+62], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <63 x i1> zeroinitializer
+        ret <63 x i1> zeroinitializer
 }
 
 define <62 x i1> @bit62() {
@@ -6111,7 +6111,7 @@ define <62 x i1> @bit62() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+56], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+60], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <62 x i1> zeroinitializer
+        ret <62 x i1> zeroinitializer
 }
 
 define <61 x i1> @bit61() {
@@ -6138,7 +6138,7 @@ define <61 x i1> @bit61() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+56], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+60], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <61 x i1> zeroinitializer
+        ret <61 x i1> zeroinitializer
 }
 
 define <60 x i1> @bit60() {
@@ -6164,7 +6164,7 @@ define <60 x i1> @bit60() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+52], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+56], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <60 x i1> zeroinitializer
+        ret <60 x i1> zeroinitializer
 }
 
 define <59 x i1> @bit59() {
@@ -6191,7 +6191,7 @@ define <59 x i1> @bit59() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+56], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+58], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <59 x i1> zeroinitializer
+        ret <59 x i1> zeroinitializer
 }
 
 define <58 x i1> @bit58() {
@@ -6217,7 +6217,7 @@ define <58 x i1> @bit58() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+52], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+56], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <58 x i1> zeroinitializer
+        ret <58 x i1> zeroinitializer
 }
 
 define <57 x i1> @bit57() {
@@ -6243,7 +6243,7 @@ define <57 x i1> @bit57() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+52], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+56], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <57 x i1> zeroinitializer
+        ret <57 x i1> zeroinitializer
 }
 
 define <56 x i1> @bit56() {
@@ -6268,7 +6268,7 @@ define <56 x i1> @bit56() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+48], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+52], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <56 x i1> zeroinitializer
+        ret <56 x i1> zeroinitializer
 }
 
 define <55 x i1> @bit55() {
@@ -6294,7 +6294,7 @@ define <55 x i1> @bit55() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+52], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+54], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <55 x i1> zeroinitializer
+        ret <55 x i1> zeroinitializer
 }
 
 define <54 x i1> @bit54() {
@@ -6319,7 +6319,7 @@ define <54 x i1> @bit54() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+48], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+52], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <54 x i1> zeroinitializer
+        ret <54 x i1> zeroinitializer
 }
 
 define <53 x i1> @bit53() {
@@ -6344,7 +6344,7 @@ define <53 x i1> @bit53() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+48], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+52], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <53 x i1> zeroinitializer
+        ret <53 x i1> zeroinitializer
 }
 
 define <52 x i1> @bit52() {
@@ -6368,7 +6368,7 @@ define <52 x i1> @bit52() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+44], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+48], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <52 x i1> zeroinitializer
+        ret <52 x i1> zeroinitializer
 }
 
 define <51 x i1> @bit51() {
@@ -6393,7 +6393,7 @@ define <51 x i1> @bit51() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+48], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+50], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <51 x i1> zeroinitializer
+        ret <51 x i1> zeroinitializer
 }
 
 define <50 x i1> @bit50() {
@@ -6417,7 +6417,7 @@ define <50 x i1> @bit50() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+44], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+48], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <50 x i1> zeroinitializer
+        ret <50 x i1> zeroinitializer
 }
 
 define <49 x i1> @bit49() {
@@ -6441,7 +6441,7 @@ define <49 x i1> @bit49() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+44], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+48], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <49 x i1> zeroinitializer
+        ret <49 x i1> zeroinitializer
 }
 
 define <48 x i1> @bit48() {
@@ -6464,7 +6464,7 @@ define <48 x i1> @bit48() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+40], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+44], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <48 x i1> zeroinitializer
+        ret <48 x i1> zeroinitializer
 }
 
 define <47 x i1> @bit47() {
@@ -6488,7 +6488,7 @@ define <47 x i1> @bit47() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+44], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+46], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <47 x i1> zeroinitializer
+        ret <47 x i1> zeroinitializer
 }
 
 define <46 x i1> @bit46() {
@@ -6511,7 +6511,7 @@ define <46 x i1> @bit46() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+40], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+44], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <46 x i1> zeroinitializer
+        ret <46 x i1> zeroinitializer
 }
 
 define <45 x i1> @bit45() {
@@ -6534,7 +6534,7 @@ define <45 x i1> @bit45() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+40], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+44], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <45 x i1> zeroinitializer
+        ret <45 x i1> zeroinitializer
 }
 
 define <44 x i1> @bit44() {
@@ -6556,7 +6556,7 @@ define <44 x i1> @bit44() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+36], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+40], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <44 x i1> zeroinitializer
+        ret <44 x i1> zeroinitializer
 }
 
 define <43 x i1> @bit43() {
@@ -6579,7 +6579,7 @@ define <43 x i1> @bit43() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+40], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+42], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <43 x i1> zeroinitializer
+        ret <43 x i1> zeroinitializer
 }
 
 define <42 x i1> @bit42() {
@@ -6601,7 +6601,7 @@ define <42 x i1> @bit42() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+36], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+40], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <42 x i1> zeroinitializer
+        ret <42 x i1> zeroinitializer
 }
 
 define <41 x i1> @bit41() {
@@ -6623,7 +6623,7 @@ define <41 x i1> @bit41() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+36], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+40], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <41 x i1> zeroinitializer
+        ret <41 x i1> zeroinitializer
 }
 
 define <40 x i1> @bit40() {
@@ -6644,7 +6644,7 @@ define <40 x i1> @bit40() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+32], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+36], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <40 x i1> zeroinitializer
+        ret <40 x i1> zeroinitializer
 }
 
 define <39 x i1> @bit39() {
@@ -6666,7 +6666,7 @@ define <39 x i1> @bit39() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+36], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+38], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <39 x i1> zeroinitializer
+        ret <39 x i1> zeroinitializer
 }
 
 define <38 x i1> @bit38() {
@@ -6687,7 +6687,7 @@ define <38 x i1> @bit38() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+32], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+36], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <38 x i1> zeroinitializer
+        ret <38 x i1> zeroinitializer
 }
 
 define <37 x i1> @bit37() {
@@ -6708,7 +6708,7 @@ define <37 x i1> @bit37() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+32], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+36], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <37 x i1> zeroinitializer
+        ret <37 x i1> zeroinitializer
 }
 
 define <36 x i1> @bit36() {
@@ -6728,7 +6728,7 @@ define <36 x i1> @bit36() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+28], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+32], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <36 x i1> zeroinitializer
+        ret <36 x i1> zeroinitializer
 }
 
 define <35 x i1> @bit35() {
@@ -6749,7 +6749,7 @@ define <35 x i1> @bit35() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+32], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+34], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <35 x i1> zeroinitializer
+        ret <35 x i1> zeroinitializer
 }
 
 define <34 x i1> @bit34() {
@@ -6769,7 +6769,7 @@ define <34 x i1> @bit34() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+28], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+32], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <34 x i1> zeroinitializer
+        ret <34 x i1> zeroinitializer
 }
 
 define <33 x i1> @bit33() {
@@ -6789,7 +6789,7 @@ define <33 x i1> @bit33() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+28], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+32], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <33 x i1> zeroinitializer
+        ret <33 x i1> zeroinitializer
 }
 
 define <31 x i1> @bit31() {
@@ -6809,7 +6809,7 @@ define <31 x i1> @bit31() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+28], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+30], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <31 x i1> zeroinitializer
+        ret <31 x i1> zeroinitializer
 }
 
 define <30 x i1> @bit30() {
@@ -6828,7 +6828,7 @@ define <30 x i1> @bit30() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+24], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+28], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <30 x i1> zeroinitializer
+        ret <30 x i1> zeroinitializer
 }
 
 define <29 x i1> @bit29() {
@@ -6847,7 +6847,7 @@ define <29 x i1> @bit29() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+24], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+28], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <29 x i1> zeroinitializer
+        ret <29 x i1> zeroinitializer
 }
 
 define <28 x i1> @bit28() {
@@ -6865,7 +6865,7 @@ define <28 x i1> @bit28() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+20], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+24], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <28 x i1> zeroinitializer
+        ret <28 x i1> zeroinitializer
 }
 
 define <27 x i1> @bit27() {
@@ -6884,7 +6884,7 @@ define <27 x i1> @bit27() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+24], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+26], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <27 x i1> zeroinitializer
+        ret <27 x i1> zeroinitializer
 }
 
 define <26 x i1> @bit26() {
@@ -6902,7 +6902,7 @@ define <26 x i1> @bit26() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+20], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+24], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <26 x i1> zeroinitializer
+        ret <26 x i1> zeroinitializer
 }
 
 define <25 x i1> @bit25() {
@@ -6920,7 +6920,7 @@ define <25 x i1> @bit25() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+20], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+24], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <25 x i1> zeroinitializer
+        ret <25 x i1> zeroinitializer
 }
 
 define <24 x i1> @bit24() {
@@ -6937,7 +6937,7 @@ define <24 x i1> @bit24() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+20], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <24 x i1> zeroinitializer
+        ret <24 x i1> zeroinitializer
 }
 
 define <23 x i1> @bit23() {
@@ -6955,7 +6955,7 @@ define <23 x i1> @bit23() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+20], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+22], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <23 x i1> zeroinitializer
+        ret <23 x i1> zeroinitializer
 }
 
 define <22 x i1> @bit22() {
@@ -6972,7 +6972,7 @@ define <22 x i1> @bit22() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+20], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <22 x i1> zeroinitializer
+        ret <22 x i1> zeroinitializer
 }
 
 define <21 x i1> @bit21() {
@@ -6989,7 +6989,7 @@ define <21 x i1> @bit21() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+20], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <21 x i1> zeroinitializer
+        ret <21 x i1> zeroinitializer
 }
 
 define <20 x i1> @bit20() {
@@ -7005,7 +7005,7 @@ define <20 x i1> @bit20() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <20 x i1> zeroinitializer
+        ret <20 x i1> zeroinitializer
 }
 
 define <19 x i1> @bit19() {
@@ -7022,7 +7022,7 @@ define <19 x i1> @bit19() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+18], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <19 x i1> zeroinitializer
+        ret <19 x i1> zeroinitializer
 }
 
 define <18 x i1> @bit18() {
@@ -7038,7 +7038,7 @@ define <18 x i1> @bit18() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+16], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <18 x i1> zeroinitializer
+        ret <18 x i1> zeroinitializer
 }
 
 define <17 x i1> @bit17() {
@@ -7054,7 +7054,7 @@ define <17 x i1> @bit17() {
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+16], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <17 x i1> zeroinitializer
+        ret <17 x i1> zeroinitializer
 }
 
 define <15 x i1> @bit15() {
@@ -7073,7 +7073,7 @@ define <15 x i1> @bit15() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+14], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <15 x i1> zeroinitializer
+        ret <15 x i1> zeroinitializer
 }
 
 define <14 x i1> @bit14() {
@@ -7091,7 +7091,7 @@ define <14 x i1> @bit14() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+10], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <14 x i1> zeroinitializer
+        ret <14 x i1> zeroinitializer
 }
 
 define <13 x i1> @bit13() {
@@ -7109,7 +7109,7 @@ define <13 x i1> @bit13() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+10], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+12], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <13 x i1> zeroinitializer
+        ret <13 x i1> zeroinitializer
 }
 
 define <12 x i1> @bit12() {
@@ -7126,7 +7126,7 @@ define <12 x i1> @bit12() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+10], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <12 x i1> zeroinitializer
+        ret <12 x i1> zeroinitializer
 }
 
 define <11 x i1> @bit11() {
@@ -7143,7 +7143,7 @@ define <11 x i1> @bit11() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+10], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <11 x i1> zeroinitializer
+        ret <11 x i1> zeroinitializer
 }
 
 define <10 x i1> @bit10() {
@@ -7159,7 +7159,7 @@ define <10 x i1> @bit10() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {%rs1, %rs1};
 ; CHECK-NEXT:    ret;
-  ret <10 x i1> zeroinitializer
+        ret <10 x i1> zeroinitializer
 }
 
 define <9 x i1> @bit9() {
@@ -7175,7 +7175,7 @@ define <9 x i1> @bit9() {
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {%rs1, %rs1};
 ; CHECK-NEXT:    st.param.b8 [func_retval0+8], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <9 x i1> zeroinitializer
+        ret <9 x i1> zeroinitializer
 }
 
 define <7 x i1> @bit7() {
@@ -7193,7 +7193,7 @@ define <7 x i1> @bit7() {
 ; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rs1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <7 x i1> zeroinitializer
+        ret <7 x i1> zeroinitializer
 }
 
 define <6 x i1> @bit6() {
@@ -7210,7 +7210,7 @@ define <6 x i1> @bit6() {
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <6 x i1> zeroinitializer
+        ret <6 x i1> zeroinitializer
 }
 
 define <5 x i1> @bit5() {
@@ -7226,7 +7226,7 @@ define <5 x i1> @bit5() {
 ; CHECK-NEXT:    st.param.b8 [func_retval0+3], %rs1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <5 x i1> zeroinitializer
+        ret <5 x i1> zeroinitializer
 }
 
 define <3 x i1> @bit3() {
@@ -7240,7 +7240,7 @@ define <3 x i1> @bit3() {
 ; CHECK-NEXT:    st.param.b8 [func_retval0+1], %rs1;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+2], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <3 x i1> zeroinitializer
+        ret <3 x i1> zeroinitializer
 }
 
 define <1 x i1> @bit1() {
@@ -7252,5 +7252,5 @@ define <1 x i1> @bit1() {
 ; CHECK-NEXT:    mov.u16 %rs1, 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+0], %rs1;
 ; CHECK-NEXT:    ret;
-  ret <1 x i1> zeroinitializer
+        ret <1 x i1> zeroinitializer
 }
