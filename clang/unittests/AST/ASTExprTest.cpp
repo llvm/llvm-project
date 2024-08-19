@@ -108,3 +108,19 @@ TEST(ASTExpr, InitListIsConstantInitialized) {
   (void)FooInit->updateInit(Ctx, 2, Ref);
   EXPECT_FALSE(FooInit->isConstantInitializer(Ctx, false));
 }
+
+TEST(ASTExpr, CheckForUnsignedOverflowICE) {
+  auto AST = buildASTFromCode(R"cpp(
+    unsigned u = 1'000'000'000u * 8u;
+  )cpp");
+  ASTContext &Ctx = AST->getASTContext();
+  const VarDecl *Var = getVariableNode(AST.get(), "u");
+
+  const auto ICE = Var->getInit()->getIntegerConstantExpr(Ctx);
+  EXPECT_TRUE(ICE.has_value());
+  EXPECT_TRUE(ICE->isUnsigned());
+  EXPECT_EQ(3'705'032'704u, *ICE);
+
+  const auto ICEOverflowCheck = Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
+  EXPECT_FALSE(ICEOverflowCheck.has_value());
+}
