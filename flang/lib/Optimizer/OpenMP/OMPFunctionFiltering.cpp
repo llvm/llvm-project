@@ -13,7 +13,7 @@
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -21,16 +21,17 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace fir {
+namespace flangomp {
 #define GEN_PASS_DEF_OMPFUNCTIONFILTERING
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
+#include "flang/Optimizer/OpenMP/Passes.h.inc"
+} // namespace flangomp
 
 using namespace mlir;
 
 namespace {
 class OMPFunctionFilteringPass
-    : public fir::impl::OMPFunctionFilteringBase<OMPFunctionFilteringPass> {
+    : public flangomp::impl::OMPFunctionFilteringBase<
+          OMPFunctionFilteringPass> {
 public:
   OMPFunctionFilteringPass() = default;
 

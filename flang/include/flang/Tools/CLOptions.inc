@@ -18,6 +18,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include <type_traits>
@@ -358,10 +359,10 @@ inline void createHLFIRToFIRPassPipeline(
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
   addNestedPassToAllTopLevelOperations(
-      pm, fir::createOMPMapInfoFinalizationPass);
-  pm.addPass(fir::createOMPMarkDeclareTargetPass());
+      pm, flangomp::createOMPMapInfoFinalizationPass);
+  pm.addPass(flangomp::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
-    pm.addPass(fir::createOMPFunctionFiltering());
+    pm.addPass(flangomp::createOMPFunctionFiltering());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
