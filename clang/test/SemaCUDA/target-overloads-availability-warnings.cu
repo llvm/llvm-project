@@ -146,3 +146,54 @@ __attribute__((device)) void DeviceUser(void) {
   use(OverloadFunHostDepr());
   use(TemplateOverloadFun<int>());
 }
+
+
+// Template functions outside of classes:
+
+// This should use the non-deprecated device overload.
+template<int X> __attribute__((device))
+auto devicefun(void) -> typename my_enable_if<(X == OverloadFunHostDepr()), int>::type {
+  return 1;
+}
+
+// This should use the non-deprecated device overload.
+template<int X> __attribute__((device))
+auto devicefun(void) -> typename my_enable_if<(X != OverloadFunHostDepr()), int>::type {
+    return 0;
+}
+
+// This should use the deprecated device overload.
+template<int X> __attribute__((device))
+auto devicefun_wrong(void) -> typename my_enable_if<(X == OverloadFunDeviceDepr()), int>::type { // expected-warning {{'OverloadFunDeviceDepr' is deprecated: Device variant}}
+  return 1;
+}
+
+// This should use the deprecated device overload.
+template<int X> __attribute__((device))
+auto devicefun_wrong(void) -> typename my_enable_if<(X != OverloadFunDeviceDepr()), int>::type { // expected-warning {{'OverloadFunDeviceDepr' is deprecated: Device variant}}
+    return 0;
+}
+
+// This should use the non-deprecated host overload.
+template<int X> __attribute__((host))
+auto hostfun(void) -> typename my_enable_if<(X == OverloadFunDeviceDepr()), int>::type {
+  return 1;
+}
+
+// This should use the non-deprecated host overload.
+template<int X> __attribute__((host))
+auto hostfun(void) -> typename my_enable_if<(X != OverloadFunDeviceDepr()), int>::type {
+    return 0;
+}
+
+// This should use the deprecated host overload.
+template<int X> __attribute__((host))
+auto hostfun_wrong(void) -> typename my_enable_if<(X == OverloadFunHostDepr()), int>::type { // expected-warning {{'OverloadFunHostDepr' is deprecated: Host variant}}
+  return 1;
+}
+
+// This should use the deprecated host overload.
+template<int X> __attribute__((host))
+auto hostfun_wrong(void) -> typename my_enable_if<(X != OverloadFunHostDepr()), int>::type { // expected-warning {{'OverloadFunHostDepr' is deprecated: Host variant}}
+    return 0;
+}

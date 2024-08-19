@@ -2029,6 +2029,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
   // parsing c none objective-c decls.
   ObjCDeclContextSwitch ObjCDC(*this);
 
+  SemaCUDA::CUDATargetContextRAII CTCRAII(Actions.CUDA(),
+                                          SemaCUDA::CTCK_Declaration);
+  if (Actions.getLangOpts().CUDA) {
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(DeclAttrs);
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(DeclSpecAttrs);
+  }
+
   Decl *SingleDecl = nullptr;
   switch (Tok.getKind()) {
   case tok::kw_template:
