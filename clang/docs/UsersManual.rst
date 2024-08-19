@@ -1467,7 +1467,7 @@ floating point semantic models: precise (the default), strict, and fast.
   "except_behavior", "ignore", "strict", "ignore", "ignore"
   "fenv_access", "off", "on", "off", "off"
   "rounding_mode", "tonearest", "dynamic", "tonearest", "tonearest"
-  "contract", "on", "off", "fast-honor-pragmas", "fast-honor-pragmas"
+  "contract", "on", "off", "fast", "fast"
   "support_math_errno", "on", "on", "off", "off"
   "no_honor_nans", "off", "off", "off", "on"
   "no_honor_infinities", "off", "off", "off", "on"
@@ -1770,7 +1770,7 @@ for more details.
      top of the source file.
    * ``fast`` Behaves identically to specifying ``-funsafe-math-optimizations``,
      ``-fno-math-errno`` and ``-fcomplex-arithmetic=promoted``
-     ``ffp-contract=fast-honor-pragmas``
+     ``ffp-contract=fast``
    * ``aggressive`` Behaves identically to specifying both ``-ffast-math`` and
      ``ffp-contract=fast``
 

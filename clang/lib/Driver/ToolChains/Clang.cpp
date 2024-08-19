@@ -2935,12 +2935,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
-      FPContract = "fast";
       setComplexRange(LangOptions::ComplexRangeKind::CX_Basic);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
-      FPContract = "fast-honor-pragmas";
       setComplexRange(LangOptions::ComplexRangeKind::CX_Promoted);
     }
     MathErrno = false;
@@ -2951,6 +2949,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     TrappingMath = false;
     RoundingFPMath = false;
     FPExceptionBehavior = "";
+    FPContract = "fast";
     SeenUnsafeMathModeOption = true;
   };
 
