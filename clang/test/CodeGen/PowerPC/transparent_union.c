@@ -10,20 +10,20 @@
 // RUN:   -emit-llvm -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
 
 typedef union tu_c {
-	char a;
-	char b;
+  signed char a;
+  signed char b;
 } tu_c_t __attribute__((transparent_union));
 
 typedef union tu_s {
-	short a;
+  short a;
 } tu_s_t __attribute__((transparent_union));
 
 typedef union tu_us {
-	unsigned short a;
+  unsigned short a;
 } tu_us_t __attribute__((transparent_union));
 
 typedef union tu_l {
-	long a;
+  long a;
 } tu_l_t __attribute__((transparent_union));
 
 // CHECK-LABEL: define{{.*}} void @ftest0(
