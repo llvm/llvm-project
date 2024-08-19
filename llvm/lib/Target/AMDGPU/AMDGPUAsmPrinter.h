@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
+#include "AMDGPUMCResourceInfo.h"
 #include "SIProgramInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
@@ -41,7 +42,7 @@ private:
 
   AMDGPUResourceUsageAnalysis *ResourceUsage;
 
-  std::unique_ptr<MCResourceInfo> RI;
+  MCResourceInfo RI;
 
   SIProgramInfo CurrentProgramInfo;
 

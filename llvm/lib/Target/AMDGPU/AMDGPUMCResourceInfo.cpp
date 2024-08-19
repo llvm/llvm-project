@@ -21,8 +21,9 @@
 
 using namespace llvm;
 
-MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK) {
-  auto GOCS = [this, FuncName](StringRef Suffix) {
+MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
+                                    MCContext &OutContext) {
+  auto GOCS = [this, FuncName, &OutContext](StringRef Suffix) {
     return OutContext.getOrCreateSymbol(FuncName + Twine(Suffix));
   };
   switch (RIK) {
@@ -51,16 +52,16 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK) {
 const MCExpr *MCResourceInfo::getSymRefExpr(StringRef FuncName,
                                             ResourceInfoKind RIK,
                                             MCContext &Ctx) {
-  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK), Ctx);
+  return MCSymbolRefExpr::create(getSymbol(FuncName, RIK, Ctx), Ctx);
 }
 
-void MCResourceInfo::assignMaxRegs() {
+void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   // Assign expression to get the max register use to the max_num_Xgpr symbol.
-  MCSymbol *MaxVGPRSym = getMaxVGPRSymbol();
-  MCSymbol *MaxAGPRSym = getMaxAGPRSymbol();
-  MCSymbol *MaxSGPRSym = getMaxSGPRSymbol();
+  MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
+  MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
+  MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
 
-  auto assignMaxRegSym = [this](MCSymbol *Sym, int32_t RegCount) {
+  auto assignMaxRegSym = [this, &OutContext](MCSymbol *Sym, int32_t RegCount) {
     const MCExpr *MaxExpr = MCConstantExpr::create(RegCount, OutContext);
     Sym->setVariableValue(MaxExpr);
   };
@@ -70,28 +71,28 @@ void MCResourceInfo::assignMaxRegs() {
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
 }
 
-void MCResourceInfo::finalize() {
+void MCResourceInfo::finalize(MCContext &OutContext) {
   assert(!Finalized && "Cannot finalize ResourceInfo again.");
   Finalized = true;
-  assignMaxRegs();
+  assignMaxRegs(OutContext);
 }
 
-MCSymbol *MCResourceInfo::getMaxVGPRSymbol() {
+MCSymbol *MCResourceInfo::getMaxVGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("max_num_vgpr");
 }
 
-MCSymbol *MCResourceInfo::getMaxAGPRSymbol() {
+MCSymbol *MCResourceInfo::getMaxAGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("max_num_agpr");
 }
 
-MCSymbol *MCResourceInfo::getMaxSGPRSymbol() {
+MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("max_num_sgpr");
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
-    const MachineFunction &MF,
-    const SmallVectorImpl<const Function *> &Callees) {
+    const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
+    MCContext &OutContext) {
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
@@ -107,22 +108,23 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (Seen.contains(Callee))
         continue;
       Seen.insert(Callee);
-      MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK);
+      MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
       ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }
     SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
   }
-  MCSymbol *Sym = getSymbol(MF.getName(), RIK);
+  MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
   Sym->setVariableValue(SymVal);
 }
 
 void MCResourceInfo::gatherResourceInfo(
     const MachineFunction &MF,
-    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI) {
+    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+    MCContext &OutContext) {
   // Worst case VGPR use for non-hardware-entrypoints.
-  MCSymbol *MaxVGPRSym = getMaxVGPRSymbol();
-  MCSymbol *MaxAGPRSym = getMaxAGPRSymbol();
-  MCSymbol *MaxSGPRSym = getMaxSGPRSymbol();
+  MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
+  MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
+  MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
 
   if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
     addMaxVGPRCandidate(FRI.NumVGPR);
@@ -134,10 +136,10 @@ void MCResourceInfo::gatherResourceInfo(
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
       assignResourceInfoExpr(numRegs, RIK, AMDGPUMCExpr::AGVK_Max, MF,
-                             FRI.Callees);
+                             FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym = getSymbol(MF.getName(), RIK);
+      MCSymbol *LocalNumSym = getSymbol(MF.getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -159,7 +161,7 @@ void MCResourceInfo::gatherResourceInfo(
     if (!FRI.HasIndirectCall) {
       for (const Function *Callee : FRI.Callees) {
         MCSymbol *calleeValSym =
-            getSymbol(Callee->getName(), RIK_PrivateSegSize);
+            getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
         ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));
       }
     }
@@ -171,29 +173,29 @@ void MCResourceInfo::gatherResourceInfo(
       localConstExpr =
           MCBinaryExpr::createAdd(localConstExpr, transitiveExpr, OutContext);
     }
-    getSymbol(MF.getName(), RIK_PrivateSegSize)
+    getSymbol(MF.getName(), RIK_PrivateSegSize, OutContext)
         ->setVariableValue(localConstExpr);
   }
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(MF.getName(), RIK);
+    MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
     Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 
   if (!FRI.HasIndirectCall) {
     assignResourceInfoExpr(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC,
-                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
     assignResourceInfoExpr(FRI.UsesFlatScratch,
                            ResourceInfoKind::RIK_UsesFlatScratch,
-                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
     assignResourceInfoExpr(FRI.HasDynamicallySizedStack,
                            ResourceInfoKind::RIK_HasDynSizedStack,
-                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
     assignResourceInfoExpr(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion,
-                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
     assignResourceInfoExpr(FRI.HasIndirectCall,
                            ResourceInfoKind::RIK_HasIndirectCall,
-                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees);
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
   } else {
     SetToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
     SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);

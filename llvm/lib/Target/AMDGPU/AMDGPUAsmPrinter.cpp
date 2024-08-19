@@ -93,7 +93,6 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
-  RI = std::make_unique<MCResourceInfo>(OutContext);
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -380,7 +379,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
   MCSymbol *ScratchSizeSymbol =
-      RI->getSymbol(F.getName(), RIK::RIK_PrivateSegSize);
+      RI.getSymbol(F.getName(), RIK::RIK_PrivateSegSize, OutContext);
   uint64_t ScratchSize;
   if (ScratchSizeSymbol->isVariable() &&
       TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
@@ -392,7 +391,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
 
   // Validate addressable scalar registers (i.e., prior to added implicit
   // SGPRs).
-  MCSymbol *NumSGPRSymbol = RI->getSymbol(F.getName(), RIK::RIK_NumSGPR);
+  MCSymbol *NumSGPRSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_NumSGPR, OutContext);
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
@@ -408,9 +408,10 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     }
   }
 
-  MCSymbol *VCCUsedSymbol = RI->getSymbol(F.getName(), RIK::RIK_UsesVCC);
+  MCSymbol *VCCUsedSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_UsesVCC, OutContext);
   MCSymbol *FlatUsedSymbol =
-      RI->getSymbol(F.getName(), RIK::RIK_UsesFlatScratch);
+      RI.getSymbol(F.getName(), RIK::RIK_UsesFlatScratch, OutContext);
   uint64_t VCCUsed, FlatUsed, NumSgpr;
 
   if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
@@ -471,9 +472,10 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
 
   // Assign expressions which can only be resolved when all other functions are
   // known.
-  RI->finalize();
-  getTargetStreamer()->EmitMCResourceMaximums(
-      RI->getMaxVGPRSymbol(), RI->getMaxAGPRSymbol(), RI->getMaxSGPRSymbol());
+  RI.finalize(OutContext);
+  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
+                                              RI.getMaxAGPRSymbol(OutContext),
+                                              RI.getMaxSGPRSymbol(OutContext));
 
   for (Function &F : M.functions())
     validateMCResourceInfo(F);
@@ -632,7 +634,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
       ResourceUsage->getResourceInfo();
-  RI->gatherResourceInfo(MF, Info);
+  RI.gatherResourceInfo(MF, Info, OutContext);
 
   if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
@@ -668,15 +670,15 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   {
     using RIK = MCResourceInfo::ResourceInfoKind;
     getTargetStreamer()->EmitMCResourceInfo(
-        RI->getSymbol(MF.getName(), RIK::RIK_NumVGPR),
-        RI->getSymbol(MF.getName(), RIK::RIK_NumAGPR),
-        RI->getSymbol(MF.getName(), RIK::RIK_NumSGPR),
-        RI->getSymbol(MF.getName(), RIK::RIK_PrivateSegSize),
-        RI->getSymbol(MF.getName(), RIK::RIK_UsesVCC),
-        RI->getSymbol(MF.getName(), RIK::RIK_UsesFlatScratch),
-        RI->getSymbol(MF.getName(), RIK::RIK_HasDynSizedStack),
-        RI->getSymbol(MF.getName(), RIK::RIK_HasRecursion),
-        RI->getSymbol(MF.getName(), RIK::RIK_HasIndirectCall));
+        RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_NumSGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_UsesVCC, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_UsesFlatScratch, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasDynSizedStack, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasRecursion, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasIndirectCall, OutContext));
   }
 
   if (isVerbose()) {
@@ -689,16 +691,18 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" Function info:", false);
 
       emitCommonFunctionComments(
-          RI->getSymbol(MF.getName(), RIK::RIK_NumVGPR)->getVariableValue(),
-          STM.hasMAIInsts() ? RI->getSymbol(MF.getName(), RIK::RIK_NumAGPR)
-                                  ->getVariableValue()
-                            : nullptr,
-          RI->createTotalNumVGPRs(MF, Ctx),
-          RI->createTotalNumSGPRs(
+          RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext)
+              ->getVariableValue(),
+          STM.hasMAIInsts()
+              ? RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext)
+                    ->getVariableValue()
+              : nullptr,
+          RI.createTotalNumVGPRs(MF, Ctx),
+          RI.createTotalNumSGPRs(
               MF,
               MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
               Ctx),
-          RI->getSymbol(MF.getName(), RIK::RIK_PrivateSegSize)
+          RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext)
               ->getVariableValue(),
           getFunctionCodeSize(MF), MFI);
       return false;
@@ -904,7 +908,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   auto GetSymRefExpr =
       [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
-    MCSymbol *Sym = RI->getSymbol(MF.getName(), RIK);
+    MCSymbol *Sym = RI.getSymbol(MF.getName(), RIK, OutContext);
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
