@@ -1491,6 +1491,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // unary-expression: '__datasizeof' unary-expression
   // unary-expression: '__datasizeof' '(' type-name ')'
   case tok::kw___datasizeof:
+  //unary-experssion: The `nameof` operator takes an enum value as input and returns the fully qualified name of the enum and its value.
   case tok::kw___nameof:
   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
@@ -2614,7 +2615,7 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     ExprKind = UETT_DataSizeOf;
     break;
   case tok::kw___nameof:
-    ExprKind = UETT_nameof;
+    ExprKind = UETT_NameOf;
     break;
   case tok::kw___builtin_vectorelements:
     ExprKind = UETT_VectorElements;

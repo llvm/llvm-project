@@ -20149,7 +20149,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
     const llvm::APSInt &InitVal = ECD->getInitVal();
 
-    enumvector.push_back(ECD->getName().str());
     // Keep track of the size of positive and negative values.
     if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
       // If the enumerator is zero that should still be counted as a positive
