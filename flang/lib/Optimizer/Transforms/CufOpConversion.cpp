@@ -28,7 +28,7 @@ namespace fir {
 using namespace fir;
 using namespace mlir;
 using namespace Fortran::runtime;
-using namespace Fortran::runtime::cuf;
+using namespace Fortran::runtime::cuda;
 
 namespace {
 
@@ -79,11 +79,11 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
 }
 
 struct CufAllocateOpConversion
-    : public mlir::OpRewritePattern<::cuf::AllocateOp> {
+    : public mlir::OpRewritePattern<cuf::AllocateOp> {
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(::cuf::AllocateOp op,
+  matchAndRewrite(cuf::AllocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
     // TODO: Allocation with source will need a new entry point in the runtime.
     if (op.getSource())
@@ -112,16 +112,16 @@ struct CufAllocateOpConversion
     mlir::func::FuncOp func =
         fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
                                                                    builder);
-    return convertOpToCall<::cuf::AllocateOp>(op, rewriter, func);
+    return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
   }
 };
 
 struct CufDeallocateOpConversion
-    : public mlir::OpRewritePattern<::cuf::DeallocateOp> {
+    : public mlir::OpRewritePattern<cuf::DeallocateOp> {
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(::cuf::DeallocateOp op,
+  matchAndRewrite(cuf::DeallocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
     // TODO: Allocation of module variable will need more work as the descriptor
     // will be duplicated and needs to be synced after allocation.
@@ -137,11 +137,25 @@ struct CufDeallocateOpConversion
     mlir::func::FuncOp func =
         fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(loc,
                                                                      builder);
-    return convertOpToCall<::cuf::DeallocateOp>(op, rewriter, func);
+    return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
   }
 };
 
-struct CufAllocOpConversion : public mlir::OpRewritePattern<::cuf::AllocOp> {
+static bool inDeviceContext(mlir::Operation *op) {
+  if (op->getParentOfType<cuf::KernelOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
+  return false;
+}
+
+struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
   CufAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
@@ -149,13 +163,23 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<::cuf::AllocOp> {
       : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter} {}
 
   mlir::LogicalResult
-  matchAndRewrite(::cuf::AllocOp op,
+  matchAndRewrite(cuf::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(op.getInType());
 
     // Only convert cuf.alloc that allocates a descriptor.
     if (!boxTy)
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      // In device context just replace the cuf.alloc operation with a fir.alloc
+      // the cuf.free will be removed.
+      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
+          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+          op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
+          op.getShape());
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -187,11 +211,11 @@ private:
   fir::LLVMTypeConverter *typeConverter;
 };
 
-struct CufFreeOpConversion : public mlir::OpRewritePattern<::cuf::FreeOp> {
+struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(::cuf::FreeOp op,
+  matchAndRewrite(cuf::FreeOp op,
                   mlir::PatternRewriter &rewriter) const override {
     // Only convert cuf.free on descriptor.
     if (!mlir::isa<fir::ReferenceType>(op.getDevptr().getType()))
@@ -199,6 +223,11 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<::cuf::FreeOp> {
     auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getDevptr().getType());
     if (!mlir::isa<fir::BaseBoxType>(refTy.getEleTy()))
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -234,9 +263,21 @@ public:
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-
-    target.addIllegalOp<::cuf::AllocOp, ::cuf::AllocateOp, ::cuf::DeallocateOp,
-                        ::cuf::FreeOp>();
+    target.addDynamicallyLegalOp<cuf::AllocOp>([](::cuf::AllocOp op) {
+      return !mlir::isa<fir::BaseBoxType>(op.getInType());
+    });
+    target.addDynamicallyLegalOp<cuf::FreeOp>([](::cuf::FreeOp op) {
+      if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(
+              op.getDevptr().getType())) {
+        return !mlir::isa<fir::BaseBoxType>(refTy.getEleTy());
+      }
+      return true;
+    });
+    target.addDynamicallyLegalOp<cuf::AllocateOp>(
+        [](::cuf::AllocateOp op) { return isBoxGlobal(op); });
+    target.addDynamicallyLegalOp<cuf::DeallocateOp>(
+        [](::cuf::DeallocateOp op) { return isBoxGlobal(op); });
+    target.addLegalDialect<fir::FIROpsDialect>();
     patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
     patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                     CufFreeOpConversion>(ctx);

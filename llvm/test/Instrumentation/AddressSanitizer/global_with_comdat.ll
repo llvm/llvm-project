@@ -4,12 +4,12 @@
 ; We keep using comdats for garbage collection if odr indicators are
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
-; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
+; RUN: rm -rf %t && split-file %s %t
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 
-; RUN: opt < no_module_id.ll -passes=asan -S | FileCheck %s --check-prefix=NOMODULEID
+; RUN: opt < %t/no_module_id.ll -passes=asan -S | FileCheck %s --check-prefix=NOMODULEID
 
 ;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

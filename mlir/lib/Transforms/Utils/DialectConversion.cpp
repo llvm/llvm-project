@@ -2348,24 +2348,22 @@ private:
   legalizeConvertedArgumentTypes(ConversionPatternRewriter &rewriter,
                                  ConversionPatternRewriterImpl &rewriterImpl);
 
+  /// Legalize the types of converted op results.
+  LogicalResult legalizeConvertedOpResultTypes(
+      ConversionPatternRewriter &rewriter,
+      ConversionPatternRewriterImpl &rewriterImpl,
+      DenseMap<Value, SmallVector<Value>> &inverseMapping);
+
   /// Legalize any unresolved type materializations.
   LogicalResult legalizeUnresolvedMaterializations(
       ConversionPatternRewriter &rewriter,
       ConversionPatternRewriterImpl &rewriterImpl,
-      std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping);
+      DenseMap<Value, SmallVector<Value>> &inverseMapping);
 
   /// Legalize an operation result that was marked as "erased".
   LogicalResult
   legalizeErasedResult(Operation *op, OpResult result,
                        ConversionPatternRewriterImpl &rewriterImpl);
-
-  /// Legalize an operation result that was replaced with a value of a different
-  /// type.
-  LogicalResult legalizeChangedResultType(
-      Operation *op, OpResult result, Value newValue,
-      const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
-      ConversionPatternRewriterImpl &rewriterImpl,
-      const DenseMap<Value, SmallVector<Value>> &inverseMapping);
 
   /// Dialect conversion configuration.
   ConversionConfig config;
@@ -2454,13 +2452,47 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
 
 LogicalResult
 OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
-  std::optional<DenseMap<Value, SmallVector<Value>>> inverseMapping;
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
-  if (failed(legalizeConvertedArgumentTypes(rewriter, rewriterImpl)) ||
-      failed(legalizeUnresolvedMaterializations(rewriter, rewriterImpl,
+  if (failed(legalizeConvertedArgumentTypes(rewriter, rewriterImpl)))
+    return failure();
+  DenseMap<Value, SmallVector<Value>> inverseMapping =
+      rewriterImpl.mapping.getInverse();
+  if (failed(legalizeConvertedOpResultTypes(rewriter, rewriterImpl,
+                                            inverseMapping)))
+    return failure();
+  if (failed(legalizeUnresolvedMaterializations(rewriter, rewriterImpl,
                                                 inverseMapping)))
     return failure();
+  return success();
+}
 
+/// Finds a user of the given value, or of any other value that the given value
+/// replaced, that was not replaced in the conversion process.
+static Operation *findLiveUserOfReplaced(
+    Value initialValue, ConversionPatternRewriterImpl &rewriterImpl,
+    const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
+  SmallVector<Value> worklist = {initialValue};
+  while (!worklist.empty()) {
+    Value value = worklist.pop_back_val();
+
+    // Walk the users of this value to see if there are any live users that
+    // weren't replaced during conversion.
+    auto liveUserIt = llvm::find_if_not(value.getUsers(), [&](Operation *user) {
+      return rewriterImpl.isOpIgnored(user);
+    });
+    if (liveUserIt != value.user_end())
+      return *liveUserIt;
+    auto mapIt = inverseMapping.find(value);
+    if (mapIt != inverseMapping.end())
+      worklist.append(mapIt->second);
+  }
+  return nullptr;
+}
+
+LogicalResult OperationConverter::legalizeConvertedOpResultTypes(
+    ConversionPatternRewriter &rewriter,
+    ConversionPatternRewriterImpl &rewriterImpl,
+    DenseMap<Value, SmallVector<Value>> &inverseMapping) {
   // Process requested operation replacements.
   for (unsigned i = 0; i < rewriterImpl.rewrites.size(); ++i) {
     auto *opReplacement =
@@ -2483,18 +2515,21 @@ OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
       if (result.getType() == newValue.getType())
         continue;
 
-      // Compute the inverse mapping only if it is really needed.
-      if (!inverseMapping)
-        inverseMapping = rewriterImpl.mapping.getInverse();
+      Operation *liveUser =
+          findLiveUserOfReplaced(result, rewriterImpl, inverseMapping);
+      if (!liveUser)
+        continue;
 
       // Legalize this result.
-      rewriter.setInsertionPoint(op);
-      if (failed(legalizeChangedResultType(
-              op, result, newValue, opReplacement->getConverter(), rewriter,
-              rewriterImpl, *inverseMapping)))
-        return failure();
+      Value castValue = rewriterImpl.buildUnresolvedMaterialization(
+          MaterializationKind::Source, computeInsertPoint(result), op->getLoc(),
+          /*inputs=*/newValue, /*outputType=*/result.getType(),
+          opReplacement->getConverter());
+      rewriterImpl.mapping.map(result, castValue);
+      inverseMapping[castValue].push_back(result);
     }
   }
+
   return success();
 }
 
@@ -2503,6 +2538,8 @@ LogicalResult OperationConverter::legalizeConvertedArgumentTypes(
     ConversionPatternRewriterImpl &rewriterImpl) {
   // Functor used to check if all users of a value will be dead after
   // conversion.
+  // TODO: This should probably query the inverse mapping, same as in
+  // `legalizeConvertedOpResultTypes`.
   auto findLiveUser = [&](Value val) {
     auto liveUserIt = llvm::find_if_not(val.getUsers(), [&](Operation *user) {
       return rewriterImpl.isOpIgnored(user);
@@ -2643,7 +2680,7 @@ static void computeNecessaryMaterializations(
       if (!castOp)
         continue;
       if (castOp->getResultTypes() == inputOperands.getTypes()) {
-        replaceMaterialization(rewriterImpl, opResult, inputOperands,
+        replaceMaterialization(rewriterImpl, user->getResults(), inputOperands,
                                inverseMapping);
         necessaryMaterializations.remove(materializationOps.lookup(user));
       }
@@ -2796,20 +2833,18 @@ static LogicalResult legalizeUnresolvedMaterialization(
 LogicalResult OperationConverter::legalizeUnresolvedMaterializations(
     ConversionPatternRewriter &rewriter,
     ConversionPatternRewriterImpl &rewriterImpl,
-    std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping) {
-  inverseMapping = rewriterImpl.mapping.getInverse();
-
+    DenseMap<Value, SmallVector<Value>> &inverseMapping) {
   // As an initial step, compute all of the inserted materializations that we
   // expect to persist beyond the conversion process.
   DenseMap<Operation *, UnresolvedMaterializationRewrite *> materializationOps;
   SetVector<UnresolvedMaterializationRewrite *> necessaryMaterializations;
   computeNecessaryMaterializations(materializationOps, rewriter, rewriterImpl,
-                                   *inverseMapping, necessaryMaterializations);
+                                   inverseMapping, necessaryMaterializations);
 
   // Once computed, legalize any necessary materializations.
   for (auto *mat : necessaryMaterializations) {
     if (failed(legalizeUnresolvedMaterialization(
-            *mat, materializationOps, rewriter, rewriterImpl, *inverseMapping)))
+            *mat, materializationOps, rewriter, rewriterImpl, inverseMapping)))
       return failure();
   }
   return success();
@@ -2831,67 +2866,6 @@ LogicalResult OperationConverter::legalizeErasedResult(
         << *liveUserIt;
     return failure();
   }
-  return success();
-}
-
-/// Finds a user of the given value, or of any other value that the given value
-/// replaced, that was not replaced in the conversion process.
-static Operation *findLiveUserOfReplaced(
-    Value initialValue, ConversionPatternRewriterImpl &rewriterImpl,
-    const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  SmallVector<Value> worklist(1, initialValue);
-  while (!worklist.empty()) {
-    Value value = worklist.pop_back_val();
-
-    // Walk the users of this value to see if there are any live users that
-    // weren't replaced during conversion.
-    auto liveUserIt = llvm::find_if_not(value.getUsers(), [&](Operation *user) {
-      return rewriterImpl.isOpIgnored(user);
-    });
-    if (liveUserIt != value.user_end())
-      return *liveUserIt;
-    auto mapIt = inverseMapping.find(value);
-    if (mapIt != inverseMapping.end())
-      worklist.append(mapIt->second);
-  }
-  return nullptr;
-}
-
-LogicalResult OperationConverter::legalizeChangedResultType(
-    Operation *op, OpResult result, Value newValue,
-    const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl,
-    const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  Operation *liveUser =
-      findLiveUserOfReplaced(result, rewriterImpl, inverseMapping);
-  if (!liveUser)
-    return success();
-
-  // Functor used to emit a conversion error for a failed materialization.
-  auto emitConversionError = [&] {
-    InFlightDiagnostic diag = op->emitError()
-                              << "failed to materialize conversion for result #"
-                              << result.getResultNumber() << " of operation '"
-                              << op->getName()
-                              << "' that remained live after conversion";
-    diag.attachNote(liveUser->getLoc())
-        << "see existing live user here: " << *liveUser;
-    return failure();
-  };
-
-  // If the replacement has a type converter, attempt to materialize a
-  // conversion back to the original type.
-  if (!replConverter)
-    return emitConversionError();
-
-  // Materialize a conversion for this live result value.
-  Type resultType = result.getType();
-  Value convertedValue = replConverter->materializeSourceConversion(
-      rewriter, op->getLoc(), resultType, newValue);
-  if (!convertedValue)
-    return emitConversionError();
-
-  rewriterImpl.mapping.map(result, convertedValue);
   return success();
 }
 

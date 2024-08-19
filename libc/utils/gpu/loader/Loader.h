@@ -85,7 +85,7 @@ void *copy_argument_vector(int argc, const char **argv, Allocator alloc) {
   }
 
   // Ensure the vector is null terminated.
-  reinterpret_cast<void **>(dev_argv)[argc + 1] = nullptr;
+  reinterpret_cast<void **>(dev_argv)[argc] = nullptr;
   return dev_argv;
 }
 

@@ -17,7 +17,6 @@
 
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
 
 namespace llvm {

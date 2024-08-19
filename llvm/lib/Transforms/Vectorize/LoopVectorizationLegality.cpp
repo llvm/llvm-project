@@ -18,6 +18,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1340,12 +1341,21 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   // Collect the blocks that need predication.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    // We don't support switch statements inside loops.
-    if (!isa<BranchInst>(BB->getTerminator())) {
-      reportVectorizationFailure("Loop contains a switch statement",
-                                 "loop contains a switch statement",
-                                 "LoopContainsSwitch", ORE, TheLoop,
-                                 BB->getTerminator());
+    // We support only branches and switch statements as terminators inside the
+    // loop.
+    if (isa<SwitchInst>(BB->getTerminator())) {
+      if (TheLoop->isLoopExiting(BB)) {
+        reportVectorizationFailure("Loop contains an unsupported switch",
+                                   "loop contains an unsupported switch",
+                                   "LoopContainsUnsupportedSwitch", ORE,
+                                   TheLoop, BB->getTerminator());
+        return false;
+      }
+    } else if (!isa<BranchInst>(BB->getTerminator())) {
+      reportVectorizationFailure("Loop contains an unsupported terminator",
+                                 "loop contains an unsupported terminator",
+                                 "LoopContainsUnsupportedTerminator", ORE,
+                                 TheLoop, BB->getTerminator());
       return false;
     }
 

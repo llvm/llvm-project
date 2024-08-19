@@ -32,17 +32,36 @@ using namespace llvm;
 namespace {
 // A list of supported preprocessing directives with their
 // internal token kinds and names.
-struct {
+struct PreprocessorDir {
   tgtok::TokKind Kind;
-  const char *Word;
-} PreprocessorDirs[] = {
-  { tgtok::Ifdef, "ifdef" },
-  { tgtok::Ifndef, "ifndef" },
-  { tgtok::Else, "else" },
-  { tgtok::Endif, "endif" },
-  { tgtok::Define, "define" }
+  StringRef Word;
 };
 } // end anonymous namespace
+
+constexpr PreprocessorDir PreprocessorDirs[] = {{tgtok::Ifdef, "ifdef"},
+                                                {tgtok::Ifndef, "ifndef"},
+                                                {tgtok::Else, "else"},
+                                                {tgtok::Endif, "endif"},
+                                                {tgtok::Define, "define"}};
+
+// Returns a pointer past the end of a valid macro name at the start of `Str`.
+// Valid macro names match the regular expression [a-zA-Z_][0-9a-zA-Z_]*.
+static const char *lexMacroName(StringRef Str) {
+  assert(!Str.empty());
+
+  // Macro names start with [a-zA-Z_].
+  const char *Next = Str.begin();
+  if (*Next != '_' && !isalpha(*Next))
+    return Next;
+  // Eat the first character of the name.
+  ++Next;
+
+  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
+  const char *End = Str.end();
+  while (Next != End && (isalpha(*Next) || isdigit(*Next) || *Next == '_'))
+    ++Next;
+  return Next;
+}
 
 TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   CurBuffer = SrcMgr.getMainFileID();
@@ -54,9 +73,16 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   PrepIncludeStack.push_back(
       std::make_unique<std::vector<PreprocessorControlDesc>>());
 
-  // Put all macros defined in the command line into the DefinedMacros set.
-  for (const std::string &MacroName : Macros)
+  // Add all macros defined on the command line to the DefinedMacros set.
+  // Check invalid macro names and print fatal error if we find one.
+  for (StringRef MacroName : Macros) {
+    const char *End = lexMacroName(MacroName);
+    if (End != MacroName.end())
+      PrintFatalError("Invalid macro name `" + MacroName +
+                      "` specified on command line");
+
     DefinedMacros.insert(MacroName);
+  }
 }
 
 SMLoc TGLexer::getLoc() const {
@@ -641,54 +667,43 @@ bool TGLexer::prepExitInclude(bool IncludeStackMustBeEmpty) {
 }
 
 tgtok::TokKind TGLexer::prepIsDirective() const {
-  for (const auto &PD : PreprocessorDirs) {
-    int NextChar = *CurPtr;
-    bool Match = true;
-    unsigned I = 0;
-    for (; I < strlen(PD.Word); ++I) {
-      if (NextChar != PD.Word[I]) {
-        Match = false;
-        break;
-      }
+  for (const auto [Kind, Word] : PreprocessorDirs) {
+    if (StringRef(CurPtr, Word.size()) != Word)
+      continue;
+    int NextChar = peekNextChar(Word.size());
 
-      NextChar = peekNextChar(I + 1);
-    }
-
-    // Check for whitespace after the directive.  If there is no whitespace,
+    // Check for whitespace after the directive. If there is no whitespace,
     // then we do not recognize it as a preprocessing directive.
-    if (Match) {
-      tgtok::TokKind Kind = PD.Kind;
 
-      // New line and EOF may follow only #else/#endif.  It will be reported
-      // as an error for #ifdef/#define after the call to prepLexMacroName().
-      if (NextChar == ' ' || NextChar == '\t' || NextChar == EOF ||
-          NextChar == '\n' ||
-          // It looks like TableGen does not support '\r' as the actual
-          // carriage return, e.g. getNextChar() treats a single '\r'
-          // as '\n'.  So we do the same here.
-          NextChar == '\r')
+    // New line and EOF may follow only #else/#endif. It will be reported
+    // as an error for #ifdef/#define after the call to prepLexMacroName().
+    if (NextChar == ' ' || NextChar == '\t' || NextChar == EOF ||
+        NextChar == '\n' ||
+        // It looks like TableGen does not support '\r' as the actual
+        // carriage return, e.g. getNextChar() treats a single '\r'
+        // as '\n'.  So we do the same here.
+        NextChar == '\r')
+      return Kind;
+
+    // Allow comments after some directives, e.g.:
+    //     #else// OR #else/**/
+    //     #endif// OR #endif/**/
+    //
+    // Note that we do allow comments after #ifdef/#define here, e.g.
+    //     #ifdef/**/ AND #ifdef//
+    //     #define/**/ AND #define//
+    //
+    // These cases will be reported as incorrect after calling
+    // prepLexMacroName().  We could have supported C-style comments
+    // after #ifdef/#define, but this would complicate the code
+    // for little benefit.
+    if (NextChar == '/') {
+      NextChar = peekNextChar(Word.size() + 1);
+
+      if (NextChar == '*' || NextChar == '/')
         return Kind;
 
-      // Allow comments after some directives, e.g.:
-      //     #else// OR #else/**/
-      //     #endif// OR #endif/**/
-      //
-      // Note that we do allow comments after #ifdef/#define here, e.g.
-      //     #ifdef/**/ AND #ifdef//
-      //     #define/**/ AND #define//
-      //
-      // These cases will be reported as incorrect after calling
-      // prepLexMacroName().  We could have supported C-style comments
-      // after #ifdef/#define, but this would complicate the code
-      // for little benefit.
-      if (NextChar == '/') {
-        NextChar = peekNextChar(I + 1);
-
-        if (NextChar == '*' || NextChar == '/')
-          return Kind;
-
-        // Pretend that we do not recognize the directive.
-      }
+      // Pretend that we do not recognize the directive.
     }
   }
 
@@ -698,10 +713,10 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
 bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   TokStart = CurPtr;
 
-  for (const auto &PD : PreprocessorDirs)
-    if (PD.Kind == Kind) {
+  for (const auto [PKind, PWord] : PreprocessorDirs)
+    if (PKind == Kind) {
       // Advance CurPtr to the end of the preprocessing word.
-      CurPtr += strlen(PD.Word);
+      CurPtr += PWord.size();
       return true;
     }
 
@@ -710,9 +725,8 @@ bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   return false;
 }
 
-tgtok::TokKind TGLexer::lexPreprocessor(
-    tgtok::TokKind Kind, bool ReturnNextLiveToken) {
-
+tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
+                                        bool ReturnNextLiveToken) {
   // We must be looking at a preprocessing directive.  Eat it!
   if (!prepEatPreprocessorDirective(Kind))
     PrintFatalError("lexPreprocessor() called for unknown "
@@ -912,14 +926,7 @@ StringRef TGLexer::prepLexMacroName() {
     ++CurPtr;
 
   TokStart = CurPtr;
-  // Macro names start with [a-zA-Z_].
-  if (*CurPtr != '_' && !isalpha(*CurPtr))
-    return "";
-
-  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
-  while (isalpha(*CurPtr) || isdigit(*CurPtr) || *CurPtr == '_')
-    ++CurPtr;
-
+  CurPtr = lexMacroName(StringRef(CurPtr, CurBuf.end() - CurPtr));
   return StringRef(TokStart, CurPtr - TokStart);
 }
 

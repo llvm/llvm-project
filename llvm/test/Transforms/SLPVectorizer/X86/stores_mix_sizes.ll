@@ -5,17 +5,9 @@ define void @test(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 0, ptr [[IDX1]], align 4
 ; CHECK-NEXT:    [[IDX_64_9:%.*]] = getelementptr i64, ptr [[P]], i64 9
 ; CHECK-NEXT:    store i64 1, ptr [[IDX_64_9]], align 8
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[IDX2]], align 4
-; CHECK-NEXT:    [[IDX6:%.*]] = getelementptr i8, ptr [[P]], i64 6
-; CHECK-NEXT:    store i8 0, ptr [[IDX6]], align 4
-; CHECK-NEXT:    [[IDX7:%.*]] = getelementptr i8, ptr [[P]], i64 7
-; CHECK-NEXT:    store i8 0, ptr [[IDX7]], align 4
-; CHECK-NEXT:    [[IDX8:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store i8 0, ptr [[IDX8]], align 4
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr [[IDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   entry:
