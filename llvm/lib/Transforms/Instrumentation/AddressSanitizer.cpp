@@ -2538,8 +2538,6 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
   SmallVector<GlobalVariable *, 16> NewGlobals(n);
   SmallVector<Constant *, 16> Initializers(n);
 
-  bool HasDynamicallyInitializedGlobals = false;
-
   for (size_t i = 0; i < n; i++) {
     GlobalVariable *G = GlobalsToChange[i];
 
@@ -2645,9 +2643,6 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
         Constant::getNullValue(IntptrTy),
         ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
 
-    if (ClInitializers && MD.IsDynInit)
-      HasDynamicallyInitializedGlobals = true;
-
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
     Initializers[i] = Initializer;
@@ -2686,7 +2681,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
   }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
-  if (HasDynamicallyInitializedGlobals)
+  if (ClInitializers)
     createInitializerPoisonCalls();
 
   LLVM_DEBUG(dbgs() << M);
