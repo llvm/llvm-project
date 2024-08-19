@@ -17,7 +17,7 @@
 
 #include "omptarget.h"
 
-#include "llvm/Frontend/Offloading/AMDGPU/ObjectUtilities.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 
 namespace llvm {
 namespace omp {
@@ -44,15 +44,13 @@ struct AMDGPUImplicitArgsTyCOV4 {
   uint8_t Unused[56];
 };
 
+/// Returns the size in bytes of the implicit arguments of AMDGPU kernels.
+/// `Version` is the ELF ABI version, e.g. COV5.
 inline uint32_t getImplicitArgsSize(uint16_t Version) {
   return Version < ELF::ELFABIVERSION_AMDGPU_HSA_V5
              ? sizeof(AMDGPUImplicitArgsTyCOV4)
              : sizeof(AMDGPUImplicitArgsTy);
 }
-
-/// Returns the size in bytes of the implicit arguments of AMDGPU kernels.
-/// `Version` is the ELF ABI version, e.g. COV5.
-uint32_t getImplicitArgsSize(uint16_t Version);
 
 /// Reads the AMDGPU specific metadata from the ELF file and propagates the
 /// KernelInfoMap
