@@ -90,8 +90,8 @@ INSTANTIATE_TEST_SUITE_P(PrmitiveSpecifiers,
                          ::testing::Values('i', 'f', 'v'));
 
 TEST_P(DataLayoutPrimitiveSpecificationTest, ParsePrimitiveSpec) {
-  for (StringRef Str : {"!1:16", "!8:8:8", "!16:32:64", "!16777215:8:0",
-                        "!16777215:32768:32768"})
+  for (StringRef Str :
+       {"!1:16", "!8:8:8", "!16:32:64", "!16777215:32768:32768"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(format(Str)), Succeeded());
 
   for (StringRef Str : {"!", "!1", "!32:32:32:32", "!16:32:64:128"})
@@ -143,13 +143,18 @@ TEST_P(DataLayoutPrimitiveSpecificationTest, ParsePrimitiveSpec) {
         DataLayout::parse(format(Str)),
         FailedWithMessage("preferred alignment must be a 16-bit integer"));
 
+  for (StringRef Str : {"!8:8:0", "!32:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(format(Str)),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
   for (StringRef Str : {"!1:8:12", "!8:8:17", "!16:32:40"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(format(Str)),
         FailedWithMessage(
             "preferred alignment must be a power of two times the byte width"));
 
-  for (StringRef Str : {"!1:16:8", "!16:16:0", "!64:32:16"})
+  for (StringRef Str : {"!1:16:8", "!64:32:16"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(format(Str)),
         FailedWithMessage(
@@ -164,7 +169,7 @@ TEST_P(DataLayoutPrimitiveSpecificationTest, ParsePrimitiveSpec) {
 }
 
 TEST(DataLayoutTest, ParseAggregateSpec) {
-  for (StringRef Str : {"a:8", "a:0:16", "a0:8:0", "a0:32:64", "a:32768:32768"})
+  for (StringRef Str : {"a:8", "a:0:16", "a0:32:64", "a:32768:32768"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
 
   for (StringRef Str : {"a", "a0", "a:32:32:32", "a0:32:64:128"})
@@ -206,13 +211,18 @@ TEST(DataLayoutTest, ParseAggregateSpec) {
         DataLayout::parse(Str),
         FailedWithMessage("preferred alignment must be a 16-bit integer"));
 
+  for (StringRef Str : {"a:0:0", "a0:16:0"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("preferred alignment must be non-zero"));
+
   for (StringRef Str : {"a:8:12", "a:16:17", "a0:32:40"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage(
             "preferred alignment must be a power of two times the byte width"));
 
-  for (StringRef Str : {"a:16:8", "a:16:0", "a0:32:16"})
+  for (StringRef Str : {"a:16:8", "a0:32:16"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage(

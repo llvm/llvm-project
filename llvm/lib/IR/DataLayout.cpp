@@ -391,7 +391,7 @@ Error DataLayout::parsePrimitiveSpec(StringRef Spec) {
   if (Error Err = parseSize(Components[0], BitWidth))
     return Err;
 
-  // ABI alignment. Required, cannot be zero.
+  // ABI alignment.
   Align ABIAlign;
   if (Error Err = parseAlignment(Components[1], ABIAlign, "ABI"))
     return Err;
@@ -400,11 +400,9 @@ Error DataLayout::parsePrimitiveSpec(StringRef Spec) {
     return createStringError("i8 must be 8-bit aligned");
 
   // Preferred alignment. Optional, defaults to the ABI alignment.
-  // Can be zero, meaning use one byte alignment.
   Align PrefAlign = ABIAlign;
   if (Components.size() > 2)
-    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred",
-                                   /*AllowZero=*/true))
+    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred"))
       return Err;
 
   if (PrefAlign < ABIAlign)
@@ -440,11 +438,9 @@ Error DataLayout::parseAggregateSpec(StringRef Spec) {
     return Err;
 
   // Preferred alignment. Optional, defaults to the ABI alignment.
-  // Can be zero, meaning use one byte alignment.
   Align PrefAlign = ABIAlign;
   if (Components.size() > 2)
-    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred",
-                                   /*AllowZero=*/true))
+    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred"))
       return Err;
 
   if (PrefAlign < ABIAlign)
