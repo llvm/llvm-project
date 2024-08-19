@@ -343,6 +343,27 @@ def RegionBranchTerminatorOpInterface :
   }];
 }
 
+def SelectOpInterface : OpInterface<"SelectOpInterface"> {
+  let description = [{
+    This interface provides information for select-like operations, i.e.,
+    operations that forward specific operands to the output, depending on a
+    condition.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a false condition.
+      }], "::mlir::Value", "getFalseValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a true condition.
+      }], "::mlir::Value", "getTrueValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the condition operand.
+      }], "::mlir::Value", "getCondition", (ins)>
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
