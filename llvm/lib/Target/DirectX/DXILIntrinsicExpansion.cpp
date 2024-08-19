@@ -125,9 +125,9 @@ static Value *expandIntegerDotIntrinsic(CallInst *Orig,
   Value *Elt0 = Builder.CreateExtractElement(A, (uint64_t)0);
   Value *Elt1 = Builder.CreateExtractElement(B, (uint64_t)0);
   Result = Builder.CreateMul(Elt0, Elt1);
-  for (unsigned i = 1; i < AVec->getNumElements(); i++) {
-    Elt0 = Builder.CreateExtractElement(A, i);
-    Elt1 = Builder.CreateExtractElement(B, i);
+  for (unsigned I = 1; I < AVec->getNumElements(); I++) {
+    Elt0 = Builder.CreateExtractElement(A, I);
+    Elt1 = Builder.CreateExtractElement(B, I);
     Result = Builder.CreateIntrinsic(Result->getType(), MadIntrinsic,
                                      ArrayRef<Value *>{Elt0, Elt1, Result},
                                      nullptr, "dx.mad");

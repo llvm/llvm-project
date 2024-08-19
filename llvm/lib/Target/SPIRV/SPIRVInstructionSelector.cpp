@@ -184,6 +184,9 @@ private:
   bool selectRsqrt(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
+  bool selectFloatDot(Register ResVReg, const SPIRVType *ResType,
+                      MachineInstr &I) const;
+
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -1449,8 +1452,31 @@ bool SPIRVInstructionSelector::selectRsqrt(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-// Since there is no integer dot implementation, expand by piecewise multiplying
-// and adding the results, making use of FMA operations where possible.
+// Select the OpDot instruction for the given float dot
+bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
+                                              const SPIRVType *ResType,
+                                              MachineInstr &I) const {
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+
+  [[maybe_unused]] SPIRVType *VecType =
+      GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
+
+  assert(GR.getScalarOrVectorComponentCount(VecType) > 1 &&
+         "dot product requires a vector of at least 2 components");
+
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpDot))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+// Since pre-1.6 SPIRV has no integer dot implementation, expand by piecewise
+// multiplying and adding the results
 bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2222,12 +2248,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_thread_id:
     return selectSpvThreadId(ResVReg, ResType, I);
   case Intrinsic::spv_fdot:
-    return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpDot))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .addUse(I.getOperand(3).getReg())
-        .constrainAllUses(TII, TRI, RBI);
+    return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
   case Intrinsic::spv_sdot:
     return selectIntegerDot(ResVReg, ResType, I);
