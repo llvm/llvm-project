@@ -2811,9 +2811,10 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
   //     je foo
   //     cmp D, E
   //     jle foo
+  bool IsUnpredictable = I.hasMetadata(LLVMContext::MD_unpredictable);
   const Instruction *BOp = dyn_cast<Instruction>(CondVal);
   if (!DAG.getTargetLoweringInfo().isJumpExpensive() && BOp &&
-      BOp->hasOneUse() && !I.hasMetadata(LLVMContext::MD_unpredictable)) {
+      BOp->hasOneUse() && !IsUnpredictable) {
     Value *Vec;
     const Value *BOp0, *BOp1;
     Instruction::BinaryOps Opcode = (Instruction::BinaryOps)0;
@@ -2862,7 +2863,9 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
 
   // Create a CaseBlock record representing this branch.
   CaseBlock CB(ISD::SETEQ, CondVal, ConstantInt::getTrue(*DAG.getContext()),
-               nullptr, Succ0MBB, Succ1MBB, BrMBB, getCurSDLoc());
+               nullptr, Succ0MBB, Succ1MBB, BrMBB, getCurSDLoc(),
+               BranchProbability::getUnknown(), BranchProbability::getUnknown(),
+               IsUnpredictable);
 
   // Use visitSwitchCase to actually insert the fast branch sequence for this
   // cond branch.
@@ -2950,9 +2953,10 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
     Cond = DAG.getNode(ISD::XOR, dl, Cond.getValueType(), Cond, True);
   }
 
-  SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
-                               MVT::Other, getControlRoot(), Cond,
-                               DAG.getBasicBlock(CB.TrueBB));
+  SDNodeFlags Flags;
+  Flags.setUnpredictable(CB.IsUnpredictable);
+  SDValue BrCond = DAG.getNode(ISD::BRCOND, dl, MVT::Other, getControlRoot(),
+                               Cond, DAG.getBasicBlock(CB.TrueBB), Flags);
 
   setValue(CurInst, BrCond);
 

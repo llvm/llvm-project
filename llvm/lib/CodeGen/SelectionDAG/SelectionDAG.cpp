@@ -7626,16 +7626,34 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue N1, SDValue N2, SDValue N3, SDValue N4) {
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4,
+                              const SDNodeFlags Flags) {
   SDValue Ops[] = { N1, N2, N3, N4 };
-  return getNode(Opcode, DL, VT, Ops);
+  return getNode(Opcode, DL, VT, Ops, Flags);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4) {
+  SDNodeFlags Flags;
+  if (Inserter)
+    Flags = Inserter->getFlags();
+  return getNode(Opcode, DL, VT, N1, N2, N3, N4, Flags);
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
+                              SDValue N1, SDValue N2, SDValue N3, SDValue N4,
+                              SDValue N5, const SDNodeFlags Flags) {
+  SDValue Ops[] = { N1, N2, N3, N4, N5 };
+  return getNode(Opcode, DL, VT, Ops, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, SDValue N3, SDValue N4,
                               SDValue N5) {
-  SDValue Ops[] = { N1, N2, N3, N4, N5 };
-  return getNode(Opcode, DL, VT, Ops);
+  SDNodeFlags Flags;
+  if (Inserter)
+    Flags = Inserter->getFlags();
+  return getNode(Opcode, DL, VT, N1, N2, N3, N4, N5, Flags);
 }
 
 /// getStackArgumentTokenFactor - Compute a TokenFactor to force all
