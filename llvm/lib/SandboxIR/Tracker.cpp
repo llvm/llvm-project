@@ -27,32 +27,6 @@ void UseSwap::dump() const {
 }
 #endif // NDEBUG
 
-PHISetIncoming::PHISetIncoming(PHINode *PHI, unsigned Idx, What What)
-    : PHI(PHI), Idx(Idx) {
-  switch (What) {
-  case What::Value:
-    OrigValueOrBB = PHI->getIncomingValue(Idx);
-    break;
-  case What::Block:
-    OrigValueOrBB = PHI->getIncomingBlock(Idx);
-    break;
-  }
-}
-
-void PHISetIncoming::revert(Tracker &Tracker) {
-  if (auto *V = OrigValueOrBB.dyn_cast<Value *>())
-    PHI->setIncomingValue(Idx, V);
-  else
-    PHI->setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
-}
-
-#ifndef NDEBUG
-void PHISetIncoming::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 PHIRemoveIncoming::PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx)
     : PHI(PHI), RemovedIdx(RemovedIdx) {
   RemovedV = PHI->getIncomingValue(RemovedIdx);
@@ -186,20 +160,26 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
-CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
-                                                     unsigned Idx)
-    : CallBr(CallBr), Idx(Idx) {
-  OrigIndirectDest = CallBr->getIndirectDest(Idx);
-}
-void CallBrInstSetIndirectDest::revert(Tracker &Tracker) {
-  CallBr->setIndirectDest(Idx, OrigIndirectDest);
-}
+void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
+
 #ifndef NDEBUG
-void CallBrInstSetIndirectDest::dump() const {
+void SwitchRemoveCase::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-#endif
+#endif // NDEBUG
+
+void SwitchAddCase::revert(Tracker &Tracker) {
+  auto It = Switch->findCaseValue(Val);
+  Switch->removeCase(It);
+}
+
+#ifndef NDEBUG
+void SwitchAddCase::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())

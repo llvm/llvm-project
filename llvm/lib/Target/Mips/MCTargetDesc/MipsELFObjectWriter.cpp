@@ -47,13 +47,6 @@ struct MipsRelocationEntry {
   }
 };
 
-#ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
-  RHS.print(OS);
-  return OS;
-}
-#endif
-
 class MipsELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   MipsELFObjectWriter(uint8_t OSABI, bool HasRelocationAddend, bool Is64);
@@ -115,17 +108,11 @@ static InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
   for (InputIt I = First; I != Last; ++I) {
     unsigned Matched = Predicate(*I);
     if (Matched != FindBest_NoMatch) {
-      LLVM_DEBUG(dbgs() << std::distance(First, I) << " is a match (";
-                 I->print(dbgs()); dbgs() << ")\n");
-      if (Best == Last || BetterThan(*I, *Best)) {
-        LLVM_DEBUG(dbgs() << ".. and it beats the last one\n");
+      if (Best == Last || BetterThan(*I, *Best))
         Best = I;
-      }
     }
-    if (Matched == FindBest_PerfectMatch) {
-      LLVM_DEBUG(dbgs() << ".. and it is unbeatable\n");
+    if (Matched == FindBest_PerfectMatch)
       break;
-    }
   }
 
   return Best;
@@ -179,10 +166,9 @@ static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
                                                const ELFRelocationEntry &R,
                                                unsigned MatchingType) {
   if (X.R.Type == MatchingType && X.R.OriginalSymbol == R.OriginalSymbol) {
-    if (!X.Matched &&
-        X.R.OriginalAddend == R.OriginalAddend)
+    if (!X.Matched && X.R.Addend == R.Addend)
       return FindBest_PerfectMatch;
-    else if (X.R.OriginalAddend >= R.OriginalAddend)
+    else if (X.R.Addend >= R.Addend)
       return FindBest_Match;
   }
   return FindBest_NoMatch;
@@ -196,19 +182,10 @@ static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
 /// - It is not already involved in a match.
 static bool compareMatchingRelocs(const MipsRelocationEntry &Candidate,
                                   const MipsRelocationEntry &PreviousBest) {
-  if (Candidate.R.OriginalAddend != PreviousBest.R.OriginalAddend)
-    return Candidate.R.OriginalAddend < PreviousBest.R.OriginalAddend;
+  if (Candidate.R.Addend != PreviousBest.R.Addend)
+    return Candidate.R.Addend < PreviousBest.R.Addend;
   return PreviousBest.Matched && !Candidate.Matched;
 }
-
-#ifndef NDEBUG
-/// Print all the relocations.
-template <class Container>
-static void dumpRelocs(const char *Prefix, const Container &Relocs) {
-  for (const auto &R : Relocs)
-    dbgs() << Prefix << R << "\n";
-}
-#endif
 
 MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
                                          bool HasRelocationAddend, bool Is64)
@@ -448,8 +425,6 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
   std::list<MipsRelocationEntry> Sorted;
   std::list<ELFRelocationEntry> Remainder;
 
-  LLVM_DEBUG(dumpRelocs("R: ", Relocs));
-
   // Separate the movable relocations (AHL relocations using the high bits) from
   // the immobile relocations (everything else). This does not preserve high/low
   // matches that already existed in the input.
@@ -459,8 +434,6 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                });
 
   for (auto &R : Remainder) {
-    LLVM_DEBUG(dbgs() << "Matching: " << R << "\n");
-
     unsigned MatchingType = getMatchingLoType(R);
     assert(MatchingType != ELF::R_MIPS_NONE &&
            "Wrong list for reloc that doesn't need a match");
@@ -493,8 +466,6 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
       InsertionPoint->Matched = true;
     Sorted.insert(InsertionPoint, R)->Matched = true;
   }
-
-  LLVM_DEBUG(dumpRelocs("S: ", Sorted));
 
   assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
 
