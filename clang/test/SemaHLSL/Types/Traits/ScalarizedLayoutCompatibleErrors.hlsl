@@ -10,16 +10,16 @@ struct Defined {
 
 struct Undefined; // expected-note {{forward declaration of 'Undefined'}}
 
-_Static_assert(__builtin_is_scalarized_layout_compatible(Undefined, Defined), ""); // expected-error{{incomplete type 'Undefined' where a complete type is required}}
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(Undefined, Defined), ""); // expected-error{{incomplete type 'Undefined' where a complete type is required}}
 
 // Case 2: No variable length arrays!
 
 void fn(int X) {
   // expected-error@#vla {{variable length arrays are not supported for the current target}}
-  // expected-error@#vla {{variable length arrays are not supported in '__builtin_is_scalarized_layout_compatible'}}
-  // expected-error@#vla {{static assertion failed due to requirement '__builtin_is_scalarized_layout_compatible(int[4], int[X])'}}
+  // expected-error@#vla {{variable length arrays are not supported in '__builtin_hlsl_is_scalarized_layout_compatible'}}
+  // expected-error@#vla {{static assertion failed due to requirement '__builtin_hlsl_is_scalarized_layout_compatible(int[4], int[X])'}}
   // expected-warning@#vla {{variable length arrays in C++ are a Clang extension}}
-  _Static_assert(__builtin_is_scalarized_layout_compatible(int[4], int[X]), ""); // #vla
+  _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(int[4], int[X]), ""); // #vla
 }
 
 // Case 3: Make this always fail for unions.
@@ -56,9 +56,9 @@ struct HasUnionDifferent {
   int I;
 };
 
-_Static_assert(__builtin_is_scalarized_layout_compatible(Wah, Wah), "Identical types are always compatible");
-_Static_assert(!__builtin_is_scalarized_layout_compatible(Wah, OneInt), "Unions are not compatible with anything else");
-_Static_assert(!__builtin_is_scalarized_layout_compatible(Wah, OneFloat), "Unions are not compatible with anything else");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(Wah, Wah), "Identical types are always compatible");
+_Static_assert(!__builtin_hlsl_is_scalarized_layout_compatible(Wah, OneInt), "Unions are not compatible with anything else");
+_Static_assert(!__builtin_hlsl_is_scalarized_layout_compatible(Wah, OneFloat), "Unions are not compatible with anything else");
 
-_Static_assert(__builtin_is_scalarized_layout_compatible(HasUnion, HasUnionSame), "");
-_Static_assert(!__builtin_is_scalarized_layout_compatible(HasUnion, HasUnionDifferent), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(HasUnion, HasUnionSame), "");
+_Static_assert(!__builtin_hlsl_is_scalarized_layout_compatible(HasUnion, HasUnionDifferent), "");
