@@ -5709,6 +5709,8 @@ def err_explicit_instantiation_internal_linkage : Error<
 def err_explicit_instantiation_not_known : Error<
   "explicit instantiation of %0 does not refer to a function template, "
   "variable template, member function, member class, or static data member">;
+def err_explicit_instantiation_no_candidate : Error<
+    "no viable candidate for explicit instantiation of %0">;
 def note_explicit_instantiation_here : Note<
   "explicit instantiation refers here">;
 def err_explicit_instantiation_data_member_not_instantiated : Error<
