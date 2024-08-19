@@ -340,6 +340,9 @@ namespace llvm {
 
     // Vector FP round.
     VFPROUND,
+    // Convert TWO packed single data to one packed data
+    VFPROUND2,
+    VFPROUND2_RND,
     VFPROUND_RND,
     VFPROUNDS,
     VFPROUNDS_RND,
@@ -618,8 +621,6 @@ namespace llvm {
 
     MPSADBW,
 
-    VCVT2PS2PHX,
-    VCVT2PS2PHX_RND,
     VCVTNE2PH2BF8,
     VCVTNE2PH2BF8S,
     VCVTNE2PH2HF8,
@@ -693,8 +694,6 @@ namespace llvm {
     MCVTUI2P,
 
     // Vector float to bfloat16.
-    // Convert TWO packed single data to one packed BF16 data
-    CVTNE2PS2BF16,
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
     // Masked version of above.

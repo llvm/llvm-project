@@ -677,7 +677,7 @@ multiclass avx10_cvt2ps2ph<bits<8> opc, string OpcodeStr,
 defm VCVT2PS2PHX : avx10_cvt2ps2ph<0x67, "vcvt2ps2phx",
                                    SchedWriteCvtPD2PS,
                                    avx512vl_f32_info, avx512vl_f16_info,
-                                   X86vcvt2ps2phx, X86vcvt2ps2phxRnd>, T8;
+                                   X86vfpround2, X86vfpround2Rnd>, T8;
 
 defm VCVTNE2PH2BF8 : avx512_binop_all<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
@@ -831,88 +831,49 @@ multiclass avx10_convert_3op<bits<8> OpCode, string OpcodeStr,
 }
 
 defm VCVTBIASPH2BF8 : avx10_convert_3op<0x74, "vcvtbiasph2bf8",
-                      avx512vl_i8_info, avx512vl_f16_info, SchedWriteCvtPD2PS,
-                      X86vcvtbiasph2bf8, X86vmcvtbiasph2bf8>,
-                      T8, PS;
+                                        avx512vl_i8_info, avx512vl_f16_info,
+                                        SchedWriteCvtPD2PS,
+                                        X86vcvtbiasph2bf8, X86vmcvtbiasph2bf8>,
+                                        T8, PS;
 defm VCVTBIASPH2BF8S : avx10_convert_3op<0x74, "vcvtbiasph2bf8s",
-                       avx512vl_i8_info, avx512vl_f16_info, SchedWriteCvtPD2PS,
-                       X86vcvtbiasph2bf8s, X86vmcvtbiasph2bf8s>,
-                       T_MAP5, PS;
+                                         avx512vl_i8_info, avx512vl_f16_info,
+                                         SchedWriteCvtPD2PS,
+                                         X86vcvtbiasph2bf8s, X86vmcvtbiasph2bf8s>,
+                                         T_MAP5, PS;
 defm VCVTBIASPH2HF8 : avx10_convert_3op<0x18, "vcvtbiasph2hf8",
-                      avx512vl_i8_info, avx512vl_f16_info, SchedWriteCvtPD2PS,
-                      X86vcvtbiasph2hf8, X86vmcvtbiasph2hf8>,
-                      T_MAP5, PS;
+                                        avx512vl_i8_info, avx512vl_f16_info,
+                                        SchedWriteCvtPD2PS,
+                                        X86vcvtbiasph2hf8, X86vmcvtbiasph2hf8>,
+                                        T_MAP5, PS;
 defm VCVTBIASPH2HF8S : avx10_convert_3op<0x1b, "vcvtbiasph2hf8s",
-                       avx512vl_i8_info, avx512vl_f16_info, SchedWriteCvtPD2PS,
-                       X86vcvtbiasph2hf8s, X86vmcvtbiasph2hf8s>,
-                       T_MAP5, PS;
-
-multiclass avx10_convert_2op_pat<AVX512VLVectorVTInfo vt_dst,
-                                 AVX512VLVectorVTInfo vt_src,
-                                 SDPatternOperator OpNode,
-                                 SDPatternOperator MaskOpNode,
-                                 PatFrag bcast128 = vt_src.info128.BroadcastLdFrag,
-                                 PatFrag loadVT128 = vt_src.info128.LdFrag,
-                                 RegisterClass maskRC128 = vt_src.info128.KRCWM> {
-  let Predicates = [HasAVX10_2] in {
-    // Special patterns to allow use of MaskOpNode for masking 128 version. Instruction
-    // patterns have been disabled with null_frag.
-    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT VR128X:$src))),
-              (!cast<Instruction>(NAME # "Z128rr") VR128X:$src)>;
-    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), (vt_dst.info128.VT VR128X:$src0),
-                           maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rrk") VR128X:$src0, maskRC128:$mask, VR128X:$src)>;
-    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), vt_dst.info128.ImmAllZerosV,
-                           maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rrkz") maskRC128:$mask, VR128X:$src)>;
-
-    def : Pat<(vt_dst.info128.VT (OpNode (loadVT128 addr:$src))),
-              (!cast<Instruction>(NAME # "Z128rm") addr:$src)>;
-    def : Pat<(MaskOpNode (loadVT128 addr:$src), (vt_dst.info128.VT VR128X:$src0),
-                           maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rmk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
-    def : Pat<(MaskOpNode (loadVT128 addr:$src), vt_dst.info128.ImmAllZerosV,
-                           maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rmkz") maskRC128:$mask, addr:$src)>;
-
-    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT (bcast128 addr:$src)))),
-              (!cast<Instruction>(NAME # "Z128rmb") addr:$src)>;
-    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
-                            (vt_dst.info128.VT VR128X:$src0), maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
-    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
-                            vt_dst.info128.ImmAllZerosV, maskRC128:$mask),
-              (!cast<Instruction>(NAME # "Z128rmbkz") maskRC128:$mask, addr:$src)>;
-  }
-}
+                                         avx512vl_i8_info, avx512vl_f16_info,
+                                         SchedWriteCvtPD2PS,
+                                         X86vcvtbiasph2hf8s, X86vmcvtbiasph2hf8s>,
+                                         T_MAP5, PS;
 
 defm VCVTNEPH2BF8 : avx512_cvt_trunc_ne<0x74, "vcvtneph2bf8", avx512vl_i8_info,
                                         avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                        X86vcvtneph2bf8, [HasAVX10_2], [HasAVX10_2_512]>,
+                                        X86vcvtneph2bf8, X86vmcvtneph2bf8,
+                                        [HasAVX10_2], [HasAVX10_2_512]>,
                                         T8, XS, EVEX_CD8<16, CD8VF>;
-defm VCVTNEPH2BF8 : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
-                                          X86vcvtneph2bf8, X86vmcvtneph2bf8>;
 
 defm VCVTNEPH2BF8S : avx512_cvt_trunc_ne<0x74, "vcvtneph2bf8s", avx512vl_i8_info,
                                          avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                         X86vcvtneph2bf8s, [HasAVX10_2], [HasAVX10_2_512]>,
+                                         X86vcvtneph2bf8s, X86vmcvtneph2bf8s,
+                                         [HasAVX10_2], [HasAVX10_2_512]>,
                                          T_MAP5, XS, EVEX_CD8<16, CD8VF>;
-defm VCVTNEPH2BF8S : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
-                                           X86vcvtneph2bf8s, X86vmcvtneph2bf8s>;
 
 defm VCVTNEPH2HF8 : avx512_cvt_trunc_ne<0x18, "vcvtneph2hf8", avx512vl_i8_info,
                                         avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                        X86vcvtneph2hf8, [HasAVX10_2], [HasAVX10_2_512]>,
+                                        X86vcvtneph2hf8, X86vmcvtneph2hf8,
+                                        [HasAVX10_2], [HasAVX10_2_512]>,
                                         T_MAP5, XS, EVEX_CD8<16, CD8VF>;
-defm VCVTNEPH2HF8 : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
-                                          X86vcvtneph2hf8, X86vmcvtneph2hf8>;
 
 defm VCVTNEPH2HF8S : avx512_cvt_trunc_ne<0x1b, "vcvtneph2hf8s", avx512vl_i8_info,
                                          avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                         X86vcvtneph2hf8s, [HasAVX10_2], [HasAVX10_2_512]>,
+                                         X86vcvtneph2hf8s, X86vmcvtneph2hf8s,
+                                         [HasAVX10_2], [HasAVX10_2_512]>,
                                          T_MAP5, XS, EVEX_CD8<16, CD8VF>;
-defm VCVTNEPH2HF8S : avx10_convert_2op_pat<avx512vl_i8_info, avx512vl_f16_info,
-                                           X86vcvtneph2hf8s, X86vmcvtneph2hf8s>;
 
 multiclass avx10_convert_2op_nomb_packed<bits<8> opc, string OpcodeStr,
                                          X86VectorVTInfo _dest, X86VectorVTInfo _src,

@@ -12677,7 +12677,7 @@ let ExeDomain = SSEPackedSingle in
 defm VCVTNE2PS2BF16 : avx512_binop_all<0x72, "vcvtne2ps2bf16",
                                        SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
                                        avx512vl_f32_info, avx512vl_bf16_info,
-                                       X86cvtne2ps2bf16, [HasBF16], [HasVLX, HasBF16]>, T8, XD,
+                                       X86vfpround2, [HasBF16], [HasVLX, HasBF16]>, T8, XD,
                                        EVEX_CD8<32, CD8VF>;
 
 // Truncate Float to BFloat16, Float16 to BF8/HF8[,S]
@@ -12686,7 +12686,11 @@ multiclass avx512_cvt_trunc_ne<bits<8> opc, string OpcodeStr,
                              AVX512VLVectorVTInfo vt_src,
                              X86SchedWriteWidths sched,
                              SDPatternOperator OpNode,
-                             list<Predicate> prds, list<Predicate> prds512> {
+                             SDPatternOperator MaskOpNode,
+                             list<Predicate> prds, list<Predicate> prds512,
+                             PatFrag bcast128 = vt_src.info128.BroadcastLdFrag,
+                             PatFrag loadVT128 = vt_src.info128.LdFrag,
+                             RegisterClass maskRC128 = vt_src.info128.KRCWM> {
   let ExeDomain = SSEPackedSingle in {
   let Predicates = prds512, Uses = []<Register>, mayRaiseFPException = 0 in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, vt_dst.info256, vt_src.info512,
@@ -12701,7 +12705,7 @@ multiclass avx512_cvt_trunc_ne<bits<8> opc, string OpcodeStr,
                                OpNode, OpNode,
                                sched.YMM, vt_src.info256.BroadcastStr, "{y}">, EVEX_V256;
     }
-  } // Predicates = [HasBF16, HasVLX]
+  } // Predicates = prds
   } // ExeDomain = SSEPackedSingle
 
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
@@ -12716,45 +12720,46 @@ multiclass avx512_cvt_trunc_ne<bits<8> opc, string OpcodeStr,
   def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst,
                   f256mem:$src), 0, "intel">;
+
+  let Predicates = prds in {
+    // Special patterns to allow use of MaskOpNode for masking 128 version. Instruction
+    // patterns have been disabled with null_frag.
+    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT VR128X:$src))),
+              (!cast<Instruction>(NAME # "Z128rr") VR128X:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), (vt_dst.info128.VT VR128X:$src0),
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rrk") VR128X:$src0, maskRC128:$mask, VR128X:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT VR128X:$src), vt_dst.info128.ImmAllZerosV,
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rrkz") maskRC128:$mask, VR128X:$src)>;
+
+    def : Pat<(vt_dst.info128.VT (OpNode (loadVT128 addr:$src))),
+              (!cast<Instruction>(NAME # "Z128rm") addr:$src)>;
+    def : Pat<(MaskOpNode (loadVT128 addr:$src), (vt_dst.info128.VT VR128X:$src0),
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
+    def : Pat<(MaskOpNode (loadVT128 addr:$src), vt_dst.info128.ImmAllZerosV,
+                           maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmkz") maskRC128:$mask, addr:$src)>;
+
+    def : Pat<(vt_dst.info128.VT (OpNode (vt_src.info128.VT (bcast128 addr:$src)))),
+              (!cast<Instruction>(NAME # "Z128rmb") addr:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
+                            (vt_dst.info128.VT VR128X:$src0), maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$src0, maskRC128:$mask, addr:$src)>;
+    def : Pat<(MaskOpNode (vt_src.info128.VT (bcast128 addr:$src)),
+                            vt_dst.info128.ImmAllZerosV, maskRC128:$mask),
+              (!cast<Instruction>(NAME # "Z128rmbkz") maskRC128:$mask, addr:$src)>;
+  }
 }
 
 defm VCVTNEPS2BF16 : avx512_cvt_trunc_ne<0x72, "vcvtneps2bf16",
                                          avx512vl_bf16_info, avx512vl_f32_info,
                                          SchedWriteCvtPD2PS, X86cvtneps2bf16,
-                                         [HasBF16, HasVLX], [HasBF16]>,
-                                         T8, XS, EVEX_CD8<32, CD8VF>;
+                                         X86mcvtneps2bf16, [HasBF16, HasVLX],
+                                         [HasBF16]>, T8, XS, EVEX_CD8<32, CD8VF>;
 
 let Predicates = [HasBF16, HasVLX] in {
-  // Special patterns to allow use of X86mcvtneps2bf16 for masking. Instruction
-  // patterns have been disabled with null_frag.
-  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
-            (VCVTNEPS2BF16Z128rr VR128X:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (v4f32 VR128X:$src), (v8bf16 VR128X:$src0),
-                              VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rrk VR128X:$src0, VK4WM:$mask, VR128X:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (v4f32 VR128X:$src), v8bf16x_info.ImmAllZerosV,
-                              VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rrkz VK4WM:$mask, VR128X:$src)>;
-
-  def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
-            (VCVTNEPS2BF16Z128rm addr:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (loadv4f32 addr:$src), (v8bf16 VR128X:$src0),
-                              VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rmk VR128X:$src0, VK4WM:$mask, addr:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (loadv4f32 addr:$src), v8bf16x_info.ImmAllZerosV,
-                              VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rmkz VK4WM:$mask, addr:$src)>;
-
-  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32
-                                     (X86VBroadcastld32 addr:$src)))),
-            (VCVTNEPS2BF16Z128rmb addr:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (v4f32 (X86VBroadcastld32 addr:$src)),
-                              (v8bf16 VR128X:$src0), VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rmbk VR128X:$src0, VK4WM:$mask, addr:$src)>;
-  def : Pat<(X86mcvtneps2bf16 (v4f32 (X86VBroadcastld32 addr:$src)),
-                              v8bf16x_info.ImmAllZerosV, VK4WM:$mask),
-            (VCVTNEPS2BF16Z128rmbkz VK4WM:$mask, addr:$src)>;
-
   def : Pat<(v8bf16 (int_x86_vcvtneps2bf16128 (v4f32 VR128X:$src))),
             (VCVTNEPS2BF16Z128rr VR128X:$src)>;
   def : Pat<(v8bf16 (int_x86_vcvtneps2bf16128 (loadv4f32 addr:$src))),
