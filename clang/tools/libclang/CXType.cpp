@@ -77,9 +77,11 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(OCLEvent);
     BTCASE(OCLQueue);
     BTCASE(OCLReserveID);
-  default:
-    return CXType_Unexposed;
-  }
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) BTCASE(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
+    default:
+      return CXType_Unexposed;
+    }
 #undef BTCASE
 }
 
@@ -628,6 +630,8 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(OCLEvent);
     TKIND(OCLQueue);
     TKIND(OCLReserveID);
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) TKIND(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TKIND(Atomic);
   }
 #undef TKIND
@@ -680,6 +684,7 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(PreserveAll);
       TCALLINGCONV(M68kRTD);
       TCALLINGCONV(PreserveNone);
+      TCALLINGCONV(RISCVVectorCall);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
     case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
     case CC_OpenCLKernel: return CXCallingConv_Unexposed;

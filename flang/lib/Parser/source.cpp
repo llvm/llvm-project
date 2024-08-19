@@ -75,6 +75,24 @@ std::optional<std::string> LocateSourceFile(
   return std::nullopt;
 }
 
+std::vector<std::string> LocateSourceFileAll(
+    std::string name, const std::vector<std::string> &searchPath) {
+  if (name == "-" || llvm::sys::path::is_absolute(name)) {
+    return {name};
+  }
+  std::vector<std::string> result;
+  for (const std::string &dir : searchPath) {
+    llvm::SmallString<128> path{dir};
+    llvm::sys::path::append(path, name);
+    bool isDir{false};
+    auto er = llvm::sys::fs::is_directory(path, isDir);
+    if (!er && !isDir) {
+      result.emplace_back(path.str().str());
+    }
+  }
+  return result;
+}
+
 std::size_t RemoveCarriageReturns(llvm::MutableArrayRef<char> buf) {
   std::size_t wrote{0};
   char *buffer{buf.data()};

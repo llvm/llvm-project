@@ -44,14 +44,28 @@ std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
           llvm::sys::fs::can_execute(UseLinker))
         return std::string(UseLinker);
 
-      // Accept 'lld', and 'ld' as aliases for the default linker
-      if (UseLinker != "lld" && UseLinker != "ld")
+      // Interpret 'lld' as explicitly requesting `wasm-ld`, so look for that
+      // linker. Note that for `wasm32-wasip2` this overrides the default linker
+      // of `wasm-component-ld`.
+      if (UseLinker == "lld") {
+        return ToolChain.GetProgramPath("wasm-ld");
+      }
+
+      // Allow 'ld' as an alias for the default linker
+      if (UseLinker != "ld")
         ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
             << A->getAsString(Args);
     }
   }
 
   return ToolChain.GetProgramPath(ToolChain.getDefaultLinker());
+}
+
+static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
+  // WASIp2 and above are all based on components, so test for WASI but exclude
+  // the original `wasi` target in addition to the `wasip1` name.
+  return TargetTriple.isOSWASI() && TargetTriple.getOSName() != "wasip1" &&
+         TargetTriple.getOSName() != "wasi";
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -72,6 +86,16 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
+
+  // On `wasip2` the default linker is `wasm-component-ld` which wraps the
+  // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
+  // to find it to avoid it needing to hunt and rediscover or search `PATH` for
+  // where it is.
+  if (llvm::sys::path::stem(Linker).ends_with_insensitive(
+          "wasm-component-ld")) {
+    CmdArgs.push_back("--wasm-ld-path");
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetProgramPath("wasm-ld")));
+  }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
 
@@ -141,9 +165,17 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  // When optimizing, if wasm-opt is available, run it.
+  // Don't use wasm-opt by default on `wasip2` as it doesn't have support for
+  // components at this time. Retain the historical default otherwise, though,
+  // of running `wasm-opt` by default.
+  bool WasmOptDefault = !TargetBuildsComponents(ToolChain.getTriple());
+  bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt,
+                                 options::OPT_no_wasm_opt, WasmOptDefault);
+
+  // If wasm-opt is enabled and optimizations are happening look for the
+  // `wasm-opt` program. If it's not found auto-disable it.
   std::string WasmOptPath;
-  if (Args.getLastArg(options::OPT_O_Group)) {
+  if (RunWasmOpt && Args.getLastArg(options::OPT_O_Group)) {
     WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
     if (WasmOptPath == "wasm-opt") {
       WasmOptPath = {};
@@ -198,7 +230,7 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 
   assert(Triple.isArch32Bit() != Triple.isArch64Bit());
 
-  getProgramPaths().push_back(getDriver().getInstalledDir());
+  getProgramPaths().push_back(getDriver().Dir);
 
   auto SysRoot = getDriver().SysRoot;
   if (getTriple().getOS() == llvm::Triple::UnknownOS) {
@@ -219,6 +251,12 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
     }
     getFilePaths().push_back(SysRoot + "/lib/" + MultiarchTriple);
   }
+}
+
+const char *WebAssembly::getDefaultLinker() const {
+  if (TargetBuildsComponents(getTriple()))
+    return "wasm-component-ld";
+  return "wasm-ld";
 }
 
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
@@ -324,6 +362,23 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     // Backend needs -wasm-enable-eh to enable Wasm EH
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-wasm-enable-eh");
+
+    // New Wasm EH spec (adopted in Oct 2023) requires multivalue and
+    // reference-types.
+    if (DriverArgs.hasFlag(options::OPT_mno_multivalue,
+                           options::OPT_mmultivalue, false)) {
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-fwasm-exceptions" << "-mno-multivalue";
+    }
+    if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
+                           options::OPT_mreference_types, false)) {
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-fwasm-exceptions" << "-mno-reference-types";
+    }
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+multivalue");
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+reference-types");
   }
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
@@ -385,6 +440,23 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       CC1Args.push_back("+exception-handling");
       // Backend needs '-exception-model=wasm' to use Wasm EH instructions
       CC1Args.push_back("-exception-model=wasm");
+
+      // New Wasm EH spec (adopted in Oct 2023) requires multivalue and
+      // reference-types.
+      if (DriverArgs.hasFlag(options::OPT_mno_multivalue,
+                             options::OPT_mmultivalue, false)) {
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-mllvm -wasm-enable-sjlj" << "-mno-multivalue";
+      }
+      if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
+                             options::OPT_mreference_types, false)) {
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-mllvm -wasm-enable-sjlj" << "-mno-reference-types";
+      }
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+multivalue");
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+reference-types");
     }
   }
 }

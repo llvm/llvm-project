@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
@@ -327,8 +328,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       break;
     uptr pc_mask = (1ULL << 48) - 1;
     uptr pc = record & pc_mask;
-    frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
-                       reinterpret_cast<uptr>(record_addr), record);
+    frame_desc.AppendF("  record_addr:%p record:0x%zx",
+                       reinterpret_cast<const void *>(record_addr), record);
     SymbolizedStackHolder symbolized_stack(
         Symbolizer::GetOrInit()->SymbolizePC(pc));
     const SymbolizedStack *frame = symbolized_stack.get();

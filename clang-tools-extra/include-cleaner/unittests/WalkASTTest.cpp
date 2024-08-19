@@ -229,13 +229,9 @@ TEST(WalkAST, FunctionTemplates) {
   EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
                        "template void ^foo<int>(int);"),
               ElementsAre());
-  // FIXME: Report specialized template as used from explicit specializations.
-  EXPECT_THAT(testWalk("template<typename T> void foo(T);",
+  EXPECT_THAT(testWalk("template<typename T> void $explicit^foo(T);",
                        "template<> void ^foo<int>(int);"),
-              ElementsAre());
-  EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
-                       "template<typename T> void ^foo(T*) {}"),
-              ElementsAre());
+              ElementsAre(Decl::FunctionTemplate));
 
   // Implicit instantiations references most relevant template.
   EXPECT_THAT(testWalk(R"cpp(
@@ -510,6 +506,8 @@ TEST(WalkAST, Functions) {
   // Definition uses declaration, not the other way around.
   testWalk("void $explicit^foo();", "void ^foo() {}");
   testWalk("void foo() {}", "void ^foo();");
+  testWalk("template <typename> void $explicit^foo();",
+           "template <typename> void ^foo() {}");
 
   // Unresolved calls marks all the overloads.
   testWalk("void $ambiguous^foo(int); void $ambiguous^foo(char);",
@@ -536,7 +534,7 @@ TEST(WalkAST, Enums) {
 TEST(WalkAST, InitializerList) {
   testWalk(R"cpp(
        namespace std {
-        template <typename T> struct $implicit^initializer_list {};
+        template <typename T> struct $implicit^initializer_list { const T *a, *b; };
        })cpp",
            R"cpp(
        const char* s = "";
@@ -550,14 +548,19 @@ TEST(WalkAST, Concepts) {
   testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
   testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
   testWalk(Concept, "void func(^Foo auto x) {}");
-  // FIXME: Foo should be explicitly referenced.
-  testWalk("template<typename T> concept Foo = true;",
-           "void func() { ^Foo auto x = 1; }");
+  testWalk(Concept, "void func() { ^Foo auto x = 1; }");
 }
 
 TEST(WalkAST, FriendDecl) {
   testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
   testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
+}
+
+TEST(WalkAST, OperatorNewDelete) {
+  testWalk("void* $explicit^operator new(decltype(sizeof(int)), void*);",
+           "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
+  testWalk("struct A { static void $explicit^operator delete(void*); };",
+           "void foo() { A a; ^delete &a; }");
 }
 } // namespace
 } // namespace clang::include_cleaner

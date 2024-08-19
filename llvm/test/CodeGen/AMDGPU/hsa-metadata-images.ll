@@ -99,7 +99,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %a,
 ; CHECK-NEXT: - 1
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 !1 = !{!"image1d_t", !"image1d_array_t", !"image1d_buffer_t",
        !"image2d_t", !"image2d_array_t", !"image2d_array_depth_t",

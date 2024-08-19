@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx -x c++ -std=c++11 %s
 // RUN: %clang_cc1 -std=c99 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
+// UNSUPPORTED: system-zos
 
 // This file contains Unicode characters; please do not "fix" them!
 

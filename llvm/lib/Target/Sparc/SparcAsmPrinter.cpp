@@ -50,8 +50,7 @@ namespace {
     StringRef getPassName() const override { return "Sparc Assembly Printer"; }
 
     void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
-    void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,
-                         const char *Modifier = nullptr);
+    void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
 
     void emitFunctionBodyStart() override;
     void emitInstruction(const MachineInstr *MI) override;
@@ -277,6 +276,12 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::DBG_VALUE:
     // FIXME: Debug Value.
     return;
+  case SP::CASArr:
+  case SP::SWAPrr:
+  case SP::SWAPri:
+    if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
+      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+    break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
     return;
@@ -401,15 +406,8 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O) {
   printOperand(MI, opNum, O);
-
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    O << ", ";
-    printOperand(MI, opNum+1, O);
-    return;
-  }
 
   if (MI->getOperand(opNum+1).isReg() &&
       MI->getOperand(opNum+1).getReg() == SP::G0)
@@ -434,6 +432,50 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'L': // Low order register of a twin word register operand
+    case 'H': // High order register of a twin word register operand
+    {
+      const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+      Register MOReg = MO.getReg();
+
+      Register HiReg, LoReg;
+      if (!SP::IntPairRegClass.contains(MOReg)) {
+        // If we aren't given a register pair already, find out which pair it
+        // belongs to. Note that here, the specified register operand, which
+        // refers to the high part of the twinword, needs to be an even-numbered
+        // register.
+        MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
+                                                  &SP::IntPairRegClass);
+        if (!MOReg) {
+          SMLoc Loc;
+          OutContext.reportError(
+              Loc, "Hi part of pair should point to an even-numbered register");
+          OutContext.reportError(
+              Loc, "(note that in some cases it might be necessary to manually "
+                   "bind the input/output registers instead of relying on "
+                   "automatic allocation)");
+          return true;
+        }
+      }
+
+      HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+      LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
+
+      Register Reg;
+      switch (ExtraCode[0]) {
+      case 'L':
+        Reg = LoReg;
+        break;
+      case 'H':
+        Reg = HiReg;
+        break;
+      }
+
+      O << '%' << SparcInstPrinter::getRegisterName(Reg);
+      return false;
+    }
     case 'f':
     case 'r':
      break;

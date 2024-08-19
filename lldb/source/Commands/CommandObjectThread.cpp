@@ -67,13 +67,18 @@ public:
         if (option_arg.getAsInteger(0, m_count)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         }
+        // A count of 0 means all frames.
+        if (m_count == 0)
+          m_count = UINT32_MAX;
         break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
-              "invalid integer value for option '%c'", short_option);
+              "invalid integer value for option '%c': %s", short_option,
+              option_arg.data());
         break;
       case 'e': {
         bool success;
@@ -81,7 +86,8 @@ public:
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
-              "invalid boolean value for option '%c'", short_option);
+              "invalid boolean value for option '%c': %s", short_option,
+              option_arg.data());
       } break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -108,8 +114,8 @@ public:
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread backtrace",
-            "Show thread call stacks.  Defaults to the current thread, thread "
-            "indexes can be specified as arguments.\n"
+            "Show backtraces of thread call stacks.  Defaults to the current "
+            "thread, thread indexes can be specified as arguments.\n"
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
             "call stacks.\n"
@@ -126,7 +132,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   std::optional<std::string> GetRepeatCommand(Args &current_args,
-                                              uint32_t idx) override {
+                                              uint32_t index) override {
     llvm::StringRef count_opt("--count");
     llvm::StringRef start_opt("--start");
 
@@ -145,14 +151,14 @@ public:
 
     for (size_t idx = 0; idx < num_entries; idx++) {
       llvm::StringRef arg_string = copy_args[idx].ref();
-      if (arg_string.equals("-c") || count_opt.starts_with(arg_string)) {
+      if (arg_string == "-c" || count_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
         count_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, count_val))
           return std::nullopt;
-      } else if (arg_string.equals("-s") || start_opt.starts_with(arg_string)) {
+      } else if (arg_string == "-s" || start_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
@@ -228,9 +234,9 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) { 
-      if (!INTERRUPT_REQUESTED(GetDebugger(), 
-                              "Interrupt skipped extended backtrace")) {
+    if (m_options.m_extended_backtrace) {
+      if (!INTERRUPT_REQUESTED(GetDebugger(),
+                               "Interrupt skipped extended backtrace")) {
         DoExtendedBacktrace(thread, result);
       }
     }
@@ -240,8 +246,6 @@ protected:
 
   CommandOptions m_options;
 };
-
-enum StepScope { eStepScopeSource, eStepScopeInstruction };
 
 #define LLDB_OPTIONS_thread_step_scope
 #include "CommandOptions.inc"
@@ -272,8 +276,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg.data());
       else {
         m_step_in_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -284,8 +289,9 @@ public:
       bool avoid_no_debug =
           OptionArgParser::ToBoolean(option_arg, true, &success);
       if (!success)
-        error.SetErrorStringWithFormat("invalid boolean value for option '%c'",
-                                       short_option);
+        error.SetErrorStringWithFormat(
+            "invalid boolean value for option '%c': %s", short_option,
+            option_arg.data());
       else {
         m_step_out_avoid_no_debug = avoid_no_debug ? eLazyBoolYes : eLazyBoolNo;
       }
@@ -293,8 +299,9 @@ public:
 
     case 'c':
       if (option_arg.getAsInteger(0, m_step_count))
-        error.SetErrorStringWithFormat("invalid step count '%s'",
-                                       option_arg.str().c_str());
+        error.SetErrorStringWithFormat(
+            "invalid integer value for option '%c': %s", short_option,
+            option_arg.data());
       break;
 
     case 'm': {
@@ -365,28 +372,14 @@ public:
   CommandObjectThreadStepWithTypeAndScope(CommandInterpreter &interpreter,
                                           const char *name, const char *help,
                                           const char *syntax,
-                                          StepType step_type,
-                                          StepScope step_scope)
+                                          StepType step_type)
       : CommandObjectParsed(interpreter, name, help, syntax,
                             eCommandRequiresProcess | eCommandRequiresThread |
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
-        m_step_type(step_type), m_step_scope(step_scope),
-        m_class_options("scripted step") {
-    CommandArgumentEntry arg;
-    CommandArgumentData thread_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    thread_id_arg.arg_type = eArgTypeThreadID;
-    thread_id_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(thread_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+        m_step_type(step_type), m_class_options("scripted step") {
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
       m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
@@ -624,7 +617,6 @@ protected:
   }
 
   StepType m_step_type;
-  StepScope m_step_scope;
   ThreadStepScopeOptionGroup m_options;
   OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
@@ -643,19 +635,7 @@ public:
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData thread_idx_arg;
-
-    // Define the first (and only) variant of this arg.
-    thread_idx_arg.arg_type = eArgTypeThreadIndex;
-    thread_idx_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(thread_idx_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatPlus);
   }
 
   ~CommandObjectThreadContinue() override = default;
@@ -886,19 +866,7 @@ public:
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData line_num_arg;
-
-    // Define the first (and only) variant of this arg.
-    line_num_arg.arg_type = eArgTypeLineNum;
-    line_num_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(line_num_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeLineNum);
   }
 
   ~CommandObjectThreadUntil() override = default;
@@ -909,7 +877,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -1413,7 +1381,10 @@ public:
     Stream &strm = result.GetOutputStream();
     ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
     if (exception_object_sp) {
-      exception_object_sp->Dump(strm);
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
     }
 
     ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
@@ -1465,9 +1436,12 @@ public:
       return false;
     }
     ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
-    if (exception_object_sp)
-      exception_object_sp->Dump(strm);
-    else
+    if (exception_object_sp) {
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
+    } else
       strm.Printf("(no siginfo)\n");
     strm.PutChar('\n');
 
@@ -1539,19 +1513,7 @@ public:
                          eCommandRequiresFrame | eCommandTryTargetAPILock |
                              eCommandProcessMustBeLaunched |
                              eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData expression_arg;
-
-    // Define the first (and only) variant of this arg.
-    expression_arg.arg_type = eArgTypeExpression;
-    expression_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(expression_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeExpression, eArgRepeatOptional);
   }
 
   ~CommandObjectThreadReturn() override = default;
@@ -1744,7 +1706,7 @@ protected:
         line = sym_ctx.line_entry.line + m_options.m_line_offset;
 
       // Try the current file, but override if asked.
-      FileSpec file = sym_ctx.line_entry.file;
+      FileSpec file = sym_ctx.line_entry.GetFile();
       if (m_options.m_filenames.GetSize() == 1)
         file = m_options.m_filenames.GetFileSpecAtIndex(0);
 
@@ -1919,19 +1881,7 @@ public:
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData plan_index_arg;
-
-    // Define the first (and only) variant of this arg.
-    plan_index_arg.arg_type = eArgTypeUnsignedInteger;
-    plan_index_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(plan_index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectThreadPlanDiscard() override = default;
@@ -1992,19 +1942,7 @@ public:
                                 eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData tid_arg;
-
-    // Define the first (and only) variant of this arg.
-    tid_arg.arg_type = eArgTypeThreadID;
-    tid_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(tid_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatStar);
   }
 
   ~CommandObjectThreadPlanPrune() override = default;
@@ -2221,8 +2159,7 @@ public:
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
-    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectTraceDumpFunctionCalls() override = default;
@@ -2395,8 +2332,7 @@ public:
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
-    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
   }
 
   ~CommandObjectTraceDumpInstructions() override = default;
@@ -2620,35 +2556,35 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      interpreter, "thread step-in",
                      "Source level single step, stepping into calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeInto, eStepScopeSource)));
+                     nullptr, eStepTypeInto)));
 
   LoadSubCommand("step-out",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-out",
                      "Finish executing the current stack frame and stop after "
                      "returning.  Defaults to current thread unless specified.",
-                     nullptr, eStepTypeOut, eStepScopeSource)));
+                     nullptr, eStepTypeOut)));
 
   LoadSubCommand("step-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-over",
                      "Source level single step, stepping over calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeOver, eStepScopeSource)));
+                     nullptr, eStepTypeOver)));
 
   LoadSubCommand("step-inst",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst",
                      "Instruction level single step, stepping into calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTrace, eStepScopeInstruction)));
+                     nullptr, eStepTypeTrace)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst-over",
                      "Instruction level single step, stepping over calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTraceOver, eStepScopeInstruction)));
+                     nullptr, eStepTypeTraceOver)));
 
   LoadSubCommand(
       "step-scripted",
@@ -2659,7 +2595,7 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
           "that will be used to populate an SBStructuredData Dictionary, which "
           "will be passed to the constructor of the class implementing the "
           "scripted step.  See the Python Reference for more details.",
-          nullptr, eStepTypeScripted, eStepScopeSource)));
+          nullptr, eStepTypeScripted)));
 
   LoadSubCommand("plan", CommandObjectSP(new CommandObjectMultiwordThreadPlan(
                              interpreter)));

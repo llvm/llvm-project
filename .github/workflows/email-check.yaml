@@ -1,7 +1,7 @@
 name: "Check for private emails used in PRs"
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
 
@@ -10,8 +10,6 @@ permissions:
 
 jobs:
   validate_email:
-    permissions:
-      pull-requests: write
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
@@ -25,20 +23,24 @@ jobs:
         run: |
           git log -1
           echo "EMAIL=$(git show -s --format='%ae' HEAD~0)" >> $GITHUB_OUTPUT
+          # Create empty comment file
+          echo "[]" > comments
 
       - name: Validate author email
         if: ${{ endsWith(steps.author.outputs.EMAIL, 'noreply.github.com')  }}
-        uses: actions/github-script@v6
         env:
-          EMAIL: ${{ steps.author.outputs.EMAIL }}
+          COMMENT: >-
+            ⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.<br/>
+            Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.<br/>
+            See [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
+        run: |
+          cat << EOF > comments
+          [{"body" : "$COMMENT"}]
+          EOF
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
         with:
-          script: |
-            const { EMAIL } = process.env
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.
-              Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.
-              See [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
-            `})
+          name: workflow-args
+          path: |
+            comments

@@ -87,9 +87,11 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (!II)
     return false;
 
-  // Look through 'extern "C"' and anything similar invented in the future.
-  // If this function is not in TU directly, it is not a C library function.
-  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit())
+  // C library functions are either declared directly within a TU (the common
+  // case) or they are accessed through the namespace `std` (when they are used
+  // in C++ via headers like <cstdlib>).
+  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
+  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
     return false;
 
   // If this function is not externally visible, it is not a C library function.
@@ -102,17 +104,28 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     return true;
 
   StringRef FName = II->getName();
-  if (FName.equals(Name))
+  if (FName == Name)
     return true;
 
   if (FName.starts_with("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.starts_with("__") && FName.ends_with("_chk") &&
-      FName.contains(Name))
-    return true;
-
   return false;
+}
+
+bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
+                                         StringRef Name) {
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  auto CompletelyMatchesParts = [II](auto... Parts) -> bool {
+    StringRef FName = II->getName();
+    return (FName.consume_front(Parts) && ...) && FName.empty();
+  };
+
+  return CompletelyMatchesParts("__", Name, "_chk") ||
+         CompletelyMatchesParts("__builtin_", "__", Name, "_chk");
 }
 
 StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {

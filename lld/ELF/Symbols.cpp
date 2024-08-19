@@ -58,23 +58,6 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
-Defined *ElfSym::bss;
-Defined *ElfSym::etext1;
-Defined *ElfSym::etext2;
-Defined *ElfSym::edata1;
-Defined *ElfSym::edata2;
-Defined *ElfSym::end1;
-Defined *ElfSym::end2;
-Defined *ElfSym::globalOffsetTable;
-Defined *ElfSym::mipsGp;
-Defined *ElfSym::mipsGpDisp;
-Defined *ElfSym::mipsLocalGp;
-Defined *ElfSym::riscvGlobalPointer;
-Defined *ElfSym::relaIpltStart;
-Defined *ElfSym::relaIpltEnd;
-Defined *ElfSym::tlsModuleBase;
-SmallVector<SymbolAux, 0> elf::symAux;
-
 static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
@@ -136,10 +119,12 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
       // after sections are finalized. (e.g. Measuring the size of .rela.dyn
       // for Android relocation packing requires knowing TLS symbol addresses
       // during section finalization.)
-      if (!Out::tlsPhdr || !Out::tlsPhdr->firstSec)
-        fatal(toString(d.file) +
-              " has an STT_TLS symbol but doesn't have an SHF_TLS section");
-      return va - Out::tlsPhdr->firstSec->addr;
+      if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec) {
+        errorOrWarn(toString(d.file) +
+                    " has an STT_TLS symbol but doesn't have a PT_TLS segment");
+        return 0;
+      }
+      return va - ctx.tlsPhdr->firstSec->addr;
     }
     return va;
   }
@@ -539,8 +524,8 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
   if (!d->section && !errSec && errOffset && d->value == errOffset)
     return;
   if (!d->section || !errSec) {
-    error("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
-          toString(sym.file) + "\n>>> defined in " + toString(newFile));
+    errorOrWarn("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
+                toString(sym.file) + "\n>>> defined in " + toString(newFile));
     return;
   }
 
@@ -564,7 +549,7 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
   if (!src2.empty())
     msg += src2 + "\n>>>            ";
   msg += obj2;
-  error(msg);
+  errorOrWarn(msg);
 }
 
 void Symbol::checkDuplicate(const Defined &other) const {

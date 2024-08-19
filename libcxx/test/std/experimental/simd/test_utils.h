@@ -48,6 +48,19 @@ using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, type
 using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::floating_point_types>;
 #endif
 
+// For interfaces with vectorizable type template parameters, we only use some common or boundary types
+// as template parameters for testing to ensure that the compilation time of a single test does not exceed.
+using simd_test_integer_types =
+    types::type_list<char,
+                     unsigned,
+                     int
+#ifndef TEST_HAS_NO_INT128
+                     ,
+                     __int128_t
+#endif
+                     >;
+using simd_test_types = types::concatenate_t<simd_test_integer_types, types::type_list<float, double>>;
+
 template <template <class T, std::size_t N> class Func>
 void test_all_simd_abi() {
   types::for_each(arithmetic_no_bool_types(), TestAllSimdAbiFunctor<Func>());

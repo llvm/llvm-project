@@ -423,10 +423,9 @@ static void runBenchmarkConfigurations(
         if (Err) {
           // Errors from executing the snippets are fine.
           // All other errors are a framework issue and should fail.
-          if (!Err.isA<SnippetExecutionFailure>()) {
-            llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
-            exit(1);
-          }
+          if (!Err.isA<SnippetExecutionFailure>())
+            ExitOnErr(std::move(Err));
+
           BenchmarkResult.Error = toString(std::move(Err));
         }
         AllResults.push_back(std::move(BenchmarkResult));
@@ -471,9 +470,11 @@ void benchmarkMain() {
 #endif
   }
 
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
   InitializeAllExegesisTargets();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
+  LLVMInitialize##TargetName##AsmParser();
+#include "llvm/Config/TargetExegesis.def"
 
   const LLVMState State =
       ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
@@ -497,22 +498,42 @@ void benchmarkMain() {
   }
 
   const auto Opcodes = getOpcodesOrDie(State);
+  std::vector<BenchmarkCode> Configurations;
+
+  unsigned LoopRegister =
+      State.getExegesisTarget().getDefaultLoopCounterRegister(
+          State.getTargetMachine().getTargetTriple());
+
+  if (Opcodes.empty()) {
+    Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
+    for (const auto &Configuration : Configurations) {
+      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
+          (Configuration.Key.MemoryMappings.size() != 0 ||
+           Configuration.Key.MemoryValues.size() != 0 ||
+           Configuration.Key.SnippetAddress != 0))
+        ExitWithError("Memory and snippet address annotations are only "
+                      "supported in subprocess "
+                      "execution mode");
+    }
+    LoopRegister = Configurations[0].Key.LoopRegister;
+  }
 
   SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
   if (RepetitionMode != Benchmark::RepetitionModeE::AggregateMin)
-    Repetitors.emplace_back(SnippetRepetitor::Create(RepetitionMode, State));
+    Repetitors.emplace_back(
+        SnippetRepetitor::Create(RepetitionMode, State, LoopRegister));
   else {
     for (Benchmark::RepetitionModeE RepMode :
          {Benchmark::RepetitionModeE::Duplicate,
           Benchmark::RepetitionModeE::Loop})
-      Repetitors.emplace_back(SnippetRepetitor::Create(RepMode, State));
+      Repetitors.emplace_back(
+          SnippetRepetitor::Create(RepMode, State, LoopRegister));
   }
 
   BitVector AllReservedRegs;
   for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
     AllReservedRegs |= Repetitor->getReservedRegs();
 
-  std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {
     for (const unsigned Opcode : Opcodes) {
       // Ignore instructions without a sched class if
@@ -533,17 +554,6 @@ void benchmarkMain() {
       }
       std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
                 std::back_inserter(Configurations));
-    }
-  } else {
-    Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
-    for (const auto &Configuration : Configurations) {
-      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
-          (Configuration.Key.MemoryMappings.size() != 0 ||
-           Configuration.Key.MemoryValues.size() != 0 ||
-           Configuration.Key.SnippetAddress != 0))
-        ExitWithError("Memory and snippet address annotations are only "
-                      "supported in subprocess "
-                      "execution mode");
     }
   }
 
@@ -613,9 +623,11 @@ static void analysisMain() {
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
-  InitializeAllAsmPrinters();
-  InitializeAllDisassemblers();
   InitializeAllExegesisTargets();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
+  LLVMInitialize##TargetName##Disassembler();
+#include "llvm/Config/TargetExegesis.def"
 
   auto MemoryBuffer = ExitOnFileError(
       BenchmarkFile,
@@ -682,9 +694,11 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   // Initialize targets so we can print them when flag --version is specified.
-  InitializeAllTargetInfos();
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##Target();                                        \
+  LLVMInitialize##TargetName##TargetInfo();                                    \
+  LLVMInitialize##TargetName##TargetMC();
+#include "llvm/Config/TargetExegesis.def"
 
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);

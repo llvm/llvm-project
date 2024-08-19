@@ -443,15 +443,23 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 /// d1) and return vector<16x2x64>
 static VectorType getDistributedType(VectorType originalType, AffineMap map,
                                      int64_t warpSize) {
-  if (map.getNumResults() != 1)
-    return VectorType();
-  SmallVector<int64_t> targetShape(originalType.getShape().begin(),
-                                   originalType.getShape().end());
+  SmallVector<int64_t> targetShape(originalType.getShape());
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     unsigned position = map.getDimPosition(i);
-    if (targetShape[position] % warpSize != 0)
-      return VectorType();
+    if (targetShape[position] % warpSize != 0) {
+      if (warpSize % targetShape[position] != 0) {
+        return VectorType();
+      }
+      warpSize /= targetShape[position];
+      targetShape[position] = 1;
+      continue;
+    }
     targetShape[position] = targetShape[position] / warpSize;
+    warpSize = 1;
+    break;
+  }
+  if (warpSize != 1) {
+    return VectorType();
   }
   VectorType targetType =
       VectorType::get(targetShape, originalType.getElementType());
@@ -526,7 +534,30 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // 4. Reindex the write using the distribution map.
     auto newWarpOp =
         newWriteOp.getVector().getDefiningOp<WarpExecuteOnLane0Op>();
+
+    // Delinearize the lane id based on the way threads are divided across the
+    // vector. To get the number of threads per vector dimension, divide the
+    // sequential size by the distributed size along each dim.
     rewriter.setInsertionPoint(newWriteOp);
+    SmallVector<OpFoldResult> delinearizedIdSizes;
+    for (auto [seqSize, distSize] :
+         llvm::zip_equal(writtenVectorType.getShape(), targetType.getShape())) {
+      assert(seqSize % distSize == 0 && "Invalid distributed vector shape");
+      delinearizedIdSizes.push_back(rewriter.getIndexAttr(seqSize / distSize));
+    }
+    SmallVector<Value> delinearized;
+    if (map.getNumResults() > 1) {
+      delinearized = rewriter
+                         .create<mlir::affine::AffineDelinearizeIndexOp>(
+                             newWarpOp.getLoc(), newWarpOp.getLaneid(),
+                             delinearizedIdSizes)
+                         .getResults();
+    } else {
+      // If there is only one map result, we can elide the delinearization
+      // op and use the lane id directly.
+      delinearized.append(targetType.getRank(), newWarpOp.getLaneid());
+    }
+
     AffineMap indexMap = map.compose(newWriteOp.getPermutationMap());
     Location loc = newWriteOp.getLoc();
     SmallVector<Value> indices(newWriteOp.getIndices().begin(),
@@ -539,11 +570,11 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
         continue;
       unsigned indexPos = indexExpr.getPosition();
       unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
+      Value laneId = delinearized[vectorPos];
       auto scale =
           rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
       indices[indexPos] = affine::makeComposedAffineApply(
-          rewriter, loc, d0 + scale * d1,
-          {indices[indexPos], newWarpOp.getLaneid()});
+          rewriter, loc, d0 + scale * d1, {indices[indexPos], laneId});
     }
     newWriteOp.getIndicesMutable().assign(indices);
 
@@ -566,9 +597,8 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
 
     // Do not process warp ops that contain only TransferWriteOps.
-    if (llvm::all_of(warpOp.getOps(), [](Operation &op) {
-          return isa<vector::TransferWriteOp, vector::YieldOp>(&op);
-        }))
+    if (llvm::all_of(warpOp.getOps(),
+                     llvm::IsaPred<vector::TransferWriteOp, vector::YieldOp>))
       return failure();
 
     SmallVector<Value> yieldValues = {writeOp.getVector()};
@@ -714,8 +744,8 @@ struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *yieldOperand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<arith::ConstantOp>(op); });
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<arith::ConstantOp>);
     if (!yieldOperand)
       return failure();
     auto constantOp = yieldOperand->get().getDefiningOp<arith::ConstantOp>();
@@ -1028,8 +1058,8 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::BroadcastOp>(op); });
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::BroadcastOp>);
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1065,8 +1095,8 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::ShapeCastOp>(op); });
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ShapeCastOp>);
     if (!operand)
       return failure();
 
@@ -1124,8 +1154,8 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *yieldOperand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::CreateMaskOp>(op); });
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::CreateMaskOp>);
     if (!yieldOperand)
       return failure();
 
@@ -1190,8 +1220,8 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::ExtractOp>(op); });
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ExtractOp>);
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1262,8 +1292,7 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
     (void)distributedDim;
 
     // Yield source vector from warp op.
-    SmallVector<int64_t> newDistributedShape(extractSrcType.getShape().begin(),
-                                             extractSrcType.getShape().end());
+    SmallVector<int64_t> newDistributedShape(extractSrcType.getShape());
     for (int i = 0; i < distributedType.getRank(); ++i)
       newDistributedShape[i + extractOp.getNumIndices()] =
           distributedType.getDimSize(i);
@@ -1293,9 +1322,8 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
         warpShuffleFromIdxFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
-      return isa<vector::ExtractElementOp>(op);
-    });
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ExtractElementOp>);
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1390,8 +1418,8 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::InsertElementOp>(op); });
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::InsertElementOp>);
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1471,8 +1499,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::InsertOp>(op); });
+    OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::InsertOp>);
     if (!operand)
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
@@ -1533,8 +1560,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     // Compute the distributed source vector type.
     VectorType srcVecType = cast<VectorType>(insertOp.getSourceType());
-    SmallVector<int64_t> distrSrcShape(srcVecType.getShape().begin(),
-                                       srcVecType.getShape().end());
+    SmallVector<int64_t> distrSrcShape(srcVecType.getShape());
     // E.g.: vector.insert %s, %d [2] : vector<96xf32> into vector<128x96xf32>
     // Case 1: distrDestDim = 1 (dim of size 96). In that case, each lane will
     //         insert a smaller vector<3xf32>.
@@ -1663,6 +1689,9 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
           }
         });
 
+    if (llvm::is_contained(distTypes, Type{}))
+      return failure();
+
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, escapingValues.getArrayRef(), distTypes,
@@ -1776,8 +1805,8 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *yieldOperand = getWarpResult(
-        warpOp, [](Operation *op) { return isa<vector::ReductionOp>(op); });
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ReductionOp>);
     if (!yieldOperand)
       return failure();
 

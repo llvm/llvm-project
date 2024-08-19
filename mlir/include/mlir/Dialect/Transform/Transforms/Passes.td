@@ -66,7 +66,25 @@ def InterpreterPass : Pass<"transform-interpreter"> {
   let description = [{
     This pass runs the transform dialect interpreter and applies the named
     sequence transformation specified by the provided name (defaults to
-    `TransformDialect::kTransformEntryPointSymbolName` (i.e. `__transform_main`)).
+    `TransformDialect::kTransformEntryPointSymbolName`,
+    i.e. `__transform_main`).
+
+    Additional options can be used to narrow down the pass applicability for
+    debugging purposes:
+      * `debugPayloadRootTag` makes the transform script apply to the payload
+        operation that has a `transform.target_tag` string attribute with the
+        given value, rather than to the anchor operation of the pass.
+      * `debugBindTrailingArgs` allows one to bind values to trailing arguments
+        of the transform entry point as follows:
+        * arguments of `TransformHandleTypeInterface` type can be bound to all
+          payload operations with the name provided as a simple string;
+        * arguments of `TransformValueHandleTypeInterface` type can be bound to
+          a flattened list of results of all operations with the name provided
+          as a string prefixed with `^`;
+        * arguments of `TransformParamTypeInterface` type can be bound to
+          integer constants provided as `;`-separated list prefixed with `#`.
+      * `entryPoint` specifies the name of the transform symbol to serve as the
+        entry point.
   }];
   let dependentDialects = ["::mlir::transform::TransformDialect"];
   let options = [
@@ -83,7 +101,9 @@ def InterpreterPass : Pass<"transform-interpreter"> {
            "false",
            "Disable expensive checks in the interpreter for a faster run.">,
     Option<"entryPoint", "entry-point", "std::string",
-           /*default=*/[{TransformDialect::kTransformEntryPointSymbolName.str()}],
+           /*default=*/[{
+              TransformDialect::kTransformEntryPointSymbolName.str()
+            }],
            "Entry point of the pass pipeline.">,
   ];
 }

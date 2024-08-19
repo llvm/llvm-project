@@ -49,6 +49,11 @@ typedef struct ValueProfNode {
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
 
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} VTableProfData;
+
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
  * profile via an mmap(). This is in contrast to the default mode, in which
@@ -103,12 +108,16 @@ const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
+const char *__llvm_profile_begin_vtabnames(void);
+const char *__llvm_profile_end_vtabnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
 ValueProfNode *__llvm_profile_end_vnodes();
+const VTableProfData *__llvm_profile_begin_vtables();
+const VTableProfData *__llvm_profile_end_vtables();
 uint32_t *__llvm_profile_begin_orderfile();
 
 /*!
@@ -252,20 +261,31 @@ uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
 /*! \brief Get the size of the profile name section in bytes. */
 uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End);
 
-/* ! \brief Given the sizes of the data and counter information, return the
- * number of padding bytes before and after the counters, and after the names,
- * in the raw profile.
+/*! \brief Get the number of virtual table profile data entries */
+uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
+                                       const VTableProfData *End);
+
+/*! \brief Get the size of virtual table profile data in bytes. */
+uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
+                                                const VTableProfData *End);
+
+/* ! \brief Given the sizes of the data and counter information, computes the
+ * number of padding bytes before and after the counter section, as well as the
+ * number of padding bytes after other setions in the raw profile.
+ * Returns -1 upon errors and 0 upon success. Output parameters should be used
+ * iff return value is 0.
  *
  * Note: When mmap() mode is disabled, no padding bytes before/after counters
  * are needed. However, in mmap() mode, the counter section in the raw profile
  * must be page-aligned: this API computes the number of padding bytes
  * needed to achieve that.
  */
-void __llvm_profile_get_padding_sizes_for_counters(
+int __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
-    uint64_t NamesSize, uint64_t *PaddingBytesBeforeCounters,
-    uint64_t *PaddingBytesAfterCounters, uint64_t *PaddingBytesAfterBitmap,
-    uint64_t *PaddingBytesAfterNames);
+    uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
+    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t *PaddingBytesAfterBitmap, uint64_t *PaddingBytesAfterNames,
+    uint64_t *PaddingBytesAfterVTable, uint64_t *PaddingBytesAfterVNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.
@@ -294,7 +314,8 @@ COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
  * variable is defined as weak so that compiler can emit an overriding
  * definition depending on user option.
  */
-extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
+COMPILER_RT_VISIBILITY extern uint64_t
+    INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
 /*!
  * This variable is a weak symbol defined in InstrProfiling.c. It allows

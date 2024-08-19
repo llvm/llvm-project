@@ -43,6 +43,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
@@ -380,7 +381,7 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   static constexpr llvm::StringRef AttachSynchronousHijackListenerName =
       "lldb.internal.Process.AttachSynchronous.hijack";
@@ -389,7 +390,7 @@ public:
   static constexpr llvm::StringRef ResumeSynchronousHijackListenerName =
       "lldb.internal.Process.ResumeSynchronous.hijack";
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -464,6 +465,8 @@ public:
     static bool SetUpdateStateOnRemoval(Event *event_ptr);
 
   private:
+    bool ForwardEventToPendingListeners(Event *event_ptr) override;
+
     void SetUpdateStateOnRemoval() { m_update_state++; }
 
     void SetRestarted(bool new_value) { m_restarted = new_value; }
@@ -735,8 +738,14 @@ public:
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
   /// consistent memory ranges given a \a core_style.
-  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+  Status CalculateCoreFileSaveRanges(const SaveCoreOptions &core_options,
                                      CoreFileMemoryRanges &ranges);
+
+  /// Helper function for Process::SaveCore(...) that calculates the thread list
+  /// based upon options set within a given \a core_options object.
+  /// \note If there is no thread list defined, all threads will be saved.
+  std::vector<lldb::ThreadSP>
+  CalculateCoreFileThreadList(const SaveCoreOptions &core_options);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
@@ -914,8 +923,8 @@ public:
   /// \param[in] force_kill
   ///     Whether lldb should force a kill (instead of a detach) from
   ///     the inferior process.  Normally if lldb launched a binary and
-  ///     Destory is called, lldb kills it.  If lldb attached to a
-  ///     running process and Destory is called, lldb detaches.  If
+  ///     Destroy is called, lldb kills it.  If lldb attached to a
+  ///     running process and Destroy is called, lldb detaches.  If
   ///     this behavior needs to be over-ridden, this is the bool that
   ///     can be used.
   ///
@@ -1311,10 +1320,16 @@ public:
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,
-                         uint32_t num_frames_with_source,
-                         bool stop_format);
+                         uint32_t num_frames_with_source, bool stop_format);
 
-  void SendAsyncInterrupt();
+  /// Send an async interrupt request.
+  ///
+  /// If \a thread is specified the async interrupt stop will be attributed to
+  /// the specified thread.
+  ///
+  /// \param[in] thread
+  ///     The thread the async interrupt will be attributed to.
+  void SendAsyncInterrupt(Thread *thread = nullptr);
 
   // Notify this process class that modules got loaded.
   //
@@ -1422,9 +1437,23 @@ public:
 
   virtual void DidExit() {}
 
+  /// Get the current address mask in the Process
+  ///
+  /// This mask can used to set/clear non-address bits in an addr_t.
+  ///
+  /// \return
+  ///   The current address mask.
+  ///   Bits which are set to 1 are not used for addressing.
+  ///   An address mask of 0 means all bits are used for addressing.
+  ///   An address mask of LLDB_INVALID_ADDRESS_MASK (all 1's) means
+  ///   that no mask has been set.
   lldb::addr_t GetCodeAddressMask();
   lldb::addr_t GetDataAddressMask();
 
+  /// The highmem masks are for targets where we may have different masks
+  /// for low memory versus high memory addresses, and they will be left
+  /// as LLDB_INVALID_ADDRESS_MASK normally, meaning the base masks
+  /// should be applied to all addresses.
   lldb::addr_t GetHighmemCodeAddressMask();
   lldb::addr_t GetHighmemDataAddressMask();
 
@@ -2553,6 +2582,19 @@ void PruneThreadPlans();
   ///     information related to the process.
   virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
 
+  /// Fetch extended crash information held by the process.  This will never be
+  /// an empty shared pointer, it will always have a dict, though it may be
+  /// empty.
+  StructuredData::DictionarySP GetExtendedCrashInfoDict() {
+    assert(m_crash_info_dict_sp && "We always have a valid dictionary");
+    return m_crash_info_dict_sp;
+  }
+
+  void ResetExtendedCrashInfoDict() {
+    // StructuredData::Dictionary is add only, so we have to make a new one:
+    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+  }
+
   size_t AddImageToken(lldb::addr_t image_ptr);
 
   lldb::addr_t GetImagePtrFromToken(size_t token) const;
@@ -2647,6 +2689,37 @@ void PruneThreadPlans();
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;
   }
+
+  /// Find a pattern within a memory region.
+  ///
+  /// This function searches for a pattern represented by the provided buffer
+  /// within the memory range specified by the low and high addresses. It uses
+  /// a bad character heuristic to optimize the search process.
+  ///
+  /// \param[in] low The starting address of the memory region to be searched.
+  /// (inclusive)
+  ///
+  /// \param[in] high The ending address of the memory region to be searched.
+  /// (exclusive)
+  ///
+  /// \param[in] buf A pointer to the buffer containing the pattern to be
+  /// searched.
+  ///
+  /// \param[in] buffer_size The size of the buffer in bytes.
+  ///
+  /// \return The address where the pattern was found or LLDB_INVALID_ADDRESS if
+  /// not found.
+  lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
+                            const uint8_t *buf, size_t size);
+
+  AddressRanges FindRangesInMemory(const uint8_t *buf, uint64_t size,
+                                   const AddressRanges &ranges,
+                                   size_t alignment, size_t max_matches,
+                                   Status &error);
+
+  lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
+                            const AddressRange &range, size_t alignment,
+                            Status &error);
 
 protected:
   friend class Trace;
@@ -2763,6 +2836,11 @@ protected:
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
 
+  virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
+                              const uint8_t *buf, size_t size,
+                              AddressRanges &matches, size_t alignment,
+                              size_t max_matches);
+
   /// DoGetMemoryRegionInfo is called by GetMemoryRegionInfo after it has
   /// removed non address bits from load_addr. Override this method in
   /// subclasses of Process.
@@ -2799,6 +2877,17 @@ protected:
   ///     before the instruction executes.
   virtual std::optional<bool> DoGetWatchpointReportedAfter() {
     return std::nullopt;
+  }
+
+  /// Handle thread specific async interrupt and return the original thread
+  /// that requested the async interrupt. It can be null if original thread
+  /// has exited.
+  ///
+  /// \param[in] description
+  ///     Returns the stop reason description of the async interrupt.
+  virtual lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo, const std::string &description) {
+    return lldb::ThreadSP();
   }
 
   lldb::StateType GetPrivateState();
@@ -3087,6 +3176,11 @@ protected:
                            // Resume will only request a resume, using this
                            // flag to check.
 
+  lldb::tid_t m_interrupt_tid; /// The tid of the thread that issued the async
+                               /// interrupt, used by thread plan timeout. It
+                               /// can be LLDB_INVALID_THREAD_ID to indicate
+                               /// user level async interrupt.
+
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.
   std::atomic<bool> m_finalizing;
@@ -3096,16 +3190,20 @@ protected:
   // if run while destructing.  We use this flag to determine that.
   std::atomic<bool> m_destructing;
 
-  /// Mask for code an data addresses. The default value (0) means no mask is
-  /// set.  The bits set to 1 indicate bits that are NOT significant for
-  /// addressing.
-  /// The highmem versions are for targets where we may have different masks
-  /// for low memory versus high memory addresses.
+  /// Mask for code an data addresses.
+  /// The default value LLDB_INVALID_ADDRESS_MASK means no mask has been set,
+  /// and addresses values should not be modified.
+  /// In these masks, the bits are set to 1 indicate bits that are not
+  /// significant for addressing.
+  /// The highmem masks are for targets where we may have different masks
+  /// for low memory versus high memory addresses, and they will be left
+  /// as LLDB_INVALID_ADDRESS_MASK normally, meaning the base masks
+  /// should be applied to all addresses.
   /// @{
-  lldb::addr_t m_code_address_mask = 0;
-  lldb::addr_t m_data_address_mask = 0;
-  lldb::addr_t m_highmem_code_address_mask = 0;
-  lldb::addr_t m_highmem_data_address_mask = 0;
+  lldb::addr_t m_code_address_mask = LLDB_INVALID_ADDRESS_MASK;
+  lldb::addr_t m_data_address_mask = LLDB_INVALID_ADDRESS_MASK;
+  lldb::addr_t m_highmem_code_address_mask = LLDB_INVALID_ADDRESS_MASK;
+  lldb::addr_t m_highmem_data_address_mask = LLDB_INVALID_ADDRESS_MASK;
   /// @}
 
   bool m_clear_thread_plans_on_stop;
@@ -3128,6 +3226,10 @@ protected:
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
+
+  /// A repository for extra crash information, consulted in
+  /// GetExtendedCrashInformation.
+  StructuredData::DictionarySP m_crash_info_dict_sp;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
@@ -3200,6 +3302,8 @@ protected:
   virtual Status UpdateAutomaticSignalFiltering();
 
   void LoadOperatingSystemPlugin(bool flush);
+
+  void SetAddressableBitMasks(AddressableBits bit_masks);
 
 private:
   Status DestroyImpl(bool force_kill);

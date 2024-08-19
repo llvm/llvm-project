@@ -441,6 +441,30 @@ public:
 
   virtual int64_t GetValueAsSigned(int64_t fail_value, bool *success = nullptr);
 
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to an APSInt and return that. Otherwise return an error.
+  llvm::Expected<llvm::APSInt> GetValueAsAPSInt();
+
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to an APFloat and return that. Otherwise return an error.
+  llvm::Expected<llvm::APFloat> GetValueAsAPFloat();
+
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to a boolean and return that. Otherwise return an error.
+  llvm::Expected<bool> GetValueAsBool();
+
+  /// Update an existing integer ValueObject with a new integer value. This
+  /// is only intended to be used with 'temporary' ValueObjects, i.e. ones that
+  /// are not associated with program variables. It does not update program
+  /// memory, registers, stack, etc.
+  void SetValueFromInteger(const llvm::APInt &value, Status &error);
+
+  /// Update an existing integer ValueObject with an integer value created
+  /// frome 'new_val_sp'.  This is only intended to be used with 'temporary'
+  /// ValueObjects, i.e. ones that are not associated with program variables.
+  /// It does not update program  memory, registers, stack, etc.
+  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error);
+
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
   /// Return the module associated with this value object in case the value is
@@ -465,7 +489,7 @@ public:
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx,
                                               bool can_create = true);
 
   // The method always creates missing children in the path, if necessary.
@@ -476,7 +500,13 @@ public:
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
-  size_t GetNumChildren(uint32_t max = UINT32_MAX);
+  llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
+  /// Like \c GetNumChildren but returns 0 on error.  You probably
+  /// shouldn't be using this function. It exists primarily to ease the
+  /// transition to more pervasive error handling while not all APIs
+  /// have been updated.
+  uint32_t GetNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
+  bool HasChildren() { return GetNumChildrenIgnoringErrors() > 0; }
 
   const Value &GetValue() const { return m_value; }
 
@@ -507,7 +537,7 @@ public:
                            std::string &destination,
                            const TypeSummaryOptions &options);
 
-  const char *GetObjectDescription();
+  llvm::Expected<std::string> GetObjectDescription();
 
   bool HasSpecialPrintableRepresentation(
       ValueObjectRepresentationStyle val_obj_display,
@@ -612,6 +642,32 @@ public:
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
                                               lldb::TypeSP &type_sp);
 
+  /// Return the target load address associated with this value object.
+  lldb::addr_t GetLoadAddress();
+
+  /// Take a ValueObject whose type is an inherited class, and cast it to
+  /// 'type', which should be one of its base classes. 'base_type_indices'
+  /// contains the indices of direct base classes on the path from the
+  /// ValueObject's current type to 'type'
+  llvm::Expected<lldb::ValueObjectSP>
+  CastDerivedToBaseType(CompilerType type,
+                        const llvm::ArrayRef<uint32_t> &base_type_indices);
+
+  /// Take a ValueObject whose type is a base class, and cast it to 'type',
+  /// which should be one of its derived classes. 'base_type_indices'
+  /// contains the indices of direct base classes on the path from the
+  /// ValueObject's current type to 'type'
+  llvm::Expected<lldb::ValueObjectSP> CastBaseToDerivedType(CompilerType type,
+                                                            uint64_t offset);
+
+  // Take a ValueObject that contains a scalar, enum or pointer type, and
+  // cast it to a "basic" type (integer, float or boolean).
+  lldb::ValueObjectSP CastToBasicType(CompilerType type);
+
+  // Take a ValueObject that contain an integer, float or enum, and cast it
+  // to an enum.
+  lldb::ValueObjectSP CastToEnumType(CompilerType type);
+
   /// If this object represents a C++ class with a vtable, return an object
   /// that represents the virtual function table. If the object isn't a class
   /// with a vtable, return a valid ValueObject with the error set correctly.
@@ -638,9 +694,9 @@ public:
 
   virtual SymbolContextScope *GetSymbolContextScope();
 
-  void Dump(Stream &s);
+  llvm::Error Dump(Stream &s);
 
-  void Dump(Stream &s, const DumpValueObjectOptions &options);
+  llvm::Error Dump(Stream &s, const DumpValueObjectOptions &options);
 
   static lldb::ValueObjectSP
   CreateValueObjectFromExpression(llvm::StringRef name,
@@ -653,14 +709,40 @@ public:
                                   const ExecutionContext &exe_ctx,
                                   const EvaluateExpressionOptions &options);
 
+  /// Given an address either create a value object containing the value at
+  /// that address, or create a value object containing the address itself
+  /// (pointer value), depending on whether the parameter 'do_deref' is true or
+  /// false.
   static lldb::ValueObjectSP
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
-                               CompilerType type);
+                               CompilerType type, bool do_deref = true);
 
   static lldb::ValueObjectSP
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
+
+  /// Create a value object containing the given APInt value.
+  static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
+                                                        const llvm::APInt &v,
+                                                        CompilerType type,
+                                                        llvm::StringRef name);
+
+  /// Create a value object containing the given APFloat value.
+  static lldb::ValueObjectSP
+  CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
+                               CompilerType type, llvm::StringRef name);
+
+  /// Create a value object containing the given boolean value.
+  static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
+                                                       bool value,
+                                                       llvm::StringRef name);
+
+  /// Create a nullptr value object with the specified type (must be a
+  /// nullptr type).
+  static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
+                                                          CompilerType type,
+                                                          llvm::StringRef name);
 
   lldb::ValueObjectSP Persist();
 
@@ -712,6 +794,10 @@ public:
     m_type_summary_sp = std::move(format);
     ClearUserVisibleData(eClearUserVisibleDataItemsSummary);
   }
+
+  void SetDerefValobj(ValueObject *deref) { m_deref_valobj = deref; }
+
+  ValueObject *GetDerefValobj() { return m_deref_valobj; }
 
   void SetValueFormat(lldb::TypeFormatImplSP format) {
     m_type_format_sp = std::move(format);
@@ -791,7 +877,7 @@ protected:
       return (m_children.find(idx) != m_children.end());
     }
 
-    ValueObject *GetChildAtIndex(size_t idx) {
+    ValueObject *GetChildAtIndex(uint32_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);
       const auto iter = m_children.find(idx);
       return ((iter == m_children.end()) ? nullptr : iter->second);
@@ -953,14 +1039,18 @@ protected:
   /// Should only be called by ValueObject::GetChildAtIndex().
   ///
   /// \return A ValueObject managed by this ValueObject's manager.
-  virtual ValueObject *CreateChildAtIndex(size_t idx,
-                                          bool synthetic_array_member,
-                                          int32_t synthetic_index);
+  virtual ValueObject *CreateChildAtIndex(size_t idx);
+
+  /// Should only be called by ValueObject::GetSyntheticArrayMember().
+  ///
+  /// \return A ValueObject managed by this ValueObject's manager.
+  virtual ValueObject *CreateSyntheticArrayMember(size_t idx);
 
   /// Should only be called by ValueObject::GetNumChildren().
-  virtual size_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
+  virtual llvm::Expected<uint32_t>
+  CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
-  void SetNumChildren(size_t num_children);
+  void SetNumChildren(uint32_t num_children);
 
   void SetValueDidChange(bool value_changed) {
     m_flags.m_value_did_change = value_changed;

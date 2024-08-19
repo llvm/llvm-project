@@ -154,3 +154,80 @@ void f() {
 }
 
 }
+
+namespace GH88929 {
+    bool b = a...[0];  // expected-error {{use of undeclared identifier 'a'}}
+    using E = P...[0]; // expected-error {{unknown type name 'P'}} \
+                       // expected-error {{expected ';' after alias declaration}}
+}
+
+namespace GH88925 {
+template <typename...> struct S {};
+
+template <auto...> struct W {};
+
+template <int...> struct sequence {};
+
+template <typename... args, int... indices> auto f(sequence<indices...>) {
+  return S<args...[indices]...>(); // #use
+}
+
+template <auto... args, int... indices> auto g(sequence<indices...>) {
+  return W<args...[indices]...>(); // #nttp-use
+}
+
+void h() {
+  static_assert(__is_same(decltype(f<int>(sequence<0, 0>())), S<int, int>));
+  static_assert(__is_same(decltype(f<int, long>(sequence<0, 0>())), S<int, int>));
+  static_assert(__is_same(decltype(f<int, long>(sequence<0, 1>())), S<int, long>));
+  f<int, long>(sequence<3>());
+  // expected-error@#use {{invalid index 3 for pack 'args' of size 2}}}
+  // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
+
+  struct foo {};
+  struct bar {};
+  struct baz {};
+
+  static_assert(__is_same(decltype(g<foo{}, bar{}, baz{}>(sequence<0, 2, 1>())), W<foo{}, baz{}, bar{}>));
+  g<foo{}>(sequence<4>());
+  // expected-error@#nttp-use {{invalid index 4 for pack args of size 1}}
+  // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
+}
+}
+
+namespace GH91885 {
+
+void test(auto...args){
+    [&]<int idx>(){
+        using R = decltype( args...[idx] ) ;
+    }.template operator()<0>();
+}
+
+template<int... args>
+void test2(){
+  [&]<int idx>(){
+    using R = decltype( args...[idx] ) ; // #test2-R
+  }.template operator()<0>(); // #test2-call
+}
+
+void f( ) {
+  test(1);
+  test2<1>();
+  test2();
+  // expected-error@#test2-R {{invalid index 0 for pack args of size 0}}
+  // expected-note@#test2-call {{requested here}}
+  // expected-note@-3 {{requested here}}
+}
+
+
+}
+
+namespace std {
+struct type_info {
+  const char *name;
+};
+} // namespace std
+
+namespace GH93650 {
+auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
+} // namespace GH93650

@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -59,19 +62,25 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
-- We can define type aliases via new keyword ``deftype``.
-
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
 Changes to the AArch64 Backend
 ------------------------------
 
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
 Changes to the ARM Backend
 --------------------------
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the AVR Backend
 --------------------------
@@ -94,15 +103,15 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Added full support for the experimental Zabha (Byte and
-  Halfword Atomic Memory Operations) extension.
-* Added assembler/disassembler support for the experimenatl Zalasr
-  (Load-Acquire and Store-Release) extension.
-* The names of the majority of the S-prefixed (supervisor-level) extension
-  names in the RISC-V profiles specification are now recognised.
-* Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
-* The experimental Ssqosid extension is supported.
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+* Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
+* ``-mcpu=sifive-p470`` was added.
+* Fixed length vector support using RVV instructions now requires VLEN>=64. This
+  means Zve32x and Zve32f will also require Zvl64b. The prior support was
+  largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -113,6 +122,21 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
+  now fill the required alignment space with repeating `0x90` bytes, rather than
+  using optimised NOP filling. Optimised NOP filling fills the space with NOP
+  instructions of various widths, not just those that use the `0x90` byte
+  encoding. To use optimised NOP filling in a code section, leave off the
+  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
+
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -122,8 +146,22 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
-* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
-  functions for accessing the values in a blockaddress constant.
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
+
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
+
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
+
+* The new pass manager can now be invoked with a custom alias analysis pipeline, using
+  the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
+
+* It is now also possible to run the new pass manager on a single function, by calling
+  ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -136,14 +174,11 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
-* llvm-nm and llvm-objdump can now print symbol information from linked
-  WebAssembly binaries, using information from exports or the "name"
-  section for functions, globals and data segments. Symbol addresses and sizes
-  are printed as offsets in the file, allowing for binary size analysis. Wasm
-  files using reference types and GC are also supported (but also only for
-  functions, globals, and data, and only for listing symbols and names).
 
 Changes to LLDB
+---------------------------------
+
+Changes to BOLT
 ---------------------------------
 
 Changes to Sanitizers

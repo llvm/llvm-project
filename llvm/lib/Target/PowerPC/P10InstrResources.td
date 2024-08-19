@@ -881,7 +881,7 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY],
 // 3 Cycles ALU operations, 1 input operands
 def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read],
       (instrs
-    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, LI, LI8,
+    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, ADDItocL8, LI, LI8,
     ADDIC, ADDIC8,
     ADDIS, ADDIS8, ADDISdtprelHA32, ADDIStocHA, ADDIStocHA8, LIS, LIS8,
     ADDME, ADDME8,

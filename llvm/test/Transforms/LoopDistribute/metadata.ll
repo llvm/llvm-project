@@ -5,20 +5,12 @@
 ; properly according to -enable-loop-distribute=0/1 and the
 ; llvm.loop.distribute.enable metadata.
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
-
+define void @explicit_on(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
 ; CHECK-LABEL: @explicit_on(
-define void @explicit_on(ptr noalias %a,
-                         ptr noalias %b,
-                         ptr noalias %c,
-                         ptr noalias %d,
-                         ptr noalias %e) {
 entry:
   br label %for.body
 
 ; EXPLICIT: for.body.ldist1:
-
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]
 
@@ -62,7 +54,6 @@ entry:
   br label %for.body
 
 ; EXPLICIT-NOT: for.body.ldist1:
-
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]
 
@@ -96,12 +87,9 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-; CHECK-LABEL: @default_distribute(
-define void @default_distribute(ptr noalias %a,
-               ptr noalias %b,
-               ptr noalias %c,
-               ptr noalias %d,
+define void @default_distribute(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d,
                ptr noalias %e) {
+; CHECK-LABEL: @default_distribute(
 entry:
   br label %for.body
 
@@ -109,7 +97,6 @@ entry:
 
 ; DEFAULT_ON: for.body.ldist1:
 ; DEFAULT_OFF-NOT: for.body.ldist1:
-
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]
 

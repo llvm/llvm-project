@@ -21,4 +21,3 @@ endforeach()
 add_lit_testsuite(check-ubsan-minimal "Running UndefinedBehaviorSanitizerMinimal tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
-set_target_properties(check-ubsan-minimal PROPERTIES FOLDER "Compiler-RT Misc")

@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+; RUN: opt -mcpu=kaveri -passes=amdgpu-attributor < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
@@ -813,4 +815,4 @@ attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

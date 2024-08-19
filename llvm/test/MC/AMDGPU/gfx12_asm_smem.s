@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
 
 //===----------------------------------------------------------------------===//
 // ENC_SMEM.
@@ -770,6 +770,18 @@ s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_DEV
 // GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_DEV ; encoding: [0x42,0x01,0x40,0xf4,0x00,0x00,0x00,0x00]
 
 s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_SYS
+// GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_SYS ; encoding: [0x42,0x01,0x60,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b32 s5, s[4:5], s0 offset:0x0 scope:0
+// GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0    ; encoding: [0x42,0x01,0x00,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b32 s5, s[4:5], s0 offset:0x0 scope:1
+// GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_SE ; encoding: [0x42,0x01,0x20,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b32 s5, s[4:5], s0 offset:0x0 scope:0x2
+// GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_DEV ; encoding: [0x42,0x01,0x40,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b32 s5, s[4:5], s0 offset:0x0 scope:03
 // GFX12: s_load_b32 s5, s[4:5], s0 offset:0x0 scope:SCOPE_SYS ; encoding: [0x42,0x01,0x60,0xf4,0x00,0x00,0x00,0x00]
 
 s_load_b32 s5, s[4:5], s0 offset:0x0 th:TH_LOAD_HT scope:SCOPE_SE

@@ -240,7 +240,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
@@ -815,7 +815,7 @@ public:
   }
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
-    return isMFMA(MI) || isWMMA(MI);
+    return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
@@ -925,6 +925,35 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
+  // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
+  // S_BARRIER, but after support for S_BARRIER_SIGNAL* / S_BARRIER_WAIT we want
+  // to check for the barrier start (S_BARRIER_SIGNAL*)
+  bool isBarrierStart(unsigned Opcode) const {
+    return Opcode == AMDGPU::S_BARRIER ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
+  }
+
+  bool isBarrier(unsigned Opcode) const {
+    return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
+           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
+           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::DS_GWS_INIT ||
+           Opcode == AMDGPU::DS_GWS_BARRIER;
+  }
+
+  static bool isF16PseudoScalarTrans(unsigned Opcode) {
+    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
+           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
+           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
+           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
+           Opcode == AMDGPU::V_S_SQRT_F16_e64;
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
@@ -949,8 +978,33 @@ public:
       return AMDGPU::S_WAIT_BVHCNT;
     case AMDGPU::S_WAIT_DSCNT_soft:
       return AMDGPU::S_WAIT_DSCNT;
+    case AMDGPU::S_WAIT_KMCNT_soft:
+      return AMDGPU::S_WAIT_KMCNT;
     default:
       return Opcode;
+    }
+  }
+
+  bool isWaitcnt(unsigned Opcode) const {
+    switch (getNonSoftWaitcntOpcode(Opcode)) {
+    case AMDGPU::S_WAITCNT:
+    case AMDGPU::S_WAITCNT_VSCNT:
+    case AMDGPU::S_WAITCNT_VMCNT:
+    case AMDGPU::S_WAITCNT_EXPCNT:
+    case AMDGPU::S_WAITCNT_LGKMCNT:
+    case AMDGPU::S_WAIT_LOADCNT:
+    case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    case AMDGPU::S_WAIT_STORECNT:
+    case AMDGPU::S_WAIT_STORECNT_DSCNT:
+    case AMDGPU::S_WAIT_SAMPLECNT:
+    case AMDGPU::S_WAIT_BVHCNT:
+    case AMDGPU::S_WAIT_EXPCNT:
+    case AMDGPU::S_WAIT_DSCNT:
+    case AMDGPU::S_WAIT_KMCNT:
+    case AMDGPU::S_WAIT_IDLE:
+      return true;
+    default:
+      return false;
     }
   }
 
@@ -973,7 +1027,13 @@ public:
   /// Return true if the instruction modifies the mode register.q
   static bool modifiesModeRegister(const MachineInstr &MI);
 
-  /// Whether we must prevent this instruction from executing with EXEC = 0.
+  /// This function is used to determine if an instruction can be safely
+  /// executed under EXEC = 0 without hardware error, indeterminate results,
+  /// and/or visible effects on future vector execution or outside the shader.
+  /// Note: as of 2024 the only use of this is SIPreEmitPeephole where it is
+  /// used in removing branches over short EXEC = 0 sequences.
+  /// As such it embeds certain assumptions which may not apply to every case
+  /// of EXEC = 0 execution.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
 
   /// Returns true if the instruction could potentially depend on the value of
@@ -982,9 +1042,7 @@ public:
 
   bool isInlineConstant(const APInt &Imm) const;
 
-  bool isInlineConstant(const APFloat &Imm) const {
-    return isInlineConstant(Imm.bitcastToAPInt());
-  }
+  bool isInlineConstant(const APFloat &Imm) const;
 
   // Returns true if this non-register operand definitely does not need to be
   // encoded as a 32-bit literal. Note that this function handles all kinds of
@@ -1194,6 +1252,15 @@ public:
                    unsigned Quantity) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
+
+  /// Build instructions that simulate the behavior of a `s_trap 2` instructions
+  /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is
+  /// interpreted as a nop.
+  MachineBasicBlock *insertSimulatedTrap(MachineRegisterInfo &MRI,
+                                         MachineBasicBlock &MBB,
+                                         MachineInstr &MI,
+                                         const DebugLoc &DL) const;
+
   /// Return the number of wait states that result from executing this
   /// instruction.
   static unsigned getNumWaitStates(const MachineInstr &MI);
@@ -1364,7 +1431,7 @@ public:
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<AMDGPUMIRFormatter>();
     return Formatter.get();
   }
@@ -1456,9 +1523,6 @@ namespace AMDGPU {
   /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
   LLVM_READONLY
   int getIfAddr64Inst(uint16_t Opcode);
-
-  LLVM_READONLY
-  int getAtomicNoRetOp(uint16_t Opcode);
 
   LLVM_READONLY
   int getSOPKOp(uint16_t Opcode);

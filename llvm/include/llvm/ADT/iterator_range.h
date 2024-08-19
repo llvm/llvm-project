@@ -48,9 +48,10 @@ public:
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
 #else
-  template <typename Container,
-            std::enable_if_t<explicitly_convertible<
-                detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+  template <
+      typename Container,
+      std::enable_if_t<explicitly_convertible<
+          llvm::detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
@@ -65,7 +66,8 @@ public:
 };
 
 template <typename Container>
-iterator_range(Container &&) -> iterator_range<detail::IterOfRange<Container>>;
+iterator_range(Container &&)
+    -> iterator_range<llvm::detail::IterOfRange<Container>>;
 
 /// Convenience function for iterating over sub-ranges.
 ///

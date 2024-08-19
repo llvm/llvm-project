@@ -205,8 +205,15 @@ public:
   /// invalidateRegions - Clears out the specified regions from the store,
   ///  marking their values as unknown. Depending on the store, this may also
   ///  invalidate additional regions that may have changed based on accessing
-  ///  the given regions. Optionally, invalidates non-static globals as well.
-  /// \param[in] store The initial store
+  ///  the given regions. If \p Call is non-null, then this also invalidates
+  ///  non-static globals (but if \p Call is from a system header, then this is
+  ///  limited to globals declared in system headers).
+  ///
+  /// Instead of calling this method directly, you should probably use
+  /// \c ProgramState::invalidateRegions, which calls this and then ensures that
+  /// the relevant checker callbacks are triggered.
+  ///
+  /// \param[in] store The initial store.
   /// \param[in] Values The values to invalidate.
   /// \param[in] E The current statement being evaluated. Used to conjure
   ///   symbols to mark the values of invalidated regions.
@@ -225,15 +232,11 @@ public:
   ///   invalidated. This should include any regions explicitly invalidated
   ///   even if they do not currently have bindings. Pass \c NULL if this
   ///   information will not be used.
-  virtual StoreRef invalidateRegions(Store store,
-                                  ArrayRef<SVal> Values,
-                                  const Expr *E, unsigned Count,
-                                  const LocationContext *LCtx,
-                                  const CallEvent *Call,
-                                  InvalidatedSymbols &IS,
-                                  RegionAndSymbolInvalidationTraits &ITraits,
-                                  InvalidatedRegions *InvalidatedTopLevel,
-                                  InvalidatedRegions *Invalidated) = 0;
+  virtual StoreRef invalidateRegions(
+      Store store, ArrayRef<SVal> Values, const Expr *Ex, unsigned Count,
+      const LocationContext *LCtx, const CallEvent *Call,
+      InvalidatedSymbols &IS, RegionAndSymbolInvalidationTraits &ITraits,
+      InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) = 0;
 
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.

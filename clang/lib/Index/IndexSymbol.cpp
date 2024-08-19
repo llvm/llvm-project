@@ -552,8 +552,7 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
-  case SymbolSubKind::UsingEnum:
-    return "using-enum";
+  case SymbolSubKind::UsingEnum: return "using-enum";
   }
   llvm_unreachable("invalid symbol subkind");
 }

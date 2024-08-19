@@ -327,6 +327,7 @@
 {'is_defined': False, 'name': '___cxa_bad_cast', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_bad_typeid', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_begin_catch', 'type': 'U'}
+{'is_defined': False, 'name': '___cxa_call_terminate', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_call_unexpected', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_current_exception_type', 'type': 'U'}
 {'is_defined': False, 'name': '___cxa_current_primary_exception', 'type': 'U'}
@@ -575,6 +576,7 @@
 {'is_defined': True, 'name': '__ZNKSt3__118__time_get_storageIcE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__118__time_get_storageIwE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__119__shared_weak_count13__get_deleterERKSt9type_info', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__119bad_expected_accessIvE4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE10do_unshiftER11__mbstate_tPcS4_RS4_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE11do_encodingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE13do_max_lengthEv', 'type': 'FUNC'}
@@ -2073,6 +2075,7 @@
 {'is_defined': True, 'name': '__ZTINSt3__117moneypunct_bynameIwLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__119__shared_weak_countE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__119bad_expected_accessIvEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__120__codecvt_utf8_utf16IDiEE', 'size': 0, 'type': 'OBJECT'}
@@ -2264,6 +2267,7 @@
 {'is_defined': True, 'name': '__ZTSNSt3__117moneypunct_bynameIwLb0EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__117moneypunct_bynameIwLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__119bad_expected_accessIvEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__13pmr15memory_resourceE', 'size': 0, 'type': 'OBJECT'}
@@ -2482,6 +2486,7 @@
 {'is_defined': True, 'name': '__ZTVNSt3__117moneypunct_bynameIwLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__119__shared_weak_countE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__119bad_expected_accessIvEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 0, 'type': 'OBJECT'}
@@ -2589,6 +2594,7 @@
 {'is_defined': True, 'name': '___cxa_bad_cast', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_bad_typeid', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_begin_catch', 'type': 'I'}
+{'is_defined': True, 'name': '___cxa_call_terminate', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_call_unexpected', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_current_exception_type', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_current_primary_exception', 'type': 'I'}

@@ -10,6 +10,15 @@
 // RUN: %clang_cc1 -std=c++20 %t/algorithm.cppm -I%t -emit-module-interface -o %t/std-algorithm.pcm
 // RUN: %clang_cc1 -std=c++20 %t/Use.cppm -I%t -fprebuilt-module-path=%t -emit-module-interface -verify -o %t/Use.pcm
 
+// Test again with reduced BMI.
+// RUN: rm -fr %t
+// RUN: mkdir %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/string.cppm -I%t -emit-reduced-module-interface -o %t/std-string.pcm
+// RUN: %clang_cc1 -std=c++20 %t/algorithm.cppm -I%t -emit-reduced-module-interface -o %t/std-algorithm.pcm
+// RUN: %clang_cc1 -std=c++20 %t/Use.cppm -I%t -fprebuilt-module-path=%t -emit-reduced-module-interface -verify -o %t/Use.pcm
+
 //--- Use.cppm
 // expected-no-diagnostics
 module;

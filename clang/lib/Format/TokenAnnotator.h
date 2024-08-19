@@ -16,13 +16,14 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
-#include "clang/Format/Format.h"
 
 namespace clang {
 namespace format {
 
 enum LineType {
   LT_Invalid,
+  // Contains public/private/protected followed by TT_InheritanceColon.
+  LT_AccessModifier,
   LT_ImportStatement,
   LT_ObjCDecl, // An @interface, @implementation, or @protocol line.
   LT_ObjCMethodDecl,
@@ -46,7 +47,7 @@ enum ScopeType {
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
-      : First(Line.Tokens.front().Tok), Level(Line.Level),
+      : First(Line.Tokens.front().Tok), Type(LT_Other), Level(Line.Level),
         PPLevel(Line.PPLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
@@ -212,7 +213,10 @@ private:
 class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
-      : Style(Style), Keywords(Keywords) {}
+      : Style(Style), IsCpp(Style.isCpp()),
+        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
+    assert(IsCpp == LangOpts.CXXOperatorNames);
+  }
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
@@ -259,6 +263,9 @@ private:
       const FormatToken &PointerOrReference) const;
 
   const FormatStyle &Style;
+
+  bool IsCpp;
+  LangOptions LangOpts;
 
   const AdditionalKeywords &Keywords;
 

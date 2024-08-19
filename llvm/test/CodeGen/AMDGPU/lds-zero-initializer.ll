@@ -11,8 +11,8 @@
 define amdgpu_kernel void @load_zeroinit_lds_global(ptr addrspace(1) %out, i1 %p) {
   ; GCN-LABEL: name: load_zeroinit_lds_global
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN:   liveins: $sgpr0_sgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GCN:   liveins: $sgpr2_sgpr3
+  ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
   ; GFX8:  [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0
   ; GFX9:  [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0
   ; GFX8:  [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1

@@ -34,7 +34,8 @@ liveins:
   - { reg: '$edi', virtual-reg: '%12' }
 frameInfo:
   maxAlignment:    1
-machineFunctionInfo: {}
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:

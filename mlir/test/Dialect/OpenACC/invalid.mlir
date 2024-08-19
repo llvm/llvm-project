@@ -738,3 +738,43 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
     acc.terminator
   }
 }
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined() {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected compute construct name}}
+  acc.loop combined(loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined(parallel loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected ')'}}
+  acc.loop combined(parallel loop) {
+  }
+
+  return
+}

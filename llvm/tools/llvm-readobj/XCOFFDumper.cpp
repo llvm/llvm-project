@@ -12,6 +12,7 @@
 
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -250,7 +251,8 @@ void XCOFFDumper::printLoaderSectionSymbolsHelper(uintptr_t LoaderSectionAddr) {
     }
 
     DictScope DS(W, "Symbol");
-    W.printString("Name", SymbolNameOrErr.get());
+    StringRef SymbolName = SymbolNameOrErr.get();
+    W.printString("Name", opts::Demangle ? demangle(SymbolName) : SymbolName);
     W.printHex("Virtual Address", LoadSecSymEntPtr->Value);
     W.printNumber("SectionNum", LoadSecSymEntPtr->SectionNumber);
     W.printHex("SymbolType", LoadSecSymEntPtr->SymbolType);
@@ -326,7 +328,8 @@ void XCOFFDumper::printLoaderSectionRelocationEntry(
 
     uint8_t Info = Type >> 8;
     W.printHex("Virtual Address", LoaderSecRelEntPtr->VirtualAddr);
-    W.printNumber("Symbol", SymbolName, LoaderSecRelEntPtr->SymbolIndex);
+    W.printNumber("Symbol", opts::Demangle ? demangle(SymbolName) : SymbolName,
+                  LoaderSecRelEntPtr->SymbolIndex);
     W.printString("IsSigned", IsRelocationSigned(Info) ? "Yes" : "No");
     W.printNumber("FixupBitValue", IsFixupIndicated(Info) ? 1 : 0);
     W.printNumber("Length", GetRelocatedLength(Info));
@@ -340,8 +343,9 @@ void XCOFFDumper::printLoaderSectionRelocationEntry(
                   << XCOFF::getRelocationTypeString(
                          static_cast<XCOFF::RelocationType>(Type))
                   << ")" << format_decimal(LoaderSecRelEntPtr->SectionNum, 8)
-                  << "    " << SymbolName << " ("
-                  << LoaderSecRelEntPtr->SymbolIndex << ")\n";
+                  << "    "
+                  << (opts::Demangle ? demangle(SymbolName) : SymbolName)
+                  << " (" << LoaderSecRelEntPtr->SymbolIndex << ")\n";
   }
 }
 
@@ -466,15 +470,17 @@ template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printHex("Virtual Address", Reloc.VirtualAddress);
-    W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
+    W.printNumber("Symbol", opts::Demangle ? demangle(SymbolName) : SymbolName,
+                  Reloc.SymbolIndex);
     W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
     W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
     W.printNumber("Length", Reloc.getRelocatedLength());
     W.printEnum("Type", (uint8_t)Reloc.Type, ArrayRef(RelocationTypeNameclass));
   } else {
     raw_ostream &OS = W.startLine();
-    OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " " << SymbolName
-       << "(" << Reloc.SymbolIndex << ") " << W.hex(Reloc.Info) << "\n";
+    OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " "
+       << (opts::Demangle ? demangle(SymbolName) : SymbolName) << "("
+       << Reloc.SymbolIndex << ") " << W.hex(Reloc.Info) << "\n";
   }
 }
 
@@ -752,7 +758,7 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   XCOFF::StorageClass SymbolClass = SymbolEntRef.getStorageClass();
 
   W.printNumber("Index", SymbolIdx);
-  W.printString("Name", SymbolName);
+  W.printString("Name", opts::Demangle ? demangle(SymbolName) : SymbolName);
   W.printHex(GetSymbolValueName(SymbolClass), SymbolEntRef.getValue());
 
   StringRef SectionName =

@@ -13,7 +13,9 @@
 #define LLVM_LIB_TARGET_DIRECTX_DXILOPBUILDER_H
 
 #include "DXILConstants.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 class Module;
@@ -22,22 +24,36 @@ class CallInst;
 class Value;
 class Type;
 class FunctionType;
-class Use;
 
 namespace dxil {
 
 class DXILOpBuilder {
 public:
-  DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {}
-  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *OverloadTy,
-                             llvm::iterator_range<Use *> Args);
-  Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT,
-                      bool NoOpCodeParam);
+  DXILOpBuilder(Module &M, IRBuilderBase &B);
+
+  /// Create a call instruction for the given DXIL op. The arguments
+  /// must be valid for an overload of the operation.
+  CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> Args,
+                     Type *RetTy = nullptr);
+
+  /// Try to create a call instruction for the given DXIL op. Fails if the
+  /// overload is invalid.
+  Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args,
+                                   Type *RetTy = nullptr);
+
+  /// Return the name of the given opcode.
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:
+  /// Gets a specific overload type of the function for the given DXIL op. If
+  /// the operation is not overloaded, \c OverloadType may be nullptr.
+  FunctionType *getOpFunctionType(dxil::OpCode OpCode,
+                                  Type *OverloadType = nullptr);
+
   Module &M;
   IRBuilderBase &B;
+  VersionTuple DXILVersion;
+  Triple::EnvironmentType ShaderStage;
 };
 
 } // namespace dxil

@@ -176,13 +176,13 @@ exit:
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: LDURDi_LDRDui:%bb.1 vector_body
 ;
-; CHECK: Cluster ld/st SU(2) - SU(6)
-; CHECK: Cluster ld/st SU(3) - SU(7)
+; CHECK: Cluster ld/st SU(0) - SU(4)
+; CHECK: Cluster ld/st SU(1) - SU(5)
 ;
-; CHECK: SU(2): %{{[0-9]+}}:fpr64 = LDURDi
-; CHECK: SU(3): %{{[0-9]+}}:fpr64 = LDURDi
-; CHECK: SU(6): %{{[0-9]+}}:fpr64 = LDRDui
-; CHECK: SU(7): %{{[0-9]+}}:fpr64 = LDRDui
+; CHECK: SU(0): %{{[0-9]+}}:fpr64 = LDURDi
+; CHECK: SU(1): %{{[0-9]+}}:fpr64 = LDURDi
+; CHECK: SU(4): %{{[0-9]+}}:fpr64 = LDRDui
+; CHECK: SU(5): %{{[0-9]+}}:fpr64 = LDRDui
 ;
 define void @LDURDi_LDRDui(ptr nocapture readonly %arg) {
 entry:

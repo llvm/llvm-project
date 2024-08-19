@@ -167,13 +167,14 @@ if(LIBC_TARGET_OS STREQUAL "baremetal")
   set(LIBC_TARGET_OS_IS_BAREMETAL TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "linux")
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
-elseif(LIBC_TARGET_OS STREQUAL "poky" OR LIBC_TARGET_OS STREQUAL "suse")
-  # poky are ustom Linux-base systems created by yocto. Since these are Linux
+elseif(LIBC_TARGET_OS STREQUAL "poky" OR LIBC_TARGET_OS STREQUAL "suse" OR
+       LIBC_TARGET_OS STREQUAL "redhat")
+  # poky are custom Linux-base systems created by yocto. Since these are Linux
   # images, we change the LIBC_TARGET_OS to linux. This define is used to
   # include the right directories during compilation.
   #
-  # openSUSE uses different triple format which causes LIBC_TARGET_OS to be
-  # computed as "suse" instead of "linux".
+  # openSUSE and redhat use different triple format which causes LIBC_TARGET_OS
+  # to be computed as "suse" or "redhat" instead of "linux".
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
   set(LIBC_TARGET_OS "linux")
 elseif(LIBC_TARGET_OS STREQUAL "darwin")

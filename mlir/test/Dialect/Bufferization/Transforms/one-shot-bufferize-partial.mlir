@@ -4,9 +4,9 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=tensor,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-TENSOR
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=scf,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-SCF

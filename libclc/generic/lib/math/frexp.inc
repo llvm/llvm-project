@@ -21,6 +21,8 @@
  * THE SOFTWARE.
  */
 
+#include "../clcmacro.h"
+
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(as_, __CLC_GENTYPE)
 #define __CLC_AS_INTN __CLC_XCONCAT(as_, __CLC_INTN)
 
@@ -38,6 +40,17 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE 
     *ep = select(e, (__CLC_INTN)0, t);
     return select(__CLC_AS_GENTYPE(i), x, t);
 }
+#endif
+
+#if __CLC_FPSIZE == 16
+#ifdef __CLC_SCALAR
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE frexp(__CLC_GENTYPE x,
+                                           __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
+  return (__CLC_GENTYPE)frexp((float)x, ep);
+}
+_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, __CLC_GENTYPE, frexp,
+                      __CLC_GENTYPE, __CLC_ADDRESS_SPACE, __CLC_INTN);
+#endif
 #endif
 
 #if __CLC_FPSIZE == 64

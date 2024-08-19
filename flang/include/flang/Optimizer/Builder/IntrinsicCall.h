@@ -25,15 +25,25 @@
 namespace fir {
 
 class StatementContext;
+struct IntrinsicHandlerEntry;
 
-// TODO: Error handling interface ?
-// TODO: Implementation is incomplete. Many intrinsics to tbd.
-
-/// Same as the other genIntrinsicCall version above, except that the result
-/// deallocation, if required, is not added to a StatementContext. Instead, an
-/// extra boolean result indicates if the result must be freed after use.
+/// Lower an intrinsic call given the intrinsic \p name, its \p resultType (that
+/// must be std::nullopt if and only if this is a subroutine call), and its
+/// lowered arguments \p args. The returned pair contains the result value
+/// (null mlir::Value for subroutine calls), and a boolean that indicates if
+/// this result must be freed after use.
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
+                 std::optional<mlir::Type> resultType,
+                 llvm::ArrayRef<fir::ExtendedValue> args,
+                 Fortran::lower::AbstractConverter *converter = nullptr);
+
+/// Same as the entry above except that instead of an intrinsic name it takes an
+/// IntrinsicHandlerEntry obtained by a previous lookup for a handler to lower
+/// this intrinsic (see lookupIntrinsicHandler).
+std::pair<fir::ExtendedValue, bool>
+genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
+                 const IntrinsicHandlerEntry &,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
@@ -156,6 +166,11 @@ struct IntrinsicLibrary {
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
 
+  /// Helper to generate TODOs for module procedures that must be intercepted in
+  /// lowering and are not yet implemented.
+  template <const char *intrinsicName>
+  void genModuleProcTODO(llvm::ArrayRef<fir::ExtendedValue>);
+
   void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
   /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
@@ -204,10 +219,15 @@ struct IntrinsicLibrary {
                                            llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCAssociatedCPtr(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genErfcScaled(mlir::Type resultType,
+                            llvm::ArrayRef<mlir::Value> args);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCPtrCompare(mlir::Type,
+                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -219,6 +239,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   void genExecuteCommandLine(mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genEtime(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
@@ -227,6 +249,8 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genGetPID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
@@ -266,8 +290,9 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeSupportFlagOrHalting(mlir::Type,
-                                          llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue
+      genIeeeSupportFlagOrHalting(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -305,6 +330,8 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue>);
   void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
+  enum class NearestProc { Nearest, NextAfter, NextDown, NextUp };
+  template <NearestProc>
   mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -320,6 +347,10 @@ struct IntrinsicLibrary {
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReduceDim(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRename(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
@@ -328,16 +359,24 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSecond(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSelectedCharKind(mlir::Type,
+                                         llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSelectedLogicalKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genShape(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -385,17 +424,22 @@ struct IntrinsicLibrary {
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
-  /// Generate code to raise \p except if \p cond is absent,
+  /// Generate code to raise \p excepts if \p cond is absent,
   /// or present and true.
-  void genRaiseExcept(int except, mlir::Value cond = {});
+  void genRaiseExcept(int excepts, mlir::Value cond = {});
+
+  /// Generate a quiet NaN of a given floating point type.
+  mlir::Value genQNan(mlir::Type resultType);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
   using ElementalGenerator = decltype(&IntrinsicLibrary::genAbs);
   using ExtendedGenerator = decltype(&IntrinsicLibrary::genLenTrim);
   using SubroutineGenerator = decltype(&IntrinsicLibrary::genDateAndTime);
-  using Generator =
-      std::variant<ElementalGenerator, ExtendedGenerator, SubroutineGenerator>;
+  /// The generator for intrinsic that has both function and subroutine form.
+  using DualGenerator = decltype(&IntrinsicLibrary::genEtime);
+  using Generator = std::variant<ElementalGenerator, ExtendedGenerator,
+                                 SubroutineGenerator, DualGenerator>;
 
   /// All generators can be outlined. This will build a function named
   /// "fir."+ <generic name> + "." + <result type code> and generate the
@@ -435,6 +479,10 @@ struct IntrinsicLibrary {
                               mlir::Type resultType,
                               llvm::ArrayRef<mlir::Value> args);
   mlir::Value invokeGenerator(SubroutineGenerator generator,
+                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value invokeGenerator(DualGenerator generator,
+                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value invokeGenerator(DualGenerator generator, mlir::Type resultType,
                               llvm::ArrayRef<mlir::Value> args);
 
   /// Get pointer to unrestricted intrinsic. Generate the related unrestricted
@@ -652,13 +700,25 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
   return mlir::FunctionType::get(context, argTypes, {resType});
 }
 
+/// Entry into the tables describing how an intrinsic must be lowered.
+struct IntrinsicHandlerEntry {
+  using RuntimeGeneratorRange =
+      std::pair<const MathOperation *, const MathOperation *>;
+  IntrinsicHandlerEntry(const IntrinsicHandler *handler) : entry{handler} {
+    assert(handler && "handler must not be nullptr");
+  };
+  IntrinsicHandlerEntry(RuntimeGeneratorRange rt) : entry{rt} {};
+  const IntrinsicArgumentLoweringRules *getArgumentLoweringRules() const;
+  std::variant<const IntrinsicHandler *, RuntimeGeneratorRange> entry;
+};
+
 //===----------------------------------------------------------------------===//
 // Helper functions for argument handling.
 //===----------------------------------------------------------------------===//
 static inline mlir::Type getConvertedElementType(mlir::MLIRContext *context,
                                                  mlir::Type eleTy) {
-  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
-    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
+  if (mlir::isa<mlir::IntegerType>(eleTy) && !eleTy.isSignlessInteger()) {
+    const auto intTy{mlir::dyn_cast<mlir::IntegerType>(eleTy)};
     auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
     return newEleTy;
   }
@@ -703,6 +763,15 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
                                        const MathOperation &mathOp,
                                        mlir::FunctionType libFuncType,
                                        llvm::ArrayRef<mlir::Value> args);
+
+/// Lookup for a handler or runtime call generator to lower intrinsic
+/// \p intrinsicName.
+std::optional<IntrinsicHandlerEntry>
+lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
+                       std::optional<mlir::Type> resultType);
+
+/// Generate a TODO error message for an as yet unimplemented intrinsic.
+void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
 
 /// Return argument lowering rules for an intrinsic.
 /// Returns a nullptr if all the intrinsic arguments should be lowered by value.

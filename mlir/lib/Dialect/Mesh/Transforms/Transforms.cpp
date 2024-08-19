@@ -133,7 +133,7 @@ struct AllSliceOpLowering
 
     // insert tensor.extract_slice
     RankedTensorType operandType =
-        op.getOperand().getType().cast<RankedTensorType>();
+        cast<RankedTensorType>(op.getOperand().getType());
     SmallVector<OpFoldResult> sizes;
     for (int64_t i = 0; i < operandType.getRank(); ++i) {
       if (i == sliceAxis) {
@@ -202,10 +202,22 @@ createCollectiveProcessGroupSize(MeshOp mesh, ArrayRef<MeshAxis> axes,
                                  ImplicitLocOpBuilder &builder) {
   Operation::result_range meshShape =
       builder.create<mesh::MeshShapeOp>(mesh, axes).getResults();
-  return arith::createProduct(builder, builder.getLoc(),
-                              llvm::to_vector_of<Value>(meshShape),
-                              builder.getIndexType())
-      .cast<TypedValue<IndexType>>();
+  return cast<TypedValue<IndexType>>(arith::createProduct(
+      builder, builder.getLoc(), llvm::to_vector_of<Value>(meshShape),
+      builder.getIndexType()));
+}
+
+TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
+                                               ArrayRef<MeshAxis> meshAxes,
+                                               ImplicitLocOpBuilder &builder) {
+  ResultRange processInGroupMultiIndex =
+      builder.create<ProcessMultiIndexOp>(mesh, meshAxes).getResults();
+  Operation::result_range processGroupShape =
+      builder.create<MeshShapeOp>(mesh, meshAxes).getResult();
+  OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
+      llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
+      llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
+  return cast<TypedValue<IndexType>>(processInGroupLinearIndex.get<Value>());
 }
 
 } // namespace mlir::mesh

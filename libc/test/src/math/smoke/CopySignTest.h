@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
+
+#include "src/__support/CPP/algorithm.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 template <typename T>
-class CopySignTest : public LIBC_NAMESPACE::testing::Test {
+class CopySignTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -31,13 +36,15 @@ public:
   }
 
   void testRange(CopySignFunc func) {
-    constexpr StorageType COUNT = 100'000;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+    constexpr int COUNT = 100'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0;
+    for (int i = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits = FPBits(v);
-      T x = T(v);
       if (x_bits.is_nan() || x_bits.is_inf())
         continue;
+      T x = x_bits.get_val();
 
       T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);
@@ -52,3 +59,5 @@ public:
   using LlvmLibcCopySignTest = CopySignTest<T>;                                \
   TEST_F(LlvmLibcCopySignTest, SpecialNumbers) { testSpecialNumbers(&func); }  \
   TEST_F(LlvmLibcCopySignTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H

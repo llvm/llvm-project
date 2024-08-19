@@ -3,7 +3,6 @@ Test trimming long progress report in tiny terminal windows
 """
 
 import os
-import pexpect
 import tempfile
 import re
 

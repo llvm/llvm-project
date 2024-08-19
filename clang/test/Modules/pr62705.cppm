@@ -10,6 +10,14 @@
 // RUN: %clang_cc1 %t/b.pcm -std=c++20 -triple %itanium_abi_triple \
 // RUN:     -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cppm
 
+// RUN: %clang_cc1 %t/a.cppm -std=c++20 -triple %itanium_abi_triple \
+// RUN:     -emit-reduced-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 %t/b.cppm -std=c++20 -triple %itanium_abi_triple \
+// RUN:     -emit-module-interface -o %t/b.pcm \
+// RUN:     -fmodule-file=a=%t/a.pcm
+// RUN: %clang_cc1 %t/b.pcm -std=c++20 -triple %itanium_abi_triple \
+// RUN:     -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cppm
+
 //--- foo.h
 namespace n {
 

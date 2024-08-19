@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// The AMDGPU target machine contains all of the hardware specific
-/// information  needed to emit code for SI+ GPUs.
+/// This file contains both AMDGPU target machine and the CodeGen pass builder.
+/// The AMDGPU target machine contains all of the hardware specific information
+/// needed to emit code for SI+ GPUs in the legacy pass manager pipeline. The
+/// CodeGen pass builder handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,8 +20,11 @@
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUIGroupLP.h"
+#include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURegBankSelect.h"
+#include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
@@ -27,13 +32,15 @@
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
-#include "R600MachineFunctionInfo.h"
 #include "R600TargetMachine.h"
+#include "SIFixSGPRCopies.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -50,16 +57,25 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
+#include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/FixIrreducible.h"
+#include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include <optional>
 
@@ -80,15 +96,18 @@ public:
 };
 
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
-                              const TargetRegisterClass &RC) {
-  return static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(&RC);
+                              const MachineRegisterInfo &MRI,
+                              const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC);
 }
 
 static bool onlyAllocateVGPRs(const TargetRegisterInfo &TRI,
-                              const TargetRegisterClass &RC) {
-  return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(&RC);
+                              const MachineRegisterInfo &MRI,
+                              const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC);
 }
-
 
 /// -{sgpr|vgpr}-regalloc=... command line option.
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
@@ -172,7 +191,7 @@ static VGPRRegisterRegAlloc greedyRegAllocVGPR(
 
 static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
-}
+} // anonymous namespace
 
 static cl::opt<bool>
 EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
@@ -244,6 +263,13 @@ static cl::opt<bool, true> LateCFGStructurize(
   cl::desc("Enable late CFG structurization"),
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
   cl::Hidden);
+
+// Disable structurizer-based control-flow lowering in order to test convergence
+// control tokens. This should eventually be replaced by the wave-transform.
+static cl::opt<bool, true> DisableStructurizer(
+    "amdgpu-disable-structurizer",
+    cl::desc("Disable structurizer for experiments; produces unusable code"),
+    cl::location(AMDGPUTargetMachine::DisableStructurizer), cl::ReallyHidden);
 
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
@@ -320,10 +346,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool> EnableStructurizerWorkarounds(
+static cl::opt<bool, true> EnableStructurizerWorkarounds(
     "amdgpu-enable-structurizer-workarounds",
-    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
-    cl::Hidden);
+    cl::desc("Enable workarounds for the StructurizeCFG pass"),
+    cl::location(AMDGPUTargetMachine::EnableStructurizerWorkarounds),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
@@ -365,6 +392,11 @@ static cl::opt<bool> EnableHipStdPar(
   cl::desc("Enable HIP Standard Parallelism Offload support"), cl::init(false),
   cl::Hidden);
 
+static cl::opt<bool>
+    EnableAMDGPUAttributor("amdgpu-attributor-enable",
+                           cl::desc("Enable AMDGPUAttributorPass"),
+                           cl::init(true), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -377,14 +409,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600ExpandSpecialInstrsPassPass(*PR);
   initializeR600VectorRegMergerPass(*PR);
   initializeGlobalISel(*PR);
-  initializeAMDGPUDAGToDAGISelPass(*PR);
+  initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombinePass(*PR);
-  initializeSILowerI1CopiesPass(*PR);
+  initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
   initializeSILowerSGPRSpillsPass(*PR);
-  initializeSIFixSGPRCopiesPass(*PR);
+  initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
@@ -396,7 +428,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
-  initializeAMDGPUAnnotateUniformValuesPass(*PR);
+  initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
@@ -410,13 +442,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
-  initializeAMDGPULateCodeGenPreparePass(*PR);
+  initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
+  initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
-  initializeSIAnnotateControlFlowPass(*PR);
+  initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
@@ -461,8 +494,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(
-      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial, nullptr));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
@@ -472,8 +504,7 @@ static ScheduleDAGInstrs *
 createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
       new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
-  DAG->addMutation(
-      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial, nullptr));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   return DAG;
 }
 
@@ -593,6 +624,8 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
+bool AMDGPUTargetMachine::DisableStructurizer = false;
+bool AMDGPUTargetMachine::EnableStructurizerWorkarounds = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -623,110 +656,47 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
-void AMDGPUTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
-  PB.registerPipelineParsingCallback(
-      [this](StringRef PassName, ModulePassManager &PM,
-             ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "amdgpu-attributor") {
-          PM.addPass(AMDGPUAttributorPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-unify-metadata") {
-          PM.addPass(AMDGPUUnifyMetadataPass());
-          return true;
-        }
-        if (PassName == "amdgpu-printf-runtime-binding") {
-          PM.addPass(AMDGPUPrintfRuntimeBindingPass());
-          return true;
-        }
-        if (PassName == "amdgpu-always-inline") {
-          PM.addPass(AMDGPUAlwaysInlinePass());
-          return true;
-        }
-        if (PassName == "amdgpu-lower-module-lds") {
-          PM.addPass(AMDGPULowerModuleLDSPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-ctor-dtor") {
-          PM.addPass(AMDGPUCtorDtorLoweringPass());
-          return true;
-        }
-        return false;
-      });
-  PB.registerPipelineParsingCallback(
-      [this](StringRef PassName, FunctionPassManager &PM,
-             ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-image-intrinsic-opt") {
-          PM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-usenative") {
-          PM.addPass(AMDGPUUseNativeCallsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-promote-alloca") {
-          PM.addPass(AMDGPUPromoteAllocaPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-promote-alloca-to-vector") {
-          PM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-kernel-attributes") {
-          PM.addPass(AMDGPULowerKernelAttributesPass());
-          return true;
-        }
-        if (PassName == "amdgpu-promote-kernel-arguments") {
-          PM.addPass(AMDGPUPromoteKernelArgumentsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-unify-divergent-exit-nodes") {
-          PM.addPass(AMDGPUUnifyDivergentExitNodesPass());
-          return true;
-        }
-        if (PassName == "amdgpu-atomic-optimizer") {
-          PM.addPass(
-              AMDGPUAtomicOptimizerPass(*this, AMDGPUAtomicOptimizerStrategy));
-          return true;
-        }
-        if (PassName == "amdgpu-codegenprepare") {
-          PM.addPass(AMDGPUCodeGenPreparePass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-kernel-arguments") {
-          PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-rewrite-undef-for-phi") {
-          PM.addPass(AMDGPURewriteUndefForPHIPass());
-          return true;
-        }
-        return false;
-      });
+static Expected<ScanOptions>
+parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
+  if (Params.empty())
+    return ScanOptions::Iterative;
+  Params.consume_front("strategy=");
+  auto Result = StringSwitch<std::optional<ScanOptions>>(Params)
+                    .Case("dpp", ScanOptions::DPP)
+                    .Cases("iterative", "", ScanOptions::Iterative)
+                    .Case("none", ScanOptions::None)
+                    .Default(std::nullopt);
+  if (Result)
+    return *Result;
+  return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
+}
 
-  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
-    FAM.registerPass([&] { return AMDGPUAA(); });
-  });
-
-  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
-    if (AAName == "amdgpu-aa") {
-      AAM.registerFunctionAnalysis<AMDGPUAA>();
-      return true;
+Expected<AMDGPUAttributorOptions>
+parseAMDGPUAttributorPassOptions(StringRef Params) {
+  AMDGPUAttributorOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName == "closed-world") {
+      Result.IsClosedWorld = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid AMDGPUAttributor pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
     }
-    return false;
-  });
+  }
+  return Result;
+}
+
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+
+#define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
-        FPM.addPass(AMDGPUUseNativeCallsPass());
-        if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
-          FPM.addPass(AMDGPUSimplifyLibCallsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         if (EnableHipStdPar)
           PM.addPass(HipStdParAcceleratorCodeSelectionPass());
@@ -748,6 +718,16 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+      });
+
+  PB.registerPeepholeEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FPM.addPass(AMDGPUUseNativeCallsPass());
+        if (EnableLibCallSimplify)
+          FPM.addPass(AMDGPUSimplifyLibCallsPass());
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
@@ -780,6 +760,34 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         }
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  // FIXME: Why is AMDGPUAttributor not in CGSCC?
+  PB.registerOptimizerLastEPCallback(
+      [this](ModulePassManager &MPM, OptimizationLevel Level) {
+        if (Level != OptimizationLevel::O0) {
+          MPM.addPass(AMDGPUAttributorPass(*this));
+        }
+      });
+
+  PB.registerFullLinkTimeOptimizationLastEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // We want to support the -lto-partitions=N option as "best effort".
+        // For that, we need to lower LDS earlier in the pipeline before the
+        // module is partitioned for codegen.
+        if (EnableLowerModuleLDS)
+          PM.addPass(AMDGPULowerModuleLDSPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
+      });
+
+  PB.registerRegClassFilterParsingCallback(
+      [](StringRef FilterName) -> RegAllocFilterFunc {
+        if (FilterName == "sgpr")
+          return onlyAllocateSGPRs;
+        if (FilterName == "vgpr")
+          return onlyAllocateVGPRs;
+        return nullptr;
       });
 }
 
@@ -859,6 +867,29 @@ AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
   return AMDGPUAS::FLAT_ADDRESS;
 }
 
+bool AMDGPUTargetMachine::splitModule(
+    Module &M, unsigned NumParts,
+    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
+  // FIXME(?): Would be better to use an already existing Analysis/PassManager,
+  // but all current users of this API don't have one ready and would need to
+  // create one anyway. Let's hide the boilerplate for now to keep it simple.
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  PassBuilder PB(this);
+  PB.registerModuleAnalyses(MAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  MPM.addPass(AMDGPUSplitModulePass(NumParts, ModuleCallback));
+  MPM.run(M, MAM);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
@@ -898,8 +929,16 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 
+Error GCNTargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+}
+
 //===----------------------------------------------------------------------===//
-// AMDGPU Pass Setup
+// AMDGPU Legacy Pass Setup
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<CSEConfigBase> llvm::AMDGPUPassConfig::getCSEConfig() const {
@@ -937,7 +976,7 @@ public:
       DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
     DAG->addMutation(
-        createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA, nullptr));
+        createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
     if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
       DAG->addMutation(createVOPDPairingMutation());
     return DAG;
@@ -1027,6 +1066,10 @@ void AMDGPUPassConfig::addIRPasses() {
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
+  // This can be disabled by passing ::Disable here or on the command line
+  // with --expand-variadics-override=disable.
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());
@@ -1042,11 +1085,6 @@ void AMDGPUPassConfig::addIRPasses() {
   if (EnableLowerModuleLDS) {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
-
-  // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
-  // after their introduction
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPUAttributorLegacyPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createInferAddressSpacesPass());
@@ -1115,6 +1153,29 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
       EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
+  if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
+    // This lowering has been placed after codegenprepare to take advantage of
+    // address mode matching (which is why it isn't put with the LDS lowerings).
+    // It could be placed anywhere before uniformity annotations (an analysis
+    // that it changes by splitting up fat pointers into their components)
+    // but has been put before switch lowering and CFG flattening so that those
+    // passes can run on the more optimized control flow this pass creates in
+    // many cases.
+    //
+    // FIXME: This should ideally be put after the LoadStoreVectorizer.
+    // However, due to some annoying facts about ResourceUsageAnalysis,
+    // (especially as exercised in the resource-usage-dead-function test),
+    // we need all the function passes codegenprepare all the way through
+    // said resource usage analysis to run on the call graph produced
+    // before codegenprepare runs (because codegenprepare will knock some
+    // nodes out of the graph, which leads to function-level passes not
+    // being run on them, which causes crashes in the resource usage analysis).
+    addPass(createAMDGPULowerBufferFatPointersPass());
+    // In accordance with the above FIXME, manually force all the
+    // function-level passes into a CGSCCPassManager.
+    addPass(new DummyCGSCCPass());
+  }
+
   TargetPassConfig::addCodeGenPrepare();
 
   if (isPassEnabled(EnableLoadStoreVectorizer))
@@ -1153,15 +1214,8 @@ AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
   return DAG;
 }
 
-MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
-    BumpPtrAllocator &Allocator, const Function &F,
-    const TargetSubtargetInfo *STI) const {
-  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
-      Allocator, F, static_cast<const R600Subtarget *>(STI));
-}
-
 //===----------------------------------------------------------------------===//
-// GCN Pass Setup
+// GCN Legacy Pass Setup
 //===----------------------------------------------------------------------===//
 
 ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
@@ -1180,24 +1234,24 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSinkingPass());
+    addPass(createAMDGPULateCodeGenPrepareLegacyPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  if (!LateCFGStructurize) {
+  if (!LateCFGStructurize && !DisableStructurizer) {
     if (EnableStructurizerWorkarounds) {
       addPass(createFixIrreduciblePass());
       addPass(createUnifyLoopExitsPass());
     }
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
-  addPass(createAMDGPUAnnotateUniformValues());
-  if (!LateCFGStructurize) {
-    addPass(createSIAnnotateControlFlowPass());
+  addPass(createAMDGPUAnnotateUniformValuesLegacy());
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    addPass(createSIAnnotateControlFlowLegacyPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
     // control flow modifications.
@@ -1206,7 +1260,7 @@ bool GCNPassConfig::addPreISel() {
   addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
-    addPass(&AMDGPUPerfHintAnalysisID);
+    addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
   return false;
 }
@@ -1245,8 +1299,8 @@ bool GCNPassConfig::addILPOpts() {
 
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
-  addPass(&SIFixSGPRCopiesID);
-  addPass(createSILowerI1CopiesPass());
+  addPass(&SIFixSGPRCopiesLegacyID);
+  addPass(createSILowerI1CopiesLegacyPass());
   return false;
 }
 
@@ -1697,4 +1751,91 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                                            : DenormalMode::PreserveSign;
 
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
+    GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC)
+    : CodeGenPassBuilder(TM, Opts, PIC) {
+  Opt.RequiresCodeGenSCCOrder = true;
+  // Exceptions and StackMaps are not supported, so these passes will never do
+  // anything.
+  // Garbage collection is not supported.
+  disablePass<StackMapLivenessPass, FuncletLayoutPass,
+              ShadowStackGCLoweringPass>();
+}
+
+void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
+  Base::addCodeGenPrepare(addPass);
+
+  // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
+  // behavior for subsequent passes. Placing it here seems better that these
+  // blocks would get cleaned up by UnreachableBlockElim inserted next in the
+  // pass flow.
+  addPass(LowerSwitchPass());
+}
+
+void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+  const bool LateCFGStructurize = AMDGPUTargetMachine::EnableLateStructurizeCFG;
+  const bool DisableStructurizer = AMDGPUTargetMachine::DisableStructurizer;
+  const bool EnableStructurizerWorkarounds =
+      AMDGPUTargetMachine::EnableStructurizerWorkarounds;
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(FlattenCFGPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SinkingPass());
+
+  addPass(AMDGPULateCodeGenPreparePass(TM));
+
+  // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
+  // regions formed by them.
+
+  addPass(AMDGPUUnifyDivergentExitNodesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    if (EnableStructurizerWorkarounds) {
+      addPass(FixIrreduciblePass());
+      addPass(UnifyLoopExitsPass());
+    }
+
+    addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
+  }
+
+  addPass(AMDGPUAnnotateUniformValuesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    addPass(SIAnnotateControlFlowPass(TM));
+
+    // TODO: Move this right after structurizeCFG to avoid extra divergence
+    // analysis. This depends on stopping SIAnnotateControlFlow from making
+    // control flow modifications.
+    addPass(AMDGPURewriteUndefForPHIPass());
+  }
+
+  addPass(LCSSAPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    addPass(AMDGPUPerfHintAnalysisPass(TM));
+
+  // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
+  // isn't this in addInstSelector?
+  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
+}
+
+void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+                                             CreateMCStreamer) const {
+  // TODO: Add AsmPrinter.
+}
+
+Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
+  addPass(AMDGPUISelDAGToDAGPass(TM));
+  addPass(SIFixSGPRCopiesPass());
+  addPass(SILowerI1CopiesPass());
+  return Error::success();
 }

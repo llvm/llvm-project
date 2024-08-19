@@ -304,24 +304,27 @@ public:
 
   [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
-  /// Returns the state with bindings for the given regions
-  ///  cleared from the store.
+  /// Returns the state with bindings for the given regions cleared from the
+  /// store. If \p Call is non-null, also invalidates global regions (but if
+  /// \p Call is from a system header, then this is limited to globals declared
+  /// in system headers).
   ///
-  /// Optionally invalidates global regions as well.
+  /// This calls the lower-level method \c StoreManager::invalidateRegions to
+  /// do the actual invalidation, then calls the checker callbacks which should
+  /// be triggered by this event.
   ///
   /// \param Regions the set of regions to be invalidated.
   /// \param E the expression that caused the invalidation.
   /// \param BlockCount The number of times the current basic block has been
-  //         visited.
-  /// \param CausesPointerEscape the flag is set to true when
-  ///        the invalidation entails escape of a symbol (representing a
-  ///        pointer). For example, due to it being passed as an argument in a
-  ///        call.
+  ///        visited.
+  /// \param CausesPointerEscape the flag is set to true when the invalidation
+  ///        entails escape of a symbol (representing a pointer). For example,
+  ///        due to it being passed as an argument in a call.
   /// \param IS the set of invalidated symbols.
   /// \param Call if non-null, the invalidated regions represent parameters to
   ///        the call and should be considered directly invalidated.
-  /// \param ITraits information about special handling for a particular
-  ///        region/symbol.
+  /// \param ITraits information about special handling for particular regions
+  ///        or symbols.
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
                     unsigned BlockCount, const LocationContext *LCtx,
@@ -330,7 +333,7 @@ public:
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Regions, const Expr *E, unsigned BlockCount,
+  invalidateRegions(ArrayRef<SVal> Values, const Expr *E, unsigned BlockCount,
                     const LocationContext *LCtx, bool CausesPointerEscape,
                     InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
@@ -484,16 +487,7 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
-  /// \sa invalidateValues()
-  /// \sa invalidateRegions()
-  ProgramStateRef
-  invalidateRegionsImpl(ArrayRef<SVal> Values,
-                        const Expr *E, unsigned BlockCount,
-                        const LocationContext *LCtx,
-                        bool ResultsInSymbolEscape,
-                        InvalidatedSymbols *IS,
-                        RegionAndSymbolInvalidationTraits *HTraits,
-                        const CallEvent *Call) const;
+  SVal wrapSymbolicRegion(SVal Base) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -780,20 +774,6 @@ inline Loc ProgramState::getLValue(const CompoundLiteralExpr *literal,
 
 inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
   return getStateManager().StoreMgr->getLValueIvar(D, Base);
-}
-
-inline SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
-  return getStateManager().StoreMgr->getLValueField(D, Base);
-}
-
-inline SVal ProgramState::getLValue(const IndirectFieldDecl *D,
-                                    SVal Base) const {
-  StoreManager &SM = *getStateManager().StoreMgr;
-  for (const auto *I : D->chain()) {
-    Base = SM.getLValueField(cast<FieldDecl>(I), Base);
-  }
-
-  return Base;
 }
 
 inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) const{

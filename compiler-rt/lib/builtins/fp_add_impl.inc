@@ -91,7 +91,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
 
   // Shift the significand of b by the difference in exponents, with a sticky
   // bottom bit to get rounding correct.
-  const unsigned int align = aExponent - bExponent;
+  const unsigned int align = (unsigned int)(aExponent - bExponent);
   if (align) {
     if (align < typeWidth) {
       const bool sticky = (bSignificand << (typeWidth - align)) != 0;

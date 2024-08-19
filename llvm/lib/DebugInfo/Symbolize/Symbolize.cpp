@@ -71,7 +71,9 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DILineInfo LineInfo = Info->symbolizeCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
@@ -116,7 +118,9 @@ Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {
@@ -628,13 +632,20 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   ObjectPair Objects = ObjectsOrErr.get();
 
   std::unique_ptr<DIContext> Context;
-  // If this is a COFF object containing PDB info, use a PDBContext to
-  // symbolize. Otherwise, use DWARF.
+  // If this is a COFF object containing PDB info and not containing DWARF
+  // section, use a PDBContext to symbolize. Otherwise, use DWARF.
   if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
     const codeview::DebugInfo *DebugInfo;
     StringRef PDBFileName;
     auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
-    if (!EC && DebugInfo != nullptr && !PDBFileName.empty()) {
+    // Use DWARF if there're DWARF sections.
+    bool HasDwarf =
+        llvm::any_of(Objects.first->sections(), [](SectionRef Section) -> bool {
+          if (Expected<StringRef> SectionName = Section.getName())
+            return SectionName.get() == ".debug_info";
+          return false;
+        });
+    if (!EC && !HasDwarf && DebugInfo != nullptr && !PDBFileName.empty()) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
 

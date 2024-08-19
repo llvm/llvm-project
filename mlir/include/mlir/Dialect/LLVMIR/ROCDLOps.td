@@ -28,6 +28,22 @@ def ROCDL_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
+    /// Get the name of the attribute used to annotate external kernel
+    /// functions.
+    static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
+    static constexpr ::llvm::StringLiteral getFlatWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.flat_work_group_size");
+    }
+    static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
+    }
+    /// MLIR's gpu-related infrastructure effectively assume uniform workgroup
+    /// sizes, so this attribute defaults to "true" on `rocdl.kernel` functions.
+    /// It is provided here to allow overriding this assumption.
+    static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
+    }
+
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.
@@ -41,7 +57,8 @@ def ROCDL_Dialect : Dialect {
      "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
-     "::mlir::IntegerAttr":$waves_per_eu
+     "::mlir::IntegerAttr":$waves_per_eu,
+     "::mlir::BoolAttr":$unsafe_fp_atomics
   );
 
   let useDefaultAttributePrinterParser = 1;
@@ -142,6 +159,24 @@ Arguments<(ins I32:$index,
    }];
 }
 
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane.
+  }];
+
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$_resultType});
+  }];
+
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
@@ -177,6 +212,23 @@ def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+
+// Emits the waintcnt instruction. The bitfield's semantics depend
+// on the target chipset
+def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32Attr:$bitfield)> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_waitcnt,
+      {builder.getInt32($bitfield)});
+  }];
+  let assemblyFormat = "attr-dict $bitfield";
+}
+
+def ROCDL_SBarrierOp : ROCDL_Op<"s.barrier"> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
+  }];
+  let assemblyFormat = "attr-dict";
+}
 
 def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   string llvmBuilder = [{
@@ -374,43 +426,6 @@ def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
 // Note: not supported on all architectures
 def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
 
-/// LEGACY BUFFER OPERATIONS. DO NOT USE IN NEW CODE. KEPT FOR IR COMPATIBILITY.
-//===---------------------------------------------------------------------===//
-// Vector buffer load/store intrinsics
-
-def ROCDL_MubufLoadOp :
-  ROCDL_Op<"buffer.load">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
-          $slc}, {$_resultType});
-  }];
-  let hasCustomAssemblyFormat = 1;
-}
-
-def ROCDL_MubufStoreOp :
-  ROCDL_Op<"buffer.store">,
-  Arguments<(ins LLVM_Type:$vdata,
-                 LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-    auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
-    createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
-          $offset, $glc, $slc}, {vdataType});
-  }];
-  let hasCustomAssemblyFormat = 1;
-}
-
 //===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
 
@@ -538,6 +553,30 @@ def ROCDL_RawBufferAtomicUMinOp :
             $offset, $soffset, $aux}, {vdataType});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+// DPP Update intrinsic
+def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
+    [AllTypesMatch<["res", "src", "old"]>], 1>,
+  Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
+      I32Attr:$bankMask, I1Attr:$boundCtrl)> {
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `with` $dppCtrl `,` $rowMask `,` $bankMask `,` $boundCtrl `:` type($src)
+  }];
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getSrc().getType());
+      llvm::Value *args[] = {
+        moduleTranslation.lookupValue(op.getOld()),
+        moduleTranslation.lookupValue(op.getSrc()),
+          builder.getInt32(op.getDppCtrl()),
+          builder.getInt32(op.getRowMask()),
+          builder.getInt32(op.getBankMask()),
+          builder.getInt1(op.getBoundCtrl())
+      };
+      $res = createIntrinsicCall(builder,
+        llvm::Intrinsic::amdgcn_update_dpp, args, {vdataType});
+  }];
 }
 
 //===---------------------------------------------------------------------===//

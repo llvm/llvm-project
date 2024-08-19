@@ -1,0 +1,19 @@
+{
+  "DefaultVariant": "macos", "DisplayName": "macOS 13",
+  "Version": "13.0",
+  "MaximumDeploymentTarget": "13.0.99",
+  "PropertyConditionFallbackNames": [], "VersionMap": {
+    "iOSMac_macOS": {
+      "16.1": "13.0",
+      "15.0": "12.0",
+      "13.1": "10.15",
+      "14.0": "11.0"
+    },
+    "macOS_iOSMac": {
+      "13.0": "16.1",
+      "12.0": "15.0",
+      "11.0": "14.0",
+      "10.15": "13.1"
+    }
+  }
+}

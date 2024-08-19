@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Test if oclc_daz_opt_on or if oclc_daz_opt_off is linked depending on
 // expected denormal mode.
 

@@ -109,7 +109,6 @@ initializeRecordStreamer(const Module &M,
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
-  MOFI->setSDKVersion(M.getSDKVersion());
   MCCtx.setObjectFileInfo(MOFI.get());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);
@@ -175,6 +174,20 @@ void ModuleSymbolTable::CollectAsmSymbols(
       AsmSymbol(Key, BasicSymbolRef::Flags(Res));
     }
   });
+
+  // In ELF, object code generated for x86-32 and some code models of x86-64 may
+  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
+  // IR. Record it like inline asm symbols.
+  Triple TT(M.getTargetTriple());
+  if (!TT.isOSBinFormatELF() || !TT.isX86())
+    return;
+  auto CM = M.getCodeModel();
+  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
+      CM == CodeModel::Large) {
+    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
+              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
+                                    BasicSymbolRef::SF_Global));
+  }
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(

@@ -134,8 +134,8 @@ transform::ApplyNVGPUToNVVMConversionPatternsOp::verifyTypeConverter(
 
 void transform::CreateAsyncGroupsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTarget(), effects);
-  transform::producesHandle(getResult(), effects);
+  transform::consumesHandle(getTargetMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -651,7 +651,7 @@ private:
 template <typename ApplyFn, typename ReduceFn>
 static void foreachIndividualVectorElement(Value vector, ApplyFn applyFn,
                                            ReduceFn reduceFn) {
-  VectorType vectorType = vector.getType().cast<VectorType>();
+  VectorType vectorType = cast<VectorType>(vector.getType());
   auto vectorShape = vectorType.getShape();
   auto strides = computeStrides(vectorShape);
   for (int64_t idx = 0, e = vectorShape[0] * strides[0]; idx < e; ++idx) {
@@ -740,9 +740,9 @@ static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 makeVectorShapes(ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
                  ArrayRef<int64_t> res) {
-  SmallVector<int64_t> vlhs{lhs.begin(), lhs.end()};
-  SmallVector<int64_t> vrhs{rhs.begin(), rhs.end()};
-  SmallVector<int64_t> vres{res.begin(), res.end()};
+  SmallVector<int64_t> vlhs{lhs};
+  SmallVector<int64_t> vrhs{rhs};
+  SmallVector<int64_t> vres{res};
   return std::make_tuple(vlhs, vrhs, vres);
 }
 
@@ -758,7 +758,7 @@ MmaSyncBuilder::getIndexCalculators(ArrayRef<int64_t> opShape,
                                        &MmaSyncBuilder::m16n8k4tf32Rhs,
                                        &MmaSyncBuilder::m16n8k4tf32Res),
                        makeVectorShapes({2, 1}, {1, 1}, {2, 2}),
-                       SmallVector<int64_t>{opShape.begin(), opShape.end()},
+                       SmallVector<int64_t>{opShape},
                        /*tf32Enabled=*/true};
   }
   // This is the version with f16 accumulation.
@@ -769,7 +769,7 @@ MmaSyncBuilder::getIndexCalculators(ArrayRef<int64_t> opShape,
                                        &MmaSyncBuilder::m16n8k16f16Rhs,
                                        &MmaSyncBuilder::m16n8k16f16Res),
                        makeVectorShapes({4, 2}, {2, 2}, {2, 2}),
-                       SmallVector<int64_t>{opShape.begin(), opShape.end()},
+                       SmallVector<int64_t>{opShape},
                        /*tf32Enabled=*/false};
   }
   return failure();
@@ -779,11 +779,11 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
   Value lhsMemRef = linalgOp.getDpsInputOperand(0)->get();
   Value rhsMemRef = linalgOp.getDpsInputOperand(1)->get();
   Value resMemRef = linalgOp.getDpsInitOperand(0)->get();
-  assert(lhsMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(lhsMemRef.getType()).getRank() == 2 &&
          "expected lhs to be a 2D memref");
-  assert(rhsMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(rhsMemRef.getType()).getRank() == 2 &&
          "expected rhs to be a 2D memref");
-  assert(resMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(resMemRef.getType()).getRank() == 2 &&
          "expected res to be a 2D memref");
 
   int64_t m = cast<MemRefType>(lhsMemRef.getType()).getShape()[0];
@@ -1135,6 +1135,8 @@ class NVGPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           NVGPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NVGPUTransformDialectExtension)
+
   NVGPUTransformDialectExtension() {
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<affine::AffineDialect>();

@@ -8,6 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -1191,8 +1192,8 @@ void IRLinker::prepareCompileUnitsForImport() {
   // When importing for ThinLTO, prevent importing of types listed on
   // the DICompileUnit that we don't need a copy of in the importing
   // module. They will be emitted by the originating module.
-  for (unsigned I = 0, E = SrcCompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(SrcCompileUnits->getOperand(I));
+  for (MDNode *N : SrcCompileUnits->operands()) {
+    auto *CU = cast<DICompileUnit>(N);
     assert(CU && "Expected valid compile unit");
     // Enums, macros, and retained types don't need to be listed on the
     // imported DICompileUnit. This means they will only be imported
@@ -1370,8 +1371,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
         return dyn_cast<MDTuple>(DstValue);
       ArrayRef<MDOperand> DstOperands = DstValue->operands();
       MDTuple *New = MDTuple::getDistinct(
-          DstM.getContext(),
-          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
+          DstM.getContext(), SmallVector<Metadata *, 4>(DstOperands));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
       MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
@@ -1488,8 +1488,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
   }
 
   // Check all of the requirements.
-  for (unsigned I = 0, E = Requirements.size(); I != E; ++I) {
-    MDNode *Requirement = Requirements[I];
+  for (MDNode *Requirement : Requirements) {
     MDString *Flag = cast<MDString>(Requirement->getOperand(0));
     Metadata *ReqValue = Requirement->getOperand(1);
 
@@ -1546,10 +1545,11 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
-  DstM.IsNewDbgInfoFormat = SrcM->IsNewDbgInfoFormat;
+  // Convert source module to match dest for the duration of the link.
+  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
 
-  // Inherit the target data from the source module if the destination module
-  // doesn't have one already.
+  // Inherit the target data from the source module if the destination
+  // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 
@@ -1775,8 +1775,6 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
-  if (getModule().IsNewDbgInfoFormat)
-    Src->convertToNewDbgValues();
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);

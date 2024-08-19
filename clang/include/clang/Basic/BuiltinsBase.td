@@ -49,6 +49,8 @@ def UnevaluatedArguments : Attribute<"u">;
 // is required for a builtin.
 def FunctionWithBuiltinPrefix : Attribute<"F">;
 
+def FunctionWithoutBuiltinPrefix : Attribute<"f">;
+
 // const, but only when -fno-math-errno and FP exceptions are ignored.
 def ConstIgnoringErrnoAndExceptions : Attribute<"e">;
 
@@ -68,6 +70,8 @@ class VScanfFormat<int I> : IndexedAttribute<"S", I>;
 
 // Builtin can be constant evaluated
 def Constexpr : Attribute<"E">;
+// Builtin is immediate and must be constant evaluated. Implies Constexpr, and will only be supported in C++20 mode.
+def Consteval : Attribute<"EG">;
 
 // Builtin kinds
 // =============

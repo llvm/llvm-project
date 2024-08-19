@@ -17,11 +17,6 @@
 
 #include "TokenAnnotator.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/SmallVector.h"
-#include <algorithm>
-#include <string>
-#include <tuple>
 
 namespace clang {
 namespace format {
@@ -238,10 +233,16 @@ private:
   void alignChainedConditionals();
 
   /// Align consecutive short case statements over all \c Changes.
-  void alignConsecutiveShortCaseStatements();
+  void alignConsecutiveShortCaseStatements(bool IsExpr);
+
+  /// Align consecutive TableGen DAGArg colon over all \c Changes.
+  void alignConsecutiveTableGenBreakingDAGArgColons();
 
   /// Align consecutive TableGen cond operator colon over all \c Changes.
   void alignConsecutiveTableGenCondOperatorColons();
+
+  /// Align consecutive TableGen definitions over all \c Changes.
+  void alignConsecutiveTableGenDefinitions();
 
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();

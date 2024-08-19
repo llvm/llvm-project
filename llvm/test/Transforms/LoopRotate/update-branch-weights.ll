@@ -232,6 +232,46 @@ loop_exit:
   ret void
 }
 
+; BFI_BEFORE-LABEL: block-frequency-info: func6_inaccurate_branch_weight
+; BFI_BEFORE: - entry: {{.*}} count = 1024
+; BFI_BEFORE: - loop_header: {{.*}} count = 2047
+; BFI_BEFORE: - loop_body: {{.*}} count = 1023
+; BFI_BEFORE: - loop_exit: {{.*}} count = 1024
+
+; BFI_AFTER-LABEL: block-frequency-info: func6_inaccurate_branch_weight
+; BFI_AFTER: - entry: {{.*}} count = 1024
+; BFI_AFTER: - loop_body: {{.*}} count = 1024
+; BFI_AFTER: - loop_exit: {{.*}} count = 1024
+
+; IR-LABEL: define void @func6_inaccurate_branch_weight(
+; IR: entry:
+; IR:   br label %loop_body
+; IR: loop_body:
+; IR:   br i1 %cmp, label %loop_body, label %loop_exit, !prof [[PROF_FUNC6_0:![0-9]+]]
+; IR: loop_exit:
+; IR:   ret void
+
+; Branch weight from sample-based PGO may be inaccurate due to sampling.
+; Count for loop_body in following case should be not less than loop_exit.
+; However this may not hold for Sample-based PGO.
+define void @func6_inaccurate_branch_weight() !prof !3 {
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [0, %entry], [%i_inc, %loop_body]
+  %cmp = icmp slt i32 %i, 2
+  br i1 %cmp, label %loop_body, label %loop_exit, !prof !9
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i_inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 1000, i32 1}
 !2 = !{!"branch_weights", i32 3000, i32 1000}
@@ -241,6 +281,7 @@ loop_exit:
 !6 = !{!"branch_weights", i32 0, i32 1}
 !7 = !{!"branch_weights", i32 1, i32 0}
 !8 = !{!"branch_weights", i32 0, i32 0}
+!9 = !{!"branch_weights", i32 1023, i32 1024}
 
 ; IR: [[PROF_FUNC0_0]] = !{!"branch_weights", i32 2000, i32 1000}
 ; IR: [[PROF_FUNC0_1]] = !{!"branch_weights", i32 999, i32 1}
@@ -251,3 +292,4 @@ loop_exit:
 ; IR: [[PROF_FUNC3_0]] = !{!"branch_weights", i32 0, i32 1}
 ; IR: [[PROF_FUNC4_0]] = !{!"branch_weights", i32 1, i32 0}
 ; IR: [[PROF_FUNC5_0]] = !{!"branch_weights", i32 0, i32 0}
+; IR: [[PROF_FUNC6_0]] = !{!"branch_weights", i32 0, i32 1024}

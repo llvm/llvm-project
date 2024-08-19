@@ -14,12 +14,13 @@
 #define LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
 
 #include "src/__support/CPP/limits.h"        // CHAR_BIT
-#include "src/__support/UInt128.h"           // UInt128
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"           // UInt128
 #include <stddef.h>                          // size_t
 #include <stdint.h>                          // uintxx_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
   return static_cast<uint8_t>(value);
@@ -115,13 +116,13 @@ template <typename T> struct Parser {
   }
 };
 
-// Specialization for cpp::UInt<N>.
+// Specialization for UInt<N>.
 // Because this code runs at compile time we try to make it efficient. For
 // binary and hexadecimal formats we read digits by chunks of 64 bits and
 // produce the BigInt internal representation direcly. For decimal numbers we
 // go the slow path and use slower BigInt arithmetic.
-template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
-  using UIntT = cpp::UInt<N>;
+template <size_t N> struct Parser<LIBC_NAMESPACE::UInt<N>> {
+  using UIntT = UInt<N>;
   template <int base> static constexpr UIntT parse(const char *str) {
     const DigitBuffer<UIntT, base> buffer(str);
     if constexpr (base == 10) {
@@ -151,12 +152,15 @@ template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
 template <typename T>
 LIBC_INLINE constexpr T parse_with_prefix(const char *ptr) {
   using P = Parser<T>;
-  if (ptr[0] == '0' && ptr[1] == 'x')
-    return P::template parse<16>(ptr + 2);
-  else if (ptr[0] == '0' && ptr[1] == 'b')
-    return P::template parse<2>(ptr + 2);
-  else
-    return P::template parse<10>(ptr);
+  if (ptr == nullptr)
+    return T();
+  if (ptr[0] == '0') {
+    if (ptr[1] == 'b')
+      return P::template parse<2>(ptr + 2);
+    if (ptr[1] == 'x')
+      return P::template parse<16>(ptr + 2);
+  }
+  return P::template parse<10>(ptr);
 }
 
 } // namespace internal
@@ -166,9 +170,19 @@ LIBC_INLINE constexpr UInt128 operator""_u128(const char *x) {
 }
 
 LIBC_INLINE constexpr auto operator""_u256(const char *x) {
-  return internal::parse_with_prefix<cpp::UInt<256>>(x);
+  return internal::parse_with_prefix<UInt<256>>(x);
 }
 
-} // namespace LIBC_NAMESPACE
+template <typename T> LIBC_INLINE constexpr T parse_bigint(const char *ptr) {
+  if (ptr == nullptr)
+    return T();
+  if (ptr[0] == '-' || ptr[0] == '+') {
+    auto positive = internal::parse_with_prefix<T>(ptr + 1);
+    return ptr[0] == '-' ? -positive : positive;
+  }
+  return internal::parse_with_prefix<T>(ptr);
+}
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H

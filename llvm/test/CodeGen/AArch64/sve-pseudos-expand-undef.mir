@@ -26,7 +26,7 @@ body:             |
 name: expand_mls_to_msb
 body:             |
   bb.0:
-    renamable $p0 = PTRUE_B 31
+    renamable $p0 = PTRUE_B 31, implicit $vg
     renamable $z0 = MLS_ZPZZZ_B_UNDEF killed renamable $p0, killed renamable $z2, killed renamable $z0, killed renamable $z1
     RET_ReallyLR implicit $z0
 ...
@@ -36,7 +36,7 @@ body:             |
 name: expand_mla_to_mad
 body:             |
   bb.0:
-    renamable $p0 = PTRUE_B 31
+    renamable $p0 = PTRUE_B 31, implicit $vg
     renamable $z0 = MLA_ZPZZZ_B_UNDEF killed renamable $p0, killed renamable $z2, killed renamable $z0, killed renamable $z1
     RET_ReallyLR implicit $z0
 ...

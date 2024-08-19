@@ -31,7 +31,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -109,7 +109,7 @@ namespace {
     const ARMSubtarget *STI;
     const TargetLowering *TL;
     ARMFunctionInfo *AFI;
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
     RegisterClassInfo RegClassInfo;
     MachineBasicBlock::const_iterator LiveRegPos;
     bool LiveRegsValid;
@@ -495,7 +495,7 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
     bool InsertSub = false;
     unsigned Opc = MBBI->getOpcode();
 
-    if (MBBI->readsRegister(Base)) {
+    if (MBBI->readsRegister(Base, /*TRI=*/nullptr)) {
       int Offset;
       bool IsLoad =
         Opc == ARM::tLDRi || Opc == ARM::tLDRHi || Opc == ARM::tLDRBi;
@@ -560,7 +560,8 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
       return;
     }
 
-    if (MBBI->killsRegister(Base) || MBBI->definesRegister(Base))
+    if (MBBI->killsRegister(Base, /*TRI=*/nullptr) ||
+        MBBI->definesRegister(Base, /*TRI=*/nullptr))
       // Register got killed. Stop updating.
       return;
   }
@@ -589,7 +590,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(MF->getRegInfo(), Reg))
+    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
       return Reg;
   return 0;
 }
@@ -888,7 +889,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
         if (is_contained(ImpDefs, DefReg))
           continue;
         // We can ignore cases where the super-reg is read and written.
-        if (MI->readsRegister(DefReg))
+        if (MI->readsRegister(DefReg, /*TRI=*/nullptr))
           continue;
         ImpDefs.push_back(DefReg);
       }
@@ -903,7 +904,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
   MachineBasicBlock &MBB = *LatestMI->getParent();
   unsigned Offset = getMemoryOpOffset(*First);
   Register Base = getLoadStoreBaseOp(*First).getReg();
-  bool BaseKill = LatestMI->killsRegister(Base);
+  bool BaseKill = LatestMI->killsRegister(Base, /*TRI=*/nullptr);
   Register PredReg;
   ARMCC::CondCodes Pred = getInstrPredicate(*First, PredReg);
   DebugLoc DL = First->getDebugLoc();
@@ -2076,7 +2077,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 
   MachineBasicBlock::iterator Prev = MBBI;
   --Prev;
-  if (Prev->getOpcode() != ARM::tMOVr || !Prev->definesRegister(ARM::LR))
+  if (Prev->getOpcode() != ARM::tMOVr ||
+      !Prev->definesRegister(ARM::LR, /*TRI=*/nullptr))
     return false;
 
   for (auto Use : Prev->uses())
@@ -2159,8 +2161,8 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -2184,7 +2186,7 @@ char ARMPreAllocLoadStoreOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
                       ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
                     ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
@@ -2202,7 +2204,7 @@ bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
-  DT = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MF  = &Fn;
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -2577,8 +2579,8 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
           Bases.push_back(Base);
           return;
         }
-        for (unsigned i = 0, e = BI->second.size(); i != e; ++i) {
-          if (Offset == getMemoryOpOffset(*BI->second[i])) {
+        for (const MachineInstr *MI : BI->second) {
+          if (Offset == getMemoryOpOffset(*MI)) {
             StopHere = true;
             break;
           }
@@ -3176,7 +3178,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (PrePostInc || BaseAccess->getParent() != Increment->getParent())
       return false;
     Register PredReg;
-    if (Increment->definesRegister(ARM::CPSR) ||
+    if (Increment->definesRegister(ARM::CPSR, /*TRI=*/nullptr) ||
         getInstrPredicate(*Increment, PredReg) != ARMCC::AL)
       return false;
 

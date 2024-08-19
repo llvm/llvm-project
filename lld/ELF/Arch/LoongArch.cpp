@@ -11,6 +11,8 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -41,6 +43,7 @@ public:
 };
 } // end anonymous namespace
 
+namespace {
 enum Op {
   SUB_W = 0x00110000,
   SUB_D = 0x00118000,
@@ -65,6 +68,7 @@ enum Reg {
   R_T2 = 14,
   R_T3 = 15,
 };
+} // namespace
 
 // Mask out the input's lowest 12 bits for use with `pcalau12i`, in sequences
 // like `pcalau12i + addi.[wd]` or `pcalau12i + {ld,st}.*` where the `pcalau12i`
@@ -95,11 +99,13 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type) {
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_GOT64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_LO20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
     pcalau12i_pc = pc - 8;
     break;
   case R_LARCH_PCALA64_HI12:
   case R_LARCH_GOT64_PC_HI12:
   case R_LARCH_TLS_IE64_PC_HI12:
+  case R_LARCH_TLS_DESC64_PC_HI12:
     pcalau12i_pc = pc - 12;
     break;
   default:
@@ -153,6 +159,17 @@ static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
 }
 
+static void handleUleb128(uint8_t *loc, uint64_t val) {
+  const uint32_t maxcount = 1 + 64 / 7;
+  uint32_t count;
+  const char *error = nullptr;
+  uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
+  if (count > maxcount || (count == maxcount && error))
+    errorOrWarn(getErrorLocation(loc) + "extra space for uleb128");
+  uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
+  encodeULEB128((orig + val) & mask, loc, count);
+}
+
 LoongArch::LoongArch() {
   // The LoongArch ISA itself does not have a limit on page sizes. According to
   // the ISA manual, the PS (page size) field in MTLB entries and CSR.STLBPS is
@@ -176,11 +193,13 @@ LoongArch::LoongArch() {
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD64;
     tlsOffsetRel = R_LARCH_TLS_DTPREL64;
     tlsGotRel = R_LARCH_TLS_TPREL64;
+    tlsDescRel = R_LARCH_TLS_DESC64;
   } else {
     symbolicRel = R_LARCH_32;
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD32;
     tlsOffsetRel = R_LARCH_TLS_DTPREL32;
     tlsGotRel = R_LARCH_TLS_TPREL32;
+    tlsDescRel = R_LARCH_TLS_DESC32;
   }
 
   gotRel = symbolicRel;
@@ -280,6 +299,10 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_LARCH_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
     return 0;
+  case R_LARCH_TLS_DESC32:
+    return read32le(buf + 4);
+  case R_LARCH_TLS_DESC64:
+    return read64le(buf + 8);
   }
 }
 
@@ -385,7 +408,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_TPREL32:
   case R_LARCH_TLS_TPREL64:
   case R_LARCH_TLS_LE_HI20:
+  case R_LARCH_TLS_LE_HI20_R:
   case R_LARCH_TLS_LE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_LE64_HI12:
     return R_TPREL;
@@ -394,11 +419,13 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_ADD16:
   case R_LARCH_ADD32:
   case R_LARCH_ADD64:
+  case R_LARCH_ADD_ULEB128:
   case R_LARCH_SUB6:
   case R_LARCH_SUB8:
   case R_LARCH_SUB16:
   case R_LARCH_SUB32:
   case R_LARCH_SUB64:
+  case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
     return R_RISCV_ADD;
@@ -466,10 +493,30 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSLD_GOT;
   case R_LARCH_TLS_GD_HI20:
     return R_TLSGD_GOT;
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
     return config->relax ? R_RELAX_HINT : R_NONE;
   case R_LARCH_ALIGN:
     return R_RELAX_HINT;
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
+  case R_LARCH_TLS_DESC64_PC_HI12:
+    return R_LOONGARCH_TLSDESC_PAGE_PC;
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LD:
+  case R_LARCH_TLS_DESC_HI20:
+  case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_TLS_DESC64_LO20:
+  case R_LARCH_TLS_DESC64_HI12:
+    return R_TLSDESC;
+  case R_LARCH_TLS_DESC_CALL:
+    return R_TLSDESC_CALL;
+  case R_LARCH_TLS_LD_PCREL20_S2:
+    return R_TLSLD_PC;
+  case R_LARCH_TLS_GD_PCREL20_S2:
+    return R_TLSGD_PC;
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    return R_TLSDESC_PC;
 
   // Other known relocs that are explicitly unimplemented:
   //
@@ -494,6 +541,8 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
+  case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_TLS_DESC_PC_LO12:
     return true;
   }
 }
@@ -514,7 +563,11 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, val);
     return;
 
+  // Relocs intended for `pcaddi`.
   case R_LARCH_PCREL20_S2:
+  case R_LARCH_TLS_LD_PCREL20_S2:
+  case R_LARCH_TLS_GD_PCREL20_S2:
+  case R_LARCH_TLS_DESC_PCREL20_S2:
     checkInt(loc, val, 22, rel);
     checkAlignment(loc, val, 4, rel);
     write32le(loc, setJ20(read32le(loc), val >> 2));
@@ -578,6 +631,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
   case R_LARCH_TLS_IE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LO12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 11, 0)));
     return;
 
@@ -593,7 +649,12 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LD_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
   case R_LARCH_TLS_GD_HI20:
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC_HI20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 31, 12)));
+    return;
+  case R_LARCH_TLS_LE_HI20_R:
+    write32le(loc, setJ20(read32le(loc), extractBits(val + 0x800, 31, 12)));
     return;
 
   // Relocs intended for `lu32i.d`.
@@ -604,6 +665,8 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_LO20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
+  case R_LARCH_TLS_DESC64_LO20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 51, 32)));
     return;
 
@@ -615,6 +678,8 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE64_HI12:
   case R_LARCH_TLS_IE64_PC_HI12:
   case R_LARCH_TLS_IE64_HI12:
+  case R_LARCH_TLS_DESC64_PC_HI12:
+  case R_LARCH_TLS_DESC64_HI12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 63, 52)));
     return;
 
@@ -633,6 +698,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_ADD64:
     write64le(loc, read64le(loc) + val);
     return;
+  case R_LARCH_ADD_ULEB128:
+    handleUleb128(loc, val);
+    return;
   case R_LARCH_SUB6:
     *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
     return;
@@ -648,14 +716,27 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_SUB64:
     write64le(loc, read64le(loc) - val);
     return;
+  case R_LARCH_SUB_ULEB128:
+    handleUleb128(loc, -val);
+    return;
 
   case R_LARCH_MARK_LA:
   case R_LARCH_MARK_PCREL:
     // no-op
     return;
 
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
     return; // Ignored (for now)
+
+  case R_LARCH_TLS_DESC_LD:
+    return; // nothing to do.
+  case R_LARCH_TLS_DESC32:
+    write32le(loc + 4, val);
+    return;
+  case R_LARCH_TLS_DESC64:
+    write64le(loc + 8, val);
+    return;
 
   default:
     llvm_unreachable("unknown relocation");
@@ -747,7 +828,7 @@ bool LoongArch::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
@@ -759,7 +840,7 @@ bool LoongArch::relaxOnce(int pass) const {
 void LoongArch::finalizeRelax(int passes) const {
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {

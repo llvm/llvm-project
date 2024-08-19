@@ -472,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
@@ -4068,10 +4070,10 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLog("[LaunchAttach] successfully attached to pid %d", m_pid);
     } else {
-      launch_err.SetErrorString(
-          "Failed to attach to pid %d, BoardServiceLaunchForDebug() unable to "
-          "ptrace(PT_ATTACHEXC)",
-          m_pid);
+      std::string errmsg = "Failed to attach to pid ";
+      errmsg += std::to_string(m_pid);
+      errmsg += ", BoardServiceLaunchForDebug() unable to ptrace(PT_ATTACHEXC)";
+      launch_err.SetErrorString(errmsg.c_str());
       SetState(eStateExited);
       DNBLog("[LaunchAttach] END (%d) error: failed to attach to pid %d",
              getpid(), m_pid);

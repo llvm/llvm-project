@@ -46,16 +46,26 @@ template <int Indirections> void RunTest(StringRef Snippet) {
   StringRef CommonCode = R"(
     struct ConstTag{};
     struct NonConstTag{};
+    struct Tag1{};
 
     struct S {
       void constMethod() const;
       void nonConstMethod();
+
+      static void staticMethod();
 
       void operator()(ConstTag) const;
       void operator()(NonConstTag);
 
       void operator[](int);
       void operator[](int) const;
+
+      int& at(int);
+      const int& at(int) const;
+      const int& at(Tag1);
+
+      int& weird_overload();
+      const double& weird_overload() const;
 
       bool operator==(const S&) const;
 
@@ -109,10 +119,12 @@ TEST(ConstReferenceDeclRefExprsTest, ConstValueVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       /*const*/target(ConstTag{});
       /*const*/target[42];
       useConstRef((/*const*/target));
       (/*const*/target).constMethod();
+      /*const*/target.staticMethod();
       (void)(/*const*/target == /*const*/target);
       (void)/*const*/target;
       (void)&/*const*/target;
@@ -140,6 +152,7 @@ TEST(ConstReferenceDeclRefExprsTest, ConstRefVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       /*const*/target(ConstTag{});
       /*const*/target[42];
       useConstRef((/*const*/target));
@@ -156,9 +169,11 @@ TEST(ConstReferenceDeclRefExprsTest, ConstRefVar) {
       useIntConstRef(/*const*/target.int_member);
       useIntPtr(/*const*/target.ptr_member);
       useIntConstPtr(&/*const*/target.int_member);
+      (void)/*const*/target.at(3);
 
       const S& const_target_ref = /*const*/target;
       const S* const_target_ptr = &/*const*/target;
+      (void)/*const*/target.at(3);
     }
 )");
 }
@@ -179,9 +194,10 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       target.nonConstMethod();
       /*const*/target(ConstTag{});
-      target[42];
+      /*const*/target[42];
       /*const*/target(ConstTag{});
       target(NonConstTag{});
       useRef(target);
@@ -205,6 +221,14 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       const S& const_target_ref = /*const*/target;
       const S* const_target_ptr = &/*const*/target;
       S* target_ptr = &target;
+
+      (void)/*const*/target.at(3);
+      ++target.at(3);
+      const int civ = /*const*/target.at(3);
+      const int& cir = /*const*/target.at(3);
+      int& ir = target.at(3);
+      target.at(Tag1{});
+      target.weird_overload();
     }
 )");
 }
@@ -218,9 +242,10 @@ TEST(ConstReferenceDeclRefExprsTest, RefVar) {
       useConstPtr(&/*const*/target);
       useConstPtrConstRef(&/*const*/target);
       /*const*/target.constMethod();
+      /*const*/target.staticMethod();
       target.nonConstMethod();
       /*const*/target(ConstTag{});
-      target[42];
+      /*const*/target[42];
       useConstRef((/*const*/target));
       (/*const*/target).constMethod();
       (void)(/*const*/target == /*const*/target);
@@ -242,6 +267,14 @@ TEST(ConstReferenceDeclRefExprsTest, RefVar) {
       const S& const_target_ref = /*const*/target;
       const S* const_target_ptr = &/*const*/target;
       S* target_ptr = &target;
+
+      (void)/*const*/target.at(3);
+      ++target.at(3);
+      const int civ = /*const*/target.at(3);
+      const int& cir = /*const*/target.at(3);
+      int& ir = target.at(3);
+      target.at(Tag1{});
+      target.weird_overload();
     }
 )");
 }
@@ -256,10 +289,11 @@ TEST(ConstReferenceDeclRefExprsTest, PtrVar) {
       useConstPtrConstRef(/*const*/target);
       usePtrConstPtr(&target);
       /*const*/target->constMethod();
+      /*const*/target->staticMethod();
       target->nonConstMethod();
       (*/*const*/target)(ConstTag{});
-      (*target)[42];
-      target->operator[](42);
+      (*/*const*/target)[42];
+      /*const*/target->operator[](42);
       useConstRef((*/*const*/target));
       (/*const*/target)->constMethod();
       (void)(*/*const*/target == */*const*/target);
@@ -276,7 +310,15 @@ TEST(ConstReferenceDeclRefExprsTest, PtrVar) {
 
       const S& const_target_ref = */*const*/target;
       const S* const_target_ptr = /*const*/target;
-      S* target_ptr = target;  // FIXME: we could chect const usage of `target_ptr`.
+      S* target_ptr = target;  // FIXME: we could chect const usage of `target_ptr`
+
+      (void)/*const*/target->at(3);
+      ++target->at(3);
+      const int civ = /*const*/target->at(3);
+      const int& cir = /*const*/target->at(3);
+      int& ir = target->at(3);
+      target->at(Tag1{});
+      target->weird_overload();
     }
 )");
 }
@@ -292,6 +334,7 @@ TEST(ConstReferenceDeclRefExprsTest, ConstPtrVar) {
       useConstPtrConstPtr(&/*const*/target);
       useConstPtrConstRef(/*const*/target);
       /*const*/target->constMethod();
+      /*const*/target->staticMethod();
       (*/*const*/target)(ConstTag{});
       (*/*const*/target)[42];
       /*const*/target->operator[](42);
@@ -310,6 +353,10 @@ TEST(ConstReferenceDeclRefExprsTest, ConstPtrVar) {
 
       const S& const_target_ref = */*const*/target;
       const S* const_target_ptr = /*const*/target;
+
+      (void)/*const*/target->at(3);
+      const int civ = /*const*/target->at(3);
+      const int& cir = /*const*/target->at(3);
     }
 )");
 }

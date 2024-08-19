@@ -77,7 +77,15 @@ DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const DWARFDie &DIE,
                                           CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    reportWarning("Unsupported reference type", File, &DIE);
+    return DWARFDie();
+  }
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -116,6 +124,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_string_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_template_alias:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_ptr_to_member_type:
@@ -200,8 +209,10 @@ static void analyzeImportedModule(
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
@@ -1070,7 +1081,13 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return 0;
 
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
@@ -2244,17 +2261,20 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
         DebugNames.addName(
             Namespace.Name, Namespace.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
-            Namespace.Die->getTag(), Unit.getUniqueID());
+            Namespace.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubname : Unit.getPubnames())
         DebugNames.addName(
             Pubname.Name, Pubname.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
-            Pubname.Die->getTag(), Unit.getUniqueID());
+            Pubname.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubtype : Unit.getPubtypes())
         DebugNames.addName(
             Pubtype.Name, Pubtype.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
-            Pubtype.Die->getTag(), Unit.getUniqueID());
+            Pubtype.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
     } break;
     }
   }
@@ -2701,8 +2721,8 @@ Error DWARFLinker::link() {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool DebugStrPool(StringsTranslator, true);
-  OffsetsStringPool DebugLineStrPool(StringsTranslator, false);
+  OffsetsStringPool DebugStrPool(true);
+  OffsetsStringPool DebugLineStrPool(false);
   DebugDieValuePool StringOffsetPool;
 
   // ODR Contexts for the optimize.
@@ -2935,7 +2955,7 @@ Error DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(hardware_concurrency(2));
+    DefaultThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();

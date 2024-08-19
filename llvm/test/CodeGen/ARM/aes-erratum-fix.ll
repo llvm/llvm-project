@@ -49,8 +49,8 @@ define arm_aapcs_vfpcc void @aese_via_call1(ptr %0) nounwind {
 ; CHECK-FIX-NEXT:    bl get_input
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aese.8 q0, q8
-; CHECK-FIX-NEXT:    aesmc.8 q8, q0
+; CHECK-FIX-NEXT:    aese.8 q8, q0
+; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %2 = call arm_aapcs_vfpcc <16 x i8> @get_input()
@@ -70,8 +70,8 @@ define arm_aapcs_vfpcc void @aese_via_call2(half %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    bl get_inputf16
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aese.8 q0, q8
-; CHECK-FIX-NEXT:    aesmc.8 q8, q0
+; CHECK-FIX-NEXT:    aese.8 q8, q0
+; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %3 = call arm_aapcs_vfpcc <16 x i8> @get_inputf16(half %0)
@@ -91,8 +91,8 @@ define arm_aapcs_vfpcc void @aese_via_call3(float %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    bl get_inputf32
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aese.8 q0, q8
-; CHECK-FIX-NEXT:    aesmc.8 q8, q0
+; CHECK-FIX-NEXT:    aese.8 q8, q0
+; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %3 = call arm_aapcs_vfpcc <16 x i8> @get_inputf32(float %0)
@@ -123,10 +123,10 @@ define arm_aapcs_vfpcc void @aese_once_via_ptr(ptr %0, ptr %1) nounwind {
 define arm_aapcs_vfpcc <16 x i8> @aese_once_via_val(<16 x i8> %0, <16 x i8> %1) nounwind {
 ; CHECK-FIX-LABEL: aese_once_via_val:
 ; CHECK-FIX:       @ %bb.0:
-; CHECK-FIX-NEXT:    vorr q1, q1, q1
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
-; CHECK-FIX-NEXT:    aese.8 q1, q0
-; CHECK-FIX-NEXT:    aesmc.8 q0, q1
+; CHECK-FIX-NEXT:    vorr q1, q1, q1
+; CHECK-FIX-NEXT:    aese.8 q0, q1
+; CHECK-FIX-NEXT:    aesmc.8 q0, q0
 ; CHECK-FIX-NEXT:    bx lr
   %3 = call <16 x i8> @llvm.arm.neon.aese(<16 x i8> %1, <16 x i8> %0)
   %4 = call <16 x i8> @llvm.arm.neon.aesmc(<16 x i8> %3)
@@ -142,8 +142,8 @@ define arm_aapcs_vfpcc void @aese_twice_via_ptr(ptr %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q9
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NEXT:    vld1.64 {d18, d19}, [r0]
-; CHECK-FIX-NEXT:    aese.8 q8, q9
-; CHECK-FIX-NEXT:    aesmc.8 q8, q8
+; CHECK-FIX-NEXT:    aese.8 q9, q8
+; CHECK-FIX-NEXT:    aesmc.8 q8, q9
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NEXT:    bx lr
   %3 = load <16 x i8>, ptr %1, align 8
@@ -2202,8 +2202,8 @@ define arm_aapcs_vfpcc void @aesd_via_call1(ptr %0) nounwind {
 ; CHECK-FIX-NEXT:    bl get_input
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aesd.8 q0, q8
-; CHECK-FIX-NEXT:    aesimc.8 q8, q0
+; CHECK-FIX-NEXT:    aesd.8 q8, q0
+; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %2 = call arm_aapcs_vfpcc <16 x i8> @get_input()
@@ -2223,8 +2223,8 @@ define arm_aapcs_vfpcc void @aesd_via_call2(half %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    bl get_inputf16
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aesd.8 q0, q8
-; CHECK-FIX-NEXT:    aesimc.8 q8, q0
+; CHECK-FIX-NEXT:    aesd.8 q8, q0
+; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %3 = call arm_aapcs_vfpcc <16 x i8> @get_inputf16(half %0)
@@ -2244,8 +2244,8 @@ define arm_aapcs_vfpcc void @aesd_via_call3(float %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    bl get_inputf32
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
-; CHECK-FIX-NEXT:    aesd.8 q0, q8
-; CHECK-FIX-NEXT:    aesimc.8 q8, q0
+; CHECK-FIX-NEXT:    aesd.8 q8, q0
+; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
 ; CHECK-FIX-NEXT:    pop {r4, pc}
   %3 = call arm_aapcs_vfpcc <16 x i8> @get_inputf32(float %0)
@@ -2276,10 +2276,10 @@ define arm_aapcs_vfpcc void @aesd_once_via_ptr(ptr %0, ptr %1) nounwind {
 define arm_aapcs_vfpcc <16 x i8> @aesd_once_via_val(<16 x i8> %0, <16 x i8> %1) nounwind {
 ; CHECK-FIX-LABEL: aesd_once_via_val:
 ; CHECK-FIX:       @ %bb.0:
-; CHECK-FIX-NEXT:    vorr q1, q1, q1
 ; CHECK-FIX-NEXT:    vorr q0, q0, q0
-; CHECK-FIX-NEXT:    aesd.8 q1, q0
-; CHECK-FIX-NEXT:    aesimc.8 q0, q1
+; CHECK-FIX-NEXT:    vorr q1, q1, q1
+; CHECK-FIX-NEXT:    aesd.8 q0, q1
+; CHECK-FIX-NEXT:    aesimc.8 q0, q0
 ; CHECK-FIX-NEXT:    bx lr
   %3 = call <16 x i8> @llvm.arm.neon.aesd(<16 x i8> %1, <16 x i8> %0)
   %4 = call <16 x i8> @llvm.arm.neon.aesimc(<16 x i8> %3)
@@ -2295,8 +2295,8 @@ define arm_aapcs_vfpcc void @aesd_twice_via_ptr(ptr %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q9
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NEXT:    vld1.64 {d18, d19}, [r0]
-; CHECK-FIX-NEXT:    aesd.8 q8, q9
-; CHECK-FIX-NEXT:    aesimc.8 q8, q8
+; CHECK-FIX-NEXT:    aesd.8 q9, q8
+; CHECK-FIX-NEXT:    aesimc.8 q8, q9
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NEXT:    bx lr
   %3 = load <16 x i8>, ptr %1, align 8

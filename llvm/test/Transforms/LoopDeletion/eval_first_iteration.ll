@@ -717,8 +717,8 @@ failure:
   unreachable
 }
 
-define i32 @test_multiple_pred_undef_1(i1 %cond, i1 %cond2) {
-; CHECK-LABEL: @test_multiple_pred_undef_1(
+define i32 @test_multiple_pred_poison_1(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_pred_poison_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -739,7 +739,7 @@ define i32 @test_multiple_pred_undef_1(i1 %cond, i1 %cond2) {
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ [[SUB]], [[IF_TRUE_1]] ], [ undef, [[IF_TRUE_2]] ]
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ [[SUB]], [[IF_TRUE_1]] ], [ poison, [[IF_TRUE_2]] ]
 ; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 4
 ; CHECK-NEXT:    br label [[DONE:%.*]]
@@ -777,7 +777,7 @@ if.false.2:
   br label %backedge
 
 backedge:
-  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ %sub, %if.true.1 ], [ undef, %if.true.2 ]
+  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ %sub, %if.true.1 ], [ poison, %if.true.2 ]
   %sum.next = add i32 %sum, %merge.phi
   %loop.cond = icmp ne i32 %sum.next, 4
   br i1 %loop.cond, label %loop, label %done
@@ -790,8 +790,8 @@ failure:
   unreachable
 }
 
-define i32 @test_multiple_pred_undef_2(i1 %cond, i1 %cond2) {
-; CHECK-LABEL: @test_multiple_pred_undef_2(
+define i32 @test_multiple_pred_poison_2(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_pred_poison_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -812,7 +812,7 @@ define i32 @test_multiple_pred_undef_2(i1 %cond, i1 %cond2) {
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ undef, [[IF_TRUE_1]] ], [ [[SUB]], [[IF_TRUE_2]] ]
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ poison, [[IF_TRUE_1]] ], [ [[SUB]], [[IF_TRUE_2]] ]
 ; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 4
 ; CHECK-NEXT:    br label [[DONE:%.*]]
@@ -850,7 +850,7 @@ if.false.2:
   br label %backedge
 
 backedge:
-  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ undef, %if.true.1 ], [ %sub, %if.true.2 ]
+  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ poison, %if.true.1 ], [ %sub, %if.true.2 ]
   %sum.next = add i32 %sum, %merge.phi
   %loop.cond = icmp ne i32 %sum.next, 4
   br i1 %loop.cond, label %loop, label %done
@@ -863,8 +863,8 @@ failure:
   unreachable
 }
 
-define i32 @test_multiple_pred_undef_3(i1 %cond, i1 %cond2) {
-; CHECK-LABEL: @test_multiple_pred_undef_3(
+define i32 @test_multiple_pred_poison_3(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_pred_poison_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -885,7 +885,7 @@ define i32 @test_multiple_pred_undef_3(i1 %cond, i1 %cond2) {
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ undef, [[IF_TRUE_1]] ], [ undef, [[IF_TRUE_2]] ]
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE_1]] ], [ 0, [[IF_FALSE_2]] ], [ poison, [[IF_TRUE_1]] ], [ poison, [[IF_TRUE_2]] ]
 ; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 4
 ; CHECK-NEXT:    br label [[DONE:%.*]]
@@ -923,7 +923,7 @@ if.false.2:
   br label %backedge
 
 backedge:
-  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ undef, %if.true.1 ], [ undef, %if.true.2 ]
+  %merge.phi = phi i32 [ 0, %if.false.1 ], [ 0, %if.false.2 ], [ poison, %if.true.1 ], [ poison, %if.true.2 ]
   %sum.next = add i32 %sum, %merge.phi
   %loop.cond = icmp ne i32 %sum.next, 4
   br i1 %loop.cond, label %loop, label %done

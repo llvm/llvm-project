@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; This code has failed the scev based code generation as the scev in the scop
 ; contains an AddRecExpr of an outer loop. When generating code, we did not

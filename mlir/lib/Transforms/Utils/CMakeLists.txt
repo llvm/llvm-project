@@ -5,11 +5,11 @@ add_mlir_library(MLIRTransformUtils
   DialectConversion.cpp
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
+  Inliner.cpp
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
   OneToNTypeConversion.cpp
   RegionUtils.cpp
-  TopologicalSortUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms

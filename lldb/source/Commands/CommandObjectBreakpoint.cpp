@@ -266,6 +266,8 @@ public:
       Status error;
       const int short_option =
           g_breakpoint_set_options[option_idx].short_option;
+      const char *long_option =
+          g_breakpoint_set_options[option_idx].long_option;
 
       switch (short_option) {
       case 'a': {
@@ -284,13 +286,15 @@ public:
 
       case 'u':
         if (option_arg.getAsInteger(0, m_column))
-          error.SetErrorStringWithFormat("invalid column number: %s",
-                                         option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_int_parsing_error_message);
         break;
 
       case 'E': {
         LanguageType language = Language::GetLanguageTypeFromString(option_arg);
 
+        llvm::StringRef error_context;
         switch (language) {
         case eLanguageTypeC89:
         case eLanguageTypeC:
@@ -304,23 +308,26 @@ public:
         case eLanguageTypeC_plus_plus_14:
           m_exception_language = eLanguageTypeC_plus_plus;
           break;
-        case eLanguageTypeObjC:
-          m_exception_language = eLanguageTypeObjC;
-          break;
         case eLanguageTypeObjC_plus_plus:
-          error.SetErrorStringWithFormat(
-              "Set exception breakpoints separately for c++ and objective-c");
+          error_context =
+              "Set exception breakpoints separately for c++ and objective-c";
           break;
         case eLanguageTypeUnknown:
-          error.SetErrorStringWithFormat(
-              "Unknown language type: '%s' for exception breakpoint",
-              option_arg.str().c_str());
+          error_context = "Unknown language type for exception breakpoint";
           break;
         default:
-          error.SetErrorStringWithFormat(
-              "Unsupported language type: '%s' for exception breakpoint",
-              option_arg.str().c_str());
+          if (Language *languagePlugin = Language::FindPlugin(language)) {
+            if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+                languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+              m_exception_language = language;
+              break;
+            }
+          }
+          error_context = "Unsupported language type for exception breakpoint";
         }
+        if (!error_context.empty())
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, error_context);
       } break;
 
       case 'f':
@@ -336,9 +343,9 @@ public:
         bool success;
         m_catch_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-catch option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'H':
@@ -355,23 +362,24 @@ public:
           m_skip_prologue = eLazyBoolNo;
 
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for skip prologue option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'l':
         if (option_arg.getAsInteger(0, m_line_num))
-          error.SetErrorStringWithFormat("invalid line number: %s.",
-                                         option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_int_parsing_error_message);
         break;
 
       case 'L':
         m_language = Language::GetLanguageTypeFromString(option_arg);
         if (m_language == eLanguageTypeUnknown)
-          error.SetErrorStringWithFormat(
-              "Unknown language type: '%s' for breakpoint",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_language_parsing_error_message);
         break;
 
       case 'm': {
@@ -384,9 +392,9 @@ public:
           m_move_to_nearest_code = eLazyBoolNo;
 
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for move-to-nearest-code option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
         break;
       }
 
@@ -404,8 +412,8 @@ public:
         if (BreakpointID::StringIsBreakpointName(option_arg, error))
           m_breakpoint_names.push_back(std::string(option_arg));
         else
-          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
-                                         option_arg.str().c_str());
+          error = CreateOptionParsingError(
+              option_arg, short_option, long_option, "Invalid breakpoint name");
         break;
       }
 
@@ -443,9 +451,9 @@ public:
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-throw option: '%s'",
-              option_arg.str().c_str());
+          error =
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       g_bool_parsing_error_message);
       } break;
 
       case 'X':
@@ -457,9 +465,8 @@ public:
         OptionValueFileColonLine value;
         Status fcl_err = value.SetValueFromString(option_arg);
         if (!fcl_err.Success()) {
-          error.SetErrorStringWithFormat(
-              "Invalid value for file:line specifier: %s",
-              fcl_err.AsCString());
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, fcl_err.AsCString());
         } else {
           m_filenames.AppendIfUnique(value.GetFileSpec());
           m_line_num = value.GetLineNumber();
@@ -532,7 +539,8 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_options.m_use_dummy);
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     // The following are the various types of breakpoints that could be set:
     //   1).  -f -l -p  [-s -g]   (setting breakpoint by source location)
@@ -777,8 +785,8 @@ private:
       } else {
         const SymbolContext &sc =
             cur_frame->GetSymbolContext(eSymbolContextLineEntry);
-        if (sc.line_entry.file) {
-          file = sc.line_entry.file;
+        if (sc.line_entry.GetFile()) {
+          file = sc.line_entry.GetFile();
         } else {
           result.AppendError("Can't find the file for the selected frame to "
                              "use as the default file.");
@@ -810,12 +818,7 @@ public:
                             "With the exception of -e, -d and -i, passing an "
                             "empty argument clears the modification.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
 
     m_options.Append(&m_bp_opts,
                      LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3,
@@ -837,7 +840,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_dummy_opts.m_use_dummy);
+    Target &target = m_dummy_opts.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -845,7 +848,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -887,12 +890,7 @@ public:
                             "Enable the specified disabled breakpoint(s). If "
                             "no breakpoints are specified, enable all of them.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointEnable() override = default;
@@ -906,7 +904,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -931,7 +929,7 @@ protected:
       // Particular breakpoint selected; enable that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -999,12 +997,7 @@ execution will NOT stop at location 1.1.  To achieve that, type:
         "The first command disables all locations for breakpoint 1, \
 the second re-enables the first location.");
 
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointDisable() override = default;
@@ -1018,7 +1011,7 @@ the second re-enables the first location.");
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
 
@@ -1042,7 +1035,7 @@ protected:
       BreakpointIDList valid_bp_ids;
 
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -1095,15 +1088,7 @@ public:
     CommandArgumentData bp_id_arg;
 
     // Define the first (and only) variant of this arg.
-    bp_id_arg.arg_type = eArgTypeBreakpointID;
-    bp_id_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
   }
 
   ~CommandObjectBreakpointList() override = default;
@@ -1164,7 +1149,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints =
         target.GetBreakpointList(m_options.m_internal);
@@ -1195,7 +1180,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -1283,7 +1268,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // The following are the various types of breakpoints that could be
     // cleared:
@@ -1369,12 +1354,7 @@ public:
                             "Delete the specified breakpoint(s).  If no "
                             "breakpoints are specified, delete them all.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointDelete() override = default;
@@ -1437,7 +1417,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
     result.Clear();
     
     std::unique_lock<std::recursive_mutex> lock;
@@ -1479,7 +1459,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, &target, result, &excluded_bp_ids,
+            command, target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -1498,7 +1478,7 @@ protected:
       }
     } else {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::deletePerm);
       if (!result.Succeeded())
         return;
@@ -1557,6 +1537,7 @@ public:
                         ExecutionContext *execution_context) override {
     Status error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
+    const char *long_option = g_breakpoint_name_options[option_idx].long_option;
 
     switch (short_option) {
     case 'N':
@@ -1566,15 +1547,13 @@ public:
       break;
     case 'B':
       if (m_breakpoint.SetValueFromString(option_arg).Fail())
-        error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for breakpoint",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_int_parsing_error_message);
       break;
     case 'D':
       if (m_use_dummy.SetValueFromString(option_arg).Fail())
-        error.SetErrorStringWithFormat(
-            "unrecognized value \"%s\" for use-dummy",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
       break;
     case 'H':
       m_help_string.SetValueFromString(option_arg);
@@ -1617,6 +1596,8 @@ public:
     Status error;
     const int short_option =
         g_breakpoint_access_options[option_idx].short_option;
+    const char *long_option =
+        g_breakpoint_access_options[option_idx].long_option;
 
     switch (short_option) {
     case 'L': {
@@ -1625,9 +1606,8 @@ public:
       if (success) {
         m_permissions.SetAllowList(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 'A': {
       bool value, success;
@@ -1635,9 +1615,8 @@ public:
       if (success) {
         m_permissions.SetAllowDisable(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     case 'D': {
       bool value, success;
@@ -1645,9 +1624,8 @@ public:
       if (success) {
         m_permissions.SetAllowDelete(value);
       } else
-        error.SetErrorStringWithFormat(
-            "invalid boolean value '%s' passed for -L option",
-            option_arg.str().c_str());
+        error = CreateOptionParsingError(option_arg, short_option, long_option,
+                                         g_bool_parsing_error_message);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -1676,14 +1654,7 @@ public:
             "on the name.",
             "breakpoint name configure <command-options> "
             "<breakpoint-name-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointName;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointName, eArgRepeatOptional);
 
     m_option_group.Append(&m_bp_opts, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_access_options, LLDB_OPT_SET_ALL,
@@ -1706,7 +1677,7 @@ protected:
       return;
     }
 
-    Target &target = GetSelectedOrDummyTarget(false);
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1769,14 +1740,7 @@ public:
       : CommandObjectParsed(
             interpreter, "add", "Add a name to the breakpoints provided.",
             "breakpoint name add <command-options> <breakpoint-id-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointID;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
 
     m_option_group.Append(&m_name_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
@@ -1801,7 +1765,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1817,7 +1781,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -1850,14 +1814,7 @@ public:
             interpreter, "delete",
             "Delete a name from the breakpoints provided.",
             "breakpoint name delete <command-options> <breakpoint-id-list>") {
-    // Create the first variant for the first (and only) argument for this
-    // command.
-    CommandArgumentEntry arg1;
-    CommandArgumentData id_arg;
-    id_arg.arg_type = eArgTypeBreakpointID;
-    id_arg.arg_repetition = eArgRepeatOptional;
-    arg1.push_back(id_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
 
     m_option_group.Append(&m_name_options, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
@@ -1882,7 +1839,7 @@ protected:
     }
 
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -1898,7 +1855,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -1941,7 +1898,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
-        GetSelectedOrDummyTarget(m_name_options.m_use_dummy.GetCurrentValue());
+        m_name_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     std::vector<std::string> name_list;
     if (command.empty()) {
@@ -2141,6 +2098,8 @@ public:
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
+      const char *long_option =
+          m_getopt_table[option_idx].definition->long_option;
 
       switch (short_option) {
       case 'f':
@@ -2150,8 +2109,8 @@ public:
         Status name_error;
         if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
                                                   name_error)) {
-          error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
-                                         name_error.AsCString());
+          error = CreateOptionParsingError(option_arg, short_option,
+                                           long_option, name_error.AsCString());
         }
         m_names.push_back(std::string(option_arg));
         break;
@@ -2251,7 +2210,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -2305,12 +2264,7 @@ public:
                             "be read in with \"breakpoint read\".  "
                             "If given no arguments, writes all breakpoints.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
+    CommandObject::AddIDsArgumentData(eBreakpointArgs);
   }
 
   ~CommandObjectBreakpointWrite() override = default;
@@ -2366,7 +2320,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
@@ -2374,7 +2328,7 @@ protected:
     BreakpointIDList valid_bp_ids;
     if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-          command, &target, result, &valid_bp_ids,
+          command, target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (!result.Succeeded()) {
@@ -2456,7 +2410,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, Target *target, bool allow_locations,
+    Args &args, Target &target, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
@@ -2473,9 +2427,9 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   Args temp_args;
 
   if (args.empty()) {
-    if (target->GetLastCreatedBreakpoint()) {
+    if (target.GetLastCreatedBreakpoint()) {
       valid_ids->AddBreakpointID(BreakpointID(
-          target->GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
+          target.GetLastCreatedBreakpoint()->GetID(), LLDB_INVALID_BREAK_ID));
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError(
@@ -2491,7 +2445,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // into TEMP_ARGS.
 
   if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
-          args, target, allow_locations, purpose, temp_args)) {
+          args, &target, allow_locations, purpose, temp_args)) {
     result.SetError(std::move(err));
     return;
   }
@@ -2515,7 +2469,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   for (size_t i = 0; i < count; ++i) {
     BreakpointID cur_bp_id = valid_ids->GetBreakpointIDAtIndex(i);
     Breakpoint *breakpoint =
-        target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+        target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
     if (breakpoint != nullptr) {
       const size_t num_locations = breakpoint->GetNumLocations();
       if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {

@@ -46,6 +46,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <cassert>
@@ -204,6 +205,10 @@ static cl::opt<bool> MISchedPostRA(
 // Experimental option to run live interval analysis early.
 static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
     cl::desc("Run live interval analysis earlier in the pipeline"));
+
+static cl::opt<bool> DisableReplaceWithVecLib(
+    "disable-replace-with-vec-lib", cl::Hidden,
+    cl::desc("Disable replace with vector math call pass"));
 
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
@@ -823,6 +828,8 @@ void TargetPassConfig::addIRPasses() {
     if (!DisableLSR) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
+      if (EnableLoopTermFold)
+        addPass(createLoopTermFoldPass());
       if (PrintLSR)
         addPass(createPrintFunctionPass(dbgs(),
                                         "\n\n*** Code after LSR ***\n"));
@@ -841,7 +848,6 @@ void TargetPassConfig::addIRPasses() {
   // TODO: add a pass insertion point here
   addPass(&GCLoweringID);
   addPass(&ShadowStackGCLoweringID);
-  addPass(createLowerConstantIntrinsicsPass());
 
   // For MachO, lower @llvm.global_dtors into @llvm.global_ctors with
   // __cxa_atexit() calls to avoid emitting the deprecated __mod_term_func.
@@ -856,16 +862,14 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableReplaceWithVecLib)
     addPass(createReplaceWithVeclibLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
-  // Expand vector predication intrinsics into standard IR instructions.
-  // This pass has to run before ScalarizeMaskedMemIntrin and ExpandReduction
-  // passes since it emits those kinds of intrinsics.
-  addPass(createExpandVectorPredicationPass());
+  // Instrument function entry after all inlining.
+  addPass(createPostInlineEntryExitInstrumenterPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
@@ -945,6 +949,9 @@ void TargetPassConfig::addISelPrepare() {
   // Force codegen to run according to the callgraph.
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createObjCARCContractPass());
 
   addPass(createCallBrPass());
 

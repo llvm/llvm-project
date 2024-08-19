@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H
 
+#include "src/__support/CPP/iterator.h" // reverse_iterator
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 template <class T, size_t N> struct array {
@@ -23,6 +25,8 @@ template <class T, size_t N> struct array {
   using value_type = T;
   using iterator = T *;
   using const_iterator = const T *;
+  using reverse_iterator = cpp::reverse_iterator<iterator>;
+  using const_reverse_iterator = cpp::reverse_iterator<const_iterator>;
 
   LIBC_INLINE constexpr T *data() { return Data; }
   LIBC_INLINE constexpr const T *data() const { return Data; }
@@ -45,12 +49,32 @@ template <class T, size_t N> struct array {
 
   LIBC_INLINE constexpr iterator begin() { return Data; }
   LIBC_INLINE constexpr const_iterator begin() const { return Data; }
+  LIBC_INLINE constexpr const_iterator cbegin() const { return begin(); }
 
   LIBC_INLINE constexpr iterator end() { return Data + N; }
   LIBC_INLINE constexpr const_iterator end() const { return Data + N; }
+  LIBC_INLINE constexpr const_iterator cend() const { return end(); }
+
+  LIBC_INLINE constexpr reverse_iterator rbegin() {
+    return reverse_iterator{end()};
+  }
+  LIBC_INLINE constexpr const_reverse_iterator rbegin() const {
+    return const_reverse_iterator{end()};
+  }
+  LIBC_INLINE constexpr const_reverse_iterator crbegin() const {
+    return rbegin();
+  }
+
+  LIBC_INLINE constexpr reverse_iterator rend() {
+    return reverse_iterator{begin()};
+  }
+  LIBC_INLINE constexpr const_reverse_iterator rend() const {
+    return const_reverse_iterator{begin()};
+  }
+  LIBC_INLINE constexpr const_reverse_iterator crend() const { return rend(); }
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H

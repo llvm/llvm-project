@@ -1,7 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call -wasm-emit-multivalue | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call -wasm-emit-multivalue | FileCheck --check-prefix REF %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call -wasm-emit-multivalue | FileCheck %s --check-prefix REGS
-; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call -wasm-emit-multivalue | obj2yaml | FileCheck %s --check-prefix OBJ
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call -target-abi=experimental-mv | FileCheck --check-prefix REF %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | FileCheck %s --check-prefix REGS
+; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | obj2yaml | FileCheck %s --check-prefix OBJ
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix NO-MULTIVALUE
 
 ; Test that the multivalue calls, returns, function types, and block

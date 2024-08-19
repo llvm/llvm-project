@@ -44,7 +44,7 @@ if (current_os == "android") {
   if (current_os == "mac") {
     target_flags += [
       "-isysroot",
-      mac_sdk_path,
+      rebase_path(mac_sdk_path, root_build_dir),
       # TODO(lgrey): We should be getting this from `compiler_defaults`. Why
       # aren't we?
     "-mmacos-version-min=10.10",

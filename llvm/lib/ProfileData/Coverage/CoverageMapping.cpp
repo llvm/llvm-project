@@ -37,6 +37,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -338,7 +339,6 @@ public:
 #endif
     for (const auto *Branch : Branches) {
       const auto &BranchParams = Branch->getBranchParams();
-      assert(BranchParams.ID >= 0 && "CondID isn't set");
       assert(SeenIDs.insert(BranchParams.ID).second && "Duplicate CondID");
       NextIDs[BranchParams.ID] = BranchParams.Conds;
     }
@@ -370,60 +370,68 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
+  /// Storage for ExecVectors
+  /// ExecVectors is the alias of its 0th element.
+  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
-  MCDCRecord::TestVectors ExecVectors;
+  MCDCRecord::TestVectors &ExecVectors;
+
+  /// Number of False items in ExecVectors
+  unsigned NumExecVectorsF;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
 #endif
 
+  bool IsVersion11;
+
 public:
   MCDCRecordProcessor(const BitVector &Bitmap,
                       const CounterMappingRegion &Region,
-                      ArrayRef<const CounterMappingRegion *> Branches)
+                      ArrayRef<const CounterMappingRegion *> Branches,
+                      bool IsVersion11)
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
+        Folded(NumConditions, false), IndependencePairs(NumConditions),
+        ExecVectors(ExecVectorsByCond[false]), IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
-                       int TVIdx, unsigned Index) {
-    assert((Index & (1 << ID)) == 0);
-
+                       int TVIdx) {
     for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
       static_assert(MCDCRecord::MCDC_False == 0);
       static_assert(MCDCRecord::MCDC_True == 1);
-      Index |= MCDCCond << ID;
-      TV[ID] = MCDCCond;
+      TV.set(ID, MCDCCond);
       auto NextID = NextIDs[ID][MCDCCond];
       auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
       assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, NextTVIdx, Index);
+        buildTestVector(TV, NextID, NextTVIdx);
         continue;
       }
 
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + Index])
+      if (!Bitmap[IsVersion11
+                      ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
+                      : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
-      ExecVectors.push_back(TV);
-
       // The final value (T,F) is equal to the last non-dontcare state on the
       // path (in a short-circuiting system).
-      ExecVectors.back().push_back(MCDCCond);
+      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
     }
 
     // Reset back to DontCare.
-    TV[ID] = MCDCRecord::MCDC_DontCare;
+    TV.set(ID, MCDCRecord::MCDC_DontCare);
   }
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
@@ -433,10 +441,18 @@ private:
     // We start at the root node (ID == 0) with all values being DontCare.
     // `TVIdx` starts with 0 and is in the traversal.
     // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 0, 0, 0);
+    MCDCRecord::TestVector TV(NumConditions);
+    buildTestVector(TV, 0, 0);
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
+
+    // Fill ExecVectors order by False items and True items.
+    // ExecVectors is the alias of ExecVectorsByCond[false], so
+    // Append ExecVectorsByCond[true] on it.
+    NumExecVectorsF = ExecVectors.size();
+    auto &ExecVectorsT = ExecVectorsByCond[true];
+    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
+                       std::make_move_iterator(ExecVectorsT.end()));
   }
 
   // Find an independence pair for each condition:
@@ -445,27 +461,18 @@ private:
   // - All other conditions' values must be equal or marked as "don't care".
   void findIndependencePairs() {
     unsigned NumTVs = ExecVectors.size();
-    for (unsigned I = 1; I < NumTVs; ++I) {
-      const MCDCRecord::TestVector &A = ExecVectors[I];
-      for (unsigned J = 0; J < I; ++J) {
-        const MCDCRecord::TestVector &B = ExecVectors[J];
-        // Enumerate two execution vectors whose outcomes are different.
-        if (A[NumConditions] == B[NumConditions])
-          continue;
-        unsigned Flip = NumConditions, Idx;
-        for (Idx = 0; Idx < NumConditions; ++Idx) {
-          MCDCRecord::CondState ACond = A[Idx], BCond = B[Idx];
-          if (ACond == BCond || ACond == MCDCRecord::MCDC_DontCare ||
-              BCond == MCDCRecord::MCDC_DontCare)
-            continue;
-          if (Flip != NumConditions)
-            break;
-          Flip = Idx;
-        }
+    for (unsigned I = NumExecVectorsF; I < NumTVs; ++I) {
+      const auto &[A, ACond] = ExecVectors[I];
+      assert(ACond == MCDCRecord::MCDC_True);
+      for (unsigned J = 0; J < NumExecVectorsF; ++J) {
+        const auto &[B, BCond] = ExecVectors[J];
+        assert(BCond == MCDCRecord::MCDC_False);
         // If the two vectors differ in exactly one condition, ignoring DontCare
         // conditions, we have found an independence pair.
-        if (Idx == NumConditions && Flip != NumConditions)
-          IndependencePairs.insert({Flip, std::make_pair(J + 1, I + 1)});
+        auto AB = A.getDifferences(B);
+        if (AB.count() == 1)
+          IndependencePairs.insert(
+              {AB.find_first(), std::make_pair(J + 1, I + 1)});
       }
     }
   }
@@ -520,9 +527,9 @@ public:
 
 Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
     const CounterMappingRegion &Region,
-    ArrayRef<const CounterMappingRegion *> Branches) {
+    ArrayRef<const CounterMappingRegion *> Branches, bool IsVersion11) {
 
-  MCDCRecordProcessor MCDCProcessor(Bitmap, Region, Branches);
+  MCDCRecordProcessor MCDCProcessor(Bitmap, Region, Branches, IsVersion11);
   return MCDCProcessor.processMCDCRecord();
 }
 
@@ -609,8 +616,8 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
 }
 
 /// Returns the bit count
-static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
-                                 const CoverageMappingRecord &Record) {
+static unsigned getMaxBitmapSize(const CoverageMappingRecord &Record,
+                                 bool IsVersion11) {
   unsigned MaxBitmapIdx = 0;
   unsigned NumConditions = 0;
   // Scan max(BitmapIdx).
@@ -625,8 +632,12 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
       NumConditions = DecisionParams.NumConditions;
     }
   }
-  unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
-  return MaxBitmapIdx * CHAR_BIT + SizeInBits;
+
+  if (IsVersion11)
+    MaxBitmapIdx = MaxBitmapIdx * CHAR_BIT +
+                   llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
+
+  return MaxBitmapIdx;
 }
 
 namespace {
@@ -692,7 +703,6 @@ private:
       assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
 
       auto ConditionID = Branch.getBranchParams().ID;
-      assert(ConditionID >= 0 && "ConditionID should be positive");
 
       if (ConditionIDs.contains(ConditionID) ||
           ConditionID >= DecisionParams.NumConditions)
@@ -815,6 +825,9 @@ Error CoverageMapping::loadFunctionRecord(
   }
   Ctx.setCounts(Counts);
 
+  bool IsVersion11 =
+      ProfileReader.getVersion() < IndexedInstrProf::ProfVersion::Version12;
+
   BitVector Bitmap;
   if (Error E = ProfileReader.getFunctionBitmap(Record.FunctionName,
                                                 Record.FunctionHash, Bitmap)) {
@@ -826,7 +839,7 @@ Error CoverageMapping::loadFunctionRecord(
     }
     if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
-    Bitmap = BitVector(getMaxBitmapSize(Ctx, Record));
+    Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
   }
   Ctx.setBitmap(std::move(Bitmap));
 
@@ -860,7 +873,8 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
+    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount,
+                        ProfileReader.hasSingleByteCoverage());
 
     // Record ExpansionRegion.
     if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
@@ -883,7 +897,7 @@ Error CoverageMapping::loadFunctionRecord(
     // DecisionRegion, all of the information is now available to process.
     // This is where the bulk of the MC/DC progressing takes place.
     Expected<MCDCRecord> Record =
-        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches);
+        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches, IsVersion11);
     if (auto E = Record.takeError()) {
       consumeError(std::move(E));
       return Error::success();
@@ -1282,8 +1296,14 @@ class SegmentBuilder {
       // value for that area.
       // We add counts of the regions of the same kind as the active region
       // to handle the both situations.
-      if (I->Kind == Active->Kind)
-        Active->ExecutionCount += I->ExecutionCount;
+      if (I->Kind == Active->Kind) {
+        assert(I->HasSingleByteCoverage == Active->HasSingleByteCoverage &&
+               "Regions are generated in different coverage modes");
+        if (I->HasSingleByteCoverage)
+          Active->ExecutionCount = Active->ExecutionCount || I->ExecutionCount;
+        else
+          Active->ExecutionCount += I->ExecutionCount;
+      }
     }
     return Regions.drop_back(std::distance(++Active, End));
   }
@@ -1333,7 +1353,7 @@ std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
   for (const auto &Function : getCoveredFunctions())
     llvm::append_range(Filenames, Function.Filenames);
   llvm::sort(Filenames);
-  auto Last = std::unique(Filenames.begin(), Filenames.end());
+  auto Last = llvm::unique(Filenames);
   Filenames.erase(Last, Filenames.end());
   return Filenames;
 }
@@ -1513,9 +1533,9 @@ LineCoverageStats::LineCoverageStats(
 
   // if there is any starting segment at this line with a counter, it must be
   // mapped
-  Mapped |= std::any_of(
-      LineSegments.begin(), LineSegments.end(),
-      [](const auto *Seq) { return Seq->IsRegionEntry && Seq->HasCount; });
+  Mapped |= any_of(LineSegments, [](const auto *Seq) {
+    return Seq->IsRegionEntry && Seq->HasCount;
+  });
 
   if (!Mapped) {
     return;

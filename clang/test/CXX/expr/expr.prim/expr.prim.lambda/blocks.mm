@@ -65,10 +65,10 @@ void nesting() {
 
 namespace overloading {
   void bool_conversion() {
-    if ([](){}) {
+    if ([](){}) { // expected-warning{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
     }
 
-    bool b = []{};
+    bool b = []{}; // expected-warning{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
     b = (bool)[]{};
   }
 
@@ -108,8 +108,9 @@ namespace overloading {
     using decltype(a)::operator id<void(*)()>; // expected-note {{here}}
   } extern d;
 
-  bool r1 = c;
-  bool r2 = d; // expected-error {{private}}
+  bool r1 = c; // expected-warning{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  bool r2 = d; // expected-error {{private}} \
+                  expected-warning{{address of lambda function pointer conversion operator will always evaluate to 'true'}}
 }
 
 namespace PR13117 {

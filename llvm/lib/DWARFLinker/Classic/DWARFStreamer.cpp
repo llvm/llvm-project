@@ -32,10 +32,9 @@ using namespace dwarf_linker::classic;
 
 Expected<std::unique_ptr<DwarfStreamer>> DwarfStreamer::createStreamer(
     const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
-    raw_pwrite_stream &OutFile, DWARFLinkerBase::TranslatorFuncTy Translator,
-    DWARFLinkerBase::MessageHandlerTy Warning) {
+    raw_pwrite_stream &OutFile, DWARFLinkerBase::MessageHandlerTy Warning) {
   std::unique_ptr<DwarfStreamer> Streamer =
-      std::make_unique<DwarfStreamer>(FileType, OutFile, Translator, Warning);
+      std::make_unique<DwarfStreamer>(FileType, OutFile, Warning);
   if (Error Err = Streamer->init(TheTriple, "__DWARF"))
     return std::move(Err);
 
@@ -63,6 +62,8 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
@@ -102,17 +103,16 @@ Error DwarfStreamer::init(Triple TheTriple,
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }
@@ -977,11 +977,10 @@ void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
 
   switch (String.getForm()) {
   case dwarf::DW_FORM_string: {
-    StringRef TranslatedString =
-        (Translator) ? Translator(*StringVal) : *StringVal;
-    Asm->OutStreamer->emitBytes(TranslatedString.data());
+    StringRef Str = *StringVal;
+    Asm->OutStreamer->emitBytes(Str.data());
     Asm->emitInt8(0);
-    LineSectionSize += TranslatedString.size() + 1;
+    LineSectionSize += Str.size() + 1;
   } break;
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_line_strp: {
@@ -1062,6 +1061,7 @@ void DwarfStreamer::emitLineTableRows(
   unsigned FileNum = 1;
   unsigned LastLine = 1;
   unsigned Column = 0;
+  unsigned Discriminator = 0;
   unsigned IsStatement = 1;
   unsigned Isa = 0;
   uint64_t Address = -1ULL;
@@ -1100,9 +1100,18 @@ void DwarfStreamer::emitLineTableRows(
       MS->emitULEB128IntValue(Column);
       LineSectionSize += 1 + getULEB128Size(Column);
     }
-
-    // FIXME: We should handle the discriminator here, but dsymutil doesn't
-    // consider it, thus ignore it for now.
+    if (Discriminator != Row.Discriminator &&
+        MS->getContext().getDwarfVersion() >= 4) {
+      Discriminator = Row.Discriminator;
+      unsigned Size = getULEB128Size(Discriminator);
+      MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
+      MS->emitULEB128IntValue(Size + 1);
+      MS->emitIntValue(dwarf::DW_LNE_set_discriminator, 1);
+      MS->emitULEB128IntValue(Discriminator);
+      LineSectionSize += /* extended op */ 1 + getULEB128Size(Size + 1) +
+                         /* discriminator */ 1 + Size;
+    }
+    Discriminator = 0;
 
     if (Isa != Row.Isa) {
       Isa = Row.Isa;
@@ -1158,7 +1167,7 @@ void DwarfStreamer::emitLineTableRows(
       EncodingBuffer.resize(0);
       Address = -1ULL;
       LastLine = FileNum = IsStatement = 1;
-      RowsSinceLastSequence = Column = Isa = 0;
+      RowsSinceLastSequence = Column = Discriminator = Isa = 0;
     }
   }
 

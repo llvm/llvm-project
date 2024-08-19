@@ -19,6 +19,7 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
              "--section-groups and --histogram">;
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
+def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
 def decompress : FF<"decompress", "Dump decompressed section content when used with -x or -p">;
 defm demangle : BB<"demangle", "Demangle symbol names", "Do not demangle symbol names (default)">;
@@ -61,7 +62,6 @@ def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
-def raw_relr : FF<"raw-relr", "Do not decode relocations in SHT_RELR section, display raw contents">, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
 // Mach-O specific options.

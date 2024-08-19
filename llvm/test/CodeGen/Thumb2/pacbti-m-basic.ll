@@ -15,7 +15,7 @@ target triple = "thumbv8m.main-none-none-eabi"
 ;     return 1 + g(x - 1);
 ; }
 
-define hidden i32 @f0(i32 %x) local_unnamed_addr {
+define hidden i32 @f0(i32 %x) local_unnamed_addr "sign-return-address"="non-leaf" {
 entry:
   %sub = add nsw i32 %x, -1
   %call = tail call i32 @g(i32 %sub)
@@ -92,8 +92,8 @@ entry:
 
 declare dso_local i32 @g(i32) local_unnamed_addr
 
-attributes #0 = { "cmse_nonsecure_entry" "target-features"="+8msecext,+armv8.1-m.main"}
-attributes #1 = { "cmse_nonsecure_entry" "target-features"="+8msecext,+armv8-m.main,+fp-armv8d16"}
+attributes #0 = { "sign-return-address"="non-leaf" "cmse_nonsecure_entry" "target-features"="+8msecext,+armv8.1-m.main"}
+attributes #1 = { "sign-return-address"="non-leaf" "cmse_nonsecure_entry" "target-features"="+8msecext,+armv8-m.main,+fp-armv8d16"}
 
 !llvm.module.flags = !{!0, !1, !2}
 

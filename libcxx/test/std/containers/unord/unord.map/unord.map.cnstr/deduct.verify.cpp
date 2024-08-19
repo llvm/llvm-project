@@ -64,41 +64,41 @@ int main(int, char**)
     using P = std::pair<const int, int>;
     {
         // cannot deduce Key from nothing
-        std::unordered_map m; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+        std::unordered_map m; // expected-error-re{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size)
-        std::unordered_map m(42); // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+        std::unordered_map m(42); // expected-error-re{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size, Hash)
         std::unordered_map m(42, std::hash<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Pred)
         std::unordered_map m(42, std::hash<int>(), std::equal_to<int>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Pred, Allocator)
         std::unordered_map m(42, std::hash<int>(), std::equal_to<int>(), std::allocator<P>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Allocator)
         std::unordered_map m(std::allocator<P>{});
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size, Allocator)
         std::unordered_map m(42, std::allocator<P>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
     {
         // cannot deduce Key from just (Size, Hash, Allocator)
         std::unordered_map m(42, std::hash<int>(), std::allocator<P>());
-            // expected-error@-1{{no viable constructor or deduction guide for deduction of template arguments of 'unordered_map'}}
+            // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_map'}}
     }
 
   return 0;

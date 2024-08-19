@@ -426,6 +426,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
+  // Default/requested number of work groups for the function.
+  SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -519,13 +522,13 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
-  using PrologEpilogSGPRSpillsMap =
-      DenseMap<Register, PrologEpilogSGPRSaveRestoreInfo>;
+  using PrologEpilogSGPRSpill =
+      std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
   // To track the SGPR spill method used for a CSR SGPR register during
   // frame lowering. Even though the SGPR spills are handled during
   // SILowerSGPRSpills pass, some special handling needed later during the
   // PrologEpilogInserter.
-  PrologEpilogSGPRSpillsMap PrologEpilogSGPRSpills;
+  SmallVector<PrologEpilogSGPRSpill, 3> PrologEpilogSGPRSpills;
 
   // To save/restore EXEC MASK around WWM spills and copies.
   Register SGPRForEXECCopy;
@@ -593,7 +596,8 @@ public:
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
 
-  const PrologEpilogSGPRSpillsMap &getPrologEpilogSGPRSpills() const {
+  ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
+    assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
     return PrologEpilogSGPRSpills;
   }
 
@@ -603,18 +607,29 @@ public:
 
   void addToPrologEpilogSGPRSpills(Register Reg,
                                    PrologEpilogSGPRSaveRestoreInfo SI) {
-    PrologEpilogSGPRSpills.insert(std::make_pair(Reg, SI));
+    assert(!hasPrologEpilogSGPRSpillEntry(Reg));
+
+    // Insert a new entry in the right place to keep the vector in sorted order.
+    // This should be cheap since the vector is expected to be very short.
+    PrologEpilogSGPRSpills.insert(
+        upper_bound(
+            PrologEpilogSGPRSpills, Reg,
+            [](const auto &LHS, const auto &RHS) { return LHS < RHS.first; }),
+        std::make_pair(Reg, SI));
   }
 
   // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
   // on success and false otherwise.
   bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
-    return PrologEpilogSGPRSpills.contains(Reg);
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    return I != PrologEpilogSGPRSpills.end();
   }
 
   // Get the scratch SGPR if allocated to save/restore \p Reg.
   Register getScratchSGPRCopyDstReg(Register Reg) const {
-    auto I = PrologEpilogSGPRSpills.find(Reg);
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
     if (I != PrologEpilogSGPRSpills.end() &&
         I->second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
       return I->second.getReg();
@@ -643,7 +658,8 @@ public:
 
   const PrologEpilogSGPRSaveRestoreInfo &
   getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
-    auto I = PrologEpilogSGPRSpills.find(Reg);
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
     assert(I != PrologEpilogSGPRSpills.end());
 
     return I->second;
@@ -736,6 +752,7 @@ public:
   Register addKernargSegmentPtr(const SIRegisterInfo &TRI);
   Register addDispatchID(const SIRegisterInfo &TRI);
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
+  Register addPrivateSegmentSize(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
   SmallVectorImpl<MCRegister> *
@@ -1072,6 +1089,13 @@ public:
 
   // \returns true if a function needs or may need AGPRs.
   bool usesAGPRs(const MachineFunction &MF) const;
+
+  /// \returns Default/requested number of work groups for this function.
+  SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }
+
+  unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
+  unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
+  unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 };
 
 } // end namespace llvm

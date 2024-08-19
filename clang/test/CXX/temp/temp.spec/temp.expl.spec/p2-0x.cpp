@@ -24,7 +24,7 @@ namespace N0 {
   void test_f0(NonDefaultConstructible NDC) {
     f0(NDC);
   }
-  
+
   template<> void f0(int);
   template<> void f0(long);
 }
@@ -39,34 +39,34 @@ template<> void N0::f0(double) { }
 
 struct X1 {
   template<typename T> void f(T);
-  
+
   template<> void f(int); // OK (DR727)
 };
 
 //     -- class template
 namespace N0 {
-  
+
 template<typename T>
 struct X0 { // expected-note {{here}}
   static T member;
-  
+
   void f1(T t) {
     t = 17;
   }
-  
+
   struct Inner : public T { }; // expected-note 2{{here}}
-  
+
   template<typename U>
   struct InnerTemplate : public T { }; // expected-note 1{{explicitly specialized}} \
    // expected-error{{base specifier}}
-  
+
   template<typename U>
   void ft1(T t, U u);
 };
 
 }
 
-template<typename T> 
+template<typename T>
 template<typename U>
 void N0::X0<T>::ft1(T t, U u) {
   t = u;
@@ -85,35 +85,36 @@ namespace N0 {
   template<> struct X0<volatile void>;
 }
 
-template<> struct N0::X0<volatile void> { 
+template<> struct N0::X0<volatile void> {
   void f1(void *);
 };
 
 //     -- variable template [C++1y]
 namespace N0 {
 template<typename T> int v0; // expected-note 4{{explicitly specialized declaration is here}}
-template<> extern int v0<char[1]>;
-template<> extern int v0<char[2]>;
-template<> extern int v0<char[5]>;
-template<> extern int v0<char[6]>;
+template<> int v0<char[1]>; // expected-note {{previous definition is here}}
+template<> int v0<char[2]>;
+template<> int v0<char[5]>; // expected-note {{previous definition is here}}
+template<> int v0<char[6]>;
 }
 using N0::v0;
 
 template<typename T> int v1; // expected-note 4{{explicitly specialized declaration is here}}
-template<> extern int v1<char[3]>;
-template<> extern int v1<char[4]>;
-template<> extern int v1<char[7]>;
-template<> extern int v1<char[8]>;
+template<> int v1<char[3]>; // expected-note {{previous definition is here}}
+template<> int v1<char[4]>; // expected-note {{previous definition is here}}
+template<> int v1<char[7]>; // expected-note {{previous definition is here}}
+template<> int v1<char[8]>;
 
 template<> int N0::v0<int[1]>;
 template<> int v0<int[2]>;
 template<> int ::v1<int[3]>; // expected-warning {{extra qualification}}
 template<> int v1<int[4]>;
 
-template<> int N0::v0<char[1]>;
+template<> int N0::v0<char[1]>; // expected-error {{redefinition of 'v0<char[1]>'}}
 template<> int v0<char[2]>;
 template<> int ::v1<char[3]>; // expected-warning {{extra qualification}}
-template<> int v1<char[4]>;
+                              // expected-error@-1 {{redefinition of 'v1<char[3]>'}}
+template<> int v1<char[4]>; // expected-error {{redefinition of 'v1<char[4]>'}}
 
 namespace N1 {
 template<> int N0::v0<int[5]>; // expected-error {{not in a namespace enclosing 'N0'}}
@@ -122,8 +123,10 @@ template<> int ::v1<int[7]>; // expected-error {{must occur at global scope}}
 template<> int v1<int[8]>; // expected-error {{must occur at global scope}}
 
 template<> int N0::v0<char[5]>; // expected-error {{not in a namespace enclosing 'N0'}}
+                                // expected-error@-1 {{redefinition of 'v0<char[5]>'}}
 template<> int v0<char[6]>; // expected-error {{not in a namespace enclosing 'N0'}}
 template<> int ::v1<char[7]>; // expected-error {{must occur at global scope}}
+                              // expected-error@-1 {{redefinition of 'v1<char[7]>'}}
 template<> int v1<char[8]>; // expected-error {{must occur at global scope}}
 }
 
@@ -147,13 +150,13 @@ void test_x0_cvvoid(N0::X0<const volatile void*> x0, const volatile void *cvp) {
 //     -- static data member of a class template
 namespace N0 {
   // This actually tests p15; the following is a declaration, not a definition.
-  template<> 
+  template<>
   NonDefaultConstructible X0<NonDefaultConstructible>::member;
-  
+
   template<> long X0<long>::member = 17;
 
   template<> float X0<float>::member;
-  
+
   template<> double X0<double>::member;
 }
 
@@ -171,7 +174,7 @@ namespace N1 {
 
 //    -- member class of a class template
 namespace N0 {
-  
+
   template<>
   struct X0<void*>::Inner { };
 
@@ -213,7 +216,7 @@ namespace N0 {
   template<>
   template<>
   struct X0<void*>::InnerTemplate<int> { };
-  
+
   template<> template<>
   struct X0<int>::InnerTemplate<int>; // expected-note{{forward declaration}}
 
@@ -245,7 +248,7 @@ namespace N0 {
   template<>
   template<>
   void X0<void*>::ft1(void*, const void*) { }
-  
+
   template<> template<>
   void X0<void*>::ft1(void *, int);
 
@@ -279,7 +282,7 @@ namespace has_inline_namespaces {
   inline namespace inner {
     template<class T> void f(T&);
 
-    template<class T> 
+    template<class T>
     struct X0 {
       struct MemberClass;
 
@@ -330,10 +333,10 @@ template<> struct has_inline_namespaces::X0<X4>::MemberClass { };
 
 template<> void has_inline_namespaces::X0<X4>::mem_func();
 
-template<> template<typename T> 
+template<> template<typename T>
 struct has_inline_namespaces::X0<X4>::MemberClassTemplate { };
 
-template<> template<typename T> 
+template<> template<typename T>
 void has_inline_namespaces::X0<X4>::mem_func_template(T&) { }
 
 template<> int has_inline_namespaces::X0<X4>::value = 13;

@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -102,9 +103,17 @@
 //
 module {
 
-  // CHECK:      ( 0, 1, 2 )
-  // CHECK-NEXT: ( 0, 2 )
-  // CHECK-NEXT: ( 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 )
+
+  //
+  // CHECK: ---- Sparse Tensor ----
+  // CHECK-NEXT: nse = 24
+  // CHECK-NEXT: dim = ( 6, 16 )
+  // CHECK-NEXT: lvl = ( 2, 4, 3, 4 )
+  // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+  // CHECK-NEXT: crd[1] : ( 0, 2 )
+  // CHECK-NEXT: values : ( 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 )
+  // CHECK-NEXT: ----
+  //
   func.func @foo1() {
     // Build.
     %c0 = arith.constant 0   : index
@@ -115,23 +124,22 @@ module {
     > : tensor<6x16xf64>
     %s1 = sparse_tensor.convert %m : tensor<6x16xf64> to tensor<?x?xf64, #BSR_row_rowmajor>
     // Test.
-    %pos1 = sparse_tensor.positions %s1 {level = 1 : index } : tensor<?x?xf64, #BSR_row_rowmajor> to memref<?xindex>
-    %vecp1 = vector.transfer_read %pos1[%c0], %c0 : memref<?xindex>, vector<3xindex>
-    vector.print %vecp1 : vector<3xindex>
-    %crd1 = sparse_tensor.coordinates %s1 {level = 1 : index } : tensor<?x?xf64, #BSR_row_rowmajor> to memref<?xindex>
-    %vecc1 = vector.transfer_read %crd1[%c0], %c0 : memref<?xindex>, vector<2xindex>
-    vector.print %vecc1 : vector<2xindex>
-    %val1 = sparse_tensor.values %s1 : tensor<?x?xf64, #BSR_row_rowmajor> to memref<?xf64>
-    %vecv1 = vector.transfer_read %val1[%c0], %f0 : memref<?xf64>, vector<24xf64>
-    vector.print %vecv1 : vector<24xf64>
+    sparse_tensor.print %s1 : tensor<?x?xf64, #BSR_row_rowmajor>
     // Release.
     bufferization.dealloc_tensor %s1: tensor<?x?xf64, #BSR_row_rowmajor>
     return
   }
 
-  // CHECK-NEXT: ( 0, 1, 2 )
-  // CHECK-NEXT: ( 0, 2 )
-  // CHECK-NEXT: ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 )
+  //
+  // CHECK-NEXT: ---- Sparse Tensor ----
+  // CHECK-NEXT: nse = 24
+  // CHECK-NEXT: dim = ( 6, 16 )
+  // CHECK-NEXT: lvl = ( 2, 4, 4, 3 )
+  // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+  // CHECK-NEXT: crd[1] : ( 0, 2 )
+  // CHECK-NEXT: values : ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 )
+  // CHECK-NEXT: ----
+  //
   func.func @foo2() {
     // Build.
     %c0 = arith.constant 0   : index
@@ -142,23 +150,22 @@ module {
     > : tensor<6x16xf64>
     %s2 = sparse_tensor.convert %m : tensor<6x16xf64> to tensor<?x?xf64, #BSR_row_colmajor>
     // Test.
-    %pos2 = sparse_tensor.positions %s2 {level = 1 : index } : tensor<?x?xf64, #BSR_row_colmajor> to memref<?xindex>
-    %vecp2 = vector.transfer_read %pos2[%c0], %c0 : memref<?xindex>, vector<3xindex>
-    vector.print %vecp2 : vector<3xindex>
-    %crd2 = sparse_tensor.coordinates %s2 {level = 1 : index } : tensor<?x?xf64, #BSR_row_colmajor> to memref<?xindex>
-    %vecc2 = vector.transfer_read %crd2[%c0], %c0 : memref<?xindex>, vector<2xindex>
-    vector.print %vecc2 : vector<2xindex>
-    %val2 = sparse_tensor.values %s2 : tensor<?x?xf64, #BSR_row_colmajor> to memref<?xf64>
-    %vecv2 = vector.transfer_read %val2[%c0], %f0 : memref<?xf64>, vector<24xf64>
-    vector.print %vecv2 : vector<24xf64>
+    sparse_tensor.print %s2 : tensor<?x?xf64, #BSR_row_colmajor>
     // Release.
     bufferization.dealloc_tensor %s2: tensor<?x?xf64, #BSR_row_colmajor>
     return
   }
 
-  // CHECK-NEXT: ( 0, 1, 1, 2, 2 )
-  // CHECK-NEXT: ( 0, 1 )
-  // CHECK-NEXT: ( 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 )
+  //
+  // CHECK-NEXT: ---- Sparse Tensor ----
+  // CHECK-NEXT: nse = 24
+  // CHECK-NEXT: dim = ( 6, 16 )
+  // CHECK-NEXT: lvl = ( 4, 2, 3, 4 )
+  // CHECK-NEXT: pos[1] : ( 0, 1, 1, 2, 2 )
+  // CHECK-NEXT: crd[1] : ( 0, 1 )
+  // CHECK-NEXT: values : ( 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7 )
+  // CHECK-NEXT: ----
+  //
   func.func @foo3() {
     // Build.
     %c0 = arith.constant 0   : index
@@ -169,23 +176,22 @@ module {
     > : tensor<6x16xf64>
     %s3 = sparse_tensor.convert %m : tensor<6x16xf64> to tensor<?x?xf64, #BSR_col_rowmajor>
     // Test.
-    %pos3 = sparse_tensor.positions %s3 {level = 1 : index } : tensor<?x?xf64, #BSR_col_rowmajor> to memref<?xindex>
-    %vecp3 = vector.transfer_read %pos3[%c0], %c0 : memref<?xindex>, vector<5xindex>
-    vector.print %vecp3 : vector<5xindex>
-    %crd3 = sparse_tensor.coordinates %s3 {level = 1 : index } : tensor<?x?xf64, #BSR_col_rowmajor> to memref<?xindex>
-    %vecc3 = vector.transfer_read %crd3[%c0], %c0 : memref<?xindex>, vector<2xindex>
-    vector.print %vecc3 : vector<2xindex>
-    %val3 = sparse_tensor.values %s3 : tensor<?x?xf64, #BSR_col_rowmajor> to memref<?xf64>
-    %vecv3 = vector.transfer_read %val3[%c0], %f0 : memref<?xf64>, vector<24xf64>
-    vector.print %vecv3 : vector<24xf64>
+    sparse_tensor.print %s3 : tensor<?x?xf64, #BSR_col_rowmajor>
     // Release.
     bufferization.dealloc_tensor %s3: tensor<?x?xf64, #BSR_col_rowmajor>
     return
   }
 
-  // CHECK-NEXT: ( 0, 1, 1, 2, 2 )
-  // CHECK-NEXT: ( 0, 1 )
-  // CHECK-NEXT: ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 )
+  //
+  // CHECK-NEXT: ---- Sparse Tensor ----
+  // CHECK-NEXT: nse = 24
+  // CHECK-NEXT: dim = ( 6, 16 )
+  // CHECK-NEXT: lvl = ( 4, 2, 4, 3 )
+  // CHECK-NEXT: pos[1] : ( 0, 1, 1, 2, 2 )
+  // CHECK-NEXT: crd[1] : ( 0, 1 )
+  // CHECK-NEXT: values : ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 5, 0, 0, 0, 0, 6, 0, 0, 7 )
+  // CHECK-NEXT: ----
+  //
   func.func @foo4() {
     // Build.
     %c0 = arith.constant 0   : index
@@ -196,15 +202,7 @@ module {
     > : tensor<6x16xf64>
     %s4 = sparse_tensor.convert %m : tensor<6x16xf64> to tensor<?x?xf64, #BSR_col_colmajor>
     // Test.
-    %pos4 = sparse_tensor.positions %s4 {level = 1 : index } : tensor<?x?xf64, #BSR_col_colmajor> to memref<?xindex>
-    %vecp4 = vector.transfer_read %pos4[%c0], %c0 : memref<?xindex>, vector<5xindex>
-    vector.print %vecp4 : vector<5xindex>
-    %crd4 = sparse_tensor.coordinates %s4 {level = 1 : index } : tensor<?x?xf64, #BSR_col_colmajor> to memref<?xindex>
-    %vecc4 = vector.transfer_read %crd4[%c0], %c0 : memref<?xindex>, vector<2xindex>
-    vector.print %vecc4 : vector<2xindex>
-    %val4 = sparse_tensor.values %s4 : tensor<?x?xf64, #BSR_col_colmajor> to memref<?xf64>
-    %vecv4 = vector.transfer_read %val4[%c0], %f0 : memref<?xf64>, vector<24xf64>
-    vector.print %vecv4 : vector<24xf64>
+    sparse_tensor.print %s4 : tensor<?x?xf64, #BSR_col_colmajor>
     // Release.
     bufferization.dealloc_tensor %s4: tensor<?x?xf64, #BSR_col_colmajor>
     return

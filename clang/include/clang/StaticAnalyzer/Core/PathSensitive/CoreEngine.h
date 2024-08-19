@@ -45,21 +45,15 @@ class FunctionSummariesTy;
 class ExprEngine;
 
 //===----------------------------------------------------------------------===//
-/// CoreEngine - Implements the core logic of the graph-reachability
-///   analysis. It traverses the CFG and generates the ExplodedGraph.
-///   Program "states" are treated as opaque void pointers.
-///   The template class CoreEngine (which subclasses CoreEngine)
-///   provides the matching component to the engine that knows the actual types
-///   for states.  Note that this engine only dispatches to transfer functions
-///   at the statement and block-level.  The analyses themselves must implement
-///   any transfer function logic and the sub-expression level (if any).
+/// CoreEngine - Implements the core logic of the graph-reachability analysis.
+/// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class CommonNodeBuilder;
   friend class EndOfFunctionNodeBuilder;
   friend class ExprEngine;
   friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
-  friend struct NodeBuilderContext;
+  friend class NodeBuilderContext;
   friend class SwitchNodeBuilder;
 
 public:
@@ -149,12 +143,6 @@ public:
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
                        ProgramStateRef InitState);
 
-  /// Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L,
-                                       unsigned Steps,
-                                       ProgramStateRef InitState,
-                                       ExplodedNodeSet &Dst);
-
   /// Dispatch the work list item based on the given location information.
   /// Use Pred parameter as the predecessor state.
   void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
@@ -199,12 +187,12 @@ public:
   DataTag::Factory &getDataTags() { return DataTags; }
 };
 
-// TODO: Turn into a class.
-struct NodeBuilderContext {
+class NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
   const LocationContext *LC;
 
+public:
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
                      const LocationContext *L)
       : Eng(E), Block(B), LC(L) {
@@ -214,8 +202,14 @@ struct NodeBuilderContext {
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
       : NodeBuilderContext(E, B, N->getLocationContext()) {}
 
+  /// Return the CoreEngine associated with this builder.
+  const CoreEngine &getEngine() const { return Eng; }
+
   /// Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
+
+  /// Return the location context associated with this builder.
+  const LocationContext *getLocationContext() const { return LC; }
 
   /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.

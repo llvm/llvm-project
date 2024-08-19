@@ -13,10 +13,10 @@ define <vscale x 2 x i64> @complex_mul_v2i64(<vscale x 2 x i64> %a, <vscale x 2 
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.experimental.vector.deinterleave2.nxv2i64(<vscale x 2 x i64> %a)
+  %a.deinterleaved = tail call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave2.nxv2i64(<vscale x 2 x i64> %a)
   %a.real = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.experimental.vector.deinterleave2.nxv2i64(<vscale x 2 x i64> %b)
+  %b.deinterleaved = tail call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave2.nxv2i64(<vscale x 2 x i64> %b)
   %b.real = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } %b.deinterleaved, 1
   %0 = mul <vscale x 1 x i64> %b.imag, %a.real
@@ -25,7 +25,7 @@ entry:
   %3 = mul <vscale x 1 x i64> %b.real, %a.real
   %4 = mul <vscale x 1 x i64> %a.imag, %b.imag
   %5 = sub <vscale x 1 x i64> %3, %4
-  %interleaved.vec = tail call <vscale x 2 x i64> @llvm.experimental.vector.interleave2.nxv2i64(<vscale x 1 x i64> %5, <vscale x 1 x i64> %2)
+  %interleaved.vec = tail call <vscale x 2 x i64> @llvm.vector.interleave2.nxv2i64(<vscale x 1 x i64> %5, <vscale x 1 x i64> %2)
   ret <vscale x 2 x i64> %interleaved.vec
 }
 
@@ -43,10 +43,10 @@ define <vscale x 4 x i64> @complex_mul_v4i64(<vscale x 4 x i64> %a, <vscale x 4 
 ; CHECK-NEXT:    mov z0.d, z5.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.experimental.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %a)
+  %a.deinterleaved = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %a)
   %a.real = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.experimental.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %b)
+  %b.deinterleaved = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %b)
   %b.real = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %b.deinterleaved, 1
   %0 = mul <vscale x 2 x i64> %b.imag, %a.real
@@ -55,7 +55,7 @@ entry:
   %3 = mul <vscale x 2 x i64> %b.real, %a.real
   %4 = mul <vscale x 2 x i64> %a.imag, %b.imag
   %5 = sub <vscale x 2 x i64> %3, %4
-  %interleaved.vec = tail call <vscale x 4 x i64> @llvm.experimental.vector.interleave2.nxv4i64(<vscale x 2 x i64> %5, <vscale x 2 x i64> %2)
+  %interleaved.vec = tail call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %5, <vscale x 2 x i64> %2)
   ret <vscale x 4 x i64> %interleaved.vec
 }
 
@@ -81,10 +81,10 @@ define <vscale x 8 x i64> @complex_mul_v8i64(<vscale x 8 x i64> %a, <vscale x 8 
 ; CHECK-NEXT:    mov z2.d, z27.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %a)
+  %a.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %a)
   %a.real = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %b)
+  %b.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %b)
   %b.real = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %b.deinterleaved, 1
   %0 = mul <vscale x 4 x i64> %b.imag, %a.real
@@ -93,7 +93,7 @@ entry:
   %3 = mul <vscale x 4 x i64> %b.real, %a.real
   %4 = mul <vscale x 4 x i64> %a.imag, %b.imag
   %5 = sub <vscale x 4 x i64> %3, %4
-  %interleaved.vec = tail call <vscale x 8 x i64> @llvm.experimental.vector.interleave2.nxv8i64(<vscale x 4 x i64> %5, <vscale x 4 x i64> %2)
+  %interleaved.vec = tail call <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64> %5, <vscale x 4 x i64> %2)
   ret <vscale x 8 x i64> %interleaved.vec
 }
 
@@ -119,11 +119,11 @@ define <vscale x 8 x i64> @complex_minus_mul_v8i64(<vscale x 8 x i64> %a, <vscal
 ; CHECK-NEXT:    mov z2.d, z27.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %a)
+  %a.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %a)
   %a.real = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %a.deinterleaved, 1
   %0 = sub <vscale x 4 x i64> zeroinitializer, %a.real
-  %b.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %b)
+  %b.deinterleaved = tail call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %b)
   %b.real = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %b.deinterleaved, 1
   %1 = mul <vscale x 4 x i64> %b.real, %0
@@ -132,15 +132,15 @@ entry:
   %4 = mul <vscale x 4 x i64> %b.real, %a.imag
   %5 = mul <vscale x 4 x i64> %b.imag, %0
   %6 = sub <vscale x 4 x i64> %5, %4
-  %interleaved.vec = tail call <vscale x 8 x i64> @llvm.experimental.vector.interleave2.nxv8i64(<vscale x 4 x i64> %3, <vscale x 4 x i64> %6)
+  %interleaved.vec = tail call <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64> %3, <vscale x 4 x i64> %6)
   ret <vscale x 8 x i64> %interleaved.vec
 }
 
-declare { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.experimental.vector.deinterleave2.nxv2i64(<vscale x 2 x i64>)
-declare <vscale x 2 x i64> @llvm.experimental.vector.interleave2.nxv2i64(<vscale x 1 x i64>, <vscale x 1 x i64>)
+declare { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.vector.deinterleave2.nxv2i64(<vscale x 2 x i64>)
+declare <vscale x 2 x i64> @llvm.vector.interleave2.nxv2i64(<vscale x 1 x i64>, <vscale x 1 x i64>)
 
-declare { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.experimental.vector.deinterleave2.nxv4i64(<vscale x 4 x i64>)
-declare <vscale x 4 x i64> @llvm.experimental.vector.interleave2.nxv4i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64>)
+declare <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
 
-declare { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64>)
-declare <vscale x 8 x i64> @llvm.experimental.vector.interleave2.nxv8i64(<vscale x 4 x i64>, <vscale x 4 x i64>)
+declare { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64>)
+declare <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64>, <vscale x 4 x i64>)

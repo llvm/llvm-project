@@ -274,7 +274,7 @@ std::string OHOS::computeSysRoot() const {
   std::string SysRoot =
       !getDriver().SysRoot.empty()
           ? getDriver().SysRoot
-          : makePath({getDriver().getInstalledDir(), "..", "..", "sysroot"});
+          : makePath({getDriver().Dir, "..", "..", "sysroot"});
   if (!llvm::sys::fs::exists(SysRoot))
     return std::string();
 

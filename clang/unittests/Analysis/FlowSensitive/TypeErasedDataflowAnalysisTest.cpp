@@ -9,6 +9,7 @@
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -66,20 +67,20 @@ protected:
               AST->getASTContext()));
     assert(Func != nullptr);
 
-    CFCtx = std::make_unique<ControlFlowContext>(
-        llvm::cantFail(ControlFlowContext::build(*Func)));
+    ACFG =
+        std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(*Func)));
 
     AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
     DACtx = std::make_unique<DataflowAnalysisContext>(
         std::make_unique<WatchedLiteralsSolver>());
     Environment Env(*DACtx, *Func);
 
-    return runDataflowAnalysis(*CFCtx, Analysis, Env);
+    return runDataflowAnalysis(*ACFG, Analysis, Env);
   }
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
   const CFGBlock *blockForStmt(const Stmt &S) {
-    const CFGBlock *Block = CFCtx->getStmtToBlock().lookup(&S);
+    const CFGBlock *Block = ACFG->blockForStmt(S);
     assert(Block != nullptr);
     return Block;
   }
@@ -105,7 +106,7 @@ protected:
   }
 
   std::unique_ptr<ASTUnit> AST;
-  std::unique_ptr<ControlFlowContext> CFCtx;
+  std::unique_ptr<AdornedCFG> ACFG;
   std::unique_ptr<DataflowAnalysisContext> DACtx;
 };
 
@@ -144,6 +145,38 @@ TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
                                    "0\n", "int x = 0;\n", "x\n", "++x\n",
                                    " (Lifetime ends)\n")));
+}
+
+TEST_F(DataflowAnalysisTest, CanAnalyzeStmt) {
+  std::string Code = R"cc(
+      struct S { bool b; };
+      void foo() {
+        S AnS = S{true};
+      }
+    )cc";
+  AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+  const auto &DeclStatement =
+      matchNode<DeclStmt>(declStmt(hasSingleDecl(varDecl(hasName("AnS")))));
+  const auto &Func = matchNode<FunctionDecl>(functionDecl(hasName("foo")));
+
+  ACFG = std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(
+      Func, const_cast<DeclStmt &>(DeclStatement), AST->getASTContext())));
+
+  NoopAnalysis Analysis = NoopAnalysis(AST->getASTContext());
+  DACtx = std::make_unique<DataflowAnalysisContext>(
+      std::make_unique<WatchedLiteralsSolver>());
+  Environment Env(*DACtx, const_cast<DeclStmt &>(DeclStatement));
+
+  llvm::Expected<std::vector<std::optional<DataflowAnalysisState<NoopLattice>>>>
+      Results = runDataflowAnalysis(*ACFG, Analysis, Env);
+
+  ASSERT_THAT_ERROR(Results.takeError(), llvm::Succeeded());
+  const Environment &ExitBlockEnv = Results->front()->Env;
+  BoolValue *BoolFieldValue = cast<BoolValue>(
+      getFieldValue(ExitBlockEnv.get<RecordStorageLocation>(
+                        *cast<VarDecl>((*DeclStatement.decl_begin()))),
+                    "b", AST->getASTContext(), ExitBlockEnv));
+  EXPECT_TRUE(Env.proves(BoolFieldValue->formula()));
 }
 
 // Tests for the statement-to-block map.
@@ -244,15 +277,17 @@ TEST_F(DiscardExprStateTest, WhileStatement) {
   EXPECT_NE(NotEqOpState.Env.getValue(NotEqOp), nullptr);
 
   // In the block that calls `foo(p)`, the value for `p != nullptr` is discarded
-  // because it is not consumed by this block.
+  // because it is not consumed outside the block it is in.
   const auto &CallFooState = blockStateForStmt(BlockStates, CallFoo);
   EXPECT_EQ(CallFooState.Env.getValue(NotEqOp), nullptr);
 }
 
 TEST_F(DiscardExprStateTest, BooleanOperator) {
   std::string Code = R"(
-    bool target(bool b1, bool b2) {
-      return b1 && b2;
+    void f();
+    void target(bool b1, bool b2) {
+      if (b1 && b2)
+        f();
     }
   )";
   auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
@@ -260,46 +295,116 @@ TEST_F(DiscardExprStateTest, BooleanOperator) {
 
   const auto &AndOp =
       matchNode<BinaryOperator>(binaryOperator(hasOperatorName("&&")));
-  const auto &Return = matchNode<ReturnStmt>(returnStmt());
+  const auto &CallF =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("f")))));
 
   // In the block that evaluates the LHS of the `&&` operator, the LHS is
   // associated with a value, while the right-hand side is not (unsurprisingly,
   // as it hasn't been evaluated yet).
   const auto &LHSState = blockStateForStmt(BlockStates, *AndOp.getLHS());
   auto *LHSValue = cast<BoolValue>(LHSState.Env.getValue(*AndOp.getLHS()));
-  ASSERT_NE(LHSValue, nullptr);
+  EXPECT_NE(LHSValue, nullptr);
   EXPECT_EQ(LHSState.Env.getValue(*AndOp.getRHS()), nullptr);
 
-  // In the block that evaluates the RHS, the RHS is associated with a
-  // value. The value for the LHS has been discarded as it is not consumed by
-  // this block.
+  // In the block that evaluates the RHS, both the LHS and RHS are associated
+  // with values, as they are both subexpressions of the `&&` operator, which
+  // is evaluated in a later block.
   const auto &RHSState = blockStateForStmt(BlockStates, *AndOp.getRHS());
-  EXPECT_EQ(RHSState.Env.getValue(*AndOp.getLHS()), nullptr);
-  auto *RHSValue = cast<BoolValue>(RHSState.Env.getValue(*AndOp.getRHS()));
-  ASSERT_NE(RHSValue, nullptr);
+  EXPECT_EQ(RHSState.Env.getValue(*AndOp.getLHS()), LHSValue);
+  auto *RHSValue = RHSState.Env.get<BoolValue>(*AndOp.getRHS());
+  EXPECT_NE(RHSValue, nullptr);
 
-  // In the block that evaluates the return statement, the expression `b1 && b2`
-  // is associated with a value (and check that it's the right one).
-  // The expressions `b1` and `b2` are _not_ associated with a value in this
-  // block, even though they are consumed by the block, because:
-  // * This block has two prececessor blocks (the one that evaluates `b1` and
-  //   the one that evaluates `b2`).
-  // * `b1` is only associated with a value in the block that evaluates `b1` but
-  //   not the block that evalutes `b2`, so the join operation discards the
-  //   value for `b1`.
-  // * `b2` is only associated with a value in the block that evaluates `b2` but
-  //   not the block that evaluates `b1`, the the join operation discards the
-  //   value for `b2`.
-  // Nevertheless, the analysis generates the correct formula for `b1 && b2`
-  // because the transfer function for the `&&` operator retrieves the values
-  // for its operands from the environments for the blocks that compute the
-  // operands, rather than from the environment for the block that contains the
-  // `&&`.
-  const auto &ReturnState = blockStateForStmt(BlockStates, Return);
-  EXPECT_EQ(ReturnState.Env.getValue(*AndOp.getLHS()), nullptr);
-  EXPECT_EQ(ReturnState.Env.getValue(*AndOp.getRHS()), nullptr);
-  EXPECT_EQ(ReturnState.Env.getValue(AndOp),
-            &ReturnState.Env.makeAnd(*LHSValue, *RHSValue));
+  // In the block that evaluates `b1 && b2`, the `&&` as well as its operands
+  // are associated with values.
+  const auto &AndOpState = blockStateForStmt(BlockStates, AndOp);
+  EXPECT_EQ(AndOpState.Env.getValue(*AndOp.getLHS()), LHSValue);
+  EXPECT_EQ(AndOpState.Env.getValue(*AndOp.getRHS()), RHSValue);
+  EXPECT_EQ(AndOpState.Env.getValue(AndOp),
+            &AndOpState.Env.makeAnd(*LHSValue, *RHSValue));
+
+  // In the block that calls `f()`, none of `b1`, `b2`, or `b1 && b2` should be
+  // associated with values.
+  const auto &CallFState = blockStateForStmt(BlockStates, CallF);
+  EXPECT_EQ(CallFState.Env.getValue(*AndOp.getLHS()), nullptr);
+  EXPECT_EQ(CallFState.Env.getValue(*AndOp.getRHS()), nullptr);
+  EXPECT_EQ(CallFState.Env.getValue(AndOp), nullptr);
+}
+
+TEST_F(DiscardExprStateTest, ConditionalOperator) {
+  std::string Code = R"(
+    void f(int*, int);
+    void g();
+    bool cond();
+
+    void target() {
+      int i = 0;
+      if (cond())
+        f(&i, cond() ? 1 : 0);
+      g();
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  const auto &AddrOfI =
+      matchNode<UnaryOperator>(unaryOperator(hasOperatorName("&")));
+  const auto &CallF =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("f")))));
+  const auto &CallG =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("g")))));
+
+  // In the block that evaluates `&i`, it should obviously have a value.
+  const auto &AddrOfIState = blockStateForStmt(BlockStates, AddrOfI);
+  auto *AddrOfIVal = AddrOfIState.Env.get<PointerValue>(AddrOfI);
+  EXPECT_NE(AddrOfIVal, nullptr);
+
+  // Because of the conditional operator, the `f(...)` call is evaluated in a
+  // different block than `&i`, but `&i` still needs to have a value here
+  // because it's a subexpression of the call.
+  const auto &CallFState = blockStateForStmt(BlockStates, CallF);
+  EXPECT_NE(&CallFState, &AddrOfIState);
+  EXPECT_EQ(CallFState.Env.get<PointerValue>(AddrOfI), AddrOfIVal);
+
+  // In the block that calls `g()`, `&i` should no longer be associated with a
+  // value.
+  const auto &CallGState = blockStateForStmt(BlockStates, CallG);
+  EXPECT_EQ(CallGState.Env.get<PointerValue>(AddrOfI), nullptr);
+}
+
+TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
+  // This is a regression test.
+  // In the CFG for `target()` below, the expression that evaluates the function
+  // pointer for `expect` and the actual call are separated into different
+  // baseic blocks (because of the control flow introduced by the `||`
+  // operator).
+  // The value for the `expect` function pointer was erroneously discarded
+  // from the environment between these two blocks because the code that
+  // determines whether the expression values for a block need to be preserved
+  // did not ignore the `ParenExpr` around `(i == 1)` (which is not represented
+  // in the CFG).
+  std::string Code = R"(
+    bool expect(bool, bool);
+    void target(int i) {
+      expect(false || (i == 1), false);
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  const auto &FnToPtrDecay = matchNode<ImplicitCastExpr>(
+      implicitCastExpr(hasCastKind(CK_FunctionToPointerDecay)));
+  const auto &CallExpect =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("expect")))));
+
+  // In the block that evaluates the implicit cast of `expect` to a pointer,
+  // this expression is associated with a value.
+  const auto &FnToPtrDecayState = blockStateForStmt(BlockStates, FnToPtrDecay);
+  EXPECT_NE(FnToPtrDecayState.Env.getValue(FnToPtrDecay), nullptr);
+
+  // In the block that calls `expect()`, the implicit cast of `expect` to a
+  // pointer is still associated with a value.
+  const auto &CallExpectState = blockStateForStmt(BlockStates, CallExpect);
+  EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
 }
 
 struct NonConvergingLattice {
@@ -769,6 +874,25 @@ public:
     else
       JoinedVal.setProperty("is_null", JoinedEnv.makeTopBoolValue());
   }
+
+  std::optional<WidenResult> widen(QualType Type, Value &Prev,
+                                   const Environment &PrevEnv, Value &Current,
+                                   Environment &CurrentEnv) override {
+    switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
+    case ComparisonResult::Same:
+      return WidenResult{&Current, LatticeJoinEffect::Unchanged};
+    case ComparisonResult::Different: {
+      auto &CurPtr = cast<PointerValue>(Current);
+      auto &WidenedPtr =
+          CurrentEnv.create<PointerValue>(CurPtr.getPointeeLoc());
+      WidenedPtr.setProperty("is_null", CurrentEnv.makeTopBoolValue());
+      return WidenResult{&WidenedPtr, LatticeJoinEffect::Changed};
+    }
+    case ComparisonResult::Unknown:
+      return std::nullopt;
+    }
+    llvm_unreachable("all cases in switch covered");
+  }
 };
 
 class WideningTest : public Test {
@@ -810,7 +934,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2", "p3"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -853,8 +976,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(),
-                    UnorderedElementsAre("p1", "p2", "p3", "p4"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -893,19 +1014,11 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooLoc =
-            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
-        EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+        const auto &FooLoc =
+            getLocForDecl<ScalarStorageLocation>(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl<PointerValue>(ASTCtx, Env, "Bar");
+        EXPECT_EQ(&BarVal.getPointeeLoc(), &FooLoc);
       });
 }
 
@@ -927,15 +1040,35 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        EXPECT_EQ(FooVal->getProperty("is_null"),
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        EXPECT_EQ(FooVal.getProperty("is_null"),
                   &Env.getBoolLiteralValue(false));
+      });
+}
+
+TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
+  std::string Code = R"(
+    void target(bool Cond) {
+      int *Foo;
+      int i = 0;
+      Foo = nullptr;
+      while (Cond) {
+        Foo = &i;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
+        EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
+                                        Env.makeTopBoolValue()));
       });
 }
 

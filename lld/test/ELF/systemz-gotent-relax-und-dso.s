@@ -1,6 +1,6 @@
 # REQUIRES: systemz
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=s390x-unknown-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=s390x-unknown-linux %S/Inputs/gotpc-relax-und-dso.s -o %tdso.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %S/Inputs/gotpc-relax-und-dso.s -o %tdso.o
 # RUN: ld.lld -shared %tdso.o -soname=t.so -o %t.so
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t.so -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=RELOC %s
@@ -14,9 +14,9 @@
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: <foo>:
-# DISASM-NEXT:     bc 0, 0
+# DISASM-NEXT:     nop     0
 # DISASM:      <hid>:
-# DISASM-NEXT:     bc 0, 0
+# DISASM-NEXT:     nop     0
 # DISASM:      <_start>:
 # DISASM-NEXT:    lgrl    %r1, 0x2400
 # DISASM-NEXT:    lgrl    %r1, 0x2400

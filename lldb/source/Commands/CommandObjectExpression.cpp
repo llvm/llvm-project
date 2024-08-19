@@ -311,19 +311,7 @@ Examples:
     expr unsigned int $foo = 5
     expr char c[] = \"foo\"; c[0])");
 
-  CommandArgumentEntry arg;
-  CommandArgumentData expression_arg;
-
-  // Define the first (and only) variant of this arg.
-  expression_arg.arg_type = eArgTypeExpression;
-  expression_arg.arg_repetition = eArgRepeatPlain;
-
-  // There is only one variant this argument could be; put it into the argument
-  // entry.
-  arg.push_back(expression_arg);
-
-  // Push the data for the first argument into the m_arguments vector.
-  m_arguments.push_back(arg);
+  AddSimpleArgumentList(eArgTypeExpression);
 
   // Add the "--format" and "--gdb-format"
   m_option_group.Append(&m_format_options,
@@ -473,7 +461,11 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
-        result_valobj_sp->Dump(output_stream, options);
+        if (llvm::Error error =
+                result_valobj_sp->Dump(output_stream, options)) {
+          result.AppendError(toString(std::move(error)));
+          return false;
+        }
 
         if (suppress_result)
           if (auto result_var_sp =
@@ -613,7 +605,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetSelectedOrDummyTarget();
+      Target &target = GetTarget();
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
@@ -673,7 +665,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target &target = GetSelectedOrDummyTarget();
+  Target &target = GetTarget();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 

@@ -12,10 +12,7 @@
 
 // iter_type put(iter_type s, ios_base& iob, char_type fill, long double v) const;
 
-// With the Microsoft UCRT, printf("%a", 0.0) produces "0x0.0000000000000p+0"
-// while other C runtimes produce just "0x0p+0".
-// https://developercommunity.visualstudio.com/t/Printf-formatting-of-float-as-hex-prints/1660844
-// XFAIL: msvc
+// XFAIL: win32-broken-printf-a-precision
 
 // XFAIL: LIBCXX-AIX-FIXME
 

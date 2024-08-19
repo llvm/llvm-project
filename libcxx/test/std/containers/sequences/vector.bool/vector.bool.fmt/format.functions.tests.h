@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -34,7 +35,6 @@ void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, 
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);

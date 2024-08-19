@@ -3,7 +3,7 @@ class A;
 
 class S {
 public:
-   template<typename T> struct A { 
+   template<typename T> struct A {
      struct Nested {
        typedef T type;
      };
@@ -17,15 +17,15 @@ template<typename T>
 struct Outer {
   template<typename U>
   class Inner0;
-  
+
   template<typename U>
   class Inner1 {
     struct ReallyInner;
-    
+
     T foo(U);
     template<typename V> T bar(V);
     template<typename V> T* bar(V);
-    
+
     static T value1;
     static U value2;
   };
@@ -47,7 +47,7 @@ template<typename X>
 template<typename Y>
 struct Outer<X>::Inner1<Y>::ReallyInner {
   static Y value3;
-  
+
   void g(X, Y);
 };
 
@@ -112,18 +112,16 @@ template struct X1<int>::B<bool>;
 // Template template parameters
 template<typename T>
 struct X2 {
-  template<template<class U, T Value> class>  // expected-error{{cannot have type 'float'}} \
-                                              // expected-note{{previous non-type template}}
+  template<template<class U, T Value> class>  // expected-error{{cannot have type 'float'}}
     struct Inner { };
 };
 
-template<typename T, 
-         int Value> // expected-note{{template non-type parameter}}
+template<typename T, int Value>
   struct X2_arg;
 
 X2<int>::Inner<X2_arg> x2i1;
 X2<float> x2a; // expected-note{{instantiation}}
-X2<long>::Inner<X2_arg> x2i3; // expected-error{{template template argument has different}}
+X2<long>::Inner<X2_arg> x2i3;
 
 namespace PR10896 {
   template<typename TN>
@@ -132,10 +130,10 @@ namespace PR10896 {
   public:
     void foo() {}
   private:
-	
+
     template<typename T>
-    T SomeField; // expected-error {{member 'SomeField' declared as a template}}
-    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of member 'SomeField2'}}
+    T SomeField; // expected-error {{non-static data member 'SomeField' cannot be declared as a template}}
+    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of variable 'SomeField2'}}
   };
 
   void g() {

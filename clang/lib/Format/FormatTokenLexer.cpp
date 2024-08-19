@@ -404,7 +404,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+  if (NullishCoalescing->isNot(TT_NullCoalescingOperator) ||
       Equal->isNot(tok::equal)) {
     return false;
   }
@@ -1442,7 +1442,6 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  LangOpts = getFormattingLangOpts(Style);
   Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
                       Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
   Lex->SetKeepWhitespaceMode(true);

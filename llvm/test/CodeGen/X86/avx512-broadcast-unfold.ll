@@ -1367,7 +1367,7 @@ define void @bcast_unfold_fdiv_v16f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v16f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB42_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1386,7 +1386,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds float, ptr %arg, i64 %tmp
   %tmp4 = load <16 x float>, ptr %tmp2, align 4
-  %tmp5 = fdiv <16 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fdiv <16 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   store <16 x float> %tmp5, ptr %tmp2, align 4
   %tmp7 = add i64 %tmp, 16
   %tmp8 = icmp eq i64 %tmp7, 1024
@@ -1400,7 +1400,7 @@ define void @bcast_unfold_fdiv_v8f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v8f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB43_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1419,7 +1419,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds float, ptr %arg, i64 %tmp
   %tmp4 = load <8 x float>, ptr %tmp2, align 4
-  %tmp5 = fdiv <8 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fdiv <8 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   store <8 x float> %tmp5, ptr %tmp2, align 4
   %tmp7 = add i64 %tmp, 8
   %tmp8 = icmp eq i64 %tmp7, 1024
@@ -1433,7 +1433,7 @@ define void @bcast_unfold_fdiv_v4f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v4f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB44_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1451,7 +1451,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds float, ptr %arg, i64 %tmp
   %tmp4 = load <4 x float>, ptr %tmp2, align 4
-  %tmp5 = fdiv <4 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fdiv <4 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   store <4 x float> %tmp5, ptr %tmp2, align 4
   %tmp7 = add i64 %tmp, 4
   %tmp8 = icmp eq i64 %tmp7, 1024
@@ -1465,7 +1465,7 @@ define void @bcast_unfold_fdiv_v8f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v8f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB45_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1484,7 +1484,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds double, ptr %arg, i64 %tmp
   %tmp4 = load <8 x double>, ptr %tmp2, align 8
-  %tmp5 = fdiv <8 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fdiv <8 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
   store <8 x double> %tmp5, ptr %tmp2, align 8
   %tmp7 = add i64 %tmp, 8
   %tmp8 = icmp eq i64 %tmp7, 1024
@@ -1498,7 +1498,7 @@ define void @bcast_unfold_fdiv_v4f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v4f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB46_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1517,7 +1517,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds double, ptr %arg, i64 %tmp
   %tmp4 = load <4 x double>, ptr %tmp2, align 8
-  %tmp5 = fdiv <4 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fdiv <4 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
   store <4 x double> %tmp5, ptr %tmp2, align 8
   %tmp7 = add i64 %tmp, 4
   %tmp8 = icmp eq i64 %tmp7, 1024
@@ -1531,7 +1531,7 @@ define void @bcast_unfold_fdiv_v2f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v2f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [2.0E+0,2.0E+0]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [3.0E+0,3.0E+0]
 ; CHECK-NEXT:    # xmm0 = mem[0,0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB47_1: # %bb1
@@ -1550,7 +1550,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
   %tmp2 = getelementptr inbounds double, ptr %arg, i64 %tmp
   %tmp4 = load <2 x double>, ptr %tmp2, align 8
-  %tmp5 = fdiv <2 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fdiv <2 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00>
   store <2 x double> %tmp5, ptr %tmp2, align 8
   %tmp7 = add i64 %tmp, 2
   %tmp8 = icmp eq i64 %tmp7, 1024

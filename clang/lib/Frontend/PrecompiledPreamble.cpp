@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -290,8 +291,7 @@ private:
 
 class PrecompilePreambleConsumer : public PCHGenerator {
 public:
-  PrecompilePreambleConsumer(PrecompilePreambleAction &Action,
-                             const Preprocessor &PP,
+  PrecompilePreambleConsumer(PrecompilePreambleAction &Action, Preprocessor &PP,
                              InMemoryModuleCache &ModuleCache,
                              StringRef isysroot,
                              std::shared_ptr<PCHBuffer> Buffer)

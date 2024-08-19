@@ -392,6 +392,24 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
   return true;
 }
 
+void CommandObject::AddSimpleArgumentList(
+    CommandArgumentType arg_type, ArgumentRepetitionType repetition_type) {
+
+  CommandArgumentEntry arg_entry;
+  CommandArgumentData simple_arg;
+
+  // Define the first (and only) variant of this arg.
+  simple_arg.arg_type = arg_type;
+  simple_arg.arg_repetition = repetition_type;
+
+  // There is only one variant this argument could be; put it into the argument
+  // entry.
+  arg_entry.push_back(simple_arg);
+
+  // Push the data for the first argument into the m_arguments vector.
+  m_arguments.push_back(arg_entry);
+}
+
 int CommandObject::GetNumArgumentEntries() { return m_arguments.size(); }
 
 CommandObject::CommandArgumentEntry *
@@ -694,20 +712,24 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   }
 }
 
-void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
-                                       CommandArgumentType ID,
-                                       CommandArgumentType IDRange) {
+void CommandObject::AddIDsArgumentData(CommandObject::IDType type) {
+  CommandArgumentEntry arg;
   CommandArgumentData id_arg;
   CommandArgumentData id_range_arg;
 
   // Create the first variant for the first (and only) argument for this
   // command.
-  id_arg.arg_type = ID;
+  switch (type) {
+  case eBreakpointArgs:
+    id_arg.arg_type = eArgTypeBreakpointID;
+    id_range_arg.arg_type = eArgTypeBreakpointIDRange;
+    break;
+  case eWatchpointArgs:
+    id_arg.arg_type = eArgTypeWatchpointID;
+    id_range_arg.arg_type = eArgTypeWatchpointIDRange;
+    break;
+  }
   id_arg.arg_repetition = eArgRepeatOptional;
-
-  // Create the second variant for the first (and only) argument for this
-  // command.
-  id_range_arg.arg_type = IDRange;
   id_range_arg.arg_repetition = eArgRepeatOptional;
 
   // The first (and only) argument for this command could be either an id or an
@@ -715,6 +737,7 @@ void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
   // this command.
   arg.push_back(id_arg);
   arg.push_back(id_range_arg);
+  m_arguments.push_back(arg);
 }
 
 const char *CommandObject::GetArgumentTypeAsCString(
@@ -735,17 +758,23 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target &CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object.
+  if (Target *target = m_exe_ctx.GetTargetPtr())
+    return *target;
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // Fallback to the command interpreter's execution context in case we get
+  // called after DoExecute has finished. For example, when doing multi-line
+  // expression that uses an input reader or breakpoint callbacks.
+  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
+    return *target;
+
+  // Finally, if we have no other target, get the selected target.
+  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
+    return *target_sp;
+
+  // We only have the dummy target.
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {

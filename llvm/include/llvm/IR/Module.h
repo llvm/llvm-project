@@ -158,11 +158,6 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
-  /// Check if the given module flag metadata represents a valid module flag,
-  /// and store the flag behavior, the key string and the value metadata.
-  static bool isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
-                                MDString *&Key, Metadata *&Val);
-
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
@@ -207,6 +202,9 @@ private:
                              ///< ID and FunctionType maps to the extension that
                              ///< is used to make the intrinsic name unique.
 
+  /// llvm.module.flags metadata
+  NamedMDNode *ModuleFlags = nullptr;
+
   friend class Constant;
 
 /// @}
@@ -217,6 +215,11 @@ public:
   /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
   /// \ref BasicBlock.
   bool IsNewDbgInfoFormat;
+
+  /// Used when printing this module in the new debug info format; removes all
+  /// declarations of debug intrinsics that are replaced by non-intrinsic
+  /// records in the new format.
+  void removeDebugIntrinsicDeclarations();
 
   /// \see BasicBlock::convertToNewDbgValues.
   void convertToNewDbgValues() {
@@ -232,6 +235,19 @@ public:
       F.convertFromNewDbgValues();
     }
     IsNewDbgInfoFormat = false;
+  }
+
+  void setIsNewDbgInfoFormat(bool UseNewFormat) {
+    if (UseNewFormat && !IsNewDbgInfoFormat)
+      convertToNewDbgValues();
+    else if (!UseNewFormat && IsNewDbgInfoFormat)
+      convertFromNewDbgValues();
+  }
+  void setNewDbgInfoFormatFlag(bool NewFlag) {
+    for (auto &F : *this) {
+      F.setNewDbgInfoFormatFlag(NewFlag);
+    }
+    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -373,17 +389,14 @@ public:
 /// @name Function Accessors
 /// @{
 
-  /// Look up the specified function in the module symbol table. Four
-  /// possibilities:
-  ///   1. If it does not exist, add a prototype for the function and return it.
-  ///   2. Otherwise, if the existing function has the correct prototype, return
-  ///      the existing function.
-  ///   3. Finally, the function exists but has the wrong prototype: return the
-  ///      function with a constantexpr cast to the right prototype.
+  /// Look up the specified function in the module symbol table. If it does not
+  /// exist, add a prototype for the function and return it. Otherwise, return
+  /// the existing function.
   ///
   /// In all cases, the returned value is a FunctionCallee wrapper around the
-  /// 'FunctionType *T' passed in, as well as a 'Value*' either of the Function or
-  /// the bitcast to the function.
+  /// 'FunctionType *T' passed in, as well as the 'Value*' of the Function. The
+  /// function type of the function may differ from the function type stored in
+  /// FunctionCallee if it was previously created with a different type.
   ///
   /// Note: For library calls getOrInsertLibFunc() should be used instead.
   FunctionCallee getOrInsertFunction(StringRef Name, FunctionType *T,
@@ -391,12 +404,8 @@ public:
 
   FunctionCallee getOrInsertFunction(StringRef Name, FunctionType *T);
 
-  /// Look up the specified function in the module symbol table. If it does not
-  /// exist, add a prototype for the function and return it. This function
-  /// guarantees to return a constant of pointer to the specified function type
-  /// or a ConstantExpr BitCast of that type if the named function has a
-  /// different type. This version of the method takes a list of
-  /// function arguments, which makes it easier for clients to use.
+  /// Same as above, but takes a list of function arguments, which makes it
+  /// easier for clients to use.
   template <typename... ArgsTy>
   FunctionCallee getOrInsertFunction(StringRef Name,
                                      AttributeList AttributeList, Type *RetTy,
@@ -491,7 +500,7 @@ public:
 
   /// Return the first NamedMDNode in the module with the specified name. This
   /// method returns null if a NamedMDNode with the specified name is not found.
-  NamedMDNode *getNamedMetadata(const Twine &Name) const;
+  NamedMDNode *getNamedMetadata(StringRef Name) const;
 
   /// Return the named MDNode in the module with the specified name. This method
   /// returns a new NamedMDNode if a NamedMDNode with the specified name is not
@@ -522,7 +531,7 @@ public:
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// This method returns null if there are no module-level flags.
-  NamedMDNode *getModuleFlagsMetadata() const;
+  NamedMDNode *getModuleFlagsMetadata() const { return ModuleFlags; }
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// If module-level flags aren't found, it creates the named metadata that
@@ -537,6 +546,8 @@ public:
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
 
   /// @}
   /// @name Materialization

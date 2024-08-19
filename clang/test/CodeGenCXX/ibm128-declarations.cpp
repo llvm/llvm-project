@@ -107,13 +107,13 @@ int main(void) {
 // CHECK: define dso_local noundef ppc_fp128 @_Z10func_vaargiz(i32 noundef signext %n, ...)
 // CHECK: entry:
 // CHECK:   store i32 %n, ptr %n.addr, align 4
-// CHECK:   call void @llvm.va_start(ptr %ap)
+// CHECK:   call void @llvm.va_start.p0(ptr %ap)
 // CHECK:   %argp.cur = load ptr, ptr %ap, align 8
 // CHECK:   %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 16
 // CHECK:   store ptr %argp.next, ptr %ap, align 8
 // CHECK:   %0 = load ppc_fp128, ptr %argp.cur, align 8
 // CHECK:   store ppc_fp128 %0, ptr %r, align 16
-// CHECK:   call void @llvm.va_end(ptr %ap)
+// CHECK:   call void @llvm.va_end.p0(ptr %ap)
 // CHECK:   %1 = load ppc_fp128, ptr %r, align 16
 // CHECK:   ret ppc_fp128 %1
 // CHECK: }
@@ -125,7 +125,7 @@ int main(void) {
 // CHECK: entry:
 // CHECK:   %0 = load ppc_fp128, ptr %lf, align 16
 // CHECK:   call void @_ZN5CTestC1Eg(ptr noundef nonnull align 16 dereferenceable(32) %ct, ppc_fp128 noundef %0)
-// CHECK:   %mem2 = getelementptr inbounds %struct.T1, ptr %tf, i32 0, i32 0
+// CHECK:   %mem2 = getelementptr inbounds nuw %struct.T1, ptr %tf, i32 0, i32 0
 // CHECK:   %1 = load ppc_fp128, ptr %mem2, align 16
 // CHECK:   %2 = load ppc_fp128, ptr %lf, align 16
 // CHECK:   %call = call noundef ppc_fp128 @_Z5func1g(ppc_fp128 noundef %2)
@@ -162,10 +162,10 @@ int main(void) {
 // CHECK:   store ptr %this, ptr %this.addr, align 8
 // CHECK:   store ppc_fp128 %arg, ptr %arg.addr, align 16
 // CHECK:   %this1 = load ptr, ptr %this.addr, align 8
-// CHECK:   %pf = getelementptr inbounds %class.CTest, ptr %this1, i32 0, i32 0
+// CHECK:   %pf = getelementptr inbounds nuw %class.CTest, ptr %this1, i32 0, i32 0
 // CHECK:   %0 = load ppc_fp128, ptr %arg.addr, align 16
 // CHECK:   store ppc_fp128 %0, ptr %pf, align 16
-// CHECK:   %vf = getelementptr inbounds %class.CTest, ptr %this1, i32 0, i32 1
+// CHECK:   %vf = getelementptr inbounds nuw %class.CTest, ptr %this1, i32 0, i32 1
 // CHECK:   %1 = load ppc_fp128, ptr %arg.addr, align 16
 // CHECK:   store volatile ppc_fp128 %1, ptr %vf, align 16
 // CHECK:   ret void

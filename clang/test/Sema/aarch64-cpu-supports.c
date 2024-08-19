@@ -5,19 +5,19 @@ int test_aarch64_features(void) {
   // expected-error@+1 {{expression is not a string literal}}
   if (__builtin_cpu_supports(ssbs2))
     return 1;
-  // expected-error@+1 {{invalid cpu feature string}}
+  // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports(""))
     return 2;
-  // expected-error@+1 {{invalid cpu feature string}}
+  // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("pmull128"))
     return 3;
-  // expected-error@+1 {{invalid cpu feature string}}
+  // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("sve2,rpres"))
     return 4;
-  // expected-error@+1 {{invalid cpu feature string}}
+  // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("dgh+sve2-pmull"))
     return 5;
-  // expected-error@+1 {{invalid cpu feature string}}
+  // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("default"))
     return 6;
   if (__builtin_cpu_supports(" ssbs + bti "))

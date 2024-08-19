@@ -9,7 +9,7 @@
 
 ## Verify reading contents of ORC sections.
 
-# RUN: llvm-bolt %t.exe --dump-orc -o /dev/null |& FileCheck %s \
+# RUN: llvm-bolt %t.exe --dump-orc -o /dev/null 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=CHECK-ORC
 
 # CHECK-ORC: 	    BOLT-INFO: ORC unwind information:
@@ -27,19 +27,19 @@
 ## Verify ORC bindings to instructions.
 
 # RUN: llvm-bolt %t.exe --print-normalized --dump-orc --print-orc -o %t.out \
-# RUN:   --bolt-info=0 |& FileCheck %s
+# RUN:   --keep-nops=0 --bolt-info=0 2>&1 | FileCheck %s
 
 
 ## Verify ORC bindings after rewrite.
 
 # RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized --print-orc \
-# RUN:   |& FileCheck %s
+# RUN:   2>&1 | FileCheck %s
 
 ## Verify ORC binding after rewrite when some of the functions are skipped.
 
-# RUN: llvm-bolt %t.exe -o %t.out --skip-funcs=bar --bolt-info=0
+# RUN: llvm-bolt %t.exe -o %t.out --skip-funcs=bar --bolt-info=0 --keep-nops=0
 # RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized --print-orc \
-# RUN:   |& FileCheck %s
+# RUN:   2>&1 | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 9 ORC entries

@@ -25,6 +25,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
@@ -32,7 +33,6 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
-#include "lldb/Target/ThreadPlanPython.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
@@ -143,6 +143,12 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
       idx, g_thread_properties[idx].default_uint_value);
 }
 
+uint64_t ThreadProperties::GetSingleThreadPlanTimeout() const {
+  const uint32_t idx = ePropertySingleThreadPlanTimeout;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_thread_properties[idx].default_uint_value);
+}
+
 // Thread Event Data
 
 llvm::StringRef Thread::ThreadEventData::GetFlavorString() {
@@ -205,15 +211,15 @@ Thread::ThreadEventData::GetStackFrameFromEvent(const Event *event_ptr) {
 
 // Thread class
 
-ConstString &Thread::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.thread");
+llvm::StringRef Thread::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.thread");
   return class_name;
 }
 
 Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
     : ThreadProperties(false), UserID(tid),
       Broadcaster(process.GetTarget().GetDebugger().GetBroadcasterManager(),
-                  Thread::GetStaticBroadcasterClass().AsCString()),
+                  Thread::GetStaticBroadcasterClass().str()),
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
       m_should_run_before_public_stop(false),
@@ -302,10 +308,10 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
       SymbolContext frame_sc(
           frame_sp->GetSymbolContext(eSymbolContextLineEntry));
       const Debugger &debugger = GetProcess()->GetTarget().GetDebugger();
-      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.file &&
+      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.GetFile() &&
           frame_sc.line_entry.line != 0) {
         if (llvm::Error e = Host::OpenFileInExternalEditor(
-                debugger.GetExternalEditor(), frame_sc.line_entry.file,
+                debugger.GetExternalEditor(), frame_sc.line_entry.GetFile(),
                 frame_sc.line_entry.line)) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                          "OpenFileInExternalEditor failed: {0}");
@@ -813,12 +819,17 @@ bool Thread::ShouldStop(Event *event_ptr) {
   // decide whether they still need to do more work.
 
   bool done_processing_current_plan = false;
-
   if (!current_plan->PlanExplainsStop(event_ptr)) {
     if (current_plan->TracerExplainsStop()) {
       done_processing_current_plan = true;
       should_stop = false;
     } else {
+      // Leaf plan that does not explain the stop should be popped.
+      // The plan should be push itself later again before resuming to stay
+      // as leaf.
+      if (current_plan->IsLeafPlan())
+        PopPlan();
+
       // If the current plan doesn't explain the stop, then find one that does
       // and let it handle the situation.
       ThreadPlan *plan_ptr = current_plan;
@@ -1378,7 +1389,7 @@ lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
     StructuredData::ObjectSP extra_args_sp, bool stop_other_threads,
     Status &status) {
 
-  ThreadPlanSP thread_plan_sp(new ThreadPlanPython(
+  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(
       *this, class_name, StructuredDataImpl(extra_args_sp)));
   thread_plan_sp->SetStopOthers(stop_other_threads);
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
@@ -1715,6 +1726,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "instrumentation break";
   case eStopReasonProcessorTrace:
     return "processor trace";
+  case eStopReasonInterrupt:
+    return "async interrupt";
   }
 
   return "StopReason = " + std::to_string(reason);
@@ -1753,10 +1766,10 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
       if (frame_sp) {
         SymbolContext frame_sc(
             frame_sp->GetSymbolContext(eSymbolContextLineEntry));
-        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
+        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.GetFile()) {
           if (llvm::Error e = Host::OpenFileInExternalEditor(
                   target->GetDebugger().GetExternalEditor(),
-                  frame_sc.line_entry.file, frame_sc.line_entry.line)) {
+                  frame_sc.line_entry.GetFile(), frame_sc.line_entry.line)) {
             LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                            "OpenFileInExternalEditor failed: {0}");
           }

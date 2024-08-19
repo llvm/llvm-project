@@ -255,7 +255,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 // Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
-INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo,) {
   __sanitizer_struct_mallinfo sret;
   clear_mallinfo(&sret);
   return sret;
@@ -1226,7 +1226,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
 }
 #endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 
@@ -1255,7 +1255,7 @@ struct InterceptorContext {
   }
 };
 
-static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }
@@ -1761,6 +1761,8 @@ namespace __msan {
 void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
+
+  __interception::DoesNotSupportStaticLinking();
 
   new(interceptor_ctx()) InterceptorContext();
 

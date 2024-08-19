@@ -802,7 +802,7 @@ bool lldb_private::formatters::NSURLSummaryProvider(
 
   llvm::StringRef class_name = descriptor->GetClassName().GetStringRef();
 
-  if (!class_name.equals("NSURL"))
+  if (class_name != "NSURL")
     return false;
 
   uint64_t offset_text = ptr_size + ptr_size +
@@ -1038,9 +1038,9 @@ public:
 
   ~ObjCClassSyntheticChildrenFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return lldb::ValueObjectSP();
   }
 

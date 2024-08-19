@@ -16,11 +16,11 @@ entry:
   %nodebug3 = alloca ptr, align 8
   ; CHECK: %a = alloca{{.*}} !DIAssignID ![[ID1:[0-9]+]]
   %a = alloca ptr, align 8, !DIAssignID !13
-  ; CHECK: @llvm.dbg.assign{{.*}} metadata ![[ID1]]{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
+  ; CHECK: #dbg_assign{{.*}} ![[ID1]]{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
   call void @llvm.dbg.assign(metadata i1 undef, metadata !14, metadata !DIExpression(), metadata !13, metadata ptr %a, metadata !DIExpression()), !dbg !15
   ; CHECK: %b = alloca{{.*}} !DIAssignID ![[ID2:[0-9]+]]
   %b = alloca ptr, align 8, !DIAssignID !16
-  ; CHECK: @llvm.dbg.assign{{.*}} metadata ![[ID2]]{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
+  ; CHECK: #dbg_assign{{.*}} ![[ID2]]{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
   call void @llvm.dbg.assign(metadata i1 undef, metadata !17, metadata !DIExpression(), metadata !16, metadata ptr %b, metadata !DIExpression()), !dbg !15
   call void @g(ptr %nodebug0, ptr %nodebug1, ptr %nodebug2, ptr %nodebug3, ptr %a, ptr %b)
   ret void, !dbg !18

@@ -26,6 +26,6 @@
 @ V6-ERRORS: note: too many operands for instruction
 @ V6-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ V6-ERRORS: cps #0
-@ V6-ERRORS: note: too few operands for instruction
 @ V6-ERRORS: note: instruction requires: arm-mode
 @ V6-ERRORS: note: instruction requires: thumb2
+@ V6-ERRORS: note: too few operands for instruction
