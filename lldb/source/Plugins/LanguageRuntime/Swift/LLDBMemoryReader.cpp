@@ -639,22 +639,22 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
              file_address, object_file->GetFileSpec().GetFilename());
     return {};
   }
-  auto sec = sec_list->GetSectionAtIndex(0);
-  auto sec_file_address = sec->GetFileAddress();
-  auto sec_load_address = sec->GetLoadBaseAddress(&m_process.GetTarget());
+  SectionSP sec = sec_list->GetSectionAtIndex(0);
+  addr_t sec_file_address = sec->GetFileAddress();
+  addr_t sec_load_address = sec->GetLoadBaseAddress(&m_process.GetTarget());
 
-  bool overflow = false;
-  auto slide =
-      llvm::SaturatingAdd(sec_load_address, -sec_file_address, &overflow);
-  if (overflow) {
+  if (sec_load_address < sec_file_address) {
     LLDB_LOG(log,
-             "[MemoryReader] section load address {0:x} - file address {1:x} "
-             "overflows",
+             "[MemoryReader] section load address {0:x} is smaller than "
+             "section file address {1:x}",
              sec_load_address, sec_file_address);
     return {};
   }
 
-  auto virtual_address = llvm::SaturatingAdd(file_address, slide, &overflow);
+  addr_t slide = sec_load_address - sec_file_address;
+
+  bool overflow = false;
+  addr_t virtual_address = llvm::SaturatingAdd(file_address, slide, &overflow);
   if (overflow) {
     LLDB_LOG(log, "[MemoryReader] file address {0:x} + slide {1:x} overflows",
              sec_load_address, sec_file_address);
