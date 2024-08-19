@@ -73,6 +73,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -1771,6 +1772,16 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
   // Garbage collection is not supported.
   disablePass<StackMapLivenessPass, FuncletLayoutPass,
               ShadowStackGCLoweringPass>();
+}
+
+void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
+  Base::addCodeGenPrepare(addPass);
+
+  // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
+  // behavior for subsequent passes. Placing it here seems better that these
+  // blocks would get cleaned up by UnreachableBlockElim inserted next in the
+  // pass flow.
+  addPass(LowerSwitchPass());
 }
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
