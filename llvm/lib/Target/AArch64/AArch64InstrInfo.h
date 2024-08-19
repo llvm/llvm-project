@@ -254,6 +254,9 @@ public:
   /// Returns whether the physical register is FP or NEON.
   static bool isFpOrNEON(Register Reg);
 
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -583,6 +586,10 @@ private:
   std::optional<unsigned>
   canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
                       MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
+
+  /// verifyInstruction - Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 };
 
 struct UsedNZCV {

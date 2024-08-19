@@ -461,16 +461,15 @@ define <1 x i64> @v1i64(i64 %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    add a2, a0, a2
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sltu a0, a2, a0
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v9, (a0), zero
-; RV32-NEXT:    vadd.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -493,17 +492,15 @@ define <2 x i64> @v2i64(i64 %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    add a2, a0, a2
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sltu a0, a2, a0
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v9, (a0), zero
-; RV32-NEXT:    vadd.vv v9, v8, v9
-; RV32-NEXT:    vrgather.vi v8, v9, 0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -527,17 +524,15 @@ define <4 x i64> @v4i64(i64 %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    add a2, a0, a2
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sltu a0, a2, a0
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vadd.vv v10, v8, v10
-; RV32-NEXT:    vrgather.vi v8, v10, 0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -561,17 +556,15 @@ define <8 x i64> @v8i64(i64 %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    add a2, a0, a2
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sltu a0, a2, a0
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v12, (a0), zero
-; RV32-NEXT:    vadd.vv v12, v8, v12
-; RV32-NEXT:    vrgather.vi v8, v12, 0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;

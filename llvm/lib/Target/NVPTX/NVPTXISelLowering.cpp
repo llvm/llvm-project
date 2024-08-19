@@ -648,6 +648,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // TRAP can be lowered to PTX trap
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  // DEBUGTRAP can be lowered to PTX brkpt
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
   // Register custom handling for vector loads/stores
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -5920,6 +5922,8 @@ static SDValue PerformSETCCCombine(SDNode *N,
 static SDValue PerformEXTRACTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SDValue Vector = N->getOperand(0);
+  if (Vector->getOpcode() == ISD::FREEZE)
+    Vector = Vector->getOperand(0);
   SDLoc DL(N);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&

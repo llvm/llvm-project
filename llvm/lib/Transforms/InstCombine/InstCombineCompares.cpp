@@ -312,7 +312,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       DL.getTypeAllocSize(Init->getType()->getArrayElementType());
   auto MaskIdx = [&](Value *Idx) {
     if (!GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0) {
-      Value *Mask = ConstantInt::get(Idx->getType(), -1);
+      Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, llvm::countr_zero(ElementSize));
       Idx = Builder.CreateAnd(Idx, Mask);
     }
@@ -3077,6 +3077,12 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
   }
 
+  if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
+      C.isNonNegative() && (C - *C2).isNonNegative() &&
+      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
+    return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
+                        ConstantInt::get(Ty, C - *C2));
+
   auto CR = ConstantRange::makeExactICmpRegion(Pred, C).subtract(*C2);
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
@@ -4010,6 +4016,16 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
       NewPredicate = ICmpInst::ICMP_ULT;
     else if (C.isOne())
       NewPredicate = ICmpInst::ICMP_ULE;
+    break;
+
+  case ICmpInst::ICMP_ULT:
+    if (C.ugt(1))
+      NewPredicate = ICmpInst::ICMP_UGE;
+    break;
+
+  case ICmpInst::ICMP_UGT:
+    if (!C.isZero() && !C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_ULT;
     break;
 
   default:
