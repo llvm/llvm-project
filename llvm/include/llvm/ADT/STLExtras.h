@@ -2002,6 +2002,20 @@ template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
   return std::max_element(adl_begin(Range), adl_end(Range), C);
 }
 
+/// Provide wrappers to std::mismatch which take ranges instead of having to
+/// pass begin/end explicitly.
+/// This function returns a pair of iterators for the first mismatching elements
+/// from `R1` and `R2`. As an example, if:
+///
+/// R1 = [0, 1, 4, 6], R2 = [0, 1, 5, 6]
+///
+/// this function will return a pair of iterators, first pointing to R1[2] and
+/// second pointing to R2[2].
+template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
+  return std::mismatch(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                       adl_end(Range2));
+}
+
 template <typename R>
 void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));
