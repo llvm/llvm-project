@@ -1883,8 +1883,8 @@ def cast_combines: GICombineGroup<[
   anyext_of_anyext,
   anyext_of_zext,
   anyext_of_sext,
-  buildvector_of_zext,
-  buildvector_of_anyext,
+//  buildvector_of_zext,
+//  buildvector_of_anyext,
   buildvector_of_truncate
 ]>;
 
