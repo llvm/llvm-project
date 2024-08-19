@@ -501,7 +501,7 @@ constexpr T alignToPowerOf2(U Value, V Align) {
 constexpr uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
-  uint64_t NegAlign = static_cast<uint64_t>(0) - Align;
+  uint64_t NegAlign = 0 - Align;
   return (Value + (Align - 1)) & NegAlign;
 }
 
