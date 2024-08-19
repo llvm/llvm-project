@@ -7013,27 +7013,32 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
-  bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxUserVF);
-  if (!UserVF.isZero() && UserVFIsLegal) {
-    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-           "VF needs to be a power of two");
-    // Collect the instructions (and their associated costs) that will be more
-    // profitable to scalarize.
-    CM.collectInLoopReductions();
-    if (CM.selectUserVectorizationFactor(UserVF)) {
-      LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-      buildVPlansWithVPRecipes(UserVF, UserVF);
-      if (!hasPlanWithVF(UserVF)) {
-        LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << UserVF
-                          << ".\n");
-        return;
-      }
+  if (!UserVF.isZero()) {
+    if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
+      reportVectorizationInfo(
+          "UserVF ignored because it may be larger than the maximal safe VF",
+          "InvalidUserVF", ORE, OrigLoop);
+    } else {
+      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
+             "VF needs to be a power of two");
+      // Collect the instructions (and their associated costs) that will be more
+      // profitable to scalarize.
+      CM.collectInLoopReductions();
+      if (CM.selectUserVectorizationFactor(UserVF)) {
+        LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        buildVPlansWithVPRecipes(UserVF, UserVF);
+        if (!hasPlanWithVF(UserVF)) {
+          LLVM_DEBUG(dbgs()
+                     << "LV: No VPlan could be built for " << UserVF << ".\n");
+          return std::nullopt;
+        }
 
-      LLVM_DEBUG(printPlans(dbgs()));
-      return;
-    } else
-      reportVectorizationInfo("UserVF ignored because of invalid costs.",
-                              "InvalidCost", ORE, OrigLoop);
+        LLVM_DEBUG(printPlans(dbgs()));
+        return;
+      } else
+        reportVectorizationInfo("UserVF ignored because of invalid costs.",
+                                "InvalidCost", ORE, OrigLoop);
+    }
   }
 
   // Collect the Vectorization Factor Candidates.
@@ -7231,7 +7236,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-VectorizationFactor LoopVectorizationPlanner::getBestVF() {
+ElementCount LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
     return VectorizationFactor::Disabled();
   // If there is a single VPlan with a single VF, return it directly.
@@ -9478,7 +9483,7 @@ static bool processLoopInVPlanNativePath(
   if (VPlanBuildStressTest || VectorizationFactor::Disabled() == VF)
     return false;
 
-  VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+  VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
     bool AddBranchWeights =
@@ -9953,7 +9958,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+      VPlan &BestPlan = LVP.getPlanFor(VF.Width);
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -9965,7 +9970,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+      VPlan &BestPlan = LVP.getPlanFor(VF.Width);
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
           LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
@@ -9991,7 +9996,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                                  ORE, EPI, &LVL, &CM, BFI, PSI,
                                                  Checks);
 
-        VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
+        VPlan &BestEpiPlan = LVP.getPlanFor(EPI.EpilogueVF);
         VPRegionBlock *VectorLoop = BestEpiPlan.getVectorLoopRegion();
         VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         Header->setName("vec.epilog.vector.body");
