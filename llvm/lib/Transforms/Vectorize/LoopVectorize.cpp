@@ -4546,6 +4546,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
   return false;
 }
 
+#ifndef NDEBUG
 VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   InstructionCost ExpectedCost = CM.expectedCost(ElementCount::getFixed(1));
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
@@ -4578,7 +4579,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       InstructionCost C = CM.expectedCost(VF);
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
-#ifndef NDEBUG
       unsigned AssumedMinimumVscale =
           getVScaleForTuning(OrigLoop, TTI).value_or(1);
       unsigned Width =
@@ -4591,7 +4591,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
                           << AssumedMinimumVscale << ")");
       LLVM_DEBUG(dbgs() << ".\n");
-#endif
 
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
         LLVM_DEBUG(
@@ -4621,6 +4620,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << ChosenFactor.Width << ".\n");
   return ChosenFactor;
 }
+#endif
 
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
@@ -7030,7 +7030,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         if (!hasPlanWithVF(UserVF)) {
           LLVM_DEBUG(dbgs()
                      << "LV: No VPlan could be built for " << UserVF << ".\n");
-          return std::nullopt;
         }
 
         LLVM_DEBUG(printPlans(dbgs()));
@@ -7236,7 +7235,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::computeBestVF() {
+VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   if (VPlans.empty())
     return VectorizationFactor::Disabled();
   // If there is a single VPlan with a single VF, return it directly.
@@ -7291,7 +7290,7 @@ ElementCount LoopVectorizationPlanner::computeBestVF() {
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
   VectorizationFactor LegacyVF = selectVectorizationFactor();
-  assert(BestFactor.Width == LegacyVF.Width);
+  assert(BestFactor.Width == LegacyVF.Width && " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be non-zero.");
 #endif
@@ -9824,9 +9823,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
 
-  // Plan how to best vectorize, return the best VF and its cost.
+  // Plan how to best vectorize,
   LVP.plan(UserVF, UserIC);
-  VectorizationFactor VF = LVP.getBestVF();
+  VectorizationFactor VF = LVP.computeBestVF();
   unsigned IC = 1;
 
   if (ORE->allowExtraAnalysis(LV_NAME))

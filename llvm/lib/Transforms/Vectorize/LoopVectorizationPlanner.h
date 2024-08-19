@@ -451,12 +451,14 @@ private:
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
+#ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
   /// and the cost of that VF.
   /// This is now only used to verify the decisions by the new VPlan-based
   /// cost-model and will be retired once the VPlan-based cost-model is
   /// stabilized.
   VectorizationFactor selectVectorizationFactor();
+#endif
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
