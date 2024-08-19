@@ -130,6 +130,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   RESERVE_REG(x29)
   RESERVE_REG(x30)
   RESERVE_REG(x31)
+#undef RESERVE_REG
 
   // -mrelax is default, unless -mno-relax is specified.
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
