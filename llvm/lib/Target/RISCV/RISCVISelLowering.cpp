@@ -10346,14 +10346,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   // vrgather.vv v12, v11, v16
   if (ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
       ContainerVT.getVectorElementCount().isKnownMultipleOf(2)) {
-    MVT HalfVT = ContainerVT.getHalfNumVectorElementsVT();
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec,
-                             DAG.getVectorIdxConstant(0, DL));
-    SDValue Hi = DAG.getNode(
-        ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec,
-        DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
-    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, HalfVT, Lo);
-    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HalfVT, Hi);
+    auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, Hi.getSimpleValueType(), Hi);
     SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ContainerVT, Hi, Lo);
 
     // Fixed length vectors might not fit exactly into their container, and so
