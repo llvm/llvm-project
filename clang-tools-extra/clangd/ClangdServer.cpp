@@ -701,14 +701,21 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
         return nullptr;
       };
       for (const auto &DiagRef : Params.Diagnostics) {
-        if (const auto *Diag = FindMatchedDiag(DiagRef))
-          for (const auto &Fix : Diag->Fixes) {
-            if (auto Rename = tryConvertToRename(Diag, Fix)) {
+        if (const auto *Diag = FindMatchedDiag(DiagRef)) {
+          auto It = Diag->Fixes.begin();
+          if (It != Diag->Fixes.end()) {
+            if (auto Rename = tryConvertToRename(Diag, *It)) {
+              // Only try to convert the first Fix to rename as subsequent Fixes
+              // might be "ignore [readability-identifier-naming] for this
+              // line".
               Result.Renames.emplace_back(std::move(*Rename));
-            } else {
-              Result.QuickFixes.push_back({DiagRef, Fix});
+              It++;
             }
           }
+          for (; It != Diag->Fixes.end(); It++) {
+            Result.QuickFixes.push_back({DiagRef, *It});
+          }
+        }
       }
     }
 
