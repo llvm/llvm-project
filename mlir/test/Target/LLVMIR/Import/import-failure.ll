@@ -360,7 +360,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: cannot translate data layout: i8:8:8:8
+; CHECK-SAME: error: malformed specification
 target datalayout = "e-i8:8:8:8"
 
 ; // -----
