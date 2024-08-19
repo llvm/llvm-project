@@ -5288,13 +5288,13 @@ def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
-          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
-          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
-          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
-          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 
 def : Pat<(int_ppc_fcfid f64:$A),
         (XSCVSXDDP $A)>;
@@ -5324,9 +5324,9 @@ def : Pat<(int_ppc_mtmsr gprc:$RS),
 
 let Predicates = [IsISA2_07] in {
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
-            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
   def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),
-            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 1, 31)>;
+            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 }
 def : Pat<(int_ppc_dcbtstt ForceXForm:$dst),
           (DCBTST 16, ForceXForm:$dst)>;
