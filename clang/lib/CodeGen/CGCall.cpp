@@ -2430,6 +2430,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute(llvm::Attribute::NoCfCheck);
     if (TargetDecl->hasAttr<LeafAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCallback);
+    if (TargetDecl->hasAttr<BPFFastCallAttr>())
+      FuncAttrs.addAttribute("bpf_fastcall");
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
     if (auto *AllocSize = TargetDecl->getAttr<AllocSizeAttr>()) {
