@@ -799,14 +799,14 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
 
   Register PtrRegister = Call->Arguments[0];
   unsigned Semantics = SPIRV::MemorySemantics::None;
-  MRI->setRegClass(PtrRegister, &SPIRV::iIDRegClass);
+  MRI->setRegClass(PtrRegister, &SPIRV::pIDRegClass);
   Register MemSemanticsReg =
       Call->Arguments.size() >= 3 ? Call->Arguments[2] : Register();
   MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
                                          Semantics, MIRBuilder, GR);
-  MRI->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
   Register ValueReg = Call->Arguments[1];
   Register ValueTypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  MRI->setRegClass(ValueReg, GR->getRegClass(Call->ReturnType));
   // support cl_ext_float_atomics
   if (Call->ReturnType->getOpcode() == SPIRV::OpTypeFloat) {
     if (Opcode == SPIRV::OpAtomicIAdd) {
@@ -817,7 +817,7 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
       Opcode = SPIRV::OpAtomicFAddEXT;
       Register NegValueReg =
           MRI->createGenericVirtualRegister(MRI->getType(ValueReg));
-      MRI->setRegClass(NegValueReg, &SPIRV::iIDRegClass);
+      MRI->setRegClass(NegValueReg, GR->getRegClass(Call->ReturnType));
       GR->assignSPIRVTypeToVReg(Call->ReturnType, NegValueReg,
                                 MIRBuilder.getMF());
       MIRBuilder.buildInstr(TargetOpcode::G_FNEG)

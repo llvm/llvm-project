@@ -297,7 +297,7 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       if (SpvType)
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       if (!MRI.getRegClassOrNull(Reg))
-        MRI.setRegClass(Reg, &SPIRV::iIDRegClass);
+        MRI.setRegClass(Reg, SpvType ? GR->getRegClass(SpvType) : &SPIRV::iIDRegClass);
     }
   }
   return SpvType;
