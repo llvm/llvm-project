@@ -287,7 +287,8 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                                                bool EmitIR) {
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
-  const IntegerType *LLVMIntTy = cast<IntegerType>(getTypeForSPIRVType(SpvType));
+  const IntegerType *LLVMIntTy =
+      cast<IntegerType>(getTypeForSPIRVType(SpvType));
   // Find a constant in DT or build a new one.
   const auto ConstInt =
       ConstantInt::get(const_cast<IntegerType *>(LLVMIntTy), Val);
@@ -635,7 +636,6 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   // Set to Reg the same type as ResVReg has.
   auto MRI = MIRBuilder.getMRI();
-//  assert(MRI->getType(ResVReg).isPointer() && "Pointer type is expected");
   if (Reg != ResVReg) {
     LLT RegLLTy =
         LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), getPointerSize());

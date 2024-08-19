@@ -616,10 +616,37 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         if (UseMI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST)
           continue;
       }
-//      if (MRI.getType(DstReg).isPointer())
-//        MRI.setType(DstReg, LLT::pointer(0, GR->getPointerSize()));
     }
   }
+}
+
+static Register
+collectInlineAsmInstrOperands(MachineInstr *MI,
+                              SmallVector<unsigned, 4> *Ops = nullptr) {
+  Register DefReg;
+  unsigned StartOp = InlineAsm::MIOp_FirstOperand,
+           AsmDescOp = InlineAsm::MIOp_FirstOperand;
+  for (unsigned Idx = StartOp, MISz = MI->getNumOperands(); Idx != MISz;
+       ++Idx) {
+    const MachineOperand &MO = MI->getOperand(Idx);
+    if (MO.isMetadata())
+      continue;
+    if (Idx == AsmDescOp && MO.isImm()) {
+      // compute the index of the next operand descriptor
+      const InlineAsm::Flag F(MO.getImm());
+      AsmDescOp += 1 + F.getNumOperandRegisters();
+      continue;
+    }
+    if (MO.isReg() && MO.isDef()) {
+      if (!Ops)
+        return MO.getReg();
+      else
+        DefReg = MO.getReg();
+    } else if (Ops) {
+      Ops->push_back(Idx);
+    }
+  }
+  return DefReg;
 }
 
 static void
@@ -677,26 +704,8 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       MIRBuilder.buildInstr(SPIRV::OpDecorate)
           .addUse(AsmReg)
           .addImm(static_cast<uint32_t>(SPIRV::Decoration::SideEffectsINTEL));
-    Register DefReg;
-    SmallVector<unsigned, 4> Ops;
-    unsigned StartOp = InlineAsm::MIOp_FirstOperand,
-             AsmDescOp = InlineAsm::MIOp_FirstOperand;
-    unsigned I2Sz = I2->getNumOperands();
-    for (unsigned Idx = StartOp; Idx != I2Sz; ++Idx) {
-      const MachineOperand &MO = I2->getOperand(Idx);
-      if (MO.isMetadata())
-        continue;
-      if (Idx == AsmDescOp && MO.isImm()) {
-        // compute the index of the next operand descriptor
-        const InlineAsm::Flag F(MO.getImm());
-        AsmDescOp += 1 + F.getNumOperandRegisters();
-      } else {
-        if (MO.isReg() && MO.isDef())
-          DefReg = MO.getReg();
-        else
-          Ops.push_back(Idx);
-      }
-    }
+
+    Register DefReg = collectInlineAsmInstrOperands(I2);
     if (!DefReg.isValid()) {
       DefReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
       MRI.setRegClass(DefReg, &SPIRV::iIDRegClass);
@@ -704,19 +713,13 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           Type::getVoidTy(MF.getFunction().getContext()), MIRBuilder);
       GR->assignSPIRVTypeToVReg(VoidType, DefReg, MF);
     }
+
     auto AsmCall = MIRBuilder.buildInstr(SPIRV::OpAsmCallINTEL)
                        .addDef(DefReg)
                        .addUse(GR->getSPIRVTypeID(RetType))
                        .addUse(AsmReg);
-    unsigned IntrIdx = 2;
-    for (unsigned Idx : Ops) {
-      ++IntrIdx;
-      //const MachineOperand &MO = I2->getOperand(Idx);
-      //if (MO.isReg())
-      //  AsmCall.addUse(MO.getReg());
-      //else
-        AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
-    }
+    for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
+      AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
   }
   for (MachineInstr *MI : ToProcess)
     MI->eraseFromParent();

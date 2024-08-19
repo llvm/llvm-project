@@ -1734,7 +1734,8 @@ void SPIRVInstructionSelector::renderImm32(MachineInstrBuilder &MIB,
 Register
 SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                                            const SPIRVType *ResType) const {
-  Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32); // lev
+  Type *LLVMTy =
+      IntegerType::get(GR.CurMF->getFunction().getContext(), 32); // lev
   const SPIRVType *SpvI32Ty =
       ResType ? ResType : GR.getOrCreateSPIRVIntegerType(32, I, TII);
   // Find a constant in DT or build a new one.
@@ -2511,7 +2512,8 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
   // 93  ThreadId  reads the thread ID
 
   MachineIRBuilder MIRBuilder(I);
-  const SPIRVType *U32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder); // lev
+  const SPIRVType *U32Type =
+      GR.getOrCreateSPIRVIntegerType(32, MIRBuilder); // lev
   const SPIRVType *Vec3Ty =
       GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder);
   const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(

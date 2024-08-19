@@ -2140,8 +2140,8 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
       auto GEPInst = MIRBuilder.buildIntrinsic(
           Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
-          .addImm(GepMI->getOperand(2).getImm())          // In bound.
-          .addUse(ArrayMI->getOperand(0).getReg())        // Alloca.
+          .addImm(GepMI->getOperand(2).getImm())            // In bound.
+          .addUse(ArrayMI->getOperand(0).getReg())          // Alloca.
           .addUse(buildConstantIntReg32(0, MIRBuilder, GR)) // Indices.
           .addUse(buildConstantIntReg32(I, MIRBuilder, GR));
       LocalSizes.push_back(Reg);
@@ -2181,8 +2181,8 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // Param Size: Size of block literal structure.
   MIB.addUse(buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR));
   // Param Aligment: Aligment of block literal structure.
-  MIB.addUse(
-      buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(), MIRBuilder, GR));
+  MIB.addUse(buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(),
+                                   MIRBuilder, GR));
 
   for (unsigned i = 0; i < LocalSizes.size(); i++)
     MIB.addUse(LocalSizes[i]);
