@@ -410,7 +410,7 @@ def ApplyFoldElementwiseToVectorPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.elementwise_to_vector",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect a set of patterns that fold elementwise op on vectors to the vector 
+    Collect a set of patterns that fold elementwise op on vectors to the vector
     dialect.
   }];
 
@@ -426,8 +426,9 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
       - CombineContractBroadcast
       - CombineContractABTranspose
       - CombineContractResultTranspose
-      - ReorderCastOpsOnBroadcast
       - ReorderElementwiseOpsOnTranspose
+      - ReorderElementwiseOpsOnBroadcast
+      - ReorderCastOpsOnBroadcast
 
     These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.
