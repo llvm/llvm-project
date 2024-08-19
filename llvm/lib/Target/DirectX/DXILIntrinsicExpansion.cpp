@@ -69,7 +69,7 @@ static Value *expandAbs(CallInst *Orig) {
                                  "dx.max");
 }
 
-// Create the appropriate DXIL float dot intrinsic for the given operands A and B
+// Create appropriate DXIL float dot intrinsic for the given A and B operands
 // The appropriate opcode will be determined by the size of the operands
 // The dot product is placed in the position indicated by Orig
 static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
@@ -108,9 +108,9 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
 // The appropriate opcode will be determined by the size of the operands
 // The dot product is placed in the position indicated by Orig
 static Value *expandFloatDotIntrinsic(CallInst *Orig) {
-  return expandFloatDotIntrinsic(Orig, Orig->getOperand(0), Orig->getOperand(1));
+  return expandFloatDotIntrinsic(Orig, Orig->getOperand(0),
+                                 Orig->getOperand(1));
 }
-
 
 // Expand integer dot product to multiply and add ops
 static Value *expandIntegerDotIntrinsic(CallInst *Orig,

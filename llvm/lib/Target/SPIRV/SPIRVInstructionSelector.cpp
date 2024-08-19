@@ -1464,7 +1464,7 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
       GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
 
   assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
-	 GR.getScalarOrVectorComponentCount(VecType) > 1 &&
+         GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
 
   [[maybe_unused]] SPIRVType *EltType =
@@ -1505,7 +1505,7 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                     .constrainAllUses(TII, TRI, RBI);
 
   assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
-	 GR.getScalarOrVectorComponentCount(VecType) > 1 &&
+         GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
 
   Register Res = MRI->createVirtualRegister(&SPIRV::IDRegClass);
