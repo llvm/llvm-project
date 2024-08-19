@@ -28894,9 +28894,11 @@ SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,
 
     // Simulate the effect of casting through memory.
     Op = DAG.getNode(ISD::BITCAST, DL, PackedInVTAsInt, Op);
-    Op = DAG.getNode(ISD::BSWAP, DL, PackedInVTAsInt, Op);
+    if (PackedInVTAsInt.getScalarSizeInBits() != 8)
+      Op = DAG.getNode(ISD::BSWAP, DL, PackedInVTAsInt, Op);
     Op = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVTAsInt, Op);
-    Op = DAG.getNode(ISD::BSWAP, DL, PackedVTAsInt, Op);
+    if (PackedVTAsInt.getScalarSizeInBits() != 8)
+      Op = DAG.getNode(ISD::BSWAP, DL, PackedVTAsInt, Op);
     Op = DAG.getNode(ISD::BITCAST, DL, PackedVT, Op);
   }
 
