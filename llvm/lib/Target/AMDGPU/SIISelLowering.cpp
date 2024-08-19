@@ -5910,24 +5910,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
-  case ISD::FPTRUNC_ROUND: {
-    unsigned Opc;
-    SDLoc DL(Op);
-
-    if (Op.getOperand(0)->getValueType(0) != MVT::f32)
-      return SDValue();
-
-    // Get the rounding mode from the last operand
-    int RoundMode = Op.getConstantOperandVal(1);
-    if (RoundMode == (int)RoundingMode::TowardPositive)
-      Opc = AMDGPUISD::FPTRUNC_ROUND_UPWARD;
-    else if (RoundMode == (int)RoundingMode::TowardNegative)
-      Opc = AMDGPUISD::FPTRUNC_ROUND_DOWNWARD;
-    else
-      return SDValue();
-
-    return DAG.getNode(Opc, DL, Op.getNode()->getVTList(), Op->getOperand(0));
-  }
+  case ISD::FPTRUNC_ROUND:
+    return lowerFPTRUNC_ROUND(Op, DAG);
   case ISD::TRAP:
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
@@ -6775,6 +6759,30 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG,
       DAG.getNode(ISD::FP_EXTEND, DL, VT, Op) :
     DAG.getNode(ISD::FP_ROUND, DL, VT, Op,
                 DAG.getTargetConstant(0, DL, MVT::i32));
+}
+
+SDValue SITargetLowering::lowerFPTRUNC_ROUND(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Op.getOperand(0)->getValueType(0) != MVT::f32)
+    return SDValue();
+
+  // Only support towardzero, tonearest, upward and downward.
+  int RoundMode = Op.getConstantOperandVal(1);
+  if (RoundMode != (int)RoundingMode::TowardZero &&
+      RoundMode != (int)RoundingMode::NearestTiesToEven &&
+      RoundMode != (int)RoundingMode::TowardPositive &&
+      RoundMode != (int)RoundingMode::TowardNegative)
+    return SDValue();
+
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  unsigned HW_Mode = (RoundMode + 3) % 4;
+  SDLoc DL(Op);
+  SDValue RoundFlag = DAG.getTargetConstant(HW_Mode, DL, MVT::i32);
+  return DAG.getNode(AMDGPUISD::FPTRUNC_ROUND, DL, Op.getNode()->getVTList(),
+                     Op->getOperand(0), RoundFlag);
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -16265,7 +16273,7 @@ static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
          << " operation at memory scope " << MemScope;
 }
 
-static bool isHalf2OrBFloat2(Type *Ty) {
+static bool isV2F16OrV2BF16(Type *Ty) {
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Type *EltTy = VT->getElementType();
     return VT->getNumElements() == 2 &&
@@ -16275,12 +16283,12 @@ static bool isHalf2OrBFloat2(Type *Ty) {
   return false;
 }
 
-static bool isHalf2(Type *Ty) {
+static bool isV2F16(Type *Ty) {
   FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isHalfTy();
 }
 
-static bool isBFloat2(Type *Ty) {
+static bool isV2BF16(Type *Ty) {
   FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
@@ -16420,7 +16428,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
                                                  : AtomicExpansionKind::CmpXChg;
       }
 
-      if (Subtarget->hasAtomicDsPkAdd16Insts() && isHalf2OrBFloat2(Ty))
+      if (Subtarget->hasAtomicDsPkAdd16Insts() && isV2F16OrV2BF16(Ty))
         return AtomicExpansionKind::None;
 
       return AtomicExpansionKind::CmpXChg;
@@ -16445,24 +16453,24 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         // gfx940, gfx12
-        if (Subtarget->hasAtomicFlatPkAdd16Insts() && isHalf2OrBFloat2(Ty))
+        if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
         // gfx90a, gfx940, gfx12
-        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
         // gfx940, gfx12
-        if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isBFloat2(Ty))
+        if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
         // gfx90a, gfx940, gfx12
-        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
         // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
-        if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isBFloat2(Ty))
+        if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
@@ -16483,7 +16491,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
           // gfx908
           if (RMW->use_empty() &&
               Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() &&
-              isHalf2(Ty))
+              isV2F16(Ty))
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
         }
       }
