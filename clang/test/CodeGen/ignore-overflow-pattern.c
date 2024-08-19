@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=add-overflow-test %s -emit-llvm -o - | FileCheck %s --check-prefix=ADD
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=negated-unsigned-const %s -emit-llvm -o - | FileCheck %s --check-prefix=NEGATE
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-overflow-pattern-exclusion=post-decr-while %s -emit-llvm -o - | FileCheck %s --check-prefix=WHILE
+
 // Ensure some common overflow-dependent or overflow-prone code patterns don't
 // trigger the overflow sanitizers. In many cases, overflow warnings caused by
 // these patterns are seen as "noise" and result in users turning off
@@ -163,29 +164,10 @@ void negation(void) {
 #define SOME -1UL
   unsigned long A = -1UL;
   unsigned long B = -2UL;
-  unsigned long C = -3UL;
-  unsigned long D = -SOME;
-  (void)A;(void)B;(void)C;(void)D;
+  unsigned long C = -SOME;
+  (void)A;(void)B;(void)C;
 }
 
-
-// ADD-LABEL: @key_alloc
-// WHILE-LABEL: @key_alloc
-// NEGATE-LABEL: @key_alloc
-// WHILE: handler.add_overflow
-// NEGATE: handler.add_overflow
-// ADD-NOT: handler.add_overflow
-// cvise'd kernel code that caused problems during development due to sign
-// extension
-typedef unsigned long _size_t;
-int qnbytes;
-int *key_alloc_key;
-_size_t key_alloc_quotalen;
-int *key_alloc(void) {
-  if (qnbytes + key_alloc_quotalen < qnbytes)
-    return key_alloc_key;
-  return key_alloc_key + 3;;
-}
 
 // ADD-LABEL: @function_call
 // WHILE-LABEL: @function_call

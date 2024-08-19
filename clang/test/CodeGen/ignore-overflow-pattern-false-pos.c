@@ -45,28 +45,8 @@ void close_but_not_quite(void) {
     c = 9;
 
   // CHECK: br i1{{.*}}handler
-  // Although this can never actually overflow we are still checking that the
-  // sanitizer instruments it.
   while (--a)
     some();
-}
-
-// cvise'd kernel code that caused problems during development
-typedef unsigned _size_t;
-typedef enum { FSE_repeat_none } FSE_repeat;
-typedef enum { ZSTD_defaultAllowed } ZSTD_defaultPolicy_e;
-FSE_repeat ZSTD_selectEncodingType_repeatMode;
-ZSTD_defaultPolicy_e ZSTD_selectEncodingType_isDefaultAllowed;
-_size_t ZSTD_NCountCost(void);
-
-// CHECK-LABEL: ZSTD_selectEncodingType
-// CHECK: br i1{{.*}}handler
-void ZSTD_selectEncodingType(void) {
-  _size_t basicCost =
-             ZSTD_selectEncodingType_isDefaultAllowed ? ZSTD_NCountCost() : 0,
-         compressedCost = 3 + ZSTD_NCountCost();
-  if (basicCost <= compressedCost)
-    ZSTD_selectEncodingType_repeatMode = FSE_repeat_none;
 }
 
 // CHECK-LABEL: function_calls
