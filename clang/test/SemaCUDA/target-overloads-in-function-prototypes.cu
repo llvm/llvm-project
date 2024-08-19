@@ -688,3 +688,16 @@ __attribute__((host)) check<is_same<decltype(only_D_function(1.0f)), DeviceTy>::
 test_only_D_function_for_host() {
   return TrueTy{};
 }
+
+// Default arguments for template parameters occur before the target attribute,
+// so we can't identify the "right" overload for them.
+template <typename T = targetdep_t>
+__attribute__((device)) // expected-warning {{target specifier has been ignored for overload resolution}}
+T use_in_template_default_arg(void) {
+  return HostTy{};
+}
+
+__attribute__((device))
+void test_use_in_template(void) {
+  use_in_template_default_arg<>();
+}
