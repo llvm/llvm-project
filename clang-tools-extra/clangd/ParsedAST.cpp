@@ -67,6 +67,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
+#include <cctype>
 #include <cstddef>
 #include <iterator>
 #include <memory>
@@ -401,6 +402,48 @@ filterFastTidyChecks(const tidy::ClangTidyCheckFactories &All,
 
 } // namespace
 
+std::vector<Fix>
+clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
+                     const clang::Diagnostic &Info, const Diag &Diag) {
+  auto RuleName = CTContext.getCheckName(Info.getID());
+  if (RuleName.empty()) {
+    return {};
+  }
+  if (!Diag.InsideMainFile) {
+    return {};
+  }
+  auto &SrcMgr = Info.getSourceManager();
+  auto &DiagLoc = Info.getLocation();
+
+  auto F = Fix{};
+  F.Message = llvm::formatv("ignore [{0}] for this line", RuleName);
+  auto &E = F.Edits.emplace_back();
+
+  auto File = SrcMgr.getFileID(DiagLoc);
+  auto CodeTilDiag = toSourceCode(
+      SrcMgr, SourceRange(SrcMgr.getLocForStartOfFile(File), DiagLoc));
+
+  auto StartCurLine = CodeTilDiag.find_last_of('\n') + 1;
+  auto CurLine = CodeTilDiag.substr(StartCurLine);
+  elog("CurLine: '{0}'", CurLine);
+  auto Indent = CurLine.take_while([](char C) { return std::isspace(C); });
+
+  if (StartCurLine > 0) {
+    auto StartPrevLine = CodeTilDiag.find_last_of('\n', StartCurLine - 1) + 1;
+    auto PrevLine =
+        CodeTilDiag.substr(StartPrevLine, StartCurLine - StartPrevLine - 1);
+    elog("PrevLine: '{0}'", PrevLine);
+  }
+
+  E.newText = llvm::formatv("{0}// NOLINTNEXTLINE({1})\n", Indent, RuleName);
+
+  auto InsertPos = sourceLocToPosition(SrcMgr, DiagLoc);
+  InsertPos.character = 0;
+  E.range = {InsertPos, InsertPos};
+
+  return {F};
+}
+
 std::optional<ParsedAST>
 ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::unique_ptr<clang::CompilerInvocation> CI,
@@ -655,10 +698,16 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
               : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
                           /*IndexRequestLimit=*/5, Directive);
-      ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
-                                              const clang::Diagnostic &Info) {
-        return FixIncludes->fix(DiagLevl, Info);
-      });
+      ASTDiags.contributeFixes(
+          [&FixIncludes, &CTContext](const Diag &Diag,
+                                     const clang::Diagnostic &Info) {
+            auto Fixes = std::vector<Fix>();
+            auto NoLintFixes = clangTidyNoLintFixes(*CTContext, Info, Diag);
+            Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
+            auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
+            Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
+            return Fixes;
+          });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
     }
   }
