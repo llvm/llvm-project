@@ -45,12 +45,10 @@ LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
-    return processOperation(op);
-  else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
-    visitBlock(block);
-  else
-    return failure();
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
+    processOperation(op);
+  }
+  visitBlock(point.get<Block *>());
   return success();
 }
 
@@ -180,7 +178,7 @@ void AbstractDenseForwardDataFlowAnalysis::visitBlock(Block *block) {
     // Skip control edges that aren't executable.
     Block *predecessor = *it;
     if (!getOrCreateFor<Executable>(
-             block, getProgramPoint<CFGEdge>(predecessor, block))
+             block, getLatticeAnchor<CFGEdge>(predecessor, block))
              ->isLive())
       continue;
 
@@ -248,8 +246,8 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
 
 const AbstractDenseLattice *
 AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint dependent,
-                                                    ProgramPoint point) {
-  AbstractDenseLattice *state = getLattice(point);
+                                                    LatticeAnchor anchor) {
+  AbstractDenseLattice *state = getLattice(anchor);
   addDependency(state, dependent);
   return state;
 }
@@ -277,12 +275,10 @@ AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
-    return processOperation(op);
-  else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
-    visitBlock(block);
-  else
-    return failure();
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
+    processOperation(op);
+  }
+  visitBlock(point.get<Block *>());
   return success();
 }
 
@@ -424,7 +420,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
   // Meet the state with the state before block's successors.
   for (Block *successor : block->getSuccessors()) {
     if (!getOrCreateFor<Executable>(block,
-                                    getProgramPoint<CFGEdge>(block, successor))
+                                    getLatticeAnchor<CFGEdge>(block, successor))
              ->isLive())
       continue;
 
@@ -474,8 +470,8 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
 
 const AbstractDenseLattice *
 AbstractDenseBackwardDataFlowAnalysis::getLatticeFor(ProgramPoint dependent,
-                                                     ProgramPoint point) {
-  AbstractDenseLattice *state = getLattice(point);
+                                                     LatticeAnchor anchor) {
+  AbstractDenseLattice *state = getLattice(anchor);
   addDependency(state, dependent);
   return state;
 }
