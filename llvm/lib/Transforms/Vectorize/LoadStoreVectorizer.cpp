@@ -1499,6 +1499,12 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
 
   // Try to compute B - A.
   const SCEV *DistScev = SE.getMinusSCEV(SE.getSCEV(PtrB), SE.getSCEV(PtrA));
+  if (DistScev->isZero()) {
+    // A load in the chain is dependent on another load in the chain, and
+    // attempting to vectorize this chain would create a cycle.
+    LLVM_DEBUG(dbgs() << "LSV: SCEV diff is zero; not vectorizing\n");
+    return std::nullopt;
+  }
   if (DistScev != SE.getCouldNotCompute()) {
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
