@@ -19634,7 +19634,7 @@ vectorization factor should be multiplied by vscale.
 Semantics:
 """"""""""
 
-Returns a positive i32 value (explicit vector length) that is unknown at compile
+Returns a non-negative i32 value (explicit vector length) that is unknown at compile
 time and depends on the hardware specification.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
@@ -19646,16 +19646,18 @@ count reaches zero.
 
 Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
 ``%scalable``, here are the constraints on the returned value:
-- If ``%cnt`` equals to 0, returns 0.
-- The returned value is always less or equal to ``%max_lanes``.
-- The returned value is always larger or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
-  - This implies that if ``%cnt`` is non-zero, the result should be non-zero
-    as well.
-  - This also implies that if ``%cnt`` is less than ``%max_lanes``, it has to
-    return ``%cnt``.
-- The returned values decrease monotonically in each loop iteration. That is,
-  the returned value of a iteration is at least as large as that of any later
-  iterations.
+
+-  If ``%cnt`` equals to 0, returns 0.
+-  The returned value is always less than or equal to ``%max_lanes``.
+-  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
+-  The returned values decrease monotonically in each loop iteration. That is,
+   the returned value of a iteration is at least as large as that of any later
+   iterations.
+
+Note that it has the following implications:
+
+-  If ``%cnt`` is non-zero, the result should be non-zero as well.
+-  If ``%cnt`` is less than ``%max_lanes``, it has to return ``%cnt``.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
