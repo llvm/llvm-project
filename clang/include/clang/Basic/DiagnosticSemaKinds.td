@@ -103,8 +103,9 @@ def note_ice_conversion_here : Note<
 def err_ice_ambiguous_conversion : Error<
   "ambiguous conversion from type %0 to an integral or unscoped "
   "enumeration type">;
-def err_invalid_enum_decl : Error<"unsupported declaration type. "
-                                      "Only enum constants are supported">;
+def err_invalid_enum_decl : Error<
+  "unsupported declaration type. "
+  "Only enum constants are supported">;
 def err_ice_too_large : Error<
   "integer constant expression evaluates to value %0 that cannot be "
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
