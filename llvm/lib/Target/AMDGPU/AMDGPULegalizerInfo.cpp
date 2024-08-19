@@ -2236,6 +2236,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
                                        ? AMDGPU::SRC_SHARED_BASE
                                        : AMDGPU::SRC_PRIVATE_BASE;
+    assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
+            !ST.hasGloballyAddressableScratch()) &&
+           "Cannot use src_private_base with globally addressable scratch!");
     // FIXME: It would be more natural to emit a COPY here, but then copy
     // coalescing would kick in and it would think it's okay to use the "HI"
     // subregister (instead of extracting the HI 32 bits) which is an artificial
@@ -2370,8 +2373,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
             B.buildInstr(AMDGPU::S_MOV_B32, {S32},
                          {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)})
             .getReg(0);
+        MRI.setRegClass(FlatScratchBaseLo, &AMDGPU::SReg_32RegClass);
         Register Sub = B.buildSub(S32, SrcLo, FlatScratchBaseLo).getReg(0);
-        return B.buildBitcast(Dst, Sub).getReg(0);
+        return B.buildIntToPtr(Dst, Sub).getReg(0);
       }
 
       // Extract low 32-bits of the pointer.
@@ -2406,13 +2410,44 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
-      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
-      if (!ApertureReg.isValid())
-        return false;
-
       // Coerce the type of the low half of the result so we can use
       // merge_values.
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+
+      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          ST.hasGloballyAddressableScratch()) {
+        // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
+        // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
+        Register AllOnes = B.buildConstant(S32, -1).getReg(0);
+        Register ThreadID = B.buildConstant(S32, 0).getReg(0);
+        ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {S32})
+                       .addUse(AllOnes)
+                       .addUse(ThreadID)
+                       .getReg(0);
+        if (ST.isWave64()) {
+          ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {S32})
+                         .addUse(AllOnes)
+                         .addUse(ThreadID)
+                         .getReg(0);
+        }
+        Register ShAmt =
+            B.buildConstant(S32, 57 - 32 - ST.getWavefrontSizeLog2()).getReg(0);
+        Register SrcHi = B.buildShl(S32, ThreadID, ShAmt).getReg(0);
+        Register CvtPtr =
+            B.buildMergeLikeInstr(DstTy, {SrcAsInt, SrcHi}).getReg(0);
+        // Accessing src_flat_scratch_base_lo as a 64-bit operand gives the full
+        // 64-bit hi:lo value.
+        Register FlatScratchBase =
+            B.buildInstr(AMDGPU::S_MOV_B64, {S64},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE)})
+                .getReg(0);
+        MRI.setRegClass(FlatScratchBase, &AMDGPU::SReg_64RegClass);
+        return B.buildPtrAdd(Dst, CvtPtr, FlatScratchBase).getReg(0);
+      }
+
+      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
+      if (!ApertureReg.isValid())
+        return false;
 
       // TODO: Should we allow mismatched types but matching sizes in merges to
       // avoid the ptrtoint?
