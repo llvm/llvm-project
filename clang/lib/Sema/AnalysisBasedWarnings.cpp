@@ -16,14 +16,13 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1068,17 +1067,13 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
 }
 
 namespace {
-  // This is not a dynamic visitor because it ends up traversing an
-  // order of magnitude more statements than every other visitor combined.
-  class FallthroughMapper final
-    : public RecursiveASTVisitor<FallthroughMapper> {
+  class FallthroughMapper final : public DynamicRecursiveASTVisitor {
   public:
     FallthroughMapper(Sema &S)
       : FoundSwitchStatements(false),
         S(S) {
+      ShouldWalkTypesOfTypeLocs = false;
     }
-
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
 
     bool foundSwitchStatements() const { return FoundSwitchStatements; }
 
@@ -1192,23 +1187,23 @@ namespace {
       return !!UnannotatedCnt;
     }
 
-    bool VisitAttributedStmt(AttributedStmt *S) {
+    bool VisitAttributedStmt(AttributedStmt *S) override {
       if (asFallThroughAttr(S))
         FallthroughStmts.insert(S);
       return true;
     }
 
-    bool VisitSwitchStmt(SwitchStmt *S) {
+    bool VisitSwitchStmt(SwitchStmt *S) override {
       FoundSwitchStatements = true;
       return true;
     }
 
     // We don't want to traverse local type declarations. We analyze their
     // methods separately.
-    bool TraverseDecl(Decl *D) { return true; }
+    bool TraverseDecl(Decl *D) override { return true; }
 
     // We analyze lambda bodies separately. Skip them here.
-    bool TraverseLambdaExpr(LambdaExpr *LE) {
+    bool TraverseLambdaExpr(LambdaExpr *LE) override {
       // Traverse the captures, but not the body.
       for (const auto C : zip(LE->captures(), LE->capture_inits()))
         TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
