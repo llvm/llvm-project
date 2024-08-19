@@ -941,14 +941,14 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                                        "actual_swift_type is a nullptr");
 
       auto transformed_type =
-          actual_swift_type->transform([](swift::Type t) -> swift::Type {
-            if (auto *aliasTy =
-                    swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
-              if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
+          actual_swift_type->transformRec([](swift::TypeBase *t)
+              -> std::optional<swift::Type> {
+            if (auto *aliasTy = swift::dyn_cast<swift::TypeAliasType>(t)) {
+              if (aliasTy->getDecl()->isDebuggerAlias()) {
                 return aliasTy->getSinglyDesugaredType();
               }
             }
-            return t;
+            return std::nullopt;
           });
 
       if (!transformed_type)
