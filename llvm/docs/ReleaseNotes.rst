@@ -165,8 +165,7 @@ Changes to the C API
 
 * Support for creating instructions with custom synchronization scopes has been added:
 
-  * ``LLVMGetSyncScopeID`` and ``LLVMGetSyncScopeIDInContext`` to map a synchronization
-    scope name to an ID, and ``LLVMGetSyncScopeName`` to map an ID back to a name.
+  * ``LLVMGetSyncScopeID`` to map a synchronization scope name to an ID
   * ``LLVMBuildFenceSyncScope``, ``LLVMBuildAtomicRMWSyncScope`` and
     ``LLVMBuildAtomicCmpXchgSyncScope`` versions of the existing builder functions
     with an additional synchronization scope ID parameter.

@@ -24,6 +24,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -146,22 +147,8 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
   return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
 }
 
-unsigned LLVMGetSyncScopeIDInContext(LLVMContextRef C, const char *Name,
-                                     unsigned SLen) {
+unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen) {
   return unwrap(C)->getOrInsertSyncScopeID(StringRef(Name, SLen));
-}
-
-unsigned LLVMGetSyncScopeID(const char *Name, unsigned SLen) {
-  return LLVMGetSyncScopeIDInContext(LLVMGetGlobalContext(), Name, SLen);
-}
-
-const char *LLVMGetSyncScopeName(LLVMContextRef C, unsigned ID,
-                                 unsigned *Length) {
-  SmallVector<StringRef> SSNs;
-  unwrap(C)->getSyncScopeNames(SSNs);
-  StringRef Name = SSNs[ID].empty() ? "system" : SSNs[ID];
-  *Length = Name.size();
-  return Name.data();
 }
 
 unsigned LLVMGetEnumAttributeKindForName(const char *Name, size_t SLen) {
@@ -4338,11 +4325,6 @@ LLVMValueRef LLVMBuildAtomicRMWSyncScope(LLVMBuilderRef B,
                                          LLVMAtomicOrdering ordering,
                                          unsigned SSID) {
   AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
-
-  SmallVector<StringRef> SSNs;
-  unwrap(B)->getContext().getSyncScopeNames(SSNs);
-  assert(SSID < SSNs.size() && "Invalid SyncScopeID");
-
   return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
                                          MaybeAlign(),
                                          mapFromLLVMOrdering(ordering), SSID));
@@ -4386,49 +4368,22 @@ int LLVMGetMaskValue(LLVMValueRef SVInst, unsigned Elt) {
 
 int LLVMGetUndefMaskElem(void) { return PoisonMaskElem; }
 
-static unsigned getAtomicSyncScopeID(Value *P) {
-  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
-    return I->getSyncScopeID();
-  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
-    return FI->getSyncScopeID();
-  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->getSyncScopeID();
-  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->getSyncScopeID();
-  return cast<AtomicCmpXchgInst>(P)->getSyncScopeID();
-}
-
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
-  Value *P = unwrap(AtomicInst);
-  return getAtomicSyncScopeID(P) == SyncScope::SingleThread;
+  return getAtomicSyncScopeID(unwrap<Instruction>(AtomicInst)).value() ==
+         SyncScope::SingleThread;
 }
 
 unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst) {
-  Value *P = unwrap(AtomicInst);
-  return getAtomicSyncScopeID(P);
-}
-
-static void setAtomicSyncScopeID(Value *P, unsigned SSID) {
-  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
-    return I->setSyncScopeID(SSID);
-  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
-    return FI->setSyncScopeID(SSID);
-  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->setSyncScopeID(SSID);
-  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->setSyncScopeID(SSID);
-  return cast<AtomicCmpXchgInst>(P)->setSyncScopeID(SSID);
+  return getAtomicSyncScopeID(unwrap<Instruction>(AtomicInst)).value();
 }
 
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
-  Value *P = unwrap(AtomicInst);
   SyncScope::ID SSID = NewValue ? SyncScope::SingleThread : SyncScope::System;
-  setAtomicSyncScopeID(P, SSID);
+  setAtomicSyncScopeID(unwrap<Instruction>(AtomicInst), SSID);
 }
 
 void LLVMSetAtomicSyncScopeID(LLVMValueRef AtomicInst, unsigned SSID) {
-  Value *P = unwrap(AtomicInst);
-  setAtomicSyncScopeID(P, SSID);
+  setAtomicSyncScopeID(unwrap<Instruction>(AtomicInst), SSID);
 }
 
 LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst)  {

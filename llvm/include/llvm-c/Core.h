@@ -649,22 +649,7 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
 /**
  * Maps a synchronization scope name to a ID unique within this context.
  */
-unsigned LLVMGetSyncScopeIDInContext(LLVMContextRef C, const char *Name,
-                                     unsigned SLen);
-
-/**
- * Maps a synchronization scope name to a unique ID.
- *
- * This is equivalent to calling LLVMGetSyncScopeIDInContext with
- * LLVMGetGlobalContext() as the context parameter.
- */
-unsigned LLVMGetSyncScopeID(const char *Name, unsigned SLen);
-
-/**
- * Maps a synchronization scope ID to its name.
- */
-const char *LLVMGetSyncScopeName(LLVMContextRef C, unsigned ID,
-                                 unsigned *Length);
+unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen);
 
 /**
  * Return an unique id given the name of a enum attribute,
