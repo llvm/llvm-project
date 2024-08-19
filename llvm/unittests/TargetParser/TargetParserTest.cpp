@@ -1199,45 +1199,28 @@ TEST(TargetParserTest, testAArch64CPUArchList) {
   }
 }
 
-bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
-                     unsigned ArchAttr) {
+bool testAArch64Arch(StringRef Arch) {
   const AArch64::ArchInfo *AI = AArch64::parseArch(Arch);
   return AI != nullptr;
 }
 
 TEST(TargetParserTest, testAArch64Arch) {
-  EXPECT_TRUE(testAArch64Arch("armv8-a", "cortex-a53", "v8a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.1-a", "generic", "v8.1a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.2-a", "generic", "v8.2a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.3-a", "generic", "v8.3a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.4-a", "generic", "v8.4a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.5-a", "generic", "v8.5a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.6-a", "generic", "v8.6a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.7-a", "generic", "v8.7a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.8-a", "generic", "v8.8a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv8.9-a", "generic", "v8.9a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9-a", "generic", "v9a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9.1-a", "generic", "v9.1a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9.2-a", "generic", "v9.2a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9.3-a", "generic", "v9.3a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9.4-a", "generic", "v9.4a",
-                              ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testAArch64Arch("armv9.5-a", "generic", "v9.5a",
-                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv8-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.1-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.2-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.3-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.4-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.5-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.6-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.7-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.8-a"));
+  EXPECT_TRUE(testAArch64Arch("armv8.9-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.1-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.2-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.3-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.4-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
