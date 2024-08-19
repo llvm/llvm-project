@@ -699,11 +699,19 @@ enum {
 
 // SPARC Specific e_flags
 enum : unsigned {
+  // ELF extension mask.
+  // All values are available for EM_SPARC32PLUS & EM_SPARCV9 objects, except
+  // EF_SPARC_32PLUS which is a EM_SPARC32PLUS-only flag.
+  //
+  // Note that those features are not mutually exclusive (one can set more than
+  // one flag in this group).
   EF_SPARC_EXT_MASK = 0xffff00,
   EF_SPARC_32PLUS = 0x000100,
   EF_SPARC_SUN_US1 = 0x000200,
   EF_SPARC_HAL_R1 = 0x000400,
   EF_SPARC_SUN_US3 = 0x000800,
+
+  // Memory model selection mask for EM_SPARCV9 objects.
   EF_SPARCV9_MM = 0x3,
   EF_SPARCV9_TSO = 0x0,
   EF_SPARCV9_PSO = 0x1,
@@ -1713,6 +1721,7 @@ enum : unsigned {
   NT_ARM_SSVE = 0x40b,
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
+  NT_ARM_FPMR = 0x40e,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,

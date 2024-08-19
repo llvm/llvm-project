@@ -11,11 +11,11 @@
 ; RELOC-NEXT: R_RISCV_SUB_ULEB128
 
 ; CHECK:      ; foo():
-; CHECK-NEXT: /proc/self/cwd/a.c:2
+; CHECK-NEXT: a.c:2
 ; CHECK-NEXT: ; int foo(int x) {
 ; CHECK-NEXT:   0: addi    sp, sp, -0x10
 ; CHECK-NEXT:   2: sd      ra, 0x8(sp)
-; CHECK-NEXT: /proc/self/cwd/a.c:3
+; CHECK-NEXT: a.c:3
 ; CHECK-NEXT: ; ext();
 ; CHECK-NEXT:   4: auipc   ra, 0x0
 
@@ -35,7 +35,7 @@ void foo2() {
   }
 }
 ;--- gen
-clang --target=riscv64-linux -S -emit-llvm -g -O1 a.c -o - | sed -E '/^attribute/s/,-[-0-9a-z]+//g'
+clang --target=riscv64-linux -S -emit-llvm -g -O1 -fdebug-compilation-dir=. a.c -o - | sed -E '/^attribute/s/,-[-0-9a-z]+//g'
 ;--- a.ll
 ; ModuleID = 'a.c'
 source_filename = "a.c"
@@ -76,7 +76,7 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !8, !9, !10, !11, !12}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "a.c", directory: "/proc/self/cwd", checksumkind: CSK_MD5, checksum: "4791066d0b0e4fd9c4b4df1c56f349cb")
+!1 = !DIFile(filename: "a.c", directory: ".", checksumkind: CSK_MD5, checksum: "4791066d0b0e4fd9c4b4df1c56f349cb")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}

@@ -31,6 +31,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -565,18 +566,22 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Set the frame-pointer register and its aliases as reserved if needed.
   if (TFI->hasFP(MF)) {
+    if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
+      MF.getContext().reportError(
+          SMLoc(),
+          "Frame pointer clobbered by function invoke is not supported.");
+
     for (const MCPhysReg &SubReg : subregs_inclusive(X86::RBP))
       Reserved.set(SubReg);
   }
 
   // Set the base-pointer register and its aliases as reserved if needed.
   if (hasBasePointer(MF)) {
-    CallingConv::ID CC = MF.getFunction().getCallingConv();
-    const uint32_t *RegMask = getCallPreservedMask(MF, CC);
-    if (MachineOperand::clobbersPhysReg(RegMask, getBaseRegister()))
-      report_fatal_error(
-        "Stack realignment in presence of dynamic allocas is not supported with"
-        "this calling convention.");
+    if (MF.getInfo<X86MachineFunctionInfo>()->getBPClobberedByInvoke())
+      MF.getContext().reportError(SMLoc(),
+                                  "Stack realignment in presence of dynamic "
+                                  "allocas is not supported with "
+                                  "this calling convention.");
 
     Register BasePtr = getX86SubSuperRegister(getBaseRegister(), 64);
     for (const MCPhysReg &SubReg : subregs_inclusive(BasePtr))

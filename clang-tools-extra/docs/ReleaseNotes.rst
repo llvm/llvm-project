@@ -109,9 +109,17 @@ Changes in existing checks
   `bsl::optional` and `bdlb::NullableValue` from
   <https://github.com/bloomberg/bde>_.
 
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check to support replacing
+  member function calls too.
+
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check to support replacing
+  member function calls too.
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
-  remove `->`, when reduntant `get()` is removed.
+  remove `->`, when redundant `get()` is removed.
 
 Removed checks
 ^^^^^^^^^^^^^^
