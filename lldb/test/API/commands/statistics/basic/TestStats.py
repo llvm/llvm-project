@@ -940,7 +940,7 @@ class TestCase(TestBase):
         # for string and that it was called once.
         summary_provider_str = str(summary_providers)
         self.assertIn("string", summary_provider_str)
-        self.assertIn("'invocationCount': 1", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'c++'", summary_provider_str)
 
@@ -952,7 +952,7 @@ class TestCase(TestBase):
         summary_providers = stats["summaryProviderStatistics"]
         summary_provider_str = str(summary_providers)
         self.assertRegex("'name': 'BoxFormatter.summary'", summary_provider_str)
-        self.assertIn("'invocationCount': 1", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
 
@@ -975,6 +975,6 @@ class TestCase(TestBase):
         summary_providers = stats["summaryProviderStatistics"]
         summary_provider_str = str(summary_providers)
         self.assertIn("std::vector", summary_provider_str)
-        self.assertIn("'invocationCount': 2", summary_provider_str)
+        self.assertIn("'count': 2", summary_provider_str)
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'c++'", summary_provider_str)
