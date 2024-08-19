@@ -110,9 +110,7 @@ MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
 
     if (Kind.isBSS()) {
       if (EmitUniquedSection) {
-        StringRef Prefix(".sbss");
-        SmallString<128> Name(Prefix);
-        Name.append(".");
+        SmallString<128> Name(".sbss.");
         Name.append(GO->getName());
         return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
                                           ELF::SHF_WRITE | ELF::SHF_ALLOC);
@@ -123,9 +121,7 @@ MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
 
     if (Kind.isData()) {
       if (EmitUniquedSection) {
-        StringRef Prefix(".sdata");
-        SmallString<128> Name(Prefix);
-        Name.append(".");
+        SmallString<128> Name(".sdata.");
         Name.append(GO->getName());
         return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
                                           ELF::SHF_WRITE | ELF::SHF_ALLOC);
