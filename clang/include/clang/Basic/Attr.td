@@ -2200,15 +2200,6 @@ def BTFTypeTag : TypeAttr {
   let LangOpts = [COnly];
 }
 
-def BPFFastCall : InheritableAttr,
-                  TargetSpecificAttr<TargetBPF> {
-  let Spellings = [Clang<"bpf_fastcall">];
-  let Subjects = SubjectList<[FunctionLike]>;
-  let Documentation = [BPFFastCallDocs];
-  let LangOpts = [COnly];
-  let SimpleHandler = 1;
-}
-
 def WebAssemblyExportName : InheritableAttr,
                             TargetSpecificAttr<TargetWebAssembly> {
   let Spellings = [Clang<"export_name">];
