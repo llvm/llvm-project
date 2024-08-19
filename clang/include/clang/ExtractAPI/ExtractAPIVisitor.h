@@ -23,13 +23,11 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <type_traits>
@@ -40,6 +38,8 @@ namespace impl {
 
 template <typename Derived>
 class ExtractAPIVisitorBase : public RecursiveASTVisitor<Derived> {
+  using Base = RecursiveASTVisitor<Derived>;
+
 protected:
   ExtractAPIVisitorBase(ASTContext &Context, APISet &API)
       : Context(Context), API(API) {}
@@ -81,8 +81,10 @@ public:
 
   bool VisitNamespaceDecl(const NamespaceDecl *Decl);
 
+  bool TraverseRecordDecl(RecordDecl *Decl);
   bool VisitRecordDecl(const RecordDecl *Decl);
 
+  bool TraverseCXXRecordDecl(CXXRecordDecl *Decl);
   bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
 
   bool VisitCXXMethodDecl(const CXXMethodDecl *Decl);
@@ -240,7 +242,7 @@ protected:
 
   bool isEmbeddedInVarDeclarator(const TagDecl &D) {
     return D.getName().empty() && getTypedefName(&D).empty() &&
-           D.isEmbeddedInDeclarator();
+           D.isEmbeddedInDeclarator() && !D.isFreeStanding();
   }
 
   void maybeMergeWithAnonymousTag(const DeclaratorDecl &D,
@@ -252,8 +254,10 @@ protected:
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
             API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator)
+      if (Record->IsEmbeddedInVarDeclarator) {
         NewRecordContext->stealRecordChain(*Record);
+        API.removeRecord(Record);
+      }
     }
   }
 };
@@ -549,6 +553,19 @@ bool ExtractAPIVisitorBase<Derived>::VisitNamespaceDecl(
 }
 
 template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseRecordDecl(RecordDecl *Decl) {
+  bool Ret = Base::TraverseRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
@@ -586,6 +603,20 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
         SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
 
   return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(
+    CXXRecordDecl *Decl) {
+  bool Ret = Base::TraverseCXXRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
 }
 
 template <typename Derived>
