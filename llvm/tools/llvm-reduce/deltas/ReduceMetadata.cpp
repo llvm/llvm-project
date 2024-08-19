@@ -23,7 +23,7 @@ using namespace llvm;
 extern cl::OptionCategory LLVMReduceOptions;
 
 static cl::opt<bool> AggressiveMetadataReduction(
-    "aggressive-md",
+    "aggressive-named-md-reduction",
     cl::desc("Reduce named metadata without taking its type into account"),
     cl::cat(LLVMReduceOptions));
 
@@ -54,15 +54,7 @@ static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
   for (NamedMDNode &I : M.named_metadata()) {
     // If we don't want to reduce mindlessly, check if our node is part of
     // ListNamedMetadata before reducing it
-    if (!AggressiveMetadataReduction) {
-      bool Found = false;
-      for (StringRef MDName : ListNamedMetadata) {
-        if (I.getName() == MDName)
-          Found = true;
-      }
-      if (!Found)
-        continue;
-    }
+    if (!AggressiveMetadataReduction && !is_contained(ListNamedMetadata, I.getName())) continue;
 
     bool MadeChange = false;
     SmallVector<MDNode *> KeptOperands;

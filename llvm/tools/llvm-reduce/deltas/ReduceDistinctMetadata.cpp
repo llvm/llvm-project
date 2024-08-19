@@ -23,8 +23,7 @@
 using namespace llvm;
 
 // Traverse the graph breadth-first and try to remove unnamed metadata nodes
-void reduceNodes(MDNode *Root,
-                 SetVector<std::pair<unsigned int, MDNode *>> &NodesToDelete,
+static void reduceNodes(MDNode *Root, SetVector<std::pair<unsigned int, MDNode *>> &NodesToDelete,
                  MDNode *TemporaryNode, Oracle &O, Module &Program) {
   std::queue<MDNode *> NodesToTraverse{};
   // Keep track of visited nodes not to get into loops
@@ -45,9 +44,10 @@ void reduceNodes(MDNode *Root,
           VisitedNodes.insert(Operand);
         }
         // Delete the node only if it is distinct
-        if (Operand->isDistinct())
+        if (Operand->isDistinct()) {
           // Add to removal list
           NodesToDelete.insert(std::make_pair(I, CurrentNode));
+        }
       }
     }
 
@@ -62,8 +62,7 @@ void reduceNodes(MDNode *Root,
 
 // After reducing metadata, we need to remove references to the temporary node,
 // this is also done with BFS
-void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
-                        Module &Program) {
+static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple, Module &Program) {
   std::queue<MDTuple *> NodesToTraverse{};
   SetVector<MDTuple *> VisitedNodes{};
 
@@ -83,12 +82,10 @@ void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
     MDTuple *CurrentTuple = NodesToTraverse.front();
     NodesToTraverse.pop();
 
-    // Shift all of the interesting elements to the left, pop remaining
-    // afterwards
-    if (CurrentTuple
-            ->isDistinct()) { // Do resizing and cleaning operations only if
-                              // the node is distinct, as resizing is not
-                              // supported for unique nodes and is redundant.
+    // Shift all of the interesting elements to the left, pop remaining afterwards
+    if (CurrentTuple ->isDistinct()) {
+      // Do resizing and cleaning operations only if the node is distinct,
+      // as resizing is not supported for unique nodes and is redundant.
       unsigned int NotToRemove = 0;
       for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
         Metadata *Operand = CurrentTuple->getOperand(I).get();
@@ -126,8 +123,7 @@ static void extractDistinctMetadataFromModule(Oracle &O,
                                               ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   MDTuple *TemporaryTuple = MDTuple::getDistinct(
-      Program.getContext(), SmallVector<Metadata *, 1>{llvm::MDString::get(
-                                Program.getContext(), "temporary_tuple")});
+      Program.getContext(), SmallVector<Metadata *, 1>{});
   SetVector<std::pair<unsigned int, MDNode *>> NodesToDelete{};
   for (NamedMDNode &NamedNode :
        Program.named_metadata()) { // Iterate over the named nodes
