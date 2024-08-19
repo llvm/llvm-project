@@ -1,0 +1,26 @@
+# RUN: llc %s -mattr=+fix-tn0009 -march=sparc -run-pass=errata-workaround -o - \
+# RUN:   | FileCheck %s
+
+---
+# CHECK:      STrr $o1, $g0, $o0
+# CHECK-NEXT: NOP
+# CHECK-NEXT: NOP
+# CHECK-NEXT: STrr $o1, $g0, $o0
+name:            seqa
+body:             |
+  bb.0.entry:
+    STrr $o1, $g0, $o0
+    NOP
+    STrr $o1, $g0, $o0
+
+---
+# CHECK:      STDrr $i0, $g0, $i0_i1
+# CHECK-NEXT: NOP
+# CHECK-NEXT: STDrr $i0, $g0, $i0_i1
+name:            seqb
+body:             |
+  bb.0.entry:
+    STDrr $i0, $g0, $i0_i1
+    STDrr $i0, $g0, $i0_i1
+
+...
