@@ -148,8 +148,8 @@ public:
 
   /// When passed a main diagnostic, returns fixes to add to it.
   /// When passed a note diagnostic, returns fixes to replace it with.
-  using DiagFixer = std::function<std::vector<Fix>(DiagnosticsEngine::Level,
-                                                   const clang::Diagnostic &)>;
+  using DiagFixer =
+      std::function<std::vector<Fix>(const Diag &, const clang::Diagnostic &)>;
   using LevelAdjuster = std::function<DiagnosticsEngine::Level(
       DiagnosticsEngine::Level, const clang::Diagnostic &)>;
   using DiagCallback =
