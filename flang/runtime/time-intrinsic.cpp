@@ -281,18 +281,19 @@ static int computeUTCDiff(const tm &localTime, bool *err) {
     else
       localHr += 24;
   }
-  return (localHr*60 + localTime.tm_min) - (utcTime.tm_hour*60 + utcTime.tm_min);
+  return (localHr*60 + localTime.tm_min) -
+      (utcTime.tm_hour*60 + utcTime.tm_min);
 }
 #endif
 
-static std::size_t getUTCOffsetToBuffer(char *buffer, const std::size_t &buffSize,
-    tm *localTime) {
+static std::size_t getUTCOffsetToBuffer(
+    char *buffer, const std::size_t &buffSize, tm *localTime) {
 #ifdef _AIX
   // format: +HHMM or -HHMM
   bool err{false};
   auto utcOffset{computeUTCDiff(*localTime, &err)};
-  auto hour{utcOffset/60};
-  auto hrMin{hour*100 + (utcOffset - hour*60)};
+  auto hour{utcOffset / 60};
+  auto hrMin{hour * 100 + (utcOffset - hour * 60)};
   auto n{sprintf(buffer, "%+05d", hrMin)};
   return err ? 0 : n + 1;
 #else
