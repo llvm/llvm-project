@@ -1486,7 +1486,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       if (isShiftedMask_64(C1) && !Skip) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = llvm::countr_zero(C1);
-        if (C2 > Leading && Trailing > 0) {
+        if (C2 > Leading && Leading > 0 && Trailing > 0) {
           SDNode *SRAI = CurDAG->getMachineNode(
               RISCV::SRAI, DL, VT, N0.getOperand(0),
               CurDAG->getTargetConstant(C2 - Leading, DL, VT));
