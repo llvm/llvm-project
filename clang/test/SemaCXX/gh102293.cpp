@@ -23,11 +23,25 @@ struct S : HasVT {
 namespace GH104802 {
 class foo {       // expected-note {{definition of 'GH104802::foo' is not complete until the closing '}'}}
   foo a;          // expected-error {{field has incomplete type 'foo'}}
+
   virtual int c();
 };
 
-class bar : bar { // expected-error {{base class has incomplete type}} \
-                     expected-note {{definition of 'GH104802::bar' is not complete until the closing '}'}}
+class bar {       // expected-note {{definition of 'GH104802::bar' is not complete until the closing '}'}}
+  const bar a;    // expected-error {{field has incomplete type 'const bar'}}
+
+  virtual int c();
+};
+
+class baz {       // expected-note {{definition of 'GH104802::baz' is not complete until the closing '}'}}
+  typedef class baz blech;
+  blech a;        // expected-error {{field has incomplete type 'blech' (aka 'GH104802::baz')}}
+
+  virtual int c();
+};
+
+class quux : quux { // expected-error {{base class has incomplete type}} \
+                     expected-note {{definition of 'GH104802::quux' is not complete until the closing '}'}}
   virtual int c();
 };
 }
