@@ -2052,11 +2052,9 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
     case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-      AS = LangAS::opencl_global;
       break;
     case OMPAllocateDeclAttr::OMPThreadMemAlloc:
-      AS = LangAS::opencl_private;
-      break;
+      return Address::invalid();
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
       return Address::invalid();
@@ -2212,10 +2210,8 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
   case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
   case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-    AS = LangAS::opencl_global;
-    return true;
   case OMPAllocateDeclAttr::OMPThreadMemAlloc:
-    AS = LangAS::opencl_private;
+    AS = LangAS::Default;
     return true;
   case OMPAllocateDeclAttr::OMPConstMemAlloc:
     AS = LangAS::cuda_constant;
