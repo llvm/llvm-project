@@ -6195,8 +6195,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
                                    diag::err_incomplete_type))
         return true;
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
-          Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
-                                   diag::err_incomplete_type))
+        Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
       return true;
 
     DiagnoseVLAInCXXTypeTrait(
