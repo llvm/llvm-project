@@ -193,9 +193,7 @@ StringRef SourceMgr::getDebugFilename(SMLoc Loc, unsigned BufferID) const {
   if (!BufferID)
     BufferID = FindBufferContainingLoc(Loc);
   assert(BufferID && "Invalid location!");
-
   auto &SB = getBufferInfo(BufferID);
-
   return SB.SourceFilename;
 }
 
@@ -204,9 +202,7 @@ SourceMgr::getDebugLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   if (!BufferID)
     BufferID = FindBufferContainingLoc(Loc);
   assert(BufferID && "Invalid location!");
-
   auto &SB = getBufferInfo(BufferID);
-
   std::pair<unsigned, unsigned> LineAndCol = getLineAndColumn(Loc, BufferID);
   return std::make_pair(LineAndCol.first + (SB.BaseLine ? SB.BaseLine : 1) - 1,
                         LineAndCol.second + (SB.BaseCol ? SB.BaseCol : 1) - 1);
