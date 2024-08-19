@@ -1,15 +1,15 @@
-//===- ReduceDistinctMetadata.cpp - Specialized Delta Pass ------------------------===//
+//===- ReduceDistinctMetadata.cpp - Specialized Delta Pass ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This file implements two functions used by the Generic Delta Debugging
 // Algorithm, which are used to reduce unnamed distinct metadata nodes.
 //
-//===------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "ReduceDistinctMetadata.h"
 #include "Delta.h"
@@ -23,8 +23,10 @@
 using namespace llvm;
 
 // Traverse the graph breadth-first and try to remove unnamed metadata nodes
-static void reduceNodes(MDNode *Root, SetVector<std::pair<unsigned int, MDNode *>> &NodesToDelete,
-                 MDNode *TemporaryNode, Oracle &O, Module &Program) {
+static void
+reduceNodes(MDNode *Root,
+            SetVector<std::pair<unsigned int, MDNode *>> &NodesToDelete,
+            MDNode *TemporaryNode, Oracle &O, Module &Program) {
   std::queue<MDNode *> NodesToTraverse{};
   // Keep track of visited nodes not to get into loops
   SetVector<MDNode *> VisitedNodes{};
@@ -62,7 +64,8 @@ static void reduceNodes(MDNode *Root, SetVector<std::pair<unsigned int, MDNode *
 
 // After reducing metadata, we need to remove references to the temporary node,
 // this is also done with BFS
-static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple, Module &Program) {
+static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
+                               Module &Program) {
   std::queue<MDTuple *> NodesToTraverse{};
   SetVector<MDTuple *> VisitedNodes{};
 
@@ -82,8 +85,9 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple, 
     MDTuple *CurrentTuple = NodesToTraverse.front();
     NodesToTraverse.pop();
 
-    // Shift all of the interesting elements to the left, pop remaining afterwards
-    if (CurrentTuple ->isDistinct()) {
+    // Shift all of the interesting elements to the left, pop remaining
+    // afterwards
+    if (CurrentTuple->isDistinct()) {
       // Do resizing and cleaning operations only if the node is distinct,
       // as resizing is not supported for unique nodes and is redundant.
       unsigned int NotToRemove = 0;
@@ -122,8 +126,8 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple, 
 static void extractDistinctMetadataFromModule(Oracle &O,
                                               ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
-  MDTuple *TemporaryTuple = MDTuple::getDistinct(
-      Program.getContext(), SmallVector<Metadata *, 1>{});
+  MDTuple *TemporaryTuple =
+      MDTuple::getDistinct(Program.getContext(), SmallVector<Metadata *, 1>{});
   SetVector<std::pair<unsigned int, MDNode *>> NodesToDelete{};
   for (NamedMDNode &NamedNode :
        Program.named_metadata()) { // Iterate over the named nodes

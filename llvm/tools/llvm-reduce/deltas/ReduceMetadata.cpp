@@ -54,7 +54,9 @@ static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
   for (NamedMDNode &I : M.named_metadata()) {
     // If we don't want to reduce mindlessly, check if our node is part of
     // ListNamedMetadata before reducing it
-    if (!AggressiveMetadataReduction && !is_contained(ListNamedMetadata, I.getName())) continue;
+    if (!AggressiveMetadataReduction &&
+        !is_contained(ListNamedMetadata, I.getName()))
+      continue;
 
     bool MadeChange = false;
     SmallVector<MDNode *> KeptOperands;
