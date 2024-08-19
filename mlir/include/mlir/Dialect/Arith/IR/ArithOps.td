@@ -1579,7 +1579,7 @@ def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
-    DeclareOpInterfaceMethods<SelectOpInterface>,
+    DeclareOpInterfaceMethods<SelectLikeOpInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";
   let description = [{

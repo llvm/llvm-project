@@ -836,7 +836,7 @@ def LLVM_SelectOp
     : LLVM_Op<"select",
           [Pure, AllTypesMatch<["trueValue", "falseValue", "res"]>,
            DeclareOpInterfaceMethods<FastmathFlagsInterface>,
-           DeclareOpInterfaceMethods<SelectOpInterface>]>,
+           DeclareOpInterfaceMethods<SelectLikeOpInterface>]>,
       LLVM_Builder<
           "$res = builder.CreateSelect($condition, $trueValue, $falseValue);"> {
   let arguments = (ins LLVM_ScalarOrVectorOf<I1>:$condition,

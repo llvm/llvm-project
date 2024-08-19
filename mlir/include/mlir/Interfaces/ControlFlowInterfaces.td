@@ -343,7 +343,7 @@ def RegionBranchTerminatorOpInterface :
   }];
 }
 
-def SelectOpInterface : OpInterface<"SelectOpInterface"> {
+def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
   let description = [{
     This interface provides information for select-like operations, i.e.,
     operations that forward specific operands to the output, depending on a
