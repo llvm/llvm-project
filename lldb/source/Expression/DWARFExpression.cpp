@@ -131,8 +131,9 @@ static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
 /// Return the length in bytes of the set of operands for \p op. No guarantees
 /// are made on the state of \p data after this call.
 static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
-                                  const lldb::offset_t data_offset,
-                                  const uint8_t op, const DWARFUnit *dwarf_cu) {
+                                        const lldb::offset_t data_offset,
+                                        const uint8_t op,
+                                        const DWARFUnit *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
   case DW_OP_addr:
