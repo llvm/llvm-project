@@ -281,8 +281,8 @@ static int computeUTCDiff(const tm &localTime, bool *err) {
     else
       localHr += 24;
   }
-  return (localHr*60 + localTime.tm_min) -
-      (utcTime.tm_hour*60 + utcTime.tm_min);
+  return (localHr * 60 + localTime.tm_min) -
+      (utcTime.tm_hour * 60 + utcTime.tm_min);
 }
 #endif
 
