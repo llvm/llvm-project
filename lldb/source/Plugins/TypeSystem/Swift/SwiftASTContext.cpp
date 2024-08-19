@@ -2467,7 +2467,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 }
 
 /// Determine whether this CU was compiled with C++ interop enabled.
-static bool ShouldEnableCXXInterop(CompileUnit *cu) {
+bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
   AutoBool interop_enabled =
     ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
   switch (interop_enabled) {

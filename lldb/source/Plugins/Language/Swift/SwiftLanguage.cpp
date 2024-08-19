@@ -1159,9 +1159,6 @@ SwiftLanguage::GetHardcodedSynthetics() {
 
       Log *log(GetLog(LLDBLog::DataFormatters));
 
-      if (!valobj.GetTargetSP()->IsSwiftCxxInteropEnabled())
-        return nullptr;
-
       CompilerType type(valobj.GetCompilerType());
       auto swift_type_system =
           type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -1188,6 +1185,29 @@ SwiftLanguage::GetHardcodedSynthetics() {
       if (!casted) {
         LLDB_LOGV(log, "[Matching Clang imported type] - "
                        "Could not cast value object to clang type");
+        return nullptr;
+      }
+
+      // Find the compile unit and module using the frame, because the value
+      // object may not have a module in the case of an expression that
+      // evaluates to a type.
+      if (!valobj.GetFrameSP())
+        return nullptr;
+
+      auto sc = valobj.GetFrameSP()->GetSymbolContext(
+          lldb::SymbolContextItem::eSymbolContextCompUnit |
+          lldb::SymbolContextItem::eSymbolContextModule);
+
+      // If there is a compile unit, use that to check if C++ interop should be
+      // enabled. If there is no compiler unit, use the module. If neither
+      // exist, assume that C++ interop is disabled.
+      if (auto *cu = sc.comp_unit) {
+        if (!SwiftASTContext::ShouldEnableCXXInterop(cu))
+          return nullptr;
+      } else if (sc.module_sp) {
+        if (!sc.module_sp->IsSwiftCxxInteropEnabled())
+          return nullptr;
+      } else {
         return nullptr;
       }
 
