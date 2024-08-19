@@ -1049,8 +1049,8 @@ func.func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf3
 
 // -----
 
-func.func @extractelement_from_vec_0d(%a: vector<f32>) -> f32 {
-  %1 = vector.extractelement %a[] : vector<f32>
+func.func @extractelement_from_vec_0d(%arg0: vector<f32>) -> f32 {
+  %1 = vector.extractelement %arg0[] : vector<f32>
   return %1 : f32
 }
 // CHECK-LABEL: @extractelement_from_vec_0d
@@ -1254,8 +1254,8 @@ func.func @extract_scalar_from_vec_2d_dynamic_position_scalable(%arg0: vector<1x
 
 // -----
 
-func.func @insertelement_into_vec_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
-  %1 = vector.insertelement %a, %b[] : vector<f32>
+func.func @insertelement_into_vec_0d(%arg0: f32, %arg1: vector<f32>) -> vector<f32> {
+  %1 = vector.insertelement %arg0, %arg1[] : vector<f32>
   return %1 : vector<f32>
 }
 // CHECK-LABEL: @insertelement_into_vec_0d
