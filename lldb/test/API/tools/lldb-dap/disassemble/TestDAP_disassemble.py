@@ -29,6 +29,14 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
+        stackFrames = self.get_stackFrames(
+            threadId=threadId, startFrame=frameIndex, levels=1
+        )
+        self.assertIsNotNone(stackFrames)
+
+        # XXX finish updating test case
+        memoryReference = stackFrames[0]["instructionPointerReference"]
+
         pc_assembly = self.disassemble(frameIndex=0)
         self.assertIn("location", pc_assembly, "Source location missing.")
         self.assertIn("instruction", pc_assembly, "Assembly instruction missing.")
