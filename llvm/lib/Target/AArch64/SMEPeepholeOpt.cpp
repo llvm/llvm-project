@@ -17,6 +17,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
 
@@ -108,8 +110,30 @@ static bool ChangesStreamingMode(const MachineInstr *MI) {
          MI->getOperand(0).getImm() == AArch64SVCR::SVCRSMZA;
 }
 
+static bool isSVERegOp(const TargetRegisterInfo &TRI,
+                       const MachineRegisterInfo &MRI,
+                       const MachineOperand &MO) {
+  if (!MO.isReg())
+    return false;
+
+  Register R = MO.getReg();
+  if (R.isPhysical())
+    return llvm::any_of(TRI.subregs_inclusive(R), [](const MCPhysReg &SR) {
+      return AArch64::ZPRRegClass.contains(SR) ||
+             AArch64::PPRRegClass.contains(SR);
+    });
+
+  const TargetRegisterClass *RC = MRI.getRegClass(R);
+  return TRI.getCommonSubClass(&AArch64::ZPRRegClass, RC) ||
+         TRI.getCommonSubClass(&AArch64::PPRRegClass, RC);
+}
+
 bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
                                             bool &HasRemainingSMChange) const {
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterInfo &TRI =
+      *MBB.getParent()->getSubtarget().getRegisterInfo();
+
   SmallVector<MachineInstr *, 4> ToBeRemoved;
 
   bool Changed = false;
@@ -129,33 +153,6 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
   // tracking.
   for (MachineInstr &MI : make_early_inc_range(MBB)) {
     switch (MI.getOpcode()) {
-    default:
-      Reset();
-      break;
-    case AArch64::COPY: {
-      // Permit copies of 32 and 64-bit registers.
-      if (!MI.getOperand(1).isReg()) {
-        Reset();
-        break;
-      }
-      Register Reg = MI.getOperand(1).getReg();
-      if (!AArch64::GPR32RegClass.contains(Reg) &&
-          !AArch64::GPR64RegClass.contains(Reg))
-        Reset();
-      break;
-    }
-    case AArch64::ADJCALLSTACKDOWN:
-    case AArch64::ADJCALLSTACKUP:
-    case AArch64::ANDXri:
-    case AArch64::ADDXri:
-      // We permit these as they don't generate SVE/NEON instructions.
-      break;
-    case AArch64::VGRestorePseudo:
-    case AArch64::VGSavePseudo:
-      // When the smstart/smstop are removed, we should also remove
-      // the pseudos that save/restore the VG value for CFI info.
-      ToBeRemoved.push_back(&MI);
-      break;
     case AArch64::MSRpstatesvcrImm1:
     case AArch64::MSRpstatePseudo: {
       if (!Prev)
@@ -174,8 +171,50 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
         Reset();
         Prev = &MI;
       }
+      continue;
+    }
+    default:
+      if (!Prev)
+        // Avoid doing expensive checks when Prev is nullptr.
+        continue;
       break;
     }
+
+    // Test if the instructions in between the start/stop sequence are agnostic
+    // of streaming mode. If not, the algorithm should reset.
+    switch (MI.getOpcode()) {
+    default:
+      Reset();
+      break;
+    case AArch64::COALESCER_BARRIER_FPR16:
+    case AArch64::COALESCER_BARRIER_FPR32:
+    case AArch64::COALESCER_BARRIER_FPR64:
+    case AArch64::COALESCER_BARRIER_FPR128:
+    case AArch64::COPY:
+      // These instructions should be safe when executed on their own, but
+      // the code remains conservative when SVE registers are used. There may
+      // exist subtle cases where executing a COPY in a different mode results
+      // in different behaviour, even if we can't yet come up with any
+      // concrete example/test-case.
+      if (isSVERegOp(TRI, MRI, MI.getOperand(0)) ||
+          isSVERegOp(TRI, MRI, MI.getOperand(1)))
+        Reset();
+      break;
+    case AArch64::ADJCALLSTACKDOWN:
+    case AArch64::ADJCALLSTACKUP:
+    case AArch64::ANDXri:
+    case AArch64::ADDXri:
+      // We permit these as they don't generate SVE/NEON instructions.
+      break;
+    case AArch64::VGRestorePseudo:
+    case AArch64::VGSavePseudo:
+      // When the smstart/smstop are removed, we should also remove
+      // the pseudos that save/restore the VG value for CFI info.
+      ToBeRemoved.push_back(&MI);
+      break;
+    case AArch64::MSRpstatesvcrImm1:
+    case AArch64::MSRpstatePseudo:
+      llvm_unreachable("Should have been handled");
     }
   }
 

@@ -229,10 +229,6 @@ define float @test6(float %f) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
