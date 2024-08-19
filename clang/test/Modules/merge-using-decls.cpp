@@ -6,7 +6,8 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify %s -DORDER=2
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++98 %s -DORDER=2
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++11 %s -DORDER=2
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++17 %s -DORDER=2
+
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++17 %s -DORDER=2
 
 #if ORDER == 1
 #include "a.h"
