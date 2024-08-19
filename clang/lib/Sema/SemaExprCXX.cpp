@@ -6241,7 +6241,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   case BTT_IsScalarizedLayoutCompatible: {
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
         Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
-                                   diag::err_incomplete_type))
+                                 diag::err_incomplete_type))
       return true;
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
         Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
