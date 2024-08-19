@@ -5794,6 +5794,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           return false;
       }
     }
+  } else if (ST.hasNoF16PseudoScalarTransInlineConstants() && !MO->isReg() &&
+             isF16PseudoScalarTrans(MI.getOpcode()) &&
+             isInlineConstant(*MO, OpInfo)) {
+    return false;
   }
 
   if (MO->isReg()) {
