@@ -63,9 +63,6 @@ int llvm_test_diagnostic_handler(void);
 int llvm_test_function_attributes(void);
 int llvm_test_callsite_attributes(void);
 
-// atomic.c
-int llvm_atomic_syncscope(void);
-
 #ifdef __cplusplus
 }
 #endif /* !defined(__cplusplus) */

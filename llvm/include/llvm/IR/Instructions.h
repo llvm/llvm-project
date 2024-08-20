@@ -4943,10 +4943,8 @@ inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
 }
 
 /// A helper function that sets an atomic operation's sync scope.
-/// Does nothing if it is not an atomic operation.
 inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
-  if (!I->isAtomic())
-    return;
+  assert(I->isAtomic());
   if (auto *AI = dyn_cast<LoadInst>(I))
     AI->setSyncScopeID(SSID);
   else if (auto *AI = dyn_cast<StoreInst>(I))

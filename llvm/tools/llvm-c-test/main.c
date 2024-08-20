@@ -112,8 +112,6 @@ int main(int argc, char **argv) {
   } else if (argc == 2 &&
              !strcmp(argv[1], "--test-dibuilder-debuginfo-format")) {
     return llvm_test_dibuilder();
-  } else if (argc == 2 && !strcmp(argv[1], "--atomic-syncscope")) {
-    return llvm_atomic_syncscope();
   } else {
     print_usage();
   }

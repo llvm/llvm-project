@@ -4377,12 +4377,18 @@ LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
   Instruction *I = unwrap<Instruction>(AtomicInst);
   if (!I->isAtomic())
     return 0;
+
   return *getAtomicSyncScopeID(I) == SyncScope::SingleThread;
 }
 
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
+  // Backwards compatibility: ignore non-atomic instructions
+  Instruction *I = unwrap<Instruction>(AtomicInst);
+  if (!I->isAtomic())
+    return;
+
   SyncScope::ID SSID = NewValue ? SyncScope::SingleThread : SyncScope::System;
-  setAtomicSyncScopeID(unwrap<Instruction>(AtomicInst), SSID);
+  setAtomicSyncScopeID(I, SSID);
 }
 
 unsigned LLVMGetAtomicSyncScopeID(LLVMValueRef AtomicInst) {
