@@ -170,6 +170,19 @@ void scanRelocations(InputChunk *chunk) {
         if (requiresGOTAccess(sym))
           addGOTEntry(sym);
         break;
+      case R_WASM_TABLE_INDEX_REL_SLEB:
+      case R_WASM_TABLE_INDEX_REL_SLEB64:
+      case R_WASM_MEMORY_ADDR_REL_SLEB:
+      case R_WASM_MEMORY_ADDR_REL_SLEB64:
+        // These relocation types are only present in the code section and
+        // are not supported. It would require replacing the constant by using
+        // a GOT global.
+        if (sym->isUndefined())
+          error(toString(file) + ": relocation " +
+                relocTypeToString(reloc.Type) +
+                " is not supported against an undefined symbol `" +
+                toString(*sym) + "`");
+        break;
       }
     }
 
