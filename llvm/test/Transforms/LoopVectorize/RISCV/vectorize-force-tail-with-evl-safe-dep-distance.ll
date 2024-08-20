@@ -432,8 +432,9 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 3002, [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 1024)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[EVL_BASED_IV]], 1024
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP3]], i64 [[EVL_BASED_IV]], i64 1024
+; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 3002, [[SAFE_AVL]]
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP4]], i32 1, i1 true)
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = add i64 [[EVL_BASED_IV]], 0
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP6]]

@@ -180,14 +180,13 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    sbc x8, x3, x1
-; CHECK-NEXT:    subs x9, x0, x2
-; CHECK-NEXT:    sbc x10, x1, x3
-; CHECK-NEXT:    subs x11, x2, x0
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbc x11, x3, x1
 ; CHECK-NEXT:    sbcs xzr, x3, x1
-; CHECK-NEXT:    csel x0, x9, x11, lt
-; CHECK-NEXT:    csel x1, x10, x8, lt
+; CHECK-NEXT:    csel x0, x8, x10, lt
+; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
   %aext = sext i128 %a to i256
   %bext = sext i128 %b to i256
@@ -200,14 +199,13 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i128_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    sbc x8, x3, x1
-; CHECK-NEXT:    subs x9, x0, x2
-; CHECK-NEXT:    sbc x10, x1, x3
-; CHECK-NEXT:    subs x11, x2, x0
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbc x11, x3, x1
 ; CHECK-NEXT:    sbcs xzr, x3, x1
-; CHECK-NEXT:    csel x0, x9, x11, lt
-; CHECK-NEXT:    csel x1, x10, x8, lt
+; CHECK-NEXT:    csel x0, x8, x10, lt
+; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
   %aext = sext i128 %a to i256
   %bext = sext i128 %b to i256
@@ -278,14 +276,13 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_minmax_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    sbc x8, x3, x1
-; CHECK-NEXT:    subs x9, x0, x2
-; CHECK-NEXT:    sbc x10, x1, x3
-; CHECK-NEXT:    subs x11, x2, x0
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbc x11, x3, x1
 ; CHECK-NEXT:    sbcs xzr, x3, x1
-; CHECK-NEXT:    csel x0, x9, x11, lt
-; CHECK-NEXT:    csel x1, x10, x8, lt
+; CHECK-NEXT:    csel x0, x8, x10, lt
+; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
   %min = call i128 @llvm.smin.i128(i128 %a, i128 %b)
   %max = call i128 @llvm.smax.i128(i128 %a, i128 %b)

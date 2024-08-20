@@ -1427,6 +1427,21 @@ void VPlanTransforms::addActiveLaneMask(
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
+/// If MaxEVLSafeElements is provided, the function adds the following recipes:
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %cmp = cmp ult %EVLPhi, MaxEVLSafeElements
+/// %SAFE_AVL = select %cmp, %EVLPhi, MaxEVLSafeElements
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL, original TC
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
+/// ...
+///
 bool VPlanTransforms::tryAddExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxEVLSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -1453,13 +1468,24 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  SmallVector<VPValue *, 3> Operands = {EVLPhi, Plan.getTripCount()};
+  VPRecipeBase *AVL = EVLPhi;
+  if (MaxEVLSafeElements) {
+    VPValue *EVLSafe = Plan.getOrAddLiveIn(
+        ConstantInt::get(CanonicalIVPHI->getScalarType(), *MaxEVLSafeElements));
+    auto *Cmp = new VPInstruction(Instruction::ICmp, ICmpInst::ICMP_ULT, EVLPhi,
+                                  EVLSafe);
+    Cmp->insertBefore(*Header, Header->getFirstNonPhi());
+    AVL = new VPInstruction(Instruction::Select, {Cmp, EVLPhi, EVLSafe},
+                            DebugLoc(), "safe_avl");
+    AVL->insertAfter(Cmp);
+  }
+  auto *VPEVL = new VPInstruction(
+      VPInstruction::ExplicitVectorLength,
+      {AVL->getVPSingleValue(), Plan.getTripCount()}, DebugLoc());
   if (MaxEVLSafeElements)
-    Operands.push_back(Plan.getOrAddLiveIn(ConstantInt::get(
-        CanonicalIVPHI->getScalarType(), *MaxEVLSafeElements)));
-  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength, Operands,
-                                  DebugLoc());
-  VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
+    VPEVL->insertAfter(AVL);
+  else
+    VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());

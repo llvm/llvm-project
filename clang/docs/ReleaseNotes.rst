@@ -73,7 +73,7 @@ C++ Specific Potentially Breaking Changes
     template <> // error: extraneous template head
     template <typename T>
     void f();
-    
+
 ABI Changes in This Version
 ---------------------------
 
@@ -174,6 +174,16 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The compiler flag `-fbracket-depth` default value is increased from 256 to 2048.
+
+- The ``-ffp-model`` option has been updated to enable a more limited set of
+  optimizations when the ``fast`` argument is used and to accept a new argument,
+  ``aggressive``. The behavior of ``-ffp-model=aggressive`` is equivalent
+  to the previous behavior of ``-ffp-model=fast``. The updated
+  ``-ffp-model=fast`` behavior no longer assumes finite math only and uses
+  the ``promoted`` algorithm for complex division when possible rather than the
+  less basic (limited range) algorithm.
+
 Removed Compiler Flags
 -------------------------
 
@@ -273,6 +283,7 @@ Bug Fixes to C++ Support
 - Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
+- Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -376,6 +387,9 @@ AST Matchers
 
 - Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
   inline namespaces with an enclosing namespace of the same name.
+
+- Fixed an ordering issue with the `hasOperands` matcher occuring when setting a
+  binding in the first matcher and using it in the second matcher.
 
 clang-format
 ------------
