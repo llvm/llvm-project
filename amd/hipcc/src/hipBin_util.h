@@ -88,7 +88,6 @@ class HipBinUtil {
   }
   virtual ~HipBinUtil();
   // Common helper functions
-  string getSelfPath() const;
   vector<string> splitStr(string fullStr, char delimiter) const;
   string replaceStr(const string& s, const string& toReplace,
                     const string& replaceWith) const;
@@ -130,35 +129,6 @@ string HipBinUtil::mktempFile(string name) {
   tmpFiles_.push_back(fileName);
   return fileName;
 }
-
-// gets the path of the executable name
-string HipBinUtil::getSelfPath() const {
-  int MAX_PATH_CHAR = 1024;
-  int bufferSize = 0;
-  string path;
-  #if defined(_WIN32) || defined(_WIN64)
-    TCHAR buffer[MAX_PATH] = { 0 };
-    bufferSize = GetModuleFileName(NULL, buffer, MAX_PATH_CHAR);
-    TSIZE pos = TSTR(buffer).find_last_of(ENDLINE);
-    TSTR wide = TSTR(buffer).substr(0, pos);
-    path = string(wide.begin(), wide.end());
-  #else
-    char buff[MAX_PATH_CHAR];
-    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
-    if (len > 0) {
-      buff[len] = '\0';
-      path = string(buff);
-      fs::path exePath(path);
-      path = exePath.parent_path().string();
-    } else {
-      std::cerr << "readlink: Error reading the exe path" << endl;
-      perror("readlink");
-      exit(-1);
-    }
-  #endif
-  return path;
-}
-
 
 // removes the empty spaces and end lines
 string HipBinUtil::trim(string str) const {

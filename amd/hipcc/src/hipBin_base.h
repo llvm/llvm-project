@@ -327,7 +327,7 @@ void HipBinBase::constructHipPath() {
   if (!hip_path_name.empty()) {
     variables_.hipPathEnv_ = hip_path_name;
   } else if (envVariables_.hipPathEnv_.empty()) {
-    fs::path full_path(hipBinUtilPtr_->getSelfPath());
+    fs::path full_path(hipcc::utils::getSelfPath());
     variables_.hipPathEnv_ = (full_path.parent_path()).string();
   } else {
     variables_.hipPathEnv_ = envVariables_.hipPathEnv_;
