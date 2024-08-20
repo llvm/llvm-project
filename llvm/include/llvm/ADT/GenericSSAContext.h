@@ -77,6 +77,12 @@ public:
   // a given funciton.
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
 
+  // A LoopT is a natural loop in the CFG.
+  using LoopT = typename SSATraits::LoopT;
+
+  // A LoopInfoT contains a forest of natural loops in the CFG.
+  using LoopInfoT = typename SSATraits::LoopInfoT;
+
   GenericSSAContext() = default;
   GenericSSAContext(const FunctionT *F) : F(F) {}
 
