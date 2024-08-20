@@ -10120,8 +10120,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   //  instantiated from the member definition associated with its class
   //  template.
   UnresolvedSet<8> TemplateMatches;
-  FunctionDecl *NonTemplateMatch = nullptr;
-  TemplateSpecCandidateSet FailedCandidates(D.getIdentifierLoc());
+  OverloadCandidateSet NonTemplateMatches(D.getBeginLoc(),
+                                          OverloadCandidateSet::CSK_Normal);
+  TemplateSpecCandidateSet FailedTemplateCandidates(D.getIdentifierLoc());
   for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();
        P != PEnd; ++P) {
     NamedDecl *Prev = *P;
@@ -10133,9 +10134,18 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
           if (Method->getPrimaryTemplate()) {
             TemplateMatches.addDecl(Method, P.getAccess());
           } else {
-            // FIXME: Can this assert ever happen?  Needs a test.
-            assert(!NonTemplateMatch && "Multiple NonTemplateMatches");
-            NonTemplateMatch = Method;
+            OverloadCandidate &C = NonTemplateMatches.addCandidate();
+            C.FoundDecl = P.getPair();
+            C.Function = Method;
+            C.Viable = true;
+            ConstraintSatisfaction S;
+            if (Method->getTrailingRequiresClause() &&
+                (CheckFunctionConstraints(Method, S, D.getIdentifierLoc(),
+                                          /*ForOverloadResolution=*/true) ||
+                 !S.IsSatisfied)) {
+              C.Viable = false;
+              C.FailureKind = ovl_fail_constraints_not_satisfied;
+            }
           }
         }
       }
@@ -10145,16 +10155,16 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (!FunTmpl)
       continue;
 
-    TemplateDeductionInfo Info(FailedCandidates.getLocation());
+    TemplateDeductionInfo Info(FailedTemplateCandidates.getLocation());
     FunctionDecl *Specialization = nullptr;
     if (TemplateDeductionResult TDK = DeduceTemplateArguments(
             FunTmpl, (HasExplicitTemplateArgs ? &TemplateArgs : nullptr), R,
             Specialization, Info);
         TDK != TemplateDeductionResult::Success) {
       // Keep track of almost-matches.
-      FailedCandidates.addCandidate()
-          .set(P.getPair(), FunTmpl->getTemplatedDecl(),
-               MakeDeductionFailureInfo(Context, TDK, Info));
+      FailedTemplateCandidates.addCandidate().set(
+          P.getPair(), FunTmpl->getTemplatedDecl(),
+          MakeDeductionFailureInfo(Context, TDK, Info));
       (void)TDK;
       continue;
     }
@@ -10168,7 +10178,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
         CUDA().IdentifyTarget(Specialization,
                               /* IgnoreImplicitHDAttr = */ true) !=
             CUDA().IdentifyTarget(D.getDeclSpec().getAttributes())) {
-      FailedCandidates.addCandidate().set(
+      FailedTemplateCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),
           MakeDeductionFailureInfo(
               Context, TemplateDeductionResult::CUDATargetMismatch, Info));
@@ -10178,12 +10188,40 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     TemplateMatches.addDecl(Specialization, P.getAccess());
   }
 
-  FunctionDecl *Specialization = NonTemplateMatch;
+  FunctionDecl *Specialization = nullptr;
+  if (!NonTemplateMatches.empty()) {
+    unsigned Msg = 0;
+    OverloadCandidateDisplayKind DisplayKind;
+    OverloadCandidateSet::iterator Best;
+    switch (NonTemplateMatches.BestViableFunction(*this, D.getIdentifierLoc(),
+                                                  Best)) {
+    case OR_Success:
+    case OR_Deleted:
+      Specialization = cast<FunctionDecl>(Best->Function);
+      break;
+    case OR_Ambiguous:
+      Msg = diag::err_explicit_instantiation_ambiguous;
+      DisplayKind = OCD_AmbiguousCandidates;
+      break;
+    case OR_No_Viable_Function:
+      Msg = diag::err_explicit_instantiation_no_candidate;
+      DisplayKind = OCD_AllCandidates;
+      break;
+    }
+    if (Msg) {
+      PartialDiagnostic Diag = PDiag(Msg) << Name;
+      NonTemplateMatches.NoteCandidates(
+          PartialDiagnosticAt(D.getIdentifierLoc(), Diag), *this, DisplayKind,
+          {});
+      return true;
+    }
+  }
+
   if (!Specialization) {
     // Find the most specialized function template specialization.
     UnresolvedSetIterator Result = getMostSpecialized(
-        TemplateMatches.begin(), TemplateMatches.end(), FailedCandidates,
-        D.getIdentifierLoc(),
+        TemplateMatches.begin(), TemplateMatches.end(),
+        FailedTemplateCandidates, D.getIdentifierLoc(),
         PDiag(diag::err_explicit_instantiation_not_known) << Name,
         PDiag(diag::err_explicit_instantiation_ambiguous) << Name,
         PDiag(diag::note_explicit_instantiation_candidate));

@@ -73,7 +73,7 @@ C++ Specific Potentially Breaking Changes
     template <> // error: extraneous template head
     template <typename T>
     void f();
-    
+
 ABI Changes in This Version
 ---------------------------
 
@@ -278,6 +278,7 @@ Bug Fixes to C++ Support
 - Properly reject defaulted copy/move assignment operators that have a non-reference explicit object parameter.
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
+- Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
