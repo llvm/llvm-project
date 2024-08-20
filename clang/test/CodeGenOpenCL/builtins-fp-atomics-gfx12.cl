@@ -48,7 +48,8 @@ void test_local_add_2f16_noret(__local half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_flat_add_2f16
-// CHECK: call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr %{{.*}}, <2 x half> %{{.*}})
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX12-LABEL:  test_flat_add_2f16
 // GFX12: flat_atomic_pk_add_f16
 half2 test_flat_add_2f16(__generic half2 *addr, half2 x) {
@@ -64,7 +65,8 @@ short2 test_flat_add_2bf16(__generic short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_global_add_half2
-// CHECK: call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %{{.*}}, <2 x half> %{{.*}})
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX12-LABEL:  test_global_add_half2
 // GFX12:  global_atomic_pk_add_f16 v2, v[0:1], v2, off th:TH_ATOMIC_RETURN
 void test_global_add_half2(__global half2 *addr, half2 x) {
@@ -73,7 +75,8 @@ void test_global_add_half2(__global half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_global_add_half2_noret
-// CHECK: call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %{{.*}}, <2 x half> %{{.*}})
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX12-LABEL:  test_global_add_half2_noret
 // GFX12:  global_atomic_pk_add_f16 v[0:1], v2, off
 void test_global_add_half2_noret(__global half2 *addr, half2 x) {

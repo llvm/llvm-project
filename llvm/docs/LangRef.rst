@@ -16819,7 +16819,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.lround`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
