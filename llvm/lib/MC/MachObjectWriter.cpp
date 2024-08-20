@@ -198,18 +198,14 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
 
   uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
-  if (PtrAuthABIVersion) {
-    assert(TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
-           Cpusubtype == MachO::CPU_SUBTYPE_ARM64E &&
-           "ptrauth ABI version is only supported on arm64e");
-    // Changes to this format should be reflected in MachO::getCPUSubType to
-    // support LTO.
-    // FIXME: Use MachO::getCPUSubType here. We can't use it for now because at
-    // the time we create TargetObjectWriter, we don't know if the assembler
-    // encountered any directives that affect the result.
+
+  // Promote arm64e subtypes to always be ptrauth-ABI-versioned, at version 0.
+  // We never need to emit unversioned binaries.
+  // And we don't support arbitrary ABI versions (or the kernel flag) yet.
+  if (TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+      Cpusubtype == MachO::CPU_SUBTYPE_ARM64E)
     Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
-        *PtrAuthABIVersion, PtrAuthKernelABIVersion);
-  }
+        /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/false);
 
   W.write<uint32_t>(Cpusubtype);
 
