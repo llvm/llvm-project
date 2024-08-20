@@ -34,6 +34,7 @@ enum AccessKinds {
   AK_TypeId,
   AK_Construct,
   AK_Destroy,
+  AK_IsWithinLifetime,
 };
 
 /// The order of this enum is important for diagnostics.
