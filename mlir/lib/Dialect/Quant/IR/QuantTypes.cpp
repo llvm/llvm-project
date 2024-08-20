@@ -29,9 +29,10 @@ bool QuantizedType::classof(Type type) {
 }
 
 LogicalResult
-QuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
-                      unsigned flags, Type storageType, Type expressedType,
-                      int64_t storageTypeMin, int64_t storageTypeMax) {
+QuantizedType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                unsigned flags, Type storageType,
+                                Type expressedType, int64_t storageTypeMin,
+                                int64_t storageTypeMax) {
   // Verify that the storage type is integral.
   // This restriction may be lifted at some point in favor of using bf16
   // or f16 as exact representations on hardware where that is advantageous.
@@ -233,11 +234,13 @@ AnyQuantizedType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 }
 
 LogicalResult
-AnyQuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
-                         unsigned flags, Type storageType, Type expressedType,
-                         int64_t storageTypeMin, int64_t storageTypeMax) {
-  if (failed(QuantizedType::verify(emitError, flags, storageType, expressedType,
-                                   storageTypeMin, storageTypeMax))) {
+AnyQuantizedType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                   unsigned flags, Type storageType,
+                                   Type expressedType, int64_t storageTypeMin,
+                                   int64_t storageTypeMax) {
+  if (failed(QuantizedType::verifyInvariants(emitError, flags, storageType,
+                                             expressedType, storageTypeMin,
+                                             storageTypeMax))) {
     return failure();
   }
 
@@ -268,12 +271,13 @@ UniformQuantizedType UniformQuantizedType::getChecked(
                           storageTypeMin, storageTypeMax);
 }
 
-LogicalResult UniformQuantizedType::verify(
+LogicalResult UniformQuantizedType::verifyInvariants(
     function_ref<InFlightDiagnostic()> emitError, unsigned flags,
     Type storageType, Type expressedType, double scale, int64_t zeroPoint,
     int64_t storageTypeMin, int64_t storageTypeMax) {
-  if (failed(QuantizedType::verify(emitError, flags, storageType, expressedType,
-                                   storageTypeMin, storageTypeMax))) {
+  if (failed(QuantizedType::verifyInvariants(emitError, flags, storageType,
+                                             expressedType, storageTypeMin,
+                                             storageTypeMax))) {
     return failure();
   }
 
@@ -321,13 +325,14 @@ UniformQuantizedPerAxisType UniformQuantizedPerAxisType::getChecked(
                           quantizedDimension, storageTypeMin, storageTypeMax);
 }
 
-LogicalResult UniformQuantizedPerAxisType::verify(
+LogicalResult UniformQuantizedPerAxisType::verifyInvariants(
     function_ref<InFlightDiagnostic()> emitError, unsigned flags,
     Type storageType, Type expressedType, ArrayRef<double> scales,
     ArrayRef<int64_t> zeroPoints, int32_t quantizedDimension,
     int64_t storageTypeMin, int64_t storageTypeMax) {
-  if (failed(QuantizedType::verify(emitError, flags, storageType, expressedType,
-                                   storageTypeMin, storageTypeMax))) {
+  if (failed(QuantizedType::verifyInvariants(emitError, flags, storageType,
+                                             expressedType, storageTypeMin,
+                                             storageTypeMax))) {
     return failure();
   }
 
@@ -380,9 +385,9 @@ CalibratedQuantizedType CalibratedQuantizedType::getChecked(
                           min, max);
 }
 
-LogicalResult
-CalibratedQuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                Type expressedType, double min, double max) {
+LogicalResult CalibratedQuantizedType::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError, Type expressedType,
+    double min, double max) {
   // Verify that the expressed type is floating point.
   // If this restriction is ever eliminated, the parser/printer must be
   // extended.

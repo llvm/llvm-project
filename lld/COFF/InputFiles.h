@@ -82,7 +82,9 @@ public:
   virtual void parse() = 0;
 
   // Returns the CPU type this file was compiled to.
-  virtual MachineTypes getMachineType() { return IMAGE_FILE_MACHINE_UNKNOWN; }
+  virtual MachineTypes getMachineType() const {
+    return IMAGE_FILE_MACHINE_UNKNOWN;
+  }
 
   MemoryBufferRef mb;
 
@@ -133,7 +135,7 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
-  MachineTypes getMachineType() override;
+  MachineTypes getMachineType() const override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
   ArrayRef<SectionChunk *> getSXDataChunks() { return sxDataChunks; }
@@ -342,6 +344,7 @@ public:
   explicit ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m);
 
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
+  MachineTypes getMachineType() const override;
 
   Symbol *impSym = nullptr;
   Symbol *thunkSym = nullptr;
@@ -376,7 +379,7 @@ public:
   ~BitcodeFile();
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
-  MachineTypes getMachineType() override;
+  MachineTypes getMachineType() const override;
   void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
 
@@ -393,7 +396,7 @@ public:
       : InputFile(ctx, DLLKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
-  MachineTypes getMachineType() override;
+  MachineTypes getMachineType() const override;
 
   struct Symbol {
     StringRef dllName;

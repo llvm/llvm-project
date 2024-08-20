@@ -58,6 +58,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -756,9 +757,7 @@ static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &context,
                              const clang::QualType Type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
-  unsigned Width = Type->isBooleanType()  ? 1
-                   : Type->isBitIntType() ? context.getIntWidth(Type)
-                                          : context.getTypeInfo(Type).Width;
+  unsigned Width = context.getIntWidth(Type);
   bool Signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
@@ -989,7 +988,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // attribute.
     return nullptr;
 
-  const FieldDecl *CountedByFD = FindCountedByField(FAMDecl);
+  const FieldDecl *CountedByFD = FAMDecl->findCountedByField();
   if (!CountedByFD)
     // Can't find the field referenced by the "counted_by" attribute.
     return nullptr;
@@ -13938,6 +13937,54 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
     IID = llvm::Intrinsic::x86_avx512_vfmaddsub_pd_512;
     break;
+  case clang::X86::BI__builtin_ia32_vfmsubph256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddph256;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubaddph256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddsubph256;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubps256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddps256;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubpd256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddpd256;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubaddps256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddsubps256;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubaddpd256_round_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask3:
+    IID = llvm::Intrinsic::x86_avx10_vfmaddsubpd256;
+    break;
   }
 
   Value *A = Ops[0];
@@ -13977,6 +14024,12 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask:
     MaskFalseVal = Ops[0];
     break;
   case clang::X86::BI__builtin_ia32_vfmaddph512_maskz:
@@ -13985,6 +14038,12 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_maskz:
     MaskFalseVal = Constant::getNullValue(Ops[0]->getType());
     break;
   case clang::X86::BI__builtin_ia32_vfmsubph512_mask3:
@@ -13999,6 +14058,18 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask3:
   case clang::X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubph256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubps256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubpd256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddph256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddps256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddpd256_round_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask3:
     MaskFalseVal = Ops[2];
     break;
   }
@@ -14300,13 +14371,13 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 }
 
 Value *CodeGenFunction::EmitRISCVCpuInit() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {VoidPtrTy}, false);
   llvm::FunctionCallee Func =
       CGM.CreateRuntimeFunction(FTy, "__init_riscv_feature_bits");
   auto *CalleeGV = cast<llvm::GlobalValue>(Func.getCallee());
   CalleeGV->setDSOLocal(true);
   CalleeGV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-  return Builder.CreateCall(Func);
+  return Builder.CreateCall(Func, {llvm::ConstantPointerNull::get(VoidPtrTy)});
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {
@@ -14390,10 +14461,10 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
     return FeaturesBit;
   };
 
-  int BitPos = RISCVISAInfo::getRISCVFeaturesBitPosition(FeatureStr);
+  auto [GroupID, BitPos] = RISCVISAInfo::getRISCVFeaturesBitsInfo(FeatureStr);
   assert(BitPos != -1 && "validation should have rejected this feature");
   Value *MaskV = Builder.getInt64(1ULL << BitPos);
-  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(0), MaskV);
+  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(GroupID), MaskV);
   return Builder.CreateICmpEQ(Bitset, MaskV);
 }
 
@@ -14686,6 +14757,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcvtw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtdq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtqq2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtdq2ph256_round_mask:
+  case X86::BI__builtin_ia32_vcvtdq2ps256_round_mask:
+  case X86::BI__builtin_ia32_vcvtqq2pd256_round_mask:
+  case X86::BI__builtin_ia32_vcvtqq2ph256_round_mask:
+  case X86::BI__builtin_ia32_vcvtqq2ps256_round_mask:
+  case X86::BI__builtin_ia32_vcvtw2ph256_round_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ true);
   case X86::BI__builtin_ia32_cvtudq2ps512_mask:
   case X86::BI__builtin_ia32_cvtuqq2ps512_mask:
@@ -14693,6 +14770,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtudq2ph256_round_mask:
+  case X86::BI__builtin_ia32_vcvtudq2ps256_round_mask:
+  case X86::BI__builtin_ia32_vcvtuqq2pd256_round_mask:
+  case X86::BI__builtin_ia32_vcvtuqq2ph256_round_mask:
+  case X86::BI__builtin_ia32_vcvtuqq2ps256_round_mask:
+  case X86::BI__builtin_ia32_vcvtuw2ph256_round_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ false);
 
   case X86::BI__builtin_ia32_vfmaddss3:
@@ -14736,6 +14819,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddpd512_mask3:
   case X86::BI__builtin_ia32_vfmsubpd512_mask3:
   case X86::BI__builtin_ia32_vfmsubph512_mask3:
+  case X86::BI__builtin_ia32_vfmaddph256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddph256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddph256_round_mask3:
+  case X86::BI__builtin_ia32_vfmaddps256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddps256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddps256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubps256_round_mask3:
+  case X86::BI__builtin_ia32_vfmaddpd256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddpd256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddpd256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubpd256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubph256_round_mask3:
     return EmitX86FMAExpr(*this, E, Ops, BuiltinID, /*IsAddSub*/ false);
   case X86::BI__builtin_ia32_vfmaddsubph512_mask:
   case X86::BI__builtin_ia32_vfmaddsubph512_maskz:
@@ -14749,6 +14844,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
   case X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
   case X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubph256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddsubph256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubph256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddph256_round_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubps256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddsubps256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubps256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddps256_round_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubpd256_round_mask:
+  case X86::BI__builtin_ia32_vfmaddsubpd256_round_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubpd256_round_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddpd256_round_mask3:
     return EmitX86FMAExpr(*this, E, Ops, BuiltinID, /*IsAddSub*/ true);
 
   case X86::BI__builtin_ia32_movdqa32store128_mask:
@@ -16329,6 +16436,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmppd128_mask:
   case X86::BI__builtin_ia32_cmppd256_mask:
   case X86::BI__builtin_ia32_cmppd512_mask:
+  case X86::BI__builtin_ia32_vcmppd256_round_mask:
+  case X86::BI__builtin_ia32_vcmpps256_round_mask:
+  case X86::BI__builtin_ia32_vcmpph256_round_mask:
     IsMaskFCmp = true;
     [[fallthrough]];
   case X86::BI__builtin_ia32_cmpps:
@@ -16829,6 +16939,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = IsConjFMA
                             ? Intrinsic::x86_avx512fp16_mask_vfcmadd_cph_512
                             : Intrinsic::x86_avx512fp16_mask_vfmadd_cph_512;
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+    return EmitX86Select(*this, Ops[3], Call, Ops[0]);
+  }
+  case X86::BI__builtin_ia32_vfcmaddcph256_round_mask:
+    IsConjFMA = true;
+    LLVM_FALLTHROUGH;
+  case X86::BI__builtin_ia32_vfmaddcph256_round_mask: {
+    Intrinsic::ID IID = IsConjFMA ? Intrinsic::x86_avx10_mask_vfcmaddcph256
+                                  : Intrinsic::x86_avx10_mask_vfmaddcph256;
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     return EmitX86Select(*this, Ops[3], Call, Ops[0]);
   }
@@ -18452,6 +18571,31 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
         ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
   }
+  case Builtin::BI__builtin_hlsl_length: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "length operand must have a float representation");
+    // if the operand is a scalar, we can use the fabs llvm intrinsic directly
+    if (!E->getArg(0)->getType()->isVectorType())
+      return EmitFAbs(*this, X);
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType()->getScalarType(),
+        CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.length");
+  }
+  case Builtin::BI__builtin_hlsl_normalize: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "normalize operand must have a float representation");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType(),
+        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.normalize");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -18776,8 +18920,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
@@ -18789,16 +18931,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID;
     llvm::Type *ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
-      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getHalfTy(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
       IID = Intrinsic::amdgcn_global_atomic_fadd;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
@@ -19223,7 +19358,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_faddf:
   case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19239,6 +19376,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
@@ -19273,9 +19412,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
                               EmitScalarExpr(E->getArg(3)), AO, SSID);
     } else {
-      // The ds_atomic_fadd_* builtins do not have syncscope/order arguments.
-      SSID = llvm::SyncScope::System;
-      AO = AtomicOrdering::SequentiallyConsistent;
+      // Most of the builtins do not have syncscope/order arguments. For DS
+      // atomics the scope doesn't really matter, as they implicitly operate at
+      // workgroup scope.
+      //
+      // The global/flat cases need to use agent scope to consistently produce
+      // the native instruction instead of a cmpxchg expansion.
+      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
       if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
@@ -19289,6 +19433,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+
+    unsigned AddrSpace = Ptr.getType()->getAddressSpace();
+    if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
+      // Most targets require "amdgpu.no.fine.grained.memory" to emit the native
+      // instruction for flat and global operations.
+      llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
+      RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+
+      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // instruction, but this only matters for float fadd.
+      if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
+        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+    }
+
     return Builder.CreateBitCast(RMW, OrigTy);
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:

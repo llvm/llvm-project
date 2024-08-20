@@ -1,5 +1,6 @@
 // Check how builtins using varargs behave with the modules.
 
+// REQUIRES: x86-registered-target
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
