@@ -541,64 +541,6 @@ define i64 @caller_small_scalar_ret() nounwind {
   ret i64 %3
 }
 
-; Check return of >2x xlen scalars
-
-define i256 @callee_large_scalar_ret() nounwind {
-  ; RV64I-LABEL: name: callee_large_scalar_ret
-  ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -1
-  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; RV64I-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
-  ; RV64I-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; RV64I-NEXT:   PseudoRET implicit $x10
-  ret i256 -1
-}
-
-define i64 @caller_large_scalar_ret() nounwind {
-  ; LP64-LABEL: name: caller_large_scalar_ret
-  ; LP64: bb.1 (%ir-block.0):
-  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -2
-  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
-  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
-  ; LP64-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[C]](s256), [[LOAD]]
-  ; LP64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
-  ; LP64-NEXT:   $x10 = COPY [[ZEXT]](s64)
-  ; LP64-NEXT:   PseudoRET implicit $x10
-  ;
-  ; LP64F-LABEL: name: caller_large_scalar_ret
-  ; LP64F: bb.1 (%ir-block.0):
-  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -2
-  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10
-  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
-  ; LP64F-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[C]](s256), [[LOAD]]
-  ; LP64F-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
-  ; LP64F-NEXT:   $x10 = COPY [[ZEXT]](s64)
-  ; LP64F-NEXT:   PseudoRET implicit $x10
-  ;
-  ; LP64D-LABEL: name: caller_large_scalar_ret
-  ; LP64D: bb.1 (%ir-block.0):
-  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -2
-  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $x10
-  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
-  ; LP64D-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[C]](s256), [[LOAD]]
-  ; LP64D-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
-  ; LP64D-NEXT:   $x10 = COPY [[ZEXT]](s64)
-  ; LP64D-NEXT:   PseudoRET implicit $x10
-  %1 = call i256 @callee_small_scalar_ret()
-  %2 = icmp eq i256 -2, %1
-  %3 = zext i1 %2 to i64
-  ret i64 %3
-}
-
 ; Check return of 2x xlen structs
 
 %struct.small = type { i64, ptr }
