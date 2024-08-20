@@ -41,9 +41,7 @@ struct Impl : RecursiveASTVisitor<Impl> {
   bool TraverseDecl(Decl *D) { return Visitor.TraverseDecl(D); }
   bool TraverseType(QualType T) { return Visitor.TraverseType(T); }
   bool TraverseTypeLoc(TypeLoc TL) { return Visitor.TraverseTypeLoc(TL); }
-  bool TraverseStmt(Stmt *S) {
-    return Visitor.TraverseStmt(S);
-  }
+  bool TraverseStmt(Stmt *S) { return Visitor.TraverseStmt(S); }
 
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
     return Visitor.TraverseConstructorInitializer(Init);
@@ -115,7 +113,7 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   // TraverseStmt() always passes in a queue, so we have no choice but to
   // accept it as a parameter here.
-  bool dataTraverseNode(Stmt *S, DataRecursionQueue* = nullptr) {
+  bool dataTraverseNode(Stmt *S, DataRecursionQueue * = nullptr) {
     // But since don't support postorder traversal, we don't need it, so
     // simply discard it here. This way, derived classes don't need to worry
     // about including it as a parameter that they never use.
@@ -196,7 +194,7 @@ struct Impl : RecursiveASTVisitor<Impl> {
 };
 } // namespace
 
-void DynamicRecursiveASTVisitor::anchor() { }
+void DynamicRecursiveASTVisitor::anchor() {}
 
 bool DynamicRecursiveASTVisitor::TraverseAST(ASTContext &AST) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseAST(AST);
@@ -259,8 +257,10 @@ bool DynamicRecursiveASTVisitor::TraverseTypeConstraint(
     const TypeConstraint *C) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTypeConstraint(C);
 }
-bool DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseObjCProtocolLoc(ProtocolLoc);
+bool DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(
+    ObjCProtocolLoc ProtocolLoc) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseObjCProtocolLoc(
+      ProtocolLoc);
 }
 
 bool DynamicRecursiveASTVisitor::TraverseConceptRequirement(
@@ -287,7 +287,6 @@ bool DynamicRecursiveASTVisitor::TraverseConceptReference(
     ConceptReference *CR) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptReference(CR);
 }
-
 
 bool DynamicRecursiveASTVisitor::TraverseCXXBaseSpecifier(
     const CXXBaseSpecifier &Base) {

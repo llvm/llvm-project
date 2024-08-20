@@ -18,13 +18,11 @@ namespace {
 /// The name recorded for the match is the name of the class whose constructor
 /// is invoked by the CXXConstructExpr, not the name of the class whose
 /// constructor the CXXConstructExpr is contained in.
-class ConstructExprVisitor : public ExpectedLocationVisitor  {
+class ConstructExprVisitor : public ExpectedLocationVisitor {
 public:
-  ConstructExprVisitor() {
-    ShouldVisitImplicitCode = false;
-  }
+  ConstructExprVisitor() { ShouldVisitImplicitCode = false; }
 
-  bool VisitCXXConstructExpr(CXXConstructExpr* Expr) override {
+  bool VisitCXXConstructExpr(CXXConstructExpr *Expr) override {
     if (const CXXConstructorDecl* Ctor = Expr->getConstructor()) {
       if (const CXXRecordDecl* Class = Ctor->getParent()) {
         Match(Class->getName(), Expr->getLocation());

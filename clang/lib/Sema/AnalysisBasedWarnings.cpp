@@ -16,13 +16,13 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1067,82 +1067,79 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
 }
 
 namespace {
-  class FallthroughMapper final : public DynamicRecursiveASTVisitor {
-  public:
-    FallthroughMapper(Sema &S)
-      : FoundSwitchStatements(false),
-        S(S) {
-      ShouldWalkTypesOfTypeLocs = false;
+class FallthroughMapper final : public DynamicRecursiveASTVisitor {
+public:
+  FallthroughMapper(Sema &S) : FoundSwitchStatements(false), S(S) {
+    ShouldWalkTypesOfTypeLocs = false;
+  }
+
+  bool foundSwitchStatements() const { return FoundSwitchStatements; }
+
+  void markFallthroughVisited(const AttributedStmt *Stmt) {
+    bool Found = FallthroughStmts.erase(Stmt);
+    assert(Found);
+    (void)Found;
+  }
+
+  typedef llvm::SmallPtrSet<const AttributedStmt *, 8> AttrStmts;
+
+  const AttrStmts &getFallthroughStmts() const { return FallthroughStmts; }
+
+  void fillReachableBlocks(CFG *Cfg) {
+    assert(ReachableBlocks.empty() && "ReachableBlocks already filled");
+    std::deque<const CFGBlock *> BlockQueue;
+
+    ReachableBlocks.insert(&Cfg->getEntry());
+    BlockQueue.push_back(&Cfg->getEntry());
+    // Mark all case blocks reachable to avoid problems with switching on
+    // constants, covered enums, etc.
+    // These blocks can contain fall-through annotations, and we don't want to
+    // issue a warn_fallthrough_attr_unreachable for them.
+    for (const auto *B : *Cfg) {
+      const Stmt *L = B->getLabel();
+      if (isa_and_nonnull<SwitchCase>(L) && ReachableBlocks.insert(B).second)
+        BlockQueue.push_back(B);
     }
 
-    bool foundSwitchStatements() const { return FoundSwitchStatements; }
-
-    void markFallthroughVisited(const AttributedStmt *Stmt) {
-      bool Found = FallthroughStmts.erase(Stmt);
-      assert(Found);
-      (void)Found;
-    }
-
-    typedef llvm::SmallPtrSet<const AttributedStmt*, 8> AttrStmts;
-
-    const AttrStmts &getFallthroughStmts() const {
-      return FallthroughStmts;
-    }
-
-    void fillReachableBlocks(CFG *Cfg) {
-      assert(ReachableBlocks.empty() && "ReachableBlocks already filled");
-      std::deque<const CFGBlock *> BlockQueue;
-
-      ReachableBlocks.insert(&Cfg->getEntry());
-      BlockQueue.push_back(&Cfg->getEntry());
-      // Mark all case blocks reachable to avoid problems with switching on
-      // constants, covered enums, etc.
-      // These blocks can contain fall-through annotations, and we don't want to
-      // issue a warn_fallthrough_attr_unreachable for them.
-      for (const auto *B : *Cfg) {
-        const Stmt *L = B->getLabel();
-        if (isa_and_nonnull<SwitchCase>(L) && ReachableBlocks.insert(B).second)
+    while (!BlockQueue.empty()) {
+      const CFGBlock *P = BlockQueue.front();
+      BlockQueue.pop_front();
+      for (const CFGBlock *B : P->succs()) {
+        if (B && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
       }
-
-      while (!BlockQueue.empty()) {
-        const CFGBlock *P = BlockQueue.front();
-        BlockQueue.pop_front();
-        for (const CFGBlock *B : P->succs()) {
-          if (B && ReachableBlocks.insert(B).second)
-            BlockQueue.push_back(B);
-        }
-      }
     }
+  }
 
-    bool checkFallThroughIntoBlock(const CFGBlock &B, int &AnnotatedCnt,
-                                   bool IsTemplateInstantiation) {
-      assert(!ReachableBlocks.empty() && "ReachableBlocks empty");
+  bool checkFallThroughIntoBlock(const CFGBlock &B, int &AnnotatedCnt,
+                                 bool IsTemplateInstantiation) {
+    assert(!ReachableBlocks.empty() && "ReachableBlocks empty");
 
-      int UnannotatedCnt = 0;
-      AnnotatedCnt = 0;
+    int UnannotatedCnt = 0;
+    AnnotatedCnt = 0;
 
-      std::deque<const CFGBlock*> BlockQueue(B.pred_begin(), B.pred_end());
-      while (!BlockQueue.empty()) {
-        const CFGBlock *P = BlockQueue.front();
-        BlockQueue.pop_front();
-        if (!P) continue;
+    std::deque<const CFGBlock *> BlockQueue(B.pred_begin(), B.pred_end());
+    while (!BlockQueue.empty()) {
+      const CFGBlock *P = BlockQueue.front();
+      BlockQueue.pop_front();
+      if (!P)
+        continue;
 
-        const Stmt *Term = P->getTerminatorStmt();
-        if (isa_and_nonnull<SwitchStmt>(Term))
-          continue; // Switch statement, good.
+      const Stmt *Term = P->getTerminatorStmt();
+      if (isa_and_nonnull<SwitchStmt>(Term))
+        continue; // Switch statement, good.
 
-        const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
-        if (SW && SW->getSubStmt() == B.getLabel() && P->begin() == P->end())
-          continue; // Previous case label has no statements, good.
+      const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
+      if (SW && SW->getSubStmt() == B.getLabel() && P->begin() == P->end())
+        continue; // Previous case label has no statements, good.
 
-        const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
-        if (L && L->getSubStmt() == B.getLabel() && P->begin() == P->end())
-          continue; // Case label is preceded with a normal label, good.
+      const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
+      if (L && L->getSubStmt() == B.getLabel() && P->begin() == P->end())
+        continue; // Case label is preceded with a normal label, good.
 
-        if (!ReachableBlocks.count(P)) {
-          for (const CFGElement &Elem : llvm::reverse(*P)) {
-            if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
+      if (!ReachableBlocks.count(P)) {
+        for (const CFGElement &Elem : llvm::reverse(*P)) {
+          if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
             if (const AttributedStmt *AS = asFallThroughAttr(CS->getStmt())) {
               // Don't issue a warning for an unreachable fallthrough
               // attribute in template instantiations as it may not be
@@ -1240,7 +1237,7 @@ namespace {
     AttrStmts FallthroughStmts;
     Sema &S;
     llvm::SmallPtrSet<const CFGBlock *, 16> ReachableBlocks;
-  };
+};
 } // anonymous namespace
 
 static StringRef getFallthroughAttrSpelling(Preprocessor &PP,

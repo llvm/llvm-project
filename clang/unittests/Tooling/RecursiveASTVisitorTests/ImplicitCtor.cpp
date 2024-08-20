@@ -15,7 +15,7 @@ namespace {
 // A visitor that visits implicit declarations and matches constructors.
 class ImplicitCtorVisitor : public ExpectedLocationVisitor {
 public:
-    bool VisitCXXConstructorDecl(CXXConstructorDecl* Ctor) override {
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
     if (Ctor->isImplicit()) {  // Was not written in source code
       if (const CXXRecordDecl* Class = Ctor->getParent()) {
         Match(Class->getName(), Ctor->getLocation());

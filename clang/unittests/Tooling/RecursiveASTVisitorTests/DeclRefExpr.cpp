@@ -14,9 +14,7 @@ namespace {
 
 class DeclRefExprVisitor : public ExpectedLocationVisitor {
 public:
-  DeclRefExprVisitor() {
-    ShouldVisitImplicitCode = false;
-  }
+  DeclRefExprVisitor() { ShouldVisitImplicitCode = false; }
 
   bool VisitDeclRefExpr(DeclRefExpr *Reference) override {
     Match(Reference->getNameInfo().getAsString(), Reference->getLocation());

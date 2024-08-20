@@ -49,11 +49,21 @@ public:
       Args.push_back("-x");
       Args.push_back("c");
       break;
-    case Lang_CXX98: Args.push_back("-std=c++98"); break;
-    case Lang_CXX11: Args.push_back("-std=c++11"); break;
-    case Lang_CXX14: Args.push_back("-std=c++14"); break;
-    case Lang_CXX17: Args.push_back("-std=c++17"); break;
-    case Lang_CXX2a: Args.push_back("-std=c++2a"); break;
+    case Lang_CXX98:
+      Args.push_back("-std=c++98");
+      break;
+    case Lang_CXX11:
+      Args.push_back("-std=c++11");
+      break;
+    case Lang_CXX14:
+      Args.push_back("-std=c++14");
+      break;
+    case Lang_CXX17:
+      Args.push_back("-std=c++17");
+      break;
+    case Lang_CXX2a:
+      Args.push_back("-std=c++2a");
+      break;
     case Lang_OBJC:
       Args.push_back("-ObjC");
       Args.push_back("-fobjc-runtime=macosx-10.12.0");
@@ -70,7 +80,7 @@ public:
 protected:
   TestVisitorHelper() = default;
   virtual ~TestVisitorHelper() = default;
-  virtual void InvokeTraverseDecl(TranslationUnitDecl* D) = 0;
+  virtual void InvokeTraverseDecl(TranslationUnitDecl *D) = 0;
 
   virtual std::unique_ptr<ASTFrontendAction> CreateTestAction() {
     return std::make_unique<TestAction>(this);
@@ -130,14 +140,15 @@ public:
   virtual ~ExpectedLocationVisitorHelper() {
     // FIXME: Range-based for loop.
     for (std::vector<ExpectedMatch>::const_iterator
-             It = ExpectedMatches.begin(), End = ExpectedMatches.end();
+             It = ExpectedMatches.begin(),
+             End = ExpectedMatches.end();
          It != End; ++It) {
       It->ExpectFound();
-         }
+    }
   }
 
 protected:
-  virtual ASTContext* getASTContext() = 0;
+  virtual ASTContext *getASTContext() = 0;
 
   /// \brief Checks an actual match against expected and disallowed matches.
   ///
@@ -148,18 +159,19 @@ protected:
 
     // FIXME: Range-based for loop.
     for (std::vector<MatchCandidate>::const_iterator
-             It = DisallowedMatches.begin(), End = DisallowedMatches.end();
+             It = DisallowedMatches.begin(),
+             End = DisallowedMatches.end();
          It != End; ++It) {
       EXPECT_FALSE(It->Matches(Name, FullLocation))
           << "Matched disallowed " << *It;
-         }
+    }
 
     // FIXME: Range-based for loop.
-    for (std::vector<ExpectedMatch>::iterator
-             It = ExpectedMatches.begin(), End = ExpectedMatches.end();
+    for (std::vector<ExpectedMatch>::iterator It = ExpectedMatches.begin(),
+                                              End = ExpectedMatches.end();
          It != End; ++It) {
       It->UpdateFor(Name, FullLocation, getASTContext()->getSourceManager());
-         }
+    }
   }
 
 private:
@@ -213,7 +225,7 @@ private:
         llvm::raw_string_ostream Stream(PartialMatches);
         Stream << ", partial match: \"" << Name << "\" at ";
         Location.print(Stream, SM);
-                 }
+      }
     }
 
     void ExpectFound() const {
@@ -232,7 +244,7 @@ private:
   std::vector<MatchCandidate> DisallowedMatches;
   std::vector<ExpectedMatch> ExpectedMatches;
 };
-}
+} // namespace detail
 
 /// \brief Base class for simple (Dynamic)RecursiveASTVisitor based tests.
 ///
@@ -251,9 +263,7 @@ public:
     ShouldVisitImplicitCode = true;
   }
 
-  void InvokeTraverseDecl(TranslationUnitDecl* D) override {
-    TraverseDecl(D);
-  }
+  void InvokeTraverseDecl(TranslationUnitDecl *D) override { TraverseDecl(D); }
 };
 
 /// \brief A RecursiveASTVisitor to check that certain matches are (or are
@@ -269,6 +279,6 @@ class ExpectedLocationVisitor : public TestVisitor,
                                 public detail::ExpectedLocationVisitorHelper {
   ASTContext *getASTContext() override { return Context; }
 };
-}
+} // namespace clang
 
 #endif

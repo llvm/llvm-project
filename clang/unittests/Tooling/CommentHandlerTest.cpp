@@ -22,8 +22,7 @@ struct Comment {
 class CommentVerifier;
 typedef std::vector<Comment> CommentList;
 
-class CommentHandlerVisitor : public TestVisitor,
-                              public CommentHandler {
+class CommentHandlerVisitor : public TestVisitor, public CommentHandler {
 public:
   CommentHandlerVisitor() : PP(nullptr), Verified(false) {}
 

@@ -15,9 +15,7 @@ namespace {
 // Matches (optional) explicit template parameters.
 class LambdaTemplateParametersVisitor : public ExpectedLocationVisitor {
 public:
-  LambdaTemplateParametersVisitor() {
-    ShouldVisitImplicitCode = false;
-  }
+  LambdaTemplateParametersVisitor() { ShouldVisitImplicitCode = false; }
 
   bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) override {
     EXPECT_FALSE(D->isImplicit());

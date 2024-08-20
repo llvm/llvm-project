@@ -9,8 +9,8 @@
 #include "IndexingContext.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TypeLoc.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -160,7 +160,8 @@ public:
     }
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) override {
+  bool VisitTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc TL) override {
     auto *T = TL.getTypePtr();
     if (!T)
       return true;
@@ -170,7 +171,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) override {
+  bool TraverseTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc TL) override {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -190,7 +192,8 @@ public:
     return true;
   }
 
-  bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) override {
+  bool VisitDeducedTemplateSpecializationTypeLoc(
+      DeducedTemplateSpecializationTypeLoc TL) override {
     auto *T = TL.getTypePtr();
     if (!T)
       return true;

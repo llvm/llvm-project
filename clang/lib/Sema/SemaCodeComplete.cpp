@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -22,7 +23,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
@@ -5442,7 +5442,8 @@ private:
     }
 
     // In T.foo or T->foo, `foo` is a member function/variable.
-    bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
+    bool
+    VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
       const Type *Base = E->getBaseType().getTypePtr();
       bool IsArrow = E->isArrow();
       if (Base->isPointerType() && IsArrow) {

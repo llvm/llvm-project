@@ -14,10 +14,10 @@ namespace {
 
 class VarDeclVisitor : public ExpectedLocationVisitor {
 public:
- bool VisitVarDecl(VarDecl *Variable) override {
-   Match(Variable->getNameAsString(), Variable->getBeginLoc());
-   return true;
- }
+  bool VisitVarDecl(VarDecl *Variable) override {
+    Match(Variable->getNameAsString(), Variable->getBeginLoc());
+    return true;
+  }
 };
 
 TEST(RecursiveASTVisitor, VisitsCXXForRangeStmtLoopVariable) {
@@ -31,9 +31,7 @@ TEST(RecursiveASTVisitor, VisitsCXXForRangeStmtLoopVariable) {
 
 class ParmVarDeclVisitorForImplicitCode : public ExpectedLocationVisitor {
 public:
-  ParmVarDeclVisitorForImplicitCode() {
-    ShouldVisitImplicitCode = true;
-  }
+  ParmVarDeclVisitorForImplicitCode() { ShouldVisitImplicitCode = true; }
 
   bool VisitParmVarDecl(ParmVarDecl *ParamVar) override {
     Match(ParamVar->getNameAsString(), ParamVar->getBeginLoc());

@@ -29,7 +29,7 @@ typedef std::map<std::string, bool> VarInfoMap;
 /// \brief Records information on variable initializers to a map.
 class EvaluateConstantInitializersVisitor
     : public clang::DynamicRecursiveASTVisitor {
- public:
+public:
   explicit EvaluateConstantInitializersVisitor(VarInfoMap &VarInfo)
       : VarInfo(VarInfo) {}
 

@@ -232,7 +232,7 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(*CtorInit);
   }
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& TAL) override {
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) override {
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(TAL);
   }
@@ -254,9 +254,11 @@ public:
       return false;
     return DynamicRecursiveASTVisitor::TraverseStmt(Node->getBody());
   }
-  bool TraverseCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *Node) override {
+  bool TraverseCXXRewrittenBinaryOperator(
+      CXXRewrittenBinaryOperator *Node) override {
     if (!Finder->isTraversalIgnoringImplicitNodes())
-      return DynamicRecursiveASTVisitor::TraverseCXXRewrittenBinaryOperator(Node);
+      return DynamicRecursiveASTVisitor::TraverseCXXRewrittenBinaryOperator(
+          Node);
     if (!Node)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -326,10 +328,12 @@ private:
   // Forwards the call to the corresponding Traverse*() method in the
   // base visitor class.
   bool baseTraverse(const Decl &DeclNode) {
-    return DynamicRecursiveASTVisitor::TraverseDecl(const_cast<Decl*>(&DeclNode));
+    return DynamicRecursiveASTVisitor::TraverseDecl(
+        const_cast<Decl *>(&DeclNode));
   }
   bool baseTraverse(const Stmt &StmtNode) {
-    return DynamicRecursiveASTVisitor::TraverseStmt(const_cast<Stmt*>(&StmtNode));
+    return DynamicRecursiveASTVisitor::TraverseStmt(
+        const_cast<Stmt *>(&StmtNode));
   }
   bool baseTraverse(QualType TypeNode) {
     return DynamicRecursiveASTVisitor::TraverseType(TypeNode);
@@ -339,7 +343,7 @@ private:
   }
   bool baseTraverse(const NestedNameSpecifier &NNS) {
     return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifier(
-        const_cast<NestedNameSpecifier*>(&NNS));
+        const_cast<NestedNameSpecifier *>(&NNS));
   }
   bool baseTraverse(NestedNameSpecifierLoc NNS) {
     return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
@@ -352,7 +356,8 @@ private:
     return DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(TAL);
   }
   bool baseTraverse(const Attr &AttrNode) {
-    return DynamicRecursiveASTVisitor::TraverseAttr(const_cast<Attr *>(&AttrNode));
+    return DynamicRecursiveASTVisitor::TraverseAttr(
+        const_cast<Attr *>(&AttrNode));
   }
 
   // Sets 'Matched' to true if 'Matcher' matches 'Node' and:
@@ -500,7 +505,7 @@ public:
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) override;
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override;
   bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit) override;
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& TAL) override;
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) override;
   bool TraverseAttr(Attr *AttrNode) override;
 
   bool dataTraverseNode(Stmt *S) override {
@@ -744,20 +749,17 @@ public:
 
   bool TraverseTemplateInstantiations(ClassTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
   bool TraverseTemplateInstantiations(VarTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
   bool TraverseTemplateInstantiations(FunctionTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
 private:
@@ -1503,8 +1505,7 @@ bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
   // because the traversal is already done in the parallel "Loc"-hierarchy.
   if (NNS.hasQualifier())
     match(*NNS.getNestedNameSpecifier());
-  return
-      DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
+  return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
 }
 
 bool MatchASTVisitor::TraverseConstructorInitializer(
@@ -1522,11 +1523,11 @@ bool MatchASTVisitor::TraverseConstructorInitializer(
 
   match(*CtorInit);
 
-  return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(
-      CtorInit);
+  return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(CtorInit);
 }
 
-bool MatchASTVisitor::TraverseTemplateArgumentLoc(const TemplateArgumentLoc& Loc) {
+bool MatchASTVisitor::TraverseTemplateArgumentLoc(
+    const TemplateArgumentLoc &Loc) {
   match(Loc);
   return DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(Loc);
 }

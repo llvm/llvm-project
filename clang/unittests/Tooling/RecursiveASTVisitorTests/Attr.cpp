@@ -30,7 +30,6 @@ public:
   }
 };
 
-
 TEST(RecursiveASTVisitor, AttributesAreVisited) {
   AttrVisitor Visitor;
   Visitor.ExpectMatch("Attr", 4, 24);

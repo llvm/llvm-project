@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ParentMap.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -711,7 +711,7 @@ static bool isObjCTypeParamDependent(QualType Type) {
   // an Objective-C type can only be dependent on a type parameter when the type
   // parameter structurally present in the type itself.
   class IsObjCTypeParamDependentTypeVisitor final
-      : public DynamicRecursiveASTVisitor  {
+      : public DynamicRecursiveASTVisitor {
   public:
     IsObjCTypeParamDependentTypeVisitor() = default;
     bool VisitObjCTypeParamType(ObjCTypeParamType *Type) override {

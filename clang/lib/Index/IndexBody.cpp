@@ -10,10 +10,10 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
 
 using namespace clang;
@@ -31,9 +31,9 @@ class BodyIndexer final : public DynamicRecursiveASTVisitor {
     return StmtStack.size() < 2 ? nullptr : StmtStack.end()[-2];
   }
 public:
-  BodyIndexer(IndexingContext &indexCtx,
-              const NamedDecl *Parent, const DeclContext *DC)
-    : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) {
+  BodyIndexer(IndexingContext &indexCtx, const NamedDecl *Parent,
+              const DeclContext *DC)
+      : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) {
     ShouldWalkTypesOfTypeLocs = false;
   }
 
@@ -197,7 +197,8 @@ public:
                                     Relations, E);
   }
 
-  bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
+  bool
+  VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
     const DeclarationNameInfo &Info = E->getMemberNameInfo();
     return indexDependentReference(
         E, E->getBaseType().getTypePtrOrNull(), Info,
@@ -474,7 +475,7 @@ public:
     return true;
   }
 
-  bool VisitParmVarDecl(ParmVarDecl* D) override {
+  bool VisitParmVarDecl(ParmVarDecl *D) override {
     // Index the parameters of lambda expression and requires expression.
     if (IndexCtx.shouldIndexFunctionLocalSymbols()) {
       const auto *DC = D->getDeclContext();

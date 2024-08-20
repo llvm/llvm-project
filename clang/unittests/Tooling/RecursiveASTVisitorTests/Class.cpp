@@ -18,7 +18,7 @@ class ClassVisitor : public ExpectedLocationVisitor {
 public:
   ClassVisitor() : SawNonImplicitLambdaClass(false) {}
 
-  bool VisitCXXRecordDecl(CXXRecordDecl* record) override {
+  bool VisitCXXRecordDecl(CXXRecordDecl *record) override {
     if (record->isLambda() && !record->isImplicit())
       SawNonImplicitLambdaClass = true;
     return true;

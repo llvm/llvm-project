@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
@@ -425,30 +425,41 @@ private:
 
   bool TraverseDecl(Decl *DeclNode) override {
     return TraverseNode(
-        DeclNode, DeclNode, [&] { return DynamicRecursiveASTVisitor::TraverseDecl(DeclNode); },
+        DeclNode, DeclNode,
+        [&] { return DynamicRecursiveASTVisitor::TraverseDecl(DeclNode); },
         &Map.PointerParents);
   }
   bool TraverseTypeLoc(TypeLoc TypeLocNode) override {
     return TraverseNode(
         TypeLocNode, DynTypedNode::create(TypeLocNode),
-        [&] { return DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLocNode);
+        },
         &Map.OtherParents);
   }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) override {
+  bool
+  TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) override {
     return TraverseNode(
         NNSLocNode, DynTypedNode::create(NNSLocNode),
-        [&] { return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
+              NNSLocNode);
+        },
         &Map.OtherParents);
   }
   bool TraverseAttr(Attr *AttrNode) override {
     return TraverseNode(
-        AttrNode, AttrNode, [&] { return DynamicRecursiveASTVisitor::TraverseAttr(AttrNode); },
+        AttrNode, AttrNode,
+        [&] { return DynamicRecursiveASTVisitor::TraverseAttr(AttrNode); },
         &Map.PointerParents);
   }
   bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLocNode) override {
     return TraverseNode(
         ProtocolLocNode, DynTypedNode::create(ProtocolLocNode),
-        [&] { return DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(ProtocolLocNode); },
+        [&] {
+          return DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(
+              ProtocolLocNode);
+        },
         &Map.OtherParents);
   }
 

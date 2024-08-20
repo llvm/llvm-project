@@ -16,9 +16,7 @@ namespace {
 
 class LambdaExprVisitor : public ExpectedLocationVisitor {
 public:
-  LambdaExprVisitor() {
-    ShouldVisitImplicitCode = false;
-  }
+  LambdaExprVisitor() { ShouldVisitImplicitCode = false; }
 
   bool VisitLambdaExpr(LambdaExpr *Lambda) override {
     PendingBodies.push(Lambda->getBody());

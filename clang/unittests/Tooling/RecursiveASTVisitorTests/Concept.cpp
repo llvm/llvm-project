@@ -52,9 +52,10 @@ struct ConceptVisitor : ExpectedLocationVisitor {
 TEST(RecursiveASTVisitor, Concepts) {
   {
     ConceptVisitor Visitor{true};
-    EXPECT_TRUE(Visitor.runOver("template <typename T> concept Fooable = true;\n"
-                                "template <Fooable T> void bar(T);",
-                                ConceptVisitor::Lang_CXX2a));
+    EXPECT_TRUE(
+        Visitor.runOver("template <typename T> concept Fooable = true;\n"
+                        "template <Fooable T> void bar(T);",
+                        ConceptVisitor::Lang_CXX2a));
     // Check that we traverse the "Fooable T" template parameter's
     // TypeConstraint's ImmediatelyDeclaredConstraint, which is a
     // ConceptSpecializationExpr.
@@ -67,9 +68,10 @@ TEST(RecursiveASTVisitor, Concepts) {
 
   {
     ConceptVisitor Visitor; // Don't visit implicit code now.
-    EXPECT_TRUE(Visitor.runOver("template <typename T> concept Fooable = true;\n"
-                                "template <Fooable T> void bar(T);",
-                                ConceptVisitor::Lang_CXX2a));
+    EXPECT_TRUE(
+        Visitor.runOver("template <typename T> concept Fooable = true;\n"
+                        "template <Fooable T> void bar(T);",
+                        ConceptVisitor::Lang_CXX2a));
     // Check that we only visit the TypeConstraint, but not the implicitly
     // generated immediately declared expression.
     EXPECT_EQ(0, Visitor.ConceptSpecializationExprsVisited);
@@ -80,14 +82,15 @@ TEST(RecursiveASTVisitor, Concepts) {
 
   {
     ConceptVisitor Visitor;
-    EXPECT_TRUE(Visitor.runOver("template <class T> concept A = true;\n"
-                                "template <class T> struct vector {};\n"
-                                "template <class T> concept B = requires(T x) {\n"
-                                "  typename vector<T*>;\n"
-                                "  {x} -> A;\n"
-                                "  requires true;\n"
-                                "};",
-                                ConceptVisitor::Lang_CXX2a));
+    EXPECT_TRUE(
+        Visitor.runOver("template <class T> concept A = true;\n"
+                        "template <class T> struct vector {};\n"
+                        "template <class T> concept B = requires(T x) {\n"
+                        "  typename vector<T*>;\n"
+                        "  {x} -> A;\n"
+                        "  requires true;\n"
+                        "};",
+                        ConceptVisitor::Lang_CXX2a));
     EXPECT_EQ(3, Visitor.ConceptRequirementsTraversed);
     EXPECT_EQ(1, Visitor.ConceptReferencesTraversed);
     EXPECT_EQ(1, Visitor.ConceptReferencesVisited);
@@ -114,9 +117,7 @@ struct Foo<F>  {};
 }
 
 struct VisitDeclOnlyOnce : ExpectedLocationVisitor {
-  VisitDeclOnlyOnce() {
-    ShouldWalkTypesOfTypeLocs = false;
-  }
+  VisitDeclOnlyOnce() { ShouldWalkTypesOfTypeLocs = false; }
 
   bool VisitConceptDecl(ConceptDecl *D) override {
     ++ConceptDeclsVisited;

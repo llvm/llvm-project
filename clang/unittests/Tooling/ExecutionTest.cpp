@@ -30,9 +30,8 @@ namespace {
 
 // This traverses the AST and outputs function name as key and "1" as value for
 // each function declaration.
-class ASTConsumerWithResult
-    : public ASTConsumer,
-      public DynamicRecursiveASTVisitor {
+class ASTConsumerWithResult : public ASTConsumer,
+                              public DynamicRecursiveASTVisitor {
 public:
   explicit ASTConsumerWithResult(ExecutionContext *Context) : Context(Context) {
     assert(Context != nullptr);

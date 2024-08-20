@@ -104,7 +104,6 @@ public:
     return std::vector<std::string>(USRSet.begin(), USRSet.end());
   }
 
-
   bool VisitCXXMethodDecl(CXXMethodDecl *MethodDecl) override {
     if (MethodDecl->isVirtual())
       OverriddenMethods.push_back(MethodDecl);
