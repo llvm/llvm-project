@@ -374,14 +374,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       }
     }
 
-    if (GraphSec->getMemProt() != Prot) {
-      std::string ErrMsg;
-      raw_string_ostream(ErrMsg)
-          << "In " << G->getName() << ", section " << *Name
-          << " is present more than once with different permissions: "
-          << GraphSec->getMemProt() << " vs " << Prot;
-      return make_error<JITLinkError>(std::move(ErrMsg));
-    }
+    GraphSec->setMemProt(GraphSec->getMemProt() | Prot);
 
     Block *B = nullptr;
     if (Sec.sh_type != ELF::SHT_NOBITS) {
@@ -528,6 +521,11 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
           return make_error<JITLinkError>(std::move(ErrMsg));
         }
 
+        // Truncate symbol if it would overflow -- ELF size fields can't be
+        // trusted.
+        uint64_t Size =
+          std::min(static_cast<uint64_t>(Sym.st_size), B->getSize() - Offset);
+
         // In RISCV, temporary symbols (Used to generate dwarf, eh_frame
         // sections...) will appear in object code's symbol table, and LLVM does
         // not use names on these temporary symbols (RISCV gnu toolchain uses
@@ -535,11 +533,9 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
         // anonymous symbol.
         auto &GSym =
             Name->empty()
-                ? G->addAnonymousSymbol(*B, Offset, Sym.st_size,
-                                        false, false)
-                : G->addDefinedSymbol(*B, Offset, *Name, Sym.st_size, L,
-                                      S, Sym.getType() == ELF::STT_FUNC,
-                                      false);
+                ? G->addAnonymousSymbol(*B, Offset, Size, false, false)
+                : G->addDefinedSymbol(*B, Offset, *Name, Size, L, S,
+                                      Sym.getType() == ELF::STT_FUNC, false);
 
         GSym.setTargetFlags(Flags);
         setGraphSymbol(SymIndex, GSym);
