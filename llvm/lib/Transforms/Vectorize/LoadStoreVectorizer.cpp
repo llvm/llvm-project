@@ -1050,8 +1050,7 @@ bool Vectorizer::isSafeToMove(
     if (!I->mayReadOrWriteMemory())
       continue;
 
-    // Loads can be reordered with other loads. We've already checked that
-    // they're independent.
+    // Loads can be reordered with other loads.
     if (IsLoadChain && isa<LoadInst>(I))
       continue;
 
