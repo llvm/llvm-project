@@ -492,6 +492,7 @@ private:
   enum class AreDebugLocsAllowed { No, Yes };
 
   // Verification methods...
+  void visitTargetExtType(TargetExtType *Ty);
   void visitGlobalValue(const GlobalValue &GV);
   void visitGlobalVariable(const GlobalVariable &GV);
   void visitGlobalAlias(const GlobalAlias &GA);
@@ -723,6 +724,16 @@ static void forEachUser(const Value *User,
   }
 }
 
+void Verifier::visitTargetExtType(TargetExtType *TTy) {
+  StringRef Name = TTy->getName();
+
+  // Opaque types in the AArch64 name space.
+  if (Name == "aarch64.svcount") {
+    Check(TTy->getNumTypeParameters() == 0 && TTy->getNumIntParameters() == 0,
+          "Target type should have no parameters", TTy);
+  }
+}
+
 void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Check(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
         "Global is external, but doesn't have external or weak linkage!", &GV);
@@ -908,10 +919,12 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
 
   // Check if it's a target extension type that disallows being used as a
   // global.
-  if (auto *TTy = dyn_cast<TargetExtType>(GV.getValueType()))
+  if (auto *TTy = dyn_cast<TargetExtType>(GV.getValueType())) {
     Check(TTy->hasProperty(TargetExtType::CanBeGlobal),
           "Global @" + GV.getName() + " has illegal target extension type",
           TTy);
+    visitTargetExtType(TTy);
+  }
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
@@ -4285,6 +4298,8 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   SmallPtrSet<Type*, 4> Visited;
   Check(AI.getAllocatedType()->isSized(&Visited),
         "Cannot allocate unsized type", &AI);
+  if (auto *TTy = dyn_cast<TargetExtType>(AI.getAllocatedType()))
+    visitTargetExtType(TTy);
   Check(AI.getArraySize()->getType()->isIntegerTy(),
         "Alloca array size must have integer type", &AI);
   if (MaybeAlign A = AI.getAlign()) {
