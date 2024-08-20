@@ -414,6 +414,20 @@ gpu.module @shuffles_mismatch {
 
 // -----
 
+// Cannot convert due to value type not being supported by the conversion
+
+gpu.module @not_supported_lowering {
+  func.func @gpu_shuffles(%val: i1, %id: i32) {
+    %width = arith.constant 32 : i32
+    // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
+    %shuffleResult, %valid = gpu.shuffle xor %val, %id, %width : i1
+    return
+  }
+}
+
+
+// -----
+
 gpu.module @kernels {
   // CHECK:   llvm.func spir_funccc @no_kernel() {
   gpu.func @no_kernel() {

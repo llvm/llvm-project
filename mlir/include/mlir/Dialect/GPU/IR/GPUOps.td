@@ -1250,17 +1250,11 @@ def GPU_ShuffleMode : I32EnumAttr<"ShuffleMode",
 def GPU_ShuffleModeAttr : EnumAttr<GPU_Dialect, GPU_ShuffleMode,
                                    "shuffle_mode">;
 
-def GPUShuffleTypes : TypeConstraint<Or<[
-  SignlessIntOfWidths<[8, 16, 32, 64]>.predicate,
-  FloatOfWidths<[16, 32, 64]>.predicate
-  ]>,
-  "i8, i16, i32, i64, f16, f32 or f64">;
-
 def GPU_ShuffleOp : GPU_Op<
     "shuffle", [Pure, AllTypesMatch<["value", "shuffleResult"]>]>,
-    Arguments<(ins GPUShuffleTypes:$value, I32:$offset, I32:$width,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width,
                GPU_ShuffleModeAttr:$mode)>,
-    Results<(outs GPUShuffleTypes:$shuffleResult, I1:$valid)> {
+    Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
     The "shuffle" op moves values to a across lanes (a.k.a., invocations,
