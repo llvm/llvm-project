@@ -115,8 +115,8 @@ add_mlir_dialect_library(MLIRROCDLTarget
   OBJECT
 
   LINK_COMPONENTS
+  FrontendOffloading
   MCParser
-  Object
   ${AMDGPU_LIBS}
 
   LINK_LIBS PUBLIC
