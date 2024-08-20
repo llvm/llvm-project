@@ -295,4 +295,5 @@ void T1(void) {
                                                            // pedantic-warning {{use of GNU statement expression extension}}
 }
 
-
+enum teste1 test1f(void), (*test1)(void) = test1f; // pedantic-warning {{ISO C forbids forward references to 'enum' types}}
+enum teste1 { TEST1 };
