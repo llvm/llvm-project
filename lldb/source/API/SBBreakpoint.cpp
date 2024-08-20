@@ -342,7 +342,7 @@ uint32_t SBBreakpoint::GetIgnoreCount() const {
   return count;
 }
 
-void SBBreakpoint::SetThreadID(tid_t tid) {
+void SBBreakpoint::SetThreadID(lldb::tid_t tid) {
   LLDB_INSTRUMENT_VA(this, tid);
 
   BreakpointSP bkpt_sp = GetSP();
@@ -353,10 +353,10 @@ void SBBreakpoint::SetThreadID(tid_t tid) {
   }
 }
 
-tid_t SBBreakpoint::GetThreadID() {
+lldb::tid_t SBBreakpoint::GetThreadID() {
   LLDB_INSTRUMENT_VA(this);
 
-  tid_t tid = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   BreakpointSP bkpt_sp = GetSP();
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
