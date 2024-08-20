@@ -2556,7 +2556,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     if (DiscardResult)
       return this->emitPopPtr(E);
-    return true;
+    return this->emitFinishInit(E);
   }
 
   if (T->isArrayType()) {
