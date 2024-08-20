@@ -140,6 +140,9 @@ public:
   /// it, otherwise return nullptr.
   BlockT *getCyclePredecessor() const;
 
+  void verifyCycle() const;
+  void verifyCycleNest() const;
+
   /// Iteration over child cycles.
   //@{
   using const_child_iterator_base =
@@ -228,6 +231,8 @@ public:
   using BlockT = typename ContextT::BlockT;
   using CycleT = GenericCycle<ContextT>;
   using FunctionT = typename ContextT::FunctionT;
+  using LoopT = typename ContextT::LoopT;
+  using LoopInfoT = typename ContextT::LoopInfoT;
   template <typename> friend class GenericCycle;
   template <typename> friend class GenericCycleInfoCompute;
 
@@ -277,9 +282,8 @@ public:
 
   /// Methods for debug and self-test.
   //@{
-#ifndef NDEBUG
-  bool validateTree() const;
-#endif
+  void verifyCycleNest(bool VerifyFull = false, LoopInfoT *LI = nullptr) const;
+  void verify(LoopInfoT *LI = nullptr) const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   Printable print(const CycleT *Cycle) { return Cycle->print(Context); }
