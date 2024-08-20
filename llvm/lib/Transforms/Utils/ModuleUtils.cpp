@@ -206,7 +206,7 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
   std::string Type = MangledType.str();
-  if (M.getModuleFlag("kcfi-normalized"))
+  if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
   F.setMetadata(LLVMContext::MD_kcfi_type,
                 MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
