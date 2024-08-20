@@ -8,8 +8,8 @@
 // Test MachineModuleInfo.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -28,7 +28,7 @@ std::unique_ptr<Module> parseIR(LLVMContext &Context, const char *IR) {
   return parseAssemblyString(IR, Err, Context);
 }
 
-class MachineModuleInfoTest: public ::testing::Test {
+class MachineModuleInfoTest : public ::testing::Test {
 protected:
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -49,8 +49,7 @@ public:
 
     std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
     if (!TheTarget)
       return;
 
@@ -69,10 +68,10 @@ TEST_F(MachineModuleInfoTest, MachineModuleInfoMoveConstructorMovesMCContext) {
 
   MachineModuleInfo MMI(LLVMTM);
 
-  MCContext* OriginalCtx = &MMI.getContext();
+  MCContext *OriginalCtx = &MMI.getContext();
 
   MachineModuleInfo MovedMMI(std::move(MMI));
-  MCContext* MovedCtx = &MovedMMI.getContext();
+  MCContext *MovedCtx = &MovedMMI.getContext();
 
   EXPECT_EQ(OriginalCtx, MovedCtx);
 }
