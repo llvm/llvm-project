@@ -1152,91 +1152,90 @@ public:
               break;
             }
             // Don't care about other unreachable statements.
-            }
           }
-          // If there are no unreachable statements, this may be a special
-          // case in CFG:
-          // case X: {
-          //    A a;  // A has a destructor.
-          //    break;
-          // }
-          // // <<<< This place is represented by a 'hanging' CFG block.
-          // case Y:
-          continue;
         }
-
-        const Stmt *LastStmt = getLastStmt(*P);
-        if (const AttributedStmt *AS = asFallThroughAttr(LastStmt)) {
-          markFallthroughVisited(AS);
-          ++AnnotatedCnt;
-          continue; // Fallthrough annotation, good.
-        }
-
-        if (!LastStmt) { // This block contains no executable statements.
-          // Traverse its predecessors.
-          std::copy(P->pred_begin(), P->pred_end(),
-                    std::back_inserter(BlockQueue));
-          continue;
-        }
-
-        ++UnannotatedCnt;
+        // If there are no unreachable statements, this may be a special
+        // case in CFG:
+        // case X: {
+        //    A a;  // A has a destructor.
+        //    break;
+        // }
+        // // <<<< This place is represented by a 'hanging' CFG block.
+        // case Y:
+        continue;
       }
-      return !!UnannotatedCnt;
-    }
 
-    bool VisitAttributedStmt(AttributedStmt *S) override {
-      if (asFallThroughAttr(S))
-        FallthroughStmts.insert(S);
-      return true;
-    }
-
-    bool VisitSwitchStmt(SwitchStmt *S) override {
-      FoundSwitchStatements = true;
-      return true;
-    }
-
-    // We don't want to traverse local type declarations. We analyze their
-    // methods separately.
-    bool TraverseDecl(Decl *D) override { return true; }
-
-    // We analyze lambda bodies separately. Skip them here.
-    bool TraverseLambdaExpr(LambdaExpr *LE) override {
-      // Traverse the captures, but not the body.
-      for (const auto C : zip(LE->captures(), LE->capture_inits()))
-        TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
-      return true;
-    }
-
-  private:
-
-    static const AttributedStmt *asFallThroughAttr(const Stmt *S) {
-      if (const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(S)) {
-        if (hasSpecificAttr<FallThroughAttr>(AS->getAttrs()))
-          return AS;
+      const Stmt *LastStmt = getLastStmt(*P);
+      if (const AttributedStmt *AS = asFallThroughAttr(LastStmt)) {
+        markFallthroughVisited(AS);
+        ++AnnotatedCnt;
+        continue; // Fallthrough annotation, good.
       }
-      return nullptr;
+
+      if (!LastStmt) { // This block contains no executable statements.
+        // Traverse its predecessors.
+        std::copy(P->pred_begin(), P->pred_end(),
+                  std::back_inserter(BlockQueue));
+        continue;
+      }
+
+      ++UnannotatedCnt;
     }
+    return !!UnannotatedCnt;
+  }
 
-    static const Stmt *getLastStmt(const CFGBlock &B) {
-      if (const Stmt *Term = B.getTerminatorStmt())
-        return Term;
-      for (const CFGElement &Elem : llvm::reverse(B))
-        if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>())
-          return CS->getStmt();
-      // Workaround to detect a statement thrown out by CFGBuilder:
-      //   case X: {} case Y:
-      //   case X: ; case Y:
-      if (const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(B.getLabel()))
-        if (!isa<SwitchCase>(SW->getSubStmt()))
-          return SW->getSubStmt();
+  bool VisitAttributedStmt(AttributedStmt *S) override {
+    if (asFallThroughAttr(S))
+      FallthroughStmts.insert(S);
+    return true;
+  }
 
-      return nullptr;
+  bool VisitSwitchStmt(SwitchStmt *S) override {
+    FoundSwitchStatements = true;
+    return true;
+  }
+
+  // We don't want to traverse local type declarations. We analyze their
+  // methods separately.
+  bool TraverseDecl(Decl *D) override { return true; }
+
+  // We analyze lambda bodies separately. Skip them here.
+  bool TraverseLambdaExpr(LambdaExpr *LE) override {
+    // Traverse the captures, but not the body.
+    for (const auto C : zip(LE->captures(), LE->capture_inits()))
+      TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
+    return true;
+  }
+
+private:
+  static const AttributedStmt *asFallThroughAttr(const Stmt *S) {
+    if (const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(S)) {
+      if (hasSpecificAttr<FallThroughAttr>(AS->getAttrs()))
+        return AS;
     }
+    return nullptr;
+  }
 
-    bool FoundSwitchStatements;
-    AttrStmts FallthroughStmts;
-    Sema &S;
-    llvm::SmallPtrSet<const CFGBlock *, 16> ReachableBlocks;
+  static const Stmt *getLastStmt(const CFGBlock &B) {
+    if (const Stmt *Term = B.getTerminatorStmt())
+      return Term;
+    for (const CFGElement &Elem : llvm::reverse(B))
+      if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>())
+        return CS->getStmt();
+    // Workaround to detect a statement thrown out by CFGBuilder:
+    //   case X: {} case Y:
+    //   case X: ; case Y:
+    if (const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(B.getLabel()))
+      if (!isa<SwitchCase>(SW->getSubStmt()))
+        return SW->getSubStmt();
+
+    return nullptr;
+  }
+
+  bool FoundSwitchStatements;
+  AttrStmts FallthroughStmts;
+  Sema &S;
+  llvm::SmallPtrSet<const CFGBlock *, 16> ReachableBlocks;
 };
 } // anonymous namespace
 

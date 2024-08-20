@@ -30,7 +30,7 @@ public:
       : SM(SM), LangOpts(LangOpts) {}
 
   virtual bool visitSymbolOccurrence(const NamedDecl *ND,
-                             ArrayRef<SourceRange> NameRanges) {
+                                     ArrayRef<SourceRange> NameRanges) {
     return true;
   }
 
