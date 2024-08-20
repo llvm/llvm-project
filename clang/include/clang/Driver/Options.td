@@ -5383,7 +5383,9 @@ def mmadd4 : Flag<["-"], "mmadd4">, Group<m_mips_Features_Group>,
 def mno_madd4 : Flag<["-"], "mno-madd4">, Group<m_mips_Features_Group>,
   HelpText<"Disable the generation of 4-operand madd.s, madd.d and related instructions.">;
 def mmsa : Flag<["-"], "mmsa">, Group<m_mips_Features_Group>,
-  HelpText<"Enable MSA ASE (MIPS only)">;
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Enable MSA ASE (MIPS only)">,
+  MarshallingInfoFlag<CodeGenOpts<"MipsMsa">>;
 def mno_msa : Flag<["-"], "mno-msa">, Group<m_mips_Features_Group>,
   HelpText<"Disable MSA ASE (MIPS only)">;
 def mmt : Flag<["-"], "mmt">, Group<m_mips_Features_Group>,
