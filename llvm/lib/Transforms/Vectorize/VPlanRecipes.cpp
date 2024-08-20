@@ -1266,12 +1266,6 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
 }
 
-VPWidenEVLRecipe *VPWidenEVLRecipe::create(VPWidenRecipe *W, VPValue &EVL) {
-  auto *R = new VPWidenEVLRecipe(*W->getUnderlyingInstr(), W->operands(), EVL);
-  R->transferFlags(*W);
-  return R;
-}
-
 void VPWidenEVLRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
@@ -1311,13 +1305,6 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
   }
   State.set(this, VPInst, 0);
   State.addMetadata(VPInst, I);
-}
-
-bool VPWidenEVLRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
-  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  // EVL in that recipe is always the last operand, thus any use before means
-  // the VPValue should be vectorized.
-  return getEVL() == Op;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

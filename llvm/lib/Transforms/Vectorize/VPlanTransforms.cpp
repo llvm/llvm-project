@@ -1345,29 +1345,30 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 if (!Instruction::isBinaryOp(Opcode) &&
                     !Instruction::isUnaryOp(Opcode))
                   return nullptr;
-                return new VPWidenEVLRecipe(W, EVL);
+                return new VPWidenEVLRecipe(*W, EVL);
               })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-                return new VPReductionEVLRecipe(*Red, EVL,
-                                                GetNewMask(Red->getCondOp()));
+                VPValue *NewMask = GetNewMask(Red->getCondOp());
+                return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
-      if (NewRecipe) {
-        [[maybe_unused]] unsigned NumDefVal = NewRecipe->getNumDefinedValues();
-        assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-               "New recipe must define the same number of values as the "
-               "original.");
-        assert(
-            NumDefVal <= 1 &&
-            "Only supports recipes with a single definition or without users.");
-        NewRecipe->insertBefore(CurRecipe);
-        if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(NewRecipe)) {
-          VPValue *CurVPV = CurRecipe->getVPSingleValue();
-          CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
-        }
-        CurRecipe->eraseFromParent();
+      if (!NewRecipe)
+        continue;
+
+      [[maybe_unused]] unsigned NumDefVal = NewRecipe->getNumDefinedValues();
+      assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
+             "New recipe must define the same number of values as the "
+             "original.");
+      assert(
+          NumDefVal <= 1 &&
+          "Only supports recipes with a single definition or without users.");
+      NewRecipe->insertBefore(CurRecipe);
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(NewRecipe)) {
+        VPValue *CurVPV = CurRecipe->getVPSingleValue();
+        CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       }
+      CurRecipe->eraseFromParent();
     }
     recursivelyDeleteDeadRecipes(HeaderMask);
   }

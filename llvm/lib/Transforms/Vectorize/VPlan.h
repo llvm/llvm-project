@@ -1458,7 +1458,7 @@ public:
 #endif
 };
 
-/// A recipe for widening operations with vector-predication intrinsics.with
+/// A recipe for widening operations with vector-predication intrinsics with
 /// explicit vector length (EVL).
 class VPWidenEVLRecipe : public VPWidenRecipe {
   using VPRecipeWithIRFlags::transferFlags;
@@ -1469,9 +1469,9 @@ public:
       : VPWidenRecipe(VPDef::VPWidenEVLSC, I, Operands) {
     addOperand(&EVL);
   }
-  VPWidenEVLRecipe(VPWidenRecipe *W, VPValue &EVL)
-      : VPWidenEVLRecipe(*W->getUnderlyingInstr(), W->operands(), EVL) {
-    this->transferFlags(*W);
+  VPWidenEVLRecipe(VPWidenRecipe &W, VPValue &EVL)
+      : VPWidenEVLRecipe(*W.getUnderlyingInstr(), W.operands(), EVL) {
+    transferFlags(W);
   }
 
   ~VPWidenEVLRecipe() override = default;
@@ -1491,7 +1491,13 @@ public:
   void execute(VPTransformState &State) override final;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // EVL in that recipe is always the last operand, thus any use before means
+    // the VPValue should be vectorized.
+    return getEVL() == Op;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2653,11 +2659,6 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
     setMask(Mask);
   }
 
-  VPWidenLoadEVLRecipe *clone() override {
-    llvm_unreachable("VPWidenLoadEVLRecipe cannot be cloned");
-    return nullptr;
-  }
-
   VP_CLASSOF_IMPL(VPDef::VPWidenLoadEVLSC)
 
   /// Return the EVL operand.
@@ -2731,11 +2732,6 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
                             {S.getAddr(), S.getStoredValue(), &EVL},
                             S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
     setMask(Mask);
-  }
-
-  VPWidenStoreEVLRecipe *clone() override {
-    llvm_unreachable("VPWidenStoreEVLRecipe cannot be cloned");
-    return nullptr;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreEVLSC)
