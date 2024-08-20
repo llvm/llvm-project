@@ -88,7 +88,7 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
-// The hash is produced in \p Key.
+// Returns the hash in its hexadecimal representation.
 std::string llvm::computeLTOCacheKey(
     const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
     const FunctionImporter::ImportMapTy &ImportList,
