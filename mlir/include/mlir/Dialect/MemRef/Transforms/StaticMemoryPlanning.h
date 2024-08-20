@@ -36,8 +36,6 @@ struct MemoryTrace {
       : bufferId{bufferId}, size{size} {}
 };
 
-using ScopeTraceData =
-    llvm::DenseMap<Operation *, llvm::SmallVector<memoryplan::MemoryTrace, 8>>;
 using Traces = llvm::SmallVector<memoryplan::MemoryTrace, 8>;
 using InplaceInfo = std::pair<uintptr_t, InplaceKind>;
 
@@ -62,8 +60,7 @@ std::size_t scheduleMemoryAllocations(
     const Traces &traces, std::size_t alignment, bool hotFirst,
     const InplaceInfoMap &inplaceMap,
     std::unordered_map<uintptr_t, std::size_t> &outSchedule,
-    std::unordered_map<uintptr_t, std::vector<uintptr_t>>
-        &outInplaceSelection);
+    std::unordered_map<uintptr_t, std::vector<uintptr_t>> &outInplaceSelection);
 
 } // namespace memoryplan
 } // namespace mlir
