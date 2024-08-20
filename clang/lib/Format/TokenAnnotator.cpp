@@ -4478,10 +4478,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Left.is(tok::colon))
     return Left.isNot(TT_ObjCMethodExpr);
-  if (Left.is(tok::coloncolon)) {
-    return Right.is(tok::star) && Right.is(TT_PointerOrReference) &&
-           Style.PointerAlignment != FormatStyle::PAS_Left;
-  }
+  if (Left.is(tok::coloncolon))
+    return false;
   if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less)) {
     if (Style.Language == FormatStyle::LK_TextProto ||
         (Style.Language == FormatStyle::LK_Proto &&
@@ -4591,7 +4589,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (!BeforeLeft)
       return false;
     if (BeforeLeft->is(tok::coloncolon)) {
-      return Left.is(tok::star) &&
+      const auto *Prev = BeforeLeft->Previous;
+      return Left.is(tok::star) && Prev &&
+             !Prev->endsSequence(tok::identifier, TT_FunctionTypeLParen) &&
              Style.PointerAlignment != FormatStyle::PAS_Right;
     }
     return !BeforeLeft->isOneOf(tok::l_paren, tok::l_square);
