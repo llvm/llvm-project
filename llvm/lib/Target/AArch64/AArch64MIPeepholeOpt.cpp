@@ -733,11 +733,42 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
     DeadInstrs.insert(SrcMI);
   }
 
-  if (!SrcMI || SrcMI->getOpcode() != AArch64::SBFMXri ||
-      SrcMI->getOperand(2).getImm() != 0 || SrcMI->getOperand(3).getImm() != 31)
+  if (!SrcMI)
     return false;
 
-  Register SrcReg = SrcMI->getOperand(1).getReg();
+  // Look for SXTW(X) and return Reg.
+  auto getSXTWSrcReg = [](MachineInstr *SrcMI) -> Register {
+    if (SrcMI->getOpcode() != AArch64::SBFMXri ||
+        SrcMI->getOperand(2).getImm() != 0 ||
+        SrcMI->getOperand(3).getImm() != 31)
+      return AArch64::NoRegister;
+    return SrcMI->getOperand(1).getReg();
+  };
+  // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
+  auto getUXTWSrcReg = [&](MachineInstr *SrcMI) -> Register {
+    if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
+        SrcMI->getOperand(3).getImm() != AArch64::sub_32 ||
+        !MRI->hasOneNonDBGUse(SrcMI->getOperand(2).getReg()))
+      return AArch64::NoRegister;
+    MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(2).getReg());
+    if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
+        Orr->getOperand(1).getReg() != AArch64::WZR ||
+        !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
+      return AArch64::NoRegister;
+    MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
+    if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
+        Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
+      return AArch64::NoRegister;
+    DeadInstrs.insert(Orr);
+    return Cpy->getOperand(1).getReg();
+  };
+
+  Register SrcReg = getSXTWSrcReg(SrcMI);
+  if (!SrcReg)
+    SrcReg = getUXTWSrcReg(SrcMI);
+  if (!SrcReg)
+    return false;
+
   MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
   LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
   MI.getOperand(1).setReg(SrcReg);
