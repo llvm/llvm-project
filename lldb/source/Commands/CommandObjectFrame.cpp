@@ -278,6 +278,30 @@ protected:
       if (frame_idx == UINT32_MAX)
         frame_idx = 0;
 
+      // If moving up/down by one, skip over hidden frames.
+      if (*m_options.relative_frame_offset == 1 ||
+          *m_options.relative_frame_offset == -1) {
+        uint32_t candidate_idx = frame_idx;
+        const unsigned max_depth = 12;
+        for (unsigned num_try = 0; num_try < max_depth; ++num_try) {
+          if (candidate_idx == 0 && *m_options.relative_frame_offset == -1) {
+            candidate_idx = UINT32_MAX;
+            break;
+          }
+          candidate_idx += *m_options.relative_frame_offset;
+          if (auto candidate_sp = thread->GetStackFrameAtIndex(candidate_idx)) {
+            if (candidate_sp->IsHidden())
+              continue;
+            // Now candidate_idx is the first non-hidden frame.
+            break;
+          }
+          candidate_idx = UINT32_MAX;
+          break;
+        };
+        if (candidate_idx != UINT32_MAX)
+          m_options.relative_frame_offset = candidate_idx - frame_idx;
+      }
+
       if (*m_options.relative_frame_offset < 0) {
         if (static_cast<int32_t>(frame_idx) >=
             -*m_options.relative_frame_offset)
