@@ -1357,34 +1357,34 @@ struct DSEState {
     return true;
   }
 
-  // Find a MemoryDef writing to \p KillingLocWrapper.MemLoc and dominating
-  // \p StartAccess, with no read access between them or on any other path to
-  // a function exit block if \p KillingLocWrapper.MemLoc is not accessible
-  // after the function returns. If there is no such MemoryDef, return
-  // std::nullopt. The returned value may not (completely) overwrite
-  // \p KillingLocWrapper.MemLoc. Currently we bail out when we encounter
-  // an aliasing MemoryUse (read).
+  // Find a MemoryDef writing to \p KillingLoc and dominating \p StartAccess,
+  // with no read access between them or on any other path to a function exit
+  // block if \p KillingLoc is not accessible after the function returns. If
+  // there is no such MemoryDef, return std::nullopt. The returned value may not
+  // (completely) overwrite \p KillingLoc. Currently we bail out when we
+  // encounter an aliasing MemoryUse (read).
   std::optional<MemoryAccess *>
-  getDomMemoryDef(MemoryLocationWrapper &KillingLocWrapper,
-                  MemoryAccess *StartAccess, unsigned &ScanLimit,
-                  unsigned &WalkerStepLimit, unsigned &PartialLimit) {
+  getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *StartAccess,
+                  const MemoryLocation &KillingLoc, const Value *KillingUndObj,
+                  unsigned &ScanLimit, unsigned &WalkerStepLimit,
+                  bool IsMemTerm, unsigned &PartialLimit) {
     if (ScanLimit == 0 || WalkerStepLimit == 0) {
       LLVM_DEBUG(dbgs() << "\n    ...  hit scan limit\n");
       return std::nullopt;
     }
 
     MemoryAccess *Current = StartAccess;
+    Instruction *KillingI = KillingDef->getMemoryInst();
     LLVM_DEBUG(dbgs() << "  trying to get dominating access\n");
 
-    // Only optimize defining access of "KillingLocWrapper.MemDef" when directly
-    // starting at its defining access. The defining access also must only
-    // access "KillingLocWrapper.MemLoc". At the moment we only support
-    // instructions with a single write location, so it should be sufficient
-    // to disable optimizations for instructions that also read from memory.
-    bool CanOptimize =
-        OptimizeMemorySSA &&
-        KillingLocWrapper.MemDef->getDefiningAccess() == StartAccess &&
-        !KillingLocWrapper.DefInst->mayReadFromMemory();
+    // Only optimize defining access of KillingDef when directly starting at its
+    // defining access. The defining access also must only access KillingLoc. At
+    // the moment we only support instructions with a single write location, so
+    // it should be sufficient to disable optimizations for instructions that
+    // also read from memory.
+    bool CanOptimize = OptimizeMemorySSA &&
+                       KillingDef->getDefiningAccess() == StartAccess &&
+                       !KillingI->mayReadFromMemory();
 
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
     std::optional<MemoryLocation> CurrentLoc;
@@ -1400,19 +1400,17 @@ struct DSEState {
       // Reached TOP.
       if (MSSA.isLiveOnEntryDef(Current)) {
         LLVM_DEBUG(dbgs() << "   ...  found LiveOnEntryDef\n");
-        if (CanOptimize &&
-            Current != KillingLocWrapper.MemDef->getDefiningAccess())
+        if (CanOptimize && Current != KillingDef->getDefiningAccess())
           // The first clobbering def is... none.
-          KillingLocWrapper.MemDef->setOptimized(Current);
+          KillingDef->setOptimized(Current);
         return std::nullopt;
       }
 
       // Cost of a step. Accesses in the same block are more likely to be valid
       // candidates for elimination, hence consider them cheaper.
-      unsigned StepCost =
-          KillingLocWrapper.MemDef->getBlock() == Current->getBlock()
-              ? MemorySSASameBBStepCost
-              : MemorySSAOtherBBStepCost;
+      unsigned StepCost = KillingDef->getBlock() == Current->getBlock()
+                              ? MemorySSASameBBStepCost
+                              : MemorySSAOtherBBStepCost;
       if (WalkerStepLimit <= StepCost) {
         LLVM_DEBUG(dbgs() << "   ...  hit walker step limit\n");
         return std::nullopt;
@@ -1427,27 +1425,25 @@ struct DSEState {
       }
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
-      // "KillingLocWrapper.MemDef". If it is not, check the next candidate.
+      // KillingDef. If it is not, check the next candidate.
       MemoryDef *CurrentDef = cast<MemoryDef>(Current);
       Instruction *CurrentI = CurrentDef->getMemoryInst();
 
-      if (canSkipDef(CurrentDef, !isInvisibleToCallerOnUnwind(
-                                     KillingLocWrapper.UnderlyingObject))) {
+      if (canSkipDef(CurrentDef, !isInvisibleToCallerOnUnwind(KillingUndObj))) {
         CanOptimize = false;
         continue;
       }
 
       // Before we try to remove anything, check for any extra throwing
       // instructions that block us from DSEing
-      if (mayThrowBetween(KillingLocWrapper.DefInst, CurrentI,
-                          KillingLocWrapper.UnderlyingObject)) {
+      if (mayThrowBetween(KillingI, CurrentI, KillingUndObj)) {
         LLVM_DEBUG(dbgs() << "  ... skip, may throw!\n");
         return std::nullopt;
       }
 
       // Check for anything that looks like it will be a barrier to further
       // removal
-      if (isDSEBarrier(KillingLocWrapper.UnderlyingObject, CurrentI)) {
+      if (isDSEBarrier(KillingUndObj, CurrentI)) {
         LLVM_DEBUG(dbgs() << "  ... skip, barrier\n");
         return std::nullopt;
       }
@@ -1456,19 +1452,16 @@ struct DSEState {
       // clobber, bail out, as the path is not profitable. We skip this check
       // for intrinsic calls, because the code knows how to handle memcpy
       // intrinsics.
-      if (!isa<IntrinsicInst>(CurrentI) &&
-          isReadClobber(KillingLocWrapper.MemLoc, CurrentI))
+      if (!isa<IntrinsicInst>(CurrentI) && isReadClobber(KillingLoc, CurrentI))
         return std::nullopt;
 
       // Quick check if there are direct uses that are read-clobbers.
-      if (any_of(Current->uses(),
-                 [this, &KillingLocWrapper, StartAccess](Use &U) {
-                   if (auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U.getUser()))
-                     return !MSSA.dominates(StartAccess, UseOrDef) &&
-                            isReadClobber(KillingLocWrapper.MemLoc,
-                                          UseOrDef->getMemoryInst());
-                   return false;
-                 })) {
+      if (any_of(Current->uses(), [this, &KillingLoc, StartAccess](Use &U) {
+            if (auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U.getUser()))
+              return !MSSA.dominates(StartAccess, UseOrDef) &&
+                     isReadClobber(KillingLoc, UseOrDef->getMemoryInst());
+            return false;
+          })) {
         LLVM_DEBUG(dbgs() << "   ...  found a read clobber\n");
         return std::nullopt;
       }
@@ -1484,36 +1477,32 @@ struct DSEState {
       // AliasAnalysis does not account for loops. Limit elimination to
       // candidates for which we can guarantee they always store to the same
       // memory location and not located in different loops.
-      if (!isGuaranteedLoopIndependent(CurrentI, KillingLocWrapper.DefInst,
-                                       *CurrentLoc)) {
+      if (!isGuaranteedLoopIndependent(CurrentI, KillingI, *CurrentLoc)) {
         LLVM_DEBUG(dbgs() << "  ... not guaranteed loop independent\n");
         CanOptimize = false;
         continue;
       }
 
-      if (isMemTerminatorInst(KillingLocWrapper.DefInst)) {
-        // If "KillingLocWrapper.DefInst" is a memory terminator
-        // (e.g. lifetime.end), check the next candidate if the current
-        // Current does not write the same underlying object as the terminator.
-        if (!isMemTerminator(*CurrentLoc, CurrentI,
-                             KillingLocWrapper.DefInst)) {
+      if (IsMemTerm) {
+        // If the killing def is a memory terminator (e.g. lifetime.end), check
+        // the next candidate if the current Current does not write the same
+        // underlying object as the terminator.
+        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI)) {
           CanOptimize = false;
           continue;
         }
       } else {
         int64_t KillingOffset = 0;
         int64_t DeadOffset = 0;
-        auto OR = isOverwrite(KillingLocWrapper.DefInst, CurrentI,
-                              KillingLocWrapper.MemLoc, *CurrentLoc,
+        auto OR = isOverwrite(KillingI, CurrentI, KillingLoc, *CurrentLoc,
                               KillingOffset, DeadOffset);
         if (CanOptimize) {
-          // CurrentDef is the earliest write clobber of
-          // "KillingLocWrapper.MemDef". Use it as optimized access. Do not
-          // optimize if CurrentDef is already the defining access of
-          // "KillingLocWrapper.MemDef".
-          if (CurrentDef != KillingLocWrapper.MemDef->getDefiningAccess() &&
+          // CurrentDef is the earliest write clobber of KillingDef. Use it as
+          // optimized access. Do not optimize if CurrentDef is already the
+          // defining access of KillingDef.
+          if (CurrentDef != KillingDef->getDefiningAccess() &&
               (OR == OW_Complete || OR == OW_MaybePartial))
-            KillingLocWrapper.MemDef->setOptimized(CurrentDef);
+            KillingDef->setOptimized(CurrentDef);
 
           // Once a may-aliasing def is encountered do not set an optimized
           // access.
@@ -1521,15 +1510,15 @@ struct DSEState {
             CanOptimize = false;
         }
 
-        // If Current does not write to the same object as
-        // "KillingLocWrapper.MemDef", check the next candidate.
+        // If Current does not write to the same object as KillingDef, check
+        // the next candidate.
         if (OR == OW_Unknown || OR == OW_None)
           continue;
         else if (OR == OW_MaybePartial) {
-          // If "KillingLocWrapper.MemDef" only partially overwrites Current,
-          // check the next candidate if the partial step limit is exceeded.
-          // This aggressively limits the number of candidates for partial store
-          // elimination, which are less likely to be removable in the end.
+          // If KillingDef only partially overwrites Current, check the next
+          // candidate if the partial step limit is exceeded. This aggressively
+          // limits the number of candidates for partial store elimination,
+          // which are less likely to be removable in the end.
           if (PartialLimit <= 1) {
             WalkerStepLimit -= 1;
             LLVM_DEBUG(dbgs() << "   ... reached partial limit ... continue with next access\n");
@@ -1546,7 +1535,7 @@ struct DSEState {
     // the blocks with killing (=completely overwriting MemoryDefs) and check if
     // they cover all paths from MaybeDeadAccess to any function exit.
     SmallPtrSet<Instruction *, 16> KillingDefs;
-    KillingDefs.insert(KillingLocWrapper.DefInst);
+    KillingDefs.insert(KillingDef->getMemoryInst());
     MemoryAccess *MaybeDeadAccess = Current;
     MemoryLocation MaybeDeadLoc = *CurrentLoc;
     Instruction *MaybeDeadI = cast<MemoryDef>(MaybeDeadAccess)->getMemoryInst();
@@ -1608,8 +1597,7 @@ struct DSEState {
         continue;
       }
 
-      if (UseInst->mayThrow() &&
-          !isInvisibleToCallerOnUnwind(KillingLocWrapper.UnderlyingObject)) {
+      if (UseInst->mayThrow() && !isInvisibleToCallerOnUnwind(KillingUndObj)) {
         LLVM_DEBUG(dbgs() << "  ... found throwing instruction\n");
         return std::nullopt;
       }
@@ -1629,12 +1617,11 @@ struct DSEState {
         LLVM_DEBUG(dbgs() << "    ... found not loop invariant self access\n");
         return std::nullopt;
       }
-      // Otherwise, for the "KillingLocWrapper.MemDef" and MaybeDeadAccess we
-      // only have to check if it reads the memory location.
+      // Otherwise, for the KillingDef and MaybeDeadAccess we only have to check
+      // if it reads the memory location.
       // TODO: It would probably be better to check for self-reads before
       // calling the function.
-      if (KillingLocWrapper.MemDef == UseAccess ||
-          MaybeDeadAccess == UseAccess) {
+      if (KillingDef == UseAccess || MaybeDeadAccess == UseAccess) {
         LLVM_DEBUG(dbgs() << "    ... skipping killing def/dom access\n");
         continue;
       }
@@ -1654,8 +1641,7 @@ struct DSEState {
           BasicBlock *MaybeKillingBlock = UseInst->getParent();
           if (PostOrderNumbers.find(MaybeKillingBlock)->second <
               PostOrderNumbers.find(MaybeDeadAccess->getBlock())->second) {
-            if (!isInvisibleToCallerAfterRet(
-                    KillingLocWrapper.UnderlyingObject)) {
+            if (!isInvisibleToCallerAfterRet(KillingUndObj)) {
               LLVM_DEBUG(dbgs()
                          << "    ... found killing def " << *UseInst << "\n");
               KillingDefs.insert(UseInst);
@@ -1673,7 +1659,7 @@ struct DSEState {
     // For accesses to locations visible after the function returns, make sure
     // that the location is dead (=overwritten) along all paths from
     // MaybeDeadAccess to the exit.
-    if (!isInvisibleToCallerAfterRet(KillingLocWrapper.UnderlyingObject)) {
+    if (!isInvisibleToCallerAfterRet(KillingUndObj)) {
       SmallPtrSet<BasicBlock *, 16> KillingBlocks;
       for (Instruction *KD : KillingDefs)
         KillingBlocks.insert(KD->getParent());
@@ -2216,7 +2202,9 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
     if (SkipStores.count(Current))
       continue;
     std::optional<MemoryAccess *> MaybeDeadAccess = getDomMemoryDef(
-        KillingLocWrapper, Current, ScanLimit, WalkerStepLimit, PartialLimit);
+        KillingLocWrapper.MemDef, Current, KillingLocWrapper.MemLoc,
+        KillingLocWrapper.UnderlyingObject, ScanLimit, WalkerStepLimit,
+        isMemTerminatorInst(KillingLocWrapper.DefInst), PartialLimit);
 
     if (!MaybeDeadAccess) {
       LLVM_DEBUG(dbgs() << "  finished walk\n");
