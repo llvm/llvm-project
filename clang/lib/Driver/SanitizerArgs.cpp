@@ -119,6 +119,8 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 static int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                                  bool DiagnoseErrors);
 
+/// Parse -fsanitize-undefined-ignore-overflow-pattern= flag values, diagnosing
+/// any invalid values. Returns a mask of excluded overflow patterns.
 static int parseOverflowPatternExclusionValues(const Driver &D,
                                                const llvm::opt::Arg *A,
                                                bool DiagnoseErrors);
