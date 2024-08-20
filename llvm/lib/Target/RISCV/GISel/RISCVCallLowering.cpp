@@ -103,15 +103,6 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    // If we're passing a smaller fp value into a larger integer register,
-    // anyextend before copying.
-    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
-        ((VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64) &&
-         VA.getValVT() == MVT::f16)) {
-      LLT DstTy = LLT::scalar(VA.getLocVT().getSizeInBits());
-      ValVReg = MIRBuilder.buildAnyExt(DstTy, ValVReg).getReg(0);
-    }
-
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
@@ -120,16 +111,40 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
+    const CCValAssign &VA = VAs[0];
+    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+      Register PhysReg = VA.getLocReg();
+
+      LLT LocTy(VA.getLocVT());
+      unsigned Opc = VA.getValVT() == MVT::f32 ? RISCV::G_FMV_X_ANYEXTW_RV64
+                                               : RISCV::G_FMV_X_ANYEXTH;
+
+      auto assignFunc = [=]() {
+        auto Fmv = MIRBuilder.buildInstr(Opc, {LocTy}, {Arg.Regs[0]});
+        Register NewReg = Fmv.getReg(0);
+        MIRBuilder.buildCopy(PhysReg, NewReg);
+        MIB.addUse(PhysReg, RegState::Implicit);
+      };
+
+      if (Thunk) {
+        *Thunk = assignFunc;
+        return 1;
+      }
+
+      assignFunc();
+      return 1;
+    }
+
     assert(VAs.size() >= 2 && "Expected at least 2 VAs.");
-    const CCValAssign &VALo = VAs[0];
     const CCValAssign &VAHi = VAs[1];
 
     assert(VAHi.needsCustom() && "Value doesn't need custom handling");
-    assert(VALo.getValNo() == VAHi.getValNo() &&
+    assert(VA.getValNo() == VAHi.getValNo() &&
            "Values belong to different arguments");
 
-    assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
-           VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+    assert(VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+           VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
     Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
@@ -148,7 +163,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     }
 
     auto assignFunc = [=]() {
-      assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+      assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
       if (VAHi.isRegLoc())
         assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
     };
@@ -246,16 +261,31 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
+    const CCValAssign &VA = VAs[0];
+    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+      Register PhysReg = VA.getLocReg();
+
+      markPhysRegUsed(PhysReg);
+
+      LLT LocTy(VA.getLocVT());
+      auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
+
+      unsigned Opc =
+          VA.getValVT() == MVT::f32 ? RISCV::G_FMV_W_X_RV64 : RISCV::G_FMV_H_X;
+      MIRBuilder.buildInstr(Opc, {Arg.Regs[0]}, {Copy.getReg(0)});
+      return 1;
+    }
+
     assert(VAs.size() >= 2 && "Expected at least 2 VAs.");
-    const CCValAssign &VALo = VAs[0];
     const CCValAssign &VAHi = VAs[1];
 
     assert(VAHi.needsCustom() && "Value doesn't need custom handling");
-    assert(VALo.getValNo() == VAHi.getValNo() &&
+    assert(VA.getValNo() == VAHi.getValNo() &&
            "Values belong to different arguments");
 
-    assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
-           VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+    assert(VA.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+           VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
     Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
@@ -272,7 +302,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
                            const_cast<CCValAssign &>(VAHi));
     }
 
-    assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+    assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
     if (VAHi.isRegLoc())
       assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
 
