@@ -3143,7 +3143,11 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // we did nothing here, but this allows us to issue a more
   // helpful diagnostic.
   if (Tok.is(tok::kw_concept)) {
-    Diag(Tok.getLocation(), diag::err_friend_concept);
+    Diag(Tok.getLocation(),
+         DS.isFriendSpecified()
+             ? diag::err_friend_concept
+             : diag::
+                   err_concept_decls_may_only_appear_in_global_namespace_scope);
     SkipUntil(tok::semi, tok::r_brace, StopBeforeMatch);
     return nullptr;
   }
