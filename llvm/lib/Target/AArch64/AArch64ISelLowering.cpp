@@ -18174,15 +18174,17 @@ performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       N->getOperand(0).getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
 
+  SelectionDAG &DAG = DCI.DAG;
+  const auto &ST = DAG.getSubtarget<AArch64Subtarget>();
   SDValue VecOp = N->getOperand(0).getOperand(0);
   EVT VecOpVT = VecOp.getValueType();
   if (VecOpVT.getScalarType() == MVT::i1 || !TLI.isTypeLegal(VecOpVT) ||
       (VecOpVT.isFixedLengthVector() &&
-       !TLI.useSVEForFixedLengthVectorVT(VecOpVT, /*OverrideNEON=*/true)))
+       !TLI.useSVEForFixedLengthVectorVT(
+           VecOpVT, /*OverrideNEON=*/ST.useSVEForFixedLengthVectors())))
     return SDValue();
 
   SDLoc DL(N);
-  SelectionDAG &DAG = DCI.DAG;
 
   // The input type is legal so map VECREDUCE_ADD to UADDV/SADDV, e.g.
   // i32 (vecreduce_add (zext nxv16i8 %op to nxv16i32))
