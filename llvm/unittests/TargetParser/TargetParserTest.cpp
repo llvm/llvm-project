@@ -1594,9 +1594,9 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
 }
 
 TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
-  std::string expected =
-      "All available -march extensions for AArch64\n\n"
-      "    Name                Architecture Feature(s)                                Description\n";
+  std::string expected = "All available -march extensions for AArch64\n\n"
+                         "    Name                Architecture Feature(s)      "
+                         "                          Description\n";
 
   outs().flush();
   testing::internal::CaptureStdout();

@@ -2860,7 +2860,8 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
-         MF.getFunction().getCallingConv() != CallingConv::SwiftTail;
+         MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
+         !requiresSaveVG(MF);
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
