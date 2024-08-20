@@ -187,6 +187,8 @@ void sortBlocks(MachineFunction &MF) {
   MachineDominatorTree MDT(MF);
 
   std::unordered_map<MachineBasicBlock *, size_t> Order;
+  Order.reserve(MF.size());
+
   size_t Index = 0;
   visit(MF, [&Order, &Index](MachineBasicBlock *MBB) { Order[MBB] = Index++; });
 
