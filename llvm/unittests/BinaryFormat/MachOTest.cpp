@@ -136,33 +136,45 @@ TEST(MachOTest, CPUSubTypePtrAuthABI) {
   }
   {
     Expected<uint32_t> Type = MachO::getCPUSubType(
-        Triple("arm64e-apple-darwin"), /*PtrAuthABIVersion=*/0x40,
+        Triple("arm64e-apple-darwin"), /*PtrAuthABIVersion=*/0x10,
         /*PtrAuthKernelABIVersion=*/false);
     ASSERT_EQ(toString(Type.takeError()),
-              "The ptrauth ABI version needs to fit within 6 bits.");
+              "The ptrauth ABI version needs to fit within 4 bits.");
   }
   {
     uint32_t Type = cantFail(MachO::getCPUSubType(
         Triple("arm64e-apple-darwin"),
         /*PtrAuthABIVersion=*/5, /*PtrAuthKernelABIVersion=*/false));
-    ASSERT_EQ(Type, 2231369730U);
+    ASSERT_EQ(Type, 0x85000002U);
   }
   {
     uint32_t Type = cantFail(MachO::getCPUSubType(
         Triple("arm64e-apple-darwin"),
         /*PtrAuthABIVersion=*/5, /*PtrAuthKernelABIVersion=*/true));
-    ASSERT_EQ(Type, 3305111554U);
+    ASSERT_EQ(Type, 0xC5000002U);
+  }
+  {
+    uint32_t Type = cantFail(MachO::getCPUSubType(
+        Triple("arm64e-apple-darwin"),
+        /*PtrAuthABIVersion=*/0xF, /*PtrAuthKernelABIVersion=*/false));
+    ASSERT_EQ(Type, 0x8F000002U);
+  }
+  {
+    uint32_t Type = cantFail(MachO::getCPUSubType(
+        Triple("arm64e-apple-darwin"),
+        /*PtrAuthABIVersion=*/0xF, /*PtrAuthKernelABIVersion=*/true));
+    ASSERT_EQ(Type, 0xCF000002U);
   }
   {
     uint32_t Type = cantFail(MachO::getCPUSubType(
         Triple("arm64e-apple-darwin"),
         /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/false));
-    ASSERT_EQ(Type, 2147483650U);
+    ASSERT_EQ(Type, 0x80000002U);
   }
   {
     uint32_t Type = cantFail(MachO::getCPUSubType(
         Triple("arm64e-apple-darwin"),
         /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/true));
-    ASSERT_EQ(Type, 3221225474U);
+    ASSERT_EQ(Type, 0xC0000002U);
   }
 }

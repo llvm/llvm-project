@@ -2402,8 +2402,8 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       outs() << format("PTRAUTH_VERSION %d",
                        MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype))
              << "\n";
-    } else if (verbose &&
-        (cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64)
+    } else if (verbose && (cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+                              MachO::CPU_SUBTYPE_LIB64)
       outs() << "    capabilities CPU_SUBTYPE_LIB64\n";
     else
       outs() << "    capabilities "

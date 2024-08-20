@@ -1642,13 +1642,13 @@ enum CPUSubTypeARM64 {
   CPU_SUBTYPE_ARM64_V8 = 1,
   CPU_SUBTYPE_ARM64E = 2,
 
-  // arm64 reserves bits in the high byte for subtype-specific flags.
-  // On arm64e, the 6 low bits represent the ptrauth ABI version.
-  CPU_SUBTYPE_ARM64E_PTRAUTH_MASK = 0x3f000000,
-  // On arm64e, the top bit tells whether the Mach-O is versioned.
+  // arm64e uses the capability bits to encode ptrauth ABI information.
+  // Bit 63 marks the binary as Versioned.
   CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK = 0x80000000,
-  // On arm64e, the 2nd high bit tells whether the Mach-O is using kernel ABI.
-  CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK = 0x40000000
+  // Bit 62 marks the binary as using a kernel ABI.
+  CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK = 0x40000000,
+  // Bits [59:56] hold the 4-bit ptrauth ABI version.
+  CPU_SUBTYPE_ARM64E_PTRAUTH_MASK = 0x0f000000,
 };
 
 inline int CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(unsigned ST) {
@@ -1658,8 +1658,8 @@ inline int CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(unsigned ST) {
 inline unsigned
 CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(unsigned PtrAuthABIVersion,
                                         bool PtrAuthKernelABIVersion) {
-  assert((PtrAuthABIVersion <= 0x3F) &&
-         "ptrauth abi version must fit in 6 bits");
+  assert((PtrAuthABIVersion <= 0xF) &&
+         "ptrauth abi version must fit in 4 bits");
   return CPU_SUBTYPE_ARM64E | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK |
          (PtrAuthKernelABIVersion ? CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
                                   : 0) |
