@@ -157,6 +157,12 @@ Changes to the C API
   * ``LLVMGetNamedFunctionWithLength``
   * ``LLVMGetNamedGlobalWithLength``
 
+* The following functions are added to access the ``LLVMContextRef`` associated
+   with ``LLVMValueRef`` and ``LLVMBuilderRef`` objects:
+
+  * ``LLVMGetValueContext``
+  * ``LLVMGetBuilderContext``
+
 * The new pass manager can now be invoked with a custom alias analysis pipeline, using
   the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
 
