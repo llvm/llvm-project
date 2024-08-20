@@ -183,11 +183,12 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(GlobalVariable &GV) {
       return RejectUser(Inst, "select on ptrs from two different GVs");
     }
 
-    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
-        MSI && isSupportedMemset(MSI, GV, *DL)) {
-      continue;
-    } else
+    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
+      if (isSupportedMemset(MSI, GV, *DL)) {
+        continue;
+      }
       return RejectUser(Inst, "cannot handle partial memset inst yet");
+    }
 
     if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst))
       return RejectUser(Inst, "cannot handle mem transfer inst yet");
