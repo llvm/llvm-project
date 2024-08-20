@@ -1187,8 +1187,8 @@ void InferAddressSpacesImpl::performPointerReplacement(
   if (CurUser == NewV)
     return;
 
-  if (auto *CurUserI = dyn_cast<Instruction>(CurUser);
-      CurUserI && CurUserI->getFunction() != F)
+  auto *CurUserI = dyn_cast<Instruction>(CurUser);
+  if (!CurUserI || CurUserI->getFunction() != F)
     return;
 
   // Handle more complex cases like intrinsic that need to be remangled.
@@ -1202,10 +1202,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
       return;
   }
 
-  if (!isa<Instruction>(CurUser))
-    return;
-
-  if (ICmpInst *Cmp = dyn_cast<ICmpInst>(CurUser)) {
+  if (ICmpInst *Cmp = dyn_cast<ICmpInst>(CurUserI)) {
     // If we can infer that both pointers are in the same addrspace,
     // transform e.g.
     //   %cmp = icmp eq float* %p, %q
@@ -1236,7 +1233,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
     }
   }
 
-  if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
+  if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUserI)) {
     unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (ASC->getDestAddressSpace() == NewAS) {
       ASC->replaceAllUsesWith(NewV);
@@ -1264,8 +1261,8 @@ void InferAddressSpacesImpl::performPointerReplacement(
     CurUser->replaceUsesOfWith(
       V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
   } else {
-    CurUser->replaceUsesOfWith(V, ConstantExpr::getAddrSpaceCast(
-                                 cast<Constant>(NewV), V->getType()));
+    CurUserI->replaceUsesOfWith(
+        V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV), V->getType()));
   }
 }
 
