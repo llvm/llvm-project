@@ -41,6 +41,7 @@ endif ()
 
 add_llvm_tool(llvm-c-test
   attributes.c
+  atomic.c
   calc.c
   debuginfo.c
   diagnostic.c

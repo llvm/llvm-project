@@ -755,13 +755,8 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        if (LLVMIsAtomic(Src)) {
-          LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
-          if (IsAtomicSingleThread)
-            LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
-          else
-            LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
-        }
+        if (LLVMIsAtomic(Src))
+          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
         break;
       }
       case LLVMStore: {
@@ -771,13 +766,8 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        if (LLVMIsAtomic(Src)) {
-          LLVMBool IsAtomicSingleThread = LLVMIsAtomicSingleThread(Src);
-          if (IsAtomicSingleThread)
-            LLVMSetAtomicSingleThread(Dst, IsAtomicSingleThread);
-          else
-            LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
-        }
+        if (LLVMIsAtomic(Src))
+          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
         break;
       }
       case LLVMGetElementPtr: {
@@ -798,12 +788,8 @@ struct FunCloner {
         LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
         LLVMAtomicRMWBinOp BinOp = LLVMGetAtomicRMWBinOp(Src);
         LLVMAtomicOrdering Ord = LLVMGetOrdering(Src);
-        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
-        if (SingleThread)
-          Dst = LLVMBuildAtomicRMW(Builder, BinOp, Ptr, Val, Ord, SingleThread);
-        else
-          Dst = LLVMBuildAtomicRMWSyncScope(Builder, BinOp, Ptr, Val, Ord,
-                                            LLVMGetAtomicSyncScopeID(Src));
+        Dst = LLVMBuildAtomicRMWSyncScope(Builder, BinOp, Ptr, Val, Ord,
+                                          LLVMGetAtomicSyncScopeID(Src));
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetValueName2(Dst, Name, NameLen);
@@ -815,14 +801,8 @@ struct FunCloner {
         LLVMValueRef New = CloneValue(LLVMGetOperand(Src, 2));
         LLVMAtomicOrdering Succ = LLVMGetCmpXchgSuccessOrdering(Src);
         LLVMAtomicOrdering Fail = LLVMGetCmpXchgFailureOrdering(Src);
-        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
-        if (SingleThread)
-          Dst = LLVMBuildAtomicCmpXchg(Builder, Ptr, Cmp, New, Succ, Fail,
-                                       SingleThread);
-        else
-          Dst = LLVMBuildAtomicCmpXchgSyncScope(Builder, Ptr, Cmp, New, Succ,
-                                                Fail,
-                                                LLVMGetAtomicSyncScopeID(Src));
+        Dst = LLVMBuildAtomicCmpXchgSyncScope(
+            Builder, Ptr, Cmp, New, Succ, Fail, LLVMGetAtomicSyncScopeID(Src));
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetWeak(Dst, LLVMGetWeak(Src));
@@ -1013,12 +993,8 @@ struct FunCloner {
       }
       case LLVMFence: {
         LLVMAtomicOrdering Ordering = LLVMGetOrdering(Src);
-        LLVMBool IsSingleThreaded = LLVMIsAtomicSingleThread(Src);
-        if (IsSingleThreaded)
-          Dst = LLVMBuildFence(Builder, Ordering, IsSingleThreaded, Name);
-        else
-          Dst = LLVMBuildFenceSyncScope(Builder, Ordering,
-                                        LLVMGetAtomicSyncScopeID(Src), Name);
+        Dst = LLVMBuildFenceSyncScope(Builder, Ordering,
+                                      LLVMGetAtomicSyncScopeID(Src), Name);
         break;
       }
       case LLVMZExt: {
