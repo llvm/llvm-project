@@ -2000,3 +2000,35 @@ bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
   // target-features.
   return (CallerBits & CalleeBits) == CalleeBits;
 }
+
+/// See if \p I should be considered for address type promotion. We check if \p
+/// I is a sext with right type and used in memory accesses. If it used in a
+/// "complex" getelementptr, we allow it to be promoted without finding other
+/// sext instructions that sign extended the same initial value. A getelementptr
+/// is considered as "complex" if it has more than 2 operands.
+bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) {
+  bool Considerable = false;
+  AllowPromotionWithoutCommonHeader = false;
+  if (!isa<SExtInst>(&I))
+    return false;
+  Type *ConsideredSExtType =
+      Type::getInt64Ty(I.getParent()->getParent()->getContext());
+  if (I.getType() != ConsideredSExtType)
+    return false;
+  // See if the sext is the one with the right type and used in at least one
+  // GetElementPtrInst.
+  for (const User *U : I.users()) {
+    if (const GetElementPtrInst *GEPInst = dyn_cast<GetElementPtrInst>(U)) {
+      Considerable = true;
+      // A getelementptr is considered as "complex" if it has more than 2
+      // operands. We will promote a SExt used in such complex GEP as we
+      // expect some computation to be merged if they are done on 64 bits.
+      if (GEPInst->getNumOperands() > 2) {
+        AllowPromotionWithoutCommonHeader = true;
+        break;
+      }
+    }
+  }
+  return Considerable;
+}

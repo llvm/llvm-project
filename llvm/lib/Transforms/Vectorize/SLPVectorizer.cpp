@@ -795,16 +795,6 @@ struct InstructionsState {
 
 } // end anonymous namespace
 
-/// Chooses the correct key for scheduling data. If \p Op has the same (or
-/// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is \p
-/// OpValue.
-static Value *isOneOf(const InstructionsState &S, Value *Op) {
-  auto *I = dyn_cast<Instruction>(Op);
-  if (I && S.isOpcodeOrAlt(I))
-    return Op;
-  return S.OpValue;
-}
-
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///
@@ -1243,11 +1233,13 @@ public:
     StridedVectorize
   };
 
-  using ValueList = SmallVector<Value *, 4>;
-  using ValueSet = SmallPtrSet<Value *, 8>;
+  using ValueList = SmallVector<Value *, 8>;
+  using InstrList = SmallVector<Instruction *, 16>;
+  using ValueSet = SmallPtrSet<Value *, 16>;
+  using StoreList = SmallVector<StoreInst *, 8>;
   using ExtraValueToDebugLocsMap =
       MapVector<Value *, SmallVector<Instruction *, 2>>;
-  using OrdersType = SmallVector<unsigned, 0>;
+  using OrdersType = SmallVector<unsigned, 4>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
@@ -1469,7 +1461,7 @@ public:
   /// \param TryRecursiveCheck used to check if long masked gather can be
   /// represented as a serie of loads/insert subvector, if profitable.
   LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
-                               OrdersType &Order,
+                               SmallVectorImpl<unsigned> &Order,
                                SmallVectorImpl<Value *> &PointerOps,
                                bool TryRecursiveCheck = true) const;
 
@@ -2838,7 +2830,7 @@ private:
   /// \param ResizeAllowed indicates whether it is allowed to handle subvector
   /// extract order.
   bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                       OrdersType &CurrentOrder,
+                       SmallVectorImpl<unsigned> &CurrentOrder,
                        bool ResizeAllowed = false) const;
 
   /// Vectorize a single entry in the tree.
@@ -3082,10 +3074,10 @@ private:
     CombinedOpcode CombinedOp = NotCombinedOp;
 
     /// Does this sequence require some shuffling?
-    SmallVector<int, 0> ReuseShuffleIndices;
+    SmallVector<int, 4> ReuseShuffleIndices;
 
     /// Does this entry require reordering?
-    OrdersType ReorderIndices;
+    SmallVector<unsigned, 4> ReorderIndices;
 
     /// Points back to the VectorizableTree.
     ///
@@ -3106,7 +3098,7 @@ private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
     /// reordering of operands during buildTree_rec() and vectorizeTree().
-    SmallVector<ValueList, 0> Operands;
+    SmallVector<ValueList, 2> Operands;
 
     /// The main/alternate instruction.
     Instruction *MainOp = nullptr;
@@ -3581,14 +3573,14 @@ private:
 
     ScheduleData() = default;
 
-    void init(int BlockSchedulingRegionID, Value *OpVal) {
+    void init(int BlockSchedulingRegionID, Instruction *I) {
       FirstInBundle = this;
       NextInBundle = nullptr;
       NextLoadStore = nullptr;
       IsScheduled = false;
       SchedulingRegionID = BlockSchedulingRegionID;
       clearDependencies();
-      OpValue = OpVal;
+      Inst = I;
       TE = nullptr;
     }
 
@@ -3694,9 +3686,6 @@ private:
 
     Instruction *Inst = nullptr;
 
-    /// Opcode of the current instruction in the schedule data.
-    Value *OpValue = nullptr;
-
     /// The TreeEntry that this instruction corresponds to.
     TreeEntry *TE = nullptr;
 
@@ -3714,13 +3703,13 @@ private:
 
     /// The dependent memory instructions.
     /// This list is derived on demand in calculateDependencies().
-    SmallVector<ScheduleData *, 0> MemoryDependencies;
+    SmallVector<ScheduleData *, 4> MemoryDependencies;
 
     /// List of instructions which this instruction could be control dependent
     /// on.  Allowing such nodes to be scheduled below this one could introduce
     /// a runtime fault which didn't exist in the original program.
     /// ex: this is a load or udiv following a readonly call which inf loops
-    SmallVector<ScheduleData *, 0> ControlDependencies;
+    SmallVector<ScheduleData *, 4> ControlDependencies;
 
     /// This ScheduleData is in the current scheduling region if this matches
     /// the current SchedulingRegionID of BlockScheduling.
@@ -3813,18 +3802,6 @@ private:
       return nullptr;
     }
 
-    ScheduleData *getScheduleData(Value *V, Value *Key) {
-      if (V == Key)
-        return getScheduleData(V);
-      auto I = ExtraScheduleDataMap.find(V);
-      if (I != ExtraScheduleDataMap.end()) {
-        ScheduleData *SD = I->second.lookup(Key);
-        if (SD && isInSchedulingRegion(SD))
-          return SD;
-      }
-      return nullptr;
-    }
-
     bool isInSchedulingRegion(ScheduleData *SD) const {
       return SD->SchedulingRegionID == SchedulingRegionID;
     }
@@ -3838,27 +3815,24 @@ private:
 
       for (ScheduleData *BundleMember = SD; BundleMember;
            BundleMember = BundleMember->NextInBundle) {
-        if (BundleMember->Inst != BundleMember->OpValue)
-          continue;
 
         // Handle the def-use chain dependencies.
 
         // Decrement the unscheduled counter and insert to ready list if ready.
         auto &&DecrUnsched = [this, &ReadyList](Instruction *I) {
-          doForAllOpcodes(I, [&ReadyList](ScheduleData *OpDef) {
-            if (OpDef && OpDef->hasValidDependencies() &&
-                OpDef->incrementUnscheduledDeps(-1) == 0) {
-              // There are no more unscheduled dependencies after
-              // decrementing, so we can put the dependent instruction
-              // into the ready list.
-              ScheduleData *DepBundle = OpDef->FirstInBundle;
-              assert(!DepBundle->IsScheduled &&
-                     "already scheduled bundle gets ready");
-              ReadyList.insert(DepBundle);
-              LLVM_DEBUG(dbgs()
-                         << "SLP:    gets ready (def): " << *DepBundle << "\n");
-            }
-          });
+          ScheduleData *OpDef = getScheduleData(I);
+          if (OpDef && OpDef->hasValidDependencies() &&
+              OpDef->incrementUnscheduledDeps(-1) == 0) {
+            // There are no more unscheduled dependencies after
+            // decrementing, so we can put the dependent instruction
+            // into the ready list.
+            ScheduleData *DepBundle = OpDef->FirstInBundle;
+            assert(!DepBundle->IsScheduled &&
+                   "already scheduled bundle gets ready");
+            ReadyList.insert(DepBundle);
+            LLVM_DEBUG(dbgs()
+                       << "SLP:    gets ready (def): " << *DepBundle << "\n");
+          }
         };
 
         // If BundleMember is a vector bundle, its operands may have been
@@ -3942,8 +3916,7 @@ private:
                "primary schedule data not in window?");
         assert(isInSchedulingRegion(SD->FirstInBundle) &&
                "entire bundle in window!");
-        (void)SD;
-        doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
+        SD->verify();
       }
 
       for (auto *SD : ReadyInsts) {
@@ -3953,29 +3926,17 @@ private:
       }
     }
 
-    void doForAllOpcodes(Value *V,
-                         function_ref<void(ScheduleData *SD)> Action) {
-      if (ScheduleData *SD = getScheduleData(V))
-        Action(SD);
-      auto I = ExtraScheduleDataMap.find(V);
-      if (I != ExtraScheduleDataMap.end())
-        for (auto &P : I->second)
-          if (isInSchedulingRegion(P.second))
-            Action(P.second);
-    }
-
     /// Put all instructions into the ReadyList which are ready for scheduling.
     template <typename ReadyListType>
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-        doForAllOpcodes(I, [&](ScheduleData *SD) {
-          if (SD->isSchedulingEntity() && SD->hasValidDependencies() &&
-              SD->isReady()) {
-            ReadyList.insert(SD);
-            LLVM_DEBUG(dbgs()
-                       << "SLP:    initially in ready list: " << *SD << "\n");
-          }
-        });
+        ScheduleData *SD = getScheduleData(I);
+        if (SD && SD->isSchedulingEntity() && SD->hasValidDependencies() &&
+            SD->isReady()) {
+          ReadyList.insert(SD);
+          LLVM_DEBUG(dbgs()
+                     << "SLP:    initially in ready list: " << *SD << "\n");
+        }
       }
     }
 
@@ -4032,10 +3993,6 @@ private:
     /// Note that the mapping survives during all vectorization iterations, i.e.
     /// ScheduleData structures are recycled.
     DenseMap<Instruction *, ScheduleData *> ScheduleDataMap;
-
-    /// Attaches ScheduleData to Instruction with the leading key.
-    DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
-        ExtraScheduleDataMap;
 
     /// The ready-list for scheduling (only used for the dry-run).
     SetVector<ScheduleData *> ReadyInsts;
@@ -4298,12 +4255,12 @@ static void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
 /// the original order of the scalars. Procedure transforms the provided order
 /// in accordance with the given \p Mask. If the resulting \p Order is just an
 /// identity order, \p Order is cleared.
-static void reorderOrder(BoUpSLP::OrdersType &Order, ArrayRef<int> Mask,
+static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
                          bool BottomOrder = false) {
   assert(!Mask.empty() && "Expected non-empty mask.");
   unsigned Sz = Mask.size();
   if (BottomOrder) {
-    BoUpSLP::OrdersType PrevOrder;
+    SmallVector<unsigned> PrevOrder;
     if (Order.empty()) {
       PrevOrder.resize(Sz);
       std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
@@ -4693,7 +4650,7 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
 }
 
 BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
-    ArrayRef<Value *> VL, const Value *VL0, OrdersType &Order,
+    ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
     SmallVectorImpl<Value *> &PointerOps, bool TryRecursiveCheck) const {
   // Check that a vectorized load would load the same memory as a scalar
   // load. For example, we don't want to vectorize loads that are smaller
@@ -4821,7 +4778,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End;
              Cnt += VF, ++VectorizedCnt) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
-          OrdersType Order;
+          SmallVector<unsigned> Order;
           SmallVector<Value *> PointerOps;
           LoadsState LS =
               canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
@@ -5395,7 +5352,7 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   TE.ReorderIndices.clear();
   // Try to improve gathered nodes with clustered reuses, if possible.
   ArrayRef<int> Slice = ArrayRef(NewMask).slice(0, Sz);
-  OrdersType NewOrder(Slice);
+  SmallVector<unsigned> NewOrder(Slice);
   inversePermutation(NewOrder, NewMask);
   reorderScalars(TE.Scalars, NewMask);
   // Fill the reuses mask with the identity submasks.
@@ -7142,6 +7099,21 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                        ReuseShuffleIndices);
         return;
       }
+      SmallPtrSet<const TreeEntry *, 4> Nodes;
+      Nodes.insert(getTreeEntry(S.OpValue));
+      for (const TreeEntry *E : MultiNodeScalars.lookup(S.OpValue))
+        Nodes.insert(E);
+      SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
+      if (any_of(Nodes, [&](const TreeEntry *E) {
+            return all_of(E->Scalars,
+                          [&](Value *V) { return Values.contains(V); });
+          })) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
+        if (TryToFindDuplicates(S))
+          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
+                       ReuseShuffleIndices);
+        return;
+      }
     } else {
       // Record the reuse of the tree node.  FIXME, currently this is only used
       // to properly draw the graph rather than for the actual vectorization.
@@ -7715,7 +7687,7 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                              OrdersType &CurrentOrder,
+                              SmallVectorImpl<unsigned> &CurrentOrder,
                               bool ResizeAllowed) const {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst, ExtractValueInst>);
   assert(It != VL.end() && "Expected at least one extract instruction.");
@@ -11881,8 +11853,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     auto *Bundle = BlocksSchedules[BB]->getScheduleData(V);
     if (Bundle && Bundle->isPartOfBundle())
       for (; Bundle; Bundle = Bundle->NextInBundle)
-        if (Bundle->OpValue == Bundle->Inst)
-          Res.second = Bundle->Inst;
+        Res.second = Bundle->Inst;
   }
 
   // LastInst can still be null at this point if there's either not an entry
@@ -11975,7 +11946,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
       Vec = InsElt = Builder.CreateInsertVector(
-          Vec->getType(), Vec, V,
+          Vec->getType(), Vec, Scalar,
           Builder.getInt64(Pos * VecTy->getNumElements()));
       auto *II = dyn_cast<IntrinsicInst>(InsElt);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
@@ -14949,7 +14920,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // initial bundle to the region.
     if (ScheduleEnd != OldScheduleEnd) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
-        doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
+        if (ScheduleData *SD = getScheduleData(I))
+          SD->clearDependencies();
       ReSchedule = true;
     }
     if (Bundle) {
@@ -15068,37 +15040,21 @@ BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
   return &(ScheduleDataChunks.back()[ChunkPos++]);
 }
 
-bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
-                                                      const InstructionsState &S) {
-  if (getScheduleData(V, isOneOf(S, V)))
-    return true;
+bool BoUpSLP::BlockScheduling::extendSchedulingRegion(
+    Value *V, const InstructionsState &S) {
   Instruction *I = dyn_cast<Instruction>(V);
   assert(I && "bundle member must be an instruction");
   assert(!isa<PHINode>(I) && !isVectorLikeInstWithConstOps(I) &&
          !doesNotNeedToBeScheduled(I) &&
          "phi nodes/insertelements/extractelements/extractvalues don't need to "
          "be scheduled");
-  auto &&CheckScheduleForI = [this, &S](Instruction *I) -> bool {
-    ScheduleData *ISD = getScheduleData(I);
-    if (!ISD)
-      return false;
-    assert(isInSchedulingRegion(ISD) &&
-           "ScheduleData not in scheduling region");
-    ScheduleData *SD = allocateScheduleDataChunks();
-    SD->Inst = I;
-    SD->init(SchedulingRegionID, S.OpValue);
-    ExtraScheduleDataMap[I][S.OpValue] = SD;
-    return true;
-  };
-  if (CheckScheduleForI(I))
+  if (getScheduleData(I))
     return true;
   if (!ScheduleStart) {
     // It's the first instruction in the new region.
     initScheduleData(I, I->getNextNode(), nullptr, nullptr);
     ScheduleStart = I;
     ScheduleEnd = I->getNextNode();
-    if (isOneOf(S, I) != I)
-      CheckScheduleForI(I);
     assert(ScheduleEnd && "tried to vectorize a terminator?");
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
     return true;
@@ -15137,8 +15093,6 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
            "Instruction is in wrong basic block.");
     initScheduleData(I, ScheduleStart, nullptr, FirstLoadStoreInRegion);
     ScheduleStart = I;
-    if (isOneOf(S, I) != I)
-      CheckScheduleForI(I);
     LLVM_DEBUG(dbgs() << "SLP:  extend schedule region start to " << *I
                       << "\n");
     return true;
@@ -15151,8 +15105,6 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
   initScheduleData(ScheduleEnd, I->getNextNode(), LastLoadStoreInRegion,
                    nullptr);
   ScheduleEnd = I->getNextNode();
-  if (isOneOf(S, I) != I)
-    CheckScheduleForI(I);
   assert(ScheduleEnd && "tried to vectorize a terminator?");
   LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I << "\n");
   return true;
@@ -15171,7 +15123,6 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     if (!SD) {
       SD = allocateScheduleDataChunks();
       ScheduleDataMap[I] = SD;
-      SD->Inst = I;
     }
     assert(!isInSchedulingRegion(SD) &&
            "new ScheduleData already in scheduling region");
@@ -15225,25 +15176,14 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       BundleMember->resetUnscheduledDeps();
 
       // Handle def-use chain dependencies.
-      if (BundleMember->OpValue != BundleMember->Inst) {
-        if (ScheduleData *UseSD = getScheduleData(BundleMember->Inst)) {
+      for (User *U : BundleMember->Inst->users()) {
+        if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
           BundleMember->Dependencies++;
           ScheduleData *DestBundle = UseSD->FirstInBundle;
           if (!DestBundle->IsScheduled)
             BundleMember->incrementUnscheduledDeps(1);
           if (!DestBundle->hasValidDependencies())
             WorkList.push_back(DestBundle);
-        }
-      } else {
-        for (User *U : BundleMember->Inst->users()) {
-          if (ScheduleData *UseSD = getScheduleData(cast<Instruction>(U))) {
-            BundleMember->Dependencies++;
-            ScheduleData *DestBundle = UseSD->FirstInBundle;
-            if (!DestBundle->IsScheduled)
-              BundleMember->incrementUnscheduledDeps(1);
-            if (!DestBundle->hasValidDependencies())
-              WorkList.push_back(DestBundle);
-          }
         }
       }
 
@@ -15392,12 +15332,12 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   assert(ScheduleStart &&
          "tried to reset schedule on block which has not been scheduled");
   for (Instruction *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-    doForAllOpcodes(I, [&](ScheduleData *SD) {
+    if (ScheduleData *SD = getScheduleData(I)) {
       assert(isInSchedulingRegion(SD) &&
              "ScheduleData not in scheduling region");
       SD->IsScheduled = false;
       SD->resetUnscheduledDeps();
-    });
+    }
   }
   ReadyInsts.clear();
 }
@@ -15432,7 +15372,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   int Idx = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
+    if (ScheduleData *SD = BS->getScheduleData(I)) {
       TreeEntry *SDTE = getTreeEntry(SD->Inst);
       (void)SDTE;
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
@@ -15443,7 +15383,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
       if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
-    });
+    }
   }
   BS->initialFillReadyList(ReadyInsts);
 
@@ -15475,11 +15415,9 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   // Check that all schedulable entities got scheduled
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd; I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [&](ScheduleData *SD) {
-      if (SD->isSchedulingEntity() && SD->hasValidDependencies()) {
-        assert(SD->IsScheduled && "must be scheduled at this point");
-      }
-    });
+    ScheduleData *SD = BS->getScheduleData(I);
+    if (SD && SD->isSchedulingEntity() && SD->hasValidDependencies())
+      assert(SD->IsScheduled && "must be scheduled at this point");
   }
 #endif
 
@@ -15661,7 +15599,8 @@ bool BoUpSLP::collectValuesToDemote(
   if (any_of(E.Scalars, [&](Value *V) {
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
-                 (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                 (E.Idx == 0 && UserIgnoreList &&
+                  UserIgnoreList->contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
                   !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);
