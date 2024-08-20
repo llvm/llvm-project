@@ -924,7 +924,7 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
     %0 = emitc.sub %arg0, %arg1 : (i32, i32) -> i32
     %1 = emitc.sub %arg2, %arg3 : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
     %2 = emitc.sub %arg4, %arg5 : (!emitc.ptr<i32>, !emitc.ptr<i32>)
-        -> !emitc.opaque<"ptrdiff_t">
+        -> !emitc.ptrdiff_t
     ```
     ```c++
     // Code emitted for the operations above.

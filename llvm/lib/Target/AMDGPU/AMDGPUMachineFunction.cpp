@@ -11,7 +11,7 @@
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMemoryUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
