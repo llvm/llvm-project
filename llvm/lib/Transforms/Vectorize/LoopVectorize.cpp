@@ -8527,9 +8527,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-
-// Collect (ExitPhi, ExitingValue) pairs phis in the original exit block that are modeled in VPlan.
-// Some exiting values are not modeled explicitly yet and won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction increments.
+// Collect (ExitPhi, ExitingValue) pairs phis in the original exit block that
+// are modeled in VPlan. Some exiting values are not modeled explicitly yet and
+// won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe,
+// VPWidenPointerInductionRecipe and induction increments.
 static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
@@ -8554,8 +8555,7 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
     // live-outs.
     if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
          !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-        isa<VPWidenPointerInductionRecipe>(
-            V) ||
+        isa<VPWidenPointerInductionRecipe>(V) ||
         (isa<Instruction>(IncomingValue) &&
          any_of(IncomingValue->users(), [&Inductions](User *U) {
            auto *P = dyn_cast<PHINode>(U);
@@ -8567,10 +8567,11 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
   return ExitingValuesToFix;
 }
 
-// Add exit values to \p Plan. Extracts and VPLiveOuts are added for each entry in \p ExitingValuesToFix.
-static void addUsersInExitBlock(
-    VPlan &Plan,
-    MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
+// Add exit values to \p Plan. Extracts and VPLiveOuts are added for each entry
+// in \p ExitingValuesToFix.
+static void
+addUsersInExitBlock(VPlan &Plan,
+                    MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
   if (ExitingValuesToFix.empty())
     return;
 
@@ -8605,7 +8606,8 @@ static void addUsersInExitBlock(
 ///    VPLiveOut which uses the latter and corresponds to the scalar header.
 /// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
 ///    the original exit block using a VPLiveOut.
-static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
+static void addLiveOutsForFirstOrderRecurrences(
+    VPlan &Plan, MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
   // Start by finding out if middle block branches to scalar preheader, which is
@@ -8905,9 +8907,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  MapVector<PHINode *, VPValue *> ExitingValuesToFix =
-      collectUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
-                              Legal->getInductionVars());
+  MapVector<PHINode *, VPValue *> ExitingValuesToFix = collectUsersInExitBlock(
+      OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
 
   addLiveOutsForFirstOrderRecurrences(*Plan, ExitingValuesToFix);
   addUsersInExitBlock(*Plan, ExitingValuesToFix);
