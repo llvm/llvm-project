@@ -132,8 +132,10 @@ define void @histogram_i16_literal_1(ptr %base, <vscale x 4 x i32> %indices, <vs
 ; CHECK-LABEL: histogram_i16_literal_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, #1 // =0x1
 ; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0, z0.s, sxtw #1]
-; CHECK-NEXT:    add z1.s, z2.s, z1.s
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
 ; CHECK-NEXT:    st1h { z1.s }, p0, [x0, z0.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %buckets = getelementptr i16, ptr %base, <vscale x 4 x i32> %indices
@@ -145,8 +147,10 @@ define void @histogram_i16_literal_2(ptr %base, <vscale x 4 x i32> %indices, <vs
 ; CHECK-LABEL: histogram_i16_literal_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z3.s, #2 // =0x2
 ; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0, z0.s, sxtw #1]
-; CHECK-NEXT:    adr z1.s, [z2.s, z1.s, lsl #1]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s
 ; CHECK-NEXT:    st1h { z1.s }, p0, [x0, z0.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %buckets = getelementptr i16, ptr %base, <vscale x 4 x i32> %indices

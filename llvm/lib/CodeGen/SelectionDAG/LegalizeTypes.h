@@ -424,6 +424,7 @@ private:
   SDValue PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
@@ -972,6 +973,7 @@ private:
   SDValue SplitVecOp_CMP(SDNode *N);
   SDValue SplitVecOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue SplitVecOp_VP_CttzElements(SDNode *N);
+  SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
