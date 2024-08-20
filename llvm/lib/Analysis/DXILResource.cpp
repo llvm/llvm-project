@@ -23,7 +23,7 @@
 using namespace llvm;
 using namespace dxil;
 
-static constexpr StringRef getResourceClassName(ResourceClass RC) {
+static StringRef getResourceClassName(ResourceClass RC) {
   switch (RC) {
   case ResourceClass::SRV:
     return "SRV";
@@ -37,7 +37,7 @@ static constexpr StringRef getResourceClassName(ResourceClass RC) {
   llvm_unreachable("Unhandled ResourceClass");
 }
 
-static constexpr StringRef getResourceKindName(ResourceKind RK) {
+static StringRef getResourceKindName(ResourceKind RK) {
   switch (RK) {
   case ResourceKind::Texture1D:
     return "Texture1D";
@@ -82,7 +82,7 @@ static constexpr StringRef getResourceKindName(ResourceKind RK) {
   llvm_unreachable("Unhandled ResourceKind");
 }
 
-static constexpr StringRef getElementTypeName(ElementType ET) {
+static StringRef getElementTypeName(ElementType ET) {
   switch (ET) {
   case ElementType::I1:
     return "i1";
@@ -126,7 +126,7 @@ static constexpr StringRef getElementTypeName(ElementType ET) {
   llvm_unreachable("Unhandled ElementType");
 }
 
-static constexpr StringRef getSamplerTypeName(SamplerType ST) {
+static StringRef getSamplerTypeName(SamplerType ST) {
   switch (ST) {
   case SamplerType::Default:
     return "Default";
@@ -138,7 +138,7 @@ static constexpr StringRef getSamplerTypeName(SamplerType ST) {
   llvm_unreachable("Unhandled SamplerType");
 }
 
-static constexpr StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
+static StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
   switch (SFT) {
   case SamplerFeedbackType::MinMip:
     return "MinMip";

@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/API.h"
-#include "clang/AST/RawCommentList.h"
-#include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
@@ -60,6 +58,10 @@ bool RecordContext::IsWellFormed() const {
 
 void RecordContext::stealRecordChain(RecordContext &Other) {
   assert(IsWellFormed());
+  // Other's record chain is empty, nothing to do
+  if (Other.First == nullptr && Other.Last == nullptr)
+    return;
+
   // If we don't have an empty chain append Other's chain into ours.
   if (First)
     Last->NextInContext = Other.First;
@@ -67,6 +69,10 @@ void RecordContext::stealRecordChain(RecordContext &Other) {
     First = Other.First;
 
   Last = Other.Last;
+
+  for (auto *StolenRecord = Other.First; StolenRecord != nullptr;
+       StolenRecord = StolenRecord->getNextInContext())
+    StolenRecord->Parent = SymbolReference(cast<APIRecord>(this));
 
   // Delete Other's chain to ensure we don't accidentally traverse it.
   Other.First = nullptr;
@@ -83,6 +89,22 @@ void RecordContext::addToRecordChain(APIRecord *Record) const {
 
   Last->NextInContext = Record;
   Last = Record;
+}
+
+void RecordContext::removeFromRecordChain(APIRecord *Record) {
+  APIRecord *Prev = nullptr;
+  for (APIRecord *Curr = First; Curr != Record; Curr = Curr->NextInContext)
+    Prev = Curr;
+
+  if (Prev)
+    Prev->NextInContext = Record->NextInContext;
+  else
+    First = Record->NextInContext;
+
+  if (Last == Record)
+    Last = Prev;
+
+  Record->NextInContext = nullptr;
 }
 
 APIRecord *APISet::findRecordForUSR(StringRef USR) const {
@@ -113,6 +135,33 @@ SymbolReference APISet::createSymbolReference(StringRef Name, StringRef USR,
                                               StringRef Source) {
   return SymbolReference(copyString(Name), copyString(USR), copyString(Source));
 }
+
+void APISet::removeRecord(StringRef USR) {
+  auto Result = USRBasedLookupTable.find(USR);
+  if (Result != USRBasedLookupTable.end()) {
+    auto *Record = Result->getSecond().get();
+    auto &ParentReference = Record->Parent;
+    auto *ParentRecord = const_cast<APIRecord *>(ParentReference.Record);
+    if (!ParentRecord)
+      ParentRecord = findRecordForUSR(ParentReference.USR);
+
+    if (auto *ParentCtx = llvm::cast_if_present<RecordContext>(ParentRecord)) {
+      ParentCtx->removeFromRecordChain(Record);
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record))
+        ParentCtx->stealRecordChain(*RecordAsCtx);
+    } else {
+      TopLevelRecords.erase(Record);
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record)) {
+        for (const auto *Child = RecordAsCtx->First; Child != nullptr;
+             Child = Child->getNextInContext())
+          TopLevelRecords.insert(Child);
+      }
+    }
+    USRBasedLookupTable.erase(Result);
+  }
+}
+
+void APISet::removeRecord(APIRecord *Record) { removeRecord(Record->USR); }
 
 APIRecord::~APIRecord() {}
 TagRecord::~TagRecord() {}

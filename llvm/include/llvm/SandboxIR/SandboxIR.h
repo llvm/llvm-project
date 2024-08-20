@@ -107,6 +107,7 @@ namespace llvm {
 namespace sandboxir {
 
 class BasicBlock;
+class ConstantInt;
 class Context;
 class Function;
 class Instruction;
@@ -130,6 +131,10 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class SwitchInst;
+class UnaryOperator;
+class BinaryOperator;
+class AtomicRMWInst;
 class AtomicCmpXchgInst;
 
 /// Iterator for the `Use` edges of a User's operands.
@@ -249,6 +254,10 @@ protected:
   friend class InvokeInst;         // For getting `Val`.
   friend class CallBrInst;         // For getting `Val`.
   friend class GetElementPtrInst;  // For getting `Val`.
+  friend class SwitchInst;         // For getting `Val`.
+  friend class UnaryOperator;      // For getting `Val`.
+  friend class BinaryOperator;     // For getting `Val`.
+  friend class AtomicRMWInst;      // For getting `Val`.
   friend class AtomicCmpXchgInst;  // For getting `Val`.
   friend class AllocaInst;         // For getting `Val`.
   friend class CastInst;           // For getting `Val`.
@@ -483,22 +492,22 @@ class Constant : public sandboxir::User {
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
   Constant(ClassID ID, llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ID, C, SBCtx) {}
-  friend class Function; // For constructor
-  friend class Context;  // For constructor.
-  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+  friend class ConstantInt; // For constructor.
+  friend class Function;    // For constructor
+  friend class Context;     // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const override {
     return getOperandUseDefault(OpIdx, Verify);
   }
 
 public:
-  static Constant *createInt(Type *Ty, uint64_t V, Context &Ctx,
-                             bool IsSigned = false);
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Constant ||
+           From->getSubclassID() == ClassID::ConstantInt ||
            From->getSubclassID() == ClassID::Function;
   }
   sandboxir::Context &getParent() const { return getContext(); }
-  unsigned getUseOperandNo(const Use &Use) const final {
+  unsigned getUseOperandNo(const Use &Use) const override {
     return getUseOperandNoDefault(Use);
   }
 #ifndef NDEBUG
@@ -506,6 +515,41 @@ public:
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
   }
   void dumpOS(raw_ostream &OS) const override;
+#endif
+};
+
+class ConstantInt : public Constant {
+  ConstantInt(llvm::ConstantInt *C, sandboxir::Context &Ctx)
+      : Constant(ClassID::ConstantInt, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    llvm_unreachable("ConstantInt has no operands!");
+  }
+
+public:
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantInt for the given value.
+  static ConstantInt *get(Type *Ty, uint64_t V, Context &Ctx,
+                          bool IsSigned = false);
+
+  // TODO: Implement missing functions.
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantInt;
+  }
+  unsigned getUseOperandNo(const Use &Use) const override {
+    llvm_unreachable("ConstantInt has no operands!");
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantInt>(Val) && "Expected a ConstantInst!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
 #endif
 };
 
@@ -630,6 +674,10 @@ protected:
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class SwitchInst;         // For getTopmostLLVMInstruction().
+  friend class UnaryOperator;      // For getTopmostLLVMInstruction().
+  friend class BinaryOperator;     // For getTopmostLLVMInstruction().
+  friend class AtomicRMWInst;      // For getTopmostLLVMInstruction().
   friend class AtomicCmpXchgInst;  // For getTopmostLLVMInstruction().
   friend class AllocaInst;         // For getTopmostLLVMInstruction().
   friend class CastInst;           // For getTopmostLLVMInstruction().
@@ -1432,6 +1480,283 @@ public:
   // TODO: Add missing member functions.
 };
 
+class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
+public:
+  SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::Switch, Opcode::Switch, SI, Ctx) {}
+
+  static constexpr const unsigned DefaultPseudoIndex =
+      llvm::SwitchInst::DefaultPseudoIndex;
+
+  static SwitchInst *create(Value *V, BasicBlock *Dest, unsigned NumCases,
+                            BasicBlock::iterator WhereIt, BasicBlock *WhereBB,
+                            Context &Ctx, const Twine &Name = "");
+
+  Value *getCondition() const;
+  void setCondition(Value *V);
+  BasicBlock *getDefaultDest() const;
+  bool defaultDestUndefined() const {
+    return cast<llvm::SwitchInst>(Val)->defaultDestUndefined();
+  }
+  void setDefaultDest(BasicBlock *DefaultCase);
+  unsigned getNumCases() const {
+    return cast<llvm::SwitchInst>(Val)->getNumCases();
+  }
+
+  using CaseHandle =
+      llvm::SwitchInst::CaseHandleImpl<SwitchInst, ConstantInt, BasicBlock>;
+  using ConstCaseHandle =
+      llvm::SwitchInst::CaseHandleImpl<const SwitchInst, const ConstantInt,
+                                       const BasicBlock>;
+  using CaseIt = llvm::SwitchInst::CaseIteratorImpl<CaseHandle>;
+  using ConstCaseIt = llvm::SwitchInst::CaseIteratorImpl<ConstCaseHandle>;
+
+  /// Returns a read/write iterator that points to the first case in the
+  /// SwitchInst.
+  CaseIt case_begin() { return CaseIt(this, 0); }
+  ConstCaseIt case_begin() const { return ConstCaseIt(this, 0); }
+  /// Returns a read/write iterator that points one past the last in the
+  /// SwitchInst.
+  CaseIt case_end() { return CaseIt(this, getNumCases()); }
+  ConstCaseIt case_end() const { return ConstCaseIt(this, getNumCases()); }
+  /// Iteration adapter for range-for loops.
+  iterator_range<CaseIt> cases() {
+    return make_range(case_begin(), case_end());
+  }
+  iterator_range<ConstCaseIt> cases() const {
+    return make_range(case_begin(), case_end());
+  }
+  CaseIt case_default() { return CaseIt(this, DefaultPseudoIndex); }
+  ConstCaseIt case_default() const {
+    return ConstCaseIt(this, DefaultPseudoIndex);
+  }
+  CaseIt findCaseValue(const ConstantInt *C) {
+    return CaseIt(
+        this,
+        const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
+  }
+  ConstCaseIt findCaseValue(const ConstantInt *C) const {
+    ConstCaseIt I = llvm::find_if(cases(), [C](const ConstCaseHandle &Case) {
+      return Case.getCaseValue() == C;
+    });
+    if (I != case_end())
+      return I;
+    return case_default();
+  }
+  ConstantInt *findCaseDest(BasicBlock *BB);
+
+  void addCase(ConstantInt *OnVal, BasicBlock *Dest);
+  /// This method removes the specified case and its successor from the switch
+  /// instruction. Note that this operation may reorder the remaining cases at
+  /// index idx and above.
+  /// Note:
+  /// This action invalidates iterators for all cases following the one removed,
+  /// including the case_end() iterator. It returns an iterator for the next
+  /// case.
+  CaseIt removeCase(CaseIt It);
+
+  unsigned getNumSuccessors() const {
+    return cast<llvm::SwitchInst>(Val)->getNumSuccessors();
+  }
+  BasicBlock *getSuccessor(unsigned Idx) const;
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Switch;
+  }
+};
+
+class UnaryOperator : public UnaryInstruction {
+  static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
+    switch (UnOp) {
+    case llvm::Instruction::FNeg:
+      return Opcode::FNeg;
+    case llvm::Instruction::UnaryOpsEnd:
+      llvm_unreachable("Bad UnOp!");
+    }
+    llvm_unreachable("Unhandled UnOp!");
+  }
+  UnaryOperator(llvm::UnaryOperator *UO, Context &Ctx)
+      : UnaryInstruction(ClassID::UnOp, getUnaryOpcode(UO->getOpcode()), UO,
+                         Ctx) {}
+  friend Context; // for constructor.
+public:
+  static Value *create(Instruction::Opcode Op, Value *OpV, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BBIterator WhereIt,
+                                      BasicBlock *WhereBB, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom,
+                                      Instruction *InsertBefore, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
+                                      Value *CopyFrom, BasicBlock *InsertAtEnd,
+                                      Context &Ctx, const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::UnOp;
+  }
+};
+
+class BinaryOperator : public SingleLLVMInstructionImpl<llvm::BinaryOperator> {
+  static Opcode getBinOpOpcode(llvm::Instruction::BinaryOps BinOp) {
+    switch (BinOp) {
+    case llvm::Instruction::Add:
+      return Opcode::Add;
+    case llvm::Instruction::FAdd:
+      return Opcode::FAdd;
+    case llvm::Instruction::Sub:
+      return Opcode::Sub;
+    case llvm::Instruction::FSub:
+      return Opcode::FSub;
+    case llvm::Instruction::Mul:
+      return Opcode::Mul;
+    case llvm::Instruction::FMul:
+      return Opcode::FMul;
+    case llvm::Instruction::UDiv:
+      return Opcode::UDiv;
+    case llvm::Instruction::SDiv:
+      return Opcode::SDiv;
+    case llvm::Instruction::FDiv:
+      return Opcode::FDiv;
+    case llvm::Instruction::URem:
+      return Opcode::URem;
+    case llvm::Instruction::SRem:
+      return Opcode::SRem;
+    case llvm::Instruction::FRem:
+      return Opcode::FRem;
+    case llvm::Instruction::Shl:
+      return Opcode::Shl;
+    case llvm::Instruction::LShr:
+      return Opcode::LShr;
+    case llvm::Instruction::AShr:
+      return Opcode::AShr;
+    case llvm::Instruction::And:
+      return Opcode::And;
+    case llvm::Instruction::Or:
+      return Opcode::Or;
+    case llvm::Instruction::Xor:
+      return Opcode::Xor;
+    case llvm::Instruction::BinaryOpsEnd:
+      llvm_unreachable("Bad BinOp!");
+    }
+    llvm_unreachable("Unhandled BinOp!");
+  }
+  BinaryOperator(llvm::BinaryOperator *BinOp, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::BinaryOperator,
+                                  getBinOpOpcode(BinOp->getOpcode()), BinOp,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      BBIterator WhereIt, BasicBlock *WhereBB,
+                                      Context &Ctx, const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      Instruction *InsertBefore, Context &Ctx,
+                                      const Twine &Name = "");
+  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
+                                      Value *RHS, Value *CopyFrom,
+                                      BasicBlock *InsertAtEnd, Context &Ctx,
+                                      const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::BinaryOperator;
+  }
+  void swapOperands() { swapOperandsInternal(0, 1); }
+};
+
+class AtomicRMWInst : public SingleLLVMInstructionImpl<llvm::AtomicRMWInst> {
+  AtomicRMWInst(llvm::AtomicRMWInst *Atomic, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::AtomicRMW,
+                                  Instruction::Opcode::AtomicRMW, Atomic, Ctx) {
+  }
+  friend class Context; // For constructor.
+
+public:
+  using BinOp = llvm::AtomicRMWInst::BinOp;
+  BinOp getOperation() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getOperation();
+  }
+  static StringRef getOperationName(BinOp Op) {
+    return llvm::AtomicRMWInst::getOperationName(Op);
+  }
+  static bool isFPOperation(BinOp Op) {
+    return llvm::AtomicRMWInst::isFPOperation(Op);
+  }
+  void setOperation(BinOp Op) {
+    cast<llvm::AtomicRMWInst>(Val)->setOperation(Op);
+  }
+  Align getAlign() const { return cast<llvm::AtomicRMWInst>(Val)->getAlign(); }
+  void setAlignment(Align Align);
+  bool isVolatile() const {
+    return cast<llvm::AtomicRMWInst>(Val)->isVolatile();
+  }
+  void setVolatile(bool V);
+  AtomicOrdering getOrdering() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getOrdering();
+  }
+  void setOrdering(AtomicOrdering Ordering);
+  SyncScope::ID getSyncScopeID() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getSyncScopeID();
+  }
+  void setSyncScopeID(SyncScope::ID SSID);
+  Value *getPointerOperand();
+  const Value *getPointerOperand() const {
+    return const_cast<AtomicRMWInst *>(this)->getPointerOperand();
+  }
+  Value *getValOperand();
+  const Value *getValOperand() const {
+    return const_cast<AtomicRMWInst *>(this)->getValOperand();
+  }
+  unsigned getPointerAddressSpace() const {
+    return cast<llvm::AtomicRMWInst>(Val)->getPointerAddressSpace();
+  }
+  bool isFloatingPointOperation() const {
+    return cast<llvm::AtomicRMWInst>(Val)->isFloatingPointOperation();
+  }
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::AtomicRMW;
+  }
+
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               BBIterator WhereIt, BasicBlock *WhereBB,
+                               Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               Instruction *InsertBefore, Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               BasicBlock *InsertAtEnd, Context &Ctx,
+                               SyncScope::ID SSID = SyncScope::System,
+                               const Twine &Name = "");
+};
+
 class AtomicCmpXchgInst
     : public SingleLLVMInstructionImpl<llvm::AtomicCmpXchgInst> {
   AtomicCmpXchgInst(llvm::AtomicCmpXchgInst *Atomic, Context &Ctx)
@@ -1844,7 +2169,7 @@ protected:
   Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
     return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
   }
-  friend class Constant; // For getOrCreateConstant().
+  friend class ConstantInt; // For getOrCreateConstant().
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
@@ -1876,6 +2201,14 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  SwitchInst *createSwitchInst(llvm::SwitchInst *I);
+  friend SwitchInst; // For createSwitchInst()
+  UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
+  friend UnaryOperator; // For createUnaryOperator()
+  BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
+  friend BinaryOperator; // For createBinaryOperator()
+  AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
+  friend AtomicRMWInst; // For createAtomicRMWInst()
   AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
   friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
   AllocaInst *createAllocaInst(llvm::AllocaInst *I);
