@@ -98,9 +98,8 @@ public:
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
-      if (std::find_if(allocas.begin(), allocas.end(), [alloca](auto x) {
-            return x.first == alloca;
-          }) == allocas.end()) {
+      if (llvm::none_of(allocas,
+                        [alloca](auto x) { return x.first == alloca; })) {
         allocas.push_back(std::make_pair(alloca, store));
       }
 

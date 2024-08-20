@@ -2231,6 +2231,7 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
+    NamedDecl *D = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
       Loc = ASE->getBase()->getExprLoc();
       Range = ASE->getBase()->getSourceRange();
@@ -2261,6 +2262,12 @@ public:
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
+      } else if (isa<MemberExpr>(Operation)) {
+        // note_unsafe_buffer_operation doesn't have this mode yet.
+        assert(!IsRelatedToDecl && "Not implemented yet!");
+        auto ME = dyn_cast<MemberExpr>(Operation);
+        D = ME->getMemberDecl();
+        MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
         if (!isa<PointerType>(destType))
@@ -2285,7 +2292,12 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
-      S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      if (D) {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation)
+            << MsgParam << D << Range;
+      } else {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      }
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
       }

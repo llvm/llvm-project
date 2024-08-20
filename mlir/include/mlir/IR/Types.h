@@ -34,7 +34,7 @@ class AsmState;
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verify(
+///    - static LogicalResult verifyInvariants(
 ///                                function_ref<InFlightDiagnostic()> emitError,
 ///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
@@ -131,6 +131,7 @@ public:
   bool isFloat8E5M2FNUZ() const;
   bool isFloat8E4M3FNUZ() const;
   bool isFloat8E4M3B11FNUZ() const;
+  bool isFloat8E3M4() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;

@@ -16,9 +16,8 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
-using namespace llvm;
+namespace llvm {
 
-namespace {
 class EmptyMatchContext {
   SelectionDAG &DAG;
   const TargetLowering &TLI;
@@ -46,6 +45,8 @@ public:
                                 bool LegalOnly = false) const {
     return TLI.isOperationLegalOrCustom(Op, VT, LegalOnly);
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 class VPMatchContext {
@@ -170,6 +171,12 @@ public:
     unsigned VPOp = ISD::getVPForBaseOpcode(Op);
     return TLI.isOperationLegalOrCustom(VPOp, VT, LegalOnly);
   }
+
+  unsigned getNumOperands(SDValue N) const {
+    return N->isVPOpcode() ? N->getNumOperands() - 2 : N->getNumOperands();
+  }
 };
-} // end anonymous namespace
-#endif
+
+} // namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_SELECTIONDAG_MATCHCONTEXT_H
