@@ -45,7 +45,7 @@ struct SMEPeepholeOpt : public MachineFunctionPass {
   }
 
   bool optimizeStartStopPairs(MachineBasicBlock &MBB,
-                              bool &HasRemainingSMChange) const;
+                              bool &HasRemovedAllSMChanges) const;
 };
 
 char SMEPeepholeOpt::ID = 0;
@@ -128,21 +128,18 @@ static bool isSVERegOp(const TargetRegisterInfo &TRI,
          TRI.getCommonSubClass(&AArch64::PPRRegClass, RC);
 }
 
-bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
-                                            bool &HasRemainingSMChange) const {
+bool SMEPeepholeOpt::optimizeStartStopPairs(
+    MachineBasicBlock &MBB, bool &HasRemovedAllSMChanges) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterInfo &TRI =
       *MBB.getParent()->getSubtarget().getRegisterInfo();
 
-  SmallVector<MachineInstr *, 4> ToBeRemoved;
-
   bool Changed = false;
   MachineInstr *Prev = nullptr;
-  HasRemainingSMChange = false;
+  SmallVector<MachineInstr *, 4> ToBeRemoved;
 
+  // Convenience function to reset the matching of a sequence.
   auto Reset = [&]() {
-    if (Prev && ChangesStreamingMode(Prev))
-      HasRemainingSMChange = true;
     Prev = nullptr;
     ToBeRemoved.clear();
   };
@@ -151,10 +148,15 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
   // and smstop nodes that cancel each other out. We only permit a limited
   // set of instructions to appear between them, otherwise we reset our
   // tracking.
+  unsigned NumSMChanges = 0;
+  unsigned NumSMChangesRemoved = 0;
   for (MachineInstr &MI : make_early_inc_range(MBB)) {
     switch (MI.getOpcode()) {
     case AArch64::MSRpstatesvcrImm1:
     case AArch64::MSRpstatePseudo: {
+      if (ChangesStreamingMode(&MI))
+        NumSMChanges++;
+
       if (!Prev)
         Prev = &MI;
       else if (isMatchingStartStopPair(Prev, &MI)) {
@@ -167,6 +169,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
         ToBeRemoved.clear();
         Prev = nullptr;
         Changed = true;
+        NumSMChangesRemoved += 2;
       } else {
         Reset();
         Prev = &MI;
@@ -218,6 +221,8 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(MachineBasicBlock &MBB,
     }
   }
 
+  HasRemovedAllSMChanges =
+      NumSMChanges && (NumSMChanges == NumSMChangesRemoved);
   return Changed;
 }
 
@@ -234,20 +239,20 @@ bool SMEPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
 
   bool Changed = false;
-  bool FunctionHasRemainingSMChange = false;
+  bool FunctionHasAllSMChangesRemoved = false;
 
   // Even if the block lives in a function with no SME attributes attached we
   // still have to analyze all the blocks because we may call a streaming
   // function that requires smstart/smstop pairs.
   for (MachineBasicBlock &MBB : MF) {
-    bool BlockHasRemainingSMChange;
-    Changed |= optimizeStartStopPairs(MBB, BlockHasRemainingSMChange);
-    FunctionHasRemainingSMChange |= BlockHasRemainingSMChange;
+    bool BlockHasAllSMChangesRemoved;
+    Changed |= optimizeStartStopPairs(MBB, BlockHasAllSMChangesRemoved);
+    FunctionHasAllSMChangesRemoved |= BlockHasAllSMChangesRemoved;
   }
 
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (Changed && AFI->hasStreamingModeChanges())
-    AFI->setHasStreamingModeChanges(FunctionHasRemainingSMChange);
+  if (FunctionHasAllSMChangesRemoved)
+    AFI->setHasStreamingModeChanges(false);
 
   return Changed;
 }
