@@ -10992,6 +10992,8 @@ def note_func_effect_from_template : Note<
   "in template expansion here">;
 def note_func_effect_in_constructor : Note<
   "in%select{| implicit}0 constructor here">;
+def note_in_evaluating_default_argument : Note<
+  "in evaluating default argument here">;
 
 // spoofing nonblocking/nonallocating
 def warn_invalid_add_func_effects : Warning<

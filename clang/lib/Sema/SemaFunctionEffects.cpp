@@ -41,11 +41,17 @@ enum class ViolationID : uint8_t {
   CallsExprWithoutEffect,
 };
 
-// Bits, describing the AST context in which a violation was found.
-// If none present, the context was the function body.
-using ViolationSite = unsigned;
-enum {
-  VSite_MemberInitializer = 1,
+// Information about the AST context in which a violation was found, so
+// that diagnostics can point to the correct source.
+struct ViolationSite {
+  enum class Kind : uint8_t {
+    Default = 0, // Function body.
+    MemberInitializer = 1,
+    DefaultArgExpr = 2
+  };
+
+  Kind VKind = Kind::Default;
+  CXXDefaultArgExpr *DefaultArgExpr = nullptr;
 };
 
 // Represents a violation of the rules, potentially for the entire duration of
@@ -269,7 +275,7 @@ public:
         // Add a Violation for this effect if a caller were to
         // try to infer it.
         InferrableEffectToFirstViolation.maybeInsert(Violation(
-            effect, ViolationID::DeclDisallowsInference, 0,
+            effect, ViolationID::DeclDisallowsInference, ViolationSite{},
             CInfo.CDecl->getLocation(), nullptr, ProblemCalleeEffect));
       }
     }
@@ -686,7 +692,8 @@ private:
         VS_MemberInitializer,
       };
 
-      if (V != nullptr && V->Site == VSite_MemberInitializer)
+      if (V != nullptr &&
+          V->Site.VKind == ViolationSite::Kind::MemberInitializer)
         return VS_MemberInitializer;
       if (isa<BlockDecl>(D))
         return VS_Block;
@@ -702,10 +709,10 @@ private:
       return VS_Function;
     };
 
-    // If a Violation's site is a member initializer, adds a note referring to
-    // the constructor which invoked it.
-    auto MaybeAddCtorContext = [&](const Decl *D, const Violation &V) {
-      if (V.Site == VSite_MemberInitializer) {
+    auto MaybeAddSiteContext = [&](const Decl *D, const Violation &V) {
+      // If a violation site is a member initializer, add a note pointing to
+      // the constructor which invoked it.
+      if (V.Site.VKind == ViolationSite::Kind::MemberInitializer) {
         unsigned ImplicitCtor = 0;
         if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D);
             Ctor && Ctor->isImplicit())
@@ -713,6 +720,12 @@ private:
         S.Diag(D->getLocation(), diag::note_func_effect_in_constructor)
             << ImplicitCtor;
       }
+
+      // If a violation site is a default argument expression, add a note
+      // pointing to the call site using the default argument.
+      else if (V.Site.VKind == ViolationSite::Kind::DefaultArgExpr)
+        S.Diag(V.Site.DefaultArgExpr->getUsedLocation(),
+               diag::note_in_evaluating_default_argument);
     };
 
     // Top-level violations are warnings.
@@ -732,13 +745,13 @@ private:
         S.Diag(Viol1.Loc, diag::warn_func_effect_violation)
             << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
             << Viol1.diagnosticSelectIndex();
-        MaybeAddCtorContext(CInfo.CDecl, Viol1);
+        MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
             << effectName << SiteDescIndex(CInfo.CDecl, &Viol1);
-        MaybeAddCtorContext(CInfo.CDecl, Viol1);
+        MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
 
@@ -749,7 +762,7 @@ private:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
             << effectName << SiteDescIndex(CInfo.CDecl, &Viol1)
             << SiteDescIndex(CalleeInfo.CDecl, nullptr) << CalleeName;
-        MaybeAddCtorContext(CInfo.CDecl, Viol1);
+        MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
 
         // Emit notes explaining the transitive chain of inferences: Why isn't
@@ -814,7 +827,7 @@ private:
             S.Diag(Viol2.Loc, diag::note_func_effect_violation)
                 << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
                 << Viol2.diagnosticSelectIndex();
-            MaybeAddCtorContext(CalleeInfo.CDecl, Viol2);
+            MaybeAddSiteContext(CalleeInfo.CDecl, Viol2);
             break;
           case ViolationID::CallsDeclWithoutEffect:
             MaybeNextCallee.emplace(*Viol2.Callee);
@@ -850,7 +863,7 @@ private:
     Analyzer &Outer;
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
-    ViolationSite VSite = 0;
+    ViolationSite VSite;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -1129,10 +1142,33 @@ private:
     bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
       ViolationSite PrevVS = VSite;
       if (Init->isAnyMemberInitializer())
-        VSite = VSite_MemberInitializer;
+        VSite.VKind = ViolationSite::Kind::MemberInitializer;
       bool Result = Base::TraverseConstructorInitializer(Init);
       VSite = PrevVS;
       return Result;
+    }
+
+    bool TraverseCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "TraverseCXXDefaultArgExpr : "
+                     << E->getUsedLocation().printToString(Outer.S.SourceMgr)
+                     << "\n";);
+
+      ViolationSite PrevVS = VSite;
+      if (VSite.VKind == ViolationSite::Kind::Default)
+        VSite = ViolationSite{.VKind = ViolationSite::Kind::DefaultArgExpr,
+                              .DefaultArgExpr = E};
+
+      bool Result = Base::TraverseCXXDefaultArgExpr(E);
+      VSite = PrevVS;
+      return Result;
+    }
+
+    bool TraverseParmVarDecl(ParmVarDecl *PV) {
+      // By traversing a ParmVarDecl as if it were a simple VarDecl, we avoid
+      // incorrectly attributing default argument expressions to this function;
+      // they are properly attributed to callers, via a CXXDefaultArgExpr.
+      return Base::TraverseVarDecl(PV);
     }
 
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {

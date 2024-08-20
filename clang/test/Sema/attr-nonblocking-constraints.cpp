@@ -257,6 +257,16 @@ struct T {
 	T(int x) [[clang::nonblocking]] : x(x) {} // OK
 };
 
+// Default arguments
+int badForDefaultArg(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+void hasDefaultArg(int param = badForDefaultArg()) { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}}
+}
+
+void nb21() [[clang::nonblocking]] {
+	hasDefaultArg(); // expected-note {{in evaluating default argument here}}
+}
+
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
   static void problem1();   // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
