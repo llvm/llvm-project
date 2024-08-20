@@ -82,7 +82,7 @@ func.func @cmpi_signed() {
   %true_i1 = arith.constant 1 : i1
   %true_i1_n1 = arith.constant -1 : i1
 
-  // int values 1 and -1 represent the same bitvector
+  // int values 1 and -1 are represented with the same bitvector (`0b1`)
   // But, bitvector `1` is interpreted as int value -1 in signed comparison
 
   // CHECK-LABEL: @cmpi_sge_i1
@@ -92,6 +92,10 @@ func.func @cmpi_signed() {
   // CHECK-LABEL: @cmpi_sge_i1
   // CHECK-NEXT:  1
   func.call @cmpi_sge_i1(%false_i1, %true_i1) : (i1, i1) -> ()
+  
+  // CHECK-LABEL: @cmpi_sge_i1
+  // CHECK-NEXT:  0
+  func.call @cmpi_sge_i1(%true_i1, %false_i1) : (i1, i1) -> ()
 
   %false = arith.constant false
   %true = arith.constant true
