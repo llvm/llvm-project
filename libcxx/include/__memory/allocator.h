@@ -148,10 +148,12 @@ public:
 
   template <class _Up, class... _Args>
   _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
-    ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
+    std::construct_at(__p, std::forward<Args>(args)...);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
+  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) {
+    std::destroy_at(__p);
+  }
 #endif
 };
 

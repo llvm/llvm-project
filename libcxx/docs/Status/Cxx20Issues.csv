@@ -1,4 +1,5 @@
 "Issue #","Issue Name","Meeting","Status","First released version","Labels"
+"`LWG3315 <https://wg21.link/LWG3315>`__","``a.construct``\ should call ``construct_at``\","2020-02 (Prague)","|Complete|","",""
 "`LWG2070 <https://wg21.link/LWG2070>`__","``allocate_shared``\  should use ``allocator_traits<A>::construct``\ ","2017-07 (Toronto)","Resolved by `P0674R1 <https://wg21.link/P0674R1>`__","",""
 "`LWG2444 <https://wg21.link/LWG2444>`__","Inconsistent complexity for ``std::sort_heap``\ ","2017-07 (Toronto)","|Nothing To Do|","",""
 "`LWG2593 <https://wg21.link/LWG2593>`__","Moved-from state of Allocators","2017-07 (Toronto)","","",""
