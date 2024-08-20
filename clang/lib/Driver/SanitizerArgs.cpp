@@ -792,8 +792,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           << "fsanitize-trap=cfi";
   }
 
-  for (const auto *Arg :
-       Args.filtered(options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
+  for (const auto *Arg : Args.filtered(
+           options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
     Arg->claim();
     OverflowPatternExclusions |=
         parseOverflowPatternExclusionValues(D, Arg, DiagnoseErrors);
