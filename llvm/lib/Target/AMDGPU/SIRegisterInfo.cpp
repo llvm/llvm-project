@@ -2471,10 +2471,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       if (OtherOp.isImm()) {
         OtherOp.setImm(OtherOp.getImm() + Offset);
         Offset = 0;
-      }
 
-      // If we can't fold the other operand, do another increment.
-      if (!OtherOp.isImm() && MaterializedReg) {
+        if (MaterializedReg)
+          FIOp.ChangeToRegister(MaterializedReg, false);
+        else
+          FIOp.ChangeToImmediate(0);
+      } else if (MaterializedReg) {
+        // If we can't fold the other operand, do another increment.
         Register DstReg = DstOp.getReg();
 
         if (!TmpReg && MaterializedReg == FrameReg) {
@@ -2496,15 +2499,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         OtherOp.setIsKill(true);
         OtherOp.setIsRenamable(true);
         FIOp.ChangeToImmediate(Offset);
-      } else if (!OtherOp.isImm() && !MaterializedReg) {
-        FIOp.ChangeToImmediate(Offset);
       } else {
-        assert(Offset == 0);
-
-        if (MaterializedReg)
-          FIOp.ChangeToRegister(MaterializedReg, false);
-        else
-          FIOp.ChangeToImmediate(0);
+        // If we don't have any other offset to apply, we can just directly
+        // interpret the frame index as the offset.
+        FIOp.ChangeToImmediate(Offset);
       }
 
       if (DeadSCC && OtherOp.isImm() && OtherOp.getImm() == 0) {
@@ -2521,7 +2519,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
 
       assert(!FIOp.isFI());
-
       return true;
     }
     default: {
