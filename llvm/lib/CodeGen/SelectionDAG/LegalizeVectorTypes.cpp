@@ -7259,9 +7259,38 @@ SDValue DAGTypeLegalizer::WidenVecOp_STRICT_FSETCC(SDNode *N) {
   return DAG.getBuildVector(VT, dl, Scalars);
 }
 
+static unsigned getExtendForIntVecReduction(SDNode *N) {
+  switch (N->getOpcode()) {
+  default:
+    llvm_unreachable("Expected integer vector reduction");
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+    return ISD::ANY_EXTEND;
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+    return ISD::SIGN_EXTEND;
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+    return ISD::ZERO_EXTEND;
+  }
+}
+
 SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   SDLoc dl(N);
   SDValue Op = GetWidenedVector(N->getOperand(0));
+  EVT VT = N->getValueType(0);
   EVT OrigVT = N->getOperand(0).getValueType();
   EVT WideVT = Op.getValueType();
   EVT ElemVT = OrigVT.getVectorElementType();
@@ -7276,6 +7305,28 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   unsigned OrigElts = OrigVT.getVectorMinNumElements();
   unsigned WideElts = WideVT.getVectorMinNumElements();
 
+  // Generate a vp.reduce_op if it is custom/legal for the target.  This avoids
+  // need pad the source vector, because the inactive lanes can simply be
+  // disabled and not contribute to the result. To avoid possible recursion,
+  // only do this if the widened mask type is legal.
+  if (auto VPOpcode = ISD::getVPForBaseOpcode(Opc);
+      VPOpcode && VT.isInteger() &&
+      TLI.isOperationLegalOrCustom(*VPOpcode, WideVT)) {
+    if (EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                          WideVT.getVectorElementCount());
+        TLI.isTypeLegal(WideMaskVT)) {
+      SDValue Start =
+        DAG.getNode(getExtendForIntVecReduction(N), dl, VT, NeutralElem);
+      SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
+      SDValue EVL =
+          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                              OrigVT.getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, VT,
+                         {Start, Op, Mask, EVL}, Flags);
+    }
+  }
+
+
   if (WideVT.isScalableVector()) {
     unsigned GCD = std::gcd(OrigElts, WideElts);
     EVT SplatVT = EVT::getVectorVT(*DAG.getContext(), ElemVT,
@@ -7284,14 +7335,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     for (unsigned Idx = OrigElts; Idx < WideElts; Idx = Idx + GCD)
       Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVT, Op, SplatNeutral,
                        DAG.getVectorIdxConstant(Idx, dl));
-    return DAG.getNode(Opc, dl, N->getValueType(0), Op, Flags);
+    return DAG.getNode(Opc, dl, VT, Op, Flags);
   }
 
   for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
 
-  return DAG.getNode(Opc, dl, N->getValueType(0), Op, Flags);
+  return DAG.getNode(Opc, dl, VT, Op, Flags);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
