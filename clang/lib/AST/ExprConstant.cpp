@@ -17388,12 +17388,12 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
   if (Val.isNullPointer() || Val.getLValueBase().isNull())
     return Error(0);
   QualType T = Val.getLValueBase().getType();
-  if (T->isFunctionType())
-    return Error(1);
+  assert(!T->isFunctionType() && "Pointers to functions should have been typed "
+                                 "as function pointers which are rejected");
   assert(T->isObjectType());
   // Hypothetical array element is not an object
   if (Val.getLValueDesignator().isOnePastTheEnd())
-    return Error(2);
+    return Error(1);
   assert(Val.getLValueDesignator().isValidSubobject() &&
          "Unchecked case for valid subobject");
   // All other ill-formed values should have failed EvaluatePointer, so the
@@ -17404,7 +17404,7 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
   // The lifetime hasn't begun yet if we are still evaluating the
   // initializer ([basic.life]p(1.2))
   if (Info.EvaluatingDeclValue && CO.Value == Info.EvaluatingDeclValue)
-    return Error(3);
+    return Error(2);
 
   if (!CO)
     return false;

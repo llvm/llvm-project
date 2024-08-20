@@ -1855,13 +1855,16 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(0, Arg.get());
   TheCall->setType(S.Context.BoolTy);
 
-  // A call to this function is always ill-formed if the type is not a pointer
-  // to an object type. There is no Mandates: to that effect, so we can only
-  // issue an error if it is actually evaluated as part of a constant evaluation
-  // (e.g., `false ? true : std::is_within_lifetime<void()>(nullptr);` is fine)
-  // However, `std::is_within_lifetime` will only take pointer types (allow
-  // non-const qualified too)
+  // This function should only be called through `std::is_within_lifetime`,
+  // which requires a pointer type
   if (const auto *PT = ParamTy->getAs<PointerType>()) {
+    // LWG4138: Function pointer types not allowed
+    if (PT->getPointeeType()->isFunctionType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(),
+             diag::err_builtin_is_within_lifetime_invalid_arg)
+          << 1;
+      return ExprError();
+    }
     // Disallow VLAs too since those shouldn't be able to
     // be a template parameter for `std::is_within_lifetime`
     if (PT->getPointeeType()->isVariableArrayType()) {
@@ -1871,7 +1874,8 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
     }
   } else {
     S.Diag(TheCall->getArg(0)->getExprLoc(),
-           diag::err_builtin_is_within_lifetime_invalid_arg);
+           diag::err_builtin_is_within_lifetime_invalid_arg)
+        << 0;
     return ExprError();
   }
 

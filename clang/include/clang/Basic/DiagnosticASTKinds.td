@@ -410,7 +410,7 @@ def warn_is_constant_evaluated_always_true_constexpr : Warning<
 
 def err_invalid_is_within_lifetime : Note<
   "'%0' cannot be called with "
-  "%select{a null pointer|a function pointer|a one-past-the-end pointer|"
+  "%select{a null pointer|a one-past-the-end pointer|"
   "a pointer to an object whose lifetime has not yet begun}1"
 >;
 

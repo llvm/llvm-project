@@ -21,11 +21,13 @@ template<bool v>
 using bool_constant = integral_constant<bool, v>;
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
+template<typename T>
+inline constexpr bool is_function_v = __is_function(T);
 #ifdef INLINE_NAMESPACE
 inline namespace __1 {
 #endif
-template<typename T>
-consteval bool is_within_lifetime(const T* p) noexcept {
+template<typename T> requires (!is_function_v<T>) // #std-constraint
+consteval bool is_within_lifetime(const T* p) noexcept { // #std-definition
   return __builtin_is_within_lifetime(p);
 }
 #ifdef INLINE_NAMESPACE
@@ -266,21 +268,15 @@ void f() {
   //   expected-note@-2 {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}}
 }
 
-// FIXME: Pending LWG4138
 template<typename T>
-consteval bool allow_bad_types_unless_used(bool b, const T* p) {
+consteval void disallow_function_types(bool b, const T* p) {
   if (b) {
-    __builtin_is_within_lifetime(p); // #bad_type_used
+    __builtin_is_within_lifetime(p); // expected-error {{function pointer argument to '__builtin_is_within_lifetime' is not allowed}}
   }
-  return true;
 }
-void fn();
-static_assert(allow_bad_types_unless_used<void()>(false, &f));
 void g() {
-  allow_bad_types_unless_used<void()>(true, &fn);
-  // expected-error@-1 {{call to consteval function 'allow_bad_types_unless_used<void ()>' is not a constant expression}}
-  //   expected-note@#bad_type_used {{'__builtin_is_within_lifetime' cannot be called with a function pointer}}
-  //   expected-note@-3 {{in call to 'allow_bad_types_unless_used<void ()>(true, &fn)'}}
+  disallow_function_types<void ()>(false, &f);
+  // expected-note@-1 {{in instantiation of function template specialization 'disallow_function_types<void ()>' requested here}}
 }
 
 struct OptBool {
@@ -416,9 +412,9 @@ void test_std_error_message() {
   //   expected-note@-2 {{'std::is_within_lifetime' cannot be called with a null pointer}}
   //   expected-note@-3 {{in call to 'is_within_lifetime<int>(nullptr)'}}
   std::is_within_lifetime<void()>(&test_std_error_message);
-  // expected-error@-1 {{call to consteval function 'std::is_within_lifetime<void ()>' is not a constant expression}}
-  //   expected-note@-2 {{'std::is_within_lifetime' cannot be called with a function pointer}}
-  //   expected-note@-3 {{in call to 'is_within_lifetime<void ()>(&test_std_error_message)'}}
+  // expected-error@-1 {{no matching function for call to 'is_within_lifetime'}}
+  //   expected-note@#std-definition {{candidate template ignored: constraints not satisfied [with T = void ()]}}
+  //   expected-note@#std-constraint {{because '!is_function_v<void ()>' evaluated to false}}
   std::is_within_lifetime(arr + 2);
   // expected-error@-1 {{call to consteval function 'std::is_within_lifetime<int>' is not a constant expression}}
   //   expected-note@-2 {{'std::is_within_lifetime' cannot be called with a one-past-the-end pointer}}
