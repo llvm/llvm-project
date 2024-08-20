@@ -202,6 +202,11 @@ class DAPTestCaseBase(TestBase):
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
         # 'value' may have the variable value and summary.
