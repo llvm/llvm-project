@@ -30,8 +30,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
-// Since ungetc_unlocked isn't always available, we don't acquire the lock for
-// system files.
+// The GPU build provides FILE access through the host operating system's
+// library. So here we simply use the public entrypoints like in the SYSTEM_FILE
+// interface.
+// FIXME: We do not acquire any locks here, so this is not thread safe.
 LIBC_INLINE void flockfile(::FILE *) { return; }
 
 LIBC_INLINE void funlockfile(::FILE *) { return; }
