@@ -13996,7 +13996,10 @@ td_library(
         "include/mlir/Dialect/DLTI/DLTIBase.td",
     ],
     includes = ["include"],
-    deps = [":OpBaseTdFiles"],
+    deps = [
+        ":DataLayoutInterfacesTdFiles",
+        ":OpBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
