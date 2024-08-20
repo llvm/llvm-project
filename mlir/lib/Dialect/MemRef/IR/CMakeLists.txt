@@ -10,6 +10,9 @@ add_mlir_dialect_library(MLIRMemRefDialect
   DEPENDS
   MLIRMemRefOpsIncGen
 
+  LINK_COMPONENTS
+  Core
+
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRArithUtils
