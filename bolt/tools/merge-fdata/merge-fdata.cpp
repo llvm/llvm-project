@@ -21,6 +21,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/thread.h"
 #include <algorithm>
 #include <mutex>
 #include <unordered_map>
