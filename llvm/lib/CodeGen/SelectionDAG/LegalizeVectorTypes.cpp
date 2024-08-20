@@ -4847,7 +4847,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
 
   // Generate a vp.op if it is custom/legal for the target.  This avoids need
   // to split and tile the subvectors (below), because the inactive lanes can
-  // simple be disabled. To avoid possible recursion, only do this if the
+  // simply be disabled. To avoid possible recursion, only do this if the
   // widened mask type is legal.
   if (auto VPOpcode = ISD::getVPForBaseOpcode(Opcode);
       VPOpcode && TLI.isOperationLegalOrCustom(*VPOpcode, WidenVT)) {
