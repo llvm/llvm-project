@@ -391,14 +391,6 @@ public:
     return sampleprof_error::success;
   }
 
-  /// Read sample profiles for the given functions and write them to the given
-  /// profile map. Currently it's only used for extended binary format to load
-  /// the profiles on-demand.
-  virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
-                               SampleProfileMap &Profiles) {
-    return sampleprof_error::not_implemented;
-  }
-
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
 
@@ -553,6 +545,14 @@ protected:
 
   /// Compute summary for this profile.
   void computeSummary();
+
+  /// Read sample profiles for the given functions and write them to the given
+  /// profile map. Currently it's only used for extended binary format to load
+  /// the profiles on-demand.
+  virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                               SampleProfileMap &Profiles) {
+    return sampleprof_error::not_implemented;
+  }
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
 
@@ -832,18 +832,19 @@ public:
   /// the reader has been given a module.
   bool collectFuncsFromModule() override;
 
+  std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
+    return std::move(ProfSymList);
+  };
+
+  void setSkipFlatProf(bool Skip) override { SkipFlatProf = Skip; }
+
+private:
   /// Read the profiles on-demand for the given functions. This is used after
   /// stale call graph matching finds new functions whose profiles aren't loaded
   /// at the beginning and we need to loaded the profiles explicitly for
   /// potential matching.
   std::error_code read(const DenseSet<StringRef> &FuncsToUse,
                        SampleProfileMap &Profiles) override;
-
-  std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
-    return std::move(ProfSymList);
-  };
-
-  void setSkipFlatProf(bool Skip) override { SkipFlatProf = Skip; }
 };
 
 class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {

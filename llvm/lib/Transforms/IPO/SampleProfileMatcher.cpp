@@ -36,10 +36,10 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
     cl::desc("The minimum number of call anchors required for a function to "
              "run stale profile call graph matching."));
 
-static cl::opt<bool> ReadToplevProfileforCGMatching(
-    "read-toplev-profile-for-cg-matching", cl::Hidden, cl::init(false),
+static cl::opt<bool> LoadFuncProfileforCGMatching(
+    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
     cl::desc(
-        "Read top-level profiles that the sample reader initially skips for "
+        "Load top-level profiles that the sample reader initially skipped for "
         "the call-graph matching(only meaningful for extended binary format)"));
 
 extern cl::opt<bool> SalvageStaleProfile;
@@ -424,7 +424,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
       FSForMatching = getFlattenedSamplesFor(R->second);
       // Try to find the salvaged top-level profiles that are explicitly loaded
       // for the matching, see "functionMatchesProfileHelper" for the details.
-      if (!FSForMatching)
+      if (!FSForMatching && LoadFuncProfileforCGMatching)
         FSForMatching = Reader.getSamplesFor(R->second.stringRef());
     }
   }
@@ -794,7 +794,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // However, if a function is renamed, sample loader skips to load its original
   // profile(which has a different name), we will miss this case. To address
   // this, we load the top-level profile candidate explicitly for the matching.
-  if (!FSForMatching && ReadToplevProfileforCGMatching) {
+  if (!FSForMatching && LoadFuncProfileforCGMatching) {
     DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
     if (std::error_code EC = Reader.read(TopLevelFunc))
       return false;
