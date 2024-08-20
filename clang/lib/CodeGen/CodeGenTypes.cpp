@@ -42,10 +42,6 @@ CodeGenTypes::~CodeGenTypes() {
     delete &*I++;
 }
 
-const ABIInfo &CodeGenTypes::getABIInfo() const {
-  return getCGM().getTargetCodeGenInfo().getABIInfo();
-}
-
 CGCXXABI &CodeGenTypes::getCXXABI() const { return getCGM().getCXXABI(); }
 
 const CodeGenOptions &CodeGenTypes::getCodeGenOpts() const {

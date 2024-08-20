@@ -101,7 +101,6 @@ public:
   }
   CodeGenModule &getCGM() const { return CGM; }
   ASTContext &getContext() const { return Context; }
-  const ABIInfo &getABIInfo() const;
   const TargetInfo &getTarget() const { return Target; }
   CGCXXABI &getCXXABI() const;
   llvm::LLVMContext &getLLVMContext() { return TheModule.getContext(); }
