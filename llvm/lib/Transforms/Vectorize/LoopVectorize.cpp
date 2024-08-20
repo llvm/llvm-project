@@ -8527,6 +8527,9 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
+
+// Collect (ExitPhi, ExitingValue) pairs phis in the original exit block that are modeled in VPlan.
+// Some exiting values are not modeled explicitly yet and won't be included. Those are un-truncated VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction increments.
 static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
@@ -8564,22 +8567,17 @@ static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
   return ExitingValuesToFix;
 }
 
-// Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
-// original exit block fed by a reduction or VPValue that's not a
-// VPWidenIntOrFpInductionRecipe or VPFirstOrderRecurrencePHIRecipe.
+// Add exit values to \p Plan. Extracts and VPLiveOuts are added for each entry in \p ExitingValuesToFix.
 static void addUsersInExitBlock(
     VPlan &Plan,
     MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
-
   if (ExitingValuesToFix.empty())
     return;
 
   auto MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-
   BasicBlock *ExitBB =
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
-
   // TODO: set B to MiddleVPBB->getFirstNonPhi(), taking care of affected tests.
   VPBuilder B(MiddleVPBB);
   if (auto *Terminator = MiddleVPBB->getTerminator()) {
@@ -8606,7 +8604,7 @@ static void addUsersInExitBlock(
 ///    ExtractFromEnd and ResumePhi recipes in each, respectively, and a
 ///    VPLiveOut which uses the latter and corresponds to the scalar header.
 /// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
-///     the original exit block using a VPLiveOut.
+///    the original exit block using a VPLiveOut.
 static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
@@ -8688,29 +8686,31 @@ static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, MapVector<PHINode *
     //   vector.body
     //     i = phi [0, vector.ph], [i+4, vector.body]
     //     v1 = phi [v_init, vector.ph], [v2, vector.body]
-    //     v2 = a[i]
+    //     v2 = a[i, i+1, i+2, i+3]
     //     b[i] = v2 - v1
     //     b[i, i+1, i+2, i+3] = v2 - v3
     //     br cond, vector.body, middle.block
     //
     //   middle.block:
-    //     s.penultimate = v2(2)
-    //     s.resume = v2(3)
+    //     vector.recur.extract.for.phi = v2(2)
+    //     vector.recur.extract = v2(3)
     //     br cond, scalar.ph, exit.block
     //
     //   scalar.ph:
-    //     s.init' = phi [s.resume, middle.block], [s.init, otherwise]
+    //     scalar.recur.init = phi [vector.recur.extract, middle.block],
+    //                             [s.init, otherwise]
     //     br scalar.body
     //
     //   scalar.body:
     //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [s.init', scalar.ph], [s2, scalar.body]
+    //     s1 = phi [scalar.recur.init, scalar.ph], [s2, scalar.body]
     //     s2 = a[i]
     //     b[i] = s2 - s1
     //     br cond, scalar.body, exit.block
     //
     //   exit.block:
-    //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
+    //     lo = lcssa.phi [s1, scalar.body],
+    //                    [vector.recur.extract.for.phi, middle.block]
     //
     // Extract the resume value and create a new VPLiveOut for it.
     auto *Resume = MiddleBuilder.createNaryOp(VPInstruction::ExtractFromEnd,
@@ -8731,6 +8731,8 @@ static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, MapVector<PHINode *
     // from scalar loop only.
     if (ExitingValuesToFix.empty())
       continue;
+    // If there are multiple successors of the middle block, their order is
+    // fixed; the first successor must be the original exit block.
     BasicBlock *ExitBB =
         cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
     for (User *U : FORPhi->users()) {
