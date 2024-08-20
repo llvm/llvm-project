@@ -51536,19 +51536,111 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   return DCI.CombineTo(ML, Blend, NewML.getValue(1), true);
 }
 
+static bool tryShrinkMaskedOperation(SelectionDAG &DAG, const SDLoc &DL,
+                                     SDValue Mask, EVT OrigVT,
+                                     SDValue *ValInOut, EVT *NewVTOut,
+                                     SDValue *NewMaskOut) {
+  // Ensure we have a reasonable input type.
+  // Also ensure input bits is larger then xmm, otherwise its not
+  // profitable to try to shrink.
+  if (!OrigVT.isSimple() ||
+      !(OrigVT.is256BitVector() || OrigVT.is512BitVector()))
+    return false;
+
+  SmallVector<SDValue> OrigMask;
+  APInt DemandedElts = getDemandedEltsForMaskedOp(
+      Mask, OrigVT.getVectorNumElements(), &OrigMask);
+  if (DemandedElts.isAllOnes() || DemandedElts.isZero())
+    return false;
+
+  unsigned OrigNumElts = OrigVT.getVectorNumElements();
+  // Potential TODO: It might be profitable to extra not just use the "lower"
+  // sub-vector.
+  unsigned ReqElts =
+      DemandedElts.getBitWidth() - DemandedElts.countLeadingZeros();
+  // We can't shrink out vector category in a meaningful way.
+  if (ReqElts > OrigNumElts / 2U)
+    return false;
+
+  // At most shrink to xmm.
+  unsigned NewNumElts =
+      std::max(128U / OrigVT.getScalarSizeInBits(), PowerOf2Ceil(ReqElts));
+
+  EVT NewVT =
+      EVT::getVectorVT(*DAG.getContext(), OrigVT.getScalarType(), NewNumElts);
+  if (!NewVT.isSimple())
+    return false;
+
+  // Extract all the value arguments;
+  if (ValInOut && *ValInOut)
+    *ValInOut = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, *ValInOut,
+                            DAG.getIntPtrConstant(0, DL));
+  if (NewVTOut)
+    *NewVTOut = NewVT;
+  *NewMaskOut = SDValue();
+  // The mask was just truncating, so don't need it anymore.
+  if (NewNumElts == ReqElts && DemandedElts.isMask())
+    return true;
+
+  // Get smaller mask.
+  EVT NewMaskVT = EVT::getVectorVT(
+      *DAG.getContext(), Mask.getValueType().getScalarType(), NewNumElts);
+  OrigMask.truncate(NewNumElts);
+  *NewMaskOut = DAG.getBuildVector(NewMaskVT, DL, OrigMask);
+  return true;
+}
+
+static bool tryShrinkMaskedOperation(SelectionDAG &DAG, const SDLoc &DL,
+                                     SDValue Mask, EVT OrigVT, EVT *NewVTOut,
+                                     SDValue *NewMaskOut) {
+  return tryShrinkMaskedOperation(DAG, DL, Mask, OrigVT, nullptr, NewVTOut,
+                                  NewMaskOut);
+}
+
+static bool tryShrinkMaskedOperation(SelectionDAG &DAG, const SDLoc &DL,
+                                     SDValue Mask, EVT OrigVT,
+                                     SDValue *ValInOut, SDValue *NewMaskOut) {
+  return tryShrinkMaskedOperation(DAG, DL, Mask, OrigVT, ValInOut, nullptr,
+                                  NewMaskOut);
+}
+
 static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
   auto *Mld = cast<MaskedLoadSDNode>(N);
+  SDLoc DL(N);
 
   // TODO: Expanding load with constant mask may be optimized as well.
   if (Mld->isExpandingLoad())
     return SDValue();
 
+  SDValue Mask = Mld->getMask();
+  EVT VT = Mld->getValueType(0);
   if (Mld->getExtensionType() == ISD::NON_EXTLOAD) {
     if (SDValue ScalarLoad =
             reduceMaskedLoadToScalarLoad(Mld, DAG, DCI, Subtarget))
       return ScalarLoad;
+
+    SDValue NewMask;
+    EVT NewVT;
+    if (sd_match(Mld->getPassThru(), m_Zero()) &&
+        tryShrinkMaskedOperation(DAG, DL, Mask, VT, &NewVT, &NewMask)) {
+      SDValue NewLoad;
+      if (NewMask)
+        NewLoad = DAG.getMaskedLoad(
+            NewVT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(),
+            NewMask, getZeroVector(NewVT.getSimpleVT(), Subtarget, DAG, DL),
+            Mld->getMemoryVT(), Mld->getMemOperand(), Mld->getAddressingMode(),
+            Mld->getExtensionType());
+      else
+        NewLoad = DAG.getLoad(NewVT, DL, Mld->getChain(), Mld->getBasePtr(),
+                              Mld->getMemOperand());
+
+      SDValue R = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Mld->getPassThru(),
+                              NewLoad, DAG.getIntPtrConstant(0, DL));
+      return DCI.CombineTo(Mld, R, NewLoad.getValue(1), true);
+    }
 
     // TODO: Do some AVX512 subsets benefit from this transform?
     if (!Subtarget.hasAVX512())
@@ -51558,9 +51650,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
 
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
-  SDValue Mask = Mld->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
-    EVT VT = Mld->getValueType(0);
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
@@ -51622,6 +51712,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (Mst->isCompressingStore())
     return SDValue();
 
+
+
   EVT VT = Mst->getValue().getValueType();
   SDLoc dl(Mst);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -51651,6 +51743,17 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   }
 
   SDValue Value = Mst->getValue();
+  SDValue NewMask;
+  if (tryShrinkMaskedOperation(DAG, dl, Mask, VT, &Value, &NewMask)) {
+    if (NewMask)
+      return DAG.getMaskedStore(Mst->getChain(), dl, Value, Mst->getBasePtr(),
+                                Mst->getOffset(), NewMask, Mst->getMemoryVT(),
+                                Mst->getMemOperand(), Mst->getAddressingMode());
+    return DAG.getStore(Mst->getChain(), SDLoc(N), Value, Mst->getBasePtr(),
+                        Mst->getPointerInfo(), Mst->getOriginalAlign(),
+                        Mst->getMemOperand()->getFlags());
+  }
+
   if (Value.getOpcode() == ISD::TRUNCATE && Value.getNode()->hasOneUse() &&
       TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(),
                             Mst->getMemoryVT())) {

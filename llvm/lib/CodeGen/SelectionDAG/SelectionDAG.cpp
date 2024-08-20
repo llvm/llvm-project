@@ -12128,6 +12128,24 @@ bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   return C && C->isAllOnes() && C->getValueSizeInBits(0) == BitWidth;
 }
 
+APInt llvm::getDemandedEltsForMaskedOp(SDValue Mask, unsigned NumElts,
+                                       SmallVector<SDValue> *MaskEltsOut) {
+  if (!ISD::isBuildVectorOfConstantSDNodes(Mask.getNode()))
+    return APInt::getAllOnes(NumElts);
+  APInt Demanded = APInt::getZero(NumElts);
+  BuildVectorSDNode *MaskBV = cast<BuildVectorSDNode>(Mask);
+  for (unsigned i = 0; i < MaskBV->getNumOperands(); ++i) {
+    APInt V;
+    if (!sd_match(MaskBV->getOperand(i), m_ConstInt(V)))
+      return APInt::getAllOnes(NumElts);
+    if (V.isNegative())
+      Demanded.setBit(i);
+    if (MaskEltsOut)
+      MaskEltsOut->emplace_back(MaskBV->getOperand(i));
+  }
+  return Demanded;
+}
+
 HandleSDNode::~HandleSDNode() {
   DropOperands();
 }
