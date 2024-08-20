@@ -2325,6 +2325,9 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
+  if (DiscardResult)
+    return this->discard(Init);
+
   if (Initializing) {
     // We already have a value, just initialize that.
     return this->visitInitializer(Init) && this->emitFinishInit(E);
@@ -2378,9 +2381,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
-
-    if (DiscardResult)
-      return this->emitPopPtr(E);
     return true;
   }
 
