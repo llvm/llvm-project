@@ -298,11 +298,11 @@ static LaneBitmask getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
   return I->LaneMask;
 }
 
-static LaneBitmask
-getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
-                     bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
-                     LaneBitmask SafeDefault,
-                     bool (*Property)(const LiveRange &LR, SlotIndex Pos)) {
+static LaneBitmask getLanesWithProperty(
+    const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+    bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
+    LaneBitmask SafeDefault,
+    function_ref<bool(const LiveRange &LR, SlotIndex Pos)> Property) {
   if (RegUnit.isVirtual()) {
     const LiveInterval &LI = LIS.getInterval(RegUnit);
     LaneBitmask Result;
@@ -317,14 +317,14 @@ getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
     }
 
     return Result;
-  } else {
-    const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
-    // Be prepared for missing liveranges: We usually do not compute liveranges
-    // for physical registers on targets with many registers (GPUs).
-    if (LR == nullptr)
-      return SafeDefault;
-    return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
   }
+
+  const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
+  // Be prepared for missing liveranges: We usually do not compute liveranges
+  // for physical registers on targets with many registers (GPUs).
+  if (LR == nullptr)
+    return SafeDefault;
+  return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
 }
 
 /// Helper to find a vreg use between two indices [PriorUseIdx, NextUseIdx).
@@ -333,11 +333,13 @@ getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
 static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
                                   SlotIndex PriorUseIdx, SlotIndex NextUseIdx,
                                   const MachineRegisterInfo &MRI,
+                                  const SIRegisterInfo *TRI,
                                   const LiveIntervals *LIS,
                                   bool Upward = false) {
-  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-  for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
     if (MO.isUndef())
+      continue;
+    if (!MO.readsReg())
       continue;
     const MachineInstr *MI = MO.getParent();
     SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -345,7 +347,7 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
                           : (InstSlot >= PriorUseIdx && InstSlot < NextUseIdx);
     if (InRange) {
       unsigned SubRegIdx = MO.getSubReg();
-      LaneBitmask UseMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
+      LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
       LastUseMask &= ~UseMask;
       if (LastUseMask.none())
         return LaneBitmask::getNone();
@@ -517,7 +519,9 @@ void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI) {
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+
+  const SIRegisterInfo *TRI =
+      MI->getMF()->getSubtarget<GCNSubtarget>().getRegisterInfo();
   RegOpers.collect(*MI, *TRI, *MRI, true, /*IgnoreDead=*/true);
   assert(RegOpers.DeadDefs.empty());
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
@@ -558,8 +562,8 @@ void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI) {
         LastTrackedMI ? LIS.getInstructionIndex(*LastTrackedMI).getRegSlot()
                       : LIS.getMBBEndIdx(MI->getParent());
     ;
-    LaneBitmask LastUseMask =
-        findUseBetween(Reg, P.LaneMask, SlotIdx, CurrIdx, *MRI, &LIS, true);
+    LaneBitmask LastUseMask = findUseBetween(Reg, P.LaneMask, SlotIdx, CurrIdx,
+                                             *MRI, TRI, &LIS, true);
     LastUseMask &= ~LiveAfter;
     LaneBitmask LiveBefore = (LiveAfter | LastUseMask);
     CurPressure.inc(Reg, LiveAfter, LiveBefore, *MRI);
@@ -733,7 +737,8 @@ void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI) {
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  const SIRegisterInfo *TRI =
+      MI->getMF()->getSubtarget<GCNSubtarget>().getRegisterInfo();
   RegOpers.collect(*MI, *TRI, *MRI, true, /*IgnoreDead=*/false);
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
 
@@ -760,7 +765,7 @@ void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI) {
     }
 
     LastUseMask =
-        findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, &LIS);
+        findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, TRI, &LIS);
     if (LastUseMask.none())
       continue;
 
