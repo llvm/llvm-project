@@ -866,6 +866,9 @@ private:
                        bool RemoveFileOnSignal, bool UseTemporary,
                        bool CreateMissingDirectories);
 
+  /// Initialize inputs from CAS.
+  void initializeDelayedInputFileFromCAS();
+
 public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
 

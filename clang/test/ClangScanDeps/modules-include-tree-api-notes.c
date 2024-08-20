@@ -51,6 +51,7 @@
 // RUN:   -fcas-path %t/cas -fsyntax-only 2>&1 | \
 // RUN:   FileCheck %s -check-prefix=INCOMPATIBLE
 
+// INCOMPATIBLE: error: missing '-x' input kind when using '-fcas-include-tree'
 // INCOMPATIBLE: error: passing incompatible option '-fapinotes' with '-fcas-include-tree'
 
 //--- cdb.json.template

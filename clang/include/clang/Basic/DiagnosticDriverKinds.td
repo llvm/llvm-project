@@ -767,6 +767,8 @@ def err_drv_inputs_and_include_tree : Error<
   "passing input files is incompatible with '-fcas-include-tree'">;
 def err_drv_incompatible_option_include_tree : Error<
   "passing incompatible option '%0' with '-fcas-include-tree'">;
+def err_drv_include_tree_miss_input_kind : Error<
+  "missing '-x' input kind when using '-fcas-include-tree'">;
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
