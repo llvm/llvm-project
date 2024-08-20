@@ -198,6 +198,8 @@ exit:
 }
 
 ; Test case for PR54370.
+; TODO: Should either compute the final value of the truncated IV independent
+; of loop or scalarize the vector IV.
 define i32 @optimizable_trunc_used_outside() {
 ; CHECK-LABEL: @optimizable_trunc_used_outside(
 ; CHECK-NEXT:  entry:
