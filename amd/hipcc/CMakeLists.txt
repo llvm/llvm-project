@@ -24,12 +24,16 @@ set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
 set(HIPCC_BIN
   hipcc.bin)
 set(HIPCC_SOURCES
-  src/hipBin.cpp)
+  src/hipBin.cpp
+  src/utils.cpp
+)
 
 set(HIPCONFIG_BIN
   hipconfig.bin)
 set(HIPCONFIG_SOURCES
-  src/hipBin.cpp)
+  src/hipBin.cpp
+  src/utils.cpp
+)
 
 add_executable(${HIPCC_BIN} ${HIPCC_SOURCES})
 if(NOT WIN32)

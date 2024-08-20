@@ -25,6 +25,8 @@ THE SOFTWARE.
 
 #include "filesystem.h"
 
+#include "utils.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -76,7 +78,6 @@ struct SystemCmdOut {
   string out;
   int exitCode = 0;
 };
-
 
 class HipBinUtil {
  public:
