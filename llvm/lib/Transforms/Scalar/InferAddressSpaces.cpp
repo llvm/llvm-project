@@ -1202,69 +1202,70 @@ void InferAddressSpacesImpl::performPointerReplacement(
       return;
   }
 
-  if (isa<Instruction>(CurUser)) {
-    if (ICmpInst *Cmp = dyn_cast<ICmpInst>(CurUser)) {
-      // If we can infer that both pointers are in the same addrspace,
-      // transform e.g.
-      //   %cmp = icmp eq float* %p, %q
-      // into
-      //   %cmp = icmp eq float addrspace(3)* %new_p, %new_q
+  if (!isa<Instruction>(CurUser))
+    return;
 
-      unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-      int SrcIdx = U.getOperandNo();
-      int OtherIdx = (SrcIdx == 0) ? 1 : 0;
-      Value *OtherSrc = Cmp->getOperand(OtherIdx);
+  if (ICmpInst *Cmp = dyn_cast<ICmpInst>(CurUser)) {
+    // If we can infer that both pointers are in the same addrspace,
+    // transform e.g.
+    //   %cmp = icmp eq float* %p, %q
+    // into
+    //   %cmp = icmp eq float addrspace(3)* %new_p, %new_q
 
-      if (Value *OtherNewV = ValueWithNewAddrSpace.lookup(OtherSrc)) {
-        if (OtherNewV->getType()->getPointerAddressSpace() == NewAS) {
-          Cmp->setOperand(OtherIdx, OtherNewV);
-          Cmp->setOperand(SrcIdx, NewV);
-          return;
-        }
-      }
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    int SrcIdx = U.getOperandNo();
+    int OtherIdx = (SrcIdx == 0) ? 1 : 0;
+    Value *OtherSrc = Cmp->getOperand(OtherIdx);
 
-      // Even if the type mismatches, we can cast the constant.
-      if (auto *KOtherSrc = dyn_cast<Constant>(OtherSrc)) {
-        if (isSafeToCastConstAddrSpace(KOtherSrc, NewAS)) {
-          Cmp->setOperand(SrcIdx, NewV);
-          Cmp->setOperand(OtherIdx, ConstantExpr::getAddrSpaceCast(
-                                        KOtherSrc, NewV->getType()));
-          return;
-        }
-      }
-    }
-
-    if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
-      unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-      if (ASC->getDestAddressSpace() == NewAS) {
-        ASC->replaceAllUsesWith(NewV);
-        DeadInstructions.push_back(ASC);
+    if (Value *OtherNewV = ValueWithNewAddrSpace.lookup(OtherSrc)) {
+      if (OtherNewV->getType()->getPointerAddressSpace() == NewAS) {
+        Cmp->setOperand(OtherIdx, OtherNewV);
+        Cmp->setOperand(SrcIdx, NewV);
         return;
       }
     }
 
-    // Otherwise, replaces the use with flat(NewV).
-    if (Instruction *VInst = dyn_cast<Instruction>(V)) {
-      // Don't create a copy of the original addrspacecast.
-      if (U == V && isa<AddrSpaceCastInst>(V))
+    // Even if the type mismatches, we can cast the constant.
+    if (auto *KOtherSrc = dyn_cast<Constant>(OtherSrc)) {
+      if (isSafeToCastConstAddrSpace(KOtherSrc, NewAS)) {
+        Cmp->setOperand(SrcIdx, NewV);
+        Cmp->setOperand(OtherIdx, ConstantExpr::getAddrSpaceCast(
+                          KOtherSrc, NewV->getType()));
         return;
-
-      // Insert the addrspacecast after NewV.
-      BasicBlock::iterator InsertPos;
-      if (Instruction *NewVInst = dyn_cast<Instruction>(NewV))
-        InsertPos = std::next(NewVInst->getIterator());
-      else
-        InsertPos = std::next(VInst->getIterator());
-
-      while (isa<PHINode>(InsertPos))
-        ++InsertPos;
-      // This instruction may contain multiple uses of V, update them all.
-      CurUser->replaceUsesOfWith(
-          V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
-    } else {
-      CurUser->replaceUsesOfWith(V, ConstantExpr::getAddrSpaceCast(
-                                        cast<Constant>(NewV), V->getType()));
+      }
     }
+  }
+
+  if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (ASC->getDestAddressSpace() == NewAS) {
+      ASC->replaceAllUsesWith(NewV);
+      DeadInstructions.push_back(ASC);
+      return;
+    }
+  }
+
+  // Otherwise, replaces the use with flat(NewV).
+  if (Instruction *VInst = dyn_cast<Instruction>(V)) {
+    // Don't create a copy of the original addrspacecast.
+    if (U == V && isa<AddrSpaceCastInst>(V))
+      return;
+
+    // Insert the addrspacecast after NewV.
+    BasicBlock::iterator InsertPos;
+    if (Instruction *NewVInst = dyn_cast<Instruction>(NewV))
+      InsertPos = std::next(NewVInst->getIterator());
+    else
+      InsertPos = std::next(VInst->getIterator());
+
+    while (isa<PHINode>(InsertPos))
+      ++InsertPos;
+    // This instruction may contain multiple uses of V, update them all.
+    CurUser->replaceUsesOfWith(
+      V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
+  } else {
+    CurUser->replaceUsesOfWith(V, ConstantExpr::getAddrSpaceCast(
+                                 cast<Constant>(NewV), V->getType()));
   }
 }
 
