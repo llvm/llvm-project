@@ -128,7 +128,7 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
 static bool ResolveAndVerifyCandidateSupportDir(FileSpec &path) {
   FileSystem::Instance().Resolve(path);
   return FileSystem::Instance().IsDirectory(path);
-};
+}
 
 bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec = GetShlibDir();

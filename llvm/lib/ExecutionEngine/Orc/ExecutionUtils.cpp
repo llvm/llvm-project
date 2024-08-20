@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -295,7 +296,7 @@ StaticLibraryDefinitionGenerator::Load(
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    auto SliceRange = getMachOSliceRangeForTriple(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
 
@@ -358,7 +359,7 @@ StaticLibraryDefinitionGenerator::Create(
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
-    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    auto SliceRange = getMachOSliceRangeForTriple(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
 
@@ -458,27 +459,6 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   }
 
   return Error::success();
-}
-
-Expected<std::pair<size_t, size_t>>
-StaticLibraryDefinitionGenerator::getSliceRangeForArch(
-    object::MachOUniversalBinary &UB, const Triple &TT) {
-
-  for (const auto &Obj : UB.objects()) {
-    auto ObjTT = Obj.getTriple();
-    if (ObjTT.getArch() == TT.getArch() &&
-        ObjTT.getSubArch() == TT.getSubArch() &&
-        (TT.getVendor() == Triple::UnknownVendor ||
-         ObjTT.getVendor() == TT.getVendor())) {
-      // We found a match. Return the range for the slice.
-      return std::make_pair(Obj.getOffset(), Obj.getSize());
-    }
-  }
-
-  return make_error<StringError>(Twine("Universal binary ") + UB.getFileName() +
-                                     " does not contain a slice for " +
-                                     TT.str(),
-                                 inconvertibleErrorCode());
 }
 
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
