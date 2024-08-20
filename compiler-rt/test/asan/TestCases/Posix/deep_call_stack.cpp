@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // Check that UAR mode can handle very deep recusrion.
 // RUN: %clangxx_asan -O2 %s -o %t
 // RUN: ulimit -s 4096

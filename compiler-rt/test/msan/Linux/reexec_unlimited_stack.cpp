@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // MSAN re-execs on unlimited stacks. We use that to verify ReExec() uses the
 // right path.
 // RUN: %clangxx_msan -O0 %s -o %t && ulimit -s unlimited && %run %t | FileCheck %s

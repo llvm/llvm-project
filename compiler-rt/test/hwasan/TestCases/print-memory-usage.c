@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // Tests __hwasan_print_memory_usage.
 // RUN: %clang_hwasan %s -o %t
 // RUN: ulimit -s 1000
