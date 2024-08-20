@@ -235,50 +235,50 @@ namespace GH68490 {
 
 template <typename T> struct Problem {
   template <typename U>
-  constexpr int UseAlign(int param = alignof(U)) const;
+  constexpr int UseAlignOf(int param = alignof(U)) const;
 
   template <typename U>
-  constexpr int UseSizeof(int param = sizeof(T)) const;
+  constexpr int UseSizeOf(int param = sizeof(T)) const;
 };
 
 template <typename T> struct Problem<T *> {
   template <typename U>
-  constexpr int UseAlign(int param = alignof(U)) const;
+  constexpr int UseAlignOf(int param = alignof(U)) const;
 
   template <typename U>
-  constexpr int UseSizeof(int param = sizeof(T)) const;
+  constexpr int UseSizeOf(int param = sizeof(T)) const;
 };
 
 template <typename T>
 template <typename U>
-constexpr int Problem<T *>::UseAlign(int param) const {
+constexpr int Problem<T *>::UseAlignOf(int param) const {
   return 2 * param;
 }
 
 template <typename T>
 template <typename U>
-constexpr int Problem<T *>::UseSizeof(int param) const {
+constexpr int Problem<T *>::UseSizeOf(int param) const {
   return 2 * param;
 }
 
 template <>
 template <typename T>
-constexpr int Problem<int>::UseAlign(int param) const {
+constexpr int Problem<int>::UseAlignOf(int param) const {
   return param;
 }
 
 template <>
 template <typename T>
-constexpr int Problem<int>::UseSizeof(int param) const {
+constexpr int Problem<int>::UseSizeOf(int param) const {
   return param;
 }
 
 void foo() {
-  static_assert(Problem<int>().UseAlign<char>() == alignof(char), "");
-  static_assert(Problem<int>().UseSizeof<char>() == sizeof(char), "");
+  static_assert(Problem<int>().UseAlignOf<char>() == alignof(char), "");
+  static_assert(Problem<int>().UseSizeOf<char>() == sizeof(char), "");
   // expected-error@-1 {{failed}} expected-note@-1 {{evaluates to '4 == 1'}}
-  static_assert(Problem<short *>().UseAlign<char>() == 2U * alignof(char), "");
-  static_assert(Problem<short *>().UseSizeof<char>() == 2U * sizeof(char), "");
+  static_assert(Problem<short *>().UseAlignOf<char>() == 2U * alignof(char), "");
+  static_assert(Problem<short *>().UseSizeOf<char>() == 2U * sizeof(char), "");
   // expected-error@-1 {{failed}} expected-note@-1 {{evaluates to '4 == 2'}}
 }
 
