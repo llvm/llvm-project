@@ -354,7 +354,7 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
     // This order matches the order in which namelookup discovers declarations
     // coming from modules.
     for (unsigned I = SpecSize; I != 0; --I)
-      (void)Context.getExternalSource()->GetExternalDecl(Specs[I-1]);
+      (void)Context.getExternalSource()->GetExternalDecl(Specs[I - 1]);
   }
 }
 
