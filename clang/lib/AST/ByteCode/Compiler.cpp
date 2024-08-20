@@ -214,7 +214,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
                                                QualType(FromMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
@@ -229,14 +229,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
                                                QualType(ToMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
   }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
@@ -265,7 +265,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     unsigned DerivedOffset =
