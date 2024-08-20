@@ -176,6 +176,14 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048.
 
+- The ``-ffp-model`` option has been updated to enable a more limited set of
+  optimizations when the ``fast`` argument is used and to accept a new argument,
+  ``aggressive``. The behavior of ``-ffp-model=aggressive`` is equivalent
+  to the previous behavior of ``-ffp-model=fast``. The updated
+  ``-ffp-model=fast`` behavior no longer assumes finite math only and uses
+  the ``promoted`` algorithm for complex division when possible rather than the
+  less basic (limited range) algorithm.
+
 Removed Compiler Flags
 -------------------------
 
