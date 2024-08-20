@@ -231,8 +231,6 @@ public:
   using BlockT = typename ContextT::BlockT;
   using CycleT = GenericCycle<ContextT>;
   using FunctionT = typename ContextT::FunctionT;
-  using LoopT = typename ContextT::LoopT;
-  using LoopInfoT = typename ContextT::LoopInfoT;
   template <typename> friend class GenericCycle;
   template <typename> friend class GenericCycleInfoCompute;
 
@@ -282,8 +280,8 @@ public:
 
   /// Methods for debug and self-test.
   //@{
-  void verifyCycleNest(bool VerifyFull = false, LoopInfoT *LI = nullptr) const;
-  void verify(LoopInfoT *LI = nullptr) const;
+  void verifyCycleNest(bool VerifyFull = false) const;
+  void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   Printable print(const CycleT *Cycle) { return Cycle->print(Context); }

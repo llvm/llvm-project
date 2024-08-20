@@ -5,13 +5,19 @@
 #include <stdio.h>
 
 int main() {
-#pragma omp target teams num_teams(4)
-#pragma omp parallel
+#pragma omp target
   {
-    int *ptr = (int *)omp_alloc(sizeof(int), omp_default_mem_alloc);
+    int *ptr;
+#pragma omp allocate(ptr) allocator(omp_default_mem_alloc)
+    ptr = omp_alloc(sizeof(int), omp_default_mem_alloc);
     assert(ptr && "Ptr is (null)!");
-    *ptr = 1;
-    assert(*ptr == 1 && "Ptr is not 1");
+    *ptr = 0;
+#pragma omp parallel num_threads(32)
+    {
+#pragma omp atomic
+      *ptr += 1;
+    }
+    assert(*ptr == 32 && "Ptr is not 32");
     omp_free(ptr, omp_default_mem_alloc);
   }
 

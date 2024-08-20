@@ -569,27 +569,15 @@ unsigned GenericCycleInfo<ContextT>::getCycleDepth(const BlockT *Block) const {
 ///
 /// Note that this does \em not check that cycles are really cycles in the CFG,
 /// or that the right set of cycles in the CFG were found.
-///
-/// Every natural loop has a corresponding cycle (possibly irreducible) with the
-/// same header, and every reducible cycle is a natural loop with the same
-/// header. We check this by comparing headers encountered in the two forests.
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull,
-                                                 LoopInfoT *LI) const {
+void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
-  DenseSet<BlockT *> LoopHeaders;
   DenseSet<BlockT *> CycleHeaders;
-
-  if (LI) {
-    for (LoopT *TopLoop : *LI) {
-      for (LoopT *Loop : depth_first(TopLoop)) {
-        LoopHeaders.insert(Loop->getHeader());
-      }
-    }
-  }
 
   for (CycleT *TopCycle : toplevel_cycles()) {
     for (CycleT *Cycle : depth_first(TopCycle)) {
+      BlockT *Header = Cycle->getHeader();
+      assert(CycleHeaders.insert(Header).second);
       if (VerifyFull)
         Cycle->verifyCycle();
       else
@@ -600,27 +588,14 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull,
         assert(MapIt != BlockMap.end());
         assert(Cycle->contains(MapIt->second));
       }
-      if (LI) {
-        BlockT *Header = Cycle->getHeader();
-        assert(CycleHeaders.insert(Header).second);
-        if (Cycle->isReducible())
-          assert(LoopHeaders.contains(Header));
-      }
-    }
-  }
-
-  if (LI) {
-    for (BlockT *Header : LoopHeaders) {
-      assert(CycleHeaders.contains(Header));
     }
   }
 #endif
 }
 
 /// \brief Verify that the entire cycle tree well-formed.
-template <typename ContextT>
-void GenericCycleInfo<ContextT>::verify(LoopInfoT *LI) const {
-  verifyCycleNest(/*VerifyFull=*/true, LI);
+template <typename ContextT> void GenericCycleInfo<ContextT>::verify() const {
+  verifyCycleNest(/*VerifyFull=*/true);
 }
 
 /// \brief Print the cycle info.
