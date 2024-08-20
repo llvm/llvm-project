@@ -53,6 +53,7 @@ LogicalResult passDriver(Operation *op,
 } // namespace memref
 
 using namespace mlir;
+namespace {
 class MergeAllocPass : public memref::impl::MergeAllocBase<MergeAllocPass> {
   using parent = memref::impl::MergeAllocBase<MergeAllocPass>;
   void runOnOperation() override {
@@ -89,6 +90,7 @@ public:
   explicit MergeAllocPass(const memref::MergeAllocationOptions &o)
       : options{std::move(o)} {}
 };
+}
 } // namespace mlir
 
 std::unique_ptr<mlir::Pass>

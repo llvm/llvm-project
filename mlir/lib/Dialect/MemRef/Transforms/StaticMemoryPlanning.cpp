@@ -230,13 +230,13 @@ struct MemoryState {
     rhs_ret = rhs.get();
     auto ret = lhs.get();
 
-    auto oldItrInCuChunks =
+    auto oldItrInCurChunks =
         std::find(curChunks.begin(), curChunks.end(), target);
-    assert(oldItrInCuChunks != curChunks.end());
+    assert(oldItrInCurChunks != curChunks.end());
     // replace old chunk with rhs
-    *oldItrInCuChunks = rhs.get();
+    *oldItrInCurChunks = rhs.get();
     // insert lhs before rhs
-    curChunks.insert(oldItrInCuChunks, lhs.get());
+    curChunks.insert(oldItrInCurChunks, lhs.get());
     rhs->lastFreedTick = target->lastFreedTick;
     // add rhs to free list
     addChunkToFreeList(rhs.get());
