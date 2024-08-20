@@ -105,7 +105,9 @@ updateFuncOp(func::FuncOp func,
 static bool isFunctionArgument(mlir::Value value) {
   // Check if the value is a Function argument
   if (auto blockArg = dyn_cast<mlir::BlockArgument>(value)) {
-    return blockArg.getOwner()->isEntryBlock();
+    return blockArg.getOwner()->isEntryBlock() &&
+           isa_and_nonnull<mlir::func::FuncOp>(
+               blockArg.getOwner()->getParentOp());
   }
   return false;
 }
