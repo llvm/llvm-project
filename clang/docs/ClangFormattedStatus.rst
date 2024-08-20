@@ -439,7 +439,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `2`
      - `79`
      - :part:`2%`
-   * - clang/lib/AST/Interp
+   * - clang/lib/AST/ByteCode
      - `44`
      - `18`
      - `26`

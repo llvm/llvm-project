@@ -58,6 +58,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -987,7 +988,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // attribute.
     return nullptr;
 
-  const FieldDecl *CountedByFD = FindCountedByField(FAMDecl);
+  const FieldDecl *CountedByFD = FAMDecl->findCountedByField();
   if (!CountedByFD)
     // Can't find the field referenced by the "counted_by" attribute.
     return nullptr;
@@ -18666,6 +18667,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getRsqrtIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.rsqrt");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_saturate: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "saturate operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(),
+        CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
+        nullptr, "hlsl.saturate");
+  }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
@@ -18919,8 +18929,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
@@ -18932,16 +18940,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID;
     llvm::Type *ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
-      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
       ArgTy = llvm::FixedVectorType::get(
           llvm::Type::getHalfTy(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
       IID = Intrinsic::amdgcn_global_atomic_fadd;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
@@ -19366,7 +19367,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_faddf:
   case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19382,6 +19385,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
@@ -19416,9 +19421,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
                               EmitScalarExpr(E->getArg(3)), AO, SSID);
     } else {
-      // The ds_atomic_fadd_* builtins do not have syncscope/order arguments.
-      SSID = llvm::SyncScope::System;
-      AO = AtomicOrdering::SequentiallyConsistent;
+      // Most of the builtins do not have syncscope/order arguments. For DS
+      // atomics the scope doesn't really matter, as they implicitly operate at
+      // workgroup scope.
+      //
+      // The global/flat cases need to use agent scope to consistently produce
+      // the native instruction instead of a cmpxchg expansion.
+      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
       if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
@@ -19432,6 +19442,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+
+    unsigned AddrSpace = Ptr.getType()->getAddressSpace();
+    if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
+      // Most targets require "amdgpu.no.fine.grained.memory" to emit the native
+      // instruction for flat and global operations.
+      llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
+      RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+
+      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // instruction, but this only matters for float fadd.
+      if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
+        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+    }
+
     return Builder.CreateBitCast(RMW, OrigTy);
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:

@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-metadata-emit < %s | FileCheck %s
+; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="print-dxil-resource-md" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
 ; RUN: llc %s --filetype=asm -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 

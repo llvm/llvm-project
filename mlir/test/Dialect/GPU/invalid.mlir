@@ -333,6 +333,22 @@ func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
 
 // -----
 
+func.func @subgroup_reduce_zero_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster_size(0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_npot_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 3 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster_size(3) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
 func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
   // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
