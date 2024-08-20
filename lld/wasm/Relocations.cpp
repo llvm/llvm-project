@@ -115,6 +115,11 @@ void scanRelocations(InputChunk *chunk) {
       if (!isa<GlobalSymbol>(sym))
         addGOTEntry(sym);
       break;
+    case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_REL_SLEB64:
+      if (requiresGOTAccess(sym))
+        addGOTEntry(sym);
+      break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
       if (!sym->isDefined()) {
