@@ -665,17 +665,15 @@ bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
         // Generate spill
         BuildMI(BB, Call.MI->getIterator(), Call.MI->getDebugLoc(),
                 TII->get(BPF::STD))
-            .addReg(Reg)
+            .addReg(Reg, RegState::Kill)
             .addReg(BPF::R10)
-            .addImm(CurOffset)
-            .addImm(0);
+            .addImm(CurOffset);
         // Generate fill
         BuildMI(BB, ++Call.MI->getIterator(), Call.MI->getDebugLoc(),
                 TII->get(BPF::LDD))
-            .addReg(Reg)
+            .addReg(Reg, RegState::Define)
             .addReg(BPF::R10)
-            .addImm(CurOffset)
-            .addImm(0);
+            .addImm(CurOffset);
       }
     }
   }
