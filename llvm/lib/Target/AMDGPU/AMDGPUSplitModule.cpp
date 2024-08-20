@@ -152,19 +152,14 @@ static constexpr unsigned InvalidPID = -1;
 
 /// \param Num numerator
 /// \param Dem denominator
-/// \param FmtString printf-like format string
-/// \returns a printable object to print (Num/Dem) using FmtString.
-static auto formatRatioOf(CostType Num, CostType Dem,
-                          const char *FmtString = "%0.2f") {
-  return format(FmtString, (double(Num) / Dem) * 100);
-}
-
-static bool isKernel(const Function *F) {
-  return AMDGPU::isEntryFunctionCC(F->getCallingConv());
+/// \returns a printable object to print (Num/Dem) using "%0.2f".
+static auto formatRatioOf(CostType Num, CostType Dem) {
+  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
 }
 
 static bool isNonCopyable(const Function &F) {
-  return isKernel(&F) || F.hasExternalLinkage() || !F.isDefinitionExact();
+  return AMDGPU::isEntryFunctionCC(F.getCallingConv()) ||
+         F.hasExternalLinkage() || !F.isDefinitionExact();
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -219,7 +214,7 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
     assert((ModuleCost + FnCost) >= ModuleCost && "Overflow!");
     ModuleCost += FnCost;
 
-    if (isKernel(&Fn))
+    if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv()))
       KernelCost += FnCost;
   }
 
@@ -242,7 +237,7 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
 
 /// \return true if \p F can be indirectly called
 static bool canBeIndirectlyCalled(const Function &F) {
-  if (F.isDeclaration() || isKernel(&F))
+  if (F.isDeclaration() || AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
   return !F.hasLocalLinkage() ||
          F.hasAddressTaken(/*PutOffender=*/nullptr,
@@ -261,7 +256,7 @@ static bool canBeIndirectlyCalled(const Function &F) {
 /// that can be split into different modules.
 ///
 /// The most trivial instance of this graph is just the CallGraph of the module,
-/// but it is not guaranteed that the graph is strictly equal to the CFG. It
+/// but it is not guaranteed that the graph is strictly equal to the CG. It
 /// currently always is but it's designed in a way that would eventually allow
 /// us to create abstract nodes, or nodes for different entities such as global
 /// variables or any other meaningful constraint we must consider.
@@ -377,11 +372,11 @@ public:
   Node(unsigned ID, const GlobalValue &GV, CostType IndividualCost,
        bool IsNonCopyable)
       : ID(ID), GV(GV), IndividualCost(IndividualCost),
-        IsNonCopyable(IsNonCopyable), IsEntry(false) {
+        IsNonCopyable(IsNonCopyable), IsGraphEntry(false) {
     if (auto *Fn = dyn_cast<Function>(&GV))
-      IsKernel = ::llvm::isKernel(Fn);
+      IsEntryFnCC = AMDGPU::isEntryFunctionCC(Fn->getCallingConv());
     else
-      IsKernel = false;
+      IsEntryFnCC = false;
   }
 
   /// An 0-indexed ID for the node. The maximum ID (exclusive) is the number of
@@ -395,15 +390,15 @@ public:
   CostType getIndividualCost() const { return IndividualCost; }
 
   bool isNonCopyable() const { return IsNonCopyable; }
-  bool isKernel() const { return IsKernel; }
+  bool isEntryFunctionCC() const { return IsEntryFnCC; }
 
   /// \returns whether this is an entry point in the graph. Entry points are
   /// defined as follows: if you take all entry points in the graph, and iterate
   /// their dependencies, you are guaranteed to visit all nodes in the graph at
   /// least once.
-  bool isGraphEntryPoint() const { return IsEntry; }
+  bool isGraphEntryPoint() const { return IsGraphEntry; }
 
-  std::string getName() const { return GV.getName().str(); }
+  StringRef getName() const { return GV.getName(); }
 
   bool hasAnyIncomingEdges() const { return IncomingEdges.size(); }
   bool hasAnyIncomingEdgesOfKind(EdgeKind EK) const {
@@ -423,7 +418,7 @@ public:
     return OutgoingEdges;
   }
 
-  bool shouldFollowIndirectCalls() const { return isKernel(); }
+  bool shouldFollowIndirectCalls() const { return isEntryFunctionCC(); }
 
   /// Visit all children of this node in a recursive fashion. Also visits Self.
   /// If \ref shouldFollowIndirectCalls returns false, then this only follows
@@ -450,14 +445,14 @@ public:
   CostType getFullCost() const;
 
 private:
-  void markAsEntry() { IsEntry = true; }
+  void markAsGraphEntry() { IsGraphEntry = true; }
 
   unsigned ID;
   const GlobalValue &GV;
   CostType IndividualCost;
   bool IsNonCopyable : 1;
-  bool IsKernel : 1;
-  bool IsEntry : 1;
+  bool IsEntryFnCC : 1;
+  bool IsGraphEntry : 1;
 
   // TODO: Cache dependencies as well?
   mutable CostType FullCost = 0;
@@ -489,6 +484,7 @@ void SplitGraph::Node::visitAllDependencies(
     }
   }
 }
+
 CostType SplitGraph::Node::getFullCost() const {
   if (FullCost)
     return FullCost;
@@ -555,9 +551,9 @@ void SplitGraph::buildGraph(CallGraph &CG) {
   SmallVector<Node *, 16> CandidateEntryPoints;
   BitVector NodesReachableByKernels = createNodesBitVector();
   for (Node *N : Nodes) {
-    // Kernels are always entry points.
-    if (N->isKernel()) {
-      N->markAsEntry();
+    // Functions with an Entry CC are always graph entry points too.
+    if (N->isEntryFunctionCC()) {
+      N->markAsGraphEntry();
       N->setDependenciesBits(NodesReachableByKernels);
     } else if (!N->hasAnyIncomingEdgesOfKind(EdgeKind::DirectCall))
       CandidateEntryPoints.push_back(N);
@@ -570,7 +566,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
     // NodesReachableByKernels is all 1s. It'd allow us to avoid
     // considering some nodes as non-entries in some specific cases.
     if (!NodesReachableByKernels.test(N->getID()))
-      N->markAsEntry();
+      N->markAsGraphEntry();
   }
 
 #ifndef NDEBUG
@@ -602,7 +598,7 @@ void SplitGraph::verifyGraph() const {
     }
 
     const Function &Fn = N->getFunction();
-    if (isKernel(&Fn)) {
+    if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv())) {
       assert(!N->hasAnyIncomingEdges() && "Kernels cannot have incoming edges");
     }
     assert(!Fn.isDeclaration() && "declarations shouldn't have nodes!");
@@ -765,11 +761,11 @@ void SplitProposal::print(raw_ostream &OS) const {
 
   OS << "[proposal] " << Name << ", total cost:" << TotalCost
      << ", code size score:" << format("%0.3f", CodeSizeScore)
-     << ", bottleneck score:" << format("%0.3f", BottleneckScore) << "\n";
+     << ", bottleneck score:" << format("%0.3f", BottleneckScore) << '\n';
   for (const auto &[PID, Part] : enumerate(Partitions)) {
     const auto &[Cost, NodeIDs] = Part;
     OS << "  - P" << PID << " nodes:" << NodeIDs.count() << " cost: " << Cost
-       << "|" << formatRatioOf(Cost, SG->getModuleCost()) << "%\n";
+       << '|' << formatRatioOf(Cost, SG->getModuleCost()) << "%\n";
   }
 }
 
@@ -1021,7 +1017,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.
-          LLVM_DEBUG(dbgs() << "L");
+          LLVM_DEBUG(dbgs() << 'L');
           SinglePIDToTry = MostSimilarPID;
         }
       } else
@@ -1050,8 +1046,8 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
     // lb = load balancing = put in cheapest partition
     {
       SplitProposal BranchSP = SP;
-      LLVM_DEBUG(dbgs() << " [lb] " << std::string(Depth, ' ') << Idx << "=P"
-                        << CheapestPID << "? ");
+      LLVM_DEBUG(dbgs().indent(Depth)
+                 << " [lb] " << Idx << "=P" << CheapestPID << "? ");
       BranchSP.add(CheapestPID, Cluster);
       pickPartition(Depth + 1, Idx + 1, BranchSP);
     }
@@ -1059,8 +1055,8 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
     // ms = most similar = put in partition with the most in common
     {
       SplitProposal BranchSP = SP;
-      LLVM_DEBUG(dbgs() << " [ms] " << std::string(Depth, ' ') << Idx << "=P"
-                        << MostSimilarPID << "? ");
+      LLVM_DEBUG(dbgs().indent(Depth)
+                 << " [ms] " << Idx << "=P" << MostSimilarPID << "? ");
       BranchSP.add(MostSimilarPID, Cluster);
       pickPartition(Depth + 1, Idx + 1, BranchSP);
     }
@@ -1155,14 +1151,14 @@ template <> struct DOTGraphTraits<SplitGraph> : public DefaultDOTGraphTraits {
   }
 
   std::string getNodeLabel(const SplitGraph::Node *N, const SplitGraph &SG) {
-    return N->getName();
+    return N->getName().str();
   }
 
   static std::string getNodeDescription(const SplitGraph::Node *N,
                                         const SplitGraph &SG) {
     std::string Result;
-    if (N->isKernel())
-      Result += "kernel ";
+    if (N->isEntryFunctionCC())
+      Result += "entry-fn-cc ";
     if (N->isNonCopyable())
       Result += "non-copyable ";
     Result += "cost:" + std::to_string(N->getIndividualCost());
@@ -1453,8 +1449,9 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
       llvm::LockFileManager Locked(LockFilePath.str());
       switch (Locked) {
       case LockFileManager::LFS_Error:
-        errs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
-                  "output may be mangled by other processes\n";
+        LLVM_DEBUG(
+            dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
+                      "output may be mangled by other processes\n");
         Locked.unsafeRemoveLockFile();
         break;
       case LockFileManager::LFS_Owned:
@@ -1466,8 +1463,10 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
         case LockFileManager::Res_OwnerDied:
           continue; // try again to get the lock.
         case LockFileManager::Res_Timeout:
-          errs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
-                    "output may be mangled by other processes\n";
+          LLVM_DEBUG(
+              dbgs()
+              << "[amdgpu-split-module] unable to acquire lockfile, debug "
+                 "output may be mangled by other processes\n");
           Locked.unsafeRemoveLockFile();
           break; // give up
         }
