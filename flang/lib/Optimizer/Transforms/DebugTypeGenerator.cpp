@@ -177,11 +177,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       auto intTy = mlir::IntegerType::get(context, 64);
       int64_t shift = 1;
       if (declOp && declOp.getShift().size() > index) {
-        if (auto defOp = mlir::dyn_cast<mlir::arith::ConstantOp>(
-                declOp.getShift()[index].getDefiningOp())) {
-          if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(defOp.getValue()))
-            shift = iattr.getInt();
-        }
+        if (std::optional<std::int64_t> optint =
+                getIntIfConstant(declOp.getShift()[index]))
+          shift = *optint;
       }
       auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
       auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
