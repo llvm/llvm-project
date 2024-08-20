@@ -2293,8 +2293,8 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
       }
       if (OR == OW_Complete) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
-                          << *DeadLocWrapper.DefInst
-                          << "\n  KILLER: " << *DefInst << '\n');
+                          << *DeadLocWrapper.DefInst << "\n  KILLER: "
+                          << *KillingLocWrapper.DefInst << '\n');
         deleteDeadInstruction(DeadLocWrapper.DefInst);
         ++NumFastStores;
         Changed = true;
