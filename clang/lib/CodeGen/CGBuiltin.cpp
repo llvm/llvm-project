@@ -14479,7 +14479,7 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
     RequireBitMasks[GroupID] |= (1ULL << BitPos);
   }
 
-  Value *Result = Builder.getTrue();
+  Value *Result = nullptr;
   for (unsigned Idx = 0; Idx < RISCVFeatureLength; Idx++) {
     if (RequireBitMasks[Idx] == 0)
       continue;
@@ -14488,8 +14488,11 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
     Value *Bitset = Builder.CreateAnd(
         loadRISCVFeatureBits(Idx, Builder, CGM, getLLVMContext()), Mask);
     Value *CmpV = Builder.CreateICmpEQ(Bitset, Mask);
-    Result = Builder.CreateAnd(Result, CmpV);
+    Result = (!Result) ? CmpV : Builder.CreateAnd(Result, CmpV);
   }
+
+  assert(Result && "Should has value here.");
+
   return Result;
 }
 
