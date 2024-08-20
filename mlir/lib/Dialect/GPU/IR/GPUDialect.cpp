@@ -620,10 +620,22 @@ LogicalResult gpu::SubgroupReduceOp::verify() {
                        << "` reduction operation is not compatible with type "
                        << getType();
   }
+
+  if (auto clusterSize = getClusterSize()) {
+    uint32_t size = *clusterSize;
+    if (!llvm::isPowerOf2_32(size)) {
+      return emitOpError() << "cluster size " << size
+                           << " is not a power of two";
+    }
+  }
+
   return success();
 }
 
 OpFoldResult gpu::SubgroupReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (getClusterSize() == 1)
+    return getValue();
+
   if (!getUniform() && canMakeGroupOpUniform(*this)) {
     setUniform(true);
     return getResult();
@@ -1736,8 +1748,7 @@ LogicalResult gpu::ReturnOp::verify() {
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayAttr targets,
                         Attribute offloadingHandler) {
-  ensureTerminator(*result.addRegion(), builder, result.location);
-
+  result.addRegion()->emplaceBlock();
   Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
     props.targets = targets;
@@ -1751,73 +1762,6 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, name,
         targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets),
         offloadingHandler);
-}
-
-ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
-  StringAttr nameAttr;
-  ArrayAttr targetsAttr;
-
-  if (parser.parseSymbolName(nameAttr))
-    return failure();
-
-  Properties &props = result.getOrAddProperties<Properties>();
-  props.setSymName(nameAttr);
-
-  // Parse the optional offloadingHandler
-  if (succeeded(parser.parseOptionalLess())) {
-    if (parser.parseAttribute(props.offloadingHandler))
-      return failure();
-    if (parser.parseGreater())
-      return failure();
-  }
-
-  // Parse the optional array of target attributes.
-  OptionalParseResult targetsAttrResult =
-      parser.parseOptionalAttribute(targetsAttr, Type{});
-  if (targetsAttrResult.has_value()) {
-    if (failed(*targetsAttrResult)) {
-      return failure();
-    }
-    props.targets = targetsAttr;
-  }
-
-  // If module attributes are present, parse them.
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
-    return failure();
-
-  // Parse the module body.
-  auto *body = result.addRegion();
-  if (parser.parseRegion(*body, {}))
-    return failure();
-
-  // Ensure that this module has a valid terminator.
-  GPUModuleOp::ensureTerminator(*body, parser.getBuilder(), result.location);
-  return success();
-}
-
-void GPUModuleOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  p.printSymbolName(getName());
-
-  if (Attribute attr = getOffloadingHandlerAttr()) {
-    p << " <";
-    p.printAttribute(attr);
-    p << ">";
-  }
-
-  if (Attribute attr = getTargetsAttr()) {
-    p << ' ';
-    p.printAttribute(attr);
-    p << ' ';
-  }
-
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {mlir::SymbolTable::getSymbolAttrName(),
-                                      getTargetsAttrName(),
-                                      getOffloadingHandlerAttrName()});
-  p << ' ';
-  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
 }
 
 bool GPUModuleOp::hasTarget(Attribute target) {

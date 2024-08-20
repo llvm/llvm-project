@@ -105,6 +105,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
+static cl::opt<bool> DisableP10StoreForward(
+    "disable-p10-store-forward",
+    cl::desc("disable P10 store forward-friendly conversion"), cl::Hidden,
+    cl::init(false));
+
 static cl::opt<bool> DisablePPCPreinc("disable-ppc-preinc",
 cl::desc("disable preincrement load/store generation on PPC"), cl::Hidden);
 
@@ -985,6 +990,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v4f32, Custom);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v4i32, Custom);
+    // LE is P8+/64-bit so direct moves are supported and these operations
+    // are legal. The custom transformation requires 64-bit since we need a
+    // pair of stores that will cover a 128-bit load for P10.
+    if (!DisableP10StoreForward && isPPC64 && !Subtarget.isLittleEndian()) {
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2i64, Custom);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8i16, Custom);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16i8, Custom);
+    }
 
     setOperationAction(ISD::BUILD_VECTOR, MVT::v16i8, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v8i16, Custom);
@@ -3375,17 +3388,15 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
     // global variables (global variables taken as the first parameter to
     // Intrinsic::threadlocal_address).
     const Function &Func = DAG.getMachineFunction().getFunction();
-    for (Function::const_iterator BI = Func.begin(), BE = Func.end(); BI != BE;
-         ++BI)
-      for (BasicBlock::const_iterator II = BI->begin(), IE = BI->end();
-           II != IE; ++II)
-        if (II->getOpcode() == Instruction::Call)
-          if (const CallInst *CI = dyn_cast<const CallInst>(&*II))
+    for (const BasicBlock &BB : Func)
+      for (const Instruction &I : BB)
+        if (I.getOpcode() == Instruction::Call)
+          if (const CallInst *CI = dyn_cast<const CallInst>(&I))
             if (Function *CF = CI->getCalledFunction())
               if (CF->isDeclaration() &&
                   CF->getIntrinsicID() == Intrinsic::threadlocal_address)
                 if (const GlobalValue *GV =
-                        dyn_cast<GlobalValue>(II->getOperand(0))) {
+                        dyn_cast<GlobalValue>(I.getOperand(0))) {
                   TLSModel::Model GVModel = TM.getTLSModel(GV);
                   if (GVModel == TLSModel::LocalDynamic)
                     TLSGV.insert(GV);
@@ -9502,10 +9513,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     } else {
       // We may lose precision, so we have to use XXSPLTI32DX.
 
-      uint32_t Hi =
-          (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
-      uint32_t Lo =
-          (uint32_t)(APSplatBits.getZExtValue() & 0xFFFFFFFF);
+      uint32_t Hi = Hi_32(APSplatBits.getZExtValue());
+      uint32_t Lo = Lo_32(APSplatBits.getZExtValue());
       SDValue SplatNode = DAG.getUNDEF(MVT::v2i64);
 
       if (!Hi || !Lo)
@@ -9649,8 +9658,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                   dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
-  int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
-                    (32-SplatBitSize));
+  int32_t SextVal = SignExtend32(SplatBits, SplatBitSize);
   if (SextVal >= -16 && SextVal <= 15)
     return getCanonicalConstSplat(SextVal, SplatSize, Op.getValueType(), DAG,
                                   dl);
@@ -11483,9 +11491,33 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
+  SDValue Val = Op.getOperand(0);
+  EVT ValVT = Val.getValueType();
+  // P10 hardware store forwarding requires that a single store contains all
+  // the data for the load. P10 is able to merge a pair of adjacent stores. Try
+  // to avoid load hit store on P10 when running binaries compiled for older
+  // processors by generating two mergeable scalar stores to forward with the
+  // vector load.
+  if (!DisableP10StoreForward && Subtarget.isPPC64() &&
+      !Subtarget.isLittleEndian() && ValVT.isInteger() &&
+      ValVT.getSizeInBits() <= 64) {
+    Val = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Val);
+    EVT ShiftAmountTy = getShiftAmountTy(MVT::i64, DAG.getDataLayout());
+    SDValue ShiftBy = DAG.getConstant(
+        64 - Op.getValueType().getScalarSizeInBits(), dl, ShiftAmountTy);
+    Val = DAG.getNode(ISD::SHL, dl, MVT::i64, Val, ShiftBy);
+    SDValue Plus8 =
+        DAG.getNode(ISD::ADD, dl, PtrVT, FIdx, DAG.getConstant(8, dl, PtrVT));
+    SDValue Store2 =
+        DAG.getStore(DAG.getEntryNode(), dl, Val, Plus8, MachinePointerInfo());
+    SDValue Store = DAG.getStore(Store2, dl, Val, FIdx, MachinePointerInfo());
+    return DAG.getLoad(Op.getValueType(), dl, Store, FIdx,
+                       MachinePointerInfo());
+  }
+
   // Store the input value into Value#0 of the stack slot.
-  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Op.getOperand(0), FIdx,
-                               MachinePointerInfo());
+  SDValue Store =
+      DAG.getStore(DAG.getEntryNode(), dl, Val, FIdx, MachinePointerInfo());
   // Load it out.
   return DAG.getLoad(Op.getValueType(), dl, Store, FIdx, MachinePointerInfo());
 }

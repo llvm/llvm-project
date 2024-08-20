@@ -5619,8 +5619,9 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
 
   // On LA64, atomic store operations with IntegerBitWidth of 32 and 64 do not
   // require fences beacuse we can use amswap_db.[w/d].
-  if (isa<StoreInst>(I)) {
-    unsigned Size = I->getOperand(0)->getType()->getIntegerBitWidth();
+  Type *Ty = I->getOperand(0)->getType();
+  if (isa<StoreInst>(I) && Ty->isIntegerTy()) {
+    unsigned Size = Ty->getIntegerBitWidth();
     return (Size == 8 || Size == 16);
   }
 

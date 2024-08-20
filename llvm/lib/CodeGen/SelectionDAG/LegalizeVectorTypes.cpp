@@ -765,6 +765,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::CONCAT_VECTORS:
     Res = ScalarizeVecOp_CONCAT_VECTORS(N);
     break;
+  case ISD::INSERT_SUBVECTOR:
+    Res = ScalarizeVecOp_INSERT_SUBVECTOR(N, OpNo);
+    break;
   case ISD::EXTRACT_VECTOR_ELT:
     Res = ScalarizeVecOp_EXTRACT_VECTOR_ELT(N);
     break;
@@ -880,6 +883,19 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
   for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i)
     Ops[i] = GetScalarizedVector(N->getOperand(i));
   return DAG.getBuildVector(N->getValueType(0), SDLoc(N), Ops);
+}
+
+/// The inserted subvector is to be scalarized - use insert vector element
+/// instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
+                                                          unsigned OpNo) {
+  // We should not be attempting to scalarize the containing vector
+  assert(OpNo == 1);
+  SDValue Elt = GetScalarizedVector(N->getOperand(1));
+  SDValue ContainingVec = N->getOperand(0);
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N),
+                     ContainingVec.getValueType(), ContainingVec, Elt,
+                     N->getOperand(2));
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>,
@@ -2412,11 +2428,64 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
                                                    SDValue &Hi) {
   // This is not "trivial", as there is a dependency between the two subvectors.
   // Depending on the number of 1s in the mask, the elements from the Hi vector
-  // need to be moved to the Lo vector. So we just perform this as one "big"
-  // operation and then extract the Lo and Hi vectors from that. This gets rid
-  // of VECTOR_COMPRESS and all other operands can be legalized later.
-  SDValue Compressed = TLI.expandVECTOR_COMPRESS(N, DAG);
-  std::tie(Lo, Hi) = DAG.SplitVector(Compressed, SDLoc(N));
+  // need to be moved to the Lo vector. Passthru values make this even harder.
+  // We try to use VECTOR_COMPRESS if the target has custom lowering with
+  // smaller types and passthru is undef, as it is most likely faster than the
+  // fully expand path. Otherwise, just do the full expansion as one "big"
+  // operation and then extract the Lo and Hi vectors from that. This gets
+  // rid of VECTOR_COMPRESS and all other operands can be legalized later.
+  SDLoc DL(N);
+  EVT VecVT = N->getValueType(0);
+
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
+  bool HasCustomLowering = false;
+  EVT CheckVT = LoVT;
+  while (CheckVT.getVectorMinNumElements() > 1) {
+    // TLI.isOperationLegalOrCustom requires a legal type, but we could have a
+    // custom lowering for illegal types. So we do the checks separately.
+    if (TLI.isOperationLegal(ISD::VECTOR_COMPRESS, CheckVT) ||
+        TLI.isOperationCustom(ISD::VECTOR_COMPRESS, CheckVT)) {
+      HasCustomLowering = true;
+      break;
+    }
+    CheckVT = CheckVT.getHalfNumVectorElementsVT(*DAG.getContext());
+  }
+
+  SDValue Passthru = N->getOperand(2);
+  if (!HasCustomLowering || !Passthru.isUndef()) {
+    SDValue Compressed = TLI.expandVECTOR_COMPRESS(N, DAG);
+    std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL, LoVT, HiVT);
+    return;
+  }
+
+  // Try to VECTOR_COMPRESS smaller vectors and combine via a stack store+load.
+  SDValue LoMask, HiMask;
+  std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
+  std::tie(LoMask, HiMask) = SplitMask(N->getOperand(1));
+
+  SDValue UndefPassthru = DAG.getUNDEF(LoVT);
+  Lo = DAG.getNode(ISD::VECTOR_COMPRESS, DL, LoVT, Lo, LoMask, UndefPassthru);
+  Hi = DAG.getNode(ISD::VECTOR_COMPRESS, DL, HiVT, Hi, HiMask, UndefPassthru);
+
+  SDValue StackPtr = DAG.CreateStackTemporary(
+      VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
+      MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
+
+  // We store LoVec and then insert HiVec starting at offset=|1s| in LoMask.
+  SDValue WideMask =
+      DAG.getNode(ISD::ZERO_EXTEND, DL, LoMask.getValueType(), LoMask);
+  SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideMask);
+  Offset = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Offset);
+
+  SDValue Chain = DAG.getEntryNode();
+  Chain = DAG.getStore(Chain, DL, Lo, StackPtr, PtrInfo);
+  Chain = DAG.getStore(Chain, DL, Hi, Offset,
+                       MachinePointerInfo::getUnknownStack(MF));
+
+  SDValue Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+  std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL);
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
@@ -4776,6 +4845,26 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
   }
 
+  // Generate a vp.op if it is custom/legal for the target.  This avoids need
+  // to split and tile the subvectors (below), because the inactive lanes can
+  // simply be disabled. To avoid possible recursion, only do this if the
+  // widened mask type is legal.
+  if (auto VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+      VPOpcode && TLI.isOperationLegalOrCustom(*VPOpcode, WidenVT)) {
+    if (EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                          WidenVT.getVectorElementCount());
+        TLI.isTypeLegal(WideMaskVT)) {
+      SDValue InOp1 = GetWidenedVector(N->getOperand(0));
+      SDValue InOp2 = GetWidenedVector(N->getOperand(1));
+      SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
+      SDValue EVL =
+          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                              N->getValueType(0).getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL,
+                         Flags);
+    }
+  }
+
   // FIXME: Improve support for scalable vectors.
   assert(!VT.isScalableVector() && "Scalable vectors not handled yet.");
 
@@ -5790,7 +5879,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_COMPRESS(SDNode *N) {
       TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
   EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
                                     Mask.getValueType().getVectorElementType(),
-                                    WideVecVT.getVectorNumElements());
+                                    WideVecVT.getVectorElementCount());
 
   SDValue WideVec = ModifyToType(Vec, WideVecVT);
   SDValue WideMask = ModifyToType(Mask, WideMaskVT, /*FillWithZeroes=*/true);

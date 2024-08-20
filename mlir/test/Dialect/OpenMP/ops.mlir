@@ -116,6 +116,27 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     omp.terminator
   } {omp.composite}
 
+  // CHECK: omp.distribute
+  omp.distribute {
+    // CHECK-NEXT: omp.parallel
+    omp.parallel {
+      // CHECK-NEXT: omp.wsloop
+      omp.wsloop {
+        // CHECK-NEXT: omp.simd
+        omp.simd{
+          // CHECK-NEXT: omp.loop_nest
+          omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
+            omp.yield
+          }
+          omp.terminator
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+
   return
 }
 

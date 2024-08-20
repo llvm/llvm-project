@@ -1056,30 +1056,37 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     return matcher.getNode(ISD::USUBSAT, dl, Op1.getValueType(), Op1, Op2);
   }
 
+  if (Opcode == ISD::UADDSAT) {
+    EVT OVT = Op1.getValueType();
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+    // We can promote if we use sign-extend. Do this if the target prefers.
+    if (TLI.isSExtCheaperThanZExt(OVT, NVT)) {
+      Op1 = SExtPromotedInteger(Op1);
+      Op2 = SExtPromotedInteger(Op2);
+      return matcher.getNode(ISD::UADDSAT, dl, NVT, Op1, Op2);
+    }
+
+    Op1 = ZExtPromotedInteger(Op1);
+    Op2 = ZExtPromotedInteger(Op2);
+    unsigned NewBits = NVT.getScalarSizeInBits();
+    APInt MaxVal = APInt::getLowBitsSet(NewBits, OldBits);
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, NVT);
+    SDValue Add = matcher.getNode(ISD::ADD, dl, NVT, Op1, Op2);
+    return matcher.getNode(ISD::UMIN, dl, NVT, Add, SatMax);
+  }
+
   bool IsShift = Opcode == ISD::USHLSAT || Opcode == ISD::SSHLSAT;
 
   // FIXME: We need vp-aware PromotedInteger functions.
-  SDValue Op1Promoted, Op2Promoted;
   if (IsShift) {
-    Op1Promoted = GetPromotedInteger(Op1);
-    Op2Promoted = ZExtPromotedInteger(Op2);
-  } else if (Opcode == ISD::UADDSAT) {
-    Op1Promoted = ZExtPromotedInteger(Op1);
-    Op2Promoted = ZExtPromotedInteger(Op2);
+    Op1 = GetPromotedInteger(Op1);
+    Op2 = ZExtPromotedInteger(Op2);
   } else {
-    Op1Promoted = SExtPromotedInteger(Op1);
-    Op2Promoted = SExtPromotedInteger(Op2);
+    Op1 = SExtPromotedInteger(Op1);
+    Op2 = SExtPromotedInteger(Op2);
   }
-  EVT PromotedType = Op1Promoted.getValueType();
+  EVT PromotedType = Op1.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
-
-  if (Opcode == ISD::UADDSAT) {
-    APInt MaxVal = APInt::getLowBitsSet(NewBits, OldBits);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-    SDValue Add =
-        matcher.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
-    return matcher.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
-  }
 
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
@@ -1102,14 +1109,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     unsigned SHLAmount = NewBits - OldBits;
     SDValue ShiftAmount =
         DAG.getShiftAmountConstant(SHLAmount, PromotedType, dl);
-    Op1Promoted =
-        DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
+    Op1 = DAG.getNode(ISD::SHL, dl, PromotedType, Op1, ShiftAmount);
     if (!IsShift)
-      Op2Promoted =
-          matcher.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
+      Op2 = matcher.getNode(ISD::SHL, dl, PromotedType, Op2, ShiftAmount);
 
-    SDValue Result =
-        matcher.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
+    SDValue Result = matcher.getNode(Opcode, dl, PromotedType, Op1, Op2);
     return matcher.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
   }
 
@@ -1118,8 +1122,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
   SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
   SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-  SDValue Result =
-      matcher.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
+  SDValue Result = matcher.getNode(AddOp, dl, PromotedType, Op1, Op2);
   Result = matcher.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
   Result = matcher.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
   return Result;
@@ -3299,7 +3302,7 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
     SDValue HiNeg =
         DAG.getSetCC(DL, CCT, LHSH, DAG.getConstant(0, DL, NVT), ISD::SETLT);
     if (N->getOpcode() == ISD::SMIN) {
-      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getConstant(-1, DL, NVT));
+      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getAllOnesConstant(DL, NVT));
     } else {
       Lo = DAG.getSelect(DL, NVT, HiNeg, DAG.getConstant(0, DL, NVT), LHSL);
     }
@@ -4387,7 +4390,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
 
   SDValue SatMax, SatMin;
   SDValue NVTZero = DAG.getConstant(0, dl, NVT);
-  SDValue NVTNeg1 = DAG.getConstant(-1, dl, NVT);
+  SDValue NVTNeg1 = DAG.getAllOnesConstant(dl, NVT);
   EVT BoolNVT = getSetCCResultType(NVT);
 
   if (!Signed) {
