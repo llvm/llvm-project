@@ -11,6 +11,7 @@
 #include "TypeLocBuilder.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"

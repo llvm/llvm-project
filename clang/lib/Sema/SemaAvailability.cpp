@@ -12,9 +12,11 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/StmtObjC.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
