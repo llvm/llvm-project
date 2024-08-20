@@ -7053,11 +7053,16 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
         if (!RD->hasConstexprDestructor())
           return false;
 
+        QualType CanUnqualT = T.getCanonicalType().getUnqualifiedType();
         for (const CXXBaseSpecifier &B : RD->bases())
-          if (!Check(B.getType(), Check))
+          if (B.getType().getCanonicalType().getUnqualifiedType() !=
+                  CanUnqualT &&
+              !Check(B.getType(), Check))
             return false;
         for (const FieldDecl *FD : RD->fields())
-          if (!Check(FD->getType(), Check))
+          if (FD->getType().getCanonicalType().getUnqualifiedType() !=
+                  CanUnqualT &&
+              !Check(FD->getType(), Check))
             return false;
         return true;
       };

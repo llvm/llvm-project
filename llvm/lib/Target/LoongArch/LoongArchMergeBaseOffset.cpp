@@ -381,6 +381,14 @@ static unsigned getNewOpc(unsigned Op, bool isLarge) {
     return isLarge ? LoongArch::FLDX_S : LoongArch::FLD_S;
   case LoongArch::FLD_D:
     return isLarge ? LoongArch::FLDX_D : LoongArch::FLD_D;
+  case LoongArch::VLD:
+    return isLarge ? LoongArch::VLDX : LoongArch::VLD;
+  case LoongArch::XVLD:
+    return isLarge ? LoongArch::XVLDX : LoongArch::XVLD;
+  case LoongArch::VLDREPL_B:
+    return LoongArch::VLDREPL_B;
+  case LoongArch::XVLDREPL_B:
+    return LoongArch::XVLDREPL_B;
   case LoongArch::ST_B:
     return isLarge ? LoongArch::STX_B : LoongArch::ST_B;
   case LoongArch::ST_H:
@@ -395,6 +403,10 @@ static unsigned getNewOpc(unsigned Op, bool isLarge) {
     return isLarge ? LoongArch::FSTX_S : LoongArch::FST_S;
   case LoongArch::FST_D:
     return isLarge ? LoongArch::FSTX_D : LoongArch::FST_D;
+  case LoongArch::VST:
+    return isLarge ? LoongArch::VSTX : LoongArch::VST;
+  case LoongArch::XVST:
+    return isLarge ? LoongArch::XVSTX : LoongArch::XVST;
   default:
     llvm_unreachable("Unexpected opcode for replacement");
   }
@@ -444,6 +456,12 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     default:
       LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
       return false;
+    case LoongArch::VLDREPL_B:
+    case LoongArch::XVLDREPL_B:
+      // We can't do this for large pattern.
+      if (Last)
+        return false;
+      [[fallthrough]];
     case LoongArch::LD_B:
     case LoongArch::LD_H:
     case LoongArch::LD_W:
@@ -455,6 +473,8 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     case LoongArch::LDPTR_D:
     case LoongArch::FLD_S:
     case LoongArch::FLD_D:
+    case LoongArch::VLD:
+    case LoongArch::XVLD:
     case LoongArch::ST_B:
     case LoongArch::ST_H:
     case LoongArch::ST_W:
@@ -462,7 +482,9 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     case LoongArch::STPTR_W:
     case LoongArch::STPTR_D:
     case LoongArch::FST_S:
-    case LoongArch::FST_D: {
+    case LoongArch::FST_D:
+    case LoongArch::VST:
+    case LoongArch::XVST: {
       if (UseMI.getOperand(1).isFI())
         return false;
       // Register defined by Lo should not be the value register.

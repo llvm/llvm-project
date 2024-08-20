@@ -13,14 +13,13 @@
 #ifndef LLVM_CLANG_SEMA_SEMAAMDGPU_H
 #define LLVM_CLANG_SEMA_SEMAAMDGPU_H
 
-#include "clang/AST/Attr.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Sema/ParsedAttr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class AttributeCommonInfo;
+class ParsedAttr;
+
 class SemaAMDGPU : public SemaBase {
 public:
   SemaAMDGPU(Sema &S);
