@@ -5,7 +5,10 @@ add_mlir_conversion_library(MLIRSCFToControlFlow
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToControlFlow
 
   DEPENDS
-  MLIRConversionPassIncGen  
+  MLIRConversionPassIncGen
+
+  LINK_COMPONENTS
+  Core
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

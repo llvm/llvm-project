@@ -391,8 +391,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitPop(T, CE);
 
     QualType PtrType = CE->getType();
-    assert(PtrType->isPointerType());
-
     const Descriptor *Desc;
     if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
       Desc = P.createDescriptor(SubExpr, *T);
@@ -2242,8 +2240,6 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
-  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
@@ -2911,6 +2907,17 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
 
   return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  const Function *Func = nullptr;
+  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+    Func = F;
+
+  if (!Func)
+    return false;
+  return this->emitGetFnPtr(Func, E);
 }
 
 template <class Emitter>
