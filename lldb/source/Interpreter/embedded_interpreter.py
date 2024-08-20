@@ -8,6 +8,8 @@ import code
 import lldb
 import traceback
 
+from io import StringIO
+
 try:
     import readline
     import rlcompleter
@@ -116,19 +118,50 @@ def run_python_interpreter(local_dict):
             print("Script exited with code %s" % e.code)
 
 
+class LLDBInteractiveConsole(code.InteractiveConsole):
+    def __init__(self, locals=None):
+        super().__init__(locals)
+        self.result_output = None
+
+    ### Implementation detail:
+    ### https://docs.python.org/3/library/code.html#code.InteractiveInterpreter.runsource
+    def runsource(self, source, filename="<input>", symbol="single"):
+        # Redirect stdout to capture print statements
+        old_stdout = sys.stdout
+        sys.stdout = result_output = StringIO()
+
+        try:
+            compiled_code = self.compile(source, filename, symbol)
+            if compiled_code is None:
+                return False
+
+            exec(compiled_code, self.locals)
+            return True
+        except Exception as e:
+            self.showsyntaxerror(filename)
+            return False
+        finally:
+            self.result_output = result_output
+            sys.stdout = old_stdout
+
+    def get_last_result(self):
+        return self.result_output.getvalue()
+
 def run_one_line(local_dict, input_string):
     global g_run_one_line_str
     try:
         input_string = strip_and_check_exit(input_string)
-        repl = code.InteractiveConsole(local_dict)
+        repl = LLDBInteractiveConsole(local_dict)
         if input_string:
             # A newline is appended to support one-line statements containing
             # control flow. For example "if True: print(1)" silently does
             # nothing, but works with a newline: "if True: print(1)\n".
             input_string += "\n"
-            repl.runsource(input_string)
+            if repl.runsource(input_string):
+                return repl.get_last_result()
         elif g_run_one_line_str:
-            repl.runsource(g_run_one_line_str)
+            if repl.runsource(g_run_one_line_str):
+                return repl.get_last_result()
     except LLDBExit:
         pass
     except SystemExit as e:
