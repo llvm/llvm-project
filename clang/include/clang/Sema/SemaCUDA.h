@@ -136,7 +136,8 @@ public:
     CUDATargetContext() = default;
 
     CUDATargetContext(SemaCUDA *S, CUDATargetContextKind Kind,
-                      CUDAFunctionTarget Target);
+                      CUDAFunctionTarget Target)
+        : Kind(Kind), S(S), Target(Target) {}
 
     CUDAFunctionTarget getTarget();
 

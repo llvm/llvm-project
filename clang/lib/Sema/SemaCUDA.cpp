@@ -143,11 +143,6 @@ static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
          });
 }
 
-SemaCUDA::CUDATargetContext::CUDATargetContext(SemaCUDA *S,
-                                               CUDATargetContextKind Kind,
-                                               CUDAFunctionTarget Target)
-    : Kind(Kind), S(S), Target(Target) {}
-
 CUDAFunctionTarget SemaCUDA::CUDATargetContext::getTarget() {
   TargetQueried = true;
   return Target;
