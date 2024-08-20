@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -315,7 +316,7 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
   // We do assume a couple of implementation details of the unique_function here:
   //  - It can store certain small-enough payload inline
   //  - Inline storage size is at least >= sizeof(void*)
-  void *ptr;
+  void *ptr = nullptr;
   unique_function<void(void *)> UniqueFunctionWithInlineStorage{
       [ptr](void *self) {
         auto mid = reinterpret_cast<uintptr_t>(&ptr);
@@ -327,6 +328,20 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
         EXPECT_TRUE(mid >= beg && mid < end);
       }};
   UniqueFunctionWithInlineStorage(&UniqueFunctionWithInlineStorage);
+}
+
+// Check that the moved-from captured state is properly destroyed during
+// move construction/assignment.
+TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
+  CountCopyAndMove::ResetCounts();
+  {
+    unique_function<void()> CapturingFunction{
+        [Counter = CountCopyAndMove{}] {}};
+    unique_function<void()> CapturingFunctionMoved{
+        std::move(CapturingFunction)};
+  }
+  EXPECT_EQ(CountCopyAndMove::TotalConstructions(),
+            CountCopyAndMove::Destructions);
 }
 
 } // anonymous namespace
