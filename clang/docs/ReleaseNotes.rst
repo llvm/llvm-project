@@ -294,6 +294,9 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash caused by long chains of ``sizeof`` and other similar operators
   that can be followed by a non-parenthesized expression. (#GH45061)
 
+- Fixed an crash when compiling ``#pragma STDC FP_CONTRACT DEFAULT`` with
+  ``-ffp-contract=fast-honor-pragmas`. (#GH104830)
+
 OpenACC Specific Changes
 ------------------------
 
