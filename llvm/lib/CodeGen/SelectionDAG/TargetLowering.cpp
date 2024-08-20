@@ -11585,8 +11585,9 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     EVT PopcountVT = ScalarVT.changeTypeToInteger();
     SDValue Popcount = DAG.getNode(
         ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
-    Popcount = DAG.getNode(ISD::ZERO_EXTEND, DL,
-                           MaskVT.changeVectorElementType(PopcountVT), Popcount);
+    Popcount =
+        DAG.getNode(ISD::ZERO_EXTEND, DL,
+                    MaskVT.changeVectorElementType(PopcountVT), Popcount);
     Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
     SDValue LastElmtPtr =
         getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
@@ -11628,8 +11629,8 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
       // overwrite the last write it with the passthru value.
       SDNodeFlags Flags{};
       Flags.setUnpredictable(true);
-      LastWriteVal =
-          DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI, LastWriteVal, Flags);
+      LastWriteVal = DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI,
+                                   LastWriteVal, Flags);
       Chain = DAG.getStore(
           Chain, DL, LastWriteVal, OutPtr,
           MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
