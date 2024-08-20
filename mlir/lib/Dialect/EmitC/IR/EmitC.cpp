@@ -798,9 +798,9 @@ LogicalResult SubOp::verify() {
                        "type if lhs is a pointer");
 
   if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
-      !isa<IntegerType, emitc::OpaqueType>(resultType))
-    return emitOpError("requires that the result is an integer or of opaque "
-                       "type if lhs and rhs are pointers");
+      !isa<IntegerType, emitc::PtrDiffTType, emitc::OpaqueType>(resultType))
+    return emitOpError("requires that the result is an integer, ptrdiff_t or "
+                       "of opaque type if lhs and rhs are pointers");
   return success();
 }
 
