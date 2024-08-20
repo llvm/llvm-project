@@ -3053,7 +3053,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
         unsigned XLen = Subtarget->getXLen();
         unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = llvm::countr_zero(Mask);
-        if (C2 > Leading && Trailing == ShAmt) {
+        if (C2 > Leading && Leading > 0 && Trailing == ShAmt) {
           SDLoc DL(N);
           EVT VT = N.getValueType();
           Val = SDValue(CurDAG->getMachineNode(
