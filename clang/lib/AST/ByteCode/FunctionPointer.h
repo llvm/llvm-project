@@ -33,7 +33,7 @@ public:
   bool isZero() const { return !Func; }
   bool isValid() const { return Valid; }
   bool isWeak() const {
-    if (!Func || !Valid)
+    if (!Func || !Valid || !Func->getDecl())
       return false;
 
     return Func->getDecl()->isWeak();
@@ -49,7 +49,10 @@ public:
                      CharUnits::fromQuantity(getIntegerRepresentation()), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
 
-    return APValue(Func->getDecl(), CharUnits::Zero(), {},
+    if (Func->getDecl())
+      return APValue(Func->getDecl(), CharUnits::Zero(), {},
+                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
+    return APValue(Func->getExpr(), CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 

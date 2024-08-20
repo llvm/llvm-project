@@ -327,6 +327,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_NullToPointer:
   case CK_NullToMemberPointer: {
+    if (!this->discard(SubExpr))
+      return false;
     if (DiscardResult)
       return true;
 
@@ -389,8 +391,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitPop(T, CE);
 
     QualType PtrType = CE->getType();
-    assert(PtrType->isPointerType());
-
     const Descriptor *Desc;
     if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
       Desc = P.createDescriptor(SubExpr, *T);
@@ -2240,8 +2240,6 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
-  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
@@ -2909,6 +2907,17 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
 
   return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  const Function *Func = nullptr;
+  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+    Func = F;
+
+  if (!Func)
+    return false;
+  return this->emitGetFnPtr(Func, E);
 }
 
 template <class Emitter>
@@ -5112,7 +5121,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visitBool(SubExpr))
       return false;
 
-    if (!this->emitInvBool(E))
+    if (!this->emitInv(E))
       return false;
 
     if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
@@ -5231,7 +5240,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!this->emitComplexBoolCast(SubExpr))
       return false;
-    if (!this->emitInvBool(E))
+    if (!this->emitInv(E))
       return false;
     if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
       return this->emitCast(PT_Bool, ET, E);

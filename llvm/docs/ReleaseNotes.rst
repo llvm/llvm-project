@@ -111,6 +111,7 @@ Changes to the RISC-V Backend
 * Fixed length vector support using RVV instructions now requires VLEN>=64. This
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -155,6 +156,12 @@ Changes to the C API
 
   * ``LLVMGetNamedFunctionWithLength``
   * ``LLVMGetNamedGlobalWithLength``
+
+* The new pass manager can now be invoked with a custom alias analysis pipeline, using
+  the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
+
+* It is now also possible to run the new pass manager on a single function, by calling
+  ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

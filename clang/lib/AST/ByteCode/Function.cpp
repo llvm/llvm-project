@@ -16,15 +16,18 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
+Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
                    bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
-    : P(P), F(F), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
+    : P(P), Source(Source), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
       Params(std::move(Params)), ParamOffsets(std::move(ParamOffsets)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO), Variadic(F->isVariadic()),
-      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
+      HasThisPointer(HasThisPointer), HasRVO(HasRVO),
+      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {
+  if (const auto *F = Source.dyn_cast<const FunctionDecl *>())
+    Variadic = F->isVariadic();
+}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -45,7 +48,8 @@ SourceInfo Function::getSource(CodePtr PC) const {
 }
 
 bool Function::isVirtual() const {
-  if (const auto *M = dyn_cast<CXXMethodDecl>(F))
+  if (const auto *M = dyn_cast_if_present<CXXMethodDecl>(
+          Source.dyn_cast<const FunctionDecl *>()))
     return M->isVirtual();
   return false;
 }
