@@ -762,7 +762,7 @@ static bool buildAtomicCompareExchangeInst(
   Register Tmp = !IsCmpxchg ? MRI->createGenericVirtualRegister(DesiredLLT)
                             : Call->ReturnRegister;
   if (!MRI->getRegClassOrNull(Tmp))
-    MRI->setRegClass(Tmp, &SPIRV::iIDRegClass);
+    MRI->setRegClass(Tmp, GR->getRegClass(SpvDesiredTy));
   GR->assignSPIRVTypeToVReg(SpvDesiredTy, Tmp, MIRBuilder.getMF());
 
   SPIRVType *IntTy = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);

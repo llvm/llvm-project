@@ -403,13 +403,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   int i = 0;
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
-    MRI->setRegClass(VRegs[i][0], GR->getRegClass(ArgTypeVRegs[i]));
-    MRI->setType(VRegs[i][0], GR->getRegType(ArgTypeVRegs[i]));
+    Register ArgReg = VRegs[i][0];
+    MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
+    MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(VRegs[i][0])
+        .addDef(ArgReg)
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), VRegs[i][0]);
+      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
   // Name the function.
