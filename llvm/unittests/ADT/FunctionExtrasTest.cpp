@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -327,6 +328,20 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
         EXPECT_TRUE(mid >= beg && mid < end);
       }};
   UniqueFunctionWithInlineStorage(&UniqueFunctionWithInlineStorage);
+}
+
+// Check that the moved-from captured state is properly destroyed during
+// move construction/assignment.
+TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
+  CountCopyAndMove::ResetCounts();
+  {
+    unique_function<void()> CapturingFunction{
+        [Counter = CountCopyAndMove{}] {}};
+    unique_function<void()> CapturingFunctionMoved{
+        std::move(CapturingFunction)};
+  }
+  EXPECT_EQ(CountCopyAndMove::TotalConstructions(),
+            CountCopyAndMove::Destructions);
 }
 
 } // anonymous namespace
