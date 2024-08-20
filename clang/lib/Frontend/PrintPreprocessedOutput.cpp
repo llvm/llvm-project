@@ -1048,9 +1048,7 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   // the macro table at the end.
   PP.EnterMainSourceFile();
 
-  Token Tok;
-  do PP.Lex(Tok);
-  while (Tok.isNot(tok::eof));
+  PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
   for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();
