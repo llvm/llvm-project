@@ -1280,6 +1280,12 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 
 // clang-format on
 
+// Wavegroup defines.
+
+enum {
+  WAVEGROUPS_PER_WORKGROUP = 4,
+};
+
 } // End namespace llvm
 
 #endif

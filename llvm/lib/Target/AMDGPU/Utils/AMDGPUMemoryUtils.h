@@ -26,6 +26,7 @@ class Value;
 class Function;
 class CallGraph;
 class Module;
+class TargetExtType;
 
 namespace AMDGPU {
 
@@ -33,6 +34,9 @@ using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
+
+// If GV is a semaphore return its type. Otherwise return nullptr.
+TargetExtType *isLDSSemaphore(const GlobalVariable &GV);
 
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);

@@ -32,6 +32,28 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
+TargetExtType *isLDSSemaphore(const GlobalVariable &GV) {
+  // TODO-GFX13: Allow arrays and structs, if all members are semaphores owned
+  // by the same rank.
+  // TODO-GFX13: Disallow other uses of target("amdgcn.semaphore") including:
+  // - Structs containing semaphores owned by different ranks.
+  // - Structs containing a mixture of semaphores and other data.
+  // - Globals in other address spaces.
+  // - Allocas.
+  Type *Ty = GV.getValueType();
+  while (true) {
+    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "amdgcn.semaphore" ? TTy : nullptr;
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->getNumElements() == 0)
+        return nullptr;
+      Ty = STy->getElementType(0);
+      continue;
+    }
+    return nullptr;
+  }
+}
+
 bool isDynamicLDS(const GlobalVariable &GV) {
   // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
@@ -45,6 +67,8 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
   }
+  if (isLDSSemaphore(GV))
+    return false;
   if (isDynamicLDS(GV)) {
     return true;
   }
