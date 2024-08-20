@@ -92,11 +92,13 @@ add_header_library(
   HDRS
     except_value_utils.h
   DEPENDS
+    .cast
     .fp_bits
     .fenv_impl
     .rounding_mode
     libc.src.__support.CPP.optional
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.macros.properties.types
 )
 
