@@ -303,7 +303,7 @@ public:
   typedef typename container_type::reference reference;
   typedef typename container_type::const_reference const_reference;
   typedef typename container_type::size_type size_type;
-  static_assert((is_same<_Tp, value_type>::value), "");
+  static_assert(is_same<_Tp, value_type>::value, "");
 
 protected:
   container_type c;
@@ -341,10 +341,10 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI queue(queue&& __q) _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
+  _LIBCPP_HIDE_FROM_ABI queue(queue&& __q) noexcept(is_nothrow_move_constructible<container_type>::value)
       : c(std::move(__q.c)) {}
 
-  _LIBCPP_HIDE_FROM_ABI queue& operator=(queue&& __q) _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI queue& operator=(queue&& __q) noexcept(is_nothrow_move_assignable<container_type>::value) {
     c = std::move(__q.c);
     return *this;
   }
@@ -398,20 +398,20 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI
 #  if _LIBCPP_STD_VER >= 17
-      decltype(auto)
-      emplace(_Args&&... __args) {
+  decltype(auto)
+  emplace(_Args&&... __args) {
     return c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  else
-      void
-      emplace(_Args&&... __args) {
+  void
+  emplace(_Args&&... __args) {
     c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  endif
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI void pop() { c.pop_front(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(queue& __q) _NOEXCEPT_(__is_nothrow_swappable<container_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(queue& __q) _NOEXCEPT_(__is_nothrow_swappable_v<container_type>) {
     using std::swap;
     swap(c, __q.c);
   }
@@ -500,7 +500,7 @@ operator<=>(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y
 
 #endif
 
-template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
+template <class _Tp, class _Container, __enable_if_t<__is_swappable_v<_Container>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void swap(queue<_Tp, _Container>& __x, queue<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
@@ -519,7 +519,7 @@ public:
   typedef typename container_type::reference reference;
   typedef typename container_type::const_reference const_reference;
   typedef typename container_type::size_type size_type;
-  static_assert((is_same<_Tp, value_type>::value), "");
+  static_assert(is_same<_Tp, value_type>::value, "");
 
 protected:
   container_type c;
@@ -539,12 +539,12 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI priority_queue(priority_queue&& __q) _NOEXCEPT_(
-      is_nothrow_move_constructible<container_type>::value&& is_nothrow_move_constructible<value_compare>::value)
+  _LIBCPP_HIDE_FROM_ABI priority_queue(priority_queue&& __q) noexcept(
+      is_nothrow_move_constructible<container_type>::value && is_nothrow_move_constructible<value_compare>::value)
       : c(std::move(__q.c)), comp(std::move(__q.comp)) {}
 
-  _LIBCPP_HIDE_FROM_ABI priority_queue& operator=(priority_queue&& __q)
-      _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value&& is_nothrow_move_assignable<value_compare>::value) {
+  _LIBCPP_HIDE_FROM_ABI priority_queue& operator=(priority_queue&& __q) noexcept(
+      is_nothrow_move_assignable<container_type>::value && is_nothrow_move_assignable<value_compare>::value) {
     c    = std::move(__q.c);
     comp = std::move(__q.comp);
     return *this;
@@ -676,7 +676,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void pop();
 
   _LIBCPP_HIDE_FROM_ABI void swap(priority_queue& __q)
-      _NOEXCEPT_(__is_nothrow_swappable<container_type>::value&& __is_nothrow_swappable<value_compare>::value);
+      _NOEXCEPT_(__is_nothrow_swappable_v<container_type>&& __is_nothrow_swappable_v<value_compare>);
 
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 };
@@ -922,7 +922,7 @@ inline void priority_queue<_Tp, _Container, _Compare>::pop() {
 
 template <class _Tp, class _Container, class _Compare>
 inline void priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q)
-    _NOEXCEPT_(__is_nothrow_swappable<container_type>::value&& __is_nothrow_swappable<value_compare>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<container_type>&& __is_nothrow_swappable_v<value_compare>) {
   using std::swap;
   swap(c, __q.c);
   swap(comp, __q.comp);
@@ -931,7 +931,7 @@ inline void priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q)
 template <class _Tp,
           class _Container,
           class _Compare,
-          __enable_if_t<__is_swappable<_Container>::value && __is_swappable<_Compare>::value, int> = 0>
+          __enable_if_t<__is_swappable_v<_Container> && __is_swappable_v<_Compare>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void
 swap(priority_queue<_Tp, _Container, _Compare>& __x, priority_queue<_Tp, _Container, _Compare>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {

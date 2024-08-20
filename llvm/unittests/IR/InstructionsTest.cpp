@@ -205,7 +205,6 @@ TEST(InstructionsTest, CastInst) {
   Type *Int64Ty = Type::getInt64Ty(C);
   Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
   Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
-  Type *X86MMXTy = Type::getX86_MMXTy(C);
 
   Type *HalfTy = Type::getHalfTy(C);
   Type *FloatTy = Type::getFloatTy(C);
@@ -248,9 +247,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
-  EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, X86MMXTy));
-  EXPECT_FALSE(CastInst::isBitCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isBitCastable(Int64Ty, X86MMXTy));
   EXPECT_FALSE(CastInst::isBitCastable(V8x64Ty, V8x8Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, V8x64Ty));
 
@@ -1163,7 +1159,8 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_TRUE(
       ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
-  // Nothing special about the values here - just re-using inputs to reduce code. 
+  // Nothing special about the values here - just re-using inputs to reduce
+  // code.
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
   Constant *V1 = ConstantVector::get({C3, C2, C1, C0});
 
@@ -1220,7 +1217,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id6->isIdentityWithExtract());
   EXPECT_FALSE(Id6->isConcat());
   delete Id6;
-  
+
   // Result has more elements than operands, but extra elements are not undef.
   ShuffleVectorInst *Id7 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C0, C1, C2, C3, CU, C1}));
@@ -1229,7 +1226,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id7->isIdentityWithExtract());
   EXPECT_FALSE(Id7->isConcat());
   delete Id7;
-  
+
   // Result has more elements than operands; choose from Op0 and Op1 is not identity.
   ShuffleVectorInst *Id8 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C4, CU, C2, C3, CU, CU}));
@@ -1745,11 +1742,12 @@ TEST(InstructionsTest, AllocaInst) {
         %A = alloca i32, i32 1
         %B = alloca i32, i32 4
         %C = alloca i32, i32 %n
-        %D = alloca <8 x double>
+        %D = alloca double
         %E = alloca <vscale x 8 x double>
         %F = alloca [2 x half]
         %G = alloca [2 x [3 x i128]]
         %H = alloca %T
+        %I = alloca i32, i64 9223372036854775807
         ret void
       }
     )");
@@ -1766,14 +1764,17 @@ TEST(InstructionsTest, AllocaInst) {
   AllocaInst &F = cast<AllocaInst>(*It++);
   AllocaInst &G = cast<AllocaInst>(*It++);
   AllocaInst &H = cast<AllocaInst>(*It++);
+  AllocaInst &I = cast<AllocaInst>(*It++);
   EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
-  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(DL.getTypeSizeInBits(D.getAllocatedType()), TypeSize::getFixed(64));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(64));
   EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+  EXPECT_FALSE(I.getAllocationSizeInBits(DL));
 }
 
 TEST(InstructionsTest, InsertAtBegin) {
@@ -1812,6 +1813,51 @@ TEST(InstructionsTest, InsertAtEnd) {
   auto It = I->insertInto(BB, BB->end());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(Ret->getNextNode(), I);
+}
+
+TEST(InstructionsTest, AtomicSyncscope) {
+  LLVMContext Ctx;
+
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
+  IRBuilder<> Builder(BB);
+
+  // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,
+  // so cover the old versions (with a SingleThreaded argument) here.
+  Value *Ptr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *Val = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+
+  // fence
+  LLVMValueRef Fence = LLVMBuildFence(
+      wrap(&Builder), LLVMAtomicOrderingSequentiallyConsistent, 0, "");
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(Fence));
+  Fence = LLVMBuildFence(wrap(&Builder),
+                         LLVMAtomicOrderingSequentiallyConsistent, 1, "");
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(Fence));
+
+  // atomicrmw
+  LLVMValueRef AtomicRMW = LLVMBuildAtomicRMW(
+      wrap(&Builder), LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+      LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(AtomicRMW));
+  AtomicRMW = LLVMBuildAtomicRMW(wrap(&Builder), LLVMAtomicRMWBinOpXchg,
+                                 wrap(Ptr), wrap(Val),
+                                 LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(AtomicRMW));
+
+  // cmpxchg
+  LLVMValueRef CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(CmpXchg));
+  CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
 }
 
 } // end anonymous namespace

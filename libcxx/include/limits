@@ -314,10 +314,18 @@ protected:
   static _LIBCPP_CONSTEXPR const bool has_signaling_NaN                                    = true;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss          = false;
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT { return __builtin_huge_valf(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT { return __builtin_nanf(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT { return __builtin_nansf(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT { return __FLT_DENORM_MIN__; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {
+    return __builtin_huge_valf();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {
+    return __builtin_nanf("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {
+    return __builtin_nansf("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {
+    return __FLT_DENORM_MIN__;
+  }
 
   static _LIBCPP_CONSTEXPR const bool is_iec559  = true;
   static _LIBCPP_CONSTEXPR const bool is_bounded = true;
@@ -363,10 +371,18 @@ protected:
   static _LIBCPP_CONSTEXPR const bool has_signaling_NaN                                    = true;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss          = false;
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT { return __builtin_huge_val(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT { return __builtin_nan(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT { return __builtin_nans(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT { return __DBL_DENORM_MIN__; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {
+    return __builtin_huge_val();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {
+    return __builtin_nan("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {
+    return __builtin_nans("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {
+    return __DBL_DENORM_MIN__;
+  }
 
   static _LIBCPP_CONSTEXPR const bool is_iec559  = true;
   static _LIBCPP_CONSTEXPR const bool is_bounded = true;
@@ -412,10 +428,18 @@ protected:
   static _LIBCPP_CONSTEXPR const bool has_signaling_NaN                                    = true;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = denorm_present;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss          = false;
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT { return __builtin_huge_vall(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT { return __builtin_nanl(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT { return __builtin_nansl(""); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT { return __LDBL_DENORM_MIN__; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {
+    return __builtin_huge_vall();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {
+    return __builtin_nanl("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {
+    return __builtin_nansl("");
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {
+    return __LDBL_DENORM_MIN__;
+  }
 
 #if defined(__powerpc__) && defined(__LONG_DOUBLE_IBM128__)
   static _LIBCPP_CONSTEXPR const bool is_iec559 = false;
@@ -452,8 +476,12 @@ public:
   static _LIBCPP_CONSTEXPR const bool is_integer  = __base::is_integer;
   static _LIBCPP_CONSTEXPR const bool is_exact    = __base::is_exact;
   static _LIBCPP_CONSTEXPR const int radix        = __base::radix;
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type epsilon() _NOEXCEPT { return __base::epsilon(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type round_error() _NOEXCEPT { return __base::round_error(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type epsilon() _NOEXCEPT {
+    return __base::epsilon();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type round_error() _NOEXCEPT {
+    return __base::round_error();
+  }
 
   static _LIBCPP_CONSTEXPR const int min_exponent   = __base::min_exponent;
   static _LIBCPP_CONSTEXPR const int min_exponent10 = __base::min_exponent10;
@@ -467,10 +495,18 @@ public:
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
   static _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss          = __base::has_denorm_loss;
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT { return __base::infinity(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT { return __base::quiet_NaN(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT { return __base::signaling_NaN(); }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT { return __base::denorm_min(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {
+    return __base::infinity();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {
+    return __base::quiet_NaN();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {
+    return __base::signaling_NaN();
+  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {
+    return __base::denorm_min();
+  }
 
   static _LIBCPP_CONSTEXPR const bool is_iec559  = __base::is_iec559;
   static _LIBCPP_CONSTEXPR const bool is_bounded = __base::is_bounded;

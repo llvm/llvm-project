@@ -162,6 +162,72 @@ entry:
   ret double %result
 }
 
+; Verify that acos(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: facos
+; CHECK: call double @llvm.experimental.constrained.acos
+define double @facos() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.acos.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that asin(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: fasin
+; CHECK: call double @llvm.experimental.constrained.asin
+define double @fasin() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.asin.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that atan(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: fatan
+; CHECK: call double @llvm.experimental.constrained.atan
+define double @fatan() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.atan.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that cosh(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: fcosh
+; CHECK: call double @llvm.experimental.constrained.cosh
+define double @fcosh() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.cosh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that sinh(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: fsinh
+; CHECK: call double @llvm.experimental.constrained.sinh
+define double @fsinh() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.sinh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that tanh(42.0) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: ftanh
+; CHECK: call double @llvm.experimental.constrained.tanh
+define double @ftanh() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.tanh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
 ; Verify that exp(42.0) isn't simplified when the rounding mode is unknown.
 ; CHECK-LABEL: f10
 ; CHECK: call double @llvm.experimental.constrained.exp

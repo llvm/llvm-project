@@ -49,6 +49,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMatMul = false;
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
+  bool HasSVE2p1 = false;
   bool HasSVE2AES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
@@ -70,6 +71,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSME2 = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
+  bool HasSME2p1 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -107,10 +109,6 @@ public:
   unsigned multiVersionSortPriority(StringRef Name) const override;
   unsigned multiVersionFeatureCost() const override;
 
-  bool
-  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
-                 StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -155,7 +153,6 @@ public:
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
-  StringRef getFeatureDependencies(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,

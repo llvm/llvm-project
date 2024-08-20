@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NoOwnershipChangeVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -74,6 +77,12 @@ struct StreamErrorState {
   /// Returns if the StreamErrorState is a valid object.
   operator bool() const { return NoError || FEof || FError; }
 
+  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &os) const {
+    os << "NoError: " << NoError << ", FEof: " << FEof
+       << ", FError: " << FError;
+  }
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddBoolean(NoError);
     ID.AddBoolean(FEof);
@@ -97,6 +106,18 @@ struct StreamState {
     Closed, /// Closed stream (an invalid stream pointer after it was closed).
     OpenFailed /// The last open operation has failed.
   } State;
+
+  StringRef getKindStr() const {
+    switch (State) {
+    case Opened:
+      return "Opened";
+    case Closed:
+      return "Closed";
+    case OpenFailed:
+      return "OpenFailed";
+    }
+    llvm_unreachable("Unknown StreamState!");
+  }
 
   /// State of the error flags.
   /// Ignored in non-opened stream state but must be NoError.
@@ -146,6 +167,9 @@ struct StreamState {
     return StreamState{L, OpenFailed, {}, false};
   }
 
+  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &os) const;
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(LastOperation);
     ID.AddInteger(State);
@@ -182,6 +206,14 @@ struct FnDescription {
   FnCheck EvalFn;
   ArgNoTy StreamArgNo;
 };
+
+LLVM_DUMP_METHOD void StreamState::dumpToStream(llvm::raw_ostream &os) const {
+  os << "{Kind: " << getKindStr() << ", Last operation: " << LastOperation
+     << ", ErrorState: ";
+  ErrorState.dumpToStream(os);
+  os << ", FilePos: " << (FilePositionIndeterminate ? "Indeterminate" : "OK")
+     << '}';
+}
 
 /// Get the value of the stream argument out of the passed call event.
 /// The call should contain a function that is described by Desc.
@@ -222,7 +254,8 @@ inline void assertStreamStateOpened(const StreamState *SS) {
 }
 
 class StreamChecker : public Checker<check::PreCall, eval::Call,
-                                     check::DeadSymbols, check::PointerEscape> {
+                                     check::DeadSymbols, check::PointerEscape,
+                                     check::ASTDecl<TranslationUnitDecl>> {
   BugType BT_FileNull{this, "NULL stream pointer", "Stream handling error"};
   BugType BT_UseAfterClose{this, "Closed stream", "Stream handling error"};
   BugType BT_UseAfterOpenFailed{this, "Invalid stream",
@@ -244,10 +277,20 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
 
+  /// Finds the declarations of 'FILE *stdin, *stdout, *stderr'.
+  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &,
+                    BugReporter &) const;
+
   const BugType *getBT_StreamEof() const { return &BT_StreamEof; }
   const BugType *getBT_IndeterminatePosition() const {
     return &BT_IndeterminatePosition;
   }
+
+  /// Assumes that the result of 'fopen' can't alias with the pointee of
+  /// 'stdin', 'stdout' or 'stderr'.
+  ProgramStateRef assumeNoAliasingWithStdStreams(ProgramStateRef State,
+                                                 DefinedSVal RetVal,
+                                                 CheckerContext &C) const;
 
   const NoteTag *constructSetEofNoteTag(CheckerContext &C,
                                         SymbolRef StreamSym) const {
@@ -300,6 +343,8 @@ public:
   /// If true, generate failure branches for cases that are often not checked.
   bool PedanticMode = false;
 
+  const CallDescription FCloseDesc = {CDM::CLibrary, {"fclose"}, 1};
+
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
       {{CDM::CLibrary, {"fopen"}, 2},
@@ -310,8 +355,7 @@ private:
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{CDM::CLibrary, {"tmpfile"}, 0},
        {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {{CDM::CLibrary, {"fclose"}, 1},
-       {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
+      {FCloseDesc, {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{CDM::CLibrary, {"fread"}, 4},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
@@ -417,6 +461,10 @@ private:
   mutable int SeekEndVal = 2;
   /// The built-in va_list type is platform-specific
   mutable QualType VaListType;
+
+  mutable const VarDecl *StdinDecl = nullptr;
+  mutable const VarDecl *StdoutDecl = nullptr;
+  mutable const VarDecl *StderrDecl = nullptr;
 
   void evalFopen(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
@@ -567,28 +615,20 @@ private:
     });
   }
 
-  void initMacroValues(CheckerContext &C) const {
+  void initMacroValues(const Preprocessor &PP) const {
     if (EofVal)
       return;
 
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("EOF", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("EOF", PP))
       EofVal = *OptInt;
     else
       EofVal = -1;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_SET", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_SET", PP))
       SeekSetVal = *OptInt;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_END", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_END", PP))
       SeekEndVal = *OptInt;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_CUR", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_CUR", PP))
       SeekCurVal = *OptInt;
-  }
-
-  void initVaListType(CheckerContext &C) const {
-    VaListType = C.getASTContext().getBuiltinVaListType().getCanonicalType();
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
@@ -696,6 +736,71 @@ struct StreamOperationEvaluator {
 
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// Definition of NoStreamStateChangeVisitor.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class NoStreamStateChangeVisitor final : public NoOwnershipChangeVisitor {
+protected:
+  /// Syntactically checks whether the callee is a closing function. Since
+  /// we have no path-sensitive information on this call (we would need a
+  /// CallEvent instead of a CallExpr for that), its possible that a
+  /// closing function was called indirectly through a function pointer,
+  /// but we are not able to tell, so this is a best effort analysis.
+  bool isClosingCallAsWritten(const CallExpr &Call) const {
+    const auto *StreamChk = static_cast<const StreamChecker *>(&Checker);
+    return StreamChk->FCloseDesc.matchesAsWritten(Call);
+  }
+
+  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+                                     ASTContext &ACtx) final {
+    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+
+    // Given that the stack frame was entered, the body should always be
+    // theoretically obtainable. In case of body farms, the synthesized body
+    // is not attached to declaration, thus triggering the '!FD->hasBody()'
+    // branch. That said, would a synthesized body ever intend to handle
+    // ownership? As of today they don't. And if they did, how would we
+    // put notes inside it, given that it doesn't match any source locations?
+    if (!FD || !FD->hasBody())
+      return false;
+    using namespace clang::ast_matchers;
+
+    auto Matches =
+        match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
+    for (BoundNodes Match : Matches) {
+      if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
+        if (isClosingCallAsWritten(*Call))
+          return true;
+    }
+    // TODO: Ownership might change with an attempt to store stream object, not
+    // only through closing it. Check for attempted stores as well.
+    return false;
+  }
+
+  bool hasResourceStateChanged(ProgramStateRef CallEnterState,
+                               ProgramStateRef CallExitEndState) final {
+    return CallEnterState->get<StreamMap>(Sym) !=
+           CallExitEndState->get<StreamMap>(Sym);
+  }
+
+  PathDiagnosticPieceRef emitNote(const ExplodedNode *N) override {
+    PathDiagnosticLocation L = PathDiagnosticLocation::create(
+        N->getLocation(),
+        N->getState()->getStateManager().getContext().getSourceManager());
+    return std::make_shared<PathDiagnosticEventPiece>(
+        L, "Returning without closing stream object or storing it for later "
+           "release");
+  }
+
+public:
+  NoStreamStateChangeVisitor(SymbolRef Sym, const StreamChecker *Checker)
+      : NoOwnershipChangeVisitor(Sym, Checker) {}
+};
+
+} // end anonymous namespace
+
 const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
                                                       SymbolRef StreamSym,
                                                       CheckerContext &C) {
@@ -776,9 +881,6 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
 
 void StreamChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  initMacroValues(C);
-  initVaListType(C);
-
   const FnDescription *Desc = lookupFn(Call);
   if (!Desc || !Desc->PreFn)
     return;
@@ -796,6 +898,30 @@ bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   Desc->EvalFn(this, Desc, Call, C);
 
   return C.isDifferent();
+}
+
+ProgramStateRef StreamChecker::assumeNoAliasingWithStdStreams(
+    ProgramStateRef State, DefinedSVal RetVal, CheckerContext &C) const {
+  auto assumeRetNE = [&C, RetVal](ProgramStateRef State,
+                                  const VarDecl *Var) -> ProgramStateRef {
+    if (!Var)
+      return State;
+    const auto *LCtx = C.getLocationContext();
+    auto &StoreMgr = C.getStoreManager();
+    auto &SVB = C.getSValBuilder();
+    SVal VarValue = State->getSVal(StoreMgr.getLValueVar(Var, LCtx));
+    auto NoAliasState =
+        SVB.evalBinOp(State, BO_NE, RetVal, VarValue, SVB.getConditionType())
+            .castAs<DefinedOrUnknownSVal>();
+    return State->assume(NoAliasState, true);
+  };
+
+  assert(State);
+  State = assumeRetNE(State, StdinDecl);
+  State = assumeRetNE(State, StdoutDecl);
+  State = assumeRetNE(State, StderrDecl);
+  assert(State);
+  return State;
 }
 
 void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
@@ -821,6 +947,8 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
       StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened(Desc));
   StateNull =
       StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed(Desc));
+
+  StateNotNull = assumeNoAliasingWithStdStreams(StateNotNull, RetVal, C);
 
   C.addTransition(StateNotNull,
                   constructLeakNoteTag(C, RetSym, "Stream opened here"));
@@ -945,16 +1073,16 @@ void StreamChecker::preWrite(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(State);
 }
 
-static std::optional<QualType> getPointeeType(const MemRegion *R) {
+static QualType getPointeeType(const MemRegion *R) {
   if (!R)
-    return std::nullopt;
+    return {};
   if (const auto *ER = dyn_cast<ElementRegion>(R))
     return ER->getElementType();
   if (const auto *TR = dyn_cast<TypedValueRegion>(R))
     return TR->getValueType();
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     return SR->getPointeeStaticType();
-  return std::nullopt;
+  return {};
 }
 
 static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
@@ -984,7 +1112,8 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   const auto *Buffer =
       dyn_cast_or_null<SubRegion>(Call.getArgSVal(0).getAsRegion());
 
-  std::optional<QualType> ElemTy = getPointeeType(Buffer);
+  const ASTContext &Ctx = C.getASTContext();
+  QualType ElemTy = getPointeeType(Buffer);
   std::optional<SVal> StartElementIndex =
       getStartIndex(C.getSValBuilder(), Buffer);
 
@@ -997,10 +1126,12 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   std::optional<int64_t> StartIndexVal =
       getKnownValue(State, StartElementIndex.value_or(UnknownVal()));
 
-  if (ElemTy && CountVal && Size && StartIndexVal) {
+  if (!ElemTy.isNull() && CountVal && Size && StartIndexVal) {
     int64_t NumBytesRead = Size.value() * CountVal.value();
-    int64_t ElemSizeInChars =
-        C.getASTContext().getTypeSizeInChars(*ElemTy).getQuantity();
+    int64_t ElemSizeInChars = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+    if (ElemSizeInChars == 0)
+      return nullptr;
+
     bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;
     int64_t NumCompleteOrIncompleteElementsRead =
         NumBytesRead / ElemSizeInChars + IncompleteLastElement;
@@ -1008,7 +1139,7 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
     constexpr int MaxInvalidatedElementsLimit = 64;
     if (NumCompleteOrIncompleteElementsRead <= MaxInvalidatedElementsLimit) {
       return escapeByStartIndexAndCount(State, Call, C.blockCount(), Buffer,
-                                        *ElemTy, *StartIndexVal,
+                                        ElemTy, *StartIndexVal,
                                         NumCompleteOrIncompleteElementsRead);
     }
   }
@@ -1872,6 +2003,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
             LocUsedForUniqueing,
             StreamOpenNode->getLocationContext()->getDecl());
     R->markInteresting(LeakSym);
+    R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);
     C.emitReport(std::move(R));
   }
 
@@ -1922,6 +2054,38 @@ ProgramStateRef StreamChecker::checkPointerEscape(
     State = State->remove<StreamMap>(Sym);
   }
   return State;
+}
+
+static const VarDecl *
+getGlobalStreamPointerByName(const TranslationUnitDecl *TU, StringRef VarName) {
+  ASTContext &Ctx = TU->getASTContext();
+  const auto &SM = Ctx.getSourceManager();
+  const QualType FileTy = Ctx.getFILEType();
+
+  if (FileTy.isNull())
+    return nullptr;
+
+  const QualType FilePtrTy = Ctx.getPointerType(FileTy).getCanonicalType();
+
+  auto LookupRes = TU->lookup(&Ctx.Idents.get(VarName));
+  for (const Decl *D : LookupRes) {
+    if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+      if (SM.isInSystemHeader(VD->getLocation()) && VD->hasExternalStorage() &&
+          VD->getType().getCanonicalType() == FilePtrTy) {
+        return VD;
+      }
+    }
+  }
+  return nullptr;
+}
+
+void StreamChecker::checkASTDecl(const TranslationUnitDecl *TU,
+                                 AnalysisManager &Mgr, BugReporter &) const {
+  StdinDecl = getGlobalStreamPointerByName(TU, "stdin");
+  StdoutDecl = getGlobalStreamPointerByName(TU, "stdout");
+  StderrDecl = getGlobalStreamPointerByName(TU, "stderr");
+  VaListType = TU->getASTContext().getBuiltinVaListType().getCanonicalType();
+  initMacroValues(Mgr.getPreprocessor());
 }
 
 //===----------------------------------------------------------------------===//

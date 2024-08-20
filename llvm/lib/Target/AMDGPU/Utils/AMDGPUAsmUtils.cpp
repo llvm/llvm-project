@@ -9,8 +9,7 @@
 #include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 
 //===----------------------------------------------------------------------===//
 // Custom Operands.
@@ -669,5 +668,19 @@ const char* const IdSymbolic[] = {
 
 } // namespace VGPRIndexMode
 
-} // namespace AMDGPU
-} // namespace llvm
+namespace UCVersion {
+
+ArrayRef<GFXVersion> getGFXVersions() {
+  // GFX6, GFX8 and GFX9 don't support s_version and there are no
+  // UC_VERSION_GFX* codes for them.
+  static const GFXVersion Versions[] = {{"UC_VERSION_GFX7", 0},
+                                        {"UC_VERSION_GFX10", 4},
+                                        {"UC_VERSION_GFX11", 6},
+                                        {"UC_VERSION_GFX12", 9}};
+
+  return Versions;
+}
+
+} // namespace UCVersion
+
+} // namespace llvm::AMDGPU

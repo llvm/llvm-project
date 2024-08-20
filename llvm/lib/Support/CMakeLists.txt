@@ -101,9 +101,10 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
   endif()
 
-  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
+  if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
+    set(delayload_flags "${delayload_flags} -INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
@@ -167,6 +168,7 @@ add_llvm_component_library(LLVMSupport
   Debug.cpp
   DebugCounter.cpp
   DeltaAlgorithm.cpp
+  DeltaTree.cpp
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
@@ -186,7 +188,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hashing.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
@@ -216,6 +217,8 @@ add_llvm_component_library(LLVMSupport
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
+  RewriteBuffer.cpp
+  RewriteRope.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
   RISCVISAUtils.cpp
@@ -322,8 +325,12 @@ if(LLVM_ENABLE_ZSTD)
   if(NOT zstd_library)
     get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
   endif()
-  get_library_name(${zstd_library} zstd_library)
-  set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  if (zstd_target STREQUAL zstd::libzstd_shared)
+    get_library_name(${zstd_library} zstd_library)
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  else()
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_STATIC_LIBRARY}")
+  endif()
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -42,9 +43,20 @@ getModifierVariantKind(XtensaCP::XtensaCPModifier Modifier) {
 }
 
 void XtensaAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  MCInst LoweredMI;
-  lowerToMCInst(MI, LoweredMI);
-  EmitToStreamer(*OutStreamer, LoweredMI);
+  unsigned Opc = MI->getOpcode();
+
+  switch (Opc) {
+  case Xtensa::BR_JT:
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(Xtensa::JX).addReg(MI->getOperand(0).getReg()));
+    return;
+  default:
+    MCInst LoweredMI;
+    lowerToMCInst(MI, LoweredMI);
+    EmitToStreamer(*OutStreamer, LoweredMI);
+    return;
+  }
 }
 
 void XtensaAsmPrinter::emitMachineConstantPoolValue(
@@ -52,16 +64,27 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   XtensaConstantPoolValue *ACPV = static_cast<XtensaConstantPoolValue *>(MCPV);
   MCSymbol *MCSym;
 
-  assert(ACPV->isExtSymbol() && "unrecognized constant pool value");
+  if (ACPV->isBlockAddress()) {
+    const BlockAddress *BA =
+        cast<XtensaConstantPoolConstant>(ACPV)->getBlockAddress();
+    MCSym = GetBlockAddressSymbol(BA);
+  } else if (ACPV->isJumpTable()) {
+    unsigned Idx = cast<XtensaConstantPoolJumpTable>(ACPV)->getIndex();
+    MCSym = this->GetJTISymbol(Idx, false);
+  } else {
+    assert(ACPV->isExtSymbol() && "unrecognized constant pool value");
+    XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
+    const char *SymName = XtensaSym->getSymbol();
 
-  XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
-  const char *Sym = XtensaSym->getSymbol();
-  std::string SymName(Sym);
+    if (XtensaSym->isPrivateLinkage()) {
+      const DataLayout &DL = getDataLayout();
+      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                           SymName);
+    } else {
+      MCSym = OutContext.getOrCreateSymbol(SymName);
+    }
+  }
 
-  if (XtensaSym->isPrivateLinkage())
-    SymName = ".L" + SymName;
-
-  MCSym = GetExternalSymbolSymbol(StringRef(SymName));
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
@@ -71,7 +94,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     std::string SymName(MCSym->getName());
     StringRef Modifier = ACPV->getModifierText();
     SymName += Modifier;
-    MCSym = GetExternalSymbolSymbol(StringRef(SymName));
+    MCSym = OutContext.getOrCreateSymbol(SymName);
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
@@ -140,6 +163,10 @@ XtensaAsmPrinter::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
   return GetCPISymbol(MO.getIndex());
 }
 
+MCSymbol *XtensaAsmPrinter::GetJumpTableSymbol(const MachineOperand &MO) const {
+  return GetJTISymbol(MO.getIndex());
+}
+
 MCOperand
 XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
                                      MachineOperand::MachineOperandType MOTy,
@@ -151,6 +178,20 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
   case MachineOperand::MO_GlobalAddress:
     Symbol = getSymbol(MO.getGlobal());
     Offset += MO.getOffset();
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    Symbol = MO.getMBB()->getSymbol();
+    break;
+  case MachineOperand::MO_BlockAddress:
+    Symbol = GetBlockAddressSymbol(MO.getBlockAddress());
+    Offset += MO.getOffset();
+    break;
+  case MachineOperand::MO_ExternalSymbol:
+    Symbol = GetExternalSymbolSymbol(MO.getSymbolName());
+    Offset += MO.getOffset();
+    break;
+  case MachineOperand::MO_JumpTableIndex:
+    Symbol = GetJumpTableSymbol(MO);
     break;
   case MachineOperand::MO_ConstantPoolIndex:
     Symbol = GetConstantPoolIndexSymbol(MO);
@@ -191,6 +232,10 @@ MCOperand XtensaAsmPrinter::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_RegisterMask:
     break;
   case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_BlockAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_JumpTableIndex:
   case MachineOperand::MO_ConstantPoolIndex:
     return LowerSymbolOperand(MO, MOTy, Offset);
   default:

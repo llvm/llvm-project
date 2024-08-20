@@ -60,6 +60,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

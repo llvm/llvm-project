@@ -228,6 +228,12 @@ static bool CheckNonSignWrappedOnly(const ConstantRange &CR1,
   return !CR1.isSignWrappedSet() && !CR2.isSignWrappedSet();
 }
 
+static bool
+CheckNoSignedWrappedLHSAndNoWrappedRHSOnly(const ConstantRange &CR1,
+                                           const ConstantRange &CR2) {
+  return !CR1.isSignWrappedSet() && !CR2.isWrappedSet();
+}
+
 static bool CheckNonWrappedOrSignWrappedOnly(const ConstantRange &CR1,
                                              const ConstantRange &CR2) {
   return !CR1.isWrappedSet() && !CR1.isSignWrappedSet() &&
@@ -1070,6 +1076,24 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
                 .multiplyWithNoWrap(ConstantRange(APInt(8, 100), APInt(8, 121)),
                                     OBO::NoSignedWrap),
             ConstantRange::getEmpty(8));
+  EXPECT_TRUE(ConstantRange::getFull(8)
+                  .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_TRUE(ConstantRange(APInt(8, 2), APInt(8, 128))
+                  .multiplyWithNoWrap(ConstantRange::getFull(8),
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 1), APInt(8, 128)),
+                              OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+          .isAllNonNegative());
+  EXPECT_FALSE(
+      ConstantRange::getFull(8)
+          .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                              OBO::NoSignedWrap)
+          .isAllNonNegative());
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -1482,6 +1506,75 @@ TEST_F(ConstantRangeTest, Shl) {
         // We currently only produce precise results for single element RHS.
         return CR2.isSingleElement();
       });
+}
+
+TEST_F(ConstantRangeTest, ShlWithNoWrap) {
+  using OBO = OverflowingBinaryOperator;
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        ConstantRange Res = CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        EXPECT_TRUE(CR1.shl(CR2).contains(Res));
+        return Res;
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.ushl_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallest, CheckNonWrappedOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.sshl_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallestSigned, CheckNoSignedWrappedLHSAndNoWrappedRHSOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow1, IsOverflow2;
+        APInt Res1 = N1.ushl_ov(N2, IsOverflow1);
+        APInt Res2 = N1.sshl_ov(N2, IsOverflow2);
+        if (IsOverflow1 || IsOverflow2)
+          return std::nullopt;
+        assert(Res1 == Res2 && "Left shift results differ?");
+        return Res1;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoSignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, 20481)));
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, -24575)));
+  EXPECT_EQ(One.shlWithNoWrap(Full, OBO::NoSignedWrap | OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 10), APInt(16, 20481)));
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shlWithNoWrap(Full, OBO::NoSignedWrap),
+            ConstantRange(APInt(16, -32768), APInt(16, 0)));
+  EXPECT_EQ(NegOne.shlWithNoWrap(Full, OBO::NoUnsignedWrap), NegOne);
+  EXPECT_EQ(ConstantRange(APInt(16, 768))
+                .shlWithNoWrap(Full, OBO::NoSignedWrap | OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 768), APInt(16, 24577)));
+  EXPECT_EQ(Full.shlWithNoWrap(ConstantRange(APInt(16, 1), APInt(16, 16)),
+                               OBO::NoUnsignedWrap),
+            ConstantRange(APInt(16, 0), APInt(16, -1)));
+  EXPECT_EQ(ConstantRange(APInt(4, 3), APInt(4, -8))
+                .shlWithNoWrap(ConstantRange(APInt(4, 0), APInt(4, 4)),
+                               OBO::NoSignedWrap),
+            ConstantRange(APInt(4, 3), APInt(4, -8)));
+  EXPECT_EQ(ConstantRange(APInt(4, -1), APInt(4, 0))
+                .shlWithNoWrap(ConstantRange(APInt(4, 1), APInt(4, 4)),
+                               OBO::NoSignedWrap),
+            ConstantRange(APInt(4, -8), APInt(4, -1)));
 }
 
 TEST_F(ConstantRangeTest, Lshr) {
@@ -2398,23 +2491,31 @@ TEST_F(ConstantRangeTest, Negative) {
   // they are also covered by the exhaustive test below.
   EXPECT_TRUE(Empty.isAllNegative());
   EXPECT_TRUE(Empty.isAllNonNegative());
+  EXPECT_TRUE(Empty.isAllPositive());
   EXPECT_FALSE(Full.isAllNegative());
   EXPECT_FALSE(Full.isAllNonNegative());
+  EXPECT_FALSE(Full.isAllPositive());
 
   EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
     bool AllNegative = true;
     bool AllNonNegative = true;
+    bool AllPositive = true;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
       if (!N.isNegative())
         AllNegative = false;
       if (!N.isNonNegative())
         AllNonNegative = false;
+      if (!N.isStrictlyPositive())
+        AllPositive = false;
     });
-    assert((CR.isEmptySet() || !AllNegative || !AllNonNegative) &&
-           "Only empty set can be both all negative and all non-negative");
+    assert(
+        (CR.isEmptySet() || !AllNegative || !AllNonNegative || !AllPositive) &&
+        "Only empty set can be all negative, all non-negative, and all "
+        "positive");
 
     EXPECT_EQ(AllNegative, CR.isAllNegative());
     EXPECT_EQ(AllNonNegative, CR.isAllNonNegative());
+    EXPECT_EQ(AllPositive, CR.isAllPositive());
   });
 }
 

@@ -77,7 +77,15 @@ DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const DWARFDie &DIE,
                                           CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    reportWarning("Unsupported reference type", File, &DIE);
+    return DWARFDie();
+  }
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -1073,7 +1081,13 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return 0;
 
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;

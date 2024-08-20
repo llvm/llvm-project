@@ -66,6 +66,8 @@ bool hasBranchWeightOrigin(const MDNode *ProfileData);
 /// Return the offset to the first branch weight data
 unsigned getBranchWeightOffset(const MDNode *ProfileData);
 
+unsigned getNumBranchWeights(const MDNode &ProfileData);
+
 /// Extract branch weights from MD_prof metadata
 ///
 /// \param ProfileData A pointer to an MDNode.

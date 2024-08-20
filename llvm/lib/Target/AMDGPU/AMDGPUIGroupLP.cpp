@@ -112,7 +112,7 @@ public:
   virtual ~InstructionRule() = default;
 };
 
-typedef DenseMap<SUnit *, SmallVector<int, 4>> SUnitsToCandidateSGsMap;
+using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
@@ -190,13 +190,9 @@ public:
   // Returns true if the SU matches all rules
   bool allowedByRules(const SUnit *SU,
                       SmallVectorImpl<SchedGroup> &SyncPipe) const {
-    if (Rules.empty())
-      return true;
-    for (size_t I = 0; I < Rules.size(); I++) {
-      auto TheRule = Rules[I].get();
-      if (!TheRule->apply(SU, Collection, SyncPipe)) {
+    for (auto &Rule : Rules) {
+      if (!Rule.get()->apply(SU, Collection, SyncPipe))
         return false;
-      }
     }
     return true;
   }
@@ -261,8 +257,8 @@ static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
           S.getSUnit()->removePred(SP);
 }
 
-typedef std::pair<SUnit *, SmallVector<int, 4>> SUToCandSGsPair;
-typedef SmallVector<SUToCandSGsPair, 4> SUsToCandSGsVec;
+using SUToCandSGsPair = std::pair<SUnit *, SmallVector<int, 4>>;
+using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 
 // The PipelineSolver is used to assign SUnits to SchedGroups in a pipeline
 // in non-trivial cases. For example, if the requested pipeline is
@@ -311,7 +307,7 @@ class PipelineSolver {
   uint64_t BranchesExplored = 0;
 
   // The direction in which we process the candidate SchedGroups per SU
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   // Update indices to fit next conflicting instruction
   void advancePosition();
@@ -365,7 +361,7 @@ public:
 
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-                 ScheduleDAGMI *DAG, bool IsBottomUp = 1)
+                 ScheduleDAGMI *DAG, bool IsBottomUp = true)
       : DAG(DAG), SyncedInstrs(SyncedInstrs),
         SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
@@ -858,7 +854,7 @@ public:
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
                                    AMDGPU::SchedulingPhase Phase) = 0;
 
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : DAG(DAG), TII(TII) {}
@@ -881,7 +877,7 @@ public:
 
   MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 1;
+    IsBottomUp = true;
   }
 };
 
@@ -959,10 +955,9 @@ private:
           return false;
       }
 
-      auto Reaches = (std::any_of(
-          Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *TargetSU) {
-            return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
-          }));
+      auto Reaches = any_of(*Cache, [&SU, &DAG](SUnit *TargetSU) {
+        return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
+      });
 
       return Reaches;
     }
@@ -1350,7 +1345,7 @@ public:
 
   MFMAExpInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 0;
+    IsBottomUp = false;
   }
 };
 
@@ -1434,19 +1429,16 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (!(TempExp && TempMFMA))
     return false;
 
-  HasChainBetweenCvt =
-      std::find_if((*TempExp)->Succs.begin(), (*TempExp)->Succs.end(),
-                   [&isCvt](SDep &Succ) {
-                     return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
-                   }) == (*TempExp)->Succs.end();
+  HasChainBetweenCvt = none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
+    return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
+  });
 
   // Count the number of MFMAs that are reached by an EXP
   for (auto &SuccSU : MFMAPipeCands) {
     if (MFMAPipeSUs.size() &&
-        std::find_if(MFMAPipeSUs.begin(), MFMAPipeSUs.end(),
-                     [&SuccSU](SUnit *PotentialMatch) {
-                       return PotentialMatch->NodeNum == SuccSU->NodeNum;
-                     }) != MFMAPipeSUs.end())
+        any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
+          return PotentialMatch->NodeNum == SuccSU->NodeNum;
+        }))
       continue;
 
     for (auto &PredSU : ExpPipeCands) {
@@ -1484,10 +1476,9 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
-    if (!std::any_of(MFMAPipeSU->Preds.begin(), MFMAPipeSU->Preds.end(),
-                     [&TII](SDep &Succ) {
-                       return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                     })) {
+    if (none_of(MFMAPipeSU->Preds, [&TII](SDep &Succ) {
+          return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+        })) {
       MFMAChainSeeds.push_back(MFMAPipeSU);
       ++MFMAChains;
     }
@@ -1946,14 +1937,10 @@ private:
         return true;
 
       // Does the previous VALU have this DS_Write as a successor
-      return (std::any_of(OtherGroup->Collection.begin(),
-                          OtherGroup->Collection.end(), [&SU](SUnit *Elt) {
-                            return std::any_of(Elt->Succs.begin(),
-                                               Elt->Succs.end(),
-                                               [&SU](SDep &Succ) {
-                                                 return Succ.getSUnit() == SU;
-                                               });
-                          }));
+      return any_of(OtherGroup->Collection, [&SU](SUnit *Elt) {
+        return any_of(Elt->Succs,
+                      [&SU](SDep &Succ) { return Succ.getSUnit() == SU; });
+      });
     }
     IsSuccOfPrevGroup(const SIInstrInfo *TII, unsigned SGID,
                       bool NeedsCache = false)
@@ -2061,7 +2048,7 @@ public:
 
   MFMASmallGemmSingleWaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : IGLPStrategy(DAG, TII) {
-    IsBottomUp = 0;
+    IsBottomUp = false;
   }
 };
 
@@ -2371,7 +2358,7 @@ public:
   // created SchedGroup first, and will consider that as the ultimate
   // predecessor group when linking. TOP_DOWN instead links and processes the
   // first created SchedGroup first.
-  bool IsBottomUp = 1;
+  bool IsBottomUp = true;
 
   // The scheduling phase this application of IGLP corresponds with.
   AMDGPU::SchedulingPhase Phase = AMDGPU::SchedulingPhase::Initial;
@@ -2466,7 +2453,7 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
     // the A->B edge impossible, otherwise it returns true;
     bool Added = tryAddEdge(A, B);
     if (Added)
-      AddedEdges.push_back(std::pair(A, B));
+      AddedEdges.emplace_back(A, B);
     else
       ++MissedEdges;
   }

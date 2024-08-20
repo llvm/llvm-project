@@ -562,6 +562,18 @@ which should implement the following interface:
           this call should return the short help text for this command[1]
       def get_long_help(self):
           this call should return the long help text for this command[1]
+      def get_repeat_command(self, command):
+          The auto-repeat command is what will get executed when the user types just
+          a return at the next prompt after this command is run.  Even if your command
+          was run because it was specified as a repeat command, that invocation will still
+          get asked for IT'S repeat command, so you can chain a series of repeats, for instance
+          to implement a pager.
+
+          The command argument is the command that is about to be executed.
+
+          If this call returns None, then the ordinary repeat mechanism will be used
+          If this call returns an empty string, then auto-repeat is disabled
+          If this call returns any other string, that will be the repeat command [1]
 
 [1] This method is optional.
 

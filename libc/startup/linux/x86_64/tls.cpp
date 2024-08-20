@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
 
@@ -14,7 +15,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -90,4 +91,4 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 bool set_thread_ptr(uintptr_t val) {
   return syscall_impl(SYS_arch_prctl, ARCH_SET_FS, val) != -1;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

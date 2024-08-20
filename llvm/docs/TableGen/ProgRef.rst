@@ -174,7 +174,7 @@ TableGen has two kinds of string literals:
 
 .. productionlist::
    TokString: '"' (non-'"' characters and escapes) '"'
-   TokCode: "[{" (shortest text not containing "}]") "}]"
+   TokCode: "[{" (text not containing "}]") "}]"
 
 A :token:`TokCode` is nothing more than a multi-line string literal
 delimited by ``[{`` and ``}]``. It can break across lines and the

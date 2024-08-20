@@ -20,6 +20,9 @@
 #endif
 MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
+MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis())
+MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
+MODULE_ANALYSIS("dxil-resource", DXILResourceAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 MODULE_ANALYSIS("lcg", LazyCallGraphAnalysis())
@@ -43,6 +46,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("annotation2metadata", Annotation2MetadataPass())
+MODULE_PASS("assign-guid", AssignGUIDPass())
 MODULE_PASS("attributor", AttributorPass())
 MODULE_PASS("attributor-light", AttributorLightPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
@@ -52,6 +56,8 @@ MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("coro-cleanup", CoroCleanupPass())
 MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
+MODULE_PASS("ctx-instr-gen",
+            PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -79,6 +85,7 @@ MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
+MODULE_PASS("print<ctx-prof-analysis>", CtxProfAnalysisPrinterPass(dbgs()))
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
@@ -94,6 +101,7 @@ MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
+MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("objc-arc-apelim", ObjCARCAPElimPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
@@ -103,7 +111,7 @@ MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
-MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(*TM))
+MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(TM))
 MODULE_PASS("print", PrintModulePass(dbgs()))
 MODULE_PASS("print-callgraph", CallGraphPrinterPass(dbgs()))
 MODULE_PASS("print-callgraph-sccs", CallGraphSCCsPrinterPass(dbgs()))
@@ -114,6 +122,8 @@ MODULE_PASS("print-must-be-executed-contexts",
             MustBeExecutedContextPrinterPass(dbgs()))
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(dbgs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(dbgs()))
+MODULE_PASS("print<dxil-metadata>", DXILMetadataAnalysisPrinterPass(dbgs()))
+MODULE_PASS("print<dxil-resource>", DXILResourcePrinterPass(dbgs()))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(dbgs()))
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
@@ -137,7 +147,7 @@ MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
 MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
-MODULE_PASS("trigger-crash", TriggerCrashPass())
+MODULE_PASS("trigger-crash-module", TriggerCrashModulePass())
 MODULE_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
 MODULE_PASS("verify", VerifierPass())
@@ -455,16 +465,17 @@ FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(TM))
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
-FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
+FUNCTION_PASS("trigger-crash-function", TriggerCrashFunctionPass())
 FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("typepromotion", TypePromotionPass(TM))
 FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
 FUNCTION_PASS("verify", VerifierPass())
+FUNCTION_PASS("verify<cycles>", CycleInfoVerifierPass())
 FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
 FUNCTION_PASS("verify<loops>", LoopVerifierPass())
 FUNCTION_PASS("verify<memoryssa>", MemorySSAVerifierPass())
@@ -583,11 +594,21 @@ FUNCTION_PASS_WITH_PARAMS(
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
     parseSROAOptions, "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS(
+  "structurizecfg", "StructurizeCFG",
+  [](bool SkipUniformRegions) {
+    return StructurizeCFGPass(SkipUniformRegions);
+  },
+  parseStructurizeCFGPassOptions, "skip-uniform-regions")
+FUNCTION_PASS_WITH_PARAMS(
     "win-eh-prepare", "WinEHPreparePass",
     [](bool DemoteCatchSwitchPHIOnly) {
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "rtsan", "RealtimeSanitizerPass",
+    [](RealtimeSanitizerOptions Opts) { return RealtimeSanitizerPass(Opts); },
+    parseRtSanPassOptions, "")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -626,6 +647,7 @@ LOOP_PASS("loop-idiom-vectorize", LoopIdiomVectorizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
 LOOP_PASS("loop-predication", LoopPredicationPass())
 LOOP_PASS("loop-reduce", LoopStrengthReducePass())
+LOOP_PASS("loop-term-fold", LoopTermFoldPass())
 LOOP_PASS("loop-simplifycfg", LoopSimplifyCFGPass())
 LOOP_PASS("loop-unroll-full", LoopFullUnrollPass())
 LOOP_PASS("loop-versioning-licm", LoopVersioningLICMPass())

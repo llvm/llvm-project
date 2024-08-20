@@ -99,6 +99,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   std::string moduleFileSuffix = ".mod";
 
   bool debugModuleDir = false;
+  bool hermeticModuleFileOutput = false;
 
   bool warnAsErr = false;
 
@@ -179,6 +180,11 @@ public:
   bool &getDebugModuleDir() { return debugModuleDir; }
   const bool &getDebugModuleDir() const { return debugModuleDir; }
 
+  bool &getHermeticModuleFileOutput() { return hermeticModuleFileOutput; }
+  const bool &getHermeticModuleFileOutput() const {
+    return hermeticModuleFileOutput;
+  }
+
   bool &getWarnAsErr() { return warnAsErr; }
   const bool &getWarnAsErr() const { return warnAsErr; }
 
@@ -244,6 +250,9 @@ public:
   }
 
   void setDebugModuleDir(bool flag) { debugModuleDir = flag; }
+  void setHermeticModuleFileOutput(bool flag) {
+    hermeticModuleFileOutput = flag;
+  }
 
   void setWarnAsErr(bool flag) { warnAsErr = flag; }
 

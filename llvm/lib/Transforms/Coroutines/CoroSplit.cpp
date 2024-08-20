@@ -735,11 +735,9 @@ void CoroCloner::salvageDebugInfo() {
   bool UseEntryValue =
       llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, Shape.OptimizeFrame,
-                           UseEntryValue);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, Shape.OptimizeFrame,
-                           UseEntryValue);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, UseEntryValue);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1248,6 +1246,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   }
 
   CoroBegin->eraseFromParent();
+  Shape.CoroBegin = nullptr;
 }
 
 // SimplifySuspendPoint needs to check that there is no calls between
@@ -1604,7 +1603,7 @@ private:
                           ArrayRef<Function *> Fns) {
     // This only works under the switch-lowering ABI because coro elision
     // only works on the switch-lowering ABI.
-    SmallVector<Constant *, 4> Args(Fns.begin(), Fns.end());
+    SmallVector<Constant *, 4> Args(Fns);
     assert(!Args.empty());
     Function *Part = *Fns.begin();
     Module *M = Part->getParent();
@@ -1790,7 +1789,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
     IRBuilder<> Builder(Id);
 
     // Determine the size of the frame.
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     auto Size = DL.getTypeAllocSize(Shape.FrameTy);
 
     // Allocate.  We don't need to update the call graph node because we're
@@ -1961,18 +1960,24 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   auto [DbgInsts, DbgVariableRecords] = collectDbgVariableIntrinsics(F);
   for (auto *DDI : DbgInsts)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, Shape.OptimizeFrame,
-                           false /*UseEntryValue*/);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, Shape.OptimizeFrame,
-                           false /*UseEntryValue*/);
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
   return Shape;
 }
 
 /// Remove calls to llvm.coro.end in the original function.
-static void removeCoroEnds(const coro::Shape &Shape) {
-  for (auto *End : Shape.CoroEnds) {
-    replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
+static void removeCoroEndsFromRampFunction(const coro::Shape &Shape) {
+  if (Shape.ABI != coro::ABI::Switch) {
+    for (auto *End : Shape.CoroEnds) {
+      replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
+    }
+  } else {
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
+      auto &Context = End->getContext();
+      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
+      End->eraseFromParent();
+    }
   }
 }
 
@@ -1981,18 +1986,6 @@ static void updateCallGraphAfterCoroutineSplit(
     const SmallVectorImpl<Function *> &Clones, LazyCallGraph::SCC &C,
     LazyCallGraph &CG, CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
     FunctionAnalysisManager &FAM) {
-  if (!Shape.CoroBegin)
-    return;
-
-  if (Shape.ABI != coro::ABI::Switch)
-    removeCoroEnds(Shape);
-  else {
-    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
-      auto &Context = End->getContext();
-      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
-      End->eraseFromParent();
-    }
-  }
 
   if (!Clones.empty()) {
     switch (Shape.ABI) {
@@ -2108,12 +2101,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
 
-  if (Coroutines.empty()) {
-    for (auto *PrepareFn : PrepareFns) {
-      replaceAllPrepares(PrepareFn, CG, C);
-    }
-  }
-
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
@@ -2126,6 +2113,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     const coro::Shape Shape =
         splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
                        OptimizeFrame, MaterializableCallback);
+    removeCoroEndsFromRampFunction(Shape);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
     ORE.emit([&]() {
@@ -2143,11 +2131,9 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     }
   }
 
-  if (!PrepareFns.empty()) {
     for (auto *PrepareFn : PrepareFns) {
       replaceAllPrepares(PrepareFn, CG, C);
     }
-  }
 
   return PreservedAnalyses::none();
 }

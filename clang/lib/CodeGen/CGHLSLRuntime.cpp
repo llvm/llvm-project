@@ -15,6 +15,7 @@
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
+#include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/Metadata.h"
@@ -114,6 +115,16 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
 }
 
 } // namespace
+
+llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
+  assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
+
+  // Check if the target has a specific translation for this type first.
+  if (llvm::Type *TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, T))
+    return TargetTy;
+
+  llvm_unreachable("Generic handling of HLSL types is not supported.");
+}
 
 llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
@@ -280,17 +291,22 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   const auto *RD = Ty->getAsCXXRecordDecl();
   if (!RD)
     return;
-  const auto *Attr = RD->getAttr<HLSLResourceAttr>();
-  if (!Attr)
-    return;
+  // the resource related attributes are on the handle member
+  // inside the record decl
+  for (auto *FD : RD->fields()) {
+    const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
+    const auto *HLSLResClassAttr = FD->getAttr<HLSLResourceClassAttr>();
+    if (!HLSLResAttr || !HLSLResClassAttr)
+      continue;
 
-  llvm::hlsl::ResourceClass RC = Attr->getResourceClass();
-  llvm::hlsl::ResourceKind RK = Attr->getResourceKind();
-  bool IsROV = Attr->getIsROV();
-  llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
+    llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
+    llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
+    bool IsROV = FD->hasAttr<HLSLROVAttr>();
+    llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
-  BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-  addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
+    BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
+    addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
+  }
 }
 
 CGHLSLRuntime::BufferResBinding::BufferResBinding(
@@ -394,6 +410,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+}
+
+void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
+                                              llvm::Function *Fn) {
+  if (FD->isInExportDeclContext()) {
+    const StringRef ExportAttrKindStr = "hlsl.export";
+    Fn->addFnAttr(ExportAttrKindStr);
+  }
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,

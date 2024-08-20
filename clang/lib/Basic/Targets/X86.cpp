@@ -186,14 +186,14 @@ bool X86TargetInfo::initFeatureMap(
   llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
   // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
   // according to other features.
-  if (HasAVX512F) {
+  if (!HasAVX10_512 && HasAVX512F) {
     UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
                                                         : "+evex512");
-    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+    if (HasAVX10 && HasEVEX512 != FE_FALSE)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
   } else if (HasAVX10) {
-    if (HasEVEX512 != FE_NOSET)
+    if (!HasAVX512F && HasEVEX512 != FE_NOSET)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
     UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
@@ -258,7 +258,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature[0] != '+')
       continue;
 
-    if (Feature == "+aes") {
+    if (Feature == "+mmx") {
+      HasMMX = true;
+    } else if (Feature == "+aes") {
       HasAES = true;
     } else if (Feature == "+vaes") {
       HasVAES = true;
@@ -302,6 +304,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX10_1 = true;
     } else if (Feature == "+avx10.1-512") {
       HasAVX10_1_512 = true;
+    } else if (Feature == "+avx10.2-256") {
+      HasAVX10_2 = true;
+    } else if (Feature == "+avx10.2-512") {
+      HasAVX10_2_512 = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -455,6 +461,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasNF = true;
     } else if (Feature == "+cf") {
       HasCF = true;
+    } else if (Feature == "+zu") {
+      HasZU = true;
+    } else if (Feature == "+branch-hint") {
+      HasBranchHint = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -482,13 +492,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     // determine whether to automatically use excess floating point precision
     // for bfloat16 arithmetic operations in the front-end.
     HasBFloat16 = SSELevel >= SSE2;
-
-    MMX3DNowEnum ThreeDNowLevel = llvm::StringSwitch<MMX3DNowEnum>(Feature)
-                                      .Case("+3dnowa", AMD3DNowAthlon)
-                                      .Case("+3dnow", AMD3DNow)
-                                      .Case("+mmx", MMX)
-                                      .Default(NoMMX3DNow);
-    MMX3DNowLevel = std::max(MMX3DNowLevel, ThreeDNowLevel);
 
     XOPEnum XLevel = llvm::StringSwitch<XOPEnum>(Feature)
                          .Case("+xop", XOP)
@@ -825,6 +828,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX10_1__");
   if (HasAVX10_1_512)
     Builder.defineMacro("__AVX10_1_512__");
+  if (HasAVX10_2)
+    Builder.defineMacro("__AVX10_2__");
+  if (HasAVX10_2_512)
+    Builder.defineMacro("__AVX10_2_512__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -962,8 +969,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__NF__");
   if (HasCF)
     Builder.defineMacro("__CF__");
-  // Condition here is aligned with the feature set of mapxf in Options.td
-  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF)
+  if (HasZU)
+    Builder.defineMacro("__ZU__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasCF && HasZU)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
@@ -1025,18 +1034,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // Each case falls through to the previous one here.
-  switch (MMX3DNowLevel) {
-  case AMD3DNowAthlon:
-    Builder.defineMacro("__3dNOW_A__");
-    [[fallthrough]];
-  case AMD3DNow:
-    Builder.defineMacro("__3dNOW__");
-    [[fallthrough]];
-  case MMX:
+  if (HasMMX) {
     Builder.defineMacro("__MMX__");
-    [[fallthrough]];
-  case NoMMX3DNow:
-    break;
   }
 
   if (CPU >= CK_i486 || CPU == CK_None) {
@@ -1055,8 +1054,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
 bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
-      .Case("3dnow", true)
-      .Case("3dnowa", true)
       .Case("adx", true)
       .Case("aes", true)
       .Case("amx-bf16", true)
@@ -1067,6 +1064,8 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx", true)
       .Case("avx10.1-256", true)
       .Case("avx10.1-512", true)
+      .Case("avx10.2-256", true)
+      .Case("avx10.2-512", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1166,6 +1165,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("ccmp", true)
       .Case("nf", true)
       .Case("cf", true)
+      .Case("zu", true)
       .Default(false);
 }
 
@@ -1181,6 +1181,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1-256", HasAVX10_1)
       .Case("avx10.1-512", HasAVX10_1_512)
+      .Case("avx10.2-256", HasAVX10_2)
+      .Case("avx10.2-512", HasAVX10_2_512)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
@@ -1225,9 +1227,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("widekl", HasWIDEKL)
       .Case("lwp", HasLWP)
       .Case("lzcnt", HasLZCNT)
-      .Case("mm3dnow", MMX3DNowLevel >= AMD3DNow)
-      .Case("mm3dnowa", MMX3DNowLevel >= AMD3DNowAthlon)
-      .Case("mmx", MMX3DNowLevel >= MMX)
+      .Case("mmx", HasMMX)
       .Case("movbe", HasMOVBE)
       .Case("movdiri", HasMOVDIRI)
       .Case("movdir64b", HasMOVDIR64B)
@@ -1286,6 +1286,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("ccmp", HasCCMP)
       .Case("nf", HasNF)
       .Case("cf", HasCF)
+      .Case("zu", HasZU)
+      .Case("branch-hint", HasBranchHint)
       .Default(false);
 }
 

@@ -10,10 +10,11 @@
 
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   void *arg;
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   return LIBC_NAMESPACE::internal::fcntl(fd, cmd, arg);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

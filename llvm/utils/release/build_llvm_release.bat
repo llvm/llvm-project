@@ -163,6 +163,7 @@ set common_cmake_flags=^
   -DCLANG_ENABLE_LIBXML2=OFF ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
 set cmake_profile_flags=""
@@ -412,6 +413,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../libxml2-v2.9.12 || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install

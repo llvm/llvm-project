@@ -709,8 +709,8 @@ void ReductionProcessor::addDeclareReduction(
     }
   }
 
-  // initial pass to collect all reduction vars so we can figure out if this
-  // should happen byref
+  // Reduction variable processing common to both intrinsic operators and
+  // procedure designators
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Object &object : objectList) {
     const semantics::Symbol *symbol = object.sym();
@@ -763,64 +763,56 @@ void ReductionProcessor::addDeclareReduction(
     reduceVarByRef.push_back(doReductionByRef(symVal));
   }
 
-  if (const auto &redDefinedOp =
-          std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
-    const auto &intrinsicOp{
-        std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
-            redDefinedOp->u)};
-    ReductionIdentifier redId = getReductionType(intrinsicOp);
-    switch (redId) {
-    case ReductionIdentifier::ADD:
-    case ReductionIdentifier::MULTIPLY:
-    case ReductionIdentifier::AND:
-    case ReductionIdentifier::EQV:
-    case ReductionIdentifier::OR:
-    case ReductionIdentifier::NEQV:
-      break;
-    default:
-      TODO(currentLocation,
-           "Reduction of some intrinsic operators is not supported");
-      break;
+  for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
+    auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    const auto &kindMap = firOpBuilder.getKindMap();
+    std::string reductionName;
+    ReductionIdentifier redId;
+    mlir::Type redNameTy = redType;
+    if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
+      redNameTy = builder.getI1Type();
+
+    if (const auto &redDefinedOp =
+            std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
+      const auto &intrinsicOp{
+          std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
+              redDefinedOp->u)};
+      redId = getReductionType(intrinsicOp);
+      switch (redId) {
+      case ReductionIdentifier::ADD:
+      case ReductionIdentifier::MULTIPLY:
+      case ReductionIdentifier::AND:
+      case ReductionIdentifier::EQV:
+      case ReductionIdentifier::OR:
+      case ReductionIdentifier::NEQV:
+        break;
+      default:
+        TODO(currentLocation,
+             "Reduction of some intrinsic operators is not supported");
+        break;
+      }
+
+      reductionName =
+          getReductionName(intrinsicOp, kindMap, redNameTy, isByRef);
+    } else if (const auto *reductionIntrinsic =
+                   std::get_if<omp::clause::ProcedureDesignator>(
+                       &redOperator.u)) {
+      if (!ReductionProcessor::supportedIntrinsicProcReduction(
+              *reductionIntrinsic)) {
+        TODO(currentLocation, "Unsupported intrinsic proc reduction");
+      }
+      redId = getReductionType(*reductionIntrinsic);
+      reductionName =
+          getReductionName(getRealName(*reductionIntrinsic).ToString(), kindMap,
+                           redNameTy, isByRef);
+    } else {
+      TODO(currentLocation, "Unexpected reduction type");
     }
 
-    for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
-      auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
-      const auto &kindMap = firOpBuilder.getKindMap();
-      if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
-        decl = createDeclareReduction(firOpBuilder,
-                                      getReductionName(intrinsicOp, kindMap,
-                                                       firOpBuilder.getI1Type(),
-                                                       isByRef),
-                                      redId, redType, currentLocation, isByRef);
-      else
-        decl = createDeclareReduction(
-            firOpBuilder,
-            getReductionName(intrinsicOp, kindMap, redType, isByRef), redId,
-            redType, currentLocation, isByRef);
-      reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-          firOpBuilder.getContext(), decl.getSymName()));
-    }
-  } else if (const auto *reductionIntrinsic =
-                 std::get_if<omp::clause::ProcedureDesignator>(
-                     &redOperator.u)) {
-    if (ReductionProcessor::supportedIntrinsicProcReduction(
-            *reductionIntrinsic)) {
-      ReductionProcessor::ReductionIdentifier redId =
-          ReductionProcessor::getReductionType(*reductionIntrinsic);
-      for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
-        auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
-        if (!redType.getEleTy().isIntOrIndexOrFloat())
-          TODO(currentLocation,
-               "Reduction of some types is not supported for intrinsics");
-        decl = createDeclareReduction(
-            firOpBuilder,
-            getReductionName(getRealName(*reductionIntrinsic).ToString(),
-                             firOpBuilder.getKindMap(), redType, isByRef),
-            redId, redType, currentLocation, isByRef);
-        reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-            firOpBuilder.getContext(), decl.getSymName()));
-      }
-    }
+    decl = createDeclareReduction(firOpBuilder, reductionName, redId, redType,
+                                  currentLocation, isByRef);
+    reductionDeclSymbols.push_back(
+        mlir::SymbolRefAttr::get(firOpBuilder.getContext(), decl.getSymName()));
   }
 }
 

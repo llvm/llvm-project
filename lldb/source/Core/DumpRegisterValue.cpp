@@ -54,7 +54,8 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
       };
   dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
 
-  vobj_sp->Dump(strm, dump_options);
+  if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
+    strm << "error: " << toString(std::move(error));
 }
 
 void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,

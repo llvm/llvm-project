@@ -61,10 +61,10 @@ public:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          const lldb_private::AddressRange &func_range) override;
 
-  bool
-  CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        lldb_private::Type *type,
-                        lldb_private::CompilerType &compiler_type) override;
+  bool CompleteTypeFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb_private::Type *type,
+      const lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl GetDeclForUIDFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
@@ -104,10 +104,13 @@ public:
   ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
-  /// If the DIE's name already has '<>', returns an empty ConstString because
+  /// If the DIE's name already has '<>', returns an empty string because
   /// it's assumed that the caller is using the DIE name anyway.
-  lldb_private::ConstString GetDIEClassTemplateParams(
+  std::string GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
+
+  void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
+                          const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
 protected:
   /// Protected typedefs and members.
@@ -168,12 +171,14 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  std::string
-  GetCPlusPlusQualifiedName(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  void GetUniqueTypeNameAndDeclaration(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb::LanguageType language, lldb_private::ConstString &unique_typename,
+      lldb_private::Declaration &decl_declaration);
 
   bool ParseChildMembers(
       const lldb_private::plugin::dwarf::DWARFDIE &die,
-      lldb_private::CompilerType &class_compiler_type,
+      const lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &member_function_dies,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &contained_type_dies,
@@ -191,7 +196,7 @@ protected:
                        unsigned &type_quals);
 
   size_t ParseChildEnumerators(
-      lldb_private::CompilerType &compiler_type, bool is_signed,
+      const lldb_private::CompilerType &compiler_type, bool is_signed,
       uint32_t enumerator_byte_size,
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die);
 
@@ -357,10 +362,10 @@ private:
 
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                           lldb_private::Type *type,
-                          lldb_private::CompilerType &clang_type);
+                          const lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                         lldb_private::Type *type,
-                        lldb_private::CompilerType &clang_type);
+                        const lldb_private::CompilerType &clang_type);
 
   lldb::TypeSP
   ParseTypeModifier(const lldb_private::SymbolContext &sc,
@@ -462,7 +467,7 @@ private:
   void
   ParseRustVariantPart(lldb_private::plugin::dwarf::DWARFDIE &die,
                        const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-                       lldb_private::CompilerType &class_clang_type,
+                       const lldb_private::CompilerType &class_clang_type,
                        const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };

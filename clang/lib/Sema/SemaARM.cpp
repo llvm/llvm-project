@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -1112,6 +1113,9 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
 
+  if (BuiltinID == AArch64::BI__hlt)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
+
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
 
@@ -1325,6 +1329,10 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
         << AL << Str << ArgLoc;
     return;
   }
+
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  if (TI.hasFeature("vfp"))
+    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));

@@ -320,9 +320,10 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
   MCContext &Context = OS.getContext();
   assert(!isa<MCSymbolRefExpr>(Expr));
-  if (Context.getAsmInfo()->hasAggressiveSymbolFolding())
+  if (!Context.getAsmInfo()->doesSetDirectiveSuppressReloc())
     return Expr;
 
+  // On Mach-O, try to avoid a relocation by using a set directive.
   MCSymbol *ABS = Context.createTempSymbol();
   OS.emitAssignment(ABS, Expr);
   return MCSymbolRefExpr::create(ABS, Context);
@@ -1299,8 +1300,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 namespace {
 
 class FrameEmitterImpl {
-  int CFAOffset = 0;
-  int InitialCFAOffset = 0;
+  int64_t CFAOffset = 0;
+  int64_t InitialCFAOffset = 0;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1414,7 +1415,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     if (IsRelative)
       Offset -= CFAOffset;
     Offset = Offset / dataAlignmentFactor;
@@ -1464,6 +1465,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
+    return;
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
     return;
   }
   llvm_unreachable("Unhandled case in switch");
@@ -1777,23 +1781,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 namespace {
 
 struct CIEKey {
-  static const CIEKey getEmptyKey() {
-    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  static const CIEKey getTombstoneKey() {
-    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
-         unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg, bool IsBKeyFrame, bool IsMTETaggedFrame)
-      : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
-        LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame),
-        IsMTETaggedFrame(IsMTETaggedFrame) {}
+  CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
@@ -1819,43 +1807,27 @@ struct CIEKey {
                            Other.IsMTETaggedFrame);
   }
 
-  const MCSymbol *Personality;
-  unsigned PersonalityEncoding;
-  unsigned LsdaEncoding;
-  bool IsSignalFrame;
-  bool IsSimple;
-  unsigned RAReg;
-  bool IsBKeyFrame;
-  bool IsMTETaggedFrame;
+  bool operator==(const CIEKey &Other) const {
+    return Personality == Other.Personality &&
+           PersonalityEncoding == Other.PersonalityEncoding &&
+           LsdaEncoding == Other.LsdaEncoding &&
+           IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
+           RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
+           IsMTETaggedFrame == Other.IsMTETaggedFrame;
+  }
+  bool operator!=(const CIEKey &Other) const { return !(*this == Other); }
+
+  const MCSymbol *Personality = nullptr;
+  unsigned PersonalityEncoding = 0;
+  unsigned LsdaEncoding = -1;
+  bool IsSignalFrame = false;
+  bool IsSimple = false;
+  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  bool IsBKeyFrame = false;
+  bool IsMTETaggedFrame = false;
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-template <> struct DenseMapInfo<CIEKey> {
-  static CIEKey getEmptyKey() { return CIEKey::getEmptyKey(); }
-  static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
-
-  static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(
-        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg,
-                     Key.IsBKeyFrame, Key.IsMTETaggedFrame));
-  }
-
-  static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
-    return LHS.Personality == RHS.Personality &&
-           LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
-           LHS.LsdaEncoding == RHS.LsdaEncoding &&
-           LHS.IsSignalFrame == RHS.IsSignalFrame &&
-           LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
-           LHS.IsBKeyFrame == RHS.IsBKeyFrame &&
-           LHS.IsMTETaggedFrame == RHS.IsMTETaggedFrame;
-  }
-};
-
-} // end namespace llvm
 
 void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                                bool IsEH) {
@@ -1864,14 +1836,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   const MCAsmInfo *AsmInfo = Context.getAsmInfo();
   FrameEmitterImpl Emitter(IsEH, Streamer);
   ArrayRef<MCDwarfFrameInfo> FrameArray = Streamer.getDwarfFrameInfos();
-
-  // Disable AttemptToFoldSymbolOffsetDifference folding of EmitCompactUnwind
-  // and fdeStart-cieStart for EmitFDE due to the the performance issue. The
-  // label differences will be evaluate at write time.
-  assert(Streamer.getUseAssemblerInfoForParsing());
-  Streamer.setUseAssemblerInfoForParsing(false);
-  auto Enable = llvm::make_scope_exit(
-      [&]() { Streamer.setUseAssemblerInfoForParsing(true); });
 
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
@@ -1906,9 +1870,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   MCSymbol *SectionStart = Context.createTempSymbol();
   Streamer.emitLabel(SectionStart);
 
-  DenseMap<CIEKey, const MCSymbol *> CIEStarts;
-
-  const MCSymbol *DummyDebugKey = nullptr;
   bool CanOmitDwarf = MOFI->getOmitDwarfIfHaveCompactUnwind();
   // Sort the FDEs by their corresponding CIE before we emit them.
   // This isn't technically necessary according to the DWARF standard,
@@ -1919,6 +1880,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                     [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
                       return CIEKey(X) < CIEKey(Y);
                     });
+  CIEKey LastKey;
+  const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
@@ -1933,11 +1896,12 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       continue;
 
     CIEKey Key(Frame);
-    const MCSymbol *&CIEStart = IsEH ? CIEStarts[Key] : DummyDebugKey;
-    if (!CIEStart)
-      CIEStart = &Emitter.EmitCIE(Frame);
+    if (!LastCIEStart || (IsEH && Key != LastKey)) {
+      LastKey = Key;
+      LastCIEStart = &Emitter.EmitCIE(Frame);
+    }
 
-    Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
+    Emitter.EmitFDE(*LastCIEStart, Frame, I == E, *SectionStart);
   }
 }
 

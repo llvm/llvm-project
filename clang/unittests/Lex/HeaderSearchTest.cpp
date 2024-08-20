@@ -19,6 +19,8 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string>
 
 namespace clang {
 namespace {
@@ -350,8 +352,8 @@ TEST_F(HeaderSearchTest, HeaderFileInfoMerge) {
     std::string TextualPath = "/textual.h";
   };
 
-  auto ExternalSource = new MockExternalHeaderFileInfoSource();
-  Search.SetExternalSource(ExternalSource);
+  auto ExternalSource = std::make_unique<MockExternalHeaderFileInfoSource>();
+  Search.SetExternalSource(ExternalSource.get());
 
   // Everything should start out external.
   auto ModularFE = AddHeader(ExternalSource->ModularPath);

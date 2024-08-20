@@ -37,7 +37,7 @@ int main() {
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID1]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_taskloop_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
-  // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID1]]
+  // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID1]]
   // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]], count=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
   // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID1]]
@@ -52,7 +52,7 @@ int main() {
   // CHECK-NOT: {{^}}[[MASTER_ID]]: ompt_event_task_create:
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_taskloop_end:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
-  // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID1]]
+  // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID1]]
   // CHECK-SAME: count=2
   // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_wait_taskgroup_begin:
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_taskgroup_end:

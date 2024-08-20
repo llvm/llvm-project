@@ -59,9 +59,15 @@ void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
   vector::populateFoldArithExtensionPatterns(patterns);
 }
 
+void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateElementwiseToVectorOpsPatterns(patterns);
+}
+
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
@@ -207,6 +213,8 @@ class VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           VectorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();

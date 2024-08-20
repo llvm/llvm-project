@@ -275,13 +275,14 @@ struct __type_info_implementations {
           __impl;
 };
 
-#    if defined(__arm64__) && __has_cpp_attribute(clang::ptrauth_vtable_pointer)
-#      if __has_feature(ptrauth_type_info_discriminated_vtable_pointer)
+#    if __has_cpp_attribute(_Clang::__ptrauth_vtable_pointer__)
+#      if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
 #        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
-          [[clang::ptrauth_vtable_pointer(process_independent, address_discrimination, type_discrimination)]]
+          [[_Clang::__ptrauth_vtable_pointer__(process_independent, address_discrimination, type_discrimination)]]
 #      else
 #        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
-          [[clang::ptrauth_vtable_pointer(process_independent, no_address_discrimination, no_extra_discrimination)]]
+          [[_Clang::__ptrauth_vtable_pointer__(                                                                        \
+              process_independent, no_address_discrimination, no_extra_discrimination)]]
 #      endif
 #    else
 #      define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH

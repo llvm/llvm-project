@@ -26,6 +26,7 @@
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8
 
@@ -57,6 +58,8 @@ public:
   bool GetStepOutAvoidsNoDebug() const;
 
   uint64_t GetMaxBacktraceDepth() const;
+
+  uint64_t GetSingleThreadPlanTimeout() const;
 };
 
 class Thread : public std::enable_shared_from_this<Thread>,

@@ -31,7 +31,6 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -219,7 +218,7 @@ namespace detail {
 
 /// Keeps state for the recursive_directory_iterator.
 struct RecDirIterState {
-  std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
+  std::vector<directory_iterator> Stack;
   bool HasNoPushRequest = false;
 };
 
@@ -242,8 +241,8 @@ public:
   /// Equivalent to operator++, with an error code.
   recursive_directory_iterator &increment(std::error_code &EC);
 
-  const directory_entry &operator*() const { return *State->Stack.top(); }
-  const directory_entry *operator->() const { return &*State->Stack.top(); }
+  const directory_entry &operator*() const { return *State->Stack.back(); }
+  const directory_entry *operator->() const { return &*State->Stack.back(); }
 
   bool operator==(const recursive_directory_iterator &Other) const {
     return State == Other.State; // identity

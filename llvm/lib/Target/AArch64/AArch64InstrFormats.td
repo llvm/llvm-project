@@ -1108,6 +1108,13 @@ def timm32_1_7 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm1_7Operand;
 }
 
+// imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
+def imm32_0_7 : Operand<i32>, ImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 8;
+}]> {
+  let ParserMatchClass = Imm0_7Operand;
+}
+
 // imm32_0_15 predicate - True if the 32-bit immediate is in the range [0,15]
 def imm32_0_15 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 16;
@@ -7602,13 +7609,12 @@ multiclass SIMDTwoScalarD<bit U, bits<5> opc, string asm,
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
-multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
-                           Predicate pred = HasNEON> {
-  let Predicates = [pred] in {
+multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm> {
+  let Predicates = [HasNEONandIsStreamingSafe] in {
   def v1i64       : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,[]>;
   def v1i32       : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,[]>;
   }
-  let Predicates = [pred, HasFullFP16] in {
+  let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
   def v1f16       : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,[]>;
   }
 }
@@ -7616,11 +7622,13 @@ multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDFPTwoScalarCVT<bit U, bit S, bits<5> opc, string asm,
                               SDPatternOperator OpNode> {
+  let Predicates = [HasNEONandIsStreamingSafe] in {
   def v1i64 : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
                                 [(set FPR64:$Rd, (OpNode (f64 FPR64:$Rn)))]>;
   def v1i32 : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
                                 [(set FPR32:$Rd, (OpNode (f32 FPR32:$Rn)))]>;
-  let Predicates = [HasNEON, HasFullFP16] in {
+  }
+  let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
   def v1i16 : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
                                 [(set (f16 FPR16:$Rd), (OpNode (f16 FPR16:$Rn)))]>;
   }
@@ -7880,7 +7888,7 @@ class SIMDMovAlias<string asm, string size, Instruction inst,
 multiclass SMov {
   // SMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
   // streaming mode.
-  let Predicates = [HasNEONorSME] in {
+  let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8to32_idx0 : SIMDSMov<0, ".b", GPR32, VectorIndex0> {
       let Inst{20-16} = 0b00001;
     }
@@ -7927,7 +7935,7 @@ multiclass SMov {
 multiclass UMov {
   // UMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
   // streaming mode.
-  let Predicates = [HasNEONorSME] in {
+  let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8_idx0 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndex0> {
       let Inst{20-16} = 0b00001;
     }

@@ -29,6 +29,7 @@ namespace llvm {
 class AAResults;
 class AssumptionCache;
 class BasicBlock;
+class DataLayout;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -133,11 +134,11 @@ private:
 
   /// Try to vectorize trees that start at insertvalue instructions.
   bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
-                                slpvectorizer::BoUpSLP &R);
+                                slpvectorizer::BoUpSLP &R, bool MaxVFOnly);
 
   /// Try to vectorize trees that start at insertelement instructions.
   bool vectorizeInsertElementInst(InsertElementInst *IEI, BasicBlock *BB,
-                                  slpvectorizer::BoUpSLP &R);
+                                  slpvectorizer::BoUpSLP &R, bool MaxVFOnly);
 
   /// Tries to vectorize \p CmpInts. \Returns true on success.
   template <typename ItT>

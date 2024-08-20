@@ -2146,6 +2146,18 @@ enum CXCursorKind {
    */
   CXCursor_OMPScopeDirective = 306,
 
+  /** OpenMP reverse directive.
+   */
+  CXCursor_OMPReverseDirective = 307,
+
+  /** OpenMP interchange directive.
+   */
+  CXCursor_OMPInterchangeDirective = 308,
+
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPAssumeDirective = 309,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2966,7 +2978,10 @@ enum CXTypeKind {
 
   CXType_ExtVector = 176,
   CXType_Atomic = 177,
-  CXType_BTFTagAttributed = 178
+  CXType_BTFTagAttributed = 178,
+
+  // HLSL Intangible Types
+  CXType_HLSLResource = 179
 };
 
 /**
@@ -3749,6 +3764,59 @@ enum CX_StorageClass {
   CX_SC_Auto,
   CX_SC_Register
 };
+
+/**
+ * Represents a specific kind of binary operator which can appear at a cursor.
+ */
+enum CX_BinaryOperatorKind {
+  CX_BO_Invalid = 0,
+  CX_BO_PtrMemD = 1,
+  CX_BO_PtrMemI = 2,
+  CX_BO_Mul = 3,
+  CX_BO_Div = 4,
+  CX_BO_Rem = 5,
+  CX_BO_Add = 6,
+  CX_BO_Sub = 7,
+  CX_BO_Shl = 8,
+  CX_BO_Shr = 9,
+  CX_BO_Cmp = 10,
+  CX_BO_LT = 11,
+  CX_BO_GT = 12,
+  CX_BO_LE = 13,
+  CX_BO_GE = 14,
+  CX_BO_EQ = 15,
+  CX_BO_NE = 16,
+  CX_BO_And = 17,
+  CX_BO_Xor = 18,
+  CX_BO_Or = 19,
+  CX_BO_LAnd = 20,
+  CX_BO_LOr = 21,
+  CX_BO_Assign = 22,
+  CX_BO_MulAssign = 23,
+  CX_BO_DivAssign = 24,
+  CX_BO_RemAssign = 25,
+  CX_BO_AddAssign = 26,
+  CX_BO_SubAssign = 27,
+  CX_BO_ShlAssign = 28,
+  CX_BO_ShrAssign = 29,
+  CX_BO_AndAssign = 30,
+  CX_BO_XorAssign = 31,
+  CX_BO_OrAssign = 32,
+  CX_BO_Comma = 33,
+  CX_BO_LAST = CX_BO_Comma
+};
+
+/**
+ * \brief Returns the operator code for the binary operator.
+ */
+CINDEX_LINKAGE enum CX_BinaryOperatorKind
+clang_Cursor_getBinaryOpcode(CXCursor C);
+
+/**
+ * \brief Returns a string containing the spelling of the binary operator.
+ */
+CINDEX_LINKAGE CXString
+clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op);
 
 /**
  * Returns the storage class for a function or variable declaration.

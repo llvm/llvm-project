@@ -38,8 +38,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -307,6 +308,41 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   for (const auto *I : RD->fields())
     if (!isEmptyField(Context, I, AllowArrays, AsIfNoUniqueAddr))
       return false;
+  return true;
+}
+
+bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
+                                    const FieldDecl *FD) {
+  if (FD->isZeroLengthBitField(Context))
+    return true;
+
+  if (FD->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(Context, FD->getType());
+}
+
+bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+  const RecordType *RT = T->getAs<RecordType>();
+  if (!RT)
+    return false;
+
+  const RecordDecl *RD = RT->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isDynamicClass())
+      return false;
+
+    for (const auto &I : CXXRD->bases())
+      if (!isEmptyRecordForLayout(Context, I.getType()))
+        return false;
+  }
+
+  for (const auto *I : RD->fields())
+    if (!isEmptyFieldForLayout(Context, I))
+      return false;
+
   return true;
 }
 

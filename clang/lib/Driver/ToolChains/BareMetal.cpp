@@ -37,7 +37,7 @@ static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
   Multilib::flags_list Flags;
-  StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
+  std::string Arch = riscv::getRISCVArch(Args, TargetTriple);
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   if (TargetTriple.isRISCV64()) {
@@ -218,17 +218,19 @@ static std::string computeBaseSysRoot(const Driver &D,
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
-  if (isRISCVBareMetal(Triple)) {
+  // Look for a multilib.yaml before trying target-specific hardwired logic.
+  // If it exists, always do what it specifies.
+  llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+  if (D.getVFS().exists(MultilibPath)) {
+    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+    SelectedMultilibs = Result.SelectedMultilibs;
+    Multilibs = Result.Multilibs;
+  } else if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
       Multilibs = Result.Multilibs;
     }
-  } else {
-    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
-    llvm::sys::path::append(MultilibPath, MultilibFilename);
-    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
-    SelectedMultilibs = Result.SelectedMultilibs;
-    Multilibs = Result.Multilibs;
   }
 }
 
@@ -270,15 +272,19 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
   }
 
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    const SmallString<128> SysRoot(computeSysRoot());
-    if (!SysRoot.empty()) {
-      for (const Multilib &M : getOrderedMultilibs()) {
-        SmallString<128> Dir(SysRoot);
-        llvm::sys::path::append(Dir, M.includeSuffix());
-        llvm::sys::path::append(Dir, "include");
-        addSystemInclude(DriverArgs, CC1Args, Dir.str());
-      }
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+
+  const SmallString<128> SysRoot(computeSysRoot());
+  if (!SysRoot.empty()) {
+    for (const Multilib &M : getOrderedMultilibs()) {
+      SmallString<128> Dir(SysRoot);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
   }
 }
@@ -296,6 +302,40 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
+  std::string Target = getTripleString();
+
+  auto AddCXXIncludePath = [&](StringRef Path) {
+    std::string Version = detectLibcxxVersion(Path);
+    if (Version.empty())
+      return;
+
+    {
+      // First the per-target include dir: include/<target>/c++/v1.
+      SmallString<128> TargetDir(Path);
+      llvm::sys::path::append(TargetDir, Target, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+    }
+
+    {
+      // Then the generic dir: include/c++/v1.
+      SmallString<128> Dir(Path);
+      llvm::sys::path::append(Dir, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  };
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+    case ToolChain::CST_Libcxx: {
+      SmallString<128> P(D.Dir);
+      llvm::sys::path::append(P, "..", "include");
+      AddCXXIncludePath(P);
+      break;
+    }
+    case ToolChain::CST_Libstdcxx:
+      // We only support libc++ toolchain installation.
+      break;
+  }
+
   std::string SysRoot(computeSysRoot());
   if (SysRoot.empty())
     return;
@@ -447,6 +487,11 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
   } else if (Triple.isAArch64()) {
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
+  }
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_r)) {
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,

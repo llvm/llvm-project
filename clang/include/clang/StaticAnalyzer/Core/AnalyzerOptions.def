@@ -184,6 +184,26 @@ ANALYZER_OPTION(bool, ShouldCrosscheckWithZ3, "crosscheck-with-z3",
                 "constraint manager backend.",
                 false)
 
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckEQClassTimeoutThreshold,
+    "crosscheck-with-z3-eqclass-timeout-threshold",
+    "Set a timeout for bug report equivalence classes in milliseconds. "
+    "If we exhaust this threshold, we will drop the bug report eqclass "
+    "instead of doing more Z3 queries. Set 0 for no timeout.", 700)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckTimeoutThreshold,
+    "crosscheck-with-z3-timeout-threshold",
+    "Set a timeout for individual Z3 queries in milliseconds. "
+    "Set 0 for no timeout.", 300)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckRLimitThreshold,
+    "crosscheck-with-z3-rlimit-threshold",
+    "Set the Z3 resource limit threshold. This sets a deterministic cutoff "
+    "point for Z3 queries, as longer queries usually consume more resources. "
+    "Set 0 for unlimited.", 400'000)
+
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
                 "Whether or not the diagnostic report should be always "

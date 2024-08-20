@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Shared functionality between the new constant expression
-// interpreter (AST/Interp/) and the current one (ExprConstant.cpp).
+// interpreter (AST/ByteCode/) and the current one (ExprConstant.cpp).
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,6 +60,9 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
                                          const LangOptions &LangOpts);
 
 void HandleComplexComplexMul(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
+                             llvm::APFloat D, llvm::APFloat &ResR,
+                             llvm::APFloat &ResI);
+void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
                              llvm::APFloat D, llvm::APFloat &ResR,
                              llvm::APFloat &ResI);
 

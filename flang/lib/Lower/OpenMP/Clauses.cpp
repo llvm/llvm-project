@@ -38,8 +38,8 @@ llvm::omp::Clause getClauseIdForClass(C &&) {
 } // namespace detail
 
 static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
-  return std::visit([](auto &&s) { return detail::getClauseIdForClass(s); },
-                    clause.u);
+  return Fortran::common::visit(
+      [](auto &&s) { return detail::getClauseIdForClass(s); }, clause.u);
 }
 
 namespace Fortran::lower::omp {
@@ -83,7 +83,7 @@ struct SymbolAndDesignatorExtractor {
 
   template <typename T>
   static SymbolWithDesignator visit(const evaluate::Expr<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return Fortran::common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   static void verify(const SymbolWithDesignator &sd) {
@@ -112,7 +112,7 @@ struct SymbolAndDesignatorExtractor {
 SymbolWithDesignator getSymbolAndDesignator(const MaybeExpr &expr) {
   if (!expr)
     return SymbolWithDesignator{};
-  return std::visit(
+  return Fortran::common::visit(
       [](auto &&s) { return SymbolAndDesignatorExtractor::visit(s); }, expr->u);
 }
 
@@ -278,7 +278,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
       // clang-format on
   );
 
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::DefinedOpName &s) {
             return DefinedOperator{
@@ -294,7 +294,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
 ProcedureDesignator
 makeProcedureDesignator(const parser::ProcedureDesignator &inp,
                         semantics::SemanticsContext &semaCtx) {
-  return ProcedureDesignator{std::visit(
+  return ProcedureDesignator{Fortran::common::visit(
       common::visitors{
           [&](const parser::Name &t) { return makeObject(t, semaCtx); },
           [&](const parser::ProcComponentRef &t) {
@@ -306,7 +306,7 @@ makeProcedureDesignator(const parser::ProcedureDesignator &inp,
 
 ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
                                         semantics::SemanticsContext &semaCtx) {
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &s) {
             return ReductionOperator{makeDefinedOperator(s, semaCtx)};
@@ -322,6 +322,11 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
 // Absent: missing-in-parser
+Absent make(const parser::OmpClause::Absent &inp,
+            semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: absent");
+}
+
 // AcqRel: empty
 // Acquire: empty
 // AdjustArgs: incomplete
@@ -366,7 +371,7 @@ Allocate make(const parser::OmpClause::Allocate &inp,
 
   using Tuple = decltype(Allocate::t);
 
-  return Allocate{std::visit(
+  return Allocate{Fortran::common::visit(
       common::visitors{
           // simple-modifier
           [&](const wrapped::AllocateModifier::Allocator &v) -> Tuple {
@@ -444,7 +449,12 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 }
 
 // Compare: empty
+
 // Contains: missing-in-parser
+Contains make(const parser::OmpClause::Contains &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: contains");
+}
 
 Copyin make(const parser::OmpClause::Copyin &inp,
             semantics::SemanticsContext &semaCtx) {
@@ -531,7 +541,7 @@ Depend make(const parser::OmpClause::Depend &inp,
       // clang-format on
   );
 
-  return Depend{std::visit( //
+  return Depend{Fortran::common::visit( //
       common::visitors{
           // Doacross
           [&](const wrapped::Source &s) -> Variant {
@@ -705,6 +715,10 @@ Hint make(const parser::OmpClause::Hint &inp,
 }
 
 // Holds: missing-in-parser
+Holds make(const parser::OmpClause::Holds &inp,
+           semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: holds");
+}
 
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
@@ -793,7 +807,7 @@ Linear make(const parser::OmpClause::Linear &inp,
 
   using Tuple = decltype(Linear::t);
 
-  return Linear{std::visit(
+  return Linear{Fortran::common::visit(
       common::visitors{
           [&](const wrapped::WithModifier &s) -> Tuple {
             return {
@@ -884,8 +898,23 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
 }
 
 // NoOpenmp: missing-in-parser
+NoOpenmp make(const parser::OmpClause::NoOpenmp &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_openmp");
+}
+
 // NoOpenmpRoutines: missing-in-parser
+NoOpenmpRoutines make(const parser::OmpClause::NoOpenmpRoutines &inp,
+                      semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_openmp_routines");
+}
+
 // NoParallelism: missing-in-parser
+NoParallelism make(const parser::OmpClause::NoParallelism &inp,
+                   semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: no_parallelism");
+}
+
 // Notinbranch: empty
 
 Novariants make(const parser::OmpClause::Novariants &inp,
@@ -906,8 +935,9 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
-  return NumTeams{{/*LowerBound=*/std::nullopt,
-                   /*UpperBound=*/makeExpr(inp.v, semaCtx)}};
+  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
+                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+  return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
@@ -949,7 +979,7 @@ Order make(const parser::OmpClause::Order &inp,
   auto &t1 = std::get<wrapped::Type>(inp.v.t);
 
   auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](parser::OmpOrderModifier::Kind k) { return convert1(k); }, s.u);
   };
   return Order{
@@ -1212,7 +1242,7 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 
 Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
-  return std::visit(
+  return Fortran::common::visit(
       [&](auto &&s) {
         return makeClause(getClauseId(cls), clause::make(s, semaCtx),
                           cls.source);

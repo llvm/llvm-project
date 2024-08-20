@@ -721,6 +721,9 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     break;
   case VectorKind::RVVFixedLengthData:
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -801,6 +804,9 @@ void TypePrinter::printDependentVectorBefore(
     break;
   case VectorKind::RVVFixedLengthData:
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -1015,6 +1021,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     break;
   }
   T->printExceptionSpecification(OS, Policy);
+
+  const FunctionEffectsRef FX = T->getFunctionEffects();
+  for (const auto &CFE : FX) {
+    OS << " __attribute__((" << CFE.Effect.name();
+    if (const Expr *E = CFE.Cond.getCondition()) {
+      OS << '(';
+      E->printPretty(OS, nullptr, Policy);
+      OS << ')';
+    }
+    OS << "))";
+  }
 
   if (T->hasTrailingReturn()) {
     OS << " -> ";
@@ -1923,6 +1940,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
 
   case attr::CountedBy:
+  case attr::CountedByOrNull:
+  case attr::SizedBy:
+  case attr::SizedByOrNull:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -1946,6 +1966,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
+  case attr::NonBlocking:
+  case attr::NonAllocating:
+  case attr::Blocking:
+  case attr::Allocating:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:

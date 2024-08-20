@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <deque>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -133,6 +134,8 @@ cl::opt<bool> SupportsHotColdNew(
     cl::desc("Linking with hot/cold operator new interfaces"));
 } // namespace llvm
 
+extern cl::opt<bool> MemProfReportHintedSizes;
+
 namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
@@ -171,6 +174,7 @@ public:
 
   void dump() const;
   void print(raw_ostream &OS) const;
+  void printTotalSizes(raw_ostream &OS) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const CallsiteContextGraph &CCG) {
@@ -438,7 +442,7 @@ protected:
   void addStackNodesForMIB(ContextNode *AllocNode,
                            CallStack<NodeT, IteratorT> &StackContext,
                            CallStack<NodeT, IteratorT> &CallsiteContext,
-                           AllocationType AllocType);
+                           AllocationType AllocType, uint64_t TotalSize);
 
   /// Matches all callsite metadata (or summary) to the nodes created for
   /// allocation memprof MIB metadata, synthesizing new nodes to reflect any
@@ -501,9 +505,8 @@ private:
   /// we were able to identify the call chain through intermediate tail calls.
   /// In the latter case new context nodes are added to the graph for the
   /// identified tail calls, and their synthesized nodes are added to
-  /// TailCallToContextNodeMap. The EdgeIter is updated in either case to the
-  /// next element after the input position (either incremented or updated after
-  /// removing the old edge).
+  /// TailCallToContextNodeMap. The EdgeIter is updated in the latter case for
+  /// the updated edges and to prepare it for an increment in the caller.
   bool
   calleesMatch(CallTy Call, EdgeIter &EI,
                MapVector<CallInfo, ContextNode *> &TailCallToContextNodeMap);
@@ -609,6 +612,10 @@ private:
 
   /// Map from each context ID to the AllocationType assigned to that context.
   DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
+
+  /// Map from each contextID to the profiled aggregate allocation size,
+  /// optionally populated when requested (via MemProfReportHintedSizes).
+  DenseMap<uint32_t, uint64_t> ContextIdToTotalSize;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
@@ -1003,17 +1010,35 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addAllocNode(
   return AllocNode;
 }
 
+static std::string getAllocTypeString(uint8_t AllocTypes) {
+  if (!AllocTypes)
+    return "None";
+  std::string Str;
+  if (AllocTypes & (uint8_t)AllocationType::NotCold)
+    Str += "NotCold";
+  if (AllocTypes & (uint8_t)AllocationType::Cold)
+    Str += "Cold";
+  return Str;
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
-    CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType) {
+    CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType,
+    uint64_t TotalSize) {
+  assert(!MemProfReportHintedSizes || TotalSize > 0);
   // Treating the hot alloc type as NotCold before the disambiguation for "hot"
   // is done.
   if (AllocType == AllocationType::Hot)
     AllocType = AllocationType::NotCold;
 
   ContextIdToAllocationType[++LastContextId] = AllocType;
+
+  if (MemProfReportHintedSizes) {
+    assert(TotalSize);
+    ContextIdToTotalSize[LastContextId] = TotalSize;
+  }
 
   // Update alloc type and context ids for this MIB.
   AllocNode->AllocTypes |= (uint8_t)AllocType;
@@ -1059,6 +1084,10 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    // For now set this to 0 so we don't duplicate sizes. Not clear how to divvy
+    // up the size. Assume that if we are able to duplicate context ids that we
+    // will be able to disambiguate all copies.
+    ContextIdToTotalSize[LastContextId] = 0;
   }
   return NewContextIds;
 }
@@ -1662,7 +1691,7 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
             addStackNodesForMIB<MDNode, MDNode::op_iterator>(
                 AllocNode, StackContext, CallsiteContext,
-                getMIBAllocType(MIBMD));
+                getMIBAllocType(MIBMD), getMIBTotalSize(MIBMD));
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Memprof and callsite metadata on memory allocations no longer
@@ -1734,12 +1763,20 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           // stack ids on the allocation call during ModuleSummaryAnalysis.
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
+          unsigned I = 0;
+          assert(!MemProfReportHintedSizes ||
+                 AN.TotalSizes.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
+            uint64_t TotalSize = 0;
+            if (MemProfReportHintedSizes)
+              TotalSize = AN.TotalSizes[I];
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
-                AllocNode, StackContext, EmptyContext, MIB.AllocType);
+                AllocNode, StackContext, EmptyContext, MIB.AllocType,
+                TotalSize);
+            I++;
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Initialize version 0 on the summary alloc node to the current alloc
@@ -1797,12 +1834,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
     auto Call = Node->Call.call();
-    for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();) {
+    for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();
+         ++EI) {
       auto Edge = *EI;
-      if (!Edge->Callee->hasCall()) {
-        ++EI;
+      if (!Edge->Callee->hasCall())
         continue;
-      }
       assert(NodeToCallingFunc.count(Edge->Callee));
       // Check if the called function matches that of the callee node.
       if (calleesMatch(Call, EI, TailCallToContextNodeMap))
@@ -1851,16 +1887,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // calls between the profiled caller and callee.
   std::vector<std::pair<CallTy, FuncTy *>> FoundCalleeChain;
   if (!calleeMatchesFunc(Call, ProfiledCalleeFunc, CallerFunc,
-                         FoundCalleeChain)) {
-    ++EI;
+                         FoundCalleeChain))
     return false;
-  }
 
   // The usual case where the profiled callee matches that of the IR/summary.
-  if (FoundCalleeChain.empty()) {
-    ++EI;
+  if (FoundCalleeChain.empty())
     return true;
-  }
 
   auto AddEdge = [Edge, &EI](ContextNode *Caller, ContextNode *Callee) {
     auto *CurEdge = Callee->findEdgeFromCaller(Caller);
@@ -1921,6 +1953,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // Remove old edge
   Edge->Callee->eraseCallerEdge(Edge.get());
   EI = Edge->Caller->CalleeEdges.erase(EI);
+
+  // To simplify the increment of EI in the caller, subtract one from EI.
+  // In the final AddEdge call we would have either added a new callee edge,
+  // to Edge->Caller, or found an existing one. Either way we are guaranteed
+  // that there is at least one callee edge.
+  assert(!Edge->Caller->CalleeEdges.empty());
+  --EI;
 
   return true;
 }
@@ -2007,7 +2046,7 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
     Instruction *Call, const Function *Func, const Function *CallerFunc,
     std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain) {
   auto *CB = dyn_cast<CallBase>(Call);
-  if (!CB->getCalledOperand())
+  if (!CB->getCalledOperand() || CB->isIndirectCall())
     return false;
   auto *CalleeVal = CB->getCalledOperand()->stripPointerCasts();
   auto *CalleeFunc = dyn_cast<Function>(CalleeVal);
@@ -2170,17 +2209,6 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
   return true;
 }
 
-static std::string getAllocTypeString(uint8_t AllocTypes) {
-  if (!AllocTypes)
-    return "None";
-  std::string Str;
-  if (AllocTypes & (uint8_t)AllocationType::NotCold)
-    Str += "NotCold";
-  if (AllocTypes & (uint8_t)AllocationType::Cold)
-    Str += "Cold";
-  return Str;
-}
-
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::dump()
     const {
@@ -2257,6 +2285,30 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::print(
       continue;
     Node->print(OS);
     OS << "\n";
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
+    raw_ostream &OS) const {
+  using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
+  for (const auto Node : nodes<GraphType>(this)) {
+    if (Node->isRemoved())
+      continue;
+    if (!Node->IsAllocation)
+      continue;
+    DenseSet<uint32_t> ContextIds = Node->getContextIds();
+    std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
+    std::sort(SortedIds.begin(), SortedIds.end());
+    for (auto Id : SortedIds) {
+      auto SizeI = ContextIdToTotalSize.find(Id);
+      assert(SizeI != ContextIdToTotalSize.end());
+      auto TypeI = ContextIdToAllocationType.find(Id);
+      assert(TypeI != ContextIdToAllocationType.end());
+      OS << getAllocTypeString((uint8_t)TypeI->second) << " context " << Id
+         << " with total size " << SizeI->second << " is "
+         << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+    }
   }
 }
 
@@ -3795,6 +3847,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
   }
   if (ExportToDot)
     exportToDot("clonefuncassign");
+
+  if (MemProfReportHintedSizes)
+    printTotalSizes(errs());
 
   return Changed;
 }

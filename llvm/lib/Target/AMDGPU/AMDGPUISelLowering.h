@@ -388,8 +388,6 @@ public:
     return MVT::i32;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };
@@ -555,8 +553,7 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
-  FPTRUNC_ROUND_UPWARD,
-  FPTRUNC_ROUND_DOWNWARD,
+  FPTRUNC_ROUND,
 
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -575,8 +572,6 @@ enum NodeType : unsigned {
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_LOAD_FMIN,
-  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,

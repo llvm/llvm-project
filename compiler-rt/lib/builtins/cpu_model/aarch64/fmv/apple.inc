@@ -5,6 +5,21 @@
 #if __has_include(<arm/cpu_capabilities_public.h>)
 #include <arm/cpu_capabilities_public.h>
 #define HAS_CPU_CAPABILITIES_PUBLIC_H 1
+
+// FB13964283 - A few of these didn't make it into the public SDK yet.
+#ifndef CAP_BIT_FEAT_SME
+#define CAP_BIT_FEAT_SME            40
+#endif
+#ifndef CAP_BIT_FEAT_SME2
+#define CAP_BIT_FEAT_SME2           41
+#endif
+#ifndef CAP_BIT_FEAT_SME_F64F64
+#define CAP_BIT_FEAT_SME_F64F64     42
+#endif
+#ifndef CAP_BIT_FEAT_SME_I16I64
+#define CAP_BIT_FEAT_SME_I16I64     43
+#endif
+
 #endif
 
 static bool isKnownAndSupported(const char *name) {

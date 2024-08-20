@@ -68,13 +68,6 @@ public:
   /// registry.  Required in order to use the pass with a PassManager.
   void registerPass(const PassInfo &PI, bool ShouldFree = false);
 
-  /// registerAnalysisGroup - Register an analysis group (or a pass implementing
-  // an analysis group) with the registry.  Like registerPass, this is required
-  // in order for a PassManager to be able to use this group/pass.
-  void registerAnalysisGroup(const void *InterfaceID, const void *PassID,
-                             PassInfo &Registeree, bool isDefault,
-                             bool ShouldFree = false);
-
   /// enumerateWith - Enumerate the registered passes, calling the provided
   /// PassRegistrationListener's passEnumerate() callback on each of them.
   void enumerateWith(PassRegistrationListener *L);

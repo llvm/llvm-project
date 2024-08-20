@@ -28,7 +28,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -880,7 +879,7 @@ private:
     if (BB != Before.getParent())
       return false;
 
-    const DataLayout &DL = Array.getModule()->getDataLayout();
+    const DataLayout &DL = Array.getDataLayout();
     const unsigned int PointerSize = DL.getPointerSize();
 
     for (Instruction &I : *BB) {
@@ -1453,7 +1452,6 @@ private:
       };
       emitRemark<OptimizationRemark>(CI, "OMP160", Remark);
 
-      CGUpdater.removeCallSite(*CI);
       CI->eraseFromParent();
       Changed = true;
       ++NumOpenMPParallelRegionsDeleted;
@@ -1667,21 +1665,21 @@ private:
       BP->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_baseptrs: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_baseptrs: " << ValuesStr << "\n");
     ValuesStr.clear();
 
     for (auto *P : OAs[1].StoredValues) {
       P->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_ptrs: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_ptrs: " << ValuesStr << "\n");
     ValuesStr.clear();
 
     for (auto *S : OAs[2].StoredValues) {
       S->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_sizes: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_sizes: " << ValuesStr << "\n");
   }
 
   /// Returns the instruction where the "wait" counterpart \p RuntimeCall can be
@@ -1895,7 +1893,6 @@ private:
       else
         emitRemark<OptimizationRemark>(&F, "OMP170", Remark);
 
-      CGUpdater.removeCallSite(*CI);
       CI->replaceAllUsesWith(ReplVal);
       CI->eraseFromParent();
       ++NumOpenMPRuntimeCallsDeduplicated;
@@ -3763,6 +3760,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     A.registerGlobalVariableSimplificationCallback(
         *KernelEnvGV, KernelConfigurationSimplifyCB);
 
+    // We cannot change to SPMD mode if the runtime functions aren't availible.
+    bool CanChangeToSPMD = OMPInfoCache.runtimeFnsAvailable(
+        {OMPRTL___kmpc_get_hardware_thread_id_in_block,
+         OMPRTL___kmpc_barrier_simple_spmd});
+
     // Check if we know we are in SPMD-mode already.
     ConstantInt *ExecModeC =
         KernelInfo::getExecModeFromKernelEnvironment(KernelEnvC);
@@ -3771,7 +3773,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ExecModeC->getSExtValue() | OMP_TGT_EXEC_MODE_GENERIC_SPMD);
     if (ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_SPMD)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
-    else if (DisableOpenMPOptSPMDization)
+    else if (DisableOpenMPOptSPMDization || !CanChangeToSPMD)
       // This is a generic region but SPMDization is disabled so stop
       // tracking.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
@@ -4217,12 +4219,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-
-    // We cannot change to SPMD mode if the runtime functions aren't availible.
-    if (!OMPInfoCache.runtimeFnsAvailable(
-            {OMPRTL___kmpc_get_hardware_thread_id_in_block,
-             OMPRTL___kmpc_barrier_simple_spmd}))
-      return false;
 
     if (!SPMDCompatibilityTracker.isAssumed()) {
       for (Instruction *NonCompatibleI : SPMDCompatibilityTracker) {
@@ -5572,6 +5568,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       bool UsedAssumedInformation = false;
       A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
                              UsedAssumedInformation, AA::Interprocedural);
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*LI->getPointerOperand()));
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
@@ -5581,6 +5579,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*SI->getPointerOperand()));
       continue;
     }
     if (auto *FI = dyn_cast<FenceInst>(&I)) {
