@@ -103,7 +103,6 @@ WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
     return success();
-    ;
   } // By default, every result of an op depends on every operand.
   for (const WrittenTo *r : results) {
     for (WrittenTo *operand : operands) {
