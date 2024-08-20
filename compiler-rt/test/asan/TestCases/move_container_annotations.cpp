@@ -27,14 +27,15 @@ template <class T> static constexpr T RoundUp(T x) {
 
 static std::deque<int> GetPoisonedState(char *begin, char *end) {
   std::deque<int> result;
-  for (; begin != end; ++begin) {
-    result.push_back(__asan_address_is_poisoned(begin));
+  for (char *ptr = begin; ptr != end; ++ptr) {
+    result.push_back(__asan_address_is_poisoned(ptr));
   }
   return result;
 }
 
 static void RandomPoison(char *beg, char *end) {
-  if (beg != RoundDown(beg) && (rand() % 2 == 1)) {
+  if (beg != RoundDown(beg) && RoundDown(beg) != RoundDown(end) &&
+      rand() % 2 == 1) {
     __asan_poison_memory_region(beg, RoundUp(beg) - beg);
     __asan_unpoison_memory_region(beg, rand() % (RoundUp(beg) - beg + 1));
   }
@@ -70,31 +71,36 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
   char *new_buffer_end = new_buffer + new_buffer_size;
   bool poison_old = poison_buffers % 2 == 1;
   bool poison_new = poison_buffers / 2 == 1;
-  if (poison_old)
-    __asan_poison_memory_region(old_buffer, old_buffer_size);
-  if (poison_new)
-    __asan_poison_memory_region(new_buffer, new_buffer_size);
   char *old_beg = old_buffer + off_old;
   char *new_beg = new_buffer + off_new;
   char *old_end = old_beg + capacity;
   char *new_end = new_beg + capacity;
 
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 75; i++) {
+    if (poison_old)
+      __asan_poison_memory_region(old_buffer, old_buffer_size);
+    if (poison_new)
+      __asan_poison_memory_region(new_buffer, new_buffer_size);
+
     RandomPoison(old_beg, old_end);
-    std::deque<int> poison_states(old_beg, old_end);
+    std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
     __sanitizer_move_contiguous_container_annotations(old_beg, old_end, new_beg,
                                                       new_end);
 
     // If old_buffer were poisoned, expected state of memory before old_beg
     // is undetermined.
     // If old buffer were not poisoned, that memory should still be unpoisoned.
-    // Area between old_beg and old_end should never be poisoned.
-    char *cur = poison_old ? old_beg : old_buffer;
-    for (; cur < old_end; ++cur) {
-      assert(!__asan_address_is_poisoned(cur));
+    char *cur;
+    if (!poison_old) {
+      for (cur = old_buffer; cur < old_beg; ++cur) {
+        assert(!__asan_address_is_poisoned(cur));
+      }
     }
-    // Memory after old_beg should be the same as at the beginning.
-    for (; cur < old_buffer_end; ++cur) {
+    for (size_t i = 0; i < poison_states.size(); ++i) {
+      assert(__asan_address_is_poisoned(&old_beg[i]) == poison_states[i]);
+    }
+    // Memory after old_end should be the same as at the beginning.
+    for (cur = old_end; cur < old_buffer_end; ++cur) {
       assert(__asan_address_is_poisoned(cur) == poison_old);
     }
 
@@ -118,7 +124,8 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
       }
     }
     // [cur; new_end) is not checked yet.
-    // If new_buffer were not poisoned, it cannot be poisoned and we can ignore check.
+    // If new_buffer were not poisoned, it cannot be poisoned and we can ignore
+    // a separate check.
     // If new_buffer were poisoned, it should be same as earlier.
     if (cur < new_end && poison_new) {
       size_t unpoisoned = count_unpoisoned(poison_states, new_end - cur);
@@ -143,9 +150,9 @@ void TestMove(size_t capacity, size_t off_old, size_t off_new,
 
 int main(int argc, char **argv) {
   int n = argc == 1 ? 64 : atoi(argv[1]);
-  for (int i = 0; i <= n; i++) {
-    for (int j = 0; j < kGranularity * 2; j++) {
-      for (int k = 0; k < kGranularity * 2; k++) {
+  for (size_t j = 0; j < kGranularity * 2; j++) {
+    for (size_t k = 0; k < kGranularity * 2; k++) {
+      for (int i = 0; i <= n; i++) {
         for (int poison = 0; poison < 4; ++poison) {
           TestMove(i, j, k, poison);
         }
