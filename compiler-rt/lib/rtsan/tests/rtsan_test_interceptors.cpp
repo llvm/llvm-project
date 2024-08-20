@@ -336,9 +336,9 @@ protected:
   }
 
   void TearDown() override {
-    if (is_locked) {
+    if (is_locked)
       Unlock();
-    }
+
     pthread_mutex_destroy(&mutex);
   }
 
@@ -477,9 +477,9 @@ protected:
   }
 
   void TearDown() override {
-    if (is_locked) {
+    if (is_locked)
       Unlock();
-    }
+
     pthread_rwlock_destroy(&rw_lock);
   }
 
