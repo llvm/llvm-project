@@ -11928,11 +11928,10 @@ struct AAUnderlyingObjectsImpl
           const auto *OtherAA = A.getAAFor<AAUnderlyingObjects>(
               *this, IRPosition::value(*UO), DepClassTy::OPTIONAL);
           auto Pred = [&](Value &V) {
-            if (&V == UO) {
+            if (&V == UO)
               Changed |= UnderlyingObjects.insert(UO);
-            } else {
+            else
               Values.emplace_back(V, nullptr);
-            }
             return true;
           };
 
