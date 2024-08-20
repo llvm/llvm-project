@@ -1060,7 +1060,7 @@ static bool introduceTooComplexPhi(BasicBlock *BB) {
   int NumPreds = pred_size(BB);
   auto *Succ = BB->getTerminator()->getSuccessor(0);
   for (auto &Phi : Succ->phis()) {
-    auto BlockIdx = Phi.getBasicBlockIndex(BB);
+    int BlockIdx = Phi.getBasicBlockIndex(BB);
     if (BlockIdx >= 0) {
       // If the incoming value is a phi and the phi is defined in BB,
       // then removing BB will not increase the total phi entries of the ir.
