@@ -5,11 +5,7 @@ add_mlir_conversion_library(MLIRControlFlowToSCF
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ControlFlowToSCF
 
   DEPENDS
-  MLIRConversionPassIncGen
-  intrinsics_gen
-
-  LINK_COMPONENTS
-  Core
+  MLIRConversionPassIncGen  
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
