@@ -2778,7 +2778,7 @@ void AsmPrinter::emitJumpTableInfo() {
     StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
 
     MCSection *JumpTableSizesSection = OutContext.getELFSection(
-        ".debug_llvm_jump_table_sizes", ELF::SHT_LLVM_JT_SIZES, Flags, 0,
+        ".llvm_jump_table_sizes", ELF::SHT_LLVM_JT_SIZES, Flags, 0,
         GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
 
     OutStreamer->switchSection(JumpTableSizesSection);
