@@ -3571,8 +3571,8 @@ permitted checks can differ and are controlled by the compiler options.
 Options to control checks:
 
 * ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
-  code marked by the profile summary with a hotness cutoff in the range ``[0,
-  999999]`` (a larger N disables more checks).
+  code marked by the profile summary with a hotness cutoff in the range
+  ``[0, 999999]`` (a larger N disables more checks).
 * ``-mllvm -lower-allow-check-random-rate=P``: Keep a check with probability P,
   a floating point number in the range ``[0.0, 1.0]``.
 * If both options are specified, a check is disabled if either condition is satisfied.
@@ -3582,7 +3582,8 @@ Parameter ``kind``, currently unused, is a string literal specifying the check
 kind. Future compiler versions may use this to allow for more granular control,
 such as applying different hotness cutoffs to different check kinds.
 
-Use ``__has_builtin(__builtin_allow_runtime_check)`` to determine if this intrinsic is supported.
+Use ``__has_builtin(__builtin_allow_runtime_check)`` to determine if this
+builtin function is supported.
 
 ``__builtin_nondeterministic_value``
 ------------------------------------
