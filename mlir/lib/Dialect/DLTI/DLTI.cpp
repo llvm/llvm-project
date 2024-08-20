@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -27,6 +28,123 @@ using namespace mlir;
 #include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
 
 #define DEBUG_TYPE "dlti"
+
+//===----------------------------------------------------------------------===//
+// parsing
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseKeyValuePair(AsmParser &parser,
+                                     DataLayoutEntryInterface &entry,
+                                     bool tryType = false) {
+  Attribute value;
+
+  if (tryType) {
+    Type type;
+    OptionalParseResult parsedType = parser.parseOptionalType(type);
+    if (parsedType.has_value()) {
+      if (failed(parsedType.value()))
+        return parser.emitError(parser.getCurrentLocation())
+               << "error while parsing type DLTI key";
+
+      if (failed(parser.parseEqual()) || failed(parser.parseAttribute(value)))
+        return failure();
+
+      entry = DataLayoutEntryAttr::get(type, value);
+      return ParseResult::success();
+    }
+  }
+
+  std::string ident;
+  OptionalParseResult parsedStr = parser.parseOptionalString(&ident);
+  if (parsedStr.has_value() && !ident.empty()) {
+    if (failed(parsedStr.value()))
+      return parser.emitError(parser.getCurrentLocation())
+             << "error while parsing string DLTI key";
+
+    if (failed(parser.parseEqual()) || failed(parser.parseAttribute(value)))
+      return failure(); // Assume that an error has already been emitted.
+
+    entry = DataLayoutEntryAttr::get(
+        StringAttr::get(parser.getContext(), ident), value);
+    return ParseResult::success();
+  }
+
+  OptionalParseResult parsedEntry = parser.parseAttribute(entry);
+  if (parsedEntry.has_value()) {
+    if (succeeded(parsedEntry.value()))
+      return parsedEntry.value();
+    return failure(); // Assume that an error has already been emitted.
+  }
+  return parser.emitError(parser.getCurrentLocation())
+         << "failed to parse DLTI entry";
+}
+
+template <class Attr>
+static Attribute parseAngleBracketedEntries(AsmParser &parser, Type ty,
+                                            bool tryType = false,
+                                            bool allowEmpty = false) {
+  SmallVector<DataLayoutEntryInterface> entries;
+  if (failed(parser.parseCommaSeparatedList(
+          AsmParser::Delimiter::LessGreater, [&]() {
+            return parseKeyValuePair(parser, entries.emplace_back(), tryType);
+          })))
+    return {};
+
+  if (entries.empty() && !allowEmpty) {
+    parser.emitError(parser.getNameLoc()) << "no DLTI entries provided";
+    return {};
+  }
+
+  return Attr::getChecked([&] { return parser.emitError(parser.getNameLoc()); },
+                          parser.getContext(), ArrayRef(entries));
+}
+
+//===----------------------------------------------------------------------===//
+// printing
+//===----------------------------------------------------------------------===//
+
+static inline std::string keyToStr(DataLayoutEntryKey key) {
+  std::string buf;
+  llvm::TypeSwitch<DataLayoutEntryKey>(key)
+      .Case<StringAttr, Type>( // The only two kinds of key we know of.
+          [&](auto key) { llvm::raw_string_ostream(buf) << key; })
+      .Default([](auto) { llvm_unreachable("unexpected entry key kind"); });
+  return buf;
+}
+
+template <class T>
+static void printAngleBracketedEntries(AsmPrinter &os, T &&entries) {
+  os << "<";
+  llvm::interleaveComma(std::forward<T>(entries), os, [&](auto entry) {
+    os << keyToStr(entry.getKey()) << " = " << entry.getValue();
+  });
+  os << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// verifying
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyEntries(function_ref<InFlightDiagnostic()> emitError,
+                                   ArrayRef<DataLayoutEntryInterface> entries,
+                                   bool allowTypes = true) {
+  DenseSet<DataLayoutEntryKey> keys;
+  for (DataLayoutEntryInterface entry : entries) {
+    if (!entry)
+      return emitError() << "contained invalid DLTI entry";
+    DataLayoutEntryKey key = entry.getKey();
+    if (key.isNull())
+      return emitError() << "contained invalid DLTI key";
+    if (!allowTypes && llvm::dyn_cast<Type>(key))
+      return emitError() << "type as DLIT key is not allowed";
+    if (!keys.insert(key).second)
+      return emitError() << "repeated DLTI key: " << keyToStr(key);
+    if (!entry.getValue())
+      return emitError() << "value associated to DLTI key " << keyToStr(key)
+                         << " is invalid";
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // DataLayoutEntryAttr
@@ -71,15 +189,16 @@ DataLayoutEntryKey DataLayoutEntryAttr::getKey() const {
 Attribute DataLayoutEntryAttr::getValue() const { return getImpl()->value; }
 
 /// Parses an attribute with syntax:
-///   attr ::= `#target.` `dl_entry` `<` (type | quoted-string) `,` attr `>`
-Attribute DataLayoutEntryAttr::parse(AsmParser &parser, Type ty) {
+///   dl-entry-attr ::= `#dlti.` `dl_entry` `<` (type | quoted-string) `,`
+///     attr `>`
+Attribute DataLayoutEntryAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
-  Type type = nullptr;
+  Type typeKey = nullptr;
   std::string identifier;
   SMLoc idLoc = parser.getCurrentLocation();
-  OptionalParseResult parsedType = parser.parseOptionalType(type);
+  OptionalParseResult parsedType = parser.parseOptionalType(typeKey);
   if (parsedType.has_value() && failed(parsedType.value()))
     return {};
   if (!parsedType.has_value()) {
@@ -95,38 +214,29 @@ Attribute DataLayoutEntryAttr::parse(AsmParser &parser, Type ty) {
       failed(parser.parseGreater()))
     return {};
 
-  return type ? get(type, value)
-              : get(parser.getBuilder().getStringAttr(identifier), value);
+  return typeKey ? get(typeKey, value)
+                 : get(parser.getBuilder().getStringAttr(identifier), value);
 }
 
-void DataLayoutEntryAttr::print(AsmPrinter &os) const {
-  os << "<";
-  if (auto type = llvm::dyn_cast_if_present<Type>(getKey()))
-    os << type;
-  else
-    os << "\"" << getKey().get<StringAttr>().strref() << "\"";
-  os << ", " << getValue() << ">";
+void DataLayoutEntryAttr::print(AsmPrinter &printer) const {
+  printer << "<" << keyToStr(getKey()) << ", " << getValue() << ">";
 }
 
 //===----------------------------------------------------------------------===//
 // DLTIMapAttr
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyEntries(function_ref<InFlightDiagnostic()> emitError,
-                                   ArrayRef<DataLayoutEntryInterface> entries) {
-  DenseSet<Type> types;
-  DenseSet<StringAttr> ids;
-  for (DataLayoutEntryInterface entry : entries) {
-    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
-      if (!types.insert(type).second)
-        return emitError() << "repeated layout entry key: " << type;
-    } else {
-      auto id = entry.getKey().get<StringAttr>();
-      if (!ids.insert(id).second)
-        return emitError() << "repeated layout entry key: " << id.getValue();
-    }
-  }
-  return success();
+/// Parses an attribute with syntax:
+///   map-attr ::= `#dlti.` `map` `<` entry-list `>`
+///   entry-list ::= entry | entry `,` entry-list
+///   entry ::= ((type | quoted-string) `=` attr) | dl-entry-attr
+Attribute MapAttr::parse(AsmParser &parser, Type type) {
+  return parseAngleBracketedEntries<MapAttr>(parser, type, /*tryType=*/true,
+                                             /*allowEmpty=*/true);
+}
+
+void MapAttr::print(AsmPrinter &printer) const {
+  printAngleBracketedEntries(printer, getEntries());
 }
 
 LogicalResult MapAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -282,98 +392,40 @@ DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
       DLTIDialect::kDataLayoutStackAlignmentKey);
 }
 
-/// Parses an attribute with syntax
-///   attr ::= `#target.` `dl_spec` `<` attr-list? `>`
-///   attr-list ::= attr
-///               | attr `,` attr-list
+/// Parses an attribute with syntax:
+///   dl-spec-attr ::= `#dlti.` `dl_spec` `<` entry-list `>`
+///   entry-list ::= | entry | entry `,` entry-list
+///   entry ::= ((type | quoted-string) = attr) | dl-entry-attr
 Attribute DataLayoutSpecAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  // Empty spec.
-  if (succeeded(parser.parseOptionalGreater()))
-    return get(parser.getContext(), {});
-
-  SmallVector<DataLayoutEntryInterface> entries;
-  if (parser.parseCommaSeparatedList(
-          [&]() { return parser.parseAttribute(entries.emplace_back()); }) ||
-      parser.parseGreater())
-    return {};
-
-  return getChecked([&] { return parser.emitError(parser.getNameLoc()); },
-                    parser.getContext(), entries);
+  return parseAngleBracketedEntries<DataLayoutSpecAttr>(parser, type,
+                                                        /*tryType=*/true,
+                                                        /*allowEmpty=*/true);
 }
 
-void DataLayoutSpecAttr::print(AsmPrinter &os) const {
-  os << "<";
-  llvm::interleaveComma(getEntries(), os);
-  os << ">";
+void DataLayoutSpecAttr::print(AsmPrinter &printer) const {
+  printAngleBracketedEntries(printer, getEntries());
 }
 
 //===----------------------------------------------------------------------===//
 // TargetDeviceSpecAttr
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
-/// A FieldParser for key-value pairs of DeviceID-target device spec pairs that
-/// make up a target system spec.
-template <>
-struct FieldParser<DeviceIDTargetDeviceSpecPair> {
-  static FailureOr<DeviceIDTargetDeviceSpecPair> parse(AsmParser &parser) {
-    std::string deviceID;
-
-    if (failed(parser.parseString(&deviceID))) {
-      parser.emitError(parser.getCurrentLocation())
-          << "DeviceID is missing, or is not of string type";
-      return failure();
-    }
-
-    if (failed(parser.parseColon())) {
-      parser.emitError(parser.getCurrentLocation()) << "Missing colon";
-      return failure();
-    }
-
-    auto target_device_spec =
-        FieldParser<TargetDeviceSpecInterface>::parse(parser);
-    if (failed(target_device_spec)) {
-      parser.emitError(parser.getCurrentLocation())
-          << "Error in parsing target device spec";
-      return failure();
-    }
-
-    return std::make_pair(parser.getBuilder().getStringAttr(deviceID),
-                          *target_device_spec);
-  }
-};
-
-inline AsmPrinter &operator<<(AsmPrinter &printer,
-                              DeviceIDTargetDeviceSpecPair param) {
-  return printer << param.first << " : " << param.second;
-}
-
-} // namespace mlir
-
 LogicalResult
 TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                              ArrayRef<DataLayoutEntryInterface> entries) {
-  // Entries in a target device spec can only have StringAttr as key. It does
-  // not support type as a key. Hence not reusing
-  // DataLayoutEntryInterface::verify.
-  DenseSet<StringAttr> ids;
-  for (DataLayoutEntryInterface entry : entries) {
-    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
-      return emitError()
-             << "dlti.target_device_spec does not allow type as a key: "
-             << type;
-    } else {
-      // Check that keys in a target device spec are unique.
-      auto id = entry.getKey().get<StringAttr>();
-      if (!ids.insert(id).second)
-        return emitError() << "repeated layout entry key: " << id.getValue();
-    }
-  }
+  return verifyEntries(emitError, entries, /*allowTypes=*/false);
+}
 
-  return success();
+/// Parses an attribute with syntax:
+///   dev-spec-attr ::= `#dlti.` `target_device_spec` `<` entry-list `>`
+///   entry-list ::= entry | entry `,` entry-list
+///   entry ::= (quoted-string `=` attr) | dl-entry-attr
+Attribute TargetDeviceSpecAttr::parse(AsmParser &parser, Type type) {
+  return parseAngleBracketedEntries<TargetDeviceSpecAttr>(parser, type);
+}
+
+void TargetDeviceSpecAttr::print(AsmPrinter &printer) const {
+  printAngleBracketedEntries(printer, getEntries());
 }
 
 //===----------------------------------------------------------------------===//
@@ -382,25 +434,44 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult
 TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             ArrayRef<DeviceIDTargetDeviceSpecPair> entries) {
-  DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
+                             ArrayRef<DataLayoutEntryInterface> entries) {
+  DenseSet<TargetSystemSpecInterface::DeviceID> deviceIds;
 
   for (const auto &entry : entries) {
-    TargetDeviceSpecInterface target_device_spec = entry.second;
+    auto deviceId =
+        llvm::dyn_cast<TargetSystemSpecInterface::DeviceID>(entry.getKey());
+    if (!deviceId)
+      return emitError() << "non-string key of DLTI system spec";
 
-    // First verify that a target device spec is valid.
-    if (failed(TargetDeviceSpecAttr::verify(emitError,
-                                            target_device_spec.getEntries())))
-      return failure();
+    if (auto targetDeviceSpec =
+            llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue())) {
+      if (failed(TargetDeviceSpecAttr::verify(emitError,
+                                              targetDeviceSpec.getEntries())))
+        return failure(); // Assume sub-verifier outputted error message.
+    } else {
+      return emitError() << "value associated with key " << deviceId
+                         << " is not a DLTI device spec";
+    }
 
     // Check that device IDs are unique across all entries.
-    TargetSystemSpecInterface::DeviceID device_id = entry.first;
-    if (!device_ids.insert(device_id).second) {
-      return emitError() << "repeated Device ID in dlti.target_system_spec: "
-                         << device_id;
-    }
+    if (!deviceIds.insert(deviceId).second)
+      return emitError() << "repeated device ID in dlti.target_system_spec: "
+                         << deviceId;
   }
+
   return success();
+}
+
+/// Parses an attribute with syntax:
+///   sys-spec-attr ::= `#dlti.` `target_system_spec` `<` entry-list `>`
+///   entry-list ::= entry | entry `,` entry-list
+///   entry ::= (quoted-string `=` dev-spec-attr) | dl-entry-attr
+Attribute TargetSystemSpecAttr::parse(AsmParser &parser, Type type) {
+  return parseAngleBracketedEntries<TargetSystemSpecAttr>(parser, type);
+}
+
+void TargetSystemSpecAttr::print(AsmPrinter &printer) const {
+  printAngleBracketedEntries(printer, getEntries());
 }
 
 //===----------------------------------------------------------------------===//
@@ -445,15 +516,6 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
     }
     return failure();
   }
-
-  auto keyToStr = [](DataLayoutEntryKey key) -> std::string {
-    std::string buf;
-    llvm::TypeSwitch<DataLayoutEntryKey>(key)
-        .Case<StringAttr, Type>( // The only two kinds of key we know of.
-            [&](auto key) { llvm::raw_string_ostream(buf) << key; })
-        .Default([](auto) { llvm_unreachable("unexpected entry key kind"); });
-    return buf;
-  };
 
   Attribute currentAttr = queryable;
   for (auto &&[idx, key] : llvm::enumerate(keys)) {
