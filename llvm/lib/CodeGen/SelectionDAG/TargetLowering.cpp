@@ -11582,11 +11582,12 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     // ... if it is not a splat vector, we need to get the passthru value at
     // position = popcount(mask) and re-load it from the stack before it is
     // overwritten in the loop below.
+    EVT PopcountVT = ScalarVT.changeTypeToInteger();
     SDValue Popcount = DAG.getNode(
         ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
     Popcount = DAG.getNode(ISD::ZERO_EXTEND, DL,
-                           MaskVT.changeVectorElementType(ScalarVT), Popcount);
-    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, ScalarVT, Popcount);
+                           MaskVT.changeVectorElementType(PopcountVT), Popcount);
+    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
     SDValue LastElmtPtr =
         getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
     LastWriteVal = DAG.getLoad(
@@ -11625,8 +11626,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
       // Re-write the last ValI if all lanes were selected. Otherwise,
       // overwrite the last write it with the passthru value.
+      SDNodeFlags Flags{};
+      Flags.setUnpredictable(true);
       LastWriteVal =
-          DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI, LastWriteVal);
+          DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI, LastWriteVal, Flags);
       Chain = DAG.getStore(
           Chain, DL, LastWriteVal, OutPtr,
           MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));

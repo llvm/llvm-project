@@ -10548,7 +10548,7 @@ multiclass compress_by_vec_width_lowering<X86VectorVTInfo _, string Name> {
                             _.KRCWM:$mask, _.RC:$src)>;
   def : Pat<(_.VT (vector_compress _.RC:$src, _.KRCWM:$mask, _.RC:$passthru)),
               (!cast<Instruction>(Name#_.ZSuffix#rrk)
-                            _.RC:$src, _.KRCWM:$mask, _.RC:$passthru)>;
+                            _.RC:$passthru, _.KRCWM:$mask, _.RC:$src)>;
 }
 
 multiclass compress_by_elt_width<bits<8> opc, string OpcodeStr,
