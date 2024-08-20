@@ -3565,10 +3565,8 @@ program location should be executed. It is expected to be used to implement
 intrinsic.
 
 The ``__builtin_allow_runtime_check()`` can be used within constrol structures
-like ``if`` to guard expensive runtime checks. The specific rules for selecting
-permitted checks can differ and are controlled by the compiler options.
-
-Options to control checks:
+like ``if`` to guard expensive runtime checks. The return value is determined
+by the following compiler options and may differ per call site:
 
 * ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
   code marked by the profile summary with a hotness cutoff in the range
