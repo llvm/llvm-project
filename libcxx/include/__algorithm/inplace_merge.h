@@ -68,7 +68,7 @@ template <class _AlgPolicy,
           class _InputIterator2,
           class _Sent2,
           class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI void __half_inplace_merge(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __half_inplace_merge(
     _InputIterator1 __first1,
     _Sent1 __last1,
     _InputIterator2 __first2,
@@ -93,7 +93,7 @@ _LIBCPP_HIDE_FROM_ABI void __half_inplace_merge(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI void __buffered_inplace_merge(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __buffered_inplace_merge(
     _BidirectionalIterator __first,
     _BidirectionalIterator __middle,
     _BidirectionalIterator __last,
@@ -124,7 +124,7 @@ _LIBCPP_HIDE_FROM_ABI void __buffered_inplace_merge(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-void __inplace_merge(
+_LIBCPP_CONSTEXPR_SINCE_CXX23 void __inplace_merge(
     _BidirectionalIterator __first,
     _BidirectionalIterator __middle,
     _BidirectionalIterator __last,

@@ -25,25 +25,25 @@ private:
   size_t __size_;
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI void __process(_Tp* __p, false_type) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __process(_Tp* __p, false_type) _NOEXCEPT {
     for (size_t __i = 0; __i < __size_; ++__i, ++__p)
       __p->~_Tp();
   }
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI void __process(_Tp*, true_type) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __process(_Tp*, true_type) _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI void __incr(false_type) _NOEXCEPT { ++__size_; }
-  _LIBCPP_HIDE_FROM_ABI void __incr(true_type) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __incr(false_type) _NOEXCEPT { ++__size_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __incr(true_type) _NOEXCEPT {}
 
   _LIBCPP_HIDE_FROM_ABI void __set(size_t __s, false_type) _NOEXCEPT { __size_ = __s; }
   _LIBCPP_HIDE_FROM_ABI void __set(size_t, true_type) _NOEXCEPT {}
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __destruct_n(size_t __s) _NOEXCEPT : __size_(__s) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit __destruct_n(size_t __s) _NOEXCEPT : __size_(__s) {}
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI void __incr() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __incr() _NOEXCEPT {
     __incr(integral_constant<bool, is_trivially_destructible<_Tp>::value>());
   }
 
@@ -53,7 +53,7 @@ public:
   }
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI void operator()(_Tp* __p) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Tp* __p) _NOEXCEPT {
     __process(__p, integral_constant<bool, is_trivially_destructible<_Tp>::value>());
   }
 };
