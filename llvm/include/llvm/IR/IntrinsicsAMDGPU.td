@@ -3838,9 +3838,7 @@ def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16_16x16x128_f8f6f4 : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4  : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
