@@ -248,6 +248,10 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
     if (TargetExtTy->getName() == "aarch64.svcount")
       return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName() == "wasm.externref")
+      return MVT(MVT::externref);
+    else if (TargetExtTy->getName() == "wasm.funcref")
+      return MVT(MVT::funcref);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
     if (HandleUnknown)

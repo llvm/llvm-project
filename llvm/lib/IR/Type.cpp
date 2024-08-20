@@ -248,14 +248,12 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  static PointerType *Ty = PointerType::get(C, 10);
+  static TargetExtType *Ty = TargetExtType::get(C, "wasm.externref", {}, {});
   return Ty;
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
+  static TargetExtType *Ty = TargetExtType::get(C, "wasm.funcref", {}, {});
   return Ty;
 }
 
@@ -832,6 +830,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit);
+
+  // Opaque types in the WebAssembly name space.
+  if (Name.starts_with("wasm."))
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit, TargetExtType::CanBeGlobal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

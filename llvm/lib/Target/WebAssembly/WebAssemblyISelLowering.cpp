@@ -374,24 +374,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setMinimumJumpTableEntries(2);
 }
 
-MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
-                                            uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerTy(DL, AS);
-}
-
-MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
-                                               uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerMemTy(DL, AS);
-}
-
 TargetLowering::AtomicExpansionKind
 WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // We have wasm instructions for these
@@ -1272,9 +1254,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TableSet = DAG.getMemIntrinsicNode(
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
         MVT::funcref,
-        // Machine Mem Operand args
-        MachinePointerInfo(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
+        MachinePointerInfo(),
         CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
         MachineMemOperand::MOStore);
 

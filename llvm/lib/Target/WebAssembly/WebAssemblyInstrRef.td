@@ -46,3 +46,11 @@ def : Pat<(select (i32 (setne I32:$cond, 0)), rc:$lhs, rc:$rhs),
 def : Pat<(select (i32 (seteq I32:$cond, 0)), rc:$lhs, rc:$rhs),
           (!cast<Instruction>("SELECT_"#rc) rc:$rhs, rc:$lhs, I32:$cond)>;
 }
+
+// Define node for wasm.funcref.to_ptr intrinsic.
+// This will then be combined with a call to the result of the intrinsic
+// to generate a proper funcref call, which is a table.set + a call indirect.
+def WebAssemblyFuncrefToPtr_t : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
+def WebAssemblyFuncrefToPtr   : SDNode<"WebAssemblyISD::FUNCREF_TO_PTR", WebAssemblyFuncrefToPtr_t,
+                                []>;
+
