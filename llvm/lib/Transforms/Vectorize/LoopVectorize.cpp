@@ -8527,7 +8527,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-static SetVector<std::pair<PHINode *, VPValue *>> collectUsersInExitBlock(
+static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
   auto MiddleVPBB =
@@ -8537,7 +8537,7 @@ static SetVector<std::pair<PHINode *, VPValue *>> collectUsersInExitBlock(
   // from scalar loop only.
   if (MiddleVPBB->getNumSuccessors() != 2)
     return {};
-  SetVector<std::pair<PHINode *, VPValue *>> ExitingValuesToFix;
+  MapVector<PHINode *, VPValue *> ExitingValuesToFix;
   BasicBlock *ExitBB =
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
@@ -8569,7 +8569,7 @@ static SetVector<std::pair<PHINode *, VPValue *>> collectUsersInExitBlock(
 // VPWidenIntOrFpInductionRecipe or VPFirstOrderRecurrencePHIRecipe.
 static void addUsersInExitBlock(
     VPlan &Plan,
-    SetVector<std::pair<PHINode *, VPValue *>> &ExitingValuesToFix) {
+    MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
 
   if (ExitingValuesToFix.empty())
     return;
@@ -8607,7 +8607,7 @@ static void addUsersInExitBlock(
 ///    VPLiveOut which uses the latter and corresponds to the scalar header.
 /// 2. Feed the penultimate value of recurrences to their LCSSA phi users in
 ///     the original exit block using a VPLiveOut.
-static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan) {
+static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan, MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
   // Start by finding out if middle block branches to scalar preheader, which is
@@ -8729,7 +8729,7 @@ static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan) {
     // No edge from the middle block to the unique exit block has been inserted
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
-    if (MiddleVPBB->getNumSuccessors() != 2)
+    if (ExitingValuesToFix.empty())
       continue;
     BasicBlock *ExitBB =
         cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
@@ -8741,6 +8741,7 @@ static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan) {
           VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
           "vector.recur.extract.for.phi");
       Plan.addLiveOut(cast<PHINode>(UI), Ext);
+      ExitingValuesToFix.erase(cast<PHINode>(UI));
     }
   }
 }
@@ -8902,12 +8903,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  SetVector<std::pair<PHINode *, VPValue *>> ExitingValuesToFix =
+  MapVector<PHINode *, VPValue *> ExitingValuesToFix =
       collectUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
                               Legal->getInductionVars());
 
-
-  addLiveOutsForFirstOrderRecurrences(*Plan);
+  addLiveOutsForFirstOrderRecurrences(*Plan, ExitingValuesToFix);
   addUsersInExitBlock(*Plan, ExitingValuesToFix);
 
   // ---------------------------------------------------------------------------
