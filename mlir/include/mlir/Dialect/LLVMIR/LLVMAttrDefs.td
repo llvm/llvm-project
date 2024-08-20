@@ -627,6 +627,11 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
 
 def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entity",
                                            /*traits=*/[], "DINodeAttr"> {
+  /// TODO: DIImportedEntity has a 'scope' field which represents the scope where
+  /// this entity is imported. Currently, we are not adding a 'scope' field in
+  /// DIImportedEntityAttr to avoid cyclic dependency. As DIImportedEntityAttr
+  /// entries will be contained inside a scope entity (e.g. DISubprogramAttr),
+  /// the scope can easily be inferred.
   let parameters = (ins
     LLVM_DITagParameter:$tag,
     "DINodeAttr":$entity,

@@ -306,11 +306,12 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit);
 
+  // DIImportedEntity requires scope information which DIImportedEntityAttr does
+  // not have. This is why we translate DIImportedEntityAttr after we have
+  // created DISubprogram as we can use it as the scope.
   SmallVector<llvm::Metadata *> retainedNodes;
-
-  for (auto nodeAttr : attr.getRetainedNodes()) {
-    if (DIImportedEntityAttr importedAttr =
-            dyn_cast<DIImportedEntityAttr>(nodeAttr)) {
+  for (DINodeAttr nodeAttr : attr.getRetainedNodes()) {
+    if (auto importedAttr = dyn_cast<DIImportedEntityAttr>(nodeAttr)) {
       llvm::DINode *dn = translate(importedAttr, node);
       retainedNodes.push_back(dn);
     }

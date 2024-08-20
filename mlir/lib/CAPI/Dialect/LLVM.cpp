@@ -353,13 +353,14 @@ MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
 
 MlirAttribute mlirLLVMDIImportedEntityAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute entity, MlirAttribute file,
-    unsigned int line, MlirAttribute name, intptr_t nElements,
-    MlirAttribute const *elements) {
-  SmallVector<Attribute> elementsStorage;
-  elementsStorage.reserve(nElements);
+    unsigned int line, MlirAttribute name, intptr_t nRetainedNodes,
+    MlirAttribute const *retainedNodes) {
+  SmallVector<Attribute> nodesStorage;
+  nodesStorage.reserve(nRetainedNodes);
   return wrap(DIImportedEntityAttr::get(
       unwrap(ctx), tag, cast<DINodeAttr>(unwrap(entity)),
       cast<DIFileAttr>(unwrap(file)), line, cast<StringAttr>(unwrap(name)),
-      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); })));
+      llvm::map_to_vector(
+          unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
+          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }

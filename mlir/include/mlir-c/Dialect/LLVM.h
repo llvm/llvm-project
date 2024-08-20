@@ -357,8 +357,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIModuleAttrGet(
 /// Creates a LLVM DIImportedEntityAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIImportedEntityAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute entity, MlirAttribute file,
-    unsigned int line, MlirAttribute name, intptr_t nNodes,
-    MlirAttribute const *elements);
+    unsigned int line, MlirAttribute name, intptr_t nRetainedNodes,
+    MlirAttribute const *retainedNodes);
 
 /// Gets the scope of this DIModuleAttr.
 MLIR_CAPI_EXPORTED MlirAttribute

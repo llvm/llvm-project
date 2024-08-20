@@ -211,7 +211,6 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
 DIImportedEntityAttr
 DebugImporter::translateImpl(llvm::DIImportedEntity *node) {
   SmallVector<DINodeAttr> elements;
-
   for (llvm::DINode *element : node->getElements()) {
     assert(element && "expected a non-null element type");
     elements.push_back(translate(element));
@@ -240,9 +239,8 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
     return nullptr;
 
   SmallVector<DINodeAttr> retainedNodes;
-
-  for (auto node : node->getRetainedNodes())
-    retainedNodes.push_back(translate(node));
+  for (llvm::DINode *retainedNode : node->getRetainedNodes())
+    retainedNodes.push_back(translate(retainedNode));
 
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
