@@ -8,7 +8,6 @@
 
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/ADT/GenericCycleImpl.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
 
 using namespace llvm;

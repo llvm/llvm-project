@@ -109,12 +109,11 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
-// DataLayoutSpecAttr
+// DLTIMapAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                           ArrayRef<DataLayoutEntryInterface> entries) {
+static LogicalResult verifyEntries(function_ref<InFlightDiagnostic()> emitError,
+                                   ArrayRef<DataLayoutEntryInterface> entries) {
   DenseSet<Type> types;
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
@@ -128,6 +127,21 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     }
   }
   return success();
+}
+
+LogicalResult MapAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              ArrayRef<DataLayoutEntryInterface> entries) {
+  return verifyEntries(emitError, entries);
+}
+
+//===----------------------------------------------------------------------===//
+// DataLayoutSpecAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           ArrayRef<DataLayoutEntryInterface> entries) {
+  return verifyEntries(emitError, entries);
 }
 
 /// Given a list of old and a list of new entries, overwrites old entries with
@@ -393,39 +407,62 @@ TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // DLTIDialect
 //===----------------------------------------------------------------------===//
 
-DataLayoutSpecInterface dlti::getDataLayoutSpec(Operation *op) {
-  DataLayoutSpecInterface dlSpec = nullptr;
+/// Retrieve the first `DLTIQueryInterface`-implementing attribute that is
+/// attached to `op` or such an attr on as close as possible an ancestor. The
+/// op the attribute is attached to is returned as well.
+static std::pair<DLTIQueryInterface, Operation *>
+getClosestQueryable(Operation *op) {
+  DLTIQueryInterface queryable = {};
 
-  for (Operation *cur = op; cur && !dlSpec; cur = cur->getParentOp()) {
-    if (auto dataLayoutOp = dyn_cast<DataLayoutOpInterface>(cur))
-      dlSpec = dataLayoutOp.getDataLayoutSpec();
-    else if (auto moduleOp = dyn_cast<ModuleOp>(cur))
-      dlSpec = moduleOp.getDataLayoutSpec();
-    else
-      for (NamedAttribute attr : cur->getAttrs())
-        if ((dlSpec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue())))
-          break;
-  }
+  // Search op and its ancestors for the first attached DLTIQueryInterface attr.
+  do {
+    for (NamedAttribute attr : op->getAttrs())
+      if ((queryable = llvm::dyn_cast<DLTIQueryInterface>(attr.getValue())))
+        break;
+  } while (!queryable && (op = op->getParentOp()));
 
-  return dlSpec;
+  return std::pair(queryable, op);
 }
 
-TargetSystemSpecInterface dlti::getTargetSystemSpec(Operation *op) {
-  TargetSystemSpecInterface sysSpec = nullptr;
+FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringAttr> keys,
+                                 bool emitError) {
+  auto [queryable, queryOp] = getClosestQueryable(op);
+  Operation *reportOp = (queryOp ? queryOp : op);
 
-  for (Operation *cur = op; cur && !sysSpec; cur = cur->getParentOp()) {
-    if (auto dataLayoutOp = dyn_cast<DataLayoutOpInterface>(cur))
-      sysSpec = dataLayoutOp.getTargetSystemSpec();
-    else if (auto moduleOp = dyn_cast<ModuleOp>(cur))
-      sysSpec = moduleOp.getTargetSystemSpec();
-    else
-      for (NamedAttribute attr : cur->getAttrs())
-        if ((sysSpec =
-                 llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue())))
-          break;
+  if (!queryable) {
+    if (emitError) {
+      auto diag = op->emitError() << "target op of failed DLTI query";
+      diag.attachNote(reportOp->getLoc())
+          << "no DLTI-queryable attrs on target op or any of its ancestors";
+    }
+    return failure();
   }
 
-  return sysSpec;
+  Attribute currentAttr = queryable;
+  for (auto &&[idx, key] : llvm::enumerate(keys)) {
+    if (auto map = llvm::dyn_cast<DLTIQueryInterface>(currentAttr)) {
+      auto maybeAttr = map.query(key);
+      if (failed(maybeAttr)) {
+        if (emitError) {
+          auto diag = op->emitError() << "target op of failed DLTI query";
+          diag.attachNote(reportOp->getLoc())
+              << "key " << key << " has no DLTI-mapping per attr: " << map;
+        }
+        return failure();
+      }
+      currentAttr = *maybeAttr;
+    } else {
+      if (emitError) {
+        auto diag = op->emitError() << "target op of failed DLTI query";
+        diag.attachNote(reportOp->getLoc())
+            << "got non-DLTI-queryable attribute upon looking up keys ["
+            << keys.take_front(idx) << "] at op";
+      }
+      return failure();
+    }
+  }
+
+  return currentAttr;
 }
 
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
@@ -480,11 +517,21 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     if (isa<ModuleOp>(op))
       return detail::verifyDataLayoutOp(op);
     return success();
-  } else if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
+  }
+
+  if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
     if (!llvm::isa<TargetSystemSpecAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << DLTIDialect::kTargetSystemDescAttrName
              << "' is expected to be a #dlti.target_system_spec attribute";
+    }
+    return success();
+  }
+
+  if (attr.getName() == DLTIDialect::kMapAttrName) {
+    if (!llvm::isa<MapAttr>(attr.getValue())) {
+      return op->emitError() << "'" << DLTIDialect::kMapAttrName
+                             << "' is expected to be a #dlti.map attribute";
     }
     return success();
   }
