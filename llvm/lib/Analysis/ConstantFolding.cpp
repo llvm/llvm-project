@@ -1791,7 +1791,9 @@ Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
     return nullptr;
 
   APInt Api = V.bitcastToAPInt();
-  __uint128_t Int128 = ((__uint128_t)Api.getWord(64) << 64) + Api.getWord(0);
+  ;
+  __uint128_t Int128 = ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
+                       Api.extractBitsAsZExtValue(64, 0);
   float128 Result = NativeFP(llvm::bit_cast<float128>(Int128));
 
   if (llvm_fenv_testexcept()) {
@@ -2128,9 +2130,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         APFloat Value = Op->getValueAPF();
         if (!Value.isValidIEEEQuad())
           return nullptr;
-        APInt api = Value.bitcastToAPInt();
+        APInt Api = Value.bitcastToAPInt();
         __uint128_t Int128 =
-            ((__uint128_t)api.getWord(64) << 64) + api.getWord(0);
+            ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
+            Api.extractBitsAsZExtValue(64, 0);
+
         float128 Result = logf128(llvm::bit_cast<float128>(Int128));
         return GetConstantFoldFPValue128(Result, Ty);
       }
