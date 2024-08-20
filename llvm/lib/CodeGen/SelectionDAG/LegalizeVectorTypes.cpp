@@ -4857,9 +4857,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
       SDValue InOp1 = GetWidenedVector(N->getOperand(0));
       SDValue InOp2 = GetWidenedVector(N->getOperand(1));
       SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
-      SDValue EVL = DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
-                                        N->getValueType(0).getVectorElementCount());
-      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL, Flags);
+      SDValue EVL =
+          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                              N->getValueType(0).getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL,
+                         Flags);
     }
   }
 
