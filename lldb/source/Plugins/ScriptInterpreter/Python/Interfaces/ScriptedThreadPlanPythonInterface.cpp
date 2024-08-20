@@ -15,18 +15,16 @@
 
 // clang-format off
 // LLDB Python header must be included first
-#include "../../lldb-python.h"
+#include "../lldb-python.h"
 //clang-format on
 
-#include "../../SWIGPythonBridge.h"
-#include "../../ScriptInterpreterPythonImpl.h"
+#include "../SWIGPythonBridge.h"
+#include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
-
-LLDB_PLUGIN_DEFINE_ADV(ScriptedThreadPlanPythonInterface, ScriptInterpreterPythonScriptedThreadPlanPythonInterface)
 
 ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
