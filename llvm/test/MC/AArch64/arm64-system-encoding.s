@@ -1,5 +1,5 @@
 ; RUN: not llvm-mc -triple arm64-apple-darwin -show-encoding < %s 2> %t | FileCheck %s
-; RUN: not llvm-mc -triple arm64-apple-darwin -mattr=+v8.3a -show-encoding < %s 2> %t | FileCheck %s --check-prefix=CHECK-V83
+; RUN: not llvm-mc -triple arm64-apple-darwin -mattr=+ccidx -show-encoding < %s 2> %t | FileCheck %s --check-prefix=CHECK-V83
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 foo:
