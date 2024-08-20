@@ -1914,8 +1914,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           }
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(ArgToAllocaMap, *DDI, Shape.OptimizeFrame,
-                                 false /*UseEntryValue*/);
+          coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
         };
         for_each(DIs, SalvageOne);
         for_each(DVRs, SalvageOne);
@@ -2852,9 +2851,8 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
 static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-                     bool OptimizeFrame, bool UseEntryValue, Function *F,
-                     Value *Storage, DIExpression *Expr,
-                     bool SkipOutermostLoad) {
+                     bool UseEntryValue, Function *F, Value *Storage,
+                     DIExpression *Expr, bool SkipOutermostLoad) {
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
@@ -2910,10 +2908,9 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
   // its availability (e.g. registers may be clobbered).
-  // Avoid this if optimizations are enabled (they would remove the alloca) or
-  // if the value is guaranteed to be available through other means (e.g. swift
-  // ABI guarantees).
-  if (StorageAsArg && !OptimizeFrame && !IsSwiftAsyncArg) {
+  // Avoid this if the value is guaranteed to be available through other means
+  // (e.g. swift ABI guarantees).
+  if (StorageAsArg && !IsSwiftAsyncArg) {
     auto &Cached = ArgToAllocaMap[StorageAsArg];
     if (!Cached) {
       Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
@@ -2936,7 +2933,7 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool UseEntryValue) {
+    DbgVariableIntrinsic &DVI, bool UseEntryValue) {
 
   Function *F = DVI.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
@@ -2944,9 +2941,9 @@ void coro::salvageDebugInfo(
   bool SkipOutermostLoad = !isa<DbgValueInst>(DVI);
   Value *OriginalStorage = DVI.getVariableLocationOp(0);
 
-  auto SalvagedInfo = ::salvageDebugInfoImpl(
-      ArgToAllocaMap, OptimizeFrame, UseEntryValue, F, OriginalStorage,
-      DVI.getExpression(), SkipOutermostLoad);
+  auto SalvagedInfo =
+      ::salvageDebugInfoImpl(ArgToAllocaMap, UseEntryValue, F, OriginalStorage,
+                             DVI.getExpression(), SkipOutermostLoad);
   if (!SalvagedInfo)
     return;
 
@@ -2978,7 +2975,7 @@ void coro::salvageDebugInfo(
 
 void coro::salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableRecord &DVR, bool OptimizeFrame, bool UseEntryValue) {
+    DbgVariableRecord &DVR, bool UseEntryValue) {
 
   Function *F = DVR.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
@@ -2986,9 +2983,9 @@ void coro::salvageDebugInfo(
   bool SkipOutermostLoad = DVR.isDbgDeclare();
   Value *OriginalStorage = DVR.getVariableLocationOp(0);
 
-  auto SalvagedInfo = ::salvageDebugInfoImpl(
-      ArgToAllocaMap, OptimizeFrame, UseEntryValue, F, OriginalStorage,
-      DVR.getExpression(), SkipOutermostLoad);
+  auto SalvagedInfo =
+      ::salvageDebugInfoImpl(ArgToAllocaMap, UseEntryValue, F, OriginalStorage,
+                             DVR.getExpression(), SkipOutermostLoad);
   if (!SalvagedInfo)
     return;
 
