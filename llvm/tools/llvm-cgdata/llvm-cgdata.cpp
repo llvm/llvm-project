@@ -348,5 +348,5 @@ int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {
     return show_main(argc, argv);
   }
 
-  return 1;
+  llvm_unreachable("unrecognized action");
 }
