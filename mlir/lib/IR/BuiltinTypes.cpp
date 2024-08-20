@@ -235,7 +235,7 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool VectorType::isValidElementType(Type t) {
-  return succeeded(isValidVectorTypeElementType(t));
+  return isValidVectorTypeElementType(t);
 }
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,

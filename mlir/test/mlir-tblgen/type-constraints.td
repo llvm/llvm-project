@@ -7,8 +7,8 @@ def DummyConstraint : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
   let cppFunctionName = "isValidDummy";
 }
 
-// DECL: ::llvm::LogicalResult isValidDummy(::mlir::Type type);
+// DECL: bool isValidDummy(::mlir::Type type);
 
-// DEF: ::llvm::LogicalResult isValidDummy(::mlir::Type type) {
-// DEF:   return ::llvm::success((((::llvm::isa<::mlir::IntegerType>(type))) || ((::llvm::isa<::mlir::IndexType>(type))) || ((::llvm::isa<::mlir::FloatType>(type)))));
+// DEF: bool isValidDummy(::mlir::Type type) {
+// DEF:   return (((::llvm::isa<::mlir::IntegerType>(type))) || ((::llvm::isa<::mlir::IndexType>(type))) || ((::llvm::isa<::mlir::FloatType>(type))));
 // DEF: }

@@ -1028,12 +1028,12 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 //===----------------------------------------------------------------------===//
 
 static const char *const typeConstraintDecl = R"(
-::llvm::LogicalResult {0}(::mlir::Type type);
+bool {0}(::mlir::Type type);
 )";
 
 static const char *const typeConstraintDef = R"(
-::llvm::LogicalResult {0}(::mlir::Type type) {
-  return ::llvm::success(({1}));
+bool {0}(::mlir::Type type) {
+  return ({1});
 }
 )";
 
