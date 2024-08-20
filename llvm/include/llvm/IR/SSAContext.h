@@ -21,8 +21,6 @@
 namespace llvm {
 class BasicBlock;
 class Function;
-class Loop;
-class LoopInfo;
 class Instruction;
 class Value;
 
@@ -37,8 +35,6 @@ template <> struct GenericSSATraits<Function> {
   using ValueRefT = Value *;
   using ConstValueRefT = const Value *;
   using UseT = Use;
-  using LoopT = Loop;
-  using LoopInfoT = LoopInfo;
 };
 
 using SSAContext = GenericSSAContext<Function>;
