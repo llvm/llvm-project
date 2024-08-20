@@ -380,10 +380,6 @@ cl::opt<bool> llvm::EnableLoopVectorization(
     "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
-static cl::opt<bool> PrintVPlansInDotFormat(
-    "vplan-print-in-dot-format", cl::Hidden,
-    cl::desc("Use dot format instead of plain text when dumping VPlans"));
-
 static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     "force-widen-divrem-via-safe-divisor", cl::Hidden,
     cl::desc(
@@ -6730,9 +6726,12 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     return RequiresScalarEpilogue &&
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
+
+  LoopBlocksDFS DFS(TheLoop);
+  DFS.perform(LI);
   MapVector<Value *, SmallVector<Value *>> DeadInvariantStoreOps;
-  for (BasicBlock *BB : TheLoop->blocks())
-    for (Instruction &I : *BB) {
+  for (BasicBlock *BB : reverse(make_range(DFS.beginRPO(), DFS.endRPO())))
+    for (Instruction &I : reverse(*BB)) {
       // Find all stores to invariant variables. Since they are going to sink
       // outside the loop we do not need calculate cost for them.
       StoreInst *SI;
@@ -6765,6 +6764,13 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         Value *PointerOp = getLoadStorePointerOperand(&I);
         DeadInterleavePointerOps.push_back(PointerOp);
       }
+
+      // Queue branches for analysis. They are dead, if their successors only
+      // contain dead instructions.
+      if (auto *Br = dyn_cast<BranchInst>(&I)) {
+        if (Br->isConditional())
+          DeadOps.push_back(&I);
+      }
     }
 
   // Mark ops feeding interleave group members as free, if they are only used
@@ -6789,8 +6795,36 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Mark ops that would be trivially dead and are only used by ignored
   // instructions as free.
   BasicBlock *Header = TheLoop->getHeader();
+
+  // Returns true if the block contains only dead instructions. Such blocks will
+  // be removed by VPlan-to-VPlan transforms and won't be considered by the
+  // VPlan-based cost model, so skip them in the legacy cost-model as well.
+  auto IsEmptyBlock = [this](BasicBlock *BB) {
+    return all_of(*BB, [this](Instruction &I) {
+      return ValuesToIgnore.contains(&I) || VecValuesToIgnore.contains(&I) ||
+             (isa<BranchInst>(&I) && !cast<BranchInst>(&I)->isConditional());
+    });
+  };
   for (unsigned I = 0; I != DeadOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadOps[I]);
+
+    // Check if the branch should be considered dead.
+    if (auto *Br = dyn_cast_or_null<BranchInst>(Op)) {
+      BasicBlock *ThenBB = Br->getSuccessor(0);
+      BasicBlock *ElseBB = Br->getSuccessor(1);
+      bool ThenEmpty = IsEmptyBlock(ThenBB);
+      bool ElseEmpty = IsEmptyBlock(ElseBB);
+      if ((ThenEmpty && ElseEmpty) ||
+          (ThenEmpty && ThenBB->getSingleSuccessor() == ElseBB &&
+           ElseBB->phis().empty()) ||
+          (ElseEmpty && ElseBB->getSingleSuccessor() == ThenBB &&
+           ThenBB->phis().empty())) {
+        VecValuesToIgnore.insert(Br);
+        DeadOps.push_back(Br->getCondition());
+      }
+      continue;
+    }
+
     // Skip any op that shouldn't be considered dead.
     if (!Op || !TheLoop->contains(Op) ||
         (isa<PHINode>(Op) && Op->getParent() == Header) ||
@@ -6980,27 +7014,32 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
-  bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxUserVF);
-  if (!UserVF.isZero() && UserVFIsLegal) {
-    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-           "VF needs to be a power of two");
-    // Collect the instructions (and their associated costs) that will be more
-    // profitable to scalarize.
-    CM.collectInLoopReductions();
-    if (CM.selectUserVectorizationFactor(UserVF)) {
-      LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-      buildVPlansWithVPRecipes(UserVF, UserVF);
-      if (!hasPlanWithVF(UserVF)) {
-        LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << UserVF
-                          << ".\n");
-        return std::nullopt;
-      }
+  if (UserVF) {
+    if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
+      reportVectorizationInfo(
+          "UserVF ignored because it may be larger than the maximal safe VF",
+          "InvalidUserVF", ORE, OrigLoop);
+    } else {
+      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
+             "VF needs to be a power of two");
+      // Collect the instructions (and their associated costs) that will be more
+      // profitable to scalarize.
+      CM.collectInLoopReductions();
+      if (CM.selectUserVectorizationFactor(UserVF)) {
+        LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        buildVPlansWithVPRecipes(UserVF, UserVF);
+        if (!hasPlanWithVF(UserVF)) {
+          LLVM_DEBUG(dbgs()
+                     << "LV: No VPlan could be built for " << UserVF << ".\n");
+          return std::nullopt;
+        }
 
-      LLVM_DEBUG(printPlans(dbgs()));
-      return {{UserVF, 0, 0}};
-    } else
-      reportVectorizationInfo("UserVF ignored because of invalid costs.",
-                              "InvalidCost", ORE, OrigLoop);
+        LLVM_DEBUG(printPlans(dbgs()));
+        return {{UserVF, 0, 0}};
+      } else
+        reportVectorizationInfo("UserVF ignored because of invalid costs.",
+                                "InvalidCost", ORE, OrigLoop);
+    }
   }
 
   // Collect the Vectorization Factor Candidates.
@@ -7216,7 +7255,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-ElementCount LoopVectorizationPlanner::getBestVF() {
+ElementCount LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
@@ -7262,19 +7301,6 @@ ElementCount LoopVectorizationPlanner::getBestVF() {
     }
   }
   return BestFactor.Width;
-}
-
-VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
-  assert(count_if(VPlans,
-                  [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
-             1 &&
-         "Best VF has not a single VPlan.");
-
-  for (const VPlanPtr &Plan : VPlans) {
-    if (Plan->hasVF(VF))
-      return *Plan.get();
-  }
-  llvm_unreachable("No plan found!");
 }
 
 static void AddRuntimeUnrollDisableMetaData(Loop *L) {
@@ -7520,16 +7546,6 @@ LoopVectorizationPlanner::executePlan(
 
   return {State.ExpandedSCEVs, ReductionResumeValues};
 }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
-  for (const auto &Plan : VPlans)
-    if (PrintVPlansInDotFormat)
-      Plan->printDOT(O);
-    else
-      Plan->print(O);
-}
-#endif
 
 //===--------------------------------------------------------------------===//
 // EpilogueVectorizerMainLoop
@@ -7818,37 +7834,6 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   DEBUG_WITH_TYPE(VerboseDebug, {
     dbgs() << "final fn:\n" << *OrigLoop->getHeader()->getParent() << "\n";
   });
-}
-
-bool LoopVectorizationPlanner::getDecisionAndClampRange(
-    const std::function<bool(ElementCount)> &Predicate, VFRange &Range) {
-  assert(!Range.isEmpty() && "Trying to test an empty VF range.");
-  bool PredicateAtRangeStart = Predicate(Range.Start);
-
-  for (ElementCount TmpVF : VFRange(Range.Start * 2, Range.End))
-    if (Predicate(TmpVF) != PredicateAtRangeStart) {
-      Range.End = TmpVF;
-      break;
-    }
-
-  return PredicateAtRangeStart;
-}
-
-/// Build VPlans for the full range of feasible VF's = {\p MinVF, 2 * \p MinVF,
-/// 4 * \p MinVF, ..., \p MaxVF} by repeatedly building a VPlan for a sub-range
-/// of VF's starting at a given VF and extending it as much as possible. Each
-/// vectorization decision can potentially shorten this sub-range during
-/// buildVPlan().
-void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
-                                           ElementCount MaxVF) {
-  auto MaxVFTimes2 = MaxVF * 2;
-  for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
-    VFRange SubRange = {VF, MaxVFTimes2};
-    auto Plan = buildVPlan(SubRange);
-    VPlanTransforms::optimize(*Plan, *PSE.getSE());
-    VPlans.push_back(std::move(Plan));
-    VF = SubRange.End;
-  }
 }
 
 iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
@@ -9502,7 +9487,7 @@ static bool processLoopInVPlanNativePath(
   if (VPlanBuildStressTest || VectorizationFactor::Disabled() == VF)
     return false;
 
-  VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+  VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
     bool AddBranchWeights =
@@ -9979,10 +9964,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      ElementCount BestVF = LVP.getBestVF();
+      ElementCount BestVF = LVP.computeBestVF();
       assert(BestVF.isScalar() &&
              "VPlan cost model and legacy cost model disagreed");
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      VPlan &BestPlan = LVP.getPlanFor(BestVF);
       LVP.executePlan(BestVF, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -9994,11 +9979,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
-      ElementCount BestVF = LVP.getBestVF();
+      ElementCount BestVF = LVP.computeBestVF();
       LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << BestVF << "\n");
       assert(VF.Width == BestVF &&
              "VPlan cost model and legacy cost model disagreed");
-      VPlan &BestPlan = LVP.getBestPlanFor(BestVF);
+      VPlan &BestPlan = LVP.getPlanFor(BestVF);
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
           LVP.selectEpilogueVectorizationFactor(BestVF, IC);
@@ -10024,7 +10009,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                                  ORE, EPI, &LVL, &CM, BFI, PSI,
                                                  Checks);
 
-        VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
+        VPlan &BestEpiPlan = LVP.getPlanFor(EPI.EpilogueVF);
         VPRegionBlock *VectorLoop = BestEpiPlan.getVectorLoopRegion();
         VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         Header->setName("vec.epilog.vector.body");
