@@ -1855,8 +1855,8 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(0, Arg.get());
   TheCall->setType(S.Context.BoolTy);
 
-  // This function should only be called through `std::is_within_lifetime`,
-  // which requires a pointer type
+  // Only accept pointers to objects as arguments, which should have object
+  // pointer or void pointer types.
   if (const auto *PT = ParamTy->getAs<PointerType>()) {
     // LWG4138: Function pointer types not allowed
     if (PT->getPointeeType()->isFunctionType()) {

@@ -17388,8 +17388,9 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
   if (Val.isNullPointer() || Val.getLValueBase().isNull())
     return Error(0);
   QualType T = Val.getLValueBase().getType();
-  assert(!T->isFunctionType() && "Pointers to functions should have been typed "
-                                 "as function pointers which are rejected");
+  assert(!T->isFunctionType() &&
+         "Pointers to functions should have been typed as function pointers "
+         "which would have been rejected earlier");
   assert(T->isObjectType());
   // Hypothetical array element is not an object
   if (Val.getLValueDesignator().isOnePastTheEnd())
