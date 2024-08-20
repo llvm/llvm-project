@@ -1568,7 +1568,7 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -1581,7 +1581,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -2725,7 +2725,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
   }
 
-  if (!FuncPtr.isValid())
+  if (!FuncPtr.isValid() || !F->getDecl())
     return Invalid(S, OpPC);
 
   assert(F);

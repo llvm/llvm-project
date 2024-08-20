@@ -14,8 +14,9 @@
 
 #include "DXILConstants.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/TargetParser/Triple.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class Module;
@@ -29,7 +30,9 @@ namespace dxil {
 
 class DXILOpBuilder {
 public:
-  DXILOpBuilder(Module &M, IRBuilderBase &B);
+  DXILOpBuilder(Module &M);
+
+  IRBuilder<> &getIRB() { return IRB; }
 
   /// Create a call instruction for the given DXIL op. The arguments
   /// must be valid for an overload of the operation.
@@ -51,7 +54,7 @@ private:
                                   Type *OverloadType = nullptr);
 
   Module &M;
-  IRBuilderBase &B;
+  IRBuilder<> IRB;
   VersionTuple DXILVersion;
   Triple::EnvironmentType ShaderStage;
 };

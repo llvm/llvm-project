@@ -835,7 +835,8 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
 def LLVM_SelectOp
     : LLVM_Op<"select",
           [Pure, AllTypesMatch<["trueValue", "falseValue", "res"]>,
-           DeclareOpInterfaceMethods<FastmathFlagsInterface>]>,
+           DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+           DeclareOpInterfaceMethods<SelectLikeOpInterface>]>,
       LLVM_Builder<
           "$res = builder.CreateSelect($condition, $trueValue, $falseValue);"> {
   let arguments = (ins LLVM_ScalarOrVectorOf<I1>:$condition,

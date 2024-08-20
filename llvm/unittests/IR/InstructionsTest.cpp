@@ -1159,7 +1159,8 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_TRUE(
       ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
-  // Nothing special about the values here - just re-using inputs to reduce code. 
+  // Nothing special about the values here - just re-using inputs to reduce
+  // code.
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
   Constant *V1 = ConstantVector::get({C3, C2, C1, C0});
 
@@ -1216,7 +1217,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id6->isIdentityWithExtract());
   EXPECT_FALSE(Id6->isConcat());
   delete Id6;
-  
+
   // Result has more elements than operands, but extra elements are not undef.
   ShuffleVectorInst *Id7 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C0, C1, C2, C3, CU, C1}));
@@ -1225,7 +1226,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id7->isIdentityWithExtract());
   EXPECT_FALSE(Id7->isConcat());
   delete Id7;
-  
+
   // Result has more elements than operands; choose from Op0 and Op1 is not identity.
   ShuffleVectorInst *Id8 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C4, CU, C2, C3, CU, CU}));
@@ -1812,6 +1813,51 @@ TEST(InstructionsTest, InsertAtEnd) {
   auto It = I->insertInto(BB, BB->end());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(Ret->getNextNode(), I);
+}
+
+TEST(InstructionsTest, AtomicSyncscope) {
+  LLVMContext Ctx;
+
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
+  IRBuilder<> Builder(BB);
+
+  // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,
+  // so cover the old versions (with a SingleThreaded argument) here.
+  Value *Ptr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *Val = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+
+  // fence
+  LLVMValueRef Fence = LLVMBuildFence(
+      wrap(&Builder), LLVMAtomicOrderingSequentiallyConsistent, 0, "");
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(Fence));
+  Fence = LLVMBuildFence(wrap(&Builder),
+                         LLVMAtomicOrderingSequentiallyConsistent, 1, "");
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(Fence));
+
+  // atomicrmw
+  LLVMValueRef AtomicRMW = LLVMBuildAtomicRMW(
+      wrap(&Builder), LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+      LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(AtomicRMW));
+  AtomicRMW = LLVMBuildAtomicRMW(wrap(&Builder), LLVMAtomicRMWBinOpXchg,
+                                 wrap(Ptr), wrap(Val),
+                                 LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(AtomicRMW));
+
+  // cmpxchg
+  LLVMValueRef CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(CmpXchg));
+  CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
 }
 
 } // end anonymous namespace

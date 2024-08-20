@@ -2527,6 +2527,7 @@ LogicalResult OperationConverter::legalizeConvertedOpResultTypes(
           opReplacement->getConverter());
       rewriterImpl.mapping.map(result, castValue);
       inverseMapping[castValue].push_back(result);
+      llvm::erase(inverseMapping[newValue], result);
     }
   }
 
