@@ -2590,7 +2590,7 @@ SDValue AMDGPUTargetLowering::getIsLtSmallestNormal(SelectionDAG &DAG,
                                                     SDNodeFlags Flags) const {
   SDLoc SL(Src);
   EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Semantics = VT.getFltSemantics();
   SDValue SmallestNormal =
       DAG.getConstantFP(APFloat::getSmallestNormalized(Semantics), SL, VT);
 
@@ -2607,7 +2607,7 @@ SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
                                           SDNodeFlags Flags) const {
   SDLoc SL(Src);
   EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &Semantics = VT.getFltSemantics();
   SDValue Inf = DAG.getConstantFP(APFloat::getInf(Semantics), SL, VT);
 
   SDValue Fabs = DAG.getNode(ISD::FABS, SL, VT, Src, Flags);
@@ -5500,8 +5500,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
-  NODE_NAME_CASE(FPTRUNC_ROUND_UPWARD)
-  NODE_NAME_CASE(FPTRUNC_ROUND_DOWNWARD)
+  NODE_NAME_CASE(FPTRUNC_ROUND)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)

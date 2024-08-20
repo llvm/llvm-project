@@ -721,9 +721,6 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
-def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
-  "Apple A7 (the CPU formerly known as Cyclone)">;
-
 def FeatureEL2VMSA : SubtargetFeature<"el2vmsa", "HasEL2VMSA", "true",
   "Enable Exception Level 2 Virtual Memory System Architecture">;
 
@@ -782,27 +779,26 @@ def HasV8_2aOps : Architecture64<8, 2, "a", "v8.2a",
   [HasV8_1aOps, FeaturePsUAO, FeaturePAN_RWV, FeatureRAS, FeatureCCPP],
   !listconcat(HasV8_1aOps.DefaultExts, [FeatureRAS])>;
 def HasV8_3aOps : Architecture64<8, 3, "a", "v8.3a",
-  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureCCIDX,
-    FeatureComplxNum],
+  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureComplxNum],
   !listconcat(HasV8_2aOps.DefaultExts, [FeatureComplxNum, FeatureJS,
-    FeaturePAuth, FeatureRCPC])>;
+    FeaturePAuth, FeatureRCPC,  FeatureCCIDX])>;
 def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
   [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
     FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
     FeatureRCPC_IMMO, FeatureLSE2],
-  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd])>;
+  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureFlagM])>;
 def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-    FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
+    FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
     FeatureBranchTargetId],
-  !listconcat(HasV8_4aOps.DefaultExts, [])>;
+  !listconcat(HasV8_4aOps.DefaultExts, [FeaturePredRes, FeatureSSBS, FeatureBranchTargetId, FeatureSB])>;
 def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
   [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
-  !listconcat(HasV8_6aOps.DefaultExts, [])>;
+  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
   !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -820,7 +816,7 @@ def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC])>;
+  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureWFxT])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -837,7 +833,7 @@ def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
     //v8.2
     FeatureRAS, FeaturePsUAO, FeatureCCPP, FeaturePAN_RWV,
     //v8.3
-    FeatureCCIDX, FeaturePAuth, FeatureRCPC,
+    FeaturePAuth, FeatureRCPC,
     //v8.4
     FeatureTRACEV8_4, FeatureTLB_RMI, FeatureFlagM, FeatureDIT, FeatureSEL2,
     FeatureRCPC_IMMO,
@@ -848,7 +844,7 @@ def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   // For v8-R, we do not enable crypto and align with GCC that enables a more
   // minimal set of optional architecture extensions.
   !listconcat(
-    !listremove(HasV8_5aOps.DefaultExts, [FeatureLSE]),
+    !listremove(HasV8_5aOps.DefaultExts, [FeatureBranchTargetId, FeaturePredRes]),
     [FeatureSSBS, FeatureFullFP16, FeatureFP16FML, FeatureSB]
   )>;
 

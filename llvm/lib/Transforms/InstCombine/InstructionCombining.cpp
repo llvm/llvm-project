@@ -4707,8 +4707,7 @@ static bool SoleWriteToDeadLocal(Instruction *I, TargetLibraryInfo &TLI) {
   pushUsers(*AI);
   while (!AllocaUsers.empty()) {
     auto *UserI = cast<Instruction>(AllocaUsers.pop_back_val());
-    if (isa<BitCastInst>(UserI) || isa<GetElementPtrInst>(UserI) ||
-        isa<AddrSpaceCastInst>(UserI)) {
+    if (isa<GetElementPtrInst>(UserI) || isa<AddrSpaceCastInst>(UserI)) {
       pushUsers(*UserI);
       continue;
     }
@@ -5429,7 +5428,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations",
+              Twine(Opts.MaxIterations) + " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }

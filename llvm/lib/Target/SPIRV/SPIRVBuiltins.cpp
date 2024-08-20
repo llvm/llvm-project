@@ -1091,16 +1091,30 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 
   Register Arg0;
   if (GroupBuiltin->HasBoolArg) {
-    Register ConstRegister = Call->Arguments[0];
-    auto ArgInstruction = getDefInstrMaybeConstant(ConstRegister, MRI);
-    (void)ArgInstruction;
-    // TODO: support non-constant bool values.
-    assert(ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT &&
-           "Only constant bool value args are supported");
-    if (GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() !=
-        SPIRV::OpTypeBool)
-      Arg0 = GR->buildConstantInt(getIConstVal(ConstRegister, MRI), MIRBuilder,
-                                  GR->getOrCreateSPIRVBoolType(MIRBuilder));
+    SPIRVType *BoolType = GR->getOrCreateSPIRVBoolType(MIRBuilder);
+    Register BoolReg = Call->Arguments[0];
+    SPIRVType *BoolRegType = GR->getSPIRVTypeForVReg(BoolReg);
+    if (!BoolRegType)
+      report_fatal_error("Can't find a register's type definition");
+    MachineInstr *ArgInstruction = getDefInstrMaybeConstant(BoolReg, MRI);
+    if (ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT) {
+      if (BoolRegType->getOpcode() != SPIRV::OpTypeBool)
+        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI), MIRBuilder,
+                                    BoolType);
+    } else {
+      if (BoolRegType->getOpcode() == SPIRV::OpTypeInt) {
+        Arg0 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+        MRI->setRegClass(Arg0, &SPIRV::IDRegClass);
+        GR->assignSPIRVTypeToVReg(BoolType, Arg0, MIRBuilder.getMF());
+        MIRBuilder.buildICmp(CmpInst::ICMP_NE, Arg0, BoolReg,
+                             GR->buildConstantInt(0, MIRBuilder, BoolRegType));
+        insertAssignInstr(Arg0, nullptr, BoolType, GR, MIRBuilder,
+                          MIRBuilder.getMF().getRegInfo());
+      } else if (BoolRegType->getOpcode() != SPIRV::OpTypeBool) {
+        report_fatal_error("Expect a boolean argument");
+      }
+      // if BoolReg is a boolean register, we don't need to do anything
+    }
   }
 
   Register GroupResultRegister = Call->ReturnRegister;
@@ -1121,6 +1135,35 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
                                                       : SPIRV::Scope::Workgroup;
   Register ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
 
+  Register VecReg;
+  if (GroupBuiltin->Opcode == SPIRV::OpGroupBroadcast &&
+      Call->Arguments.size() > 2) {
+    // For OpGroupBroadcast "LocalId must be an integer datatype. It must be a
+    // scalar, a vector with 2 components, or a vector with 3 components.",
+    // meaning that we must create a vector from the function arguments if
+    // it's a work_group_broadcast(val, local_id_x, local_id_y) or
+    // work_group_broadcast(val, local_id_x, local_id_y, local_id_z) call.
+    Register ElemReg = Call->Arguments[1];
+    SPIRVType *ElemType = GR->getSPIRVTypeForVReg(ElemReg);
+    if (!ElemType || ElemType->getOpcode() != SPIRV::OpTypeInt)
+      report_fatal_error("Expect an integer <LocalId> argument");
+    unsigned VecLen = Call->Arguments.size() - 1;
+    VecReg = MRI->createGenericVirtualRegister(
+        LLT::fixed_vector(VecLen, MRI->getType(ElemReg)));
+    MRI->setRegClass(VecReg, &SPIRV::vIDRegClass);
+    SPIRVType *VecType =
+        GR->getOrCreateSPIRVVectorType(ElemType, VecLen, MIRBuilder);
+    GR->assignSPIRVTypeToVReg(VecType, VecReg, MIRBuilder.getMF());
+    auto MIB =
+        MIRBuilder.buildInstr(TargetOpcode::G_BUILD_VECTOR).addDef(VecReg);
+    for (unsigned i = 1; i < Call->Arguments.size(); i++) {
+      MIB.addUse(Call->Arguments[i]);
+      MRI->setRegClass(Call->Arguments[i], &SPIRV::iIDRegClass);
+    }
+    insertAssignInstr(VecReg, nullptr, VecType, GR, MIRBuilder,
+                      MIRBuilder.getMF().getRegInfo());
+  }
+
   // Build work/sub group instruction.
   auto MIB = MIRBuilder.buildInstr(GroupBuiltin->Opcode)
                  .addDef(GroupResultRegister)
@@ -1132,10 +1175,13 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
   if (Call->Arguments.size() > 0) {
     MIB.addUse(Arg0.isValid() ? Arg0 : Call->Arguments[0]);
     MRI->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-    for (unsigned i = 1; i < Call->Arguments.size(); i++) {
-      MIB.addUse(Call->Arguments[i]);
-      MRI->setRegClass(Call->Arguments[i], &SPIRV::iIDRegClass);
-    }
+    if (VecReg.isValid())
+      MIB.addUse(VecReg);
+    else
+      for (unsigned i = 1; i < Call->Arguments.size(); i++) {
+        MIB.addUse(Call->Arguments[i]);
+        MRI->setRegClass(Call->Arguments[i], &SPIRV::iIDRegClass);
+      }
   }
 
   // Build select instruction.

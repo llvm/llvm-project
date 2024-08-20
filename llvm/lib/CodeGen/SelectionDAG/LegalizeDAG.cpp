@@ -2435,7 +2435,7 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
 
   EVT SetCCVT =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ExpVT);
-  const fltSemantics &FltSem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
 
   const APFloat::ExponentType MaxExpVal = APFloat::semanticsMaxExponent(FltSem);
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
@@ -2535,7 +2535,7 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   if (AsIntVT == EVT()) // TODO: How to handle f80?
     return SDValue();
 
-  const fltSemantics &FltSem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = VT.getFltSemantics();
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const unsigned Precision = APFloat::semanticsPrecision(FltSem);
   const unsigned BitSize = VT.getScalarSizeInBits();
@@ -2601,7 +2601,7 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   SDValue IsDenormal =
       DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
 
-  SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
   SDValue Zero = DAG.getConstant(0, dl, ExpVT);
 
   SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);
@@ -2797,7 +2797,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   // The following optimization is valid only if every value in SrcVT (when
   // treated as signed) is representable in DestVT.  Check that the mantissa
   // size of DestVT is >= than the number of bits in SrcVT -1.
-  assert(APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(DestVT)) >=
+  assert(APFloat::semanticsPrecision(DestVT.getFltSemantics()) >=
              SrcVT.getSizeInBits() - 1 &&
          "Cannot perform lossless SINT_TO_FP!");
 
@@ -3658,6 +3658,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::FMAXIMUM: {
     if (SDValue Expanded = TLI.expandFMINIMUM_FMAXIMUM(Node, DAG))
       Results.push_back(Expanded);
+    break;
+  }
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
+    Results.push_back(TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG));
     break;
   }
   case ISD::FSIN:
@@ -4539,6 +4544,16 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMAX_F80, RTLIB::FMAX_F128,
                     RTLIB::FMAX_PPCF128, Results);
     break;
+  case ISD::FMINIMUMNUM:
+    ExpandFPLibCall(Node, RTLIB::FMINIMUMNUM_F32, RTLIB::FMINIMUMNUM_F64,
+                    RTLIB::FMINIMUMNUM_F80, RTLIB::FMINIMUMNUM_F128,
+                    RTLIB::FMINIMUMNUM_PPCF128, Results);
+    break;
+  case ISD::FMAXIMUMNUM:
+    ExpandFPLibCall(Node, RTLIB::FMAXIMUMNUM_F32, RTLIB::FMAXIMUMNUM_F64,
+                    RTLIB::FMAXIMUMNUM_F80, RTLIB::FMAXIMUMNUM_F128,
+                    RTLIB::FMAXIMUMNUM_PPCF128, Results);
+    break;
   case ISD::FSQRT:
   case ISD::STRICT_FSQRT:
     ExpandFPLibCall(Node, RTLIB::SQRT_F32, RTLIB::SQRT_F64,
@@ -5027,7 +5042,8 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::RESET_FPENV: {
     // It is legalized to call 'fesetenv(FE_DFL_ENV)'. On most targets
     // FE_DFL_ENV is defined as '((const fenv_t *) -1)' in glibc.
-    SDValue Ptr = DAG.getIntPtrConstant(-1LL, dl);
+    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
+    SDValue Ptr = DAG.getAllOnesConstant(dl, PtrTy);
     SDValue Chain = Node->getOperand(0);
     Results.push_back(
         DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, dl));
@@ -5082,7 +5098,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     // target must provide custom lowering.
     const DataLayout &DL = DAG.getDataLayout();
     EVT PtrTy = TLI.getPointerTy(DL);
-    SDValue Mode = DAG.getConstant(-1LL, dl, PtrTy);
+    SDValue Mode = DAG.getAllOnesConstant(dl, PtrTy);
     Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
                                                 Node->getOperand(0), dl));
     break;
@@ -5464,6 +5480,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));

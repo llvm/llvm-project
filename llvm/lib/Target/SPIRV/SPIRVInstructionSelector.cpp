@@ -159,7 +159,7 @@ private:
   bool selectBitreverse(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
-  bool selectConstVector(Register ResVReg, const SPIRVType *ResType,
+  bool selectBuildVector(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
   bool selectSplatVector(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
@@ -174,6 +174,9 @@ private:
 
   bool selectFmix(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
+
+  bool selectLength(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
 
   bool selectFrac(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
@@ -240,6 +243,9 @@ private:
 
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+
+  bool selectNormalize(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
 
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
@@ -405,7 +411,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectBitreverse(ResVReg, ResType, I);
 
   case TargetOpcode::G_BUILD_VECTOR:
-    return selectConstVector(ResVReg, ResType, I);
+    return selectBuildVector(ResVReg, ResType, I);
   case TargetOpcode::G_SPLAT_VECTOR:
     return selectSplatVector(ResVReg, ResType, I);
 
@@ -1372,6 +1378,23 @@ bool SPIRVInstructionSelector::selectFmix(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectLength(Register ResVReg,
+                                            const SPIRVType *ResType,
+                                            MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Length)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
                                            const SPIRVType *ResType,
                                            MachineInstr &I) const {
@@ -1385,6 +1408,23 @@ bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
       .addImm(GL::Fract)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectNormalize(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Normalize)
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
 }
@@ -1457,35 +1497,6 @@ bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
   return false;
 }
 
-bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
-                                                 const SPIRVType *ResType,
-                                                 MachineInstr &I) const {
-  // TODO: only const case is supported for now.
-  assert(std::all_of(
-      I.operands_begin(), I.operands_end(), [this](const MachineOperand &MO) {
-        if (MO.isDef())
-          return true;
-        if (!MO.isReg())
-          return false;
-        SPIRVType *ConstTy = this->MRI->getVRegDef(MO.getReg());
-        assert(ConstTy && ConstTy->getOpcode() == SPIRV::ASSIGN_TYPE &&
-               ConstTy->getOperand(1).isReg());
-        Register ConstReg = ConstTy->getOperand(1).getReg();
-        const MachineInstr *Const = this->MRI->getVRegDef(ConstReg);
-        assert(Const);
-        return (Const->getOpcode() == TargetOpcode::G_CONSTANT ||
-                Const->getOpcode() == TargetOpcode::G_FCONSTANT);
-      }));
-
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                     TII.get(SPIRV::OpConstantComposite))
-                 .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType));
-  for (unsigned i = I.getNumExplicitDefs(); i < I.getNumExplicitOperands(); ++i)
-    MIB.addUse(I.getOperand(i).getReg());
-  return MIB.constrainAllUses(TII, TRI, RBI);
-}
-
 static unsigned getArrayComponentCount(MachineRegisterInfo *MRI,
                                        const SPIRVType *ResType) {
   Register OpReg = ResType->getOperand(2).getReg();
@@ -1549,6 +1560,40 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
   if (SPIRVType *OpDef = MRI->getVRegDef(OpReg))
     return isConstReg(MRI, OpDef, Visited);
   return false;
+}
+
+bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  unsigned N = 0;
+  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+    N = GR.getScalarOrVectorComponentCount(ResType);
+  else if (ResType->getOpcode() == SPIRV::OpTypeArray)
+    N = getArrayComponentCount(MRI, ResType);
+  else
+    report_fatal_error("Cannot select G_BUILD_VECTOR with a non-vector result");
+  if (I.getNumExplicitOperands() - I.getNumExplicitDefs() != N)
+    report_fatal_error("G_BUILD_VECTOR and the result type are inconsistent");
+
+  // check if we may construct a constant vector
+  bool IsConst = true;
+  for (unsigned i = I.getNumExplicitDefs();
+       i < I.getNumExplicitOperands() && IsConst; ++i)
+    if (!isConstReg(MRI, I.getOperand(i).getReg()))
+      IsConst = false;
+
+  if (!IsConst && N < 2)
+    report_fatal_error(
+        "There must be at least two constituent operands in a vector");
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(IsConst ? SPIRV::OpConstantComposite
+                                     : SPIRV::OpCompositeConstruct))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+  for (unsigned i = I.getNumExplicitDefs(); i < I.getNumExplicitOperands(); ++i)
+    MIB.addUse(I.getOperand(i).getReg());
+  return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
@@ -2118,8 +2163,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAny(ResVReg, ResType, I);
   case Intrinsic::spv_lerp:
     return selectFmix(ResVReg, ResType, I);
+  case Intrinsic::spv_length:
+    return selectLength(ResVReg, ResType, I);
   case Intrinsic::spv_frac:
     return selectFrac(ResVReg, ResType, I);
+  case Intrinsic::spv_normalize:
+    return selectNormalize(ResVReg, ResType, I);
   case Intrinsic::spv_rsqrt:
     return selectRsqrt(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:

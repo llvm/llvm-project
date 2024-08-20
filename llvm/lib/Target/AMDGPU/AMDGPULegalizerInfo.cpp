@@ -2368,24 +2368,29 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
-    Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
-    if (!ApertureReg.isValid())
-      return false;
+    auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
+      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
+      if (!ApertureReg.isValid())
+        return false;
 
-    // Coerce the type of the low half of the result so we can use merge_values.
-    Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+      // Coerce the type of the low half of the result so we can use
+      // merge_values.
+      Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
-    // TODO: Should we allow mismatched types but matching sizes in merges to
-    // avoid the ptrtoint?
-    auto BuildPtr = B.buildMergeLikeInstr(DstTy, {SrcAsInt, ApertureReg});
+      // TODO: Should we allow mismatched types but matching sizes in merges to
+      // avoid the ptrtoint?
+      return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
+    };
 
     // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
     // G_ADDRSPACE_CAST we need to guess.
     if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
-      B.buildCopy(Dst, BuildPtr);
+      castLocalOrPrivateToFlat(Dst);
       MI.eraseFromParent();
       return true;
     }
+
+    Register BuildPtr = castLocalOrPrivateToFlat(DstTy);
 
     auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
     auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
@@ -7090,22 +7095,30 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 
 bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
                                                MachineIRBuilder &B) const {
-  unsigned Opc;
-  int RoundMode = MI.getOperand(2).getImm();
-
-  if (RoundMode == (int)RoundingMode::TowardPositive)
-    Opc = AMDGPU::G_FPTRUNC_ROUND_UPWARD;
-  else if (RoundMode == (int)RoundingMode::TowardNegative)
-    Opc = AMDGPU::G_FPTRUNC_ROUND_DOWNWARD;
-  else
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register Src = MI.getOperand(1).getReg();
+  if (MRI.getType(Src) != LLT::scalar(32))
     return false;
 
-  B.buildInstr(Opc)
+  // Only support towardzero, tonearest, upward and downward.
+  int RoundMode = MI.getOperand(2).getImm();
+  if (RoundMode != (int)RoundingMode::TowardZero &&
+      RoundMode != (int)RoundingMode::NearestTiesToEven &&
+      RoundMode != (int)RoundingMode::TowardPositive &&
+      RoundMode != (int)RoundingMode::TowardNegative)
+    return false;
+
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  unsigned HW_Mode = (RoundMode + 3) % 4;
+  B.buildInstr(AMDGPU::G_FPTRUNC_ROUND)
       .addDef(MI.getOperand(0).getReg())
-      .addUse(MI.getOperand(1).getReg());
+      .addUse(Src)
+      .addImm(HW_Mode);
 
   MI.eraseFromParent();
-
   return true;
 }
 

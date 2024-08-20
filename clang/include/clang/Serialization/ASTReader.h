@@ -378,6 +378,7 @@ class ASTReader
 {
 public:
   /// Types of AST files.
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTIdentifierIterator;
   friend class ASTRecordReader;

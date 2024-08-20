@@ -308,7 +308,7 @@ protected:
   const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   lldb_private::CompileUnit *m_lldb_cu = nullptr;
   // If this is a DWO file, we have a backlink to our skeleton compile unit.
-  DWARFUnit *m_skeleton_unit = nullptr;
+  std::atomic<DWARFUnit *> m_skeleton_unit = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;

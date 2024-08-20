@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// The AMDGPU target machine contains all of the hardware specific
-/// information  needed to emit code for SI+ GPUs.
+/// This file contains both AMDGPU target machine and the CodeGen pass builder.
+/// The AMDGPU target machine contains all of the hardware specific information
+/// needed to emit code for SI+ GPUs in the legacy pass manager pipeline. The
+/// CodeGen pass builder handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
-#include "AMDGPUCodeGenPassBuilder.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUIGroupLP.h"
@@ -31,7 +32,6 @@
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
-#include "R600MachineFunctionInfo.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
 #include "SIMachineFunctionInfo.h"
@@ -40,6 +40,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -64,10 +65,17 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
+#include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/FixIrreducible.h"
+#include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include <optional>
 
@@ -338,10 +346,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool> EnableStructurizerWorkarounds(
+static cl::opt<bool, true> EnableStructurizerWorkarounds(
     "amdgpu-enable-structurizer-workarounds",
-    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
-    cl::Hidden);
+    cl::desc("Enable workarounds for the StructurizeCFG pass"),
+    cl::location(AMDGPUTargetMachine::EnableStructurizerWorkarounds),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
@@ -382,6 +391,11 @@ static cl::opt<bool> EnableHipStdPar(
   "amdgpu-enable-hipstdpar",
   cl::desc("Enable HIP Standard Parallelism Offload support"), cl::init(false),
   cl::Hidden);
+
+static cl::opt<bool>
+    EnableAMDGPUAttributor("amdgpu-attributor-enable",
+                           cl::desc("Enable AMDGPUAttributorPass"),
+                           cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
@@ -611,6 +625,7 @@ bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 bool AMDGPUTargetMachine::DisableStructurizer = false;
+bool AMDGPUTargetMachine::EnableStructurizerWorkarounds = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -762,6 +777,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // module is partitioned for codegen.
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+          PM.addPass(AMDGPUAttributorPass(*this));
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -921,7 +938,7 @@ Error GCNTargetMachine::buildCodeGenPipeline(
 }
 
 //===----------------------------------------------------------------------===//
-// AMDGPU Pass Setup
+// AMDGPU Legacy Pass Setup
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<CSEConfigBase> llvm::AMDGPUPassConfig::getCSEConfig() const {
@@ -1197,15 +1214,8 @@ AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
   return DAG;
 }
 
-MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
-    BumpPtrAllocator &Allocator, const Function &F,
-    const TargetSubtargetInfo *STI) const {
-  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
-      Allocator, F, static_cast<const R600Subtarget *>(STI));
-}
-
 //===----------------------------------------------------------------------===//
-// GCN Pass Setup
+// GCN Legacy Pass Setup
 //===----------------------------------------------------------------------===//
 
 ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
@@ -1741,4 +1751,91 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                                            : DenormalMode::PreserveSign;
 
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
+    GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC)
+    : CodeGenPassBuilder(TM, Opts, PIC) {
+  Opt.RequiresCodeGenSCCOrder = true;
+  // Exceptions and StackMaps are not supported, so these passes will never do
+  // anything.
+  // Garbage collection is not supported.
+  disablePass<StackMapLivenessPass, FuncletLayoutPass,
+              ShadowStackGCLoweringPass>();
+}
+
+void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
+  Base::addCodeGenPrepare(addPass);
+
+  // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
+  // behavior for subsequent passes. Placing it here seems better that these
+  // blocks would get cleaned up by UnreachableBlockElim inserted next in the
+  // pass flow.
+  addPass(LowerSwitchPass());
+}
+
+void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+  const bool LateCFGStructurize = AMDGPUTargetMachine::EnableLateStructurizeCFG;
+  const bool DisableStructurizer = AMDGPUTargetMachine::DisableStructurizer;
+  const bool EnableStructurizerWorkarounds =
+      AMDGPUTargetMachine::EnableStructurizerWorkarounds;
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(FlattenCFGPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SinkingPass());
+
+  addPass(AMDGPULateCodeGenPreparePass(TM));
+
+  // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
+  // regions formed by them.
+
+  addPass(AMDGPUUnifyDivergentExitNodesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    if (EnableStructurizerWorkarounds) {
+      addPass(FixIrreduciblePass());
+      addPass(UnifyLoopExitsPass());
+    }
+
+    addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
+  }
+
+  addPass(AMDGPUAnnotateUniformValuesPass());
+
+  if (!LateCFGStructurize && !DisableStructurizer) {
+    addPass(SIAnnotateControlFlowPass(TM));
+
+    // TODO: Move this right after structurizeCFG to avoid extra divergence
+    // analysis. This depends on stopping SIAnnotateControlFlow from making
+    // control flow modifications.
+    addPass(AMDGPURewriteUndefForPHIPass());
+  }
+
+  addPass(LCSSAPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    addPass(AMDGPUPerfHintAnalysisPass(TM));
+
+  // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
+  // isn't this in addInstSelector?
+  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
+}
+
+void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+                                             CreateMCStreamer) const {
+  // TODO: Add AsmPrinter.
+}
+
+Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
+  addPass(AMDGPUISelDAGToDAGPass(TM));
+  addPass(SIFixSGPRCopiesPass());
+  addPass(SILowerI1CopiesPass());
+  return Error::success();
 }
