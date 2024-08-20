@@ -102,7 +102,39 @@ public:
   /// elsewhere, typically by the in-memory ModuleSummaryIndex the importing
   /// decisions are made from (the module path for each summary is owned by the
   /// index's module path string table).
-  using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
+  class ImportMapTy {
+  public:
+    using ImportMapTyImpl = DenseMap<StringRef, FunctionsToImportTy>;
+
+    enum class AddDefinitionStatus {
+      NoChange,
+      Inserted,
+      ChangedToDefinition,
+    };
+
+    // Add the given GUID to ImportList as a definition.  If the same GUID has
+    // been added as a declaration previously, that entry is overridden.
+    AddDefinitionStatus addDefinition(StringRef FromModule,
+                                      GlobalValue::GUID GUID);
+
+    // Add the given GUID to ImportList as a declaration.  If the same GUID has
+    // been added as a definition previously, that entry takes precedence, and
+    // no change is made.
+    void maybeAddDeclaration(StringRef FromModule, GlobalValue::GUID GUID);
+
+    void addGUID(StringRef FromModule, GlobalValue::GUID GUID,
+                 GlobalValueSummary::ImportKind ImportKind) {
+      if (ImportKind == GlobalValueSummary::Definition)
+        addDefinition(FromModule, GUID);
+      else
+        maybeAddDeclaration(FromModule, GUID);
+    }
+
+    const ImportMapTyImpl &getImportMap() const { return ImportMap; }
+
+  private:
+    ImportMapTyImpl ImportMap;
+  };
 
   /// The set contains an entry for every global value that the module exports.
   /// Depending on the user context, this container is allowed to contain
@@ -121,33 +153,6 @@ public:
 
   /// Import functions in Module \p M based on the supplied import list.
   Expected<bool> importFunctions(Module &M, const ImportMapTy &ImportList);
-
-  enum class AddDefinitionStatus {
-    NoChange,
-    Inserted,
-    ChangedToDefinition,
-  };
-
-  // Add the given GUID to ImportList as a definition.  If the same GUID has
-  // been added as a declaration previously, that entry is overridden.
-  static AddDefinitionStatus addDefinition(ImportMapTy &ImportList,
-                                           StringRef FromModule,
-                                           GlobalValue::GUID GUID);
-
-  // Add the given GUID to ImportList as a declaration.  If the same GUID has
-  // been added as a definition previously, that entry takes precedence, and no
-  // change is made.
-  static void maybeAddDeclaration(ImportMapTy &ImportList, StringRef FromModule,
-                                  GlobalValue::GUID GUID);
-
-  static void addGUID(ImportMapTy &ImportList, StringRef FromModule,
-                      GlobalValue::GUID GUID,
-                      GlobalValueSummary::ImportKind ImportKind) {
-    if (ImportKind == GlobalValueSummary::Definition)
-      addDefinition(ImportList, FromModule, GUID);
-    else
-      maybeAddDeclaration(ImportList, FromModule, GUID);
-  }
 
 private:
   /// The summaries index used to trigger importing.
