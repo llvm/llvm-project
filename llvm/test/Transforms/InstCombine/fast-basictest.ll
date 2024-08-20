@@ -549,9 +549,8 @@ define float @test16_reassoc(float %a, float %b, float %z) {
 
 define float @test17(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test17(
-; CHECK-NEXT:    [[C:%.*]] = fmul fast float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast float [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fmul fast float [[C]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul fast float [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul fast float %z, 4.000000e+01
@@ -563,9 +562,8 @@ define float @test17(float %a, float %b, float %z) {
 
 define float @test17_unary_fneg(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test17_unary_fneg(
-; CHECK-NEXT:    [[C:%.*]] = fmul fast float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast float [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fmul fast float [[C]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul fast float [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul fast float %z, 4.000000e+01
@@ -577,9 +575,8 @@ define float @test17_unary_fneg(float %a, float %b, float %z) {
 
 define float @test17_reassoc_nsz(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test17_reassoc_nsz(
-; CHECK-NEXT:    [[C:%.*]] = fmul reassoc nsz float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc nsz float [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fmul reassoc nsz float [[C]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul reassoc nsz float [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul reassoc nsz float %z, 4.000000e+01
@@ -609,9 +606,8 @@ define float @test17_reassoc(float %a, float %b, float %z) {
 
 define float @test17_unary_fneg_no_FMF(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test17_unary_fneg_no_FMF(
-; CHECK-NEXT:    [[C:%.*]] = fmul float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fmul float [[C]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul float [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul float %z, 4.000000e+01
@@ -623,9 +619,8 @@ define float @test17_unary_fneg_no_FMF(float %a, float %b, float %z) {
 
 define float @test17_reassoc_unary_fneg(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test17_reassoc_unary_fneg(
-; CHECK-NEXT:    [[C:%.*]] = fmul reassoc float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc float [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fmul reassoc float [[C]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[Z:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul reassoc float [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul reassoc float %z, 4.000000e+01
