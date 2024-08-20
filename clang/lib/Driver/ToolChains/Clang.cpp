@@ -7770,7 +7770,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddAllArgs(CmdArgs,
-                  options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+                  options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
                   options::OPT_fno_offload_uniform_block);

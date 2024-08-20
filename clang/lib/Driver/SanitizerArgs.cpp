@@ -793,7 +793,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   for (const auto *Arg :
-       Args.filtered(options::OPT_fsanitize_overflow_pattern_exclusion_EQ)) {
+       Args.filtered(options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
     Arg->claim();
     OverflowPatternExclusions |=
         parseOverflowPatternExclusionValues(D, Arg, DiagnoseErrors);
@@ -1253,8 +1253,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                         "-fsanitize-system-ignorelist=", SystemIgnorelistFiles);
 
   if (OverflowPatternExclusions)
-    Args.AddAllArgs(CmdArgs,
-                    options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+    Args.AddAllArgs(
+        CmdArgs, options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ);
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
