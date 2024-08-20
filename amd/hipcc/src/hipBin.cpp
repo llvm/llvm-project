@@ -37,16 +37,14 @@ class HipBin;
 class HipBin {
  private:
   HipBinUtil* hipBinUtilPtr_;
-  vector<HipBinBase*> hipBinBasePtrs_;
-  vector<PlatformInfo> platformVec_;
+  vector<HipBinBase *> hipBinBasePtrs_;
   HipBinBase* hipBinNVPtr_;
   HipBinBase* hipBinAMDPtr_;
 
  public:
   HipBin();
   ~HipBin();
-  vector<HipBinBase*>& getHipBinPtrs();
-  vector<PlatformInfo>& getPlaformInfo();
+  vector<HipBinBase *> &getHipBinPtrs();
   void executeHipBin(string filename, int argc, char* argv[]);
   void executeHipConfig(int argc, char* argv[]);
   void executeHipCC(int argc, char* argv[]);
@@ -63,14 +61,10 @@ HipBin::HipBin() {
   bool platformDetected = false;
   if (hipBinAMDPtr_->detectPlatform()) {
     // populates the struct with AMD info
-    const PlatformInfo& platformInfo = hipBinAMDPtr_->getPlatformInfo();
-    platformVec_.push_back(platformInfo);
     hipBinBasePtrs_.push_back(hipBinAMDPtr_);
     platformDetected = true;
   } else if (hipBinNVPtr_->detectPlatform()) {
     // populates the struct with Nvidia info
-    const PlatformInfo& platformInfo = hipBinNVPtr_->getPlatformInfo();
-    platformVec_.push_back(platformInfo);
     hipBinBasePtrs_.push_back(hipBinNVPtr_);
     platformDetected = true;
   }
@@ -78,8 +72,6 @@ HipBin::HipBin() {
   if (!platformDetected) {
     std::cerr << "Device not supported - Defaulting to AMD" << endl;
     // populates the struct with AMD info
-    const PlatformInfo& platformInfo = hipBinAMDPtr_->getPlatformInfo();
-    platformVec_.push_back(platformInfo);
     hipBinBasePtrs_.push_back(hipBinAMDPtr_);
   }
 }
@@ -89,15 +81,8 @@ HipBin::~HipBin() {
   delete hipBinAMDPtr_;
   // clearing the vector so no one accesses the pointers
   hipBinBasePtrs_.clear();
-  // clearing the platform vector as the pointers are deleted
-  platformVec_.clear();
   delete hipBinUtilPtr_;
 }
-
-vector<PlatformInfo>& HipBin::getPlaformInfo() {
-  return platformVec_;  // Return the populated platform info.
-}
-
 
 vector<HipBinBase*>& HipBin::getHipBinPtrs() {
   return hipBinBasePtrs_;  // Return the populated device pointers.
