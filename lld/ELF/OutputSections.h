@@ -143,6 +143,25 @@ struct OutputDesc final : SectionCommand {
   }
 };
 
+// This represents a CLASS(class_name) { ... } that can be referenced by output
+// section descriptions. If referenced more than once, the sections can be
+// spilled to the next reference like --enable-non-contiguous-regions.
+struct SectionClass final : public SectionBase {
+  SmallVector<InputSectionDescription *, 0> commands;
+  bool assigned = false;
+
+  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  static bool classof(const SectionBase *s) { return s->kind() == Class; }
+};
+
+struct SectionClassDesc : SectionCommand {
+  SectionClass sc;
+
+  SectionClassDesc(StringRef name) : SectionCommand(ClassKind), sc(name) {}
+
+  static bool classof(const SectionCommand *c) { return c->kind == ClassKind; }
+};
+
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);

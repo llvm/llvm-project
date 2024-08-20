@@ -3300,6 +3300,46 @@ the configuration (without a prefix: ``Auto``).
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
 
+.. _BreakBinaryOperations:
+
+**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+  The break constructor initializers style to use.
+
+  Possible values:
+
+  * ``BBO_Never`` (in configuration: ``Never``)
+    Don't break binary operations
+
+    .. code-block:: c++
+
+       aaa + bbbb * ccccc - ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+    Binary operations will either be all on the same line, or each operation
+    will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb *
+       ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+    Binary operations of a particular precedence that exceed the column
+    limit will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb * ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+
+
 .. _BreakConstructorInitializers:
 
 **BreakConstructorInitializers** (``BreakConstructorInitializersStyle``) :versionbadge:`clang-format 5` :ref:`¶ <BreakConstructorInitializers>`
@@ -4147,7 +4187,8 @@ the configuration (without a prefix: ``Auto``).
 
 **IndentRequiresClause** (``Boolean``) :versionbadge:`clang-format 15` :ref:`¶ <IndentRequiresClause>`
   Indent the requires clause in a template. This only applies when
-  ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  or ``WithFollowing``.
 
   In clang-format 12, 13 and 14 it was named ``IndentRequires``.
 
@@ -5379,22 +5420,47 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``RCPS_OwnLine`` (in configuration: ``OwnLine``)
-    Always put the ``requires`` clause on its own line.
+    Always put the ``requires`` clause on its own line (possibly followed by
+    a semicolon).
 
     .. code-block:: c++
 
       template <typename T>
-      requires C<T>
+        requires C<T>
       struct Foo {...
 
       template <typename T>
-      requires C<T>
+      void bar(T t)
+        requires C<T>;
+
+      template <typename T>
+        requires C<T>
       void bar(T t) {...
 
       template <typename T>
       void baz(T t)
-      requires C<T>
+        requires C<T>
       {...
+
+  * ``RCPS_OwnLineWithBrace`` (in configuration: ``OwnLineWithBrace``)
+    As with ``OwnLine``, except, unless otherwise prohibited, place a
+    following open brace (of a function definition) to follow on the same
+    line.
+
+    .. code-block:: c++
+
+      void bar(T t)
+        requires C<T> {
+        return;
+      }
+
+      void bar(T t)
+        requires C<T> {}
+
+      template <typename T>
+        requires C<T>
+      void baz(T t) {
+        ...
 
   * ``RCPS_WithPreceding`` (in configuration: ``WithPreceding``)
     Try to put the clause together with the preceding part of a declaration.

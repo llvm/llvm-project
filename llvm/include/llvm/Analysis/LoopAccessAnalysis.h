@@ -15,8 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
 #include <variant>
@@ -26,11 +25,8 @@ namespace llvm {
 class AAResults;
 class DataLayout;
 class Loop;
-class LoopAccessInfo;
 class raw_ostream;
-class SCEV;
-class SCEVUnionPredicate;
-class Value;
+class TargetTransformInfo;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
@@ -486,6 +482,7 @@ public:
     Need = false;
     Pointers.clear();
     Checks.clear();
+    DiffChecks.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.

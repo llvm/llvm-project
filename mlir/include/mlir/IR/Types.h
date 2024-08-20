@@ -34,7 +34,7 @@ class AsmState;
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verify(
+///    - static LogicalResult verifyInvariants(
 ///                                function_ref<InFlightDiagnostic()> emitError,
 ///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'

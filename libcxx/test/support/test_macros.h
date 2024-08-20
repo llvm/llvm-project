@@ -291,17 +291,27 @@ struct is_same<T, T> { enum {value = 1}; };
 // when optimizations are enabled.
 template <class Tp>
 inline Tp const& DoNotOptimize(Tp const& value) {
-    asm volatile("" : : "r,m"(value) : "memory");
-    return value;
+  // The `m` constraint is invalid in the AMDGPU backend.
+#  if defined(__AMDGPU__) || defined(__NVPTX__)
+  asm volatile("" : : "r"(value) : "memory");
+#  else
+  asm volatile("" : : "r,m"(value) : "memory");
+#  endif
+  return value;
 }
 
 template <class Tp>
 inline Tp& DoNotOptimize(Tp& value) {
-#if defined(__clang__)
+  // The `m` and `r` output constraint is invalid in the AMDGPU backend as well
+  // as i8 / i1 arguments, so we just capture the pointer instead.
+#  if defined(__AMDGPU__)
+  Tp* tmp = &value;
+  asm volatile("" : "+v"(tmp) : : "memory");
+#  elif defined(__clang__)
   asm volatile("" : "+r,m"(value) : : "memory");
-#else
+#  else
   asm volatile("" : "+m,r"(value) : : "memory");
-#endif
+#  endif
   return value;
 }
 #else

@@ -228,6 +228,11 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
+  TFI->spillFPBP(MF);
+
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
@@ -340,6 +345,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
            << " stack bytes in function '"
            << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
+
+  // Emit any remarks implemented for the target, based on final frame layout.
+  TFI->emitRemarks(MF, ORE);
 
   delete RS;
   SaveBlocks.clear();
@@ -1545,7 +1553,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       // If this instruction has a FrameIndex operand, we need to
       // use that target machine register info object to eliminate
       // it.
-      TRI.eliminateFrameIndex(MI, SPAdj, i);
+      TRI.eliminateFrameIndex(MI, SPAdj, i, RS);
 
       // Reset the iterator if we were at the beginning of the BB.
       if (AtBeginning) {

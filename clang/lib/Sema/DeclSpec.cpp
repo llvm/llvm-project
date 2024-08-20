@@ -377,6 +377,8 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
+#include "clang/Basic/HLSLIntangibleTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -608,6 +610,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##ImgType##_t: \
     return #ImgType "_t";
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");

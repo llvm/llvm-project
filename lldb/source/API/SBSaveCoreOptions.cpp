@@ -27,6 +27,8 @@ SBSaveCoreOptions::SBSaveCoreOptions(const SBSaveCoreOptions &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
+SBSaveCoreOptions::~SBSaveCoreOptions() = default;
+
 const SBSaveCoreOptions &
 SBSaveCoreOptions::operator=(const SBSaveCoreOptions &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);

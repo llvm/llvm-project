@@ -2193,9 +2193,9 @@ public:
     /// The number of iterations
     Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams = nullptr;
+    ArrayRef<Value *> NumTeams;
     /// The number of threads.
-    Value *NumThreads = nullptr;
+    ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
     Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
@@ -2204,8 +2204,9 @@ public:
     // Constructors for TargetKernelArgs.
     TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
-                     Value *NumIterations, Value *NumTeams, Value *NumThreads,
-                     Value *DynCGGroupMem, bool HasNoWait)
+                     Value *NumIterations, ArrayRef<Value *> NumTeams,
+                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
+                     bool HasNoWait)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
@@ -2852,17 +2853,16 @@ public:
   /// instructions for passed in target arguments where neccessary
   /// \param Dependencies A vector of DependData objects that carry
   // dependency information as passed in the depend clause
-  InsertPointTy createTarget(const LocationDescription &Loc,
-                             bool IsOffloadEntry,
-                             OpenMPIRBuilder::InsertPointTy AllocaIP,
-                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
-                             int32_t NumThreads,
-                             SmallVectorImpl<Value *> &Inputs,
-                             GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-                             SmallVector<DependData> Dependencies = {});
+  InsertPointTy
+  createTarget(const LocationDescription &Loc, bool IsOffloadEntry,
+               OpenMPIRBuilder::InsertPointTy AllocaIP,
+               OpenMPIRBuilder::InsertPointTy CodeGenIP,
+               TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
+               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
+               GenMapInfoCallbackTy GenMapInfoCB,
+               TargetBodyGenCallbackTy BodyGenCB,
+               TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+               SmallVector<DependData> Dependencies = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

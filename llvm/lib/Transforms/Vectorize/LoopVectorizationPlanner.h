@@ -362,11 +362,13 @@ public:
   /// VF and its cost.
   VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
-  /// Return the best VPlan for \p VF.
-  VPlan &getBestPlanFor(ElementCount VF) const;
+  /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
+  /// for each VF.
+  VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Return the most profitable vectorization factor.
-  ElementCount getBestVF() const;
+  /// Compute and return the most profitable vectorization factor. Also collect
+  /// all profitable VFs in ProfitableVFs.
+  ElementCount computeBestVF();
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.

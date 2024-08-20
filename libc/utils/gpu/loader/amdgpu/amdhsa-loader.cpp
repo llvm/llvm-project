@@ -180,7 +180,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
           if (hsa_status_t err =
                   hsa_amd_memory_pool_allocate(pool, size,
                                                /*flags=*/0, &dev_ptr))
-            handle_error(err);
+            dev_ptr = nullptr;
           hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_ptr);
           buffer->data[0] = reinterpret_cast<uintptr_t>(dev_ptr);
         };

@@ -393,6 +393,41 @@ TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // DLTIDialect
 //===----------------------------------------------------------------------===//
 
+DataLayoutSpecInterface dlti::getDataLayoutSpec(Operation *op) {
+  DataLayoutSpecInterface dlSpec = nullptr;
+
+  for (Operation *cur = op; cur && !dlSpec; cur = cur->getParentOp()) {
+    if (auto dataLayoutOp = dyn_cast<DataLayoutOpInterface>(cur))
+      dlSpec = dataLayoutOp.getDataLayoutSpec();
+    else if (auto moduleOp = dyn_cast<ModuleOp>(cur))
+      dlSpec = moduleOp.getDataLayoutSpec();
+    else
+      for (NamedAttribute attr : cur->getAttrs())
+        if ((dlSpec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue())))
+          break;
+  }
+
+  return dlSpec;
+}
+
+TargetSystemSpecInterface dlti::getTargetSystemSpec(Operation *op) {
+  TargetSystemSpecInterface sysSpec = nullptr;
+
+  for (Operation *cur = op; cur && !sysSpec; cur = cur->getParentOp()) {
+    if (auto dataLayoutOp = dyn_cast<DataLayoutOpInterface>(cur))
+      sysSpec = dataLayoutOp.getTargetSystemSpec();
+    else if (auto moduleOp = dyn_cast<ModuleOp>(cur))
+      sysSpec = moduleOp.getTargetSystemSpec();
+    else
+      for (NamedAttribute attr : cur->getAttrs())
+        if ((sysSpec =
+                 llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue())))
+          break;
+  }
+
+  return sysSpec;
+}
+
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
