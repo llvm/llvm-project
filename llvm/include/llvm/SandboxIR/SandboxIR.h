@@ -131,6 +131,7 @@ class CastInst;
 class PtrToIntInst;
 class BitCastInst;
 class AllocaInst;
+class CatchSwitchInst;
 class SwitchInst;
 class UnaryOperator;
 class BinaryOperator;
@@ -254,6 +255,7 @@ protected:
   friend class InvokeInst;         // For getting `Val`.
   friend class CallBrInst;         // For getting `Val`.
   friend class GetElementPtrInst;  // For getting `Val`.
+  friend class CatchSwitchInst;    // For getting `Val`.
   friend class SwitchInst;         // For getting `Val`.
   friend class UnaryOperator;      // For getting `Val`.
   friend class BinaryOperator;     // For getting `Val`.
@@ -263,6 +265,7 @@ protected:
   friend class CastInst;           // For getting `Val`.
   friend class PHINode;            // For getting `Val`.
   friend class UnreachableInst;    // For getting `Val`.
+  friend class CatchSwitchAddHandler; // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -674,6 +677,7 @@ protected:
   friend class InvokeInst;         // For getTopmostLLVMInstruction().
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
+  friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
   friend class UnaryOperator;      // For getTopmostLLVMInstruction().
   friend class BinaryOperator;     // For getTopmostLLVMInstruction().
@@ -1480,6 +1484,97 @@ public:
   // TODO: Add missing member functions.
 };
 
+class CatchSwitchInst
+    : public SingleLLVMInstructionImpl<llvm::CatchSwitchInst> {
+public:
+  CatchSwitchInst(llvm::CatchSwitchInst *CSI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CatchSwitch, Opcode::CatchSwitch,
+                                  CSI, Ctx) {}
+
+  static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
+                                 unsigned NumHandlers, BBIterator WhereIt,
+                                 BasicBlock *WhereBB, Context &Ctx,
+                                 const Twine &Name = "");
+
+  Value *getParentPad() const;
+  void setParentPad(Value *ParentPad);
+
+  bool hasUnwindDest() const {
+    return cast<llvm::CatchSwitchInst>(Val)->hasUnwindDest();
+  }
+  bool unwindsToCaller() const {
+    return cast<llvm::CatchSwitchInst>(Val)->unwindsToCaller();
+  }
+  BasicBlock *getUnwindDest() const;
+  void setUnwindDest(BasicBlock *UnwindDest);
+
+  unsigned getNumHandlers() const {
+    return cast<llvm::CatchSwitchInst>(Val)->getNumHandlers();
+  }
+
+private:
+  static BasicBlock *handler_helper(Value *V) { return cast<BasicBlock>(V); }
+  static const BasicBlock *handler_helper(const Value *V) {
+    return cast<BasicBlock>(V);
+  }
+
+public:
+  using DerefFnTy = BasicBlock *(*)(Value *);
+  using handler_iterator = mapped_iterator<op_iterator, DerefFnTy>;
+  using handler_range = iterator_range<handler_iterator>;
+  using ConstDerefFnTy = const BasicBlock *(*)(const Value *);
+  using const_handler_iterator =
+      mapped_iterator<const_op_iterator, ConstDerefFnTy>;
+  using const_handler_range = iterator_range<const_handler_iterator>;
+
+  handler_iterator handler_begin() {
+    op_iterator It = op_begin() + 1;
+    if (hasUnwindDest())
+      ++It;
+    return handler_iterator(It, DerefFnTy(handler_helper));
+  }
+  const_handler_iterator handler_begin() const {
+    const_op_iterator It = op_begin() + 1;
+    if (hasUnwindDest())
+      ++It;
+    return const_handler_iterator(It, ConstDerefFnTy(handler_helper));
+  }
+  handler_iterator handler_end() {
+    return handler_iterator(op_end(), DerefFnTy(handler_helper));
+  }
+  const_handler_iterator handler_end() const {
+    return const_handler_iterator(op_end(), ConstDerefFnTy(handler_helper));
+  }
+  handler_range handlers() {
+    return make_range(handler_begin(), handler_end());
+  }
+  const_handler_range handlers() const {
+    return make_range(handler_begin(), handler_end());
+  }
+
+  void addHandler(BasicBlock *Dest);
+
+  // TODO: removeHandler() cannot be reverted because there is no equivalent
+  // addHandler() with a handler_iterator to specify the position. So we can't
+  // implement it for now.
+
+  unsigned getNumSuccessors() const { return getNumOperands() - 1; }
+  BasicBlock *getSuccessor(unsigned Idx) const {
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchswitch!");
+    return cast<BasicBlock>(getOperand(Idx + 1));
+  }
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchswitch!");
+    setOperand(Idx + 1, NewSucc);
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchSwitch;
+  }
+};
+
 class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
 public:
   SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
@@ -2201,6 +2296,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
+  friend CatchSwitchInst; // For createCatchSwitchInst()
   SwitchInst *createSwitchInst(llvm::SwitchInst *I);
   friend SwitchInst; // For createSwitchInst()
   UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
