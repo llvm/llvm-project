@@ -64,7 +64,6 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
             frames[0]["source"]["path"], self.main_path, "incorrect source file path"
         )
 
-
         # Check disassembly view
         instruction = self.disassemble(frameIndex=0)
         self.assertEqual(
