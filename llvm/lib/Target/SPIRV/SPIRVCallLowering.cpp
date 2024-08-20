@@ -404,6 +404,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (const auto &Arg : F.args()) {
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
     MRI->setRegClass(VRegs[i][0], GR->getRegClass(ArgTypeVRegs[i]));
+    MRI->setType(VRegs[i][0], GR->getRegType(ArgTypeVRegs[i]));
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
         .addDef(VRegs[i][0])
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
@@ -532,10 +533,17 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
-      ArgVRegs.push_back(Arg.Regs[0]);
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
-      if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
-        GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MF);
+      Register ArgReg = Arg.Regs[0];
+      ArgVRegs.push_back(ArgReg);
+      SPIRVType *SpvType = GR->getSPIRVTypeForVReg(ArgReg);
+      if (!SpvType) {
+        SpvType = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
+        GR->assignSPIRVTypeToVReg(SpvType, ArgReg, MF);
+      }
+      if (!MRI->getRegClassOrNull(ArgReg)) {
+        MRI->setRegClass(ArgReg, GR->getRegClass(SpvType));
+        MRI->setType(ArgReg, GR->getRegType(SpvType));
+      }
     }
     auto instructionSet = canUseOpenCL ? SPIRV::InstructionSet::OpenCL_std
                                        : SPIRV::InstructionSet::GLSL_std_450;

@@ -327,6 +327,7 @@ inline bool getIsFloat(SPIRVType *SpvType, const SPIRVGlobalRegistry &GR) {
                                ->getOpcode() == SPIRV::OpTypeFloat;
 }
 
+/*
 static std::pair<Register, unsigned>
 createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
                const SPIRVGlobalRegistry &GR) {
@@ -337,16 +338,18 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   LLT SrcLLT = MRI.getType(SrcReg);
   bool IsFloat = getIsFloat(SpvType, GR);
   auto GetIdOp = IsFloat ? SPIRV::GET_fID : SPIRV::GET_ID;
+  bool IsVec = SrcLLT.isVector();
+  unsigned NumElements =
+      IsVec ? std::max(2U, GR.getScalarOrVectorComponentCount(SpvType)) : 1;
   if (SrcLLT.isPointer()) {
     unsigned PtrSz = GR.getPointerSize();
     NewT = LLT::pointer(0, PtrSz);
-    bool IsVec = SrcLLT.isVector();
     if (IsVec)
-      NewT = LLT::fixed_vector(2, NewT);
+      NewT = LLT::fixed_vector(NumElements, NewT);
     GetIdOp = IsVec ? SPIRV::GET_vpID : SPIRV::GET_pID;
-  } else if (SrcLLT.isVector()) {
-    NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
-    NewT = LLT::fixed_vector(2, NewT);
+  } else if (IsVec) {
+    NewT = LLT::fixed_vector(
+        NumElements, LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType)));
     GetIdOp = IsFloat ? SPIRV::GET_vfID : SPIRV::GET_vID;
   } else {
     NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
@@ -354,6 +357,28 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   Register IdReg = MRI.createGenericVirtualRegister(NewT);
   MRI.setRegClass(IdReg, GR.getRegClass(SpvType));
   return {IdReg, GetIdOp};
+}
+*/
+static std::pair<Register, unsigned>
+createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
+               const SPIRVGlobalRegistry &GR) {
+  if (!SpvType)
+    SpvType = GR.getSPIRVTypeForVReg(SrcReg);
+  const TargetRegisterClass *RC = GR.getRegClass(SpvType);
+  Register Reg = MRI.createGenericVirtualRegister(GR.getRegType(SpvType));
+  MRI.setRegClass(Reg, RC);
+  unsigned GetIdOp = SPIRV::GET_ID;
+  if (RC == &SPIRV::fIDRegClass)
+    GetIdOp = SPIRV::GET_fID;
+  else if (RC == &SPIRV::pIDRegClass)
+    GetIdOp = SPIRV::GET_pID;
+  else if (RC == &SPIRV::vfIDRegClass)
+    GetIdOp = SPIRV::GET_vfID;
+  else if (RC == &SPIRV::vpIDRegClass)
+    GetIdOp = SPIRV::GET_vpID;
+  else if (RC == &SPIRV::vIDRegClass)
+    GetIdOp = SPIRV::GET_vID;
+  return {Reg, GetIdOp};
 }
 
 // Insert ASSIGN_TYPE instuction between Reg and its definition, set NewReg as

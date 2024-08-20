@@ -1460,6 +1460,12 @@ SPIRVGlobalRegistry::getRegClass(SPIRVType *SpvType) const {
   return &SPIRV::iIDRegClass;
 }
 
+inline unsigned getAS(SPIRVType *SpvType) {
+  return storageClassToAddressSpace(
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          SpvType->getOperand(1).getImm()));
+}
+
 LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   unsigned Opcode = SpvType ? SpvType->getOpcode() : 0;
   switch (Opcode) {
@@ -1468,13 +1474,13 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   case SPIRV::OpTypeBool:
     return LLT::scalar(getScalarOrVectorBitWidth(SpvType));
   case SPIRV::OpTypePointer:
-    return LLT::pointer(0, getPointerSize());
+    return LLT::pointer(getAS(SpvType), getPointerSize());
   case SPIRV::OpTypeVector: {
     SPIRVType *ElemType = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
     LLT ET;
     switch (ElemType ? ElemType->getOpcode() : 0) {
     case SPIRV::OpTypePointer:
-      ET = LLT::pointer(0, getPointerSize());
+      ET = LLT::pointer(getAS(ElemType), getPointerSize());
       break;
     case SPIRV::OpTypeInt:
     case SPIRV::OpTypeFloat:
@@ -1484,7 +1490,8 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
     default:
       ET = LLT::scalar(64);
     }
-    return LLT::fixed_vector(2, ET);
+    return LLT::fixed_vector(
+        static_cast<unsigned>(SpvType->getOperand(2).getImm()), ET);
   }
   }
   return LLT::scalar(64);
