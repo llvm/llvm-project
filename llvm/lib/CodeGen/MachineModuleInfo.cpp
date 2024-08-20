@@ -30,39 +30,14 @@ void MachineModuleInfo::initialize() {
 }
 
 void MachineModuleInfo::finalize() {
-  Context.reset();
-  // We don't clear the ExternalContext.
-
   delete ObjFileMMI;
   ObjFileMMI = nullptr;
 }
 
-MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
-    : TM(std::move(MMI.TM)),
-      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
-      MachineFunctions(std::move(MMI.MachineFunctions)) {
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine &TM,
+                                     MCContext &Context)
+    : TM(TM), Context(Context) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
-  ObjFileMMI = MMI.ObjFileMMI;
-  ExternalContext = MMI.ExternalContext;
-  TheModule = MMI.TheModule;
-}
-
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
-  initialize();
-}
-
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
-                                     MCContext *ExtContext)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false),
-      ExternalContext(ExtContext) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
 
@@ -137,9 +112,7 @@ public:
     return true;
   }
 
-  StringRef getPassName() const override {
-    return "Free MachineFunction";
-  }
+  StringRef getPassName() const override { return "Free MachineFunction"; }
 };
 
 } // end anonymous namespace
@@ -151,14 +124,8 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
+    MachineModuleInfo &MMI)
+    : ImmutablePass(ID), MMI(MMI) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
