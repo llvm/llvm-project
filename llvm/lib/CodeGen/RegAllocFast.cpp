@@ -335,7 +335,7 @@ private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
 
   void addRegClassCounts(MutableArrayRef<unsigned> RegClassDefCounts,
-                            Register Reg) const;
+                         Register Reg) const;
 
   void findAndSortDefOperandIndexes(const MachineInstr &MI);
   void findAndSortUseOperandIndexes(const MachineInstr &MI);
