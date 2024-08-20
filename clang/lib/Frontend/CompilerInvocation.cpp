@@ -3078,50 +3078,6 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
       Consumer(Input.getFile());
 }
 
-static void determineInputFromIncludeTree(
-    StringRef IncludeTreeID, CASOptions &CASOpts, DiagnosticsEngine &Diags,
-    std::optional<cas::IncludeTreeRoot> &IncludeTree,
-    std::optional<llvm::MemoryBufferRef> &Buffer, StringRef &InputFilename) {
-  assert(!IncludeTreeID.empty());
-  auto reportError = [&](llvm::Error &&E) {
-    Diags.Report(diag::err_fe_unable_to_load_include_tree)
-        << IncludeTreeID << llvm::toString(std::move(E));
-  };
-  auto CAS = CASOpts.getOrCreateDatabases(Diags).first;
-  if (!CAS)
-    return;
-  auto ID = CAS->parseID(IncludeTreeID);
-  if (!ID)
-    return reportError(ID.takeError());
-  auto Object = CAS->getReference(*ID);
-  if (!Object)
-    return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
-  auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
-  if (!Root)
-    return reportError(Root.takeError());
-  auto MainTree = Root->getMainFileTree();
-  if (!MainTree)
-    return reportError(MainTree.takeError());
-  auto BaseFile = MainTree->getBaseFile();
-  if (!BaseFile)
-    return reportError(BaseFile.takeError());
-  auto FilenameBlob = BaseFile->getFilename();
-  if (!FilenameBlob)
-    return reportError(FilenameBlob.takeError());
-
-  InputFilename = FilenameBlob->getData();
-  IncludeTree = *Root;
-
-  if (InputFilename != Module::getModuleInputBufferName())
-    return;
-
-  // Handle <module-include> buffer
-  auto Contents = BaseFile->getContents();
-  if (!Contents)
-    return reportError(Contents.takeError());
-  Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
-}
-
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                               CASOptions &CASOpts, DiagnosticsEngine &Diags,
                               bool &IsHeaderFile) {
@@ -3367,17 +3323,18 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   Opts.Inputs.clear();
 
-  std::optional<cas::IncludeTreeRoot> Tree;
-  std::optional<llvm::MemoryBufferRef> TreeInputBuffer;
   if (!Opts.CASIncludeTreeID.empty()) {
-    if (!Inputs.empty()) {
+    if (!Inputs.empty())
       Diags.Report(diag::err_drv_inputs_and_include_tree);
+
+    if (DashX.isUnknown()) {
+      Diags.Report(diag::err_drv_include_tree_miss_input_kind);
+      DashX = Language::C; // set to default C to avoid crashing.
     }
-    StringRef InputFilename;
-    determineInputFromIncludeTree(Opts.CASIncludeTreeID, CASOpts, Diags, Tree,
-                                  TreeInputBuffer, InputFilename);
-    if (!InputFilename.empty())
-      Inputs.push_back(InputFilename.str());
+
+    // Quit early as include tree will delay input initialization.
+    Opts.DashX = DashX;
+    return Diags.getNumErrors() == NumErrorsBefore;
   }
 
   if (Inputs.empty())
@@ -3410,20 +3367,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     }
 
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
-  }
-
-  if (Tree) {
-    FrontendInputFile &InputFile = Opts.Inputs.back();
-    if (TreeInputBuffer) {
-      // This is automatically set to modulemap when building a module; revert
-      // to a source file for the module includes buffer.
-      auto Kind = InputFile.getKind().withFormat(InputKind::Source);
-      InputFile = FrontendInputFile(Tree->getRef(), *TreeInputBuffer, Kind,
-                                    InputFile.isSystem());
-    } else {
-      InputFile = FrontendInputFile(Tree->getRef(), InputFile.getFile(),
-                                    InputFile.getKind(), InputFile.isSystem());
-    }
   }
 
   Opts.DashX = DashX;

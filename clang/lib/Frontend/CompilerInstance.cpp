@@ -89,6 +89,10 @@ CompilerInstance::~CompilerInstance() {
 void CompilerInstance::setInvocation(
     std::shared_ptr<CompilerInvocation> Value) {
   Invocation = std::move(Value);
+
+  /// Initialize the input from CAS when setting the invocation to preserve
+  /// the same behavior when perform all kinds of FrontendActions.
+  initializeDelayedInputFileFromCAS();
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -990,6 +994,57 @@ CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
   return nullptr;
 }
 
+void CompilerInstance::initializeDelayedInputFileFromCAS() {
+  auto &Opts = Invocation->getFrontendOpts();
+  // Return if no need to initialize or already initialized.
+  if (Opts.CASIncludeTreeID.empty() || !Opts.Inputs.empty())
+    return;
+
+  // If there is include tree, initialize the inputs from CAS.
+  auto reportError = [&](llvm::Error &&E) {
+    Diagnostics->Report(diag::err_fe_unable_to_load_include_tree)
+        << Opts.CASIncludeTreeID << llvm::toString(std::move(E));
+  };
+  auto CAS = Invocation->getCASOpts().getOrCreateDatabases(*Diagnostics).first;
+  if (!CAS)
+    return;
+  auto ID = CAS->parseID(Opts.CASIncludeTreeID);
+  if (!ID)
+    return reportError(ID.takeError());
+  auto Object = CAS->getReference(*ID);
+  if (!Object)
+    return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
+  auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
+  if (!Root)
+    return reportError(Root.takeError());
+  auto MainTree = Root->getMainFileTree();
+  if (!MainTree)
+    return reportError(MainTree.takeError());
+  auto BaseFile = MainTree->getBaseFile();
+  if (!BaseFile)
+    return reportError(BaseFile.takeError());
+  auto FilenameBlob = BaseFile->getFilename();
+  if (!FilenameBlob)
+    return reportError(FilenameBlob.takeError());
+
+  auto InputFilename = FilenameBlob->getData();
+
+  if (InputFilename != Module::getModuleInputBufferName()) {
+    Opts.Inputs.emplace_back(Root->getRef(), InputFilename, Opts.DashX,
+                             /*isSystem=*/false);
+  } else {
+    assert(Opts.ProgramAction == frontend::GenerateModule);
+
+    auto Kind = Opts.DashX.withFormat(InputKind::Source);
+    auto Contents = BaseFile->getContents();
+    if (!Contents)
+      return reportError(Contents.takeError());
+    auto Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
+    Opts.Inputs.emplace_back(Root->getRef(), Buffer, Kind,
+                             (bool)Opts.IsSystemModule);
+  }
+}
+
 Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
 CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
                                        bool RemoveFileOnSignal,
@@ -1121,6 +1176,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // binary search later.
   llvm::sort(getCodeGenOpts().TocDataVarsUserSpecified);
   llvm::sort(getCodeGenOpts().NoTocDataVars);
+
+  initializeDelayedInputFileFromCAS();
 
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
