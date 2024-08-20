@@ -319,46 +319,6 @@ static void widenScalarLLTNextPow2(Register Reg, MachineRegisterInfo &MRI) {
     MRI.setType(Reg, LLT::scalar(NewSz));
 }
 
-inline bool getIsFloat(SPIRVType *SpvType, const SPIRVGlobalRegistry &GR) {
-  bool IsFloat = SpvType->getOpcode() == SPIRV::OpTypeFloat;
-  return IsFloat ? true
-                 : SpvType->getOpcode() == SPIRV::OpTypeVector &&
-                       GR.getSPIRVTypeForVReg(SpvType->getOperand(1).getReg())
-                               ->getOpcode() == SPIRV::OpTypeFloat;
-}
-
-/*
-static std::pair<Register, unsigned>
-createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
-               const SPIRVGlobalRegistry &GR) {
-  if (!SpvType)
-    SpvType = GR.getSPIRVTypeForVReg(SrcReg);
-  assert(SpvType && "VReg is expected to have SPIRV type");
-  LLT NewT;
-  LLT SrcLLT = MRI.getType(SrcReg);
-  bool IsFloat = getIsFloat(SpvType, GR);
-  auto GetIdOp = IsFloat ? SPIRV::GET_fID : SPIRV::GET_ID;
-  bool IsVec = SrcLLT.isVector();
-  unsigned NumElements =
-      IsVec ? std::max(2U, GR.getScalarOrVectorComponentCount(SpvType)) : 1;
-  if (SrcLLT.isPointer()) {
-    unsigned PtrSz = GR.getPointerSize();
-    NewT = LLT::pointer(0, PtrSz);
-    if (IsVec)
-      NewT = LLT::fixed_vector(NumElements, NewT);
-    GetIdOp = IsVec ? SPIRV::GET_vpID : SPIRV::GET_pID;
-  } else if (IsVec) {
-    NewT = LLT::fixed_vector(
-        NumElements, LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType)));
-    GetIdOp = IsFloat ? SPIRV::GET_vfID : SPIRV::GET_vID;
-  } else {
-    NewT = LLT::scalar(GR.getScalarOrVectorBitWidth(SpvType));
-  }
-  Register IdReg = MRI.createGenericVirtualRegister(NewT);
-  MRI.setRegClass(IdReg, GR.getRegClass(SpvType));
-  return {IdReg, GetIdOp};
-}
-*/
 static std::pair<Register, unsigned>
 createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
                const SPIRVGlobalRegistry &GR) {
@@ -454,6 +414,11 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   SmallVector<MachineInstr *, 10> ToErase;
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
 
+  bool IsExtendedInts =
+      ST->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
       continue;
@@ -464,10 +429,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       MachineInstr &MI = *MII;
       unsigned MIOp = MI.getOpcode();
 
-      // validate bit width of scalar registers
-      for (const auto &MOP : MI.operands())
-        if (MOP.isReg())
-          widenScalarLLTNextPow2(MOP.getReg(), MRI);
+      if (!IsExtendedInts) {
+        // validate bit width of scalar registers
+        for (const auto &MOP : MI.operands())
+          if (MOP.isReg())
+            widenScalarLLTNextPow2(MOP.getReg(), MRI);
+      }
 
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
         Register Reg = MI.getOperand(1).getReg();

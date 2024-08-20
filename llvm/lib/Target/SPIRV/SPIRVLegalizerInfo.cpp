@@ -54,6 +54,13 @@ bool isTypeFoldingSupported(unsigned Opcode) {
   return TypeFoldingSupportingOpcs.count(Opcode) > 0;
 }
 
+LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
+  return [IsExtendedInts, TypeIdx](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return IsExtendedInts && Ty.isValid() && Ty.isScalar();
+  };
+}
+
 SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   using namespace TargetOpcode;
 
@@ -143,6 +150,27 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
 
+  bool IsExtendedInts =
+      ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+  auto extendedScalarsAndVectors =
+      [IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[0];
+        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+      };
+  auto extendedScalarsAndVectorsProduct = [IsExtendedInts](
+                                              const LegalityQuery &Query) {
+    const LLT Ty1 = Query.Types[0], Ty2 = Query.Types[1];
+    return IsExtendedInts && Ty1.isValid() && Ty2.isValid() &&
+           !Ty1.isPointerOrPointerVector() && !Ty2.isPointerOrPointerVector();
+  };
+  auto extendedPtrsScalarsAndVectors =
+      [IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[0];
+        return IsExtendedInts && Ty.isValid();
+      };
+
   for (auto Opc : TypeFoldingSupportingOpcs)
     getActionDefinitionsBuilder(Opc).custom();
 
@@ -182,7 +210,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE}).legalIf(typeInSet(1, allPtrs));
 
-  getActionDefinitionsBuilder(G_BITREVERSE).legalFor(allIntScalarsAndVectors);
+  getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
+                               G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
+                               G_USUBSAT})
+      .legalFor(allIntScalarsAndVectors)
+      .legalIf(extendedScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
 
@@ -194,13 +226,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allScalarsAndVectors);
 
-  getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
-      .legalFor(allIntScalarsAndVectors);
+  getActionDefinitionsBuilder(G_CTPOP)
+      .legalForCartesianProduct(allIntScalarsAndVectors)
+      .legalIf(extendedScalarsAndVectorsProduct);
 
-  getActionDefinitionsBuilder(G_CTPOP).legalForCartesianProduct(
-      allIntScalarsAndVectors, allIntScalarsAndVectors);
+  // Extensions.
+  getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalForCartesianProduct(allScalarsAndVectors)
+      .legalIf(extendedScalarsAndVectorsProduct);
 
-  getActionDefinitionsBuilder(G_PHI).legalFor(allPtrsScalarsAndVectors);
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor(allPtrsScalarsAndVectors)
+      .legalIf(extendedPtrsScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),
@@ -211,11 +248,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_INTTOPTR)
-      .legalForCartesianProduct(allPtrs, allIntScalars);
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalForCartesianProduct(allIntScalars, allPtrs);
-  getActionDefinitionsBuilder(G_PTR_ADD).legalForCartesianProduct(
-      allPtrs, allIntScalars);
+      .legalForCartesianProduct(allIntScalars, allPtrs)
+      .legalIf(
+          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)));
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
 
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().
@@ -246,10 +289,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_UADDO, G_USUBO, G_SMULO, G_UMULO})
       .alwaysLegal();
-
-  // Extensions.
-  getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct(allScalarsAndVectors);
 
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
@@ -310,10 +349,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
     // Struct return types become a single scalar, so cannot easily legalize.
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).alwaysLegal();
-
-    // supported saturation arithmetic
-    getActionDefinitionsBuilder({G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT})
-        .legalFor(allIntScalarsAndVectors);
   }
 
   getLegacyLegalizerInfo().computeTables();
