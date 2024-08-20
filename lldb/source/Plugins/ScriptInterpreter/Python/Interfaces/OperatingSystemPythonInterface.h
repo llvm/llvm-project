@@ -14,7 +14,7 @@
 
 #if LLDB_ENABLE_PYTHON
 
-#include "../ScriptedThreadPythonInterface.h"
+#include "ScriptedThreadPythonInterface.h"
 
 #include <optional>
 
