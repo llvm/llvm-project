@@ -2036,20 +2036,21 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   auto IsPrivatizable = [](const Symbol *sym) {
+    auto *misc{sym->detailsIf<MiscDetails>()};
     return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
         !sym->owner().IsDerivedType() &&
         sym->owner().kind() != Scope::Kind::ImpliedDos &&
         !sym->detailsIf<semantics::AssocEntityDetails>() &&
-        !sym->detailsIf<semantics::NamelistDetails>();
+        !sym->detailsIf<semantics::NamelistDetails>() &&
+        (!misc ||
+            (misc->kind() != MiscDetails::Kind::ComplexPartRe &&
+                misc->kind() != MiscDetails::Kind::ComplexPartIm &&
+                misc->kind() != MiscDetails::Kind::KindParamInquiry &&
+                misc->kind() != MiscDetails::Kind::LenParamInquiry &&
+                misc->kind() != MiscDetails::Kind::ConstructName));
   };
 
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
-    // Exclude construct-names
-    if (auto *details{symbol->detailsIf<semantics::MiscDetails>()}) {
-      if (details->kind() == semantics::MiscDetails::Kind::ConstructName) {
-        return;
-      }
-    }
     if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly

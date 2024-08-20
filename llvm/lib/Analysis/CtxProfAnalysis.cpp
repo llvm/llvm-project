@@ -96,6 +96,9 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
 }
 AnalysisKey CtxProfAnalysis::Key;
 
+CtxProfAnalysis::CtxProfAnalysis(StringRef Profile)
+    : Profile(Profile.empty() ? UseCtxProfile : Profile) {}
+
 PGOContextualProfile CtxProfAnalysis::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Profile);
@@ -182,4 +185,11 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
   OS << formatv("{0:2}", JSONed);
   OS << "\n";
   return PreservedAnalyses::all();
+}
+
+InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
+  while (auto *Prev = CB.getPrevNode())
+    if (auto *IPC = dyn_cast<InstrProfCallsite>(Prev))
+      return IPC;
+  return nullptr;
 }

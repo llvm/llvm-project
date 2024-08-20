@@ -162,7 +162,7 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
-For simplicity of lowering, We match DXIL in using an index from the beginning
+For simplicity of lowering, we match DXIL in using an index from the beginning
 of the binding space rather than an index from the lower bound of the binding
 itself.
 

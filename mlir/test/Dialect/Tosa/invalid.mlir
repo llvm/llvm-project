@@ -291,6 +291,14 @@ func.func @test_reshape_invalid_placeholders(%arg0 : tensor<?xf32>) -> () {
 
 // -----
 
+func.func @test_reshape_invalid_tensor_dim(%arg0 : tensor<4x?xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size -2}}
+  %0 = "tosa.reshape" (%arg0) {new_shape = array<i64: -2, -1>} : (tensor<4x?xf32>) -> tensor<?x4xf32>
+  return
+}
+
+// -----
+
 func.func @test_reverse_axis_out_of_range(%arg0 : tensor<13x21x3xf32>) -> () {
   // expected-error@+1 {{'tosa.reverse' op expect input tensor rank (3) to be larger than reverse axis (5)}}
   %0 = tosa.reverse %arg0 {axis = 5 : i32} : (tensor<13x21x3xf32>) -> tensor<?x?x?xi32>
