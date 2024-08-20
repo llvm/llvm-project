@@ -2448,7 +2448,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       Register TmpReg;
 
-      // Do an in-place scale of the wave offset to the lane offset.
       if (FrameReg && !ST.enableFlatScratch()) {
         // FIXME: In the common case where the add does not also read its result
         // (i.e. this isn't a reg += fi), it's not finding the dest reg as
