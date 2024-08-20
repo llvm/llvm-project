@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  CGData
   CodeGen
-  CodeGenData
   Core
   Support
   )
