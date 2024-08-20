@@ -441,7 +441,7 @@ json::Value toJSON(const SetBreakpointsResponseBody &SBR) {
 bool fromJSON(const json::Value &Params, SetFunctionBreakpointsArguments &SFBA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("breakpoints", SFBA.breakpoints);
+  return O && O.map("breakpoints", SFBA.breakpoints) && O.mapOptional("focusThread", SFBA.focusThread);
 }
 
 json::Value toJSON(const SetFunctionBreakpointsResponseBody &SFBR) {

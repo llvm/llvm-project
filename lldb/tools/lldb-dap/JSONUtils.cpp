@@ -991,4 +991,60 @@ std::string JSONToString(const llvm::json::Value &json) {
   return data;
 }
 
+// "BreakpointMode": {
+//   "type": "object",
+//   "description": "A BreakpointMode is provided as a option when setting 
+//                   breakpoints on sources or instructions.",
+//   "properties": {
+//     "mode": {
+//       "type": "string",
+//       "description": "The internal ID of the mode. This value is passed 
+//                       to the setBreakpoints request."
+//     },
+//     "label": {
+//       "type": "string",
+//       "description": "The name of the breakpoint mode. This is shown in the UI."
+//     },
+//     "description": {
+//       "type": "string",
+//       "description": "An optional help text providing additional information about 
+//                       the breakpoint mode. This string is typically shown as a
+//                       hover and can be translated."
+//     }
+//     "appliesTo": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/BreakpointModeApplicability"
+//       },
+//       "description": "Describes one or more type of breakpoint this mode applies to."
+//     }
+//   },
+//   "required": [ "mode", "label", "appliesTo" ]
+// }
+
+std::vector<protocol::BreakpointMode> CreateBreakpointModes() {
+  std::vector<protocol::BreakpointMode> breakpointModes;
+  std::vector<protocol::BreakpointModeApplicability> appliesTo;
+  appliesTo.emplace_back(protocol::BreakpointModeApplicability::eBreakpointModeApplicabilitySource);
+
+  // Currently we support "Normal" and "Thread Focused" modes for source bp
+  // where "Normal" is no-op, and "Thread Focused" will add filter for tid
+  // using the builtin dap.focus_tid
+  protocol::BreakpointMode normal{
+    "normal", // mode
+    "Normal", // label
+    "Regular source breakpoint", // description
+    appliesTo,
+  };
+  protocol::BreakpointMode threadFocused{
+    "threadFocused", // mode
+    "Thread Focus", // label 
+    "Breakpoint that will focus on the current selected thread.", // description
+    appliesTo,
+  };
+  breakpointModes.emplace_back(normal);
+  breakpointModes.emplace_back(threadFocused);
+  return breakpointModes;
+}
+
 } // namespace lldb_dap

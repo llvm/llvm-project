@@ -113,7 +113,9 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         }
       }
     }
-
+    // Return the tid if the breakpoint is set for a specific thread
+    if (m_bp.GetThreadID() != LLDB_INVALID_THREAD_ID)
+      breakpoint.threadId = m_bp.GetThreadID();
     breakpoint.source = std::move(source);
   }
 
@@ -133,4 +135,8 @@ void Breakpoint::SetBreakpoint() {
     SetCondition();
   if (!m_hit_condition.empty())
     SetHitCondition();
+}
+
+void Breakpoint::SetThreadID(lldb::tid_t tid) {
+  m_bp.SetThreadID(tid);
 }

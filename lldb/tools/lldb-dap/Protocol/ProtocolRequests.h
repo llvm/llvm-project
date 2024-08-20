@@ -684,6 +684,7 @@ llvm::json::Value toJSON(const SetBreakpointsResponseBody &);
 struct SetFunctionBreakpointsArguments {
   /// The function names of the breakpoints.
   std::vector<FunctionBreakpoint> breakpoints;
+  bool focusThread = false;
 };
 bool fromJSON(const llvm::json::Value &, SetFunctionBreakpointsArguments &,
               llvm::json::Path);

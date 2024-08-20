@@ -415,6 +415,13 @@ llvm::json::Object CreateInitializedEventObject(lldb::SBTarget &target);
 /// Convert a given JSON object to a string.
 std::string JSONToString(const llvm::json::Value &json);
 
+/// Create a "breakpointModes" JSON object that contains supported
+/// modes
+///
+/// \return
+///     A JSON object with breakpoint modes
+std::vector<protocol::BreakpointMode> CreateBreakpointModes();
+
 } // namespace lldb_dap
 
 #endif

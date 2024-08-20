@@ -647,6 +647,8 @@ struct Breakpoint {
   /// a breakpoint is verified or a specific reason is not known, the adapter
   /// should omit this property.
   std::optional<BreakpointReason> reason;
+  // The tid is breakpoint is set for a specific thread.
+  std::optional<lldb::tid_t> threadId;
 };
 bool fromJSON(const llvm::json::Value &, Breakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const Breakpoint &);

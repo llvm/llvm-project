@@ -21,6 +21,7 @@ llvm::Expected<protocol::SetFunctionBreakpointsResponseBody>
 SetFunctionBreakpointsRequestHandler::Run(
     const protocol::SetFunctionBreakpointsArguments &args) const {
   std::vector<protocol::Breakpoint> response_breakpoints;
+  const bool focus_thread = args.focusThread;
 
   // Disable any function breakpoints that aren't in this request.
   // There is no call to remove function breakpoints other than calling this
@@ -35,7 +36,9 @@ SetFunctionBreakpointsRequestHandler::Run(
       it->second.SetBreakpoint();
     else
       it->second.UpdateBreakpoint(fn_bp);
-
+    // LLDB_INVALID_THREAD_ID will set breakpoint for all thread
+    if (focus_thread && dap.focus_tid != LLDB_INVALID_THREAD_ID)
+      it->second.SetThreadID(dap.focus_tid);
     response_breakpoints.push_back(it->second.ToProtocolBreakpoint());
     seen.erase(fn_bp.GetFunctionName());
   }

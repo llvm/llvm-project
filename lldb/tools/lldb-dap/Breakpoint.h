@@ -30,6 +30,7 @@ public:
 
   bool MatchesName(const char *name);
   void SetBreakpoint();
+  void SetThreadID(lldb::tid_t tid);
 
 protected:
   /// The LLDB breakpoint associated wit this source breakpoint.
