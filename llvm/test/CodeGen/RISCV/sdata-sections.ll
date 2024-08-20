@@ -6,6 +6,10 @@
 @v = dso_local global i32 0, align 4
 @r = dso_local global i64 7, align 8
 
+; If a symbol has an explicit sdata/sbss section name, we should honor it.
+@vv = dso_local global i32 0, section ".sbss", align 4
+@rr = dso_local global i64 7, section ".sdata", align 8
+
 ; SmallDataLimit set to 8, so we expect @v will be put in sbss
 ; and @r will be put in sdata.
 !llvm.module.flags = !{!0}
@@ -13,5 +17,9 @@
 
 ; RV32:    .section        .sbss.v,"aw"
 ; RV32:    .section        .sdata.r,"aw"
+; RV32:    .section        .sbss,"aw"
+; RV32:    .section        .sdata,"aw"
 ; RV64:    .section        .sbss.v,"aw"
 ; RV64:    .section        .sdata.r,"aw"
+; RV64:    .section        .sbss,"aw"
+; RV64:    .section        .sdata,"aw"

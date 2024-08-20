@@ -105,8 +105,10 @@ MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Handle Small Section classification here.
   if (isGlobalInSmallSection(GO, TM)) {
-    // Emit a unique section for sdata/sbss when -fdata-section.
-    bool EmitUniquedSection = TM.getDataSections();
+    // Emit to an unique sdata/sbss section when -fdata-section is set.
+    // However, if a symbol has an explicit sdata/sbss section, place it in that
+    // section.
+    bool EmitUniquedSection = TM.getDataSections() && !GO->hasSection();
 
     if (Kind.isBSS()) {
       if (EmitUniquedSection) {
