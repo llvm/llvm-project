@@ -5159,10 +5159,9 @@ std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
     break;
 
   case Kind::None:
-    assert(0 && "effectProhibitingInference with None");
     break;
   }
-  llvm_unreachable("unknown effect kind");
+  llvm_unreachable("unknown effect kind or None");
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
@@ -5185,10 +5184,9 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
   case Kind::Blocking:
     return false;
   case Kind::None:
-    assert(0 && "shouldDiagnoseFunctionCall with None");
     break;
   }
-  llvm_unreachable("unknown effect kind");
+  llvm_unreachable("unknown effect kind or None");
 }
 
 // =====
