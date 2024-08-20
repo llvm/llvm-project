@@ -34,7 +34,6 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   ADD_TO_PARENT MLIRPythonSources.Core.Python
   SOURCES
-    extras/__init__.py
     extras/types.py
     extras/meta.py
 )
