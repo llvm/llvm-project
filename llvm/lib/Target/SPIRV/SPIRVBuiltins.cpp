@@ -431,7 +431,6 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
     FalseConst = GR->buildConstantInt(0, MIRBuilder, ReturnType);
   }
 
-  MIRBuilder.getMRI()->setRegClass(ReturnRegister, GR->getRegClass(ReturnType));
   return MIRBuilder.buildSelect(ReturnRegister, SourceRegister, TrueConst,
                                 FalseConst);
 }
@@ -577,17 +576,12 @@ static bool buildOpFromWrapper(MachineIRBuilder &MIRBuilder, unsigned Opcode,
                                const SPIRV::IncomingCall *Call,
                                Register TypeReg,
                                ArrayRef<uint32_t> ImmArgs = {}) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   auto MIB = MIRBuilder.buildInstr(Opcode);
   if (TypeReg.isValid())
     MIB.addDef(Call->ReturnRegister).addUse(TypeReg);
   unsigned Sz = Call->Arguments.size() - ImmArgs.size();
-  for (unsigned i = 0; i < Sz; ++i) {
-    Register ArgReg = Call->Arguments[i];
-    if (!MRI->getRegClassOrNull(ArgReg))
-      MRI->setRegClass(ArgReg, &SPIRV::iIDRegClass);
-    MIB.addUse(ArgReg);
-  }
+  for (unsigned i = 0; i < Sz; ++i)
+    MIB.addUse(Call->Arguments[i]);
   for (uint32_t ImmArg : ImmArgs)
     MIB.addImm(ImmArg);
   return true;
@@ -601,8 +595,6 @@ static bool buildAtomicInitInst(const SPIRV::IncomingCall *Call,
 
   assert(Call->Arguments.size() == 2 &&
          "Need 2 arguments for atomic init translation");
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
   MIRBuilder.buildInstr(SPIRV::OpStore)
       .addUse(Call->Arguments[0])
       .addUse(Call->Arguments[1]);
@@ -618,22 +610,17 @@ static bool buildAtomicLoadInst(const SPIRV::IncomingCall *Call,
     return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicLoad, Call, TypeReg);
 
   Register PtrRegister = Call->Arguments[0];
-  MIRBuilder.getMRI()->setRegClass(PtrRegister, &SPIRV::iIDRegClass);
   // TODO: if true insert call to __translate_ocl_memory_sccope before
   // OpAtomicLoad and the function implementation. We can use Translator's
   // output for transcoding/atomic_explicit_arguments.cl as an example.
-  Register ScopeRegister;
-  if (Call->Arguments.size() > 1) {
-    ScopeRegister = Call->Arguments[1];
-    MIRBuilder.getMRI()->setRegClass(ScopeRegister, &SPIRV::iIDRegClass);
-  } else
-    ScopeRegister = buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
-
+  Register ScopeRegister =
+      Call->Arguments.size() > 1
+          ? Call->Arguments[1]
+          : buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
   Register MemSemanticsReg;
   if (Call->Arguments.size() > 2) {
     // TODO: Insert call to __translate_ocl_memory_order before OpAtomicLoad.
     MemSemanticsReg = Call->Arguments[2];
-    MIRBuilder.getMRI()->setRegClass(MemSemanticsReg, &SPIRV::iIDRegClass);
   } else {
     int Semantics =
         SPIRV::MemorySemantics::SequentiallyConsistent |
@@ -660,12 +647,10 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
   Register PtrRegister = Call->Arguments[0];
-  MIRBuilder.getMRI()->setRegClass(PtrRegister, &SPIRV::iIDRegClass);
   int Semantics =
       SPIRV::MemorySemantics::SequentiallyConsistent |
       getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
   Register MemSemanticsReg = buildConstantIntReg32(Semantics, MIRBuilder, GR);
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
   MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
       .addUse(PtrRegister)
       .addUse(ScopeRegister)
@@ -688,9 +673,6 @@ static bool buildAtomicCompareExchangeInst(
   Register ObjectPtr = Call->Arguments[0];   // Pointer (volatile A *object.)
   Register ExpectedArg = Call->Arguments[1]; // Comparator (C* expected).
   Register Desired = Call->Arguments[2];     // Value (C Desired).
-  MRI->setRegClass(ObjectPtr, &SPIRV::iIDRegClass);
-  MRI->setRegClass(ExpectedArg, &SPIRV::iIDRegClass);
-  MRI->setRegClass(Desired, &SPIRV::iIDRegClass);
   SPIRVType *SpvDesiredTy = GR->getSPIRVTypeForVReg(Desired);
   LLT DesiredLLT = MRI->getType(Desired);
 
@@ -731,8 +713,6 @@ static bool buildAtomicCompareExchangeInst(
       MemSemEqualReg = Call->Arguments[3];
     if (MemOrdNeq == MemSemEqual)
       MemSemUnequalReg = Call->Arguments[4];
-    MRI->setRegClass(Call->Arguments[3], &SPIRV::iIDRegClass);
-    MRI->setRegClass(Call->Arguments[4], &SPIRV::iIDRegClass);
   }
   if (!MemSemEqualReg.isValid())
     MemSemEqualReg = buildConstantIntReg32(MemSemEqual, MIRBuilder, GR);
@@ -749,7 +729,6 @@ static bool buildAtomicCompareExchangeInst(
     Scope = getSPIRVScope(ClScope);
     if (ClScope == static_cast<unsigned>(Scope))
       ScopeReg = Call->Arguments[5];
-    MRI->setRegClass(Call->Arguments[5], &SPIRV::iIDRegClass);
   }
   if (!ScopeReg.isValid())
     ScopeReg = buildConstantIntReg32(Scope, MIRBuilder, GR);
@@ -801,14 +780,12 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
 
   Register PtrRegister = Call->Arguments[0];
   unsigned Semantics = SPIRV::MemorySemantics::None;
-  MRI->setRegClass(PtrRegister, &SPIRV::pIDRegClass);
   Register MemSemanticsReg =
       Call->Arguments.size() >= 3 ? Call->Arguments[2] : Register();
   MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
                                          Semantics, MIRBuilder, GR);
   Register ValueReg = Call->Arguments[1];
   Register ValueTypeReg = GR->getSPIRVTypeID(Call->ReturnType);
-  MRI->setRegClass(ValueReg, GR->getRegClass(Call->ReturnType));
   // support cl_ext_float_atomics
   if (Call->ReturnType->getOpcode() == SPIRV::OpTypeFloat) {
     if (Opcode == SPIRV::OpAtomicIAdd) {
@@ -847,21 +824,10 @@ static bool buildAtomicFloatingRMWInst(const SPIRV::IncomingCall *Call,
                                        SPIRVGlobalRegistry *GR) {
   assert(Call->Arguments.size() == 4 &&
          "Wrong number of atomic floating-type builtin");
-
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-
   Register PtrReg = Call->Arguments[0];
-  MRI->setRegClass(PtrReg, &SPIRV::iIDRegClass);
-
   Register ScopeReg = Call->Arguments[1];
-  MRI->setRegClass(ScopeReg, &SPIRV::iIDRegClass);
-
   Register MemSemanticsReg = Call->Arguments[2];
-  MRI->setRegClass(MemSemanticsReg, &SPIRV::iIDRegClass);
-
   Register ValueReg = Call->Arguments[3];
-  MRI->setRegClass(ValueReg, &SPIRV::iIDRegClass);
-
   MIRBuilder.buildInstr(Opcode)
       .addDef(Call->ReturnRegister)
       .addUse(GR->getSPIRVTypeID(Call->ReturnType))
@@ -938,15 +904,10 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     MemSemantics |= SPIRV::MemorySemantics::SequentiallyConsistent;
   }
 
-  Register MemSemanticsReg;
-  if (MemFlags == MemSemantics) {
-    MemSemanticsReg = Call->Arguments[0];
-    if (!MRI->getRegClassOrNull(MemSemanticsReg))
-      MRI->setRegClass(MemSemanticsReg, &SPIRV::iIDRegClass);
-  } else {
-    MemSemanticsReg = buildConstantIntReg32(MemSemantics, MIRBuilder, GR);
-  }
-
+  Register MemSemanticsReg =
+      MemFlags == MemSemantics
+          ? Call->Arguments[0]
+          : buildConstantIntReg32(MemSemantics, MIRBuilder, GR);
   Register ScopeReg;
   SPIRV::Scope::Scope Scope = SPIRV::Scope::Workgroup;
   SPIRV::Scope::Scope MemScope = Scope;
@@ -963,12 +924,8 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     if (!(MemFlags & SPIRV::CLK_LOCAL_MEM_FENCE) ||
         (Opcode == SPIRV::OpMemoryBarrier))
       Scope = MemScope;
-
-    if (CLScope == static_cast<unsigned>(Scope)) {
+    if (CLScope == static_cast<unsigned>(Scope))
       ScopeReg = Call->Arguments[1];
-      if (!MRI->getRegClassOrNull(ScopeReg))
-        MRI->setRegClass(ScopeReg, &SPIRV::iIDRegClass);
-    }
   }
 
   if (!ScopeReg.isValid())
@@ -1078,19 +1035,13 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
           "Group Operation parameter must be an integer constant");
     uint64_t GrpOp = MI->getOperand(1).getCImm()->getValue().getZExtValue();
     Register ScopeReg = Call->Arguments[0];
-    if (!MRI->getRegClassOrNull(ScopeReg))
-      MRI->setRegClass(ScopeReg, &SPIRV::iIDRegClass);
     auto MIB = MIRBuilder.buildInstr(GroupBuiltin->Opcode)
                    .addDef(Call->ReturnRegister)
                    .addUse(GR->getSPIRVTypeID(Call->ReturnType))
                    .addUse(ScopeReg)
                    .addImm(GrpOp);
-    for (unsigned i = 2; i < Call->Arguments.size(); ++i) {
-      Register ArgReg = Call->Arguments[i];
-      if (!MRI->getRegClassOrNull(ArgReg))
-        MRI->setRegClass(ArgReg, &SPIRV::iIDRegClass);
-      MIB.addUse(ArgReg);
-    }
+    for (unsigned i = 2; i < Call->Arguments.size(); ++i)
+      MIB.addUse(Call->Arguments[i]);
     return true;
   }
 
@@ -1183,10 +1134,8 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     if (VecReg.isValid())
       MIB.addUse(VecReg);
     else
-      for (unsigned i = 1; i < Call->Arguments.size(); i++) {
+      for (unsigned i = 1; i < Call->Arguments.size(); i++)
         MIB.addUse(Call->Arguments[i]);
-        MRI->setRegClass(Call->Arguments[i], &SPIRV::iIDRegClass);
-      }
   }
 
   // Build select instruction.
@@ -1220,7 +1169,6 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
                                     : Register(0));
   }
 
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (IntelSubgroups->IsBlock) {
     // Minimal number or arguments set in TableGen records is 1
     if (SPIRVType *Arg0Type = GR->getSPIRVTypeForVReg(Call->Arguments[0])) {
@@ -1257,13 +1205,8 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
           : MIRBuilder.buildInstr(OpCode)
                 .addDef(Call->ReturnRegister)
                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-  for (size_t i = 0; i < Call->Arguments.size(); ++i) {
-    Register ArgReg = Call->Arguments[i];
-    MIB.addUse(ArgReg);
-    if (!MRI->getRegClassOrNull(ArgReg))
-      MRI->setRegClass(ArgReg, &SPIRV::iIDRegClass);
-  }
-
+  for (size_t i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
   return true;
 }
 
@@ -1285,13 +1228,8 @@ static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
 
   Register GroupResultReg = Call->ReturnRegister;
-  if (!MRI->getRegClassOrNull(GroupResultReg))
-    MRI->setRegClass(GroupResultReg, GR->getRegClass(Call->ReturnType));
-
-  // Scope
   Register ScopeReg = Call->Arguments[0];
-  if (!MRI->getRegClassOrNull(ScopeReg))
-    MRI->setRegClass(ScopeReg, &SPIRV::iIDRegClass);
+  Register ValueReg = Call->Arguments[2];
 
   // Group Operation
   Register ConstGroupOpReg = Call->Arguments[1];
@@ -1305,11 +1243,6 @@ static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
     report_fatal_error("uniform group instructions: group operation must be an "
                        "integer constant",
                        false);
-
-  // Value
-  Register ValueReg = Call->Arguments[2];
-  if (!MRI->getRegClassOrNull(ValueReg))
-    MRI->setRegClass(ValueReg, GR->getRegClass(Call->ReturnType));
 
   auto MIB = MIRBuilder.buildInstr(GroupUniform->Opcode)
                  .addDef(GroupResultReg)
@@ -1334,10 +1267,7 @@ static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
     report_fatal_error(DiagMsg.c_str(), false);
   }
 
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register ResultReg = Call->ReturnRegister;
-  if (!MRI->getRegClassOrNull(ResultReg))
-    MRI->setRegClass(ResultReg, &SPIRV::iIDRegClass);
 
   // Deduce the `Scope` operand from the builtin function name.
   SPIRV::Scope::Scope ScopeArg =
@@ -1654,7 +1584,6 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
   bool IsDimBuf = ImgType->getOperand(2).getImm() == SPIRV::Dim::DIM_Buffer;
   unsigned Opcode =
       IsDimBuf ? SPIRV::OpImageQuerySize : SPIRV::OpImageQuerySizeLod;
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
   auto MIB = MIRBuilder.buildInstr(Opcode)
                  .addDef(QueryResult)
                  .addUse(GR->getSPIRVTypeID(QueryResultType))
@@ -1710,7 +1639,6 @@ static bool generateImageMiscQueryInst(const SPIRV::IncomingCall *Call,
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
   Register Image = Call->Arguments[0];
-  MIRBuilder.getMRI()->setRegClass(Image, &SPIRV::iIDRegClass);
   SPIRV::Dim::Dim ImageDimensionality = static_cast<SPIRV::Dim::Dim>(
       GR->getSPIRVTypeForVReg(Image)->getOperand(2).getImm());
   (void)ImageDimensionality;
@@ -1774,12 +1702,8 @@ static bool generateReadImageInst(const StringRef DemangledCall,
                                   SPIRVGlobalRegistry *GR) {
   Register Image = Call->Arguments[0];
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  MRI->setRegClass(Image, &SPIRV::iIDRegClass);
-  MRI->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
   bool HasOclSampler = DemangledCall.contains_insensitive("ocl_sampler");
   bool HasMsaa = DemangledCall.contains_insensitive("msaa");
-  if (HasOclSampler || HasMsaa)
-    MRI->setRegClass(Call->Arguments[2], &SPIRV::iIDRegClass);
   if (HasOclSampler) {
     Register Sampler = Call->Arguments[1];
 
@@ -1805,32 +1729,35 @@ static bool generateReadImageInst(const StringRef DemangledCall,
 
     Register Lod = GR->buildConstantFP(APFloat::getZero(APFloat::IEEEsingle()),
                                        MIRBuilder);
-    SPIRVType *TempType = Call->ReturnType;
-    bool NeedsExtraction = false;
-    if (TempType->getOpcode() != SPIRV::OpTypeVector) {
-      TempType =
+
+    if (Call->ReturnType->getOpcode() != SPIRV::OpTypeVector) {
+      SPIRVType *TempType =
           GR->getOrCreateSPIRVVectorType(Call->ReturnType, 4, MIRBuilder);
-      NeedsExtraction = true;
-    }
-    LLT LLType = LLT::scalar(GR->getScalarOrVectorBitWidth(TempType));
-    Register TempRegister = MRI->createGenericVirtualRegister(LLType);
-    MRI->setRegClass(TempRegister, &SPIRV::iIDRegClass);
-    GR->assignSPIRVTypeToVReg(TempType, TempRegister, MIRBuilder.getMF());
-
-    MIRBuilder.buildInstr(SPIRV::OpImageSampleExplicitLod)
-        .addDef(NeedsExtraction ? TempRegister : Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(TempType))
-        .addUse(SampledImage)
-        .addUse(Call->Arguments[2]) // Coordinate.
-        .addImm(SPIRV::ImageOperand::Lod)
-        .addUse(Lod);
-
-    if (NeedsExtraction)
+      Register TempRegister =
+          MRI->createGenericVirtualRegister(GR->getRegType(TempType));
+      MRI->setRegClass(TempRegister, GR->getRegClass(TempType));
+      GR->assignSPIRVTypeToVReg(TempType, TempRegister, MIRBuilder.getMF());
+      MIRBuilder.buildInstr(SPIRV::OpImageSampleExplicitLod)
+          .addDef(TempRegister)
+          .addUse(GR->getSPIRVTypeID(TempType))
+          .addUse(SampledImage)
+          .addUse(Call->Arguments[2]) // Coordinate.
+          .addImm(SPIRV::ImageOperand::Lod)
+          .addUse(Lod);
       MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
           .addDef(Call->ReturnRegister)
           .addUse(GR->getSPIRVTypeID(Call->ReturnType))
           .addUse(TempRegister)
           .addImm(0);
+    } else {
+      MIRBuilder.buildInstr(SPIRV::OpImageSampleExplicitLod)
+          .addDef(Call->ReturnRegister)
+          .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+          .addUse(SampledImage)
+          .addUse(Call->Arguments[2]) // Coordinate.
+          .addImm(SPIRV::ImageOperand::Lod)
+          .addUse(Lod);
+    }
   } else if (HasMsaa) {
     MIRBuilder.buildInstr(SPIRV::OpImageRead)
         .addDef(Call->ReturnRegister)
@@ -1852,9 +1779,6 @@ static bool generateReadImageInst(const StringRef DemangledCall,
 static bool generateWriteImageInst(const SPIRV::IncomingCall *Call,
                                    MachineIRBuilder &MIRBuilder,
                                    SPIRVGlobalRegistry *GR) {
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
-  MIRBuilder.getMRI()->setRegClass(Call->Arguments[2], &SPIRV::iIDRegClass);
   MIRBuilder.buildInstr(SPIRV::OpImageWrite)
       .addUse(Call->Arguments[0])  // Image.
       .addUse(Call->Arguments[1])  // Coordinate.
@@ -1909,10 +1833,6 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
           "Unable to recognize SPIRV type name: " + ReturnType;
       report_fatal_error(DiagMsg.c_str());
     }
-    MRI->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-    MRI->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
-    MRI->setRegClass(Call->Arguments[3], &SPIRV::iIDRegClass);
-
     MIRBuilder.buildInstr(SPIRV::OpImageSampleExplicitLod)
         .addDef(Call->ReturnRegister)
         .addUse(GR->getSPIRVTypeID(Type))
@@ -2031,7 +1951,6 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  MRI->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
   SPIRVType *PtrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
   assert(PtrType->getOpcode() == SPIRV::OpTypePointer &&
          PtrType->getOperand(2).isReg());
@@ -2045,14 +1964,9 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
   unsigned NumArgs = Call->Arguments.size();
   assert(NumArgs >= 2);
   Register GlobalWorkSize = Call->Arguments[NumArgs < 4 ? 1 : 2];
-  MRI->setRegClass(GlobalWorkSize, &SPIRV::iIDRegClass);
   Register LocalWorkSize =
       NumArgs == 2 ? Register(0) : Call->Arguments[NumArgs < 4 ? 2 : 3];
-  if (LocalWorkSize.isValid())
-    MRI->setRegClass(LocalWorkSize, &SPIRV::iIDRegClass);
   Register GlobalWorkOffset = NumArgs <= 3 ? Register(0) : Call->Arguments[1];
-  if (GlobalWorkOffset.isValid())
-    MRI->setRegClass(GlobalWorkOffset, &SPIRV::iIDRegClass);
   if (NumArgs < 4) {
     Register Const;
     SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(GlobalWorkSize);
@@ -2061,8 +1975,6 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       assert(DefInstr && isSpvIntrinsic(*DefInstr, Intrinsic::spv_gep) &&
              DefInstr->getOperand(3).isReg());
       Register GWSPtr = DefInstr->getOperand(3).getReg();
-      if (!MRI->getRegClassOrNull(GWSPtr))
-        MRI->setRegClass(GWSPtr, &SPIRV::iIDRegClass);
       // TODO: Maybe simplify generation of the type of the fields.
       unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
       unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
@@ -2211,7 +2123,6 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
   switch (Opcode) {
   case SPIRV::OpRetainEvent:
   case SPIRV::OpReleaseEvent:
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
     return MIRBuilder.buildInstr(Opcode).addUse(Call->Arguments[0]);
   case SPIRV::OpCreateUserEvent:
   case SPIRV::OpGetDefaultQueue:
@@ -2219,21 +2130,15 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
         .addDef(Call->ReturnRegister)
         .addUse(GR->getSPIRVTypeID(Call->ReturnType));
   case SPIRV::OpIsValidEvent:
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
     return MIRBuilder.buildInstr(Opcode)
         .addDef(Call->ReturnRegister)
         .addUse(GR->getSPIRVTypeID(Call->ReturnType))
         .addUse(Call->Arguments[0]);
   case SPIRV::OpSetUserEventStatus:
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
     return MIRBuilder.buildInstr(Opcode)
         .addUse(Call->Arguments[0])
         .addUse(Call->Arguments[1]);
   case SPIRV::OpCaptureEventProfilingInfo:
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
-    MIRBuilder.getMRI()->setRegClass(Call->Arguments[2], &SPIRV::iIDRegClass);
     return MIRBuilder.buildInstr(Opcode)
         .addUse(Call->Arguments[0])
         .addUse(Call->Arguments[1])
@@ -2446,22 +2351,15 @@ static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
   // Add a pointer to the value to load/store.
   MIB.addUse(Call->Arguments[0]);
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  MRI->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
   // Add a value to store.
-  if (!IsLoad) {
+  if (!IsLoad)
     MIB.addUse(Call->Arguments[1]);
-    MRI->setRegClass(Call->Arguments[1], &SPIRV::iIDRegClass);
-  }
   // Add optional memory attributes and an alignment.
   unsigned NumArgs = Call->Arguments.size();
-  if ((IsLoad && NumArgs >= 2) || NumArgs >= 3) {
+  if ((IsLoad && NumArgs >= 2) || NumArgs >= 3)
     MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 1 : 2], MRI));
-    MRI->setRegClass(Call->Arguments[IsLoad ? 1 : 2], &SPIRV::iIDRegClass);
-  }
-  if ((IsLoad && NumArgs >= 3) || NumArgs >= 4) {
+  if ((IsLoad && NumArgs >= 3) || NumArgs >= 4)
     MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 2 : 3], MRI));
-    MRI->setRegClass(Call->Arguments[IsLoad ? 2 : 3], &SPIRV::iIDRegClass);
-  }
   return true;
 }
 
