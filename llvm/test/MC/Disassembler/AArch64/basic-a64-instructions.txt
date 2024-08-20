@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
-# RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
+# RUN: llvm-mc -triple=arm64 -mattr=+ccidx -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
 #------------------------------------------------------------------------------
 # Add/sub (immediate)

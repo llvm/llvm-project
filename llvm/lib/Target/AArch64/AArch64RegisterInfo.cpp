@@ -479,6 +479,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPMR);
   markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {

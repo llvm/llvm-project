@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -221,86 +222,40 @@ static ArrayAttr concatArrayAttr(ArrayAttr lhs, ArrayAttr rhs) {
   return ArrayAttr::get(lhs.getContext(), result);
 }
 
-/// Attempts to return the underlying pointer value that `pointerValue` is based
-/// on. This traverses down the chain of operations to the last operation
-/// producing the base pointer and returns it. If it encounters an operation it
-/// cannot further traverse through, returns the operation's result.
-static Value getUnderlyingObject(Value pointerValue) {
-  while (true) {
-    if (auto gepOp = pointerValue.getDefiningOp<LLVM::GEPOp>()) {
-      pointerValue = gepOp.getBase();
-      continue;
-    }
-
-    if (auto addrCast = pointerValue.getDefiningOp<LLVM::AddrSpaceCastOp>()) {
-      pointerValue = addrCast.getOperand();
-      continue;
-    }
-
-    break;
-  }
-
-  return pointerValue;
-}
-
 /// Attempts to return the set of all underlying pointer values that
 /// `pointerValue` is based on. This function traverses through select
-/// operations and block arguments unlike getUnderlyingObject.
-static SmallVector<Value> getUnderlyingObjectSet(Value pointerValue) {
+/// operations and block arguments.
+static FailureOr<SmallVector<Value>>
+getUnderlyingObjectSet(Value pointerValue) {
   SmallVector<Value> result;
+  WalkContinuation walkResult = walkSlice(pointerValue, [&](Value val) {
+    if (auto gepOp = val.getDefiningOp<LLVM::GEPOp>())
+      return WalkContinuation::advanceTo(gepOp.getBase());
 
-  SmallVector<Value> workList{pointerValue};
-  // Avoid dataflow loops.
-  SmallPtrSet<Value, 4> seen;
-  do {
-    Value current = workList.pop_back_val();
-    current = getUnderlyingObject(current);
+    if (auto addrCast = val.getDefiningOp<LLVM::AddrSpaceCastOp>())
+      return WalkContinuation::advanceTo(addrCast.getOperand());
 
-    if (!seen.insert(current).second)
-      continue;
+    // Attempt to advance to control flow predecessors.
+    std::optional<SmallVector<Value>> controlFlowPredecessors =
+        getControlFlowPredecessors(val);
+    if (controlFlowPredecessors)
+      return WalkContinuation::advanceTo(*controlFlowPredecessors);
 
-    if (auto selectOp = current.getDefiningOp<LLVM::SelectOp>()) {
-      workList.push_back(selectOp.getTrueValue());
-      workList.push_back(selectOp.getFalseValue());
-      continue;
+    // For all non-control flow results, consider `val` an underlying object.
+    if (isa<OpResult>(val)) {
+      result.push_back(val);
+      return WalkContinuation::skip();
     }
 
-    if (auto blockArg = dyn_cast<BlockArgument>(current)) {
-      Block *parentBlock = blockArg.getParentBlock();
+    // If this place is reached, `val` is a block argument that is not
+    // understood. Therefore, we conservatively interrupt.
+    // Note: Dealing with function arguments is not necessary, as the slice
+    // would have to go through an SSACopyOp first.
+    return WalkContinuation::interrupt();
+  });
 
-      // Attempt to find all block argument operands for every predecessor.
-      // If any operand to the block argument wasn't found in a predecessor,
-      // conservatively add the block argument to the result set.
-      SmallVector<Value> operands;
-      bool anyUnknown = false;
-      for (auto iter = parentBlock->pred_begin();
-           iter != parentBlock->pred_end(); iter++) {
-        auto branch = dyn_cast<BranchOpInterface>((*iter)->getTerminator());
-        if (!branch) {
-          result.push_back(blockArg);
-          anyUnknown = true;
-          break;
-        }
-
-        Value operand = branch.getSuccessorOperands(
-            iter.getSuccessorIndex())[blockArg.getArgNumber()];
-        if (!operand) {
-          result.push_back(blockArg);
-          anyUnknown = true;
-          break;
-        }
-
-        operands.push_back(operand);
-      }
-
-      if (!anyUnknown)
-        llvm::append_range(workList, operands);
-
-      continue;
-    }
-
-    result.push_back(current);
-  } while (!workList.empty());
+  if (walkResult.wasInterrupted())
+    return failure();
 
   return result;
 }
@@ -311,36 +266,40 @@ static SmallVector<Value> getUnderlyingObjectSet(Value pointerValue) {
 static void createNewAliasScopesFromNoAliasParameter(
     Operation *call, iterator_range<Region::iterator> inlinedBlocks) {
 
-  // First collect all noalias parameters. These have been specially marked by
-  // the `handleArgument` implementation by using the `ssa.copy` intrinsic and
-  // attaching a `noalias` attribute to it.
-  // These are only meant to be temporary and should therefore be deleted after
-  // we're done using them here.
+  // First, collect all ssa copy operations, which correspond to function
+  // parameters, and additionally store the noalias parameters. All parameters
+  // have been marked by the `handleArgument` implementation by using the
+  // `ssa.copy` intrinsic. Additionally, noalias parameters have an attached
+  // `noalias` attribute to the intrinsics. These intrinsics are only meant to
+  // be temporary and should therefore be deleted after we're done using them
+  // here.
+  SetVector<LLVM::SSACopyOp> ssaCopies;
   SetVector<LLVM::SSACopyOp> noAliasParams;
   for (Value argument : cast<LLVM::CallOp>(call).getArgOperands()) {
     for (Operation *user : argument.getUsers()) {
       auto ssaCopy = llvm::dyn_cast<LLVM::SSACopyOp>(user);
       if (!ssaCopy)
         continue;
+      ssaCopies.insert(ssaCopy);
+
       if (!ssaCopy->hasAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
         continue;
-
       noAliasParams.insert(ssaCopy);
     }
   }
 
-  // If there were none, we have nothing to do here.
-  if (noAliasParams.empty())
-    return;
-
   // Scope exit block to make it impossible to forget to get rid of the
   // intrinsics.
   auto exit = llvm::make_scope_exit([&] {
-    for (LLVM::SSACopyOp ssaCopyOp : noAliasParams) {
+    for (LLVM::SSACopyOp ssaCopyOp : ssaCopies) {
       ssaCopyOp.replaceAllUsesWith(ssaCopyOp.getOperand());
       ssaCopyOp->erase();
     }
   });
+
+  // If there were no noalias parameters, we have nothing to do here.
+  if (noAliasParams.empty())
+    return;
 
   // Create a new domain for this specific inlining and a new scope for every
   // noalias parameter.
@@ -363,14 +322,19 @@ static void createNewAliasScopesFromNoAliasParameter(
 
       // Find the set of underlying pointers that this pointer is based on.
       SmallPtrSet<Value, 4> basedOnPointers;
-      for (Value pointer : pointerArgs)
-        llvm::copy(getUnderlyingObjectSet(pointer),
+      for (Value pointer : pointerArgs) {
+        FailureOr<SmallVector<Value>> underlyingObjectSet =
+            getUnderlyingObjectSet(pointer);
+        if (failed(underlyingObjectSet))
+          return;
+        llvm::copy(*underlyingObjectSet,
                    std::inserter(basedOnPointers, basedOnPointers.begin()));
+      }
 
       bool aliasesOtherKnownObject = false;
       // Go through the based on pointers and check that they are either:
       // * Constants that can be ignored (undef, poison, null pointer).
-      // * Based on a noalias parameter.
+      // * Based on a pointer parameter.
       // * Other pointers that we know can't alias with our noalias parameter.
       //
       // Any other value might be a pointer based on any noalias parameter that
@@ -381,11 +345,13 @@ static void createNewAliasScopesFromNoAliasParameter(
             if (matchPattern(object, m_Constant()))
               return false;
 
-            if (noAliasParams.contains(object.getDefiningOp<LLVM::SSACopyOp>()))
+            if (auto ssaCopy = object.getDefiningOp<LLVM::SSACopyOp>()) {
+              // If that value is based on a noalias parameter, it is guaranteed
+              // to not alias with any other object.
+              aliasesOtherKnownObject |= !noAliasParams.contains(ssaCopy);
               return false;
+            }
 
-            // TODO: This should include other arguments from the inlined
-            //       callable.
             if (isa_and_nonnull<LLVM::AllocaOp, LLVM::AddressOfOp>(
                     object.getDefiningOp())) {
               aliasesOtherKnownObject = true;
@@ -808,29 +774,25 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName())) {
-      if (argument.use_empty())
-        return argument;
 
-      // This code is essentially a workaround for deficiencies in the
-      // inliner interface: We need to transform operations *after* inlined
-      // based on the argument attributes of the parameters *before* inlining.
-      // This method runs prior to actual inlining and thus cannot transform the
-      // post-inlining code, while `processInlinedCallBlocks` does not have
-      // access to pre-inlining function arguments. Additionally, it is required
-      // to distinguish which parameter an SSA value originally came from.
-      // As a workaround until this is changed: Create an ssa.copy intrinsic
-      // with the noalias attribute that can easily be found, and is extremely
-      // unlikely to exist in the code prior to inlining, using this to
-      // communicate between this method and `processInlinedCallBlocks`.
-      // TODO: Fix this by refactoring the inliner interface.
-      auto copyOp = builder.create<LLVM::SSACopyOp>(call->getLoc(), argument);
+    // This code is essentially a workaround for deficiencies in the inliner
+    // interface: We need to transform operations *after* inlined based on the
+    // argument attributes of the parameters *before* inlining. This method runs
+    // prior to actual inlining and thus cannot transform the post-inlining
+    // code, while `processInlinedCallBlocks` does not have access to
+    // pre-inlining function arguments. Additionally, it is required to
+    // distinguish which parameter an SSA value originally came from. As a
+    // workaround until this is changed: Create an ssa.copy intrinsic with the
+    // noalias attribute (when it was present before) that can easily be found,
+    // and is extremely unlikely to exist in the code prior to inlining, using
+    // this to communicate between this method and `processInlinedCallBlocks`.
+    // TODO: Fix this by refactoring the inliner interface.
+    auto copyOp = builder.create<LLVM::SSACopyOp>(call->getLoc(), argument);
+    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName()))
       copyOp->setDiscardableAttr(
           builder.getStringAttr(LLVM::LLVMDialect::getNoAliasAttrName()),
           builder.getUnitAttr());
-      return copyOp;
-    }
-    return argument;
+    return copyOp;
   }
 
   void processInlinedCallBlocks(
