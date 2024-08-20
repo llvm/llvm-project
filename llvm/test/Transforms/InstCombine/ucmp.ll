@@ -349,13 +349,13 @@ define i8 @ucmp_from_select_le_neg1(i32 %x, i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[NE:%.*]] = sext i1 [[NE_BOOL]] to i8
-; CHECK-NEXT:    [[LE_NOT:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[LE_NOT:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[LE_NOT]], i8 1, i8 [[NE]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ne_bool = icmp ult i32 %x, %y
   %ne = sext i1 %ne_bool to i8
-  %le = icmp ule i32 %x, %y
+  %le = icmp uge i32 %x, %y
   %r = select i1 %le, i8 %ne, i8 1
   ret i8 %r
 }
