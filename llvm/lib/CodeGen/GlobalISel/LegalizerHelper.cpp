@@ -8768,11 +8768,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
 
   LLT Ty = MRI.getType(DstReg);
-  if (MRI.getType(SrcReg) != Ty)
-    return UnableToLegalize;
-
-  if (!Ty.isScalar())
-    return UnableToLegalize;
 
   // Reset sign bit
   MIRBuilder.buildAnd(DstReg, SrcReg,
