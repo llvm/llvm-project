@@ -3144,7 +3144,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // helpful diagnostic.
   if (Tok.is(tok::kw_concept)) {
     Diag(Tok.getLocation(),
-         DS.isFriendSpecified()
+         DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
              ? diag::err_friend_concept
              : diag::
                    err_concept_decls_may_only_appear_in_global_namespace_scope);
