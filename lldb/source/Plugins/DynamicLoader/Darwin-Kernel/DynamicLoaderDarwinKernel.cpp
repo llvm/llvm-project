@@ -256,7 +256,7 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
       if (process->ReadMemoryFromInferior (kernel_addresses_64[i], uval, 8, read_err) == 8)
       {
           DataExtractor data (&uval, 8, process->GetByteOrder(), process->GetAddressByteSize());
-          offset_t offset = 0;
+          lldb::offset_t offset = 0;
           uint64_t addr = data.GetU64 (&offset);
           if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
               return addr;
@@ -270,7 +270,7 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
       if (process->ReadMemoryFromInferior (kernel_addresses_32[i], uval, 4, read_err) == 4)
       {
           DataExtractor data (&uval, 4, process->GetByteOrder(), process->GetAddressByteSize());
-          offset_t offset = 0;
+          lldb::offset_t offset = 0;
           uint32_t addr = data.GetU32 (&offset);
           if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
               return addr;
