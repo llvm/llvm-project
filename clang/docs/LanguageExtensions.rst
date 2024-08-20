@@ -3582,8 +3582,7 @@ Parameter ``kind``, currently unused, is a string literal specifying the check
 kind. Future compiler versions may use this to allow for more granular control,
 such as applying different hotness cutoffs to different check kinds.
 
-Use ``__has_builtin(__builtin_allow_runtime_check)`` to determine if this
-builtin function is supported.
+Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
 ``__builtin_nondeterministic_value``
 ------------------------------------
