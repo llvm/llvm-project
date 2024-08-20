@@ -3139,6 +3139,15 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     return Actions.BuildDeclaratorGroup(Decls);
   }
 
+  // Befriending a concept is invalid and would already fail if
+  // we did nothing here, but this allows us to issue a more
+  // helpful diagnostic.
+  if (Tok.is(tok::kw_concept)) {
+    Diag(Tok.getLocation(), diag::err_friend_concept);
+    SkipUntil(tok::semi, tok::r_brace, StopBeforeMatch);
+    return nullptr;
+  }
+
   ParsingDeclarator DeclaratorInfo(*this, DS, DeclAttrs,
                                    DeclaratorContext::Member);
   if (TemplateInfo.TemplateParams)
