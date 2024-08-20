@@ -229,3 +229,58 @@ namespace unevaluated {
   template<int = 0> int f(int = a); // expected-warning 0-1{{extension}}
   int k = sizeof(f());
 }
+
+#if __cplusplus >= 201103L
+namespace GH68490 {
+
+template <typename T> struct Problem {
+  template <typename U>
+  constexpr int UseAlign(int param = alignof(U)) const;
+
+  template <typename U>
+  constexpr int UseSizeof(int param = sizeof(T)) const;
+};
+
+template <typename T> struct Problem<T *> {
+  template <typename U>
+  constexpr int UseAlign(int param = alignof(U)) const;
+
+  template <typename U>
+  constexpr int UseSizeof(int param = sizeof(T)) const;
+};
+
+template <typename T>
+template <typename U>
+constexpr int Problem<T *>::UseAlign(int param) const {
+  return 2 * param;
+}
+
+template <typename T>
+template <typename U>
+constexpr int Problem<T *>::UseSizeof(int param) const {
+  return 2 * param;
+}
+
+template <>
+template <typename T>
+constexpr int Problem<int>::UseAlign(int param) const {
+  return param;
+}
+
+template <>
+template <typename T>
+constexpr int Problem<int>::UseSizeof(int param) const {
+  return param;
+}
+
+void foo() {
+  static_assert(Problem<int>().UseAlign<char>() == alignof(char), "");
+  static_assert(Problem<int>().UseSizeof<char>() == sizeof(char), "");
+  // expected-error@-1 {{failed}} expected-note@-1 {{evaluates to '4 == 1'}}
+  static_assert(Problem<short *>().UseAlign<char>() == 2U * alignof(char), "");
+  static_assert(Problem<short *>().UseSizeof<char>() == 2U * sizeof(char), "");
+  // expected-error@-1 {{failed}} expected-note@-1 {{evaluates to '4 == 2'}}
+}
+
+} // namespace GH68490
+#endif
