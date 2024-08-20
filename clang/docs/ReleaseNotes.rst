@@ -295,7 +295,7 @@ Miscellaneous Clang Crashes Fixed
   that can be followed by a non-parenthesized expression. (#GH45061)
 
 - Fixed an crash when compiling ``#pragma STDC FP_CONTRACT DEFAULT`` with
-  ``-ffp-contract=fast-honor-pragmas`. (#GH104830)
+  ``-ffp-contract=fast-honor-pragmas``. (#GH104830)
 
 OpenACC Specific Changes
 ------------------------
