@@ -2556,7 +2556,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   bool Crel = false, ExperimentalCrel = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
-  std::optional<bool> Msa;
+  bool Msa = false;
   const char *MipsTargetFeature = nullptr;
   StringRef ImplicitIt;
   for (const Arg *A :
@@ -2786,7 +2786,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           << "-Wa,--crel" << D.getTargetTriple();
     }
   }
-  if (Msa && *Msa)
+  if (Msa)
     CmdArgs.push_back("-mmsa");
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
