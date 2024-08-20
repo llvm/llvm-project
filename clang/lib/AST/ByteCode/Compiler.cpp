@@ -214,7 +214,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
                                                QualType(FromMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
@@ -229,14 +229,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
                                                QualType(ToMP->getClass(), 0));
 
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
   }
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
@@ -265,7 +265,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
 
     unsigned DerivedOffset =
@@ -391,8 +391,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitPop(T, CE);
 
     QualType PtrType = CE->getType();
-    assert(PtrType->isPointerType());
-
     const Descriptor *Desc;
     if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
       Desc = P.createDescriptor(SubExpr, *T);
@@ -2242,8 +2240,6 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
-  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
@@ -2329,6 +2325,9 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
+  if (DiscardResult)
+    return this->discard(Init);
+
   if (Initializing) {
     // We already have a value, just initialize that.
     return this->visitInitializer(Init) && this->emitFinishInit(E);
@@ -2382,9 +2381,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
       if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
-
-    if (DiscardResult)
-      return this->emitPopPtr(E);
     return true;
   }
 
@@ -2911,6 +2907,17 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
 
   return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  const Function *Func = nullptr;
+  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+    Func = F;
+
+  if (!Func)
+    return false;
+  return this->emitGetFnPtr(Func, E);
 }
 
 template <class Emitter>

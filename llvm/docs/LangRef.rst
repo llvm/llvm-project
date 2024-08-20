@@ -2046,7 +2046,8 @@ example:
     attributes.
 ``naked``
     This attribute disables prologue / epilogue emission for the
-    function. This can have very system-specific consequences.
+    function. This can have very system-specific consequences. The arguments of
+    a ``naked`` function can not be referenced through IR values.
 ``"no-inline-line-tables"``
     When this attribute is set to true, the inliner discards source locations
     when inlining code and instead uses the source location of the call site.
