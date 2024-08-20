@@ -70,6 +70,7 @@ struct ConvertUpdateHaloOp
 
     auto array = op.getInput();
     auto rank = array.getType().getRank();
+    auto opSplitAxes = op.getSplitAxes().getAxes();
     auto mesh = op.getMesh();
     auto meshOp = getMesh(op, symbolTableCollection);
     auto haloSizes = getMixedValues(op.getStaticHaloSizes(),
@@ -87,13 +88,34 @@ struct ConvertUpdateHaloOp
     // most of the offset/size/stride data is the same for all dims
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    SmallVector<OpFoldResult> shape(rank);
+    SmallVector<OpFoldResult> shape(rank), dimSizes(rank);
+    auto currHaloDim = -1; // halo sizes are provided for split dimensions only
     // we need the actual shape to compute offsets and sizes
-    for (auto [i, s] : llvm::enumerate(array.getType().getShape())) {
+    for (auto i = 0; i < rank; ++i) {
+      auto s = array.getType().getShape()[i];
       if (ShapedType::isDynamic(s)) {
         shape[i] = rewriter.create<memref::DimOp>(loc, array, s).getResult();
       } else {
         shape[i] = rewriter.getIndexAttr(s);
+      }
+
+      if ((size_t)i < opSplitAxes.size() && !opSplitAxes[i].empty()) {
+        ++currHaloDim;
+        // the offsets for lower dim sstarts after their down halo
+        offsets[i] = haloSizes[currHaloDim * 2];
+
+        // prepare shape and offsets of highest dim's halo exchange
+        auto _haloSz =
+            rewriter
+                .create<arith::AddIOp>(loc, toValue(haloSizes[currHaloDim * 2]),
+                                       toValue(haloSizes[currHaloDim * 2 + 1]))
+                .getResult();
+        // the halo shape of lower dims exlude the halos
+        dimSizes[i] =
+            rewriter.create<arith::SubIOp>(loc, toValue(shape[i]), _haloSz)
+                .getResult();
+      } else {
+        dimSizes[i] = shape[i];
       }
     }
 
@@ -101,18 +123,19 @@ struct ConvertUpdateHaloOp
     auto tag = rewriter.create<::mlir::arith::ConstantOp>(loc, tagAttr);
     auto zeroAttr = rewriter.getI32IntegerAttr(0); // for detecting v<0
     auto zero = rewriter.create<::mlir::arith::ConstantOp>(loc, zeroAttr);
+
     SmallVector<Type> indexResultTypes(meshOp.getShape().size(),
                                        rewriter.getIndexType());
     auto myMultiIndex =
         rewriter.create<ProcessMultiIndexOp>(loc, indexResultTypes, mesh)
             .getResult();
-    // halo sizes are provided for split dimensions only
-    auto currHaloDim = 0;
-
-    for (auto [dim, splitAxes] : llvm::enumerate(op.getSplitAxes())) {
+    // traverse all split axes from high to low dim
+    for (ssize_t dim = opSplitAxes.size() - 1; dim >= 0; --dim) {
+      auto splitAxes = opSplitAxes[dim];
       if (splitAxes.empty()) {
         continue;
       }
+      assert(currHaloDim >= 0 && (size_t)currHaloDim < haloSizes.size() / 2);
       // Get the linearized ids of the neighbors (down and up) for the
       // given split
       auto tmp = rewriter
@@ -124,11 +147,13 @@ struct ConvertUpdateHaloOp
                                    loc, rewriter.getI32Type(), tmp[0]),
                                rewriter.create<arith::IndexCastOp>(
                                    loc, rewriter.getI32Type(), tmp[1])};
-      // store for later
-      auto orgDimSize = shape[dim];
-      // this dim's offset to the start of the upper halo
-      auto upperOffset = rewriter.create<arith::SubIOp>(
+
+      auto lowerRecvOffset = rewriter.getIndexAttr(0);
+      auto lowerSendOffset = toValue(haloSizes[currHaloDim * 2]);
+      auto upperRecvOffset = rewriter.create<arith::SubIOp>(
           loc, toValue(shape[dim]), toValue(haloSizes[currHaloDim * 2 + 1]));
+      auto upperSendOffset = rewriter.create<arith::SubIOp>(
+          loc, upperRecvOffset, toValue(haloSizes[currHaloDim * 2]));
 
       // Make sure we send/recv in a way that does not lead to a dead-lock.
       // The current approach is by far not optimal, this should be at least
@@ -136,10 +161,10 @@ struct ConvertUpdateHaloOp
       // Also, buffers should be re-used.
       // Still using temporary contiguous buffers for MPI communication...
       // Still yielding a "serialized" communication pattern...
-      auto genSendRecv = [&](auto dim, bool upperHalo) {
+      auto genSendRecv = [&](bool upperHalo) {
         auto orgOffset = offsets[dim];
-        shape[dim] = upperHalo ? haloSizes[currHaloDim * 2 + 1]
-                               : haloSizes[currHaloDim * 2];
+        dimSizes[dim] = upperHalo ? haloSizes[currHaloDim * 2 + 1]
+                                  : haloSizes[currHaloDim * 2];
         // Check if we need to send and/or receive
         // Processes on the mesh borders have only one neighbor
         auto to = upperHalo ? neighbourIDs[1] : neighbourIDs[0];
@@ -149,14 +174,14 @@ struct ConvertUpdateHaloOp
         auto hasTo = rewriter.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::sge, to, zero);
         auto buffer = rewriter.create<memref::AllocOp>(
-            loc, shape, array.getType().getElementType());
+            loc, dimSizes, array.getType().getElementType());
         // if has neighbor: copy halo data from array to buffer and send
         rewriter.create<scf::IfOp>(
             loc, hasTo, [&](OpBuilder &builder, Location loc) {
-              offsets[dim] = upperHalo ? OpFoldResult(builder.getIndexAttr(0))
-                                       : OpFoldResult(upperOffset);
+              offsets[dim] = upperHalo ? OpFoldResult(lowerSendOffset)
+                                       : OpFoldResult(upperSendOffset);
               auto subview = builder.create<memref::SubViewOp>(
-                  loc, array, offsets, shape, strides);
+                  loc, array, offsets, dimSizes, strides);
               builder.create<memref::CopyOp>(loc, subview, buffer);
               builder.create<mpi::SendOp>(loc, TypeRange{}, buffer, tag, to);
               builder.create<scf::YieldOp>(loc);
@@ -164,11 +189,11 @@ struct ConvertUpdateHaloOp
         // if has neighbor: receive halo data into buffer and copy to array
         rewriter.create<scf::IfOp>(
             loc, hasFrom, [&](OpBuilder &builder, Location loc) {
-              offsets[dim] = upperHalo ? OpFoldResult(upperOffset)
-                                       : OpFoldResult(builder.getIndexAttr(0));
+              offsets[dim] = upperHalo ? OpFoldResult(upperRecvOffset)
+                                       : OpFoldResult(lowerRecvOffset);
               builder.create<mpi::RecvOp>(loc, TypeRange{}, buffer, tag, from);
               auto subview = builder.create<memref::SubViewOp>(
-                  loc, array, offsets, shape, strides);
+                  loc, array, offsets, dimSizes, strides);
               builder.create<memref::CopyOp>(loc, buffer, subview);
               builder.create<scf::YieldOp>(loc);
             });
@@ -176,25 +201,15 @@ struct ConvertUpdateHaloOp
         offsets[dim] = orgOffset;
       };
 
-      genSendRecv(dim, false);
-      genSendRecv(dim, true);
+      genSendRecv(false);
+      genSendRecv(true);
 
-      // prepare shape and offsets for next split dim
-      auto _haloSz =
-          rewriter
-              .create<arith::AddIOp>(loc, toValue(haloSizes[currHaloDim * 2]),
-                                     toValue(haloSizes[currHaloDim * 2 + 1]))
-              .getResult();
-      // the shape for next halo excludes the halo on both ends for the
-      // current dim
-      shape[dim] =
-          rewriter.create<arith::SubIOp>(loc, toValue(orgDimSize), _haloSz)
-              .getResult();
-      // the offsets for next halo starts after the down halo for the
-      // current dim
-      offsets[dim] = haloSizes[currHaloDim * 2];
+      // the shape for lower dims include higher dims' halos
+      dimSizes[dim] = shape[dim];
+      // -> the offset for higher dims is always 0
+      offsets[dim] = rewriter.getIndexAttr(0);
       // on to next halo
-      ++currHaloDim;
+      --currHaloDim;
     }
     rewriter.eraseOp(op);
     return mlir::success();
