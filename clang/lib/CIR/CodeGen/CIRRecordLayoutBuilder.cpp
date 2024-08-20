@@ -271,12 +271,6 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
 
   CharUnits Size = nonVirtualBaseType ? astRecordLayout.getNonVirtualSize()
                                       : astRecordLayout.getSize();
-  if (recordDecl->isUnion()) {
-    llvm_unreachable("NYI");
-    // lowerUnion();
-    // computeVolatileBitfields();
-    return;
-  }
   accumulateFields();
 
   // RD implies C++
@@ -316,13 +310,20 @@ void CIRRecordLowering::lowerUnion() {
   // type would work fine and be simpler but would be different than what we've
   // been doing and cause lit tests to change.
   for (const auto *Field : recordDecl->fields()) {
+
+    mlir::Type FieldType = nullptr;
     if (Field->isBitField()) {
       if (Field->isZeroLengthBitField(astContext))
         continue;
-      llvm_unreachable("NYI");
+
+      FieldType = getBitfieldStorageType(Field->getBitWidthValue(astContext));
+
+      setBitFieldInfo(Field, CharUnits::Zero(), FieldType);
+    } else {
+      FieldType = getStorageType(Field);
     }
     fields[Field->getCanonicalDecl()] = 0;
-    auto FieldType = getStorageType(Field);
+    // auto FieldType = getStorageType(Field);
     // Compute zero-initializable status.
     // This union might not be zero initialized: it may contain a pointer to
     // data member which might have some exotic initialization sequence.
