@@ -42,6 +42,157 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+define void @simple_urem_to_sel_fail_not_in_loop(i32 %N, i32 %rem_amt) nounwind {
+; CHECK-LABEL: define void @simple_urem_to_sel_fail_not_in_loop(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[REM_AMT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_05]], [[REM_AMT]]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[I_04]])
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+entry:
+  %cmp3.not = icmp eq i32 %N, 0
+  br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %rem = urem i32 %i.05, %rem_amt
+  tail call void @use.i32(i32 %rem)
+  ret void
+
+for.body:
+  %i.04 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  tail call void @use.i32(i32 %i.04)
+  %inc = add nuw i32 %i.04, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @simple_urem_to_sel_inner_loop(i32 %N, i32 %M) nounwind {
+; CHECK-LABEL: define void @simple_urem_to_sel_inner_loop(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[M:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[REM_AMT:%.*]] = call i32 @get.i32()
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_INNER_COND_CLEANUP:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    br i1 [[CMP_INNER]], label %[[FOR_INNER_COND_CLEANUP]], label %[[FOR_INNER_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_INNER_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_INNER_BODY:.*]]
+; CHECK:       [[FOR_INNER_BODY]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[INC_INNER:%.*]], %[[FOR_INNER_BODY]] ], [ 0, %[[FOR_INNER_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_04]], [[REM_AMT]]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    [[INC_INNER]] = add nuw i32 [[J]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i32 [[INC_INNER]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label %[[FOR_INNER_COND_CLEANUP]], label %[[FOR_INNER_BODY]]
+; CHECK:       [[FOR_INNER_COND_CLEANUP]]:
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+entry:
+  %rem_amt = call i32 @get.i32()
+  %cmp3.not = icmp eq i32 %N, 0
+  br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.04 = phi i32 [ %inc, %for.inner.cond.cleanup ], [ 0, %entry ]
+
+  %cmp_inner = icmp eq i32 %M, 0
+  br i1 %cmp_inner, label %for.inner.cond.cleanup, label %for.inner.body
+
+for.inner.body:
+  %j = phi i32 [ %inc_inner, %for.inner.body ], [ 0, %for.body ]
+  %rem = urem i32 %i.04, %rem_amt
+  tail call void @use.i32(i32 %rem)
+  %inc_inner = add nuw i32 %j, 1
+  %exitcond_inner = icmp eq i32 %inc_inner, %M
+  br i1 %exitcond_inner, label %for.inner.cond.cleanup, label %for.inner.body
+
+for.inner.cond.cleanup:
+  %inc = add nuw i32 %i.04, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @simple_urem_to_sel_inner_loop_fail_not_invariant(i32 %N, i32 %M) nounwind {
+; CHECK-LABEL: define void @simple_urem_to_sel_inner_loop_fail_not_invariant(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[M:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_INNER_COND_CLEANUP:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM_AMT:%.*]] = call i32 @get.i32()
+; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    br i1 [[CMP_INNER]], label %[[FOR_INNER_COND_CLEANUP]], label %[[FOR_INNER_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_INNER_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_INNER_BODY:.*]]
+; CHECK:       [[FOR_INNER_BODY]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[INC_INNER:%.*]], %[[FOR_INNER_BODY]] ], [ 0, %[[FOR_INNER_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_04]], [[REM_AMT]]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    [[INC_INNER]] = add nuw i32 [[J]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i32 [[INC_INNER]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label %[[FOR_INNER_COND_CLEANUP]], label %[[FOR_INNER_BODY]]
+; CHECK:       [[FOR_INNER_COND_CLEANUP]]:
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+entry:
+  %cmp3.not = icmp eq i32 %N, 0
+  br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.04 = phi i32 [ %inc, %for.inner.cond.cleanup ], [ 0, %entry ]
+  %rem_amt = call i32 @get.i32()
+  %cmp_inner = icmp eq i32 %M, 0
+  br i1 %cmp_inner, label %for.inner.cond.cleanup, label %for.inner.body
+
+for.inner.body:
+  %j = phi i32 [ %inc_inner, %for.inner.body ], [ 0, %for.body ]
+  %rem = urem i32 %i.04, %rem_amt
+  tail call void @use.i32(i32 %rem)
+  %inc_inner = add nuw i32 %j, 1
+  %exitcond_inner = icmp eq i32 %inc_inner, %M
+  br i1 %exitcond_inner, label %for.inner.cond.cleanup, label %for.inner.body
+
+for.inner.cond.cleanup:
+  %inc = add nuw i32 %i.04, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-LABEL: define void @simple_urem_to_sel_nested2(
 ; CHECK-SAME: i32 [[N:%.*]], i32 [[REM_AMT:%.*]]) #[[ATTR0]] {
@@ -639,8 +790,8 @@ for.body:
   br i1 false, label %for.preheader, label %for.body
 }
 
-define void @simple_urem_to_sel_non_zero_start(i32 %N, i32 %rem_amt) nounwind {
-; CHECK-LABEL: define void @simple_urem_to_sel_non_zero_start(
+define void @simple_urem_to_sel_non_zero_start_fail(i32 %N, i32 %rem_amt) nounwind {
+; CHECK-LABEL: define void @simple_urem_to_sel_non_zero_start_fail(
 ; CHECK-SAME: i32 [[N:%.*]], i32 [[REM_AMT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp ult i32 [[N]], 3
@@ -658,6 +809,42 @@ define void @simple_urem_to_sel_non_zero_start(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 entry:
+  %cmp3.not = icmp ult i32 %N, 3
+  br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.04 = phi i32 [ %inc, %for.body ], [ 2, %entry ]
+  %rem = urem i32 %i.04, %rem_amt
+  tail call void @use.i32(i32 %rem)
+  %inc = add nuw i32 %i.04, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @simple_urem_to_sel_non_zero_start_okay(i32 %N, i32 %rem_amt_in) nounwind {
+; CHECK-LABEL: define void @simple_urem_to_sel_non_zero_start_okay(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[REM_AMT_IN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[REM_AMT:%.*]] = or i32 [[REM_AMT_IN]], 16
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp ult i32 [[N]], 3
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 2, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_04]], [[REM_AMT]]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+entry:
+  %rem_amt = or i32 %rem_amt_in, 16
   %cmp3.not = icmp ult i32 %N, 3
   br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
 
