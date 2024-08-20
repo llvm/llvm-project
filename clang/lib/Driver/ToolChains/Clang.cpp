@@ -7967,8 +7967,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_persistent_storage_variables);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
-  Args.addOptOutFlag(CmdArgs, options::OPT_fcxx_static_destructors,
-                     options::OPT_fno_cxx_static_destructors);
+  if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fc++-static-destructors=") + A->getValue()));
 
   addMachineOutlinerArgs(D, Args, CmdArgs, Triple, /*IsLTO=*/false);
 
