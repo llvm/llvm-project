@@ -310,6 +310,10 @@ public:
                                        QualType DestRecordTy,
                                        mlir::cir::PointerType DestCIRTy,
                                        bool isRefCast, Address Src) = 0;
+
+  virtual mlir::cir::MethodAttr
+  buildVirtualMethodAttr(mlir::cir::MethodType MethodTy,
+                         const CXXMethodDecl *MD) = 0;
 };
 
 /// Creates and Itanium-family ABI

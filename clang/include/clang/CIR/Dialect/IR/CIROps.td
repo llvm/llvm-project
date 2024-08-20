@@ -2590,6 +2590,60 @@ def GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetMethodOp
+//===----------------------------------------------------------------------===//
+
+def GetMethodOp : CIR_Op<"get_method"> {
+  let summary = "Resolve a method to a function pointer as callee";
+  let description = [{
+    The `cir.get_method` operation takes a method and an object as input, and
+    yields a function pointer that points to the actual function corresponding
+    to the input method. The operation also applies any necessary adjustments to
+    the input object pointer for calling the method and yields the adjusted
+    pointer.
+
+    This operation is generated when calling a method through a pointer-to-
+    member-function in C++:
+
+    ```cpp
+    // Foo *object;
+    // int arg;
+    // void (Foo::*method)(int);
+
+    (object->*method)(arg);
+    ```
+
+    The code above will generate CIR similar as:
+
+    ```mlir
+    // %object = ...
+    // %arg = ...
+    // %method = ...
+    %callee, %this = cir.get_method %method, %object
+    cir.call %callee(%this, %arg)
+    ```
+
+    The method type must match the callee type. That is:
+    - The return type of the method must match the return type of the callee.
+    - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
+    - Types of other parameters of the callee must match the parameters of the
+      method.
+  }];
+
+  let arguments = (ins CIR_MethodType:$method, StructPtr:$object);
+  let results = (outs FuncPtr:$callee, VoidPtr:$adjusted_this);
+
+  let assemblyFormat = [{
+    $method `,` $object
+    `:` `(` qualified(type($method)) `,` qualified(type($object)) `)`
+    `->` `(` qualified(type($callee)) `,` qualified(type($adjusted_this)) `)`
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecInsertOp
 //===----------------------------------------------------------------------===//
 

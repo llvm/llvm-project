@@ -442,6 +442,54 @@ def DataMemberAttr : CIR_Attr<"DataMember", "data_member",
 }
 
 //===----------------------------------------------------------------------===//
+// MethodAttr
+//===----------------------------------------------------------------------===//
+
+def MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+  let summary = "Holds a constant pointer-to-member-function value";
+  let description = [{
+    A method attribute is a literal attribute that represents a constant
+    pointer-to-member-function value.
+
+    If the member function is a non-virtual function, the `symbol` parameter
+    gives the global symbol for the non-virtual member function.
+
+    If the member function is a virtual function, the `vtable_offset` parameter
+    gives the offset of the vtable entry corresponding to the virtual member
+    function.
+
+    `symbol` and `vtable_offset` cannot be present at the same time. If both of
+    `symbol` and `vtable_offset` are not present, the attribute represents a
+    null pointer constant.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "mlir::cir::MethodType">:$type,
+                        OptionalParameter<
+                            "std::optional<FlatSymbolRefAttr>">:$symbol,
+                        OptionalParameter<
+                            "std::optional<uint64_t>">:$vtable_offset);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::cir::MethodType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "mlir::cir::MethodType":$type,
+                                        "FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "mlir::cir::MethodType":$type,
+                                        "uint64_t":$vtable_offset), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
+    }]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SignedOverflowBehaviorAttr
 //===----------------------------------------------------------------------===//
 

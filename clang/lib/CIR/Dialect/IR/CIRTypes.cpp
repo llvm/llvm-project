@@ -934,6 +934,39 @@ llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
 bool FuncType::isVoid() const { return mlir::isa<VoidType>(getReturnType()); }
 
 //===----------------------------------------------------------------------===//
+// MethodType Definitions
+//===----------------------------------------------------------------------===//
+
+static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+  // With Itanium ABI, member function pointers have the same layout as the
+  // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
+  // function pointer type.
+  // TODO: consider member function pointer layout in other ABIs
+  auto voidPtrTy = mlir::cir::PointerType::get(mlir::cir::VoidType::get(ctx));
+  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  return mlir::cir::StructType::get(ctx, fields, /*packed=*/false,
+                                    mlir::cir::StructType::Struct);
+}
+
+llvm::TypeSize
+MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType Definitions
 //===----------------------------------------------------------------------===//
 

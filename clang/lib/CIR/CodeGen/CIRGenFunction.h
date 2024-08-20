@@ -622,6 +622,8 @@ public:
 
   RValue buildCXXMemberCallExpr(const clang::CXXMemberCallExpr *E,
                                 ReturnValueSlot ReturnValue);
+  RValue buildCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
+                                       ReturnValueSlot ReturnValue);
   RValue buildCXXMemberOrOperatorMemberCallExpr(
       const clang::CallExpr *CE, const clang::CXXMethodDecl *MD,
       ReturnValueSlot ReturnValue, bool HasQualifier,

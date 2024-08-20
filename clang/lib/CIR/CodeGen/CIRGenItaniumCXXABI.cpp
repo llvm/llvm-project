@@ -295,6 +295,10 @@ public:
                                mlir::cir::PointerType DestCIRTy, bool isRefCast,
                                Address Src) override;
 
+  mlir::cir::MethodAttr
+  buildVirtualMethodAttr(mlir::cir::MethodType MethodTy,
+                         const CXXMethodDecl *MD) override;
+
   /**************************** RTTI Uniqueness ******************************/
 protected:
   /// Returns true if the ABI requires RTTI type_info objects to be unique
@@ -2489,4 +2493,24 @@ mlir::Value CIRGenItaniumCXXABI::buildDynamicCast(
   auto castInfo = buildDynamicCastInfo(CGF, Loc, SrcRecordTy, DestRecordTy);
   return CGF.getBuilder().createDynCast(Loc, Src.getPointer(), DestCIRTy,
                                         isRefCast, castInfo);
+}
+
+mlir::cir::MethodAttr
+CIRGenItaniumCXXABI::buildVirtualMethodAttr(mlir::cir::MethodType MethodTy,
+                                            const CXXMethodDecl *MD) {
+  assert(MD->isVirtual() && "only deal with virtual member functions");
+
+  uint64_t Index = CGM.getItaniumVTableContext().getMethodVTableIndex(MD);
+  uint64_t VTableOffset;
+  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+    // Multiply by 4-byte relative offsets.
+    VTableOffset = Index * 4;
+  } else {
+    const ASTContext &Context = getContext();
+    CharUnits PointerWidth = Context.toCharUnitsFromBits(
+        Context.getTargetInfo().getPointerWidth(LangAS::Default));
+    VTableOffset = Index * PointerWidth.getQuantity();
+  }
+
+  return mlir::cir::MethodAttr::get(MethodTy, VTableOffset);
 }

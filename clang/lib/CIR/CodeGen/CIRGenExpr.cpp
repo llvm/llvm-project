@@ -2834,7 +2834,7 @@ RValue CIRGenFunction::buildCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   const Expr *callee = CE->getCallee()->IgnoreParens();
 
   if (isa<BinaryOperator>(callee))
-    llvm_unreachable("NYI");
+    return buildCXXMemberPointerCallExpr(CE, ReturnValue);
 
   const auto *ME = cast<MemberExpr>(callee);
   const auto *MD = cast<CXXMethodDecl>(ME->getMemberDecl());

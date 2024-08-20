@@ -105,6 +105,53 @@ static CXXRecordDecl *getCXXRecord(const Expr *E) {
   return cast<CXXRecordDecl>(Ty->getDecl());
 }
 
+RValue
+CIRGenFunction::buildCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
+                                              ReturnValueSlot ReturnValue) {
+  const BinaryOperator *BO =
+      cast<BinaryOperator>(E->getCallee()->IgnoreParens());
+  const Expr *BaseExpr = BO->getLHS();
+  const Expr *MemFnExpr = BO->getRHS();
+
+  const auto *MPT = MemFnExpr->getType()->castAs<MemberPointerType>();
+  const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
+  const auto *RD =
+      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
+
+  // Emit the 'this' pointer.
+  Address This = Address::invalid();
+  if (BO->getOpcode() == BO_PtrMemI)
+    This = buildPointerWithAlignment(BaseExpr, nullptr, KnownNonNull);
+  else
+    This = buildLValue(BaseExpr).getAddress();
+
+  buildTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(),
+                 QualType(MPT->getClass(), 0));
+
+  // Get the member function pointer.
+  mlir::Value MemFnPtr = buildScalarExpr(MemFnExpr);
+
+  // Resolve the member function pointer to the actual callee and adjust the
+  // "this" pointer for call.
+  auto Loc = getLoc(E->getExprLoc());
+  auto [CalleePtr, AdjustedThis] =
+      builder.createGetMethod(Loc, MemFnPtr, This.getPointer());
+
+  // Prepare the call arguments.
+  CallArgList ArgsList;
+  ArgsList.add(RValue::get(AdjustedThis), getContext().VoidPtrTy);
+  buildCallArgs(ArgsList, FPT, E->arguments());
+
+  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, 1);
+
+  // Build the call.
+  CIRGenCallee Callee(FPT, CalleePtr.getDefiningOp());
+  return buildCall(CGM.getTypes().arrangeCXXMethodCall(ArgsList, FPT, required,
+                                                       /*PrefixSize=*/0),
+                   Callee, ReturnValue, ArgsList, nullptr, E == MustTailCall,
+                   Loc);
+}
+
 RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
     bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,

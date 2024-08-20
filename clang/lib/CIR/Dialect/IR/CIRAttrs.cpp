@@ -472,6 +472,79 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// MethodAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MethodAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
+                   mlir::cir::MethodType type,
+                   std::optional<FlatSymbolRefAttr> symbol,
+                   std::optional<uint64_t> vtable_offset) {
+  if (symbol.has_value() && vtable_offset.has_value()) {
+    emitError() << "at most one of symbol and vtable_offset can be present "
+                   "in #cir.method";
+    return failure();
+  }
+
+  return success();
+}
+
+Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
+  auto ty = mlir::cast<mlir::cir::MethodType>(odsType);
+
+  if (parser.parseLess())
+    return {};
+
+  // Try to parse the null pointer constant.
+  if (parser.parseOptionalKeyword("null").succeeded()) {
+    if (parser.parseGreater())
+      return {};
+    return get(ty);
+  }
+
+  // Try to parse a flat symbol ref for a pointer to non-virtual member
+  // function.
+  FlatSymbolRefAttr symbol;
+  auto parseSymbolRefResult = parser.parseOptionalAttribute(symbol);
+  if (parseSymbolRefResult.has_value()) {
+    if (parseSymbolRefResult.value().failed())
+      return {};
+    if (parser.parseGreater())
+      return {};
+    return get(ty, symbol);
+  }
+
+  // Parse a uint64 that represents the vtable offset.
+  std::uint64_t vtableOffset = 0;
+  if (parser.parseKeyword("vtable_offset"))
+    return {};
+  if (parser.parseEqual())
+    return {};
+  if (parser.parseInteger(vtableOffset))
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(ty, vtableOffset);
+}
+
+void MethodAttr::print(AsmPrinter &printer) const {
+  auto symbol = getSymbol();
+  auto vtableOffset = getVtableOffset();
+
+  printer << '<';
+  if (symbol.has_value()) {
+    printer << *symbol;
+  } else if (vtableOffset.has_value()) {
+    printer << "vtable_offset = " << *vtableOffset;
+  } else {
+    printer << "null";
+  }
+  printer << '>';
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastInfoAtttr definitions
 //===----------------------------------------------------------------------===//
 

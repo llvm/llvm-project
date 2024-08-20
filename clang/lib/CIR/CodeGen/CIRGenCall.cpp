@@ -731,7 +731,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       [[maybe_unused]] auto resultTypes = CalleePtr->getResultTypes();
       [[maybe_unused]] auto FuncPtrTy =
           mlir::dyn_cast<mlir::cir::PointerType>(resultTypes.front());
-      assert((resultTypes.size() == 1) && FuncPtrTy &&
+      assert(FuncPtrTy &&
              mlir::isa<mlir::cir::FuncType>(FuncPtrTy.getPointee()) &&
              "expected pointer to function");
 
