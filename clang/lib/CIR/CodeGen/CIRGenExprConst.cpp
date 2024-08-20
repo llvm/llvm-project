@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Address.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -1890,9 +1891,16 @@ mlir::Value CIRGenModule::buildMemberPointerConstant(const UnaryOperator *E) {
   const auto *decl = cast<DeclRefExpr>(E->getSubExpr())->getDecl();
 
   // A member function pointer.
-  // Member function pointer is not supported yet.
-  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl))
-    assert(0 && "not implemented");
+  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
+    auto ty = mlir::cast<mlir::cir::MethodType>(getCIRType(E->getType()));
+    if (methodDecl->isVirtual())
+      return builder.create<mlir::cir::ConstantOp>(
+          loc, ty, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
+
+    auto methodFuncOp = GetAddrOfFunction(methodDecl);
+    return builder.create<mlir::cir::ConstantOp>(
+        loc, ty, builder.getMethodAttr(ty, methodFuncOp));
+  }
 
   auto ty = mlir::cast<mlir::cir::DataMemberType>(getCIRType(E->getType()));
 

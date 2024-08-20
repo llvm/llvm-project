@@ -111,6 +111,10 @@ public:
     return getPointerTo(::mlir::cir::VoidType::get(getContext()), langAS);
   }
 
+  mlir::cir::PointerType getVoidPtrTy(mlir::cir::AddressSpaceAttr cirAS) {
+    return getPointerTo(::mlir::cir::VoidType::get(getContext()), cirAS);
+  }
+
   mlir::cir::BoolAttr getCIRBoolAttr(bool state) {
     return mlir::cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
@@ -590,6 +594,11 @@ public:
     return create<mlir::cir::YieldOp>(loc, value);
   }
 
+  mlir::cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
+                                         mlir::Value stride) {
+    return create<mlir::cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
   mlir::cir::CallOp
   createCallOp(mlir::Location loc,
                mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
@@ -677,6 +686,39 @@ public:
     resOperands.append(operands.begin(), operands.end());
     return createTryCallOp(loc, mlir::SymbolRefAttr(), fn_type.getReturnType(),
                            resOperands);
+  }
+
+  struct GetMethodResults {
+    mlir::Value callee;
+    mlir::Value adjustedThis;
+  };
+
+  GetMethodResults createGetMethod(mlir::Location loc, mlir::Value method,
+                                   mlir::Value objectPtr) {
+    // Build the callee function type.
+    auto methodFuncTy =
+        mlir::cast<mlir::cir::MethodType>(method.getType()).getMemberFuncTy();
+    auto methodFuncInputTypes = methodFuncTy.getInputs();
+
+    auto objectPtrTy = mlir::cast<mlir::cir::PointerType>(objectPtr.getType());
+    auto objectPtrAddrSpace =
+        mlir::cast_if_present<mlir::cir::AddressSpaceAttr>(
+            objectPtrTy.getAddrSpace());
+    auto adjustedThisTy = getVoidPtrTy(objectPtrAddrSpace);
+
+    llvm::SmallVector<mlir::Type, 8> calleeFuncInputTypes{adjustedThisTy};
+    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                methodFuncInputTypes.begin(),
+                                methodFuncInputTypes.end());
+    auto calleeFuncTy =
+        methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
+    // TODO(cir): consider the address space of the callee.
+    assert(!MissingFeatures::addressSpace());
+    auto calleeTy = getPointerTo(calleeFuncTy);
+
+    auto op = create<mlir::cir::GetMethodOp>(loc, calleeTy, adjustedThisTy,
+                                             method, objectPtr);
+    return {op.getCallee(), op.getAdjustedThis()};
   }
 };
 

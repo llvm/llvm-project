@@ -375,7 +375,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return op->emitOpError("nullptr expects pointer type");
   }
 
-  if (isa<DataMemberAttr>(attrType)) {
+  if (isa<DataMemberAttr, MethodAttr>(attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify. Don't need to repeat here.
     return success();
@@ -3477,6 +3477,61 @@ LogicalResult GetRuntimeMemberOp::verify() {
 
   if (getType().getPointee() != memberPtrTy.getMemberTy()) {
     emitError() << "result type does not match the member pointer type";
+    return mlir::failure();
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetMethodOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetMethodOp::verify() {
+  auto methodTy = getMethod().getType();
+
+  // Assume objectTy is !cir.ptr<!T>
+  auto objectPtrTy = mlir::cast<mlir::cir::PointerType>(getObject().getType());
+  auto objectTy = objectPtrTy.getPointee();
+
+  if (methodTy.getClsTy() != objectTy) {
+    emitError() << "method class type and object type do not match";
+    return mlir::failure();
+  }
+
+  // Assume methodFuncTy is !cir.func<!Ret (!Args)>
+  auto calleePtrTy = mlir::cast<mlir::cir::PointerType>(getCallee().getType());
+  auto calleeTy = mlir::cast<mlir::cir::FuncType>(calleePtrTy.getPointee());
+  auto methodFuncTy = methodTy.getMemberFuncTy();
+
+  // We verify at here that calleeTy is !cir.func<!Ret (!cir.ptr<!void>, !Args)>
+  // Note that the first parameter type of the callee is !cir.ptr<!void> instead
+  // of !cir.ptr<!T> because the "this" pointer may be adjusted before calling
+  // the callee.
+
+  if (methodFuncTy.getReturnType() != calleeTy.getReturnType()) {
+    emitError() << "method return type and callee return type do not match";
+    return mlir::failure();
+  }
+
+  auto calleeArgsTy = calleeTy.getInputs();
+  auto methodFuncArgsTy = methodFuncTy.getInputs();
+
+  if (calleeArgsTy.empty()) {
+    emitError() << "callee parameter list lacks receiver object ptr";
+    return mlir::failure();
+  }
+
+  auto calleeThisArgPtrTy =
+      mlir::dyn_cast<mlir::cir::PointerType>(calleeArgsTy[0]);
+  if (!calleeThisArgPtrTy ||
+      !mlir::isa<mlir::cir::VoidType>(calleeThisArgPtrTy.getPointee())) {
+    emitError() << "the first parameter of callee must be a void pointer";
+    return mlir::failure();
+  }
+
+  if (calleeArgsTy.slice(1) != methodFuncArgsTy) {
+    emitError() << "callee parameters and method parameters do not match";
     return mlir::failure();
   }
 

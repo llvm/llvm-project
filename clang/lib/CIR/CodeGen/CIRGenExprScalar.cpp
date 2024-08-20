@@ -1680,7 +1680,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(!MissingFeatures::cxxABI());
 
     const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
-    assert(!MPT->isMemberFunctionPointerType() && "NYI");
+    if (MPT->isMemberFunctionPointerType()) {
+      auto Ty = mlir::cast<mlir::cir::MethodType>(CGF.getCIRType(DestTy));
+      return Builder.getNullMethodPtr(Ty, CGF.getLoc(E->getExprLoc()));
+    }
 
     auto Ty = mlir::cast<mlir::cir::DataMemberType>(CGF.getCIRType(DestTy));
     return Builder.getNullDataMemberPtr(Ty, CGF.getLoc(E->getExprLoc()));

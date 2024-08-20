@@ -409,6 +409,26 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MethodType
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodType : CIR_Type<"Method", "method",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "CIR type that represents C++ pointer-to-member-function type";
+  let description = [{
+    `cir.method` models the pointer-to-member-function type in C++. The layout
+    of this type is ABI-dependent.
+  }];
+
+  let parameters = (ins "mlir::cir::FuncType":$memberFuncTy,
+                        "mlir::cir::StructType":$clsTy);
+
+  let assemblyFormat = [{
+    `<` qualified($memberFuncTy) `in` $clsTy `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Exception info type
 //
 // By introducing an exception info type, exception related operations can be
@@ -517,6 +537,15 @@ def ArrayPtr : Type<
     ]>, "!cir.ptr<!cir.eh_info>"> {
 }
 
+// Pointer to functions
+def FuncPtr : Type<
+    And<[
+      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::mlir::cir::FuncType>("
+            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+    ]>, "!cir.ptr<!cir.func>"> {
+}
+
 //===----------------------------------------------------------------------===//
 // StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//
@@ -529,9 +558,10 @@ def CIR_StructType : Type<CPred<"::mlir::isa<::mlir::cir::StructType>($_self)">,
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_BoolType, CIR_ArrayType,
-  CIR_VectorType, CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionType,
-  CIR_AnyFloat, CIR_FP16, CIR_BFloat16, CIR_ComplexType
+  CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_MethodType,
+  CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_FuncType, CIR_VoidType,
+  CIR_StructType, CIR_ExceptionType, CIR_AnyFloat, CIR_FP16, CIR_BFloat16,
+  CIR_ComplexType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

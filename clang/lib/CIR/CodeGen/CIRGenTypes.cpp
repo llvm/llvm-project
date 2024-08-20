@@ -712,13 +712,18 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(Ty);
-    assert(MPT->isMemberDataPointer() && "ptr-to-member-function is NYI");
 
     auto memberTy = ConvertType(MPT->getPointeeType());
     auto clsTy = mlir::cast<mlir::cir::StructType>(
         ConvertType(QualType(MPT->getClass(), 0)));
-    ResultType =
-        mlir::cir::DataMemberType::get(Builder.getContext(), memberTy, clsTy);
+    if (MPT->isMemberDataPointer())
+      ResultType =
+          mlir::cir::DataMemberType::get(Builder.getContext(), memberTy, clsTy);
+    else {
+      auto memberFuncTy = mlir::cast<mlir::cir::FuncType>(memberTy);
+      ResultType =
+          mlir::cir::MethodType::get(Builder.getContext(), memberFuncTy, clsTy);
+    }
     break;
   }
 
