@@ -12776,6 +12776,7 @@ td_library(
         ":ArithOpsInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
+        ":ControlFlowInterfaces",
         ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
