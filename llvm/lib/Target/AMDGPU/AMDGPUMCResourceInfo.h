@@ -44,6 +44,9 @@ private:
   int32_t MaxAGPR = 0;
   int32_t MaxSGPR = 0;
 
+  // Whether the MCResourceInfo has been finalized through finalize(MCContext
+  // &). Should only be called once, at the end of AsmPrinting to assign MaxXGPR
+  // symbols to their final value.
   bool Finalized = false;
 
   void assignResourceInfoExpr(int64_t localValue, ResourceInfoKind RIK,
