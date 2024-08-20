@@ -3291,13 +3291,6 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
   if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
     return TU->getPrimaryContext();
 
-  // Merge VarDecls inside functions to deduplicate variables that might be
-  // captured inside lambdas. Function and lambda class inside can be loaded
-  // from different modules.
-  if (auto *FD = dyn_cast<FunctionDecl>(DC))
-    if (FD->getOwningModule())
-      return FD->getCanonicalDecl();
-
   return nullptr;
 }
 
