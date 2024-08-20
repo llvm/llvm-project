@@ -348,16 +348,16 @@ def F8E3M4 : Type<CPred<"$_self.isFloat8E3M4()">, "f8E3M4 type">,
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
 
-class Complex<Type type>
+class Complex<Type elType>
     : ConfinedType<AnyComplex, [
           SubstLeaves<"$_self",
                       "::llvm::cast<::mlir::ComplexType>($_self).getElementType()",
-           type.predicate>],
-           "complex type with " # type.summary # " elements",
+           elType.predicate>],
+           "complex type with " # elType.summary # " elements",
            "::mlir::ComplexType">,
-      SameBuildabilityAs<type, "::mlir::ComplexType::get($_builder.get" # type #
+      SameBuildabilityAs<elType, "::mlir::ComplexType::get($_builder.get" # elType #
                                "Type())"> {
-  Type elementType = type;
+  Type elementType = elType;
 }
 
 class OpaqueType<string dialect, string name, string summary>
