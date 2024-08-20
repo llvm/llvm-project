@@ -131,6 +131,9 @@ C++2c Feature Support
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
+- Added the ``__builtin_is_within_lifetime`` builtin, which supports
+  `P2641R4 Checking if a union alternative is active <https://wg21.link/p2641r4>`_
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
