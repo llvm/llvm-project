@@ -1276,6 +1276,14 @@ RISC-V Support
   accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
   vector.
 
+PowerPC Support
+^^^^^^^^^^^^^^^
+
+- Clang now emits errors for impossible ``__attribute__((musttail))``.
+- Added support for ``-mcpu=[pwr11 | power11]`` and ``-mtune=[pwr11 | power11]``.
+- Added support for ``builtin_cpu_supports`` on AIX, along with a subset of
+  features that can be queried.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1294,6 +1302,14 @@ AIX Support
   base is encoded as an immediate operand.
   This access sequence is not used for TLS variables larger than 32KB, and is
   currently only supported on 64-bit mode.
+- Introduced the options ``-mtocdata/-mno-tocdata`` to enable/disable TOC data
+  transformations for the listed suitable variables.
+- Introduced the ``-maix-shared-lib-tls-model-opt`` option to enable the tuning
+  of changing local-dynamic mode access(es) to initial-exec access(es) at the
+  function level on 64-bit mode.
+- Clang now emits errors for ``-gdwarf-5``.
+- Added the support of the OpenMP runtime libomp on AIX. OpenMP applications can be
+  compiled with ``-fopenmp`` and execute on AIX.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1451,6 +1467,7 @@ OpenMP Support
 --------------
 
 - Added support for the `[[omp::assume]]` attribute.
+- AIX added an include directory for ``omp.h`` at ``/opt/IBM/openxlCSDK/include/openmp``.
 
 Additional Information
 ======================
