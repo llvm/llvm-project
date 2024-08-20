@@ -85,9 +85,10 @@ public:
   /// \param region The memory region to save.
   /// \returns An empty SBStatus upon success, or an error if the region is
   /// invalid.
-  /// \note This supercedes SaveCoreStyle, and if this list is set
-  /// only regions within this list will be saved. If the list is empty
-  /// all regions will be saved according to style.
+  /// \note Ranges that overlapped with be unioned into a single region this
+  /// also supercedes stack minification. Specifying full regions and a
+  /// non-custom core style will include the specified regions and union them
+  /// with all style specific regions.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
   /// Reset all options.

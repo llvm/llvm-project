@@ -308,7 +308,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         self.build()
         exe = self.getBuildArtifact("a.out")
-        default_value_file = self.getBuildArtifact("core.defaults.dmp")
+        one_region_file = self.getBuildArtifact("core.one_region.dmp")
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -325,24 +325,64 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # minidump defaults to stacks only, so we want to see if the
             # default options work as expected.
             options = lldb.SBSaveCoreOptions()
-            default_value_spec = lldb.SBFileSpec(default_value_file)
-            options.SetOutputFile(default_value_spec)
+            file_spec = lldb.SBFileSpec(one_region_file)
+            options.SetOutputFile(file_spec)
             options.SetPluginName("minidump")
             options.AddMemoryRegionToSave(memory_region)
+            options.SetStyle(lldb.eSaveCoreCustom)
             error = process.SaveCore(options)
             print (f"Error: {error.GetCString()}")
             self.assertTrue(error.Success(), error.GetCString())
 
             core_target = self.dbg.CreateTarget(None)
-            core_proc = target.LoadCore(default_value_file)
+            core_proc = target.LoadCore(one_region_file)
             core_memory_list = core_proc.GetMemoryRegions()
-            self.assertEqual(core_memory_list.GetSize(), 1)
+            # Note because the /proc/pid maps are included on linux, we can't
+            # depend on size for validation, so we'll ensure the first region
+            # is present and then assert we fail on the second.
             core_memory_region = lldb.SBMemoryRegionInfo()
             core_memory_list.GetMemoryRegionAtIndex(0, core_memory_region)
             self.assertEqual(core_memory_region.GetRegionBase(), memory_region.GetRegionBase())
             self.assertEqual(core_memory_region.GetRegionEnd(), memory_region.GetRegionEnd())
+            
+            region_two = lldb.SBMemoryRegionInfo()
+            core_memory_list.GetMemoryRegionAtIndex(1, region_two)
+            err = lldb.SBError()
+            content = core_proc.ReadMemory(region_two.GetRegionBase(), 1, err)
+            self.assertTrue(err.Fail(), "Should fail to read memory")
+
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
-            if os.path.isfile(default_value_file):
-                os.unlink(default_value_file)
+            if os.path.isfile(one_region_file):
+                os.unlink(one_region_file)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_minidump_custom_save_style(self):
+        """Test that verifies a custom and unspecified save style fails for 
+            containing no data to save"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        custom_file = self.getBuildArtifact("core.custom.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustom)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Fail())
+            self.assertEqual(error.GetCString(), "no valid address ranges found for core style")
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)

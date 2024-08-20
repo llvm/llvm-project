@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"

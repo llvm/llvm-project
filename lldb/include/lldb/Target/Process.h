@@ -43,6 +43,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -733,7 +734,7 @@ public:
     }
   };
 
-  using CoreFileMemoryRanges = std::vector<CoreFileMemoryRange>;
+  using CoreFileMemoryRanges = lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, CoreFileMemoryRange>;
 
   /// Helper function for Process::SaveCore(...) that calculates the address
   /// ranges that should be saved. This allows all core file plug-ins to save
