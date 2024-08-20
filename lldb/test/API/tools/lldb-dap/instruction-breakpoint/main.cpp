@@ -3,13 +3,13 @@
 
 int function(int x) {
 
-  if (x == 0)// breakpoint 1
+  if (x == 0) // breakpoint 1
     return x;
 
   if ((x % 2) != 0)
     return x;
   else
-    return function(x-1) + x;
+    return function(x - 1) + x;
 }
 
 int main(int argc, char const *argv[]) {
