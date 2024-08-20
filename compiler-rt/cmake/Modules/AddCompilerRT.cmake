@@ -91,7 +91,7 @@ function(add_compiler_rt_object_libraries name)
       ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
+    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
         OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -110,7 +110,7 @@ endmacro()
 
 function(add_compiler_rt_component name)
   add_custom_target(${name})
-  set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT/Components")
   if(COMMAND runtime_register_component)
     runtime_register_component(${name})
   endif()
@@ -175,8 +175,9 @@ function(add_compiler_rt_runtime name type)
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
-  # to allow non-LTO projects to link with it.
-  if(COMPILER_RT_HAS_FNO_LTO_FLAG)
+  # to allow non-LTO projects to link with it. GPU targets can currently only be
+  # distributed as LLVM-IR and ignore this.
+  if(COMPILER_RT_HAS_FNO_LTO_FLAG AND NOT COMPILER_RT_GPU_BUILD)
     set(NO_LTO_FLAGS "-fno-lto")
   else()
     set(NO_LTO_FLAGS "")
@@ -293,7 +294,7 @@ function(add_compiler_rt_runtime name type)
     if(NOT TARGET ${LIB_PARENT_TARGET})
       add_custom_target(${LIB_PARENT_TARGET})
       set_target_properties(${LIB_PARENT_TARGET} PROPERTIES
-                            FOLDER "Compiler-RT Misc")
+                            FOLDER "Compiler-RT/Runtimes")
     endif()
   endif()
 
@@ -348,6 +349,7 @@ function(add_compiler_rt_runtime name type)
           DEPENDS ${sources_${libname}}
           COMMENT "Building C object ${output_file_${libname}}")
       add_custom_target(${libname} DEPENDS ${output_dir_${libname}}/${output_file_${libname}})
+      set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Codegenning")
       install(FILES ${output_dir_${libname}}/${output_file_${libname}}
         DESTINATION ${install_dir_${libname}}
         ${COMPONENT_OPTION})
@@ -370,8 +372,8 @@ function(add_compiler_rt_runtime name type)
       add_dependencies(${libname} ${LIB_DEPS})
     endif()
     set_target_properties(${libname} PROPERTIES
-        OUTPUT_NAME ${output_name_${libname}})
-    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
+        OUTPUT_NAME ${output_name_${libname}}
+        FOLDER "Compiler-RT/Runtimes")
     if(LIB_LINK_LIBS)
       target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
@@ -538,7 +540,7 @@ function(add_compiler_rt_test test_suite test_name arch)
     DEPENDS ${TEST_DEPS}
     )
   add_custom_target(T${test_name} DEPENDS "${output_bin}")
-  set_target_properties(T${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
+  set_target_properties(T${test_name} PROPERTIES FOLDER "Compiler-RT/Tests")
 
   # Make the test suite depend on the binary.
   add_dependencies(${test_suite} T${test_name})
@@ -558,7 +560,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 
-  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT/Resources")
 endmacro()
 
 macro(add_compiler_rt_script name)
@@ -607,7 +609,7 @@ macro(add_custom_libcxx name prefix)
     COMMENT "Clobbering ${name} build directories"
     USES_TERMINAL
     )
-  set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
@@ -619,7 +621,7 @@ macro(add_custom_libcxx name prefix)
 
   add_custom_target(${name}-clobber
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
-  set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
   set(PASSTHROUGH_VARIABLES
     ANDROID

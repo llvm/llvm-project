@@ -32,7 +32,7 @@ class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
 
 public:
   explicit SystemZTTIImpl(const SystemZTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   /// \name Scalar TTI Implementations

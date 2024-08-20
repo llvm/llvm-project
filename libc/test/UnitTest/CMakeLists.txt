@@ -11,17 +11,10 @@ function(add_unittest_framework_library name)
                         "header only libraries, use 'add_header_library'")
   endif()
 
-  # The Nvidia 'nvlink' linker does not support static libraries.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    set(library_type OBJECT)
-  else()
-    set(library_type STATIC)
-  endif()
-
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
     add_library(
       ${lib}
-      ${library_type}
+      STATIC
       EXCLUDE_FROM_ALL
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
@@ -41,7 +34,7 @@ function(add_unittest_framework_library name)
   target_compile_options(${name}.hermetic PRIVATE ${compile_options})
 
   if(TEST_LIB_DEPENDS)
-    foreach(dep IN LISTS ${TEST_LIB_DEPENDS})
+    foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
       if(TARGET ${dep}.unit)
         add_dependencies(${name}.unit ${dep}.unit)
       else()

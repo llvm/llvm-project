@@ -96,3 +96,229 @@ define <4 x i8> @scmp_nonsplat() {
   %1 = call <4 x i8> @llvm.scmp(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 -1, i32 1, i32 -2, i32 4>)
   ret <4 x i8> %1
 }
+
+define i8 @scmp_with_itself(i32 %x) {
+; CHECK-LABEL: define i8 @scmp_with_itself(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 0
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %x)
+  ret i8 %1
+}
+
+define <4 x i8> @ucmp_vec_with_itself(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i8> @ucmp_vec_with_itself(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> zeroinitializer
+;
+  %1 = call <4 x i8> @llvm.scmp(<4 x i32> %x, <4 x i32> %x)
+  ret <4 x i8> %1
+}
+
+define i8 @scmp_known_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_known_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 1
+;
+  %1 = icmp sgt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @scmp_known_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_known_eq(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 0
+;
+  %1 = icmp eq i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @scmp_known_lt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_known_lt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 -1
+;
+  %1 = icmp slt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_known_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_known_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 1
+;
+  %1 = icmp ugt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_known_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_known_eq(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 0
+;
+  %1 = icmp eq i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_known_lt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_known_lt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    ret i8 -1
+;
+  %1 = icmp ult i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_with_addition(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_with_addition(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 -1
+;
+  %1 = add nuw i32 %x, 1
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %1)
+  ret i8 %2
+}
+
+define i8 @ucmp_with_addition2(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_with_addition2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 1
+;
+  %1 = add nuw i32 %x, 1
+  %2 = call i8 @llvm.ucmp(i32 %1, i32 %x)
+  ret i8 %2
+}
+
+define <4 x i8> @ucmp_with_addition_vec(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i8> @ucmp_with_addition_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+;
+  %1 = add nuw <4 x i32> %x, splat(i32 1)
+  %2 = call <4 x i8> @llvm.ucmp(<4 x i32> %x, <4 x i32> %1)
+  ret <4 x i8> %2
+}
+
+define i1 @scmp_eq_4(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @scmp_eq_4(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %2 = icmp eq i8 %1, 4
+  ret i1 %2
+}
+
+define i1 @ucmp_ne_negative_2(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @ucmp_ne_negative_2(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %2 = icmp ne i8 %1, -2
+  ret i1 %2
+}
+
+; Negative case: mismatched signedness of predicates
+define i8 @scmp_known_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_known_ugt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %1 = icmp ugt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @scmp_known_ult(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_known_ult(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %1 = icmp ult i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_known_sgt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_known_sgt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %1 = icmp sgt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+define i8 @ucmp_known_slt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_known_slt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %1 = icmp slt i32 %x, %y
+  call void @llvm.assume(i1 %1)
+
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %2
+}
+
+; Negative case: no nuw flag
+define i8 @ucmp_with_addition_no_nuw(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_with_addition_no_nuw(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %1 = add i32 %x, 1
+  %2 = call i8 @llvm.ucmp(i32 %x, i32 %1)
+  ret i8 %2
+}

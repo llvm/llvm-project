@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -2952,6 +2953,42 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPBUUDSYrr:
   case X86::VPDPBUUDrr:
   case X86::VPDPBUUDYrr:
+  case X86::VPDPBSSDSZ128r:
+  case X86::VPDPBSSDSZ128rk:
+  case X86::VPDPBSSDSZ128rkz:
+  case X86::VPDPBSSDSZ256r:
+  case X86::VPDPBSSDSZ256rk:
+  case X86::VPDPBSSDSZ256rkz:
+  case X86::VPDPBSSDSZr:
+  case X86::VPDPBSSDSZrk:
+  case X86::VPDPBSSDSZrkz:
+  case X86::VPDPBSSDZ128r:
+  case X86::VPDPBSSDZ128rk:
+  case X86::VPDPBSSDZ128rkz:
+  case X86::VPDPBSSDZ256r:
+  case X86::VPDPBSSDZ256rk:
+  case X86::VPDPBSSDZ256rkz:
+  case X86::VPDPBSSDZr:
+  case X86::VPDPBSSDZrk:
+  case X86::VPDPBSSDZrkz:
+  case X86::VPDPBUUDSZ128r:
+  case X86::VPDPBUUDSZ128rk:
+  case X86::VPDPBUUDSZ128rkz:
+  case X86::VPDPBUUDSZ256r:
+  case X86::VPDPBUUDSZ256rk:
+  case X86::VPDPBUUDSZ256rkz:
+  case X86::VPDPBUUDSZr:
+  case X86::VPDPBUUDSZrk:
+  case X86::VPDPBUUDSZrkz:
+  case X86::VPDPBUUDZ128r:
+  case X86::VPDPBUUDZ128rk:
+  case X86::VPDPBUUDZ128rkz:
+  case X86::VPDPBUUDZ256r:
+  case X86::VPDPBUUDZ256rk:
+  case X86::VPDPBUUDZ256rkz:
+  case X86::VPDPBUUDZr:
+  case X86::VPDPBUUDZrk:
+  case X86::VPDPBUUDZrkz:
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128rk:
   case X86::VPDPWSSDZ128rkz:
@@ -2970,6 +3007,24 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPWSSDSZr:
   case X86::VPDPWSSDSZrk:
   case X86::VPDPWSSDSZrkz:
+  case X86::VPDPWUUDZ128r:
+  case X86::VPDPWUUDZ128rk:
+  case X86::VPDPWUUDZ128rkz:
+  case X86::VPDPWUUDZ256r:
+  case X86::VPDPWUUDZ256rk:
+  case X86::VPDPWUUDZ256rkz:
+  case X86::VPDPWUUDZr:
+  case X86::VPDPWUUDZrk:
+  case X86::VPDPWUUDZrkz:
+  case X86::VPDPWUUDSZ128r:
+  case X86::VPDPWUUDSZ128rk:
+  case X86::VPDPWUUDSZ128rkz:
+  case X86::VPDPWUUDSZ256r:
+  case X86::VPDPWUUDSZ256rk:
+  case X86::VPDPWUUDSZ256rkz:
+  case X86::VPDPWUUDSZr:
+  case X86::VPDPWUUDSZrk:
+  case X86::VPDPWUUDSZrkz:
   case X86::VPMADD52HUQrr:
   case X86::VPMADD52HUQYrr:
   case X86::VPMADD52HUQZ128r:
@@ -3120,9 +3175,9 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
-        X86::isCFCMOVCC(Opcode) || X86::isCCMPCC(Opcode) ||
-        X86::isCTESTCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isSETZUCC(Opcode) ||
+        X86::isCMOVCC(Opcode) || X86::isCFCMOVCC(Opcode) ||
+        X86::isCCMPCC(Opcode) || X86::isCTESTCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3144,8 +3199,9 @@ X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
 }
 
 X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
-  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                      : X86::COND_INVALID;
+  return X86::isSETCC(MI.getOpcode()) || X86::isSETZUCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
@@ -3224,18 +3280,18 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
 #define GET_X86_NF_TRANSFORM_TABLE
 #define GET_X86_ND2NONND_TABLE
 #include "X86GenInstrMapping.inc"
-unsigned X86::getNFVariant(unsigned Opc) {
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+
+static unsigned getNewOpcFromTable(ArrayRef<X86TableEntry> Table,
+                                   unsigned Opc) {
   const auto I = llvm::lower_bound(Table, Opc);
   return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
 }
+unsigned X86::getNFVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86NFTransformTable, Opc);
+}
 
-static unsigned getNonNDVariant(unsigned Opc, const X86Subtarget &STI) {
-  if (!STI.hasNDD())
-    return 0U;
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86ND2NonNDTable);
-  const auto I = llvm::lower_bound(Table, Opc);
-  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+unsigned X86::getNonNDVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
 /// Return the inverse of the specified condition,
@@ -3535,10 +3591,10 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
-  // Call defs X87 register, so we special case it here because
+  // Call and inlineasm defs X87 register, so we special case it here because
   // otherwise calls are incorrectly flagged as x87 instructions
   // as a result.
-  if (MI.isCall())
+  if (MI.isCall() || MI.isInlineAsm())
     return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
@@ -5587,7 +5643,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return nullptr;
 
   // Collect information about virtual register operands of MI.
@@ -7202,7 +7258,7 @@ static MachineInstr *fuseInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
+static MachineInstr *makeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
@@ -7281,6 +7337,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
         return NewMI;
       }
     }
+    break;
+  case X86::MOV32r0:
+    if (auto *NewMI =
+            makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,
+                       InsertPt, MI))
+      return NewMI;
     break;
   }
 
@@ -7382,16 +7444,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                                                Size, Alignment))
     return CustomMI;
 
-  if (Opc == X86::MOV32r0)
-    if (auto *NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI))
-      return NewMI;
-
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
-  unsigned NonNDOpc = getNonNDVariant(Opc, Subtarget);
+  unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
                 : lookupFoldTable(Opc, OpNum);
@@ -7483,6 +7541,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   for (auto Op : Ops) {
     MachineOperand &MO = MI.getOperand(Op);
     auto SubReg = MO.getSubReg();
+    // MOV32r0 is special b/c it's used to clear a 64-bit register too.
+    // (See patterns for MOV32r0 in TD files).
+    if (MI.getOpcode() == X86::MOV32r0 && SubReg == X86::sub_32bit)
+      continue;
     if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
       return nullptr;
   }
@@ -7508,7 +7570,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     switch (Opc) {
     default:
       // NDD can be folded into RMW though its Op0 and Op1 are not tied.
-      return getNonNDVariant(Opc, Subtarget) ? Impl() : nullptr;
+      return (Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U) ? Impl()
+                                                                   : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -8823,6 +8886,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   unsigned Opcode = MI.getOpcode();
   if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
       Opcode == X86::PLDTILECFGV)
+    return true;
+
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
     return true;
 
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
@@ -10324,7 +10392,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
       return false;
     }
 
-    MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+    MachineDominatorTree *DT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
     return VisitNode(DT->getRootNode(), 0);
   }
 
@@ -10411,7 +10480,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -10454,6 +10523,7 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
@@ -10530,7 +10600,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
+X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                   MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 

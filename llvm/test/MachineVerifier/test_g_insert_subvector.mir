@@ -1,4 +1,5 @@
-# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs -mtriple=arm64 %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
 
 ---
 name:            g_splat_vector

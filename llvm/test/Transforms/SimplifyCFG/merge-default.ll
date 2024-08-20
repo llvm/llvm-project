@@ -11,8 +11,8 @@ define void @foo(i32 %Kind) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[KIND:%.*]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 15, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 15, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    call void @g()

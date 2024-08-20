@@ -51,3 +51,24 @@ subroutine predetermined_privatization()
   end do
   !$omp end parallel do
 end
+
+! https://github.com/llvm/llvm-project/issues/75767
+!CHECK-LABEL: func @_QPparallel_critical_privatization(
+subroutine parallel_critical_privatization()
+  integer :: i
+
+  !CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_critical_privatizationEi"}
+  !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: omp.parallel private(@{{.*}} %[[I_DECL]]#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>) {
+  !CHECK:   %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !$omp parallel default(firstprivate)
+    !CHECK: omp.critical {
+    !$omp critical
+      !CHECK: %[[C200:.*]] = arith.constant 200 : i32
+      !CHECK: hlfir.assign %[[C200]] to %[[PRIV_I_DECL]]#0 : i32, !fir.ref<i32>
+      i = 200
+    !CHECK: }
+    !$omp end critical
+  !CHECK: }
+  !$omp end parallel
+end subroutine

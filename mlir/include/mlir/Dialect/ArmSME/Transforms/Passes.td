@@ -116,10 +116,14 @@ def EnableArmStreaming
                             "not be used for input and/or output and the "
                             "function must return with ZA unchanged")
            )}]>,
-    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+    Option<"ifRequiredByOps", "if-required-by-ops", "bool",
            /*default=*/"false",
-           "Only apply the selected streaming/ZA modes if the function "
-           " contains ops that require them.">
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " ops that implement the ArmSMETileOpInterface.">,
+    Option<"ifScalableAndSupported", "if-scalable-and-supported",
+           "bool", /*default=*/"false",
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " supported scalable vector operations.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
@@ -166,8 +170,8 @@ def OuterProductFusion
     Becomes:
 
     ```mlir
-    %a_packed = "llvm.intr.experimental.vector.interleave2"(%a0, %a1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
-    %b_packed = "llvm.intr.experimental.vector.interleave2"(%b0, %b1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+    %a_packed = vector.interleave %a0, %a1 : vector<[4]xf16> -> vector<[8]xf16>
+    %b_packed = vector.interleave %b0, %b1 : vector<[4]xf16> -> vector<[8]xf16>
     %0 = arm_sme.fmopa_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
     ```
 
@@ -176,7 +180,7 @@ def OuterProductFusion
     https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smesmopa_4way-arm_smesmopa_4wayop
   }];
   let constructor = "mlir::arm_sme::createOuterProductFusionPass()";
-  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "LLVM::LLVMDialect"];
+  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect"];
 }
 
 def VectorLegalization
@@ -198,7 +202,8 @@ def VectorLegalization
     "func::FuncDialect",
     "arm_sme::ArmSMEDialect",
     "vector::VectorDialect",
-    "arith::ArithDialect"
+    "arith::ArithDialect",
+    "index::IndexDialect"
   ];
 }
 

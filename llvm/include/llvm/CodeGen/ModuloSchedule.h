@@ -370,6 +370,78 @@ protected:
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
 };
 
+/// Expand the kernel using modulo variable expansion algorithm (MVE).
+/// It unrolls the kernel enough to avoid overlap of register lifetime.
+class ModuloScheduleExpanderMVE {
+private:
+  using ValueMapTy = DenseMap<unsigned, unsigned>;
+  using MBBVectorTy = SmallVectorImpl<MachineBasicBlock *>;
+  using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
+
+  ModuloSchedule &Schedule;
+  MachineFunction &MF;
+  const TargetSubtargetInfo &ST;
+  MachineRegisterInfo &MRI;
+  const TargetInstrInfo *TII = nullptr;
+  LiveIntervals &LIS;
+
+  MachineBasicBlock *OrigKernel = nullptr;
+  MachineBasicBlock *OrigPreheader = nullptr;
+  MachineBasicBlock *OrigExit = nullptr;
+  MachineBasicBlock *Check = nullptr;
+  MachineBasicBlock *Prolog = nullptr;
+  MachineBasicBlock *NewKernel = nullptr;
+  MachineBasicBlock *Epilog = nullptr;
+  MachineBasicBlock *NewPreheader = nullptr;
+  MachineBasicBlock *NewExit = nullptr;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
+
+  /// The number of unroll required to avoid overlap of live ranges.
+  /// NumUnroll = 1 means no unrolling.
+  int NumUnroll;
+
+  void calcNumUnroll();
+  void generatePipelinedLoop();
+  void generateProlog(SmallVectorImpl<ValueMapTy> &VRMap);
+  void generatePhi(MachineInstr *OrigMI, int UnrollNum,
+                   SmallVectorImpl<ValueMapTy> &PrologVRMap,
+                   SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                   SmallVectorImpl<ValueMapTy> &PhiVRMap);
+  void generateKernel(SmallVectorImpl<ValueMapTy> &PrologVRMap,
+                      SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                      InstrMapTy &LastStage0Insts);
+  void generateEpilog(SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                      SmallVectorImpl<ValueMapTy> &EpilogVRMap,
+                      InstrMapTy &LastStage0Insts);
+  void mergeRegUsesAfterPipeline(Register OrigReg, Register NewReg);
+
+  MachineInstr *cloneInstr(MachineInstr *OldMI);
+
+  void updateInstrDef(MachineInstr *NewMI, ValueMapTy &VRMap, bool LastDef);
+
+  void generateKernelPhi(Register OrigLoopVal, Register NewLoopVal,
+                         unsigned UnrollNum,
+                         SmallVectorImpl<ValueMapTy> &VRMapProlog,
+                         SmallVectorImpl<ValueMapTy> &VRMapPhi);
+  void updateInstrUse(MachineInstr *MI, int StageNum, int PhaseNum,
+                      SmallVectorImpl<ValueMapTy> &CurVRMap,
+                      SmallVectorImpl<ValueMapTy> *PrevVRMap);
+
+  void insertCondBranch(MachineBasicBlock &MBB, int RequiredTC,
+                        InstrMapTy &LastStage0Insts,
+                        MachineBasicBlock &GreaterThan,
+                        MachineBasicBlock &Otherwise);
+
+public:
+  ModuloScheduleExpanderMVE(MachineFunction &MF, ModuloSchedule &S,
+                            LiveIntervals &LIS)
+      : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
+        TII(ST.getInstrInfo()), LIS(LIS) {}
+
+  void expand();
+  static bool canApply(MachineLoop &L);
+};
+
 /// Expander that simply annotates each scheduled instruction with a post-instr
 /// symbol that can be consumed by the ModuloScheduleTest pass.
 ///

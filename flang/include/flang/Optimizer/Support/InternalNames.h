@@ -15,6 +15,7 @@
 #include <optional>
 
 static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
+static constexpr llvm::StringRef componentInitSeparator = ".di.";
 static constexpr llvm::StringRef bindingTableSeparator = ".v.";
 static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
 
@@ -55,9 +56,8 @@ struct NameUniquer {
     DeconstructedName(llvm::ArrayRef<std::string> modules,
                       llvm::ArrayRef<std::string> procs, std::int64_t blockId,
                       llvm::StringRef name, llvm::ArrayRef<std::int64_t> kinds)
-        : modules{modules.begin(), modules.end()}, procs{procs.begin(),
-                                                         procs.end()},
-          blockId{blockId}, name{name}, kinds{kinds.begin(), kinds.end()} {}
+        : modules{modules}, procs{procs}, blockId{blockId}, name{name},
+          kinds{kinds} {}
 
     llvm::SmallVector<std::string> modules;
     llvm::SmallVector<std::string> procs;
@@ -155,6 +155,11 @@ struct NameUniquer {
   /// mangled derived type name.
   static std::string
   getTypeDescriptorBindingTableName(llvm::StringRef mangledTypeName);
+
+  /// Given a mangled derived type name and a component name, get the name of
+  /// the global object containing the component default initialization.
+  static std::string getComponentInitName(llvm::StringRef mangledTypeName,
+                                          llvm::StringRef componentName);
 
   /// Remove markers that have been added when doing partial type
   /// conversions. mlir::Type cannot be mutated in a pass, so new

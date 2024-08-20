@@ -80,9 +80,11 @@
 ; R600-NOT: .amd_amdgpu_hsa_metadata
 ; R600-NOT: .amd_amdgpu_pal_metadata
 
-define amdgpu_kernel void @elf_notes() {
+define amdgpu_kernel void @elf_notes() #0 {
   ret void
 }
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

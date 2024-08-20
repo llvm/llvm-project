@@ -208,9 +208,11 @@ FormatStringConverter::FormatStringConverter(ASTContext *ContextIn,
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
       Args[FormatArgOffset]->IgnoreImplicitAsWritten());
-  assert(FormatExpr);
-  if (!FormatExpr->isOrdinary())
-    return; // No wide string support yet
+  if (!FormatExpr || !FormatExpr->isOrdinary()) {
+    // Function must have a narrow string literal as its first argument.
+    conversionNotPossible("first argument is not a narrow string literal");
+    return;
+  }
   PrintfFormatString = FormatExpr->getString();
 
   // Assume that the output will be approximately the same size as the input,

@@ -100,7 +100,8 @@ getFieldsForInitListExpr(const InitListT *InitList) {
   std::vector<const FieldDecl *> Fields;
 
   if (InitList->getType()->isUnionType()) {
-    Fields.push_back(InitList->getInitializedFieldInUnion());
+    if (const FieldDecl *Field = InitList->getInitializedFieldInUnion())
+      Fields.push_back(Field);
     return Fields;
   }
 
@@ -137,9 +138,11 @@ RecordInitListHelper::RecordInitListHelper(
   // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
   SmallVector<Expr *> InitsForUnion;
   if (Ty->isUnionType() && Inits.empty()) {
-    assert(Fields.size() == 1);
-    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
-    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+    assert(Fields.size() <= 1);
+    if (!Fields.empty()) {
+      ImplicitValueInitForUnion.emplace(Fields.front()->getType());
+      InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+    }
     Inits = InitsForUnion;
   }
 
@@ -165,6 +168,13 @@ static void insertIfGlobal(const Decl &D,
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasGlobalStorage())
       Globals.insert(V);
+}
+
+static void insertIfLocal(const Decl &D,
+                          llvm::DenseSet<const VarDecl *> &Locals) {
+  if (auto *V = dyn_cast<VarDecl>(&D))
+    if (V->hasLocalStorage() && !isa<ParmVarDecl>(V))
+      Locals.insert(V);
 }
 
 static void insertIfFunction(const Decl &D,
@@ -217,12 +227,14 @@ public:
 
   bool VisitDecl(Decl *D) {
     insertIfGlobal(*D, Referenced.Globals);
+    insertIfLocal(*D, Referenced.Locals);
     insertIfFunction(*D, Referenced.Functions);
     return true;
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *E) {
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
+    insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
     return true;
   }

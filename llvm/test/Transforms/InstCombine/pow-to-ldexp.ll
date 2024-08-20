@@ -5,16 +5,10 @@
 
 
 define float @pow_sitofp_f32_const_base_2(i32 %x) {
-; LDEXP-LABEL: define float @pow_sitofp_f32_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
-; LDEXP-NEXT:    ret float [[LDEXPF]]
-;
-; NOLDEXP-LABEL: define float @pow_sitofp_f32_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to float
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call float @llvm.exp2.f32(float [[ITOFP]])
-; NOLDEXP-NEXT:    ret float [[POW]]
+; CHECK-LABEL: define float @pow_sitofp_f32_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = sitofp i32 %x to float
   %pow = tail call float @llvm.pow.f32(float 2.000000e+00, float %itofp)
@@ -22,16 +16,10 @@ define float @pow_sitofp_f32_const_base_2(i32 %x) {
 }
 
 define float @pow_sitofp_f32_const_base_2__flags(i32 %x) {
-; LDEXP-LABEL: define float @pow_sitofp_f32_const_base_2__flags(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call nnan nsz float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
-; LDEXP-NEXT:    ret float [[LDEXPF]]
-;
-; NOLDEXP-LABEL: define float @pow_sitofp_f32_const_base_2__flags(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to float
-; NOLDEXP-NEXT:    [[EXP2:%.*]] = tail call nnan nsz float @llvm.exp2.f32(float [[ITOFP]])
-; NOLDEXP-NEXT:    ret float [[EXP2]]
+; CHECK-LABEL: define float @pow_sitofp_f32_const_base_2__flags(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call nnan nsz float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = sitofp i32 %x to float
   %pow = tail call nsz nnan float @llvm.pow.f32(float 2.000000e+00, float %itofp)
@@ -115,16 +103,10 @@ define float @pow_sitofp_f32_const_base_16(i32 %x) {
 }
 
 define double @pow_sitofp_f64_const_base_2(i32 %x) {
-; LDEXP-LABEL: define double @pow_sitofp_f64_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
-; LDEXP-NEXT:    ret double [[LDEXP]]
-;
-; NOLDEXP-LABEL: define double @pow_sitofp_f64_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to double
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call double @llvm.exp2.f64(double [[ITOFP]])
-; NOLDEXP-NEXT:    ret double [[POW]]
+; CHECK-LABEL: define double @pow_sitofp_f64_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %itofp = sitofp i32 %x to double
   %pow = tail call double @llvm.pow.f64(double 2.000000e+00, double %itofp)
@@ -134,8 +116,7 @@ define double @pow_sitofp_f64_const_base_2(i32 %x) {
 define half @pow_sitofp_f16_const_base_2(i32 %x) {
 ; CHECK-LABEL: define half @pow_sitofp_f16_const_base_2(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to half
-; CHECK-NEXT:    [[POW:%.*]] = tail call half @llvm.pow.f16(half 0xH4000, half [[ITOFP]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call half @llvm.ldexp.f16.i32(half 0xH3C00, i32 [[X]])
 ; CHECK-NEXT:    ret half [[POW]]
 ;
   %itofp = sitofp i32 %x to half
@@ -144,16 +125,10 @@ define half @pow_sitofp_f16_const_base_2(i32 %x) {
 }
 
 define <2 x float> @pow_sitofp_v2f32_const_base_2(<2 x i32> %x) {
-; LDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
-; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-NEXT:    ret <2 x float> [[EXP2]]
-;
-; NOLDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
-; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x float>
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
-; NOLDEXP-NEXT:    ret <2 x float> [[POW]]
+; CHECK-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
+; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = sitofp <2 x i32> %x to <2 x float>
   %pow = tail call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> %itofp)
@@ -199,16 +174,10 @@ define <2 x float> @pow_sitofp_v2f32_const_base_mixed_2(<2 x i32> %x) {
 }
 
 define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(<2 x i32> %x) {
-; LDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
-; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NEXT:    [[EXP2:%.*]] = tail call nsz afn <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-NEXT:    ret <2 x float> [[EXP2]]
-;
-; NOLDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
-; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x float>
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call nsz afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
-; NOLDEXP-NEXT:    ret <2 x float> [[POW]]
+; CHECK-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call nsz afn <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
+; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = sitofp <2 x i32> %x to <2 x float>
   %pow = tail call nsz afn <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> %itofp)
@@ -216,16 +185,10 @@ define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(<2 x i32> %x) {
 }
 
 define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(<vscale x 4 x i32> %x) {
-; LDEXP-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
-; LDEXP-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[X]])
-; LDEXP-NEXT:    ret <vscale x 4 x float> [[EXP2]]
-;
-; NOLDEXP-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
-; NOLDEXP-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[ITOFP]])
-; NOLDEXP-NEXT:    ret <vscale x 4 x float> [[POW]]
+; CHECK-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
+; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[X]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = sitofp <vscale x 4 x i32> %x to <vscale x 4 x float>
   %pow = tail call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> splat (float 2.0), <vscale x 4 x float> %itofp)
@@ -233,16 +196,10 @@ define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(<vscale x 4 x i32> 
 }
 
 define <2 x half> @pow_sitofp_v2f16_const_base_2(<2 x i32> %x) {
-; LDEXP-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
-; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> <half 0xH3C00, half 0xH3C00>, <2 x i32> [[X]])
-; LDEXP-NEXT:    ret <2 x half> [[EXP2]]
-;
-; NOLDEXP-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
-; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x half>
-; NOLDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x half> @llvm.exp2.v2f16(<2 x half> [[ITOFP]])
-; NOLDEXP-NEXT:    ret <2 x half> [[EXP2]]
+; CHECK-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> <half 0xH3C00, half 0xH3C00>, <2 x i32> [[X]])
+; CHECK-NEXT:    ret <2 x half> [[EXP2]]
 ;
   %itofp = sitofp <2 x i32> %x to <2 x half>
   %pow = tail call <2 x half> @llvm.pow.v2f16(<2 x half> <half 2.000000e+00, half 2.000000e+00>, <2 x half> %itofp)
@@ -250,16 +207,10 @@ define <2 x half> @pow_sitofp_v2f16_const_base_2(<2 x i32> %x) {
 }
 
 define <2 x double> @pow_sitofp_v2f64_const_base_2(<2 x i32> %x) {
-; LDEXP-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
-; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-NEXT:    ret <2 x double> [[EXP2]]
-;
-; NOLDEXP-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
-; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x double>
-; NOLDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x double> @llvm.exp2.v2f64(<2 x double> [[ITOFP]])
-; NOLDEXP-NEXT:    ret <2 x double> [[EXP2]]
+; CHECK-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> [[X]])
+; CHECK-NEXT:    ret <2 x double> [[EXP2]]
 ;
   %itofp = sitofp <2 x i32> %x to <2 x double>
   %pow = tail call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> %itofp)
@@ -333,16 +284,10 @@ define <2 x double> @pow_sitofp_v2f64_const_base_8(<2 x i32> %x) {
 }
 
 define fp128 @pow_sitofp_fp128_const_base_2(i32 %x) {
-; LDEXP-LABEL: define fp128 @pow_sitofp_fp128_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
-; LDEXP-NEXT:    ret fp128 [[LDEXPL]]
-;
-; NOLDEXP-LABEL: define fp128 @pow_sitofp_fp128_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to fp128
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call fp128 @llvm.exp2.f128(fp128 [[ITOFP]])
-; NOLDEXP-NEXT:    ret fp128 [[POW]]
+; CHECK-LABEL: define fp128 @pow_sitofp_fp128_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
+; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = sitofp i32 %x to fp128
   %pow = tail call fp128 @llvm.pow.fp128(fp128 0xL00000000000000004000000000000000, fp128 %itofp)
@@ -412,16 +357,10 @@ define float @libcall_powf_sitofp_f32_const_base_2__flags(i32 %x) {
 }
 
 define float @readnone_libcall_powf_sitofp_f32_const_base_2(i32 %x) {
-; LDEXP-LABEL: define float @readnone_libcall_powf_sitofp_f32_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
-; LDEXP-NEXT:    ret float [[LDEXPF]]
-;
-; NOLDEXP-LABEL: define float @readnone_libcall_powf_sitofp_f32_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to float
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call float @llvm.exp2.f32(float [[ITOFP]])
-; NOLDEXP-NEXT:    ret float [[POW]]
+; CHECK-LABEL: define float @readnone_libcall_powf_sitofp_f32_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = sitofp i32 %x to float
   %pow = tail call float @powf(float 2.000000e+00, float %itofp) memory(none)
@@ -429,16 +368,10 @@ define float @readnone_libcall_powf_sitofp_f32_const_base_2(i32 %x) {
 }
 
 define double @readnone_libcall_pow_sitofp_f32_const_base_2(i32 %x) {
-; LDEXP-LABEL: define double @readnone_libcall_pow_sitofp_f32_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
-; LDEXP-NEXT:    ret double [[LDEXP]]
-;
-; NOLDEXP-LABEL: define double @readnone_libcall_pow_sitofp_f32_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to double
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call double @llvm.exp2.f64(double [[ITOFP]])
-; NOLDEXP-NEXT:    ret double [[POW]]
+; CHECK-LABEL: define double @readnone_libcall_pow_sitofp_f32_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %itofp = sitofp i32 %x to double
   %pow = tail call double @pow(double 2.000000e+00, double %itofp) memory(none)
@@ -446,16 +379,10 @@ define double @readnone_libcall_pow_sitofp_f32_const_base_2(i32 %x) {
 }
 
 define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(i32 %x) {
-; LDEXP-LABEL: define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(
-; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
-; LDEXP-NEXT:    ret fp128 [[LDEXPL]]
-;
-; NOLDEXP-LABEL: define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(
-; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to fp128
-; NOLDEXP-NEXT:    [[POW:%.*]] = tail call fp128 @llvm.exp2.f128(fp128 [[ITOFP]])
-; NOLDEXP-NEXT:    ret fp128 [[POW]]
+; CHECK-LABEL: define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
+; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = sitofp i32 %x to fp128
   %pow = tail call fp128 @powl(fp128 0xL00000000000000004000000000000000, fp128 %itofp) memory(none)

@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+#include <stdio.h> //needed for stdin/out/err
+
+namespace LIBC_NAMESPACE_DECL {
 namespace file {
 
 enum Stream {
@@ -94,4 +97,4 @@ LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
 }
 
 } // namespace file
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

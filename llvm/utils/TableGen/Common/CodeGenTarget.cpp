@@ -63,7 +63,7 @@ StringRef llvm::getName(MVT::SimpleValueType T) {
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   // clang-format off
   switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc)                          \
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");

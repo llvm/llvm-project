@@ -55,6 +55,7 @@ config.substitutions.append(('%{exec}',
 ))
 
 config.stdlib = 'apple-libc++'
+config.using_system_stdlib = True
 
 import os, site
 import libcxx.test.params, libcxx.test.config

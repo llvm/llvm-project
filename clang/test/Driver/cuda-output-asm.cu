@@ -1,8 +1,5 @@
 // Tests CUDA compilation with -S and -emit-llvm.
 
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix HOST -check-prefix SM20 %s
 // RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-host-only -o foo.s --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \

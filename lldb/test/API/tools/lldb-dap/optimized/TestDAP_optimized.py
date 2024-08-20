@@ -47,6 +47,6 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(optimized_variable["value"].startswith("<error:"))
         error_msg = optimized_variable["$__lldb_extensions"]["error"]
         self.assertTrue(
-            ("Could not evaluate DW_OP_entry_value" in error_msg)
+            ("could not evaluate DW_OP_entry_value: no parent function" in error_msg)
             or ("variable not available" in error_msg)
         )

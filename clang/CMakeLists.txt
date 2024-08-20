@@ -350,7 +350,9 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  endif ()
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -848,23 +850,17 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # Install targets have side effects, so we always want to execute them.
-    # "install" is reserved by CMake and can't be used as a step name for
-    # ExternalProject_Add_Step, so we can match against "^install-" instead of
-    # "^install" to get a tighter match. CMake's installation scripts already
-    # skip up-to-date files, so there's no behavior change if you install to the
-    # same destination multiple times.
-    if(target MATCHES "^install-")
-      set(step_always ON)
-    else()
-      set(step_always OFF)
-    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
-      ALWAYS ${step_always}
+      # We need to set ALWAYS to ON here, otherwise these targets won't be
+      # built on a second invocation of ninja.  The targets have their own
+      # logic to determine if they should build or not so setting ALWAYS ON
+      # here does not mean the targets will always rebuild it just means that
+      # they will check their dependenices and see if they need to be built.
+      ALWAYS ON
       EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )

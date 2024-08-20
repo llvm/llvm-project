@@ -49,6 +49,9 @@ _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
+  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor.
+  using __trivially_relocatable = locale;
+
   // types:
   class _LIBCPP_EXPORTED_FROM_ABI facet;
   class _LIBCPP_EXPORTED_FROM_ABI id;

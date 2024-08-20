@@ -116,82 +116,118 @@ declare <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float>, i64
 
 define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale x 4 x float> %v2, <vscale x 4 x double> %v3) {
 ; CHECK-LABEL: 'reductions'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %add_nxv1i32 = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv1i32 = call i32 @llvm.vector.reduce.mul.nxv1i32(<vscale x 1 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %and_nxv1i32 = call i32 @llvm.vector.reduce.and.nxv1i32(<vscale x 1 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %or_nxv1i32 = call i32 @llvm.vector.reduce.or.nxv1i32(<vscale x 1 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %or_nxv4i64 = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %xor_nxv1i32 = call i32 @llvm.vector.reduce.xor.nxv1i32(<vscale x 1 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %xor_nxv4i32 = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xor_nxv4i64 = call i64 @llvm.vector.reduce.xor.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %umin_nxv1i64 = call i64 @llvm.vector.reduce.umin.nxv1i64(<vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umin_nxv4i32 = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %umin_nxv4i64 = call i64 @llvm.vector.reduce.umin.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %smin_nxv1i64 = call i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smin_nxv4i32 = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %smin_nxv4i64 = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %umax_nxv1i64 = call i64 @llvm.vector.reduce.umax.nxv1i64(<vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umax_nxv4i32 = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %umax_nxv4i64 = call i64 @llvm.vector.reduce.umax.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %smax_nxv1i64 = call i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fadd_nxv1f32 = call fast float @llvm.vector.reduce.fadd.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'reductions'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %add_nxv1i32 = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv1i32 = call i32 @llvm.vector.reduce.mul.nxv1i32(<vscale x 1 x i32> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %and_nxv1i32 = call i32 @llvm.vector.reduce.and.nxv1i32(<vscale x 1 x i32> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %or_nxv1i32 = call i32 @llvm.vector.reduce.or.nxv1i32(<vscale x 1 x i32> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %or_nxv4i64 = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %xor_nxv1i32 = call i32 @llvm.vector.reduce.xor.nxv1i32(<vscale x 1 x i32> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %xor_nxv4i32 = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xor_nxv4i64 = call i64 @llvm.vector.reduce.xor.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %umin_nxv1i64 = call i64 @llvm.vector.reduce.umin.nxv1i64(<vscale x 1 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umin_nxv4i32 = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %umin_nxv4i64 = call i64 @llvm.vector.reduce.umin.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %smin_nxv1i64 = call i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smin_nxv4i32 = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %smin_nxv4i64 = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %umax_nxv1i64 = call i64 @llvm.vector.reduce.umax.nxv1i64(<vscale x 1 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %umax_nxv4i32 = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %umax_nxv4i64 = call i64 @llvm.vector.reduce.umax.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %smax_nxv1i64 = call i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %fadd_nxv1f32 = call fast float @llvm.vector.reduce.fadd.nxv1f32(float 0.000000e+00, <vscale x 1 x float> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v2)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v3)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+  %add_nxv1i32 = call i32 @llvm.vector.reduce.add.nxv1i32(<vscale x 1 x i32> undef)
   %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
   %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
+  %mul_nxv1i32 = call i32 @llvm.vector.reduce.mul.nxv1i32(<vscale x 1 x i32> undef)
   %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
   %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
+  %and_nxv1i32 = call i32 @llvm.vector.reduce.and.nxv1i32(<vscale x 1 x i32> undef)
   %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
   %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
+  %or_nxv1i32 = call i32 @llvm.vector.reduce.or.nxv1i32(<vscale x 1 x i32> undef)
   %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)
   %or_nxv4i64 = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> %v1)
+  %xor_nxv1i32 = call i32 @llvm.vector.reduce.xor.nxv1i32(<vscale x 1 x i32> undef)
   %xor_nxv4i32 = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> %v0)
   %xor_nxv4i64 = call i64 @llvm.vector.reduce.xor.nxv4i64(<vscale x 4 x i64> %v1)
+  %umin_nxv1i64 = call i64 @llvm.vector.reduce.umin.nxv1i64(<vscale x 1 x i64> undef)
   %umin_nxv4i32 = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> %v0)
   %umin_nxv4i64 = call i64 @llvm.vector.reduce.umin.nxv4i64(<vscale x 4 x i64> %v1)
+  %smin_nxv1i64 = call i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64> undef)
   %smin_nxv4i32 = call i32 @llvm.vector.reduce.smin.nxv4i32(<vscale x 4 x i32> %v0)
   %smin_nxv4i64 = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v1)
+  %umax_nxv1i64 = call i64 @llvm.vector.reduce.umax.nxv1i64(<vscale x 1 x i64> undef)
   %umax_nxv4i32 = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %v0)
   %umax_nxv4i64 = call i64 @llvm.vector.reduce.umax.nxv4i64(<vscale x 4 x i64> %v1)
+  %smax_nxv1i64 = call i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64> undef)
   %smax_nxv4i32 = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %v0)
   %smax_nxv4i64 = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v1)
 
+  %fadd_nxv1f32 = call fast float @llvm.vector.reduce.fadd.nxv1f32(float 0.0, <vscale x 1 x float> undef)
   %fadd_nxv4f32 = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.0, <vscale x 4 x float> %v2)
   %fadd_nxv4f64 = call fast double @llvm.vector.reduce.fadd.nxv4f64(double 0.0, <vscale x 4 x double> %v3)
+  %fmin_nxv1f32 = call fast float @llvm.vector.reduce.fmin.nxv1f32(<vscale x 1 x float> undef)
   %fmin_nxv4f32 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %v2)
   %fmin_nxv4f64 = call fast double @llvm.vector.reduce.fmin.nxv4f64(<vscale x 4 x double> %v3)
+  %fmax_nxv1f32 = call fast float @llvm.vector.reduce.fmax.nxv1f32(<vscale x 1 x float> undef)
   %fmax_nxv4f32 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %v2)
   %fmax_nxv4f64 = call fast double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double> %v3)
 
@@ -691,8 +727,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask_nxv8i1_i32 = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask_nxv4i1_i32 = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask_nxv2i1_i32 = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %mask_nxv32i1_i64 = call <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64 undef, i64 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %mask_nxv16i1_i16 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %mask_nxv32i1_i64 = call <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %mask_nxv16i1_i16 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i16(i16 undef, i16 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %mask_v16i1_i64 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %mask_v8i1_i64 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %mask_v4i1_i64 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 undef, i64 undef)
@@ -701,8 +737,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 144 for instruction: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'get_lane_mask'
@@ -909,6 +945,123 @@ define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %
   ret void
 }
 
+define void @histogram_nxv2i64(<vscale x 2 x ptr> %buckets, <vscale x 2 x i1> %mask) #3 {
+; CHECK-LABEL: 'histogram_nxv2i64'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv2i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %buckets, i64 1, <vscale x 2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv4i32(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %mask) #3 {
+; CHECK-LABEL: 'histogram_nxv4i32'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv4i32'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv8i16(<vscale x 8 x ptr> %buckets, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv8i16'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv8i16'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> %buckets, i16 1, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv16i8'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv16i8'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv16p0.i64(<vscale x 16 x ptr> %buckets, i8 1, <vscale x 16 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v2i64'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v2i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v4i32'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v4i32'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v8i16'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v8i16'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+  ret void
+}
+
+define void @histogram_v16i8(<16 x ptr> %buckets, <16 x i1> %mask) {
+; CHECK-LABEL: 'histogram_v16i8'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_v16i8'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.v16p0.i64(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+  ret void
+}
+
+define void @histogram_nxv4i64(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: 'histogram_nxv4i64'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'histogram_nxv4i64'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)
@@ -949,3 +1102,4 @@ declare void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs,
 attributes #0 = { "target-features"="+sve,+bf16" }
 attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
 attributes #2 = { "target-features"="+sve" vscale_range(2, 16) }
+attributes #3 = { "target-features"="+sve,+sve2" vscale_range(1,16) }

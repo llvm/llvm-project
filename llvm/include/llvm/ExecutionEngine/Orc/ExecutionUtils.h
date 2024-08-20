@@ -319,15 +319,13 @@ private:
                                    Error &Err);
   Error buildObjectFilesMap();
 
-  static Expected<std::pair<size_t, size_t>>
-  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
-
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
   std::set<std::string> ImportedDynamicLibraries;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
   DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+  BumpPtrAllocator ObjFileNameStorage;
 };
 
 /// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT

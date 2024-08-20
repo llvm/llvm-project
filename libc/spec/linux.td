@@ -112,7 +112,19 @@ def Linux : StandardSpec<"Linux"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      []  // Functions
+      [
+        FunctionSpec<
+          "prctl",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+            ArgSpec<UnsignedLongType>,
+          ]
+        >,
+      ]  // Functions
   >;
 
   HeaderSpec SysRandom = HeaderSpec<
@@ -205,7 +217,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<StructEpollEventPtr>,
             ArgSpec<IntType>,
             ArgSpec<IntType>,
-            ArgSpec<SigSetPtrType>
+            ArgSpec<ConstSigSetPtrType>
           ]
         >,
         FunctionSpec<
@@ -216,7 +228,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<StructEpollEventPtr>,
             ArgSpec<IntType>,
             ArgSpec<ConstStructTimeSpecPtr>,
-            ArgSpec<SigSetPtrType>
+            ArgSpec<ConstSigSetPtrType>
           ]
         >,
       ]  // Functions

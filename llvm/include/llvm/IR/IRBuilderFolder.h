@@ -15,6 +15,7 @@
 #define LLVM_IR_IRBUILDERFOLDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 
@@ -52,7 +53,7 @@ public:
                          Value *RHS) const = 0;
 
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                         bool IsInBounds = false) const = 0;
+                         GEPNoWrapFlags NW) const = 0;
 
   virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
 

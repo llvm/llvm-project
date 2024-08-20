@@ -11,10 +11,10 @@
 
 #include <type_traits>
 
-struct bad_ty {};
+struct bad_type {};
 
 struct bad_deleter {
-  void operator()(bad_ty) {}
+  void operator()(bad_type) {}
 };
 
 struct no_move_deleter {
@@ -30,18 +30,18 @@ struct no_nullptr_deleter {
   void operator()(std::nullptr_t) const = delete;
 };
 
-struct Base {};
-struct Derived : Base {};
+struct base {};
+struct derived : base {};
 
 template <class T>
-class MoveDeleter {
-  MoveDeleter();
-  MoveDeleter(MoveDeleter const&);
+class move_deleter {
+  move_deleter();
+  move_deleter(move_deleter const&);
 
 public:
-  MoveDeleter(MoveDeleter&&) {}
+  move_deleter(move_deleter&&) {}
 
-  explicit MoveDeleter(int) {}
+  explicit move_deleter(int) {}
 
   void operator()(T* ptr) { delete ptr; }
 };

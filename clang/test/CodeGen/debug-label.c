@@ -7,7 +7,7 @@ int f1(int a, int b) {
   int sum;
 
 top:
-  // CHECK: call void @llvm.dbg.label(metadata [[LABEL_METADATA:!.*]]), !dbg [[LABEL_LOCATION:!.*]]
+  // CHECK: #dbg_label([[LABEL_METADATA:!.*]],  [[LABEL_LOCATION:![0-9]+]]
   sum = a + b;
   return sum;
 }

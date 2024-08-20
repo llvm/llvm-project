@@ -202,7 +202,7 @@ Profile mergeProfilesByThread(const Profile &L, const Profile &R) {
     for (const auto &Block : P.get()) {
       ThreadProfileIndexMap::iterator It;
       std::tie(It, std::ignore) = ThreadProfileIndex.insert(
-          {Block.Thread, PathDataMapPtr{new PathDataMap()}});
+          {Block.Thread, std::make_unique<PathDataMap>()});
       for (const auto &PathAndData : Block.PathData) {
         auto &PathID = PathAndData.first;
         auto &Data = PathAndData.second;

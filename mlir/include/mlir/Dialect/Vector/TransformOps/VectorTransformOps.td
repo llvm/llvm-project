@@ -89,6 +89,20 @@ def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLowerBitCastPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_bitcast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector bitcast operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usally a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerBroadcastPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_broadcast",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -392,6 +406,17 @@ def ApplyFoldArithExtensionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyFoldElementwiseToVectorPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.elementwise_to_vector",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect a set of patterns that fold elementwise op on vectors to the vector
+    dialect.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.reduction_to_contract",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -401,8 +426,9 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
       - CombineContractBroadcast
       - CombineContractABTranspose
       - CombineContractResultTranspose
-      - ReorderCastOpsOnBroadcast
       - ReorderElementwiseOpsOnTranspose
+      - ReorderElementwiseOpsOnBroadcast
+      - ReorderCastOpsOnBroadcast
 
     These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.

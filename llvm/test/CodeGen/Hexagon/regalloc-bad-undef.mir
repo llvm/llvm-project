@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -hexagon-subreg-liveness -start-after machine-scheduler -stop-after stack-slot-coloring -o - %s | FileCheck %s
+# RUN: llc -march=hexagon -enable-subreg-liveness -start-after machine-scheduler -stop-after stack-slot-coloring -o - %s | FileCheck %s
 
 --- |
   target triple = "hexagon"

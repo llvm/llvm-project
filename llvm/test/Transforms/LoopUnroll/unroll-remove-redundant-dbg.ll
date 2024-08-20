@@ -7,7 +7,7 @@ define i64 @d(i1 %tobool.not, i32 %add, i64 %conv23) !dbg !14{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 0, metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 0, [[META16:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    ret i64 5
 ;
 entry:

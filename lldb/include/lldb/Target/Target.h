@@ -34,6 +34,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -117,6 +118,8 @@ public:
 
   InlineStrategy GetInlineStrategy() const;
 
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
+
   llvm::StringRef GetArg0() const;
 
   void SetArg0(llvm::StringRef arg);
@@ -140,6 +143,8 @@ public:
   bool GetSkipPrologue() const;
 
   PathMappingList &GetSourcePathMap() const;
+
+  PathMappingList &GetObjectPathMap() const;
 
   bool GetAutoSourceMapRelative() const;
 
@@ -1077,9 +1082,11 @@ public:
   // section, then read from the file cache
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr);
+  //
+  // The method is virtual for mocking in the unit tests.
+  virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                            Status &error, bool force_live_memory = false,
+                            lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1615,7 +1622,7 @@ public:
 
   TargetStats &GetStatistics() { return m_stats; }
 
-private:
+protected:
   /// Construct with optional file and arch.
   ///
   /// This member is private. Clients must use

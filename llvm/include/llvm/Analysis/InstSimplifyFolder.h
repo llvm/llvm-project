@@ -38,7 +38,7 @@ class InstSimplifyFolder final : public IRBuilderFolder {
   virtual void anchor();
 
 public:
-  InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
+  explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
 
   //===--------------------------------------------------------------------===//
   // Value-based folders.
@@ -77,8 +77,8 @@ public:
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
-    return simplifyGEPInst(Ty, Ptr, IdxList, IsInBounds, SQ);
+                 GEPNoWrapFlags NW) const override {
+    return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
   Value *FoldSelect(Value *C, Value *True, Value *False) const override {

@@ -50,17 +50,10 @@ entry:
 define arm_aapcs_vfpcc <2 x float> @t4(<2 x i32> %vecinit2.i) nounwind {
 ; CHECK-LABEL: t4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.s32 d2, d0
-; CHECK-NEXT:    vldr s2, LCPI3_0
-; CHECK-NEXT:    vdiv.f32 s1, s5, s2
-; CHECK-NEXT:    vdiv.f32 s0, s4, s2
+; CHECK-NEXT:    vcvt.f32.s32 d16, d0
+; CHECK-NEXT:    vmov.i32 d17, #0x2f000000
+; CHECK-NEXT:    vmul.f32 d0, d16, d17
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:    .data_region
-; CHECK-NEXT:  LCPI3_0:
-; CHECK-NEXT:    .long 0x50000000 @ float 8.58993459E+9
-; CHECK-NEXT:    .end_data_region
 entry:
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
   %div.i = fdiv <2 x float> %vcvt.i, <float 0x4200000000000000, float 0x4200000000000000>
@@ -122,13 +115,12 @@ define arm_aapcs_vfpcc <2 x float> @fix_i64_to_float(<2 x i64> %in) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl ___floatundisf
 ; CHECK-NEXT:    vmov r2, r1, d8
-; CHECK-NEXT:    vmov s18, r0
-; CHECK-NEXT:    vmov.f32 s16, #2.000000e+00
+; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov.i32 d8, #0x3f000000
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl ___floatundisf
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vdiv.f32 s1, s18, s16
-; CHECK-NEXT:    vdiv.f32 s0, s2, s16
+; CHECK-NEXT:    vmov s18, r0
+; CHECK-NEXT:    vmul.f32 d0, d9, d8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {lr}
 ; CHECK-NEXT:    bx lr
@@ -147,13 +139,13 @@ define arm_aapcs_vfpcc <2 x double> @fix_i64_to_double(<2 x i64> %in) {
 ; CHECK-NEXT:    bl ___floatundidf
 ; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    vmov.f64 d8, #2.000000e+00
+; CHECK-NEXT:    vmov.f64 d8, #5.000000e-01
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl ___floatundidf
 ; CHECK-NEXT:    vmov d16, r0, r1
-; CHECK-NEXT:    vdiv.f64 d1, d9, d8
-; CHECK-NEXT:    vdiv.f64 d0, d16, d8
+; CHECK-NEXT:    vmul.f64 d1, d9, d8
+; CHECK-NEXT:    vmul.f64 d0, d16, d8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {lr}
 ; CHECK-NEXT:    bx lr
@@ -200,9 +192,7 @@ define arm_aapcs_vfpcc <3 x float> @test_illegal_int_to_fp(<3 x i32> %in) {
 define arm_aapcs_vfpcc <2 x float> @t1_mul(<2 x i32> %vecinit2.i) local_unnamed_addr #0 {
 ; CHECK-LABEL: t1_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.s32 d16, d0
-; CHECK-NEXT:    vmov.i32 d17, #0x3e000000
-; CHECK-NEXT:    vmul.f32 d0, d16, d17
+; CHECK-NEXT:    vcvt.f32.s32 d0, d0, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -213,9 +203,7 @@ entry:
 define arm_aapcs_vfpcc <2 x float> @t2_mul(<2 x i32> %vecinit2.i) local_unnamed_addr #0 {
 ; CHECK-LABEL: t2_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.u32 d16, d0
-; CHECK-NEXT:    vmov.i32 d17, #0x3e000000
-; CHECK-NEXT:    vmul.f32 d0, d16, d17
+; CHECK-NEXT:    vcvt.f32.u32 d0, d0, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = uitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -239,10 +227,7 @@ entry:
 define arm_aapcs_vfpcc <2 x float> @t5_mul(<2 x i32> %vecinit2.i) local_unnamed_addr #0 {
 ; CHECK-LABEL: t5_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.s32 d16, d0
-; CHECK-NEXT:    mov r0, #796917760
-; CHECK-NEXT:    vdup.32 d17, r0
-; CHECK-NEXT:    vmul.f32 d0, d16, d17
+; CHECK-NEXT:    vcvt.f32.s32 d0, d0, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -253,9 +238,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @t6_mul(<4 x i32> %vecinit6.i) local_unnamed_addr #0 {
 ; CHECK-LABEL: t6_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.s32 q8, q0
-; CHECK-NEXT:    vmov.i32 q9, #0x3e000000
-; CHECK-NEXT:    vmul.f32 q0, q8, q9
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <4 x i32> %vecinit6.i to <4 x float>
@@ -267,9 +250,7 @@ define arm_aapcs_vfpcc <4 x float> @fix_unsigned_i16_to_float_mul(<4 x i16> %in)
 ; CHECK-LABEL: fix_unsigned_i16_to_float_mul:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovl.u16 q8, d0
-; CHECK-NEXT:    vmov.i32 q9, #0x3f000000
-; CHECK-NEXT:    vcvt.f32.u32 q8, q8
-; CHECK-NEXT:    vmul.f32 q0, q8, q9
+; CHECK-NEXT:    vcvt.f32.u32 q0, q8, #1
 ; CHECK-NEXT:    bx lr
   %conv = uitofp <4 x i16> %in to <4 x float>
   %shift = fmul <4 x float> %conv, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
@@ -280,9 +261,7 @@ define arm_aapcs_vfpcc <4 x float> @fix_signed_i16_to_float_mul(<4 x i16> %in) l
 ; CHECK-LABEL: fix_signed_i16_to_float_mul:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovl.s16 q8, d0
-; CHECK-NEXT:    vmov.i32 q9, #0x3f000000
-; CHECK-NEXT:    vcvt.f32.s32 q8, q8
-; CHECK-NEXT:    vmul.f32 q0, q8, q9
+; CHECK-NEXT:    vcvt.f32.s32 q0, q8, #1
 ; CHECK-NEXT:    bx lr
   %conv = sitofp <4 x i16> %in to <4 x float>
   %shift = fmul <4 x float> %conv, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
@@ -340,11 +319,8 @@ define arm_aapcs_vfpcc <2 x double> @fix_i64_to_double_mul(<2 x i64> %in) local_
 define arm_aapcs_vfpcc <8 x float> @test7_mul(<8 x i32> %in) local_unnamed_addr #0 {
 ; CHECK-LABEL: test7_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvt.f32.s32 q8, q0
-; CHECK-NEXT:    vcvt.f32.s32 q9, q1
-; CHECK-NEXT:    vmov.i32 q10, #0x3e000000
-; CHECK-NEXT:    vmul.f32 q0, q8, q10
-; CHECK-NEXT:    vmul.f32 q1, q9, q10
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0, #3
+; CHECK-NEXT:    vcvt.f32.s32 q1, q1, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <8 x i32> %in to <8 x float>
@@ -355,9 +331,7 @@ entry:
 define arm_aapcs_vfpcc <3 x float> @test_illegal_int_to_fp_mul(<3 x i32> %in) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_illegal_int_to_fp_mul:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vcvt.f32.s32 q8, q0
-; CHECK-NEXT:    vmov.f32 q9, #2.500000e-01
-; CHECK-NEXT:    vmul.f32 q0, q8, q9
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0, #2
 ; CHECK-NEXT:    bx lr
   %conv = sitofp <3 x i32> %in to <3 x float>
   %res = fmul <3 x float> %conv, <float 2.500000e-01, float 2.500000e-01, float 2.500000e-01>

@@ -14,7 +14,7 @@ entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  br i1 icmp ne (ptr @test_weak, ptr null), label %if.then, label %cleanup
+  br i1 ptrtoint (ptr @test_weak to i1), label %if.then, label %cleanup
 
 if.then:                                          ; preds = %entry.split
   store i32 0, ptr %A

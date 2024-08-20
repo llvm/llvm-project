@@ -1594,11 +1594,11 @@ def set_actions_for_signal(
 ):
     return_obj = lldb.SBCommandReturnObject()
     command = "process handle {0}".format(signal_name)
-    if pass_action != None:
+    if pass_action is not None:
         command += " -p {0}".format(pass_action)
-    if stop_action != None:
+    if stop_action is not None:
         command += " -s {0}".format(stop_action)
-    if notify_action != None:
+    if notify_action is not None:
         command += " -n {0}".format(notify_action)
 
     testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)

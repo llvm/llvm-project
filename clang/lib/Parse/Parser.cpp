@@ -629,11 +629,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
-  // Skip over the EOF token, flagging end of previous input for incremental
-  // processing
-  if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
-    ConsumeToken();
-
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:
@@ -970,7 +965,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     SingleDecl = ParseModuleImport(SourceLocation(), IS);
   } break;
   case tok::kw_export:
-    if (getLangOpts().CPlusPlusModules) {
+    if (getLangOpts().CPlusPlusModules || getLangOpts().HLSL) {
       ProhibitAttributes(Attrs);
       SingleDecl = ParseExportDeclaration();
       break;
@@ -2060,9 +2055,19 @@ bool Parser::TryAnnotateTypeOrScopeToken(
       return true;
     }
 
+    bool TemplateKWPresent = false;
+    if (Tok.is(tok::kw_template)) {
+      ConsumeToken();
+      TemplateKWPresent = true;
+    }
+
     TypeResult Ty;
     if (Tok.is(tok::identifier)) {
-      // FIXME: check whether the next token is '<', first!
+      if (TemplateKWPresent && NextToken().isNot(tok::less)) {
+        Diag(Tok.getLocation(),
+             diag::missing_template_arg_list_after_template_kw);
+        return true;
+      }
       Ty = Actions.ActOnTypenameType(getCurScope(), TypenameLoc, SS,
                                      *Tok.getIdentifierInfo(),
                                      Tok.getLocation());

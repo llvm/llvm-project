@@ -11,5 +11,14 @@ class TestCase(TestBase):
         """
         self.build()
         _, _, thread, _ = lldbutil.run_to_name_breakpoint(self, "_Dfunction")
-        symbol = thread.frame[0].symbol
-        self.assertEqual(symbol.GetDisplayName(), "_Dfunction")
+        frame = thread.frame[0]
+
+        symbol = frame.symbol
+        # On Windows the function does not have an associated symbol.
+        if symbol.IsValid():
+            self.assertFalse(symbol.mangled)
+            self.assertEqual(symbol.GetDisplayName(), "_Dfunction")
+
+        function = frame.function
+        self.assertFalse(function.mangled)
+        self.assertEqual(function.GetDisplayName(), "_Dfunction")

@@ -173,7 +173,7 @@ define dso_local void @test_zext_inreg_64(i64 %in) {
   %trunc_i32 = trunc i64 %in to i32
   %zext_i32 = zext i32 %trunc_i32 to i64
   store volatile i64 %zext_i32, ptr @var64
-; CHECK: and {{x[0-9]+}}, {{x[0-9]+}}, #0xffffffff
+; CHECK: mov {{w[0-9]+}}, {{w[0-9]+}}
 
   ret void
 }

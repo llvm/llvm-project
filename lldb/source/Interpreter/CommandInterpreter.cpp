@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <memory>
@@ -32,7 +33,7 @@
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegexCommand.h"
 #include "Commands/CommandObjectRegister.h"
-#include "Commands/CommandObjectScript.h"
+#include "Commands/CommandObjectScripting.h"
 #include "Commands/CommandObjectSession.h"
 #include "Commands/CommandObjectSettings.h"
 #include "Commands/CommandObjectSource.h"
@@ -47,6 +48,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -516,6 +518,11 @@ void CommandInterpreter::Initialize() {
     AddAlias("re", cmd_obj_sp);
   }
 
+  cmd_obj_sp = GetCommandSPExact("scripting run");
+  if (cmd_obj_sp) {
+    AddAlias("script", cmd_obj_sp);
+  }
+
   cmd_obj_sp = GetCommandSPExact("session history");
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
@@ -567,7 +574,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);
   REGISTER_COMMAND_OBJECT("quit", CommandObjectQuit);
   REGISTER_COMMAND_OBJECT("register", CommandObjectRegister);
-  REGISTER_COMMAND_OBJECT("script", CommandObjectScript);
+  REGISTER_COMMAND_OBJECT("scripting", CommandObjectMultiwordScripting);
   REGISTER_COMMAND_OBJECT("settings", CommandObjectMultiwordSettings);
   REGISTER_COMMAND_OBJECT("session", CommandObjectSession);
   REGISTER_COMMAND_OBJECT("source", CommandObjectMultiwordSource);
@@ -1291,6 +1298,39 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
   return {};
 }
 
+CommandObject *CommandInterpreter::GetAliasCommandObject(
+    llvm::StringRef cmd, StringList *matches, StringList *descriptions) const {
+  auto find_exact =
+      [&](const CommandObject::CommandMap &map) -> CommandObject * {
+    auto found_elem = map.find(cmd.str());
+    if (found_elem == map.end())
+      return (CommandObject *)nullptr;
+    CommandObject *exact_cmd = found_elem->second.get();
+    if (!exact_cmd)
+      return nullptr;
+
+    if (matches)
+      matches->AppendString(exact_cmd->GetCommandName());
+
+    if (descriptions)
+      descriptions->AppendString(exact_cmd->GetHelp());
+
+    return exact_cmd;
+    return nullptr;
+  };
+
+  CommandObject *exact_cmd = find_exact(GetAliases());
+  if (exact_cmd)
+    return exact_cmd;
+
+  // We didn't have an exact command, so now look for partial matches.
+  StringList tmp_list;
+  StringList *matches_ptr = matches ? matches : &tmp_list;
+  AddNamesMatchingPartialString(GetAliases(), cmd, *matches_ptr);
+
+  return {};
+}
+
 bool CommandInterpreter::CommandExists(llvm::StringRef cmd) const {
   return m_command_dict.find(std::string(cmd)) != m_command_dict.end();
 }
@@ -1816,51 +1856,8 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
     error = expr_result_valobj_sp->GetError();
 
   if (error.Success()) {
-    switch (expr_result) {
-    case eExpressionSetupError:
-      error.SetErrorStringWithFormat(
-          "expression setup error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionParseError:
-      error.SetErrorStringWithFormat(
-          "expression parse error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionResultUnavailable:
-      error.SetErrorStringWithFormat(
-          "expression error fetching result for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionCompleted:
-      break;
-    case eExpressionDiscarded:
-      error.SetErrorStringWithFormat(
-          "expression discarded for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionInterrupted:
-      error.SetErrorStringWithFormat(
-          "expression interrupted for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionHitBreakpoint:
-      error.SetErrorStringWithFormat(
-          "expression hit breakpoint for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionTimedOut:
-      error.SetErrorStringWithFormat(
-          "expression timed out for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionStoppedForDebug:
-      error.SetErrorStringWithFormat("expression stop at entry point "
-                                     "for debugging for the "
-                                     "expression '%s'",
-                                     expr_str.c_str());
-      break;
-    case eExpressionThreadVanished:
-      error.SetErrorStringWithFormat(
-          "expression thread vanished for the expression '%s'",
-          expr_str.c_str());
-      break;
-    }
+    std::string result = lldb_private::toString(expr_result);
+    error.SetErrorString(result + "for the expression '" + expr_str + "'");
   }
   return error;
 }
@@ -1909,6 +1906,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item = std::make_shared<StructuredData::Dictionary>();
     transcript_item->AddStringItem("command", command_line);
+    transcript_item->AddIntegerItem(
+        "timestampInEpochSeconds",
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
     m_transcript.AddItem(transcript_item);
   }
 
@@ -2056,6 +2058,14 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         log, "HandleCommand, command line after removing command name(s): '%s'",
         remainder.c_str());
 
+    // To test whether or not transcript should be saved, `transcript_item` is
+    // used instead of `GetSaveTrasncript()`. This is because the latter will
+    // fail when the command is "settings set interpreter.save-transcript true".
+    if (transcript_item) {
+      transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
+      transcript_item->AddStringItem("commandArguments", remainder);
+    }
+
     ElapsedTime elapsed(execute_time);
     cmd_obj->Execute(remainder.c_str(), result);
   }
@@ -2072,7 +2082,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item->AddStringItem("output", result.GetOutputData());
     transcript_item->AddStringItem("error", result.GetErrorData());
-    transcript_item->AddFloatItem("seconds", execute_time.get().count());
+    transcript_item->AddFloatItem("durationInSeconds",
+                                  execute_time.get().count());
   }
 
   return result.Succeeded();
@@ -2531,7 +2542,7 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
     const StopReason reason = stop_info->GetStopReason();
     if (reason == eStopReasonException ||
         reason == eStopReasonInstrumentation ||
-        reason == eStopReasonProcessorTrace)
+        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt)
       return true;
 
     if (reason == eStopReasonSignal) {
@@ -2692,7 +2703,8 @@ enum {
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
-  eHandleCommandFlagStopOnCrash = (1u << 6)
+  eHandleCommandFlagStopOnCrash = (1u << 6),
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3114,14 +3126,19 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (!is_interactive) {
+  const bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
+  if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
     // alias, get an error and stop parsing the commands file).
+    // But obey the AllowRepeats flag if the user has set it.
     if (line.empty())
       return;
-
+  }
+  if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
@@ -3373,6 +3390,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagPrintResult;
       if (options->m_print_errors != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintErrors;
+      if (options->m_allow_repeats == eLazyBoolYes)
+        flags |= eHandleCommandFlagAllowRepeats;
     } else {
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
               eHandleCommandFlagPrintErrors;
@@ -3431,6 +3450,19 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
   std::string next_word;
   StringList matches;
   bool done = false;
+
+  auto build_alias_cmd = [&](std::string &full_name) {
+    revised_command_line.Clear();
+    matches.Clear();
+    std::string alias_result;
+    cmd_obj =
+        BuildAliasResult(full_name, scratch_command, alias_result, result);
+    revised_command_line.Printf("%s", alias_result.c_str());
+    if (cmd_obj) {
+      wants_raw_input = cmd_obj->WantsRawCommandString();
+    }
+  };
+
   while (!done) {
     char quote_char = '\0';
     std::string suffix;
@@ -3442,14 +3474,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       bool is_real_command =
           (!is_alias) || (cmd_obj != nullptr && !cmd_obj->IsAlias());
       if (!is_real_command) {
-        matches.Clear();
-        std::string alias_result;
-        cmd_obj =
-            BuildAliasResult(full_name, scratch_command, alias_result, result);
-        revised_command_line.Printf("%s", alias_result.c_str());
-        if (cmd_obj) {
-          wants_raw_input = cmd_obj->WantsRawCommandString();
-        }
+        build_alias_cmd(full_name);
       } else {
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
@@ -3496,21 +3521,32 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     if (cmd_obj == nullptr) {
       const size_t num_matches = matches.GetSize();
       if (matches.GetSize() > 1) {
-        StreamString error_msg;
-        error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
-                         next_word.c_str());
+        StringList alias_matches;
+        GetAliasCommandObject(next_word, &alias_matches);
 
-        for (uint32_t i = 0; i < num_matches; ++i) {
-          error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
+        if (alias_matches.GetSize() == 1) {
+          std::string full_name;
+          GetAliasFullName(alias_matches.GetStringAtIndex(0), full_name);
+          build_alias_cmd(full_name);
+          done = static_cast<bool>(cmd_obj);
+        } else {
+          StreamString error_msg;
+          error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
+                           next_word.c_str());
+
+          for (uint32_t i = 0; i < num_matches; ++i) {
+            error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
+          }
+          result.AppendRawError(error_msg.GetString());
         }
-        result.AppendRawError(error_msg.GetString());
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         lldbassert(num_matches == 0);
         result.AppendErrorWithFormat("'%s' is not a valid command.\n",
                                      next_word.c_str());
       }
-      return nullptr;
+      if (!done)
+        return nullptr;
     }
 
     if (cmd_obj->IsMultiwordObject()) {

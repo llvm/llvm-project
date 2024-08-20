@@ -52,16 +52,13 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) if_present
   while(1);
-  // expected-error@+2{{OpenACC clause 'seq' may not follow a 'device_type' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'seq' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) seq
   while(1);
-  // expected-error@+2{{OpenACC clause 'independent' may not follow a 'device_type' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'independent' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) independent
   while(1);
-  // expected-error@+2{{OpenACC clause 'auto' may not follow a 'device_type' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'auto' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) auto
   while(1);
   // expected-error@+2{{OpenACC clause 'worker' may not follow a 'device_type' clause in a compute construct}}

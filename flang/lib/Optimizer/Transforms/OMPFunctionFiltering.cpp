@@ -103,7 +103,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> fir::createOMPFunctionFilteringPass() {
-  return std::make_unique<OMPFunctionFilteringPass>();
-}

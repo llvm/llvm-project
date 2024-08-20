@@ -1477,34 +1477,6 @@ entry:
   ret void
 }
 
-define i1 @constexpr_icmp1() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; TUNIT-LABEL: define {{[^@]+}}@constexpr_icmp1
-; TUNIT-SAME: () #[[ATTR2]] {
-; TUNIT-NEXT:    ret i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CGSCC-LABEL: define {{[^@]+}}@constexpr_icmp1
-; CGSCC-SAME: () #[[ATTR1]] {
-; CGSCC-NEXT:    ret i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-;
-  ret i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-}
-
-define i1 @constexpr_icmp2() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; TUNIT-LABEL: define {{[^@]+}}@constexpr_icmp2
-; TUNIT-SAME: () #[[ATTR2]] {
-; TUNIT-NEXT:    ret i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CGSCC-LABEL: define {{[^@]+}}@constexpr_icmp2
-; CGSCC-SAME: () #[[ATTR1]] {
-; CGSCC-NEXT:    ret i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-;
-  ret i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
-}
-
 define i8 @switch(i1 %c1, i1 %c2) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@switch

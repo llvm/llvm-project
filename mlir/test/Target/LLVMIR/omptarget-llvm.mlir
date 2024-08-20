@@ -110,7 +110,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
   %22 = llvm.mlir.constant(1 : index) : i64
   %23 = omp.map.bounds   lower_bound(%20 : i64) upper_bound(%19 : i64) extent(%21 : i64) stride(%22 : i64) start_idx(%22 : i64)
   %map2 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%23) -> !llvm.ptr {name = ""}
-  omp.target_enter_data   if(%12 : i1) device(%13 : i32) map_entries(%map1, %map2 : !llvm.ptr, !llvm.ptr)
+  omp.target_enter_data   if(%12) device(%13 : i32) map_entries(%map1, %map2 : !llvm.ptr, !llvm.ptr)
   %24 = llvm.load %7 : !llvm.ptr -> i32
   %25 = llvm.mlir.constant(10 : i32) : i32
   %26 = llvm.icmp "sgt" %24, %25 : i32
@@ -127,7 +127,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
   %36 = llvm.mlir.constant(1 : index) : i64
   %37 = omp.map.bounds   lower_bound(%34 : i64) upper_bound(%33 : i64) extent(%35 : i64) stride(%36 : i64) start_idx(%36 : i64)
   %map4 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%37) -> !llvm.ptr {name = ""}
-  omp.target_exit_data   if(%26 : i1) device(%27 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
+  omp.target_exit_data   if(%26) device(%27 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
   llvm.return
 }
 
@@ -457,7 +457,7 @@ llvm.func @_QPopenmp_target_data_update() {
     omp.terminator
   }
 
-  omp.target_update motion_entries(%2 : !llvm.ptr)
+  omp.target_update map_entries(%2 : !llvm.ptr)
 
   llvm.return
 }

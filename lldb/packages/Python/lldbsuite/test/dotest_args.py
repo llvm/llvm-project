@@ -97,6 +97,12 @@ def create_parser():
     )
 
     group.add_argument(
+        "--make",
+        metavar="make",
+        dest="make",
+        help=textwrap.dedent("Specify which make to use."),
+    )
+    group.add_argument(
         "--dsymutil",
         metavar="dsymutil",
         dest="dsymutil",

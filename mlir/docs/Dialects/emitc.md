@@ -10,10 +10,17 @@ The following convention is followed:
     `emitc.call_opaque` operation, C++11 is required.
 *   If floating-point type template arguments are passed to an `emitc.call_opaque`
     operation, C++20 is required.
+*   If `ssize_t` is used, then the code requires the POSIX header `sys/types.h`
+    or any of the C++ headers in which the type is defined.
 *   Else the generated code is compatible with C99.
 
 These restrictions are neither inherent to the EmitC dialect itself nor to the
 Cpp emitter and therefore need to be considered while implementing conversions.
+
+Type conversions are provided for the MLIR type `index` into the unsigned `size_t`
+type and its signed counterpart `ptrdiff_t`. Conversions between these two types
+are only valid if the `index`-typed values are within 
+`[PTRDIFF_MIN, PTRDIFF_MAX]`.
 
 After the conversion, C/C++ code can be emitted with `mlir-translate`. The tool
 supports translating MLIR to C/C++ by passing `-mlir-to-cpp`. Furthermore, code

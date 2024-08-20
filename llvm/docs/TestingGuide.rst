@@ -23,7 +23,7 @@ Requirements
 ============
 
 In order to use the LLVM testing infrastructure, you will need all of the
-software required to build LLVM, as well as `Python <http://python.org>`_ 3.6 or
+software required to build LLVM, as well as `Python <http://python.org>`_ 3.8 or
 later.
 
 LLVM Testing Infrastructure Organization
@@ -741,16 +741,16 @@ RUN lines:
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).
 
-``${fs-src-root}``
+``%{fs-src-root}``
    Expands to the root component of file system paths for the source directory,
    i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on Windows.
 
-``${fs-tmp-root}``
+``%{fs-tmp-root}``
    Expands to the root component of file system paths for the test's temporary
    directory, i.e. ``/`` on Unix systems or ``C:\`` (or another drive) on
    Windows.
 
-``${fs-sep}``
+``%{fs-sep}``
    Expands to the file system separator, i.e. ``/`` or ``\`` on Windows.
 
 ``%/s, %/S, %/t, %/T``

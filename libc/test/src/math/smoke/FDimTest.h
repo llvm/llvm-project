@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -61,10 +61,11 @@ public:
   void test_in_range(FuncPtr func) {
     constexpr StorageType STORAGE_MAX =
         LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0, w = STORAGE_MAX;
+    for (int i = 0; i <= COUNT; ++i, v += STEP, w -= STEP) {
       FPBits xbits(v), ybits(w);
       if (xbits.is_inf_or_nan())
         continue;

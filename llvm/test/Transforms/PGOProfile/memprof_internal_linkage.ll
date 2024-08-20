@@ -28,12 +28,12 @@ entry:
   store i32 0, ptr %retval, align 4
   store i32 %argc, ptr %argc.addr, align 4
   store ptr %argv, ptr %argv.addr, align 8
-  call void @_ZL3foov.__uniq.231888424933890731874095357293037629092() #4, !dbg !14
+  call void @_ZL3foov.__uniq.246575255519150625886541854978321354160() #4, !dbg !14
   ret i32 0, !dbg !15
 }
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-define internal void @_ZL3foov.__uniq.231888424933890731874095357293037629092() #1 !dbg !16 {
+define internal void @_ZL3foov.__uniq.246575255519150625886541854978321354160() #1 !dbg !16 {
 entry:
   %a = alloca ptr, align 8
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 20) #5, !dbg !17
@@ -76,7 +76,7 @@ attributes #5 = { builtin allocsize(0) }
 !13 = !{}
 !14 = !DILocation(line: 8, column: 3, scope: !10)
 !15 = !DILocation(line: 9, column: 3, scope: !10)
-!16 = distinct !DISubprogram(name: "foo", linkageName: "_ZL3foov.__uniq.231888424933890731874095357293037629092", scope: !11, file: !11, line: 3, type: !12, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0)
+!16 = distinct !DISubprogram(name: "foo", linkageName: "_ZL3foov.__uniq.246575255519150625886541854978321354160", scope: !11, file: !11, line: 3, type: !12, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0)
 !17 = !DILocation(line: 4, column: 12, scope: !16)
 !18 = !DILocation(line: 4, column: 8, scope: !16)
 !19 = !DILocation(line: 5, column: 10, scope: !16)

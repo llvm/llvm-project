@@ -620,7 +620,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       if (!CmpLHSConst || !llvm::is_contained(successors(BB), B))
         continue;
       // First collapse InstChain
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       for (Instruction *I : llvm::reverse(InstChain)) {
         CmpLHSConst = ConstantFoldBinaryOpOperands(
             I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL);
@@ -787,12 +787,9 @@ BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
                ? static_cast<uint32_t>(BlockExecWeight::NORETURN)
                : static_cast<uint32_t>(BlockExecWeight::UNREACHABLE);
 
-  // Check if the block is 'unwind' handler of  some invoke instruction.
-  for (const auto *Pred : predecessors(BB))
-    if (Pred)
-      if (const auto *II = dyn_cast<InvokeInst>(Pred->getTerminator()))
-        if (II->getUnwindDest() == BB)
-          return static_cast<uint32_t>(BlockExecWeight::UNWIND);
+  // Check if the block is an exception handling block.
+  if (BB->isEHPad())
+    return static_cast<uint32_t>(BlockExecWeight::UNWIND);
 
   // Check if the block contains 'cold' call.
   for (const auto &I : *BB)

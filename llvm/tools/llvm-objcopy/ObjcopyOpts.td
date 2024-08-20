@@ -1,5 +1,10 @@
 include "CommonOpts.td"
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 defm binary_architecture
     : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,
@@ -176,6 +181,10 @@ def G : JoinedOrSeparate<["-"], "G">,
         Alias<keep_global_symbol>,
         HelpText<"Alias for --keep-global-symbol">;
 
+defm verify_note_sections : B<"verify-note-sections",
+                              "Validate note sections",
+                              "Don't validate note sections">;
+
 defm keep_global_symbols
     : Eq<"keep-global-symbols",
          "Read a list of symbols from <filename> and run as if "
@@ -253,6 +262,17 @@ defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be 
 def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>,
                    HelpText<"Alias for --change-start">;
+
+defm change_section_lma
+    : Eq<"change-section-lma", "Shift LMA of non-zero-sized sections in the program header by <val>">,
+      MetaVarName<"*{+|-}val">;
+
+defm change_section_address
+    : Eq<"change-section-address", "Set the address of the <section> to, or adjust it by, <val>">,
+      MetaVarName<"sectionpattern{=|+|-}val">;
+def adjust_section_vma : JoinedOrSeparate<["--"], "adjust-section-vma">,
+                   Alias<change_section_address>,
+                   HelpText<"Alias for --change-section-address">;
 
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "

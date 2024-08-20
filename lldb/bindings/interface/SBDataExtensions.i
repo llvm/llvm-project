@@ -40,19 +40,19 @@ STRING_EXTENSION_OUTSIDE(SBData)
                 lldbtarget = lldbdict['target']
             else:
                 lldbtarget = None
-            if target == None and lldbtarget != None and lldbtarget.IsValid():
+            if target is None and lldbtarget is not None and lldbtarget.IsValid():
                 target = lldbtarget
-            if ptr_size == None:
+            if ptr_size is None:
                 if target and target.IsValid():
                     ptr_size = target.addr_size
                 else:
                     ptr_size = 8
-            if endian == None:
+            if endian is None:
                 if target and target.IsValid():
                     endian = target.byte_order
                 else:
                     endian = lldbdict['eByteOrderLittle']
-            if size == None:
+            if size is None:
                 if value > 2147483647:
                     size = 8
                 elif value < -2147483648:

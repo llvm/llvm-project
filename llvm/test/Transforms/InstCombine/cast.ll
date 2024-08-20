@@ -512,8 +512,8 @@ define <2 x i16> @test40vec_poison(<2 x i16> %a) {
 ; ALL-LABEL: @test40vec_poison(
 ; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 poison>
 ; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 poison>
-; ALL-NEXT:    [[R:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
-; ALL-NEXT:    ret <2 x i16> [[R]]
+; ALL-NEXT:    [[T32:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
+; ALL-NEXT:    ret <2 x i16> [[T32]]
 ;
   %t = zext <2 x i16> %a to <2 x i32>
   %t21 = lshr <2 x i32> %t, <i32 9, i32 poison>
@@ -935,27 +935,6 @@ define float @test2c() {
 ; ALL-NEXT:    ret float -1.000000e+00
 ;
   ret float extractelement (<2 x float> bitcast (double bitcast (<2 x float> <float -1.000000e+00, float -1.000000e+00> to double) to <2 x float>), i32 0)
-}
-
-define i64 @test_mmx(<2 x i32> %x) {
-; ALL-LABEL: @test_mmx(
-; ALL-NEXT:    [[C:%.*]] = bitcast <2 x i32> [[X:%.*]] to i64
-; ALL-NEXT:    ret i64 [[C]]
-;
-  %A = bitcast <2 x i32> %x to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
-  %C = bitcast <2 x i32> %B to i64
-  ret i64 %C
-}
-
-define i64 @test_mmx_const(<2 x i32> %c) {
-; ALL-LABEL: @test_mmx_const(
-; ALL-NEXT:    ret i64 0
-;
-  %A = bitcast <2 x i32> zeroinitializer to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
-  %C = bitcast <2 x i32> %B to i64
-  ret i64 %C
 }
 
 ; PR12514
@@ -1437,7 +1416,8 @@ define i64 @PR28745() {
 ; LE-LABEL: @PR28745(
 ; LE-NEXT:    ret i64 0
 ;
-  %s = select i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), { i32 } { i32 1 }, { i32 } zeroinitializer
+  %c = icmp eq i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), 0
+  %s = select i1 %c, { i32 } { i32 1 }, { i32 } zeroinitializer
   %e = extractvalue { i32 } %s, 0
   %b = zext i32 %e to i64
   ret i64 %b
@@ -2014,8 +1994,8 @@ define <2 x i8> @trunc_lshr_zext_uniform(<2 x i8> %A) {
 
 define <2 x i8> @trunc_lshr_zext_uniform_poison(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_zext_uniform_poison(
-; ALL-NEXT:    [[D:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 poison>
-; ALL-NEXT:    ret <2 x i8> [[D]]
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 poison>
+; ALL-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = zext <2 x i8> %A to <2 x i32>
   %C = lshr <2 x i32> %B, <i32 6, i32 poison>
@@ -2036,8 +2016,8 @@ define <2 x i8> @trunc_lshr_zext_nonuniform(<2 x i8> %A) {
 
 define <3 x i8> @trunc_lshr_zext_nonuniform_poison(<3 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_zext_nonuniform_poison(
-; ALL-NEXT:    [[D:%.*]] = lshr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 poison>
-; ALL-NEXT:    ret <3 x i8> [[D]]
+; ALL-NEXT:    [[C:%.*]] = lshr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 poison>
+; ALL-NEXT:    ret <3 x i8> [[C]]
 ;
   %B = zext <3 x i8> %A to <3 x i32>
   %C = lshr <3 x i32> %B, <i32 6, i32 2, i32 poison>

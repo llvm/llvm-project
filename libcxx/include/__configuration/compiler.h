@@ -41,8 +41,8 @@
 #      warning "Libc++ only supports AppleClang 15 and later"
 #    endif
 #  elif defined(_LIBCPP_GCC_VER)
-#    if _LIBCPP_GCC_VER < 1300
-#      warning "Libc++ only supports GCC 13 and later"
+#    if _LIBCPP_GCC_VER < 1400
+#      warning "Libc++ only supports GCC 14 and later"
 #    endif
 #  endif
 
