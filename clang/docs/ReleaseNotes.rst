@@ -149,6 +149,9 @@ Resolutions to C++ Defect Reports
   of the target type, even if the type of the bit-field is larger.
   (`CWG2627: Bit-fields and narrowing conversions <https://cplusplus.github.io/CWG/issues/2627.html>`_)
 
+- ``nullptr`` is now promoted to ``void*`` when passed to a C-style variadic function.
+  (`CWG722: Can nullptr be passed to an ellipsis? <https://cplusplus.github.io/CWG/issues/722.html>`_)
+
 C Language Changes
 ------------------
 
