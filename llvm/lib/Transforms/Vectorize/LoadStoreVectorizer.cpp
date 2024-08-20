@@ -996,9 +996,31 @@ bool Vectorizer::isSafeToMove(
   LLVM_DEBUG(dbgs() << "LSV: isSafeToMove(" << *ChainElem << " -> "
                     << *ChainBegin << ")\n");
 
-  assert(isa<LoadInst>(ChainElem) == IsLoadChain);
+  assert(isa<LoadInst>(ChainElem) == IsLoadChain &&
+         isa<LoadInst>(ChainBegin) == IsLoadChain);
+
   if (ChainElem == ChainBegin)
     return true;
+
+  if constexpr (IsLoadChain) {
+    // If ChainElem depends on ChainBegin, they're not safe to reorder.
+    SmallVector<Instruction *, 8> Worklist;
+    Worklist.emplace_back(ChainElem);
+    while (!Worklist.empty()) {
+      Instruction *I = Worklist.pop_back_val();
+      for (Use &O : I->operands()) {
+        if (isa<PHINode>(O))
+          continue;
+        if (auto *J = dyn_cast<Instruction>(O)) {
+          if (J == ChainBegin) {
+            LLVM_DEBUG(dbgs() << "LSV: dependent loads; not safe to reorder\n");
+            return false;
+          }
+          Worklist.emplace_back(J);
+        }
+      }
+    }
+  }
 
   // Invariant loads can always be reordered; by definition they are not
   // clobbered by stores.
@@ -1028,7 +1050,8 @@ bool Vectorizer::isSafeToMove(
     if (!I->mayReadOrWriteMemory())
       continue;
 
-    // Loads can be reordered with other loads.
+    // Loads can be reordered with other loads. We've already checked that
+    // they're independent.
     if (IsLoadChain && isa<LoadInst>(I))
       continue;
 
@@ -1499,13 +1522,6 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
 
   // Try to compute B - A.
   const SCEV *DistScev = SE.getMinusSCEV(SE.getSCEV(PtrB), SE.getSCEV(PtrA));
-  if (DistScev->isZero()) {
-    // A load in the chain is dependent on another load in the chain, and
-    // attempting to vectorize this chain would create a cycle.
-    LLVM_DEBUG(dbgs() << "LSV: SCEV diff is zero; not vectorizing\n");
-    return std::nullopt;
-  }
-
   if (DistScev != SE.getCouldNotCompute()) {
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
