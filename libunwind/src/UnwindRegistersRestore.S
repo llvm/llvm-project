@@ -680,7 +680,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    x16,     [x0, #0x0F8]
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x16                 // restore sp
-  ret    x30                    // jump to pc
+  br     x30                    // jump to pc
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
