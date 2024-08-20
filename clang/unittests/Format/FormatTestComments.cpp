@@ -416,25 +416,29 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
   verifyFormat("f(/* aaaaaaaaaaaaaaaaaa = */\n"
                "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
-  FormatStyle BinPack = getLLVMStyle();
   verifyFormat(
       "int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb, /* 2nd */ int ccccccccccc,\n"
-      "                  /* 3rd */ int dddddddddddd);",
-      BinPack);
+      "                  /* 3rd */ int dddddddddddd);");
 
-  FormatStyle OnePerLine = getLLVMStyle();
-  OnePerLine.BinPackParameters = FormatStyle::BPPS_OnePerLine;
-  verifyFormat("int a(/* 1st */ int b, /* 2nd */ int c);", OnePerLine);
+  auto Style = getLLVMStyle();
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
+               "         /* parameter 2 */ aaaaaa,\n"
+               "         /* parameter 3 */ aaaaaa,\n"
+               "         /* parameter 4 */ aaaaaa);",
+               Style);
+
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("int a(/* 1st */ int b, /* 2nd */ int c);", Style);
   verifyFormat("int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb,\n"
                "                  /* 2nd */ int ccccccccccc,\n"
                "                  /* 3rd */ int dddddddddddd);",
-               OnePerLine);
+               Style);
 
-  FormatStyle AlwaysOnePerLine = getLLVMStyle();
-  AlwaysOnePerLine.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int a(/* 1st */ int b,\n"
                "      /* 2nd */ int c);",
-               AlwaysOnePerLine);
+               Style);
 
   // Aligning block comments in macros.
   verifyGoogleFormat("#define A        \\\n"

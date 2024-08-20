@@ -1194,6 +1194,12 @@ struct FormatStyle {
 
   /// Different way to try to fit all parameters on a line.
   enum BinPackParametersStyle : int8_t {
+    /// Bin-pack parameters.
+    /// \code
+    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
+    /// \endcode
+    BPPS_BinPack,
     /// Put all parameters on the current line if they fit.
     /// Otherwise, put each one on its own line.
     /// \code
@@ -1204,12 +1210,6 @@ struct FormatStyle {
     ///           int ccccccccccccccccccccccccccccccccccccc);
     /// \endcode
     BPPS_OnePerLine,
-    /// Bin-pack parameters.
-    /// \code
-    ///    void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
-    ///           int ccccccccccccccccccccccccccccccccccccccccccc);
-    /// \endcode
-    BPPS_BinPack,
     /// Always put each parameter on its own line.
     /// \code
     ///    void f(int a,

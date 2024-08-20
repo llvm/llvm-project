@@ -435,11 +435,11 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
 
-  Style.BinPackParameters = FormatStyle::BPPS_BinPack;
-  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
-              FormatStyle::BPPS_OnePerLine);
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   CHECK_PARSE("BinPackParameters: BinPack", BinPackParameters,
               FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
+              FormatStyle::BPPS_OnePerLine);
   CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", BinPackParameters,
               FormatStyle::BPPS_AlwaysOnePerLine);
   // For backward compatibility.

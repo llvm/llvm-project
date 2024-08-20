@@ -8982,7 +8982,7 @@ TEST_F(FormatTest, FormatsDefinitionBreakAlways) {
                BreakAlways);
 
   // Ensure BreakFunctionDefinitionParameters interacts correctly when
-  // BinPackParameters is set to BPPS_AlwaysOnePerLine
+  // BinPackParameters is set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakFunctionDefinitionParameters = true;
   verifyFormat("void f(\n"
                "    int a,\n"

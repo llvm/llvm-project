@@ -2072,6 +2072,14 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
+  * ``BPPS_BinPack`` (in configuration: ``BinPack``)
+    Bin-pack parameters.
+
+    .. code-block:: c++
+
+       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+              int ccccccccccccccccccccccccccccccccccccccccccc);
+
   * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
     Put all parameters on the current line if they fit.
     Otherwise, put each one on its own line.
@@ -2083,14 +2091,6 @@ the configuration (without a prefix: ``Auto``).
        void f(int a,
               int b,
               int ccccccccccccccccccccccccccccccccccccc);
-
-  * ``BPPS_BinPack`` (in configuration: ``BinPack``)
-    Bin-pack parameters.
-
-    .. code-block:: c++
-
-       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
-              int ccccccccccccccccccccccccccccccccccccccccccc);
 
   * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
     Always put each parameter on its own line.

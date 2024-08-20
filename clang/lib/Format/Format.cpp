@@ -137,8 +137,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BinPackParametersStyle> {
   static void enumeration(IO &IO, FormatStyle::BinPackParametersStyle &Value) {
-    IO.enumCase(Value, "OnePerLine", FormatStyle::BPPS_OnePerLine);
     IO.enumCase(Value, "BinPack", FormatStyle::BPPS_BinPack);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BPPS_OnePerLine);
     IO.enumCase(Value, "AlwaysOnePerLine", FormatStyle::BPPS_AlwaysOnePerLine);
 
     // For backward compatibility.
