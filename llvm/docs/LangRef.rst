@@ -16838,7 +16838,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.lround`` on any
-floating-point type. Not all targets support all types however.
+floating-point type or vector of floating-point type. Not all targets
+support all types however.
 
 ::
 
@@ -19773,7 +19774,7 @@ This is an overloaded intrinsic. A number of scalar values of integer, floating 
 from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
 The remaining lanes are filled with values from ``passthru``.
 
-:: code-block:: llvm
+.. code-block:: llvm
 
       declare <8 x i32> @llvm.experimental.vector.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
       declare <16 x float> @llvm.experimental.vector.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)

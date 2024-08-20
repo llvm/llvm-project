@@ -1382,7 +1382,7 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
       Default = false;
     if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
       StringRef Model = A->getValue();
-      if (Model != "fast")
+      if (Model != "fast" && Model != "aggressive")
         Default = false;
     }
   }

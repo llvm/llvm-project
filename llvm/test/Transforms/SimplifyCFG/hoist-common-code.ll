@@ -159,16 +159,14 @@ declare void @foo()
 
 define i1 @test_icmp_simple(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_simple(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ [[CMP1:%.*]], [[IF]] ], [ [[CMP2:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP1]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[CMP2]] = icmp ugt i32 [[B]], [[A]]
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -187,13 +185,8 @@ else:
 
 define void @test_icmp_complex(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_complex(
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
-; CHECK:       if:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[B]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[IF2]], label [[ELSE2]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if2:
@@ -280,16 +273,14 @@ else:
 
 define i32 @test_binop(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_binop(
+; CHECK-NEXT:    [[OP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[OP1:%.*]], [[IF]] ], [ [[OP2:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK-NEXT:    ret i32 [[OP1]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OP1]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[OP2]] = add i32 [[B]], [[A]]
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -308,16 +299,14 @@ else:
 
 define i32 @test_binop_flags(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_binop_flags(
+; CHECK-NEXT:    [[OP1:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[OP1:%.*]], [[IF]] ], [ [[OP2:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK-NEXT:    ret i32 [[OP1]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OP1]] = add nuw nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[OP2]] = add nsw i32 [[B]], [[A]]
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -392,16 +381,14 @@ else:
 
 define i32 @test_intrin(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_intrin(
+; CHECK-NEXT:    [[OP1:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[OP1:%.*]], [[IF]] ], [ [[OP2:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK-NEXT:    ret i32 [[OP1]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OP1]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[OP2]] = call i32 @llvm.umin.i32(i32 [[B]], i32 [[A]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -448,16 +435,14 @@ else:
 
 define float @test_intrin_3arg(i1 %c, float %a, float %b, float %d) {
 ; CHECK-LABEL: @test_intrin_3arg(
+; CHECK-NEXT:    [[OP1:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[D:%.*]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi float [ [[OP1:%.*]], [[IF]] ], [ [[OP2:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    ret float [[COMMON_RET_OP]]
+; CHECK-NEXT:    ret float [[OP1]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OP1]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[D:%.*]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[OP2]] = call float @llvm.fma.f32(float [[B]], float [[A]], float [[D]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;

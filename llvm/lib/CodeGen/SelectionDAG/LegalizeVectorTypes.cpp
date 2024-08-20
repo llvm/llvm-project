@@ -4845,6 +4845,26 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
   }
 
+  // Generate a vp.op if it is custom/legal for the target.  This avoids need
+  // to split and tile the subvectors (below), because the inactive lanes can
+  // simply be disabled. To avoid possible recursion, only do this if the
+  // widened mask type is legal.
+  if (auto VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+      VPOpcode && TLI.isOperationLegalOrCustom(*VPOpcode, WidenVT)) {
+    if (EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                          WidenVT.getVectorElementCount());
+        TLI.isTypeLegal(WideMaskVT)) {
+      SDValue InOp1 = GetWidenedVector(N->getOperand(0));
+      SDValue InOp2 = GetWidenedVector(N->getOperand(1));
+      SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
+      SDValue EVL =
+          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                              N->getValueType(0).getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL,
+                         Flags);
+    }
+  }
+
   // FIXME: Improve support for scalable vectors.
   assert(!VT.isScalableVector() && "Scalable vectors not handled yet.");
 
