@@ -112,17 +112,14 @@ void scanRelocations(InputChunk *chunk) {
     case R_WASM_TABLE_INDEX_SLEB64:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB64:
-      // These relocations target the code section and can only be resolved
-      // at linking time.
-      if (requiresGOTAccess(sym)) {
+      // These relocations target the code section.
+      if (requiresGOTAccess(sym))
         addGOTEntry(sym);
-      }
       // The indirect call needs a table element that can only be added
       // for defined functions.
-      if (sym->isDefined()) {
+      if (sym->isDefined())
         out.elemSec->addEntry(cast<FunctionSymbol>(sym));
-      }
-      // Unresolved symbols are handled below.
+      // Undefined symbols are handled below.
       break;
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_GLOBAL_INDEX_I32:
@@ -173,15 +170,6 @@ void scanRelocations(InputChunk *chunk) {
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
               " cannot be used against symbol `" + toString(*sym) +
               "`; recompile with -fPIC");
-        break;
-      case R_WASM_TABLE_INDEX_REL_SLEB:
-      case R_WASM_TABLE_INDEX_REL_SLEB64:
-        if (sym->isUndefined()) {
-          error(toString(file) + ": relocation " +
-                relocTypeToString(reloc.Type) +
-                " cannot be used against an undefined symbol `" +
-                toString(*sym) + "`");
-        }
         break;
       case R_WASM_TABLE_INDEX_I32:
       case R_WASM_TABLE_INDEX_I64:
