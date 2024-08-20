@@ -346,8 +346,6 @@ int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {
     return merge_main(argc, argv);
   case CGDataAction::Show:
     return show_main(argc, argv);
-  default:
-    llvm_unreachable("unrecognized action");
   }
 
   return 1;
