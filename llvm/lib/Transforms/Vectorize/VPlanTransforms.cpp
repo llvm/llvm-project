@@ -992,7 +992,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     // Try to remove redundant blend recipes.
-    SmallSet<VPValue *, 4> UniqueValues;
+    SmallPtrSet<VPValue *, 4> UniqueValues;
     if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
       UniqueValues.insert(Blend->getIncomingValue(0));
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
