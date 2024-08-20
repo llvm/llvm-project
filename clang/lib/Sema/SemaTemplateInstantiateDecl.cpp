@@ -12,6 +12,7 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
@@ -4689,6 +4690,7 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   NamedDecl *Pattern = nullptr;
   std::optional<ArrayRef<TemplateArgument>> Innermost;
   #if 1
+
   if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
     Pattern = FTD->isCXXClassMember() ? FTD->getFirstDecl() : FTD;
     Innermost = FD->getTemplateSpecializationArgs()->asArray();
@@ -4700,6 +4702,9 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   #else
   Pattern = FD;
   #endif
+
+  if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD))
+    Pattern = FD;
 
   // Instantiate the expression.
   //
