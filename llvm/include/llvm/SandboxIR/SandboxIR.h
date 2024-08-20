@@ -564,8 +564,9 @@ public:
 #endif
 };
 
+// TODO: This should inherit from ConstantData.
 class ConstantInt : public Constant {
-  ConstantInt(llvm::ConstantInt *C, sandboxir::Context &Ctx)
+  ConstantInt(llvm::ConstantInt *C, Context &Ctx)
       : Constant(ClassID::ConstantInt, C, Ctx) {}
   friend class Context; // For constructor.
 
@@ -574,11 +575,164 @@ class ConstantInt : public Constant {
   }
 
 public:
+  static ConstantInt *getTrue(Context &Ctx);
+  static ConstantInt *getFalse(Context &Ctx);
+  static ConstantInt *getBool(Context &Ctx, bool V);
+  static Constant *getTrue(Type *Ty);
+  static Constant *getFalse(Type *Ty);
+  static Constant *getBool(Type *Ty, bool V);
+
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
   static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
-  // TODO: Implement missing functions.
+  /// Return a ConstantInt with the specified integer value for the specified
+  /// type. If the type is wider than 64 bits, the value will be zero-extended
+  /// to fit the type, unless IsSigned is true, in which case the value will
+  /// be interpreted as a 64-bit signed integer and sign-extended to fit
+  /// the type.
+  /// Get a ConstantInt for a specific value.
+  static ConstantInt *get(IntegerType *Ty, uint64_t V, bool IsSigned = false);
+
+  /// Return a ConstantInt with the specified value for the specified type. The
+  /// value V will be canonicalized to a an unsigned APInt. Accessing it with
+  /// either getSExtValue() or getZExtValue() will yield a correctly sized and
+  /// signed value for the type Ty.
+  /// Get a ConstantInt for a specific signed value.
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
+  static Constant *getSigned(Type *Ty, int64_t V);
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the integer type that corresponds to the bit width of the value.
+  static ConstantInt *get(Context &Ctx, const APInt &V);
+
+  /// Return a ConstantInt constructed from the string strStart with the given
+  /// radix.
+  static ConstantInt *get(IntegerType *Ty, StringRef Str, uint8_t Radix);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantInt for the given value.
+  static Constant *get(Type *Ty, const APInt &V);
+
+  /// Return the constant as an APInt value reference. This allows clients to
+  /// obtain a full-precision copy of the value.
+  /// Return the constant's value.
+  inline const APInt &getValue() const {
+    return cast<llvm::ConstantInt>(Val)->getValue();
+  }
+
+  /// getBitWidth - Return the scalar bitwidth of this constant.
+  unsigned getBitWidth() const {
+    return cast<llvm::ConstantInt>(Val)->getBitWidth();
+  }
+  /// Return the constant as a 64-bit unsigned integer value after it
+  /// has been zero extended as appropriate for the type of this constant. Note
+  /// that this method can assert if the value does not fit in 64 bits.
+  /// Return the zero extended value.
+  inline uint64_t getZExtValue() const {
+    return cast<llvm::ConstantInt>(Val)->getZExtValue();
+  }
+
+  /// Return the constant as a 64-bit integer value after it has been sign
+  /// extended as appropriate for the type of this constant. Note that
+  /// this method can assert if the value does not fit in 64 bits.
+  /// Return the sign extended value.
+  inline int64_t getSExtValue() const {
+    return cast<llvm::ConstantInt>(Val)->getSExtValue();
+  }
+
+  /// Return the constant as an llvm::MaybeAlign.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline MaybeAlign getMaybeAlignValue() const {
+    return cast<llvm::ConstantInt>(Val)->getMaybeAlignValue();
+  }
+
+  /// Return the constant as an llvm::Align, interpreting `0` as `Align(1)`.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline Align getAlignValue() const {
+    return cast<llvm::ConstantInt>(Val)->getAlignValue();
+  }
+
+  /// A helper method that can be used to determine if the constant contained
+  /// within is equal to a constant.  This only works for very small values,
+  /// because this is all that can be represented with all types.
+  /// Determine if this constant's value is same as an unsigned char.
+  bool equalsInt(uint64_t V) const {
+    return cast<llvm::ConstantInt>(Val)->equalsInt(V);
+  }
+
+  /// Variant of the getType() method to always return an IntegerType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  IntegerType *getIntegerType() const;
+
+  /// This static method returns true if the type Ty is big enough to
+  /// represent the value V. This can be used to avoid having the get method
+  /// assert when V is larger than Ty can represent. Note that there are two
+  /// versions of this method, one for unsigned and one for signed integers.
+  /// Although ConstantInt canonicalizes everything to an unsigned integer,
+  /// the signed version avoids callers having to convert a signed quantity
+  /// to the appropriate unsigned type before calling the method.
+  /// @returns true if V is a valid value for type Ty
+  /// Determine if the value is in range for the given type.
+  static bool isValueValidForType(Type *Ty, uint64_t V);
+  static bool isValueValidForType(Type *Ty, int64_t V);
+
+  bool isNegative() const { return cast<llvm::ConstantInt>(Val)->isNegative(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common code. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  bool isZero() const { return cast<llvm::ConstantInt>(Val)->isZero(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common case. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  /// Determine if the value is one.
+  bool isOne() const { return cast<llvm::ConstantInt>(Val)->isOne(); }
+
+  /// This function will return true iff every bit in this constant is set
+  /// to true.
+  /// @returns true iff this constant's bits are all set to true.
+  /// Determine if the value is all ones.
+  bool isMinusOne() const { return cast<llvm::ConstantInt>(Val)->isMinusOne(); }
+
+  /// This function will return true iff this constant represents the largest
+  /// value that may be represented by the constant's type.
+  /// @returns true iff this is the largest value that may be represented
+  /// by this type.
+  /// Determine if the value is maximal.
+  bool isMaxValue(bool IsSigned) const {
+    return cast<llvm::ConstantInt>(Val)->isMaxValue(IsSigned);
+  }
+
+  /// This function will return true iff this constant represents the smallest
+  /// value that may be represented by this constant's type.
+  /// @returns true if this is the smallest value that may be represented by
+  /// this type.
+  /// Determine if the value is minimal.
+  bool isMinValue(bool IsSigned) const {
+    return cast<llvm::ConstantInt>(Val)->isMinValue(IsSigned);
+  }
+
+  /// This function will return true iff this constant represents a value with
+  /// active bits bigger than 64 bits or a value greater than the given uint64_t
+  /// value.
+  /// @returns true iff this constant is greater or equal to the given number.
+  /// Determine if the value is greater or equal to the given number.
+  bool uge(uint64_t Num) const {
+    return cast<llvm::ConstantInt>(Val)->uge(Num);
+  }
+
+  /// getLimitedValue - If the value is smaller than the specified limit,
+  /// return it, otherwise return the limit value.  This causes the value
+  /// to saturate to the limit.
+  /// @returns the min of the value of the constant and the specified value
+  /// Get the constant's value with a saturation limit
+  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+    return cast<llvm::ConstantInt>(Val)->getLimitedValue(Limit);
+  }
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -3198,6 +3352,7 @@ protected:
   LLVMContext &LLVMCtx;
   friend class Type;        // For LLVMCtx.
   friend class PointerType; // For LLVMCtx.
+  friend class IntegerType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
