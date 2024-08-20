@@ -846,8 +846,8 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
   return (AS1 == AS2) ? AS1 : FlatAddrSpace;
 }
 
-bool InferAddressSpacesImpl::run(Function &F_) {
-  F = &F_;
+bool InferAddressSpacesImpl::run(Function &CurFn) {
+  F = &CurFn;
   DL = &F->getDataLayout();
 
   if (AssumeDefaultIsFlatAddressSpace)
