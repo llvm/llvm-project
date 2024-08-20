@@ -40,7 +40,6 @@
 #define LLVM_SUPPORT_BALANCED_PARTITIONING_H
 
 #include "llvm/ADT/ArrayRef.h"
-
 #include <atomic>
 #include <condition_variable>
 #include <mutex>

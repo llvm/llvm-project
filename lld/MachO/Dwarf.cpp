@@ -11,7 +11,6 @@
 #include "InputSection.h"
 #include "OutputSegment.h"
 #include "llvm/ADT/StringSwitch.h"
-
 #include <memory>
 
 using namespace lld;

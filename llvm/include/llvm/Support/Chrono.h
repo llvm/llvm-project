@@ -10,7 +10,6 @@
 #define LLVM_SUPPORT_CHRONO_H
 
 #include "llvm/Support/FormatVariadicDetails.h"
-
 #include <chrono>
 #include <ctime>
 #include <ratio>
