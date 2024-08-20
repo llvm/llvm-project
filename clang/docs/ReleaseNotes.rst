@@ -388,6 +388,9 @@ AST Matchers
 - Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
   inline namespaces with an enclosing namespace of the same name.
 
+- Fixed an ordering issue with the `hasOperands` matcher occuring when setting a
+  binding in the first matcher and using it in the second matcher.
+
 clang-format
 ------------
 
