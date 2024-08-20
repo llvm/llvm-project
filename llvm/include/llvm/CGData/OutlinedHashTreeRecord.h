@@ -13,10 +13,10 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
-#define LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
+#ifndef LLVM_CGDATA_OUTLINEDHASHTREERECORD_H
+#define LLVM_CGDATA_OUTLINEDHASHTREERECORD_H
 
-#include "llvm/CodeGenData/OutlinedHashTree.h"
+#include "llvm/CGData/OutlinedHashTree.h"
 
 namespace llvm {
 
@@ -72,4 +72,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
+#endif // LLVM_CGDATA_OUTLINEDHASHTREERECORD_H

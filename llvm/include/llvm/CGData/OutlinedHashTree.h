@@ -12,8 +12,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREE_H
-#define LLVM_CODEGENDATA_OUTLINEDHASHTREE_H
+#ifndef LLVM_CGDATA_OUTLINEDHASHTREE_H
+#define LLVM_CGDATA_OUTLINEDHASHTREE_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StableHashing.h"
