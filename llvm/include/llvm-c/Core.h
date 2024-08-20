@@ -1974,6 +1974,13 @@ void LLVMDumpValue(LLVMValueRef Val);
 char *LLVMPrintValueToString(LLVMValueRef Val);
 
 /**
+ * Obtain the context to which this value is associated.
+ *
+ * @see llvm::Value::getContext()
+ */
+LLVMContextRef LLVMGetValueContext(LLVMValueRef Val);
+
+/**
  * Return a string representation of the DbgRecord. Use
  * LLVMDisposeMessage to free the string.
  *
@@ -4159,6 +4166,13 @@ LLVMMetadataRef LLVMBuilderGetDefaultFPMathTag(LLVMBuilderRef Builder);
  */
 void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                     LLVMMetadataRef FPMathTag);
+
+/**
+ * Obtain the context to which this builder is associated.
+ *
+ * @see llvm::IRBuilder::getContext()
+ */
+LLVMContextRef LLVMGetBuilderContext(LLVMBuilderRef Builder);
 
 /**
  * Deprecated: Passing the NULL location will crash.
