@@ -172,6 +172,7 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
+  void addIRPasses(AddIRPass &) const;
   void addCodeGenPrepare(AddIRPass &) const;
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
@@ -182,6 +183,8 @@ public:
   /// given that a pass shall work at an optimization \p Level minimum.
   bool isPassEnabled(const cl::opt<bool> &Opt,
                      CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
+  void addEarlyCSEOrGVNPass(AddIRPass &) const;
+  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
 };
 
 } // end namespace llvm
