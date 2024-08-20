@@ -713,7 +713,7 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
 
   /// Get additional info for kernel, e.g., register spill counts
-  std::optional<utils::KernelMetaDataTy>
+  std::optional<offloading::amdgpu::AMDGPUKernelMetaData>
   getKernelInfo(StringRef Identifier) const {
     auto It = KernelInfoMap.find(Identifier);
 
@@ -733,7 +733,7 @@ private:
 #if SANITIZER_AMDGPU
   hsa_code_object_reader_t CodeObjectReader;
 #endif
-  StringMap<utils::KernelMetaDataTy> KernelInfoMap;
+  StringMap<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfoMap;
   uint16_t ELFABIVersion;
 };
 
@@ -884,7 +884,7 @@ private:
   uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
-  std::optional<utils::KernelMetaDataTy> KernelInfo;
+  std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
 
@@ -4639,9 +4639,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
     if (!TargeTripleAndFeaturesOrError)
       return TargeTripleAndFeaturesOrError.takeError();
-    return utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
-                                           ElfOrErr->getPlatformFlags(),
-                                           *TargeTripleAndFeaturesOrError);
+    return offloading::amdgpu::isImageCompatibleWithEnv(
+        Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
+        *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
