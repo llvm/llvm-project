@@ -36,10 +36,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         Returns the default memory space as an attribute.
       }],
       /*returnType=*/  "::mlir::ptr::MemorySpaceAttrInterface",
-      /*methodName=*/  "getDefaultMemorySpace",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+      /*methodName=*/  "getDefaultMemorySpace"
     >,
     InterfaceMethod<
       /*desc=*/        [{
@@ -52,9 +49,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "::mlir::IntegerAttr":$alignment,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
       /*desc=*/        [{
@@ -67,9 +62,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "::mlir::IntegerAttr":$alignment,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
       /*desc=*/        [{
@@ -83,9 +76,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
                             "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "::mlir::IntegerAttr":$alignment,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
       /*desc=*/        [{
@@ -100,9 +91,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
                             "::mlir::ptr::AtomicOrdering":$successOrdering,
                             "::mlir::ptr::AtomicOrdering":$failureOrdering,
                             "::mlir::IntegerAttr":$alignment,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
       /*desc=*/        [{
@@ -116,16 +105,12 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*methodName=*/  "isValidAddrSpaceCast",
       /*args=*/        (ins "::mlir::Type":$tgt,
                             "::mlir::Type":$src,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
       /*desc=*/        [{
         This method checks if it's valid to perform a `ptrtoint` or `inttoptr`
-        op in the memory space. `CastValidity::InvalidSourceType` always refers
-        to the 'ptr-like' type and `CastValidity::InvalidTargetType` always
-        refers to the `int-like` type.
+        op in the memory space.
         The first type is expected to be integer-like, while the second must be a
         ptr-like type.
         If `emitError` is non-null then the method is allowed to emit errors.
@@ -134,9 +119,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*methodName=*/  "isValidPtrIntCast",
       /*args=*/        (ins "::mlir::Type":$intLikeTy,
                             "::mlir::Type":$ptrLikeTy,
-                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+                            "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
   ];
 }
@@ -152,10 +135,7 @@ def MemorySpaceOpInterface : OpInterface<"MemorySpaceOpInterface"> {
     InterfaceMethod<
       /*desc=*/        "Returns the memory space of the op.",
       /*returnType=*/  "::mlir::ptr::MemorySpaceAttrInterface",
-      /*methodName=*/  "getMemorySpace",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{}]
+      /*methodName=*/  "getMemorySpace"
       >,
   ];
 }

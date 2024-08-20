@@ -12,7 +12,7 @@
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
-// Atomic binary op enum attribute
+// Atomic binary op enum attribute.
 //===----------------------------------------------------------------------===//
 
 def AtomicBinOpXchg : I64EnumAttrCase<"xchg", 0, "xchg">;
@@ -45,7 +45,7 @@ def AtomicBinOp : I64EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// Atomic ordering enum attribute
+// Atomic ordering enum attribute.
 //===----------------------------------------------------------------------===//
 
 def AtomicOrderingNotAtomic : I64EnumAttrCase<"not_atomic", 0, "not_atomic">;
