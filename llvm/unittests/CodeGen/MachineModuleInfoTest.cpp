@@ -50,7 +50,7 @@ public:
                            "define void @g() {\n"
                            "  ret void\n"
                            "}\n")) {
-    // MachineModuleAnalysis needs a TargetMachine instance.
+    // MachineModuleInfo needs a TargetMachine instance.
     llvm::InitializeAllTargets();
 
     std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
