@@ -126,6 +126,14 @@ EXTENSION(swiftcc,
 EXTENSION(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
+
+// We have the extension above.  Keep the feature for older swift stdlib,
+// since it only learned to check the extensions recently.
+// rdar://133628186
+FEATURE(swiftasynccc,
+  PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
+  clang::TargetInfo::CCCR_OK)
+
 FEATURE(pragma_stdc_cx_limited_range, true)
 // Objective-C features
 FEATURE(objc_arr, LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?

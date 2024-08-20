@@ -17,3 +17,12 @@ void __attribute__((__swiftcall__)) f(void) {}
 // expected-warning@+2 {{'__swiftasynccall__' calling convention is not supported for this target}}
 #endif
 void __attribute__((__swiftasynccall__)) g(void) {}
+
+// Allow has_feature in addition to has_extension to let swift transition.
+// rdar://133628186
+#if __has_feature(swiftasynccc)
+// expected-no-diagnostics
+#else
+// expected-warning@+2 {{'__swiftasynccall__' calling convention is not supported for this target}}
+#endif
+void __attribute__((__swiftasynccall__)) h(void) {}
