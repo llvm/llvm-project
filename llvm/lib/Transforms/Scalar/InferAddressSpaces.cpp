@@ -1227,7 +1227,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
       if (isSafeToCastConstAddrSpace(KOtherSrc, NewAS)) {
         Cmp->setOperand(SrcIdx, NewV);
         Cmp->setOperand(OtherIdx, ConstantExpr::getAddrSpaceCast(
-                          KOtherSrc, NewV->getType()));
+                                      KOtherSrc, NewV->getType()));
         return;
       }
     }
@@ -1259,7 +1259,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
       ++InsertPos;
     // This instruction may contain multiple uses of V, update them all.
     CurUser->replaceUsesOfWith(
-      V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
+        V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
   } else {
     CurUserI->replaceUsesOfWith(
         V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV), V->getType()));
