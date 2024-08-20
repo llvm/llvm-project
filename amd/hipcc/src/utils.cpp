@@ -24,11 +24,10 @@ typedef std::string::size_type TSIZE;
 
 std::string hipcc::utils::getSelfPath() {
   int MAX_PATH_CHAR = 1024;
-  int bufferSize = 0;
   std::string path;
 #if defined(_WIN32) || defined(_WIN64)
   TCHAR buffer[MAX_PATH] = {0};
-  bufferSize = GetModuleFileName(NULL, buffer, MAX_PATH_CHAR);
+  GetModuleFileName(NULL, buffer, MAX_PATH_CHAR);
   TSIZE pos = TSTR(buffer).find_last_of(ENDLINE);
   TSTR wide = TSTR(buffer).substr(0, pos);
   path = std::string(wide.begin(), wide.end());
