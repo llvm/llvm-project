@@ -406,6 +406,38 @@ template <> struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
 } // namespace llvm
 
 namespace {
+struct Field {
+  StringRef Name;
+  std::optional<NullabilityKind> Nullability;
+  AvailabilityItem Availability;
+  std::optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  StringRef Type;
+};
+
+typedef std::vector<Field> FieldsSeq;
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(Field)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Field> {
+  static void mapping(IO &IO, Field &F) {
+    IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Nullability", F.Nullability, std::nullopt);
+    IO.mapOptional("Availability", F.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", F.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
+    IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
+    IO.mapOptional("Type", F.Type, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
 struct Tag;
 typedef std::vector<Tag> TagsSeq;
 
@@ -425,6 +457,7 @@ struct Tag {
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
   FunctionsSeq Methods;
+  FieldsSeq Fields;
 
   /// Tags that are declared within the current tag. Only the tags that have
   /// corresponding API Notes will be listed.
@@ -463,6 +496,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
     IO.mapOptional("Methods", T.Methods);
+    IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
   }
 };
@@ -793,6 +827,16 @@ public:
                          SwiftVersion);
   }
 
+  template <typename T>
+  void convertVariable(const T &Entity, VariableInfo &VI) {
+    convertAvailability(Entity.Availability, VI, Entity.Name);
+    VI.setSwiftPrivate(Entity.SwiftPrivate);
+    VI.SwiftName = std::string(Entity.SwiftName);
+    if (Entity.Nullability)
+      VI.setNullabilityAudited(*Entity.Nullability);
+    VI.setType(std::string(Entity.Type));
+  }
+
   void convertContext(std::optional<ContextID> ParentContextID, const Class &C,
                       ContextKind Kind, VersionTuple SwiftVersion) {
     // Write the class.
@@ -848,14 +892,9 @@ public:
 
       // Translate from Property into ObjCPropertyInfo.
       ObjCPropertyInfo PI;
-      convertAvailability(Property.Availability, PI, Property.Name);
-      PI.setSwiftPrivate(Property.SwiftPrivate);
-      PI.SwiftName = std::string(Property.SwiftName);
-      if (Property.Nullability)
-        PI.setNullabilityAudited(*Property.Nullability);
+      convertVariable(Property, PI);
       if (Property.SwiftImportAsAccessors)
         PI.setSwiftImportAsAccessors(*Property.SwiftImportAsAccessors);
-      PI.setType(std::string(Property.Type));
 
       // Add both instance and class properties with this name.
       if (Property.Kind) {
@@ -970,6 +1009,12 @@ public:
                                       CI, SwiftVersion);
     Context TagCtx(TagCtxID, ContextKind::Tag);
 
+    for (const auto &Field : T.Fields) {
+      FieldInfo FI;
+      convertVariable(Field, FI);
+      Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
+    }
+
     for (const auto &CXXMethod : T.Methods) {
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
@@ -1037,12 +1082,7 @@ public:
       }
 
       GlobalVariableInfo GVI;
-      convertAvailability(Global.Availability, GVI, Global.Name);
-      GVI.setSwiftPrivate(Global.SwiftPrivate);
-      GVI.SwiftName = std::string(Global.SwiftName);
-      if (Global.Nullability)
-        GVI.setNullabilityAudited(*Global.Nullability);
-      GVI.setType(std::string(Global.Type));
+      convertVariable(Global, GVI);
       Writer.addGlobalVariable(Ctx, Global.Name, GVI, SwiftVersion);
     }
 
