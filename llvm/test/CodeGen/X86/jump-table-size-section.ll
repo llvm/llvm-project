@@ -9,12 +9,12 @@ $foo1 = comdat any
 define void @foo1(i32 %x, ptr %to) comdat {
 
 ; CHECK-LABEL: foo1
-; CHECK:      .section        .debug_llvm_jump_table_sizes,"G",@llvm_jt_sizes,foo1,comdat
+; CHECK:      .section        .llvm_jump_table_sizes,"G",@llvm_jt_sizes,foo1,comdat
 ; CHECK-NEXT: .quad   .LJTI0_0
 ; CHECK-NEXT: .quad   6
 
 ; NOFLAG-LABEL: foo1
-; NOFLAG-NOT: .section        .debug_llvm_jump_table_sizes
+; NOFLAG-NOT: .section        .llvm_jump_table_sizes
 
 entry:
   switch i32 %x, label %default [
@@ -49,12 +49,12 @@ default:
 define void @foo2(i32 %x, ptr %to) {
 
 ; CHECK-LABEL: foo2
-; CHECK:      .section        .debug_llvm_jump_table_sizes
+; CHECK:      .section        .llvm_jump_table_sizes
 ; CHECK-NEXT: .quad   .LJTI1_0
 ; CHECK-NEXT: .quad   5
 
 ; NOFLAG-LABEL: foo2
-; NOFLAG-NOT: .section        .debug_llvm_jump_table_sizes
+; NOFLAG-NOT: .section        .llvm_jump_table_sizes
 
 entry:
   switch i32 %x, label %default [
@@ -90,7 +90,7 @@ default:
 define void @foo3(i32 %x, ptr %to) {
 
 ; CHECK-LABEL:    foo3
-; CHECK-NOT:      .section        .debug_llvm_jump_table_sizes
+; CHECK-NOT:      .section        .llvm_jump_table_sizes
 
 exit:
   ret void
