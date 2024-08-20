@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"

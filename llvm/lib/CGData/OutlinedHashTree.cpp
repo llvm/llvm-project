@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGenData/OutlinedHashTree.h"
+#include "llvm/CGData/OutlinedHashTree.h"
 
 #define DEBUG_TYPE "outlined-hash-tree"
 
