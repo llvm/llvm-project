@@ -88,7 +88,6 @@ class HipBinUtil {
   }
   virtual ~HipBinUtil();
   // Common helper functions
-  vector<string> splitStr(string fullStr, char delimiter) const;
   string replaceStr(const string& s, const string& toReplace,
                     const string& replaceWith) const;
   string replaceRegex(const string& s, regex toReplace,
@@ -145,17 +144,6 @@ bool HipBinUtil::stringRegexMatch(string fullString, string pattern) const {
 // subtring is present in string
 bool HipBinUtil::substringPresent(string fullString, string subString) const {
   return fullString.find(subString) != string::npos;
-}
-
-// splits the string with the delimiter
-vector<string> HipBinUtil::splitStr(string fullStr, char delimiter) const {
-  vector <string> tokens;
-  stringstream check1(fullStr);
-  string intermediate;
-  while (getline(check1, intermediate, delimiter)) {
-    tokens.push_back(intermediate);
-  }
-  return tokens;
 }
 
 // replaces the toReplace string with replaceWith string. Returns the new string

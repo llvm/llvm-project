@@ -398,7 +398,7 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
       ISACMD += " ";
       if (hipBinUtilPtr_->substringPresent(isaarg,"--rocm-path=") ||
           hipBinUtilPtr_->substringPresent(isaarg,"--hip-path=")) {
-        ISACMD += "-I" + hipBinUtilPtr_->splitStr(isaarg, '=')[1] + "/include";
+        ISACMD += "-I" + hipcc::utils::splitStr(isaarg, '=')[1] + "/include";
       } else {
         ISACMD += isaarg;
       }
