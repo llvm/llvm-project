@@ -18,7 +18,9 @@
 # RUN: not ld.lld -o /dev/null --no-demangle --error-handling-script=%s %t2.o 2>&1 |\
 # RUN:   FileCheck --check-prefix=CHECK-SYM-CXX-NO-DEMANGLE %s
 
-# RUN: { echo 'a_: ret'; echo 'bar: movl a(%rip), %eax' ; } | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
+# RUN: echo 'a_: ret' > %t
+# RUN: echo 'bar: movl a(%rip), %eax' >> %t
+# RUN: cat %t | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
 # RUN: not ld.lld -o /dev/null --error-handling-script=%s %t3.o 2>&1 |\
 # RUN:   FileCheck --check-prefix=CHECK-SYM-C-CORRECTION -DOBJ=%t3.o %s
 
