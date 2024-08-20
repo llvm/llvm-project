@@ -27,6 +27,7 @@
 # CHECK-NEXT: <$x>:
 # CHECK-NEXT:   nop
 
+## Trailing data followed by a section starting with an instruction.
 .section .text.1,"ax"
 .globl _start
 _start:
@@ -35,6 +36,7 @@ _start:
 .section .text.2,"ax"
   nop
 
+## Trailing data followed by a section starting with a data directive.
 .section .text.hot.1,"ax"
   nop
   .long 42

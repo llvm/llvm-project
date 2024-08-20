@@ -407,9 +407,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   if (ST.hasStdExtM()) {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
-        .legalFor({s32, sXLen})
+        .legalFor({sXLen})
         .libcallFor({sDoubleXLen})
-        .clampScalar(0, s32, sDoubleXLen)
+        .clampScalar(0, sXLen, sDoubleXLen)
         .widenScalarToNextPow2(0);
   } else {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
@@ -423,7 +423,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
   if (ST.hasStdExtZbb())
-    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+    AbsActions.customFor({sXLen}).minScalar(0, sXLen);
   AbsActions.lower();
 
   auto &MinMaxActions =
