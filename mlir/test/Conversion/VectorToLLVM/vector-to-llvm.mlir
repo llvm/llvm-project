@@ -1049,11 +1049,11 @@ func.func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf3
 
 // -----
 
-func.func @extractelement_from_vec_0d(%arg0: vector<f32>) -> f32 {
+func.func @extractelement_from_vec_0d_f32(%arg0: vector<f32>) -> f32 {
   %1 = vector.extractelement %arg0[] : vector<f32>
   return %1 : f32
 }
-// CHECK-LABEL: @extractelement_from_vec_0d
+// CHECK-LABEL: @extractelement_from_vec_0d_f32
 //       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
 //       CHECK:   llvm.extractelement %{{.*}}[%[[C0]] : {{.*}}] : vector<1xf32>
 
