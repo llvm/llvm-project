@@ -226,10 +226,7 @@ define i8 @ucmp_from_select_lt(i32 %x, i32 %y) {
 define i8 @ucmp_from_select_lt_and_gt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_from_select_lt_and_gt(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[GT_BOOL:%.*]] = icmp ugt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[GT:%.*]] = zext i1 [[GT_BOOL]] to i8
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[GT]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %gt_bool = icmp ugt i32 %x, %y
@@ -535,10 +532,7 @@ define i8 @ucmp_from_select_ge_neg4(i32 %x, i32 %y) {
 define i8 @ucmp_from_select_gt_and_lt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_from_select_gt_and_lt(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LT_BOOL:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[LT:%.*]] = sext i1 [[LT_BOOL]] to i8
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[GT]], i8 1, i8 [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lt_bool = icmp ult i32 %x, %y
