@@ -752,10 +752,10 @@ AsmToken AsmLexer::LexToken() {
       return LexLineComment();
   }
 
-  if (isAtStartOfComment(TokStart))
+  if (CurChar != EOF && isAtStartOfComment(TokStart))
     return LexLineComment();
 
-  if (isAtStatementSeparator(TokStart)) {
+  if (CurChar != EOF && isAtStatementSeparator(TokStart)) {
     CurPtr += strlen(MAI.getSeparatorString()) - 1;
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
