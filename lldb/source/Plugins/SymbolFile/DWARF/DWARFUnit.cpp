@@ -1023,7 +1023,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  offset_t offset = GetStrOffsetsBase() + index * 4;
+  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
 }
 
