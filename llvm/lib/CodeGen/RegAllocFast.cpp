@@ -334,7 +334,7 @@ public:
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
 
-  void addRegClassDefCounts(MutableArrayRef<unsigned> RegClassDefCounts,
+  void addRegClassCounts(MutableArrayRef<unsigned> RegClassDefCounts,
                             Register Reg) const;
 
   void findAndSortDefOperandIndexes(const MachineInstr &MI);
@@ -1266,7 +1266,7 @@ void RegAllocFastImpl::dumpState() const {
 #endif
 
 /// Count number of defs consumed from each register class by \p Reg
-void RegAllocFastImpl::addRegClassDefCounts(
+void RegAllocFastImpl::addRegClassCounts(
     MutableArrayRef<unsigned> RegClassDefCounts, Register Reg) const {
   assert(RegClassDefCounts.size() == TRI->getNumRegClasses());
 
@@ -1334,7 +1334,7 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
 
   for (const MachineOperand &MO : MI.operands())
     if (MO.isReg() && MO.isDef())
-      addRegClassDefCounts(RegClassDefCounts, MO.getReg());
+      addRegClassCounts(RegClassDefCounts, MO.getReg());
 
   llvm::sort(DefOperandIndexes, [&](unsigned I0, unsigned I1) {
     const MachineOperand &MO0 = MI.getOperand(I0);
@@ -1386,6 +1386,17 @@ void RegAllocFastImpl::findAndSortUseOperandIndexes(const MachineInstr &MI) {
       UseOperandIndexes.push_back(I);
   }
 
+  // Track number of uses which may consume a register from the class. This is
+  // used to assign registers for possibly-too-small classes first. Example:
+  // defs are eax, 3 * gr32_abcd, 2 * gr32 => we want to assign the gr32_abcd
+  // registers first so that the gr32 don't use the gr32_abcd registers before
+  // we assign these.
+  SmallVector<unsigned> RegClassUseCounts(TRI->getNumRegClasses(), 0);
+
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.isUse() && MO.getReg() != MCRegister::NoRegister)
+      addRegClassCounts(RegClassUseCounts, MO.getReg());
+
   llvm::sort(UseOperandIndexes, [&](unsigned I0, unsigned I1) {
     const MachineOperand &MO0 = MI.getOperand(I0);
     const MachineOperand &MO1 = MI.getOperand(I1);
@@ -1398,6 +1409,18 @@ void RegAllocFastImpl::findAndSortUseOperandIndexes(const MachineInstr &MI) {
     if (RC0.AllocationPriority > RC1.AllocationPriority)
       return true;
     if (RC0.AllocationPriority < RC1.AllocationPriority)
+      return false;
+
+    // Identify regclass that are easy to use up completely just in this
+    // instruction.
+    unsigned ClassSize0 = RegClassInfo.getOrder(&RC0).size();
+    unsigned ClassSize1 = RegClassInfo.getOrder(&RC1).size();
+
+    bool SmallClass0 = ClassSize0 < RegClassUseCounts[RC0.getID()];
+    bool SmallClass1 = ClassSize1 < RegClassUseCounts[RC1.getID()];
+    if (SmallClass0 > SmallClass1)
+      return true;
+    if (SmallClass0 < SmallClass1)
       return false;
 
     // Tie-break rule: operand index.
