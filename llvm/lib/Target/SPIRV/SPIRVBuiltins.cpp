@@ -2451,7 +2451,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   if (OrigRetTy && !OrigRetTy->isVoidTy()) {
     ReturnType = GR->assignTypeToVReg(OrigRetTy, ReturnRegister, MIRBuilder);
     if (!MIRBuilder.getMRI()->getRegClassOrNull(ReturnRegister))
-      MIRBuilder.getMRI()->setRegClass(ReturnRegister, GR->getRegClass(ReturnType));
+      MIRBuilder.getMRI()->setRegClass(ReturnRegister,
+                                       GR->getRegClass(ReturnType));
   } else if (OrigRetTy && OrigRetTy->isVoidTy()) {
     ReturnRegister = MIRBuilder.getMRI()->createVirtualRegister(&IDRegClass);
     MIRBuilder.getMRI()->setType(ReturnRegister, LLT::scalar(64));

@@ -311,7 +311,7 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
     if (RegType.isScalar())
       MRI.setType(Reg, LLT::scalar(64));
     else if (RegType.isPointer())
-      MRI.setType(Reg, LLT::pointer(RegType.getAddressSpace(), 64));
+      MRI.setType(Reg, LLT::pointer(0, 64));
     else if (RegType.isVector())
       MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
   }
@@ -371,16 +371,6 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 64 bits (for SPIR-V IDs).
       MRI->setType(I.getOperand(0).getReg(), LLT::scalar(64));
-/*
-      Register Reg = I.getOperand(0).getReg();
-      LLT RegType = MRI->getType(Reg);
-      if (RegType.isScalar())
-        MRI->setType(Reg, LLT::scalar(64));
-      else if (RegType.isPointer())
-        MRI->setType(Reg, LLT::pointer(RegType.getAddressSpace(), 64));
-      else if (RegType.isVector())
-        MRI->setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
-*/
     }
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
