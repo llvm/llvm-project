@@ -9,8 +9,8 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 
@@ -79,11 +79,13 @@ class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
 
 public:
   static AnalysisKey Key;
-  explicit CtxProfAnalysis(StringRef Profile) : Profile(Profile) {};
+  explicit CtxProfAnalysis(StringRef Profile = "");
 
   using Result = PGOContextualProfile;
 
   PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
+
+  static InstrProfCallsite *getCallsiteInstrumentation(CallBase &CB);
 };
 
 class CtxProfAnalysisPrinterPass

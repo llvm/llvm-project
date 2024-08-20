@@ -6052,9 +6052,11 @@ cc_library(
     srcs = [
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
+        "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
     ],
     hdrs = [
         "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
+        "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
     ],
     includes = ["include"],
@@ -6074,6 +6076,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
+        ":SPIRVDialect",
         ":MemRefToLLVM",
         ":Support",
         ":VectorToLLVM",
@@ -8398,6 +8401,7 @@ cc_library(
         ":ArithTransforms",
         ":ConversionPassIncGen",
         ":FuncToSPIRV",
+        ":GPUToSPIRV",
         ":IR",
         ":IndexToSPIRV",
         ":MemRefToSPIRV",
@@ -12773,6 +12777,7 @@ td_library(
         ":ArithOpsInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -13992,7 +13997,10 @@ td_library(
         "include/mlir/Dialect/DLTI/DLTIBase.td",
     ],
     includes = ["include"],
-    deps = [":OpBaseTdFiles"],
+    deps = [
+        ":DataLayoutInterfacesTdFiles",
+        ":OpBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
