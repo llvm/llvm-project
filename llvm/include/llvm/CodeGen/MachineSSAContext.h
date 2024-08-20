@@ -22,6 +22,8 @@
 namespace llvm {
 class MachineInstr;
 class MachineFunction;
+class MachineLoop;
+class MachineLoopInfo;
 class Register;
 
 inline unsigned succ_size(const MachineBasicBlock *BB) {
@@ -39,6 +41,8 @@ template <> struct GenericSSATraits<MachineFunction> {
   using ValueRefT = Register;
   using ConstValueRefT = Register;
   using UseT = MachineOperand;
+  using LoopT = MachineLoop;
+  using LoopInfoT = MachineLoopInfo;
 };
 
 using MachineSSAContext = GenericSSAContext<MachineFunction>;

@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/ADT/GenericCycleImpl.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
