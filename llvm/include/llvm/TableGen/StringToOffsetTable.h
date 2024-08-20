@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <optional>
 
 namespace llvm {
 
@@ -26,7 +27,8 @@ class StringToOffsetTable {
   std::string AggregateString;
 
 public:
-  bool Empty() const { return StringOffset.empty(); }
+  bool empty() const { return StringOffset.empty(); }
+  size_t size() const { return AggregateString.size(); }
 
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
     auto IterBool =
@@ -39,6 +41,15 @@ public:
     }
 
     return IterBool.first->second;
+  }
+
+  // Returns the offset of `Str` in the table if its preset, else return
+  // std::nullopt.
+  std::optional<unsigned> GetStringOffset(StringRef Str) const {
+    auto II = StringOffset.find(Str);
+    if (II == StringOffset.end())
+      return std::nullopt;
+    return II->second;
   }
 
   void EmitString(raw_ostream &O) {
