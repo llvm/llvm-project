@@ -15,6 +15,7 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <optional>
 
 namespace clang {
@@ -25,13 +26,15 @@ class Module;
 
 namespace lldb_private {
 
-/// Wraps an ExternalASTSource into an ExternalSemaSource. Doesn't take
-/// ownership of the provided source.
+/// Wraps an ExternalASTSource into an ExternalSemaSource.
+///
+/// Assumes shared ownership of the underlying source.
 class ExternalASTSourceWrapper : public ImporterBackedASTSource {
-  ExternalASTSource *m_Source;
+  llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
-  ExternalASTSourceWrapper(ExternalASTSource *Source) : m_Source(Source) {
+  explicit ExternalASTSourceWrapper(ExternalASTSource *Source)
+      : m_Source(Source) {
     assert(m_Source && "Can't wrap nullptr ExternalASTSource");
   }
 
@@ -257,10 +260,18 @@ public:
   /// Construct a SemaSourceWithPriorities with a 'high quality' source that
   /// has the higher priority and a 'low quality' source that will be used
   /// as a fallback.
-  SemaSourceWithPriorities(clang::ExternalSemaSource &high_quality_source,
-                           clang::ExternalSemaSource &low_quality_source) {
-    Sources.push_back(&high_quality_source);
-    Sources.push_back(&low_quality_source);
+  ///
+  /// This class assumes shared ownership of the sources provided to it.
+  SemaSourceWithPriorities(clang::ExternalSemaSource *high_quality_source,
+                           clang::ExternalSemaSource *low_quality_source) {
+    assert(high_quality_source);
+    assert(low_quality_source);
+
+    high_quality_source->Retain();
+    low_quality_source->Retain();
+
+    Sources.push_back(high_quality_source);
+    Sources.push_back(low_quality_source);
   }
 
   ~SemaSourceWithPriorities() override;
