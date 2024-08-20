@@ -9,31 +9,41 @@ target triple = "amdgcn-amd-amdhsa"
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX1210-SDAG-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    s_load_b32 s2, s[2:3], 0x24
-; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-SDAG-NEXT:    s_cmp_lg_u32 s2, -1
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_lshlrev_b32 v1, 20, v0
+; GFX1210-SDAG-NEXT:    s_cmp_lg_u32 s0, -1
+; GFX1210-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX1210-SDAG-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX1210-SDAG-NEXT:    s_cselect_b32 s0, s2, 0
-; GFX1210-SDAG-NEXT:    flat_store_b32 v0, v0, s[0:1] scope:SCOPE_SYS
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, 0, v1
+; GFX1210-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX1210-SDAG-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1210-GISEL:       ; %bb.0:
 ; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
-; GFX1210-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1210-GISEL-NEXT:    s_mov_b64 s[2:3], src_private_base
-; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_mov_b32 s1, s3
+; GFX1210-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1210-GISEL-NEXT:    v_dual_mov_b64 v[0:1], src_flat_scratch_base_lo :: v_dual_lshlrev_b32 v2, 20, v2
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_cmp_lg_u32 s0, -1
+; GFX1210-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
+; GFX1210-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1210-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v2, v1, vcc_lo
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
-; GFX1210-GISEL-NEXT:    flat_store_b32 v0, v0, s[0:1] scope:SCOPE_SYS
+; GFX1210-GISEL-NEXT:    s_and_b32 s1, 1, s1
+; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX1210-GISEL-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s1
+; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v0, 0, v0, vcc_lo
+; GFX1210-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
+; GFX1210-GISEL-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
@@ -42,18 +52,33 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 }
 
 define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspace(5) %ptr) {
-; GFX1210-LABEL: use_private_to_flat_addrspacecast_nonnull:
-; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b32 s0, s[2:3], 0x24
-; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_mov_b64 s[2:3], src_private_base
-; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    s_mov_b32 s1, s3
-; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    flat_store_b32 v0, v0, s[0:1] scope:SCOPE_SYS
-; GFX1210-NEXT:    s_wait_storecnt 0x0
-; GFX1210-NEXT:    s_endpgm
+; GFX1210-SDAG-LABEL: use_private_to_flat_addrspacecast_nonnull:
+; GFX1210-SDAG:       ; %bb.0:
+; GFX1210-SDAG-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 20, v0
+; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
+; GFX1210-SDAG-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
+; GFX1210-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1210-SDAG-NEXT:    s_endpgm
+;
+; GFX1210-GISEL-LABEL: use_private_to_flat_addrspacecast_nonnull:
+; GFX1210-GISEL:       ; %bb.0:
+; GFX1210-GISEL-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX1210-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
+; GFX1210-GISEL-NEXT:    v_dual_mov_b64 v[0:1], src_flat_scratch_base_lo :: v_dual_mov_b32 v3, 0
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1210-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1210-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v2, v1, vcc_lo
+; GFX1210-GISEL-NEXT:    flat_store_b32 v[0:1], v3 scope:SCOPE_SYS
+; GFX1210-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1210-GISEL-NEXT:    s_endpgm
   %stof = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %ptr)
   store volatile i32 0, ptr %stof
   ret void

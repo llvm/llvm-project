@@ -7761,6 +7761,9 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
     const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
                                        ? AMDGPU::SRC_SHARED_BASE
                                        : AMDGPU::SRC_PRIVATE_BASE;
+    assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
+            !Subtarget->hasGloballyAddressableScratch()) &&
+           "Cannot use src_private_base with globally addressable scratch!");
     // Note: this feature (register) is broken. When used as a 32-bit operand,
     // it returns a wrong value (all zeroes?). The real value is in the upper 32
     // bits.
@@ -7900,11 +7903,40 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
         SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
-
-      SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
-      SDValue CvtPtr =
-          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
-      CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+      SDValue CvtPtr;
+      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          Subtarget->hasGloballyAddressableScratch()) {
+        // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
+        // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
+        SDValue AllOnes = DAG.getConstant(-1, SL, MVT::i32);
+        SDValue ThreadID = DAG.getConstant(0, SL, MVT::i32);
+        ThreadID = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+            DAG.getTargetConstant(Intrinsic::amdgcn_mbcnt_lo, SL, MVT::i32),
+            AllOnes, ThreadID);
+        if (Subtarget->isWave64())
+          ThreadID = DAG.getNode(
+              ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+              DAG.getTargetConstant(Intrinsic::amdgcn_mbcnt_hi, SL, MVT::i32),
+              AllOnes, ThreadID);
+        SDValue ShAmt = DAG.getShiftAmountConstant(
+            57 - 32 - Subtarget->getWavefrontSizeLog2(), MVT::i32, SL);
+        SDValue SrcHi = DAG.getNode(ISD::SHL, SL, MVT::i32, ThreadID, ShAmt);
+        CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, SrcHi);
+        CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+        // Accessing src_flat_scratch_base_lo as a 64-bit operand gives the full
+        // 64-bit hi:lo value.
+        SDValue FlatScratchBase = {
+            DAG.getMachineNode(
+                AMDGPU::S_MOV_B64, SL, MVT::i64,
+                DAG.getRegister(AMDGPU::SRC_FLAT_SCRATCH_BASE, MVT::i64)),
+            0};
+        CvtPtr = DAG.getNode(ISD::ADD, SL, MVT::i64, CvtPtr, FlatScratchBase);
+      } else {
+        SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
+        CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
+        CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+      }
 
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return CvtPtr;

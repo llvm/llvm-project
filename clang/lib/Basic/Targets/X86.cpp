@@ -186,14 +186,14 @@ bool X86TargetInfo::initFeatureMap(
   llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
   // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
   // according to other features.
-  if (HasAVX512F) {
+  if (!HasAVX10_512 && HasAVX512F) {
     UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
                                                         : "+evex512");
-    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+    if (HasAVX10 && HasEVEX512 != FE_FALSE)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
   } else if (HasAVX10) {
-    if (HasEVEX512 != FE_NOSET)
+    if (!HasAVX512F && HasEVEX512 != FE_NOSET)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
     UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
