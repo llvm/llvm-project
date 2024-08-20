@@ -1627,12 +1627,12 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", new StartDebuggingRequestHandler(),
+        "startDebugging", &g_dap.start_debugging_request_handler,
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", new ReplModeRequestHandler(),
+      "repl-mode", &g_dap.repl_mode_request_handler,
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
@@ -1718,6 +1718,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
+  // The debug adapter support for instruction breakpoint.
+  body.try_emplace("supportsInstructionBreakpoints", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;
@@ -4046,6 +4048,181 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// SetInstructionBreakpoints request; value of command field is
+// 'setInstructionBreakpoints'. Replaces all existing instruction breakpoints.
+// Typically, instruction breakpoints would be set from a disassembly window. To
+// clear all instruction breakpoints, specify an empty array. When an
+// instruction breakpoint is hit, a `stopped` event (with reason `instruction
+// breakpoint`) is generated. Clients should only call this request if the
+// corresponding capability `supportsInstructionBreakpoints` is true. interface
+// SetInstructionBreakpointsRequest extends Request {
+//   command: 'setInstructionBreakpoints';
+//   arguments: SetInstructionBreakpointsArguments;
+// }
+// interface SetInstructionBreakpointsArguments {
+//   The instruction references of the breakpoints
+//   breakpoints: InstructionBreakpoint[];
+// }
+// "InstructionBreakpoint ": {
+//   "type": "object",
+//   "description": "Properties of a breakpoint passed to the
+//   setInstructionBreakpoints request.", "properties": {
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "The instruction reference of the breakpoint.
+//       This should be a memory or instruction pointer reference from an
+//       EvaluateResponse, Variable, StackFrame, GotoTarget, or Breakpoint."
+//     },
+//     "offset": {
+//       "type": "number",
+//       "description": "The offset from the instruction reference.
+//       This can be negative."
+//     },
+//     "condition": {
+//       "type": "string",
+//       "description": "An expression for conditional breakpoints.
+//       It is only honored by a debug adapter if the corresponding capability
+//       supportsConditionalBreakpoints` is true."
+//     },
+//     "hitCondition": {
+//       "type": "string",
+//       "description": "An expression that controls how many hits of the
+//       breakpoint are ignored. The debug adapter is expected to interpret the
+//       expression as needed. The attribute is only honored by a debug adapter
+//       if the corresponding capability `supportsHitConditionalBreakpoints` is
+//       true."
+//     },
+// }
+// interface SetInstructionBreakpointsResponse extends Response {
+//   body: {
+//     Information about the breakpoints. The array elements correspond to the
+//     elements of the `breakpoints` array.
+//     breakpoints: Breakpoint[];
+//   };
+// }
+// Response to `setInstructionBreakpoints` request.
+// "Breakpoint": {
+//   "type": "object",
+//   "description": "Response to `setInstructionBreakpoints` request.",
+//   "properties": {
+//     "id": {
+//       "type": "number",
+//       "description": "The identifier for the breakpoint. It is needed if
+//       breakpoint events are used to update or remove breakpoints."
+//     },
+//     "verified": {
+//       "type": "boolean",
+//       "description": "If true, the breakpoint could be set (but not
+//       necessarily at the desired location."
+//     },
+//     "message": {
+//       "type": "string",
+//       "description": "A message about the state of the breakpoint.
+//       This is shown to the user and can be used to explain why a breakpoint
+//       could not be verified."
+//     },
+//     "source": {
+//       "type": "Source",
+//       "description": "The source where the breakpoint is located."
+//     },
+//     "line": {
+//       "type": "number",
+//       "description": "The start line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "column": {
+//       "type": "number",
+//       "description": "The start column of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endLine": {
+//       "type": "number",
+//       "description": "The end line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endColumn": {
+//       "type": "number",
+//       "description": "The end column of the actual range covered by the
+//       breakpoint. If no end line is given, then the end column is assumed to
+//       be in the start line."
+//     },
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "A memory reference to where the breakpoint is set."
+//     },
+//     "offset": {
+//       "type": "number",
+//       "description": "The offset from the instruction reference.
+//       This can be negative."
+//     },
+//   },
+//   "required": [ "id", "verified", "line"]
+// }
+void request_setInstructionBreakpoints(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  llvm::json::Array response_breakpoints;
+  llvm::json::Object body;
+  FillResponse(request, response);
+
+  auto arguments = request.getObject("arguments");
+  auto breakpoints = arguments->getArray("breakpoints");
+
+  // It holds active instruction brealpoint list received from DAP.
+  InstructionBreakpointMap request_ibp;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      auto bp_obj = bp.getAsObject();
+      if (bp_obj) {
+        // Read instruction breakpoint request.
+        InstructionBreakpoint inst_bp(*bp_obj);
+        // Store them into map for reference.
+        request_ibp[inst_bp.instructionReference] = std::move(inst_bp);
+      }
+    }
+
+    // Store removed instruction breakpoint list to delete them further.
+    std::vector<lldb::addr_t> removed_ibp;
+
+    // Iterate previouse active instruction breakpoint list.
+    for (auto &prev_ibp : g_dap.instruction_breakpoints) {
+      // Find previouse instruction breakpoint reference address in newly
+      // received instruction breakpoint list.
+      auto inst_reference = request_ibp.find(prev_ibp.first);
+      // Request for remove and delete the breakpoint, if the prev instruction
+      // breakpoint ID is not available in active instrcation breakpoint list.
+      // Means delete removed breakpoint instance.
+      if (inst_reference == request_ibp.end()) {
+        g_dap.target.BreakpointDelete(prev_ibp.second.id);
+        removed_ibp.push_back(prev_ibp.first);
+      } else {
+        // Instead of recreating breakpoint instance, update the breakpoint if
+        // there are any conditional changes.
+        prev_ibp.second.UpdateBreakpoint(inst_reference->second);
+        request_ibp.erase(inst_reference);
+        response_breakpoints.emplace_back(
+            CreateInstructionBreakpoint(prev_ibp.second.bp));
+      }
+    }
+    // Update Prev instruction breakpoint list.
+    for (const auto &name : removed_ibp) {
+      g_dap.instruction_breakpoints.erase(name);
+    }
+
+    for (auto &req_bpi : request_ibp) {
+      // Add this breakpoint info to the response
+      g_dap.instruction_breakpoints[req_bpi.first] = std::move(req_bpi.second);
+      InstructionBreakpoint &new_bp =
+          g_dap.instruction_breakpoints[req_bpi.first];
+      new_bp.SetInstructionBreakpoint();
+      response_breakpoints.emplace_back(CreateInstructionBreakpoint(new_bp.bp));
+    }
+  }
+
+  body.try_emplace("breakpoints", std::move(response_breakpoints));
+  response.try_emplace("body", std::move(body));
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("attach", request_attach);
   g_dap.RegisterRequestCallback("completions", request_completions);
@@ -4078,6 +4255,9 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
   g_dap.RegisterRequestCallback("disassemble", request_disassemble);
+  // Instruction breapoint request
+  g_dap.RegisterRequestCallback("setInstructionBreakpoints",
+                                request_setInstructionBreakpoints);
   // Custom requests
   g_dap.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_dap.RegisterRequestCallback("modules", request_modules);

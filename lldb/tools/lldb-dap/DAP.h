@@ -68,6 +68,8 @@ namespace lldb_dap {
 
 typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
+    InstructionBreakpointMap;
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 enum DAPBroadcasterBits {

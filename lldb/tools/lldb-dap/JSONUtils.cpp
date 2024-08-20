@@ -766,6 +766,102 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   return llvm::json::Value(std::move(object));
 }
 
+// Response to `setInstructionBreakpoints` request.
+// "Breakpoint": {
+//   "type": "object",
+//   "description": "Response to `setInstructionBreakpoints` request.",
+//   "properties": {
+//     "id": {
+//       "type": "number",
+//       "description": "The identifier for the breakpoint. It is needed if
+//       breakpoint events are used to update or remove breakpoints."
+//     },
+//     "verified": {
+//       "type": "boolean",
+//       "description": "If true, the breakpoint could be set (but not
+//       necessarily at the desired location."
+//     },
+//     "message": {
+//       "type": "string",
+//       "description": "A message about the state of the breakpoint.
+//       This is shown to the user and can be used to explain why a breakpoint
+//       could not be verified."
+//     },
+//     "source": {
+//       "type": "Source",
+//       "description": "The source where the breakpoint is located."
+//     },
+//     "line": {
+//       "type": "number",
+//       "description": "The start line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "column": {
+//       "type": "number",
+//       "description": "The start column of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endLine": {
+//       "type": "number",
+//       "description": "The end line of the actual range covered by the
+//       breakpoint."
+//     },
+//     "endColumn": {
+//       "type": "number",
+//       "description": "The end column of the actual range covered by the
+//       breakpoint. If no end line is given, then the end column is assumed to
+//       be in the start line."
+//     },
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "A memory reference to where the breakpoint is set."
+//     },
+//     "offset": {
+//       "type": "number",
+//       "description": "The offset from the instruction reference.
+//       This can be negative."
+//     },
+//   },
+//   "required": [ "id", "verified", "line"]
+// }
+llvm::json::Value CreateInstructionBreakpoint(lldb::SBBreakpoint &bp) {
+  llvm::json::Object object;
+  if (!bp.IsValid()) {
+    return llvm::json::Value(std::move(object));
+  }
+  object.try_emplace("verified", bp.GetNumResolvedLocations() > 0);
+  object.try_emplace("id", bp.GetID());
+
+  lldb::SBBreakpointLocation bp_loc;
+  const auto num_locs = bp.GetNumLocations();
+  for (size_t i = 0; i < num_locs; ++i) {
+    bp_loc = bp.GetLocationAtIndex(i);
+    if (bp_loc.IsResolved())
+      break;
+  }
+  // If not locations are resolved, use the first location.
+  if (!bp_loc.IsResolved())
+    bp_loc = bp.GetLocationAtIndex(0);
+  auto bp_addr = bp_loc.GetAddress();
+
+  lldb::addr_t address_load = bp_addr.GetLoadAddress(g_dap.target);
+  std::string address_hex;
+  llvm::raw_string_ostream addr_strm(address_hex);
+  if (address_load != LLDB_INVALID_ADDRESS) {
+    addr_strm << llvm::format_hex(address_load, 0);
+    addr_strm.flush();
+    object.try_emplace("instructionReference", address_hex);
+  }
+
+  if (bp_addr.IsValid()) {
+    auto line_entry = bp_addr.GetLineEntry();
+    const auto line = line_entry.GetLine();
+    if (line != UINT32_MAX)
+      object.try_emplace("line", line);
+  }
+  return llvm::json::Value(std::move(object));
+}
+
 // "Thread": {
 //   "type": "object",
 //   "description": "A Thread",
