@@ -65,6 +65,9 @@
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
+#if __has_include(<link.h>)
+#include <link.h>
+#endif
 #ifdef HAVE__UNWIND_BACKTRACE
 // FIXME: We should be able to use <unwind.h> for any target that has an
 // _Unwind_Backtrace function, but on FreeBSD the configure test passes
