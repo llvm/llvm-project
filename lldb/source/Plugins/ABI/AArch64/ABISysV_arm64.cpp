@@ -60,6 +60,59 @@ ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) 
   return ABISP();
 }
 
+static bool PushToLinuxGuardedControlStack(addr_t return_addr,
+                                           RegisterContext *reg_ctx,
+                                           Thread &thread) {
+  // If the Guarded Control Stack extension is enabled we need to put the return
+  // address onto that stack.
+  const RegisterInfo *gcs_features_enabled_info =
+      reg_ctx->GetRegisterInfoByName("gcs_features_enabled");
+  if (!gcs_features_enabled_info)
+    return false;
+
+  uint64_t gcs_features_enabled = reg_ctx->ReadRegisterAsUnsigned(
+      gcs_features_enabled_info, LLDB_INVALID_ADDRESS);
+  if (gcs_features_enabled == LLDB_INVALID_ADDRESS)
+    return false;
+
+  // Only attempt this if GCS is enabled. If it's not enabled then gcspr_el0
+  // may point to unmapped memory.
+  if ((gcs_features_enabled & 1) == 0)
+    return false;
+
+  const RegisterInfo *gcspr_el0_info =
+      reg_ctx->GetRegisterInfoByName("gcspr_el0");
+  if (!gcspr_el0_info)
+    return false;
+
+  uint64_t gcspr_el0 =
+      reg_ctx->ReadRegisterAsUnsigned(gcspr_el0_info, LLDB_INVALID_ADDRESS);
+  if (gcspr_el0 == LLDB_INVALID_ADDRESS)
+    return false;
+
+  // A link register entry on the GCS is 8 bytes.
+  gcspr_el0 -= 8;
+  if (!reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0))
+    return false;
+
+  Status error;
+  size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
+                                                  sizeof(return_addr), error);
+  if ((wrote != sizeof(return_addr) || error.Fail()))
+    return false;
+
+  Log *log = GetLog(LLDBLog::Expressions);
+  LLDB_LOGF(log,
+            "Pushed return address 0x%" PRIx64 "to Guarded Control Stack. "
+            "gcspr_el0 was 0%" PRIx64 ", is now 0x%" PRIx64 ".",
+            return_addr, gcspr_el0 + 8, gcspr_el0);
+
+  // gcspr_el0 will be restored to the original value by lldb-server after
+  // the call has finished, which serves as the "pop".
+
+  return true;
+}
+
 bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
@@ -102,6 +155,9 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                    LLDB_REGNUM_GENERIC_RA),
           return_addr))
     return false;
+
+  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux())
+    PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
 
   // Set "sp" to the requested value
   if (!reg_ctx->WriteRegisterFromUnsigned(
