@@ -125,9 +125,6 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
 
-/* Define to 1 if you have the <link.h> header file. */
-#cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
