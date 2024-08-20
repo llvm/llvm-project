@@ -17,7 +17,7 @@
 #ifndef LLVM_SUPPORT_ATOMIC_H
 #define LLVM_SUPPORT_ATOMIC_H
 
-#include <stdint.h>
+#include <cstdint>
 
 // Windows will at times define MemoryFence.
 #ifdef MemoryFence

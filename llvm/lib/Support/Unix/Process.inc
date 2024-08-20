@@ -14,6 +14,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/config.h"
+#include <optional>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
