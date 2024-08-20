@@ -5667,6 +5667,8 @@ def err_explicit_instantiation_internal_linkage : Error<
 def err_explicit_instantiation_not_known : Error<
   "explicit instantiation of %0 does not refer to a function template, "
   "variable template, member function, member class, or static data member">;
+def err_explicit_instantiation_no_candidate : Error<
+    "no viable candidate for explicit instantiation of %0">;
 def note_explicit_instantiation_here : Note<
   "explicit instantiation refers here">;
 def err_explicit_instantiation_data_member_not_instantiated : Error<
@@ -10066,8 +10068,9 @@ def warn_null_ret : Warning<
   InGroup<NonNull>;
 
 def err_lifetimebound_no_object_param : Error<
-  "'lifetimebound' attribute cannot be applied; %select{static |non-}0member "
-  "function has no implicit object parameter">;
+  "'lifetimebound' attribute cannot be applied; "
+  "%select{non-|static |explicit object }0"
+  "member function has no implicit object parameter">;
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
@@ -11164,6 +11167,8 @@ def err_omp_loop_diff_cxx : Error<
   "upper and lower loop bounds">;
 def err_omp_loop_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP for loop">;
+def err_omp_loop_bad_collapse_var : Error<
+  "cannot use variable %1 in collapsed imperfectly-nested loop %select{init|condition|increment}0 statement">;
 def err_omp_simd_region_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<

@@ -45,6 +45,8 @@ public:
                                 bool LegalOnly = false) const {
     return TLI.isOperationLegalOrCustom(Op, VT, LegalOnly);
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 class VPMatchContext {
@@ -168,6 +170,10 @@ public:
                                 bool LegalOnly = false) const {
     unsigned VPOp = ISD::getVPForBaseOpcode(Op);
     return TLI.isOperationLegalOrCustom(VPOp, VT, LegalOnly);
+  }
+
+  unsigned getNumOperands(SDValue N) const {
+    return N->isVPOpcode() ? N->getNumOperands() - 2 : N->getNumOperands();
   }
 };
 
