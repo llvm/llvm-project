@@ -689,6 +689,9 @@ private:
 
   const value_type* __data_;
   size_type __size_;
+
+  template<class, class, class>
+  friend class basic_string;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 
