@@ -179,6 +179,8 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The compiler flag `-fbracket-depth` default value is increased from 256 to 2048.
+
 Removed Compiler Flags
 -------------------------
 

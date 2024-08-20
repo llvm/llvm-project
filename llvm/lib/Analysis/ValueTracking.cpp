@@ -310,8 +310,9 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const DataLayout &DL, AssumptionCache *AC,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
-  assert(V1->getType() == V2->getType() &&
-         "Testing equality of non-equal types!");
+  // We don't support looking through casts.
+  if (V1 == V2 || V1->getType() != V2->getType())
+    return false;
   auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
