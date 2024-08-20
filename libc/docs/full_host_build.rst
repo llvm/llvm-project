@@ -65,7 +65,7 @@ libc with the following command:
 
 .. code-block:: sh
 
-   $> ninja libc check-libc
+   $> ninja libc libm check-libc
 
 To build the docs run this command:
 
