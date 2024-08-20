@@ -205,6 +205,36 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 void test_larger_sorts() {
   test_larger_sorts<N, N>();
 }
 
+namespace stability_test {
+struct Element {
+  int key;
+  int value;
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 Element(int key, int value) : key(key), value(value) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const Element other) const {
+    return (key == other.key) and (value == other.value);
+  }
+};
+
+struct Comparer_by_key {
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator()(const Element lhs, const Element rhs) { return lhs.key < rhs.key; }
+};
+
+_LIBCPP_CONSTEXPR_SINCE_CXX23 std::array<Element, 5> get_by_key_sorted_array() {
+  std::array<Element, 5> a = {Element(1, 0), Element(1, 1), Element(0, 0), Element(0, 1), Element(0, 2)};
+  std::stable_sort(a.begin(), a.end(), Comparer_by_key());
+  return a;
+}
+
+_LIBCPP_CONSTEXPR_SINCE_CXX23 void run() {
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 std::array<Element, 5> a = get_by_key_sorted_array();
+  COMPILE_OR_RUNTIME_ASSERT(a[0] == Element(0, 0));
+  COMPILE_OR_RUNTIME_ASSERT(a[1] == Element(0, 1));
+  COMPILE_OR_RUNTIME_ASSERT(a[2] == Element(0, 2));
+  COMPILE_OR_RUNTIME_ASSERT(a[3] == Element(1, 0));
+  COMPILE_OR_RUNTIME_ASSERT(a[4] == Element(1, 1));
+}
+} // namespace stability_test
+
 #if _LIBCPP_STD_VER >= 23
 #  define COMPILE_AND_RUNTIME_CALL(func)                                                                               \
     func;                                                                                                              \
@@ -243,6 +273,10 @@ int main(int, char**) {
     test_larger_sorts<997>();
     test_larger_sorts<1000>();
     test_larger_sorts<1009>();
+  }
+
+  { // test "stable" aka leaving already sorted elements in relative order
+    COMPILE_AND_RUNTIME_CALL(stability_test::run());
   }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
