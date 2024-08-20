@@ -30,7 +30,7 @@ namespace lldb_private {
 /// Wraps an ExternalASTSource into an ExternalSemaSource.
 ///
 /// Assumes shared ownership of the underlying source.
-class ExternalASTSourceWrapper : public ImporterBackedASTSource {
+class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
   llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
