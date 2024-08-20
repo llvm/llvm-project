@@ -2321,15 +2321,26 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  // vpcompress depends on various AVX512 extensions.
   if (Subtarget.hasAVX512()) {
-    for (MVT VT : {MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64, MVT::v8i32,
-                   MVT::v8f32, MVT::v4i64, MVT::v4f64, MVT::v16i32, MVT::v16f32,
-                   MVT::v8i64, MVT::v8f64})
+    // Legal in AVX512F
+    for (MVT VT : {MVT::v16i32, MVT::v16f32, MVT::v8i64, MVT::v8f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Legal);
 
+    // Legal in AVX512F + AVX512VL
+    if (Subtarget.hasVLX())
+      for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v4i32, MVT::v4f32, MVT::v4i64,
+                     MVT::v4f64, MVT::v2i64, MVT::v2f64})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Legal);
+
+    // Legal in AVX512F + AVX512VBMI2
     if (Subtarget.hasVBMI2())
-      for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v32i8, MVT::v16i16,
-                     MVT::v64i8, MVT::v32i16})
+      for (MVT VT : {MVT::v32i16, MVT::v64i8})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Legal);
+
+    // Legal in AVX512F + AVX512VL + AVX512VBMI2
+    if (Subtarget.hasVBMI2() && Subtarget.hasVLX())
+      for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v32i8, MVT::v16i16})
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Legal);
   }
 
