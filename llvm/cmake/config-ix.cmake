@@ -27,12 +27,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
   set(NETBSD 1)
 endif()
 
-# Confirmed in
-# https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297153534
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
-  set(ZOS 1)
-endif()
-
 if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
   set(OPENBSD 1)
 endif()
