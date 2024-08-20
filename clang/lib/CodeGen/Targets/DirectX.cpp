@@ -9,9 +9,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -32,24 +30,20 @@ public:
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
                                                   const Type *Ty) const {
+  auto *BuiltinTy = dyn_cast<BuiltinType>(Ty);
+  if (!BuiltinTy || BuiltinTy->getKind() != BuiltinType::HLSLResource)
+    return nullptr;
+
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-  if (auto *BuiltinTy = dyn_cast<BuiltinType>(Ty)) {
-    switch (BuiltinTy->getKind()) {
-    case BuiltinType::HLSLResource: {
-      // FIXME: translate __hlsl_resource_t to target("dx.TypedBuffer", i32, 1,
-      // 0, 1) only for now (RWBuffer<int>); more work us needed to determine
-      // the target ext type and its parameters based on the handle type
-      // attributes (not yet implemented)
-      llvm::IntegerType *ElemType = llvm::IntegerType::getInt32Ty(Ctx);
-      ArrayRef<unsigned> Flags = {/*IsWriteable*/ 1, /*IsROV*/ 0,
-                                  /*IsSigned*/ 1};
-      return llvm::TargetExtType::get(Ctx, "dx.TypedBuffer", {ElemType}, Flags);
-    }
-    default:
-      llvm_unreachable("unhandled builtin type");
-    }
-  }
-  return nullptr;
+  // FIXME: translate __hlsl_resource_t to target("dx.TypedBuffer", <4 x float>,
+  // 1, 0, 1) only for now (RWBuffer<float4>); more work us needed to determine
+  // the target ext type and its parameters based on the handle type
+  // attributes (not yet implemented)
+  llvm::FixedVectorType *ElemType =
+      llvm::FixedVectorType::get(llvm::Type::getFloatTy(Ctx), 4);
+  ArrayRef<unsigned> Flags = {/*IsWriteable*/ 1, /*IsROV*/ 0,
+                              /*IsSigned*/ 1};
+  return llvm::TargetExtType::get(Ctx, "dx.TypedBuffer", {ElemType}, Flags);
 }
 
 } // namespace
