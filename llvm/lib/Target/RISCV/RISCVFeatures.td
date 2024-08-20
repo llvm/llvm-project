@@ -1057,7 +1057,7 @@ def FeatureStdExtSupm
 def FeatureStdExtSmctr
     : RISCVExperimentalExtension<"smctr", 1, 0,
                                  "'Smctr' (Control Transfer Records Machine Level)",
-                                 [FeatureStdExtSmcsrind]>;
+                                 [FeatureStdExtSscsrind]>;
 def FeatureStdExtSsctr
     : RISCVExperimentalExtension<"ssctr" ,1, 0,
                                  "'Ssctr' (Control Transfer Records Supervisor Level)",
