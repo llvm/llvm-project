@@ -8527,9 +8527,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-// Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
-// original exit block.
-static void addUsersInExitBlock(
+static MapVector<PHINode *, VPValue *> collectUsersInExitBlock(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
   auto MiddleVPBB =
@@ -8538,9 +8536,8 @@ static void addUsersInExitBlock(
   // and there is nothing to fix from vector loop; phis should have incoming
   // from scalar loop only.
   if (MiddleVPBB->getNumSuccessors() != 2)
-    return;
-
-  // Introduce VPUsers modeling the exit values.
+    return {};
+  MapVector<PHINode *, VPValue *> ExitingValuesToFix;
   BasicBlock *ExitBB =
       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
@@ -8561,8 +8558,18 @@ static void addUsersInExitBlock(
            return P && Inductions.contains(P);
          })))
       continue;
-    Plan.addLiveOut(&ExitPhi, V);
+    ExitingValuesToFix.insert({&ExitPhi, V});
   }
+  return ExitingValuesToFix;
+}
+
+// Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
+// original exit block.
+static void
+addUsersInExitBlock(VPlan &Plan,
+                    MapVector<PHINode *, VPValue *> &ExitingValuesToFix) {
+  for (const auto &[ExitPhi, V] : ExitingValuesToFix)
+    Plan.addLiveOut(ExitPhi, V);
 }
 
 /// Feed a resume value for every FOR from the vector loop to the scalar loop,
@@ -8769,8 +8776,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // After here, VPBB should not be used.
   VPBB = nullptr;
 
-  addUsersInExitBlock(OrigLoop, RecipeBuilder, *Plan,
-                      Legal->getInductionVars());
+  MapVector<PHINode *, VPValue *> ExitingValuesToFix = collectUsersInExitBlock(
+      OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
+  addUsersInExitBlock(*Plan, ExitingValuesToFix);
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
