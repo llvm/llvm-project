@@ -1627,12 +1627,12 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", &g_dap.start_debugging_request_handler,
+        "startDebugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", &g_dap.repl_mode_request_handler,
+      "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
