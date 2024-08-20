@@ -953,7 +953,7 @@ public:
 };
 
 class ShuffleVectorInst final
-  : public SingleLLVMInstructionImpl<llvm::ShuffleVectorInst> {
+    : public SingleLLVMInstructionImpl<llvm::ShuffleVectorInst> {
   /// Use Context::createShuffleVectorInst() instead.
   ShuffleVectorInst(llvm::Instruction *I, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::ShuffleVector, Opcode::ShuffleVector,
@@ -985,13 +985,10 @@ public:
 
   static bool isValidOperands(const Value *V1, const Value *V2,
                               ArrayRef<int> Mask) {
-    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val,
-                                                    Mask);
+    return llvm::ShuffleVectorInst::isValidOperands(V1->Val, V2->Val, Mask);
   }
 
-  void commute() {
-    cast<llvm::ShuffleVectorInst>(Val)->commute();
-  }
+  void commute() { cast<llvm::ShuffleVectorInst>(Val)->commute(); }
 
   VectorType *getType() const {
     return cast<llvm::ShuffleVectorInst>(Val)->getType();
@@ -1175,7 +1172,8 @@ public:
   }
   static bool isReplicationMask(const Constant *Mask, int &ReplicationFactor,
                                 int &VF) {
-    return llvm::ShuffleVectorInst::isReplicationMask(cast<llvm::Constant>(Mask->Val), ReplicationFactor, VF);
+    return llvm::ShuffleVectorInst::isReplicationMask(
+        cast<llvm::Constant>(Mask->Val), ReplicationFactor, VF);
   }
 
   /// Return true if this shuffle mask is a replication mask.
