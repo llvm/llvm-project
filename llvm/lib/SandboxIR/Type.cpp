@@ -47,6 +47,11 @@ PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {
       Ctx.getType(llvm::PointerType::get(Ctx.LLVMCtx, AddressSpace)));
 }
 
+ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
+  return cast<ArrayType>(ElementType->getContext().getType(
+      llvm::ArrayType::get(ElementType->LLVMTy, NumElements)));
+}
+
 StructType *StructType::get(Context &Ctx, ArrayRef<Type *> Elements,
                             bool IsPacked) {
   SmallVector<llvm::Type *> LLVMElements;
