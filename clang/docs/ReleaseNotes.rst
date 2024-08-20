@@ -233,6 +233,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
+- Improved diagnostic when trying to befriend a concept. (#GH45182).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
