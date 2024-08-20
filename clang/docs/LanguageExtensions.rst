@@ -3987,7 +3987,7 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
-``__builin_va_list`` object.
+``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
 
@@ -4321,7 +4321,7 @@ an appropriate value during the emission.
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
-token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
+token `none`. If a user calls `__builtin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
 Source location builtins
