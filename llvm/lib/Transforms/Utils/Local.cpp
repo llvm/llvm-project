@@ -1045,7 +1045,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   return true;
 }
 
-// Check whether removing BB will make the phis in its Succ will have too
+// Check whether removing BB will make the phis in its Succ have too
 // many incoming entries. This function does not check whether BB is foldable
 // or not.
 static bool introduceTooComplexPhi(BasicBlock *BB) {
