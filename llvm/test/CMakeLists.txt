@@ -80,6 +80,7 @@ set(LLVM_TEST_DEPENDS
           llvm-cas-dump
           llvm-cat
           llvm-cfi-verify
+          llvm-cgdata
           llvm-config
           llvm-cov
           llvm-ctxprof-util

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
