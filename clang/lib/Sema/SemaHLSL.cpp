@@ -546,8 +546,7 @@ void SemaHLSL::handleTextureDimensionAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  std::optional<llvm::APSInt> I = llvm::APSInt(64);
-  I = E->getIntegerConstantExpr(getASTContext());
+  std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(getASTContext());
 
   int arg0;
   if (I.has_value())
