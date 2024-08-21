@@ -281,8 +281,6 @@ void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
   // won't actually emit any line information, it will reset the line table
   // sequence and emit a label at the start of the new line table sequence.
   MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
-
-  // Add the line entry to this section's entries.
   getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
 }
 

@@ -3,7 +3,11 @@
 
 // RUN: llvm-mc -filetype obj -triple x86_64-linux-elf %s -o %t.o
 // RUN: llvm-dwarfdump -v --debug-line %t.o | FileCheck %s --check-prefix=CHECK-LINE-TABLE
-// RUN: llvm-objdump -s -j .offset_02 -j .offset_03 -j .offset_05 %t.o | FileCheck %s --check-prefix=CHECK-SECTIONS
+// RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=CHECK-SYM
+// RUN: llvm-objdump -s -j .offsets %t.o | FileCheck %s --check-prefix=CHECK-OFFSETS
+
+// RUN: not llvm-mc -filetype obj -triple x86_64-linux-elf --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+// RUN: not llvm-mc -filetype obj -triple x86_64-linux-elf --defsym ERR2=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
 
 
 
@@ -34,18 +38,23 @@
 # CHECK-LINE-TABLE-NEXT: 0x00000069: 05 DW_LNS_set_column (5)
 # CHECK-LINE-TABLE-NEXT: 0x0000006b: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      5      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x0000006c: 02 DW_LNS_advance_pc (addr += 9, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x0000006e: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      5      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000006c: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      5      1   0             0       0  is_stmt end_sequence
 
-# CHECK-SECTIONS: Contents of section .offset_02:
-# CHECK-SECTIONS-NEXT: 0000 39000000
+# CHECK-SYM:      Symbol table '.symtab' contains 9 entries:
+# CHECK-SYM-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-SYM-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# CHECK-SYM-NEXT:      1: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS test.c
+# CHECK-SYM-NEXT:      2: 0000000000000000     0 SECTION LOCAL  DEFAULT     2 .text
+# CHECK-SYM-NEXT:      3: 0000000000000039     0 NOTYPE  LOCAL  DEFAULT     3 my_label_02
+# CHECK-SYM-NEXT:      4: 000000000000004a     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03
+# CHECK-SYM-NEXT:      5: 000000000000005b     0 NOTYPE  LOCAL  DEFAULT     3 my_label_04
+# CHECK-SYM-NEXT:      6: 000000000000004a     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03.1
+# CHECK-SYM-NEXT:      7: 000000000000006f     0 NOTYPE  LOCAL  DEFAULT     3 my_label_05
+# CHECK-SYM-NEXT:      8: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 foo
 
-# CHECK-SECTIONS: Contents of section .offset_03:
-# CHECK-SECTIONS-NEXT: 0000 4a000000
+# CHECK-OFFSETS: 0000 39000000 4a000000 5b000000
 
-# CHECK-SECTIONS: Contents of section .offset_05:
-# CHECK-SECTIONS-NEXT: 0000 5b000000
 	.text
 	.file	"test.c"
 	.globl	foo
@@ -67,18 +76,26 @@ foo:
 	.loc	1 1 4
 	.loc_label my_label_04
 	.loc	1 1 5
+.ifdef ERR
+  .loc_label my_label_04
+# ERR: [[#@LINE+1]]:13: error: expected identifier
+  .loc_label
+# ERR: [[#@LINE+1]]:19: error: expected newline
+  .loc_label aaaa bbbb
+.endif
+.ifdef ERR2
+# ERR2: [[#@LINE+1]]:14: error: symbol 'my_label_04' is already defined
+  .loc_label my_label_04
+.endif
 	mov     %rax, 0x04
+	.loc_label my_label_05
 	ret
 	.cfi_endproc
 
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 
-	.section	.offset_02,"",@progbits
-	.quad	my_label_02-.Lline_table_start0
-
-	.section	.offset_03,"",@progbits
-	.quad	my_label_03-.Lline_table_start0
-
-	.section	.offset_05,"",@progbits
-	.quad	my_label_04-.Lline_table_start0
+	.section	.offsets,"",@progbits
+	.long	my_label_02-.Lline_table_start0
+	.long	my_label_03-.Lline_table_start0
+	.long	my_label_04-.Lline_table_start0

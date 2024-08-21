@@ -469,9 +469,11 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
                                              MCSymbol *LastLabel,
                                              MCSymbol *EndLabel) {
-  // Emit a DW_LNE_end_sequence for the end of the section.
-  // Use the section end label to compute the address delta and use INT64_MAX
-  // as the line delta which is the signal that this is actually a
+  // Emit a DW_LNE_end_sequence into the line table. When EndLabel is null, it
+  // means we should emit the entry for the end of the section and therefore we
+  // use the section end label for the reference label. After having the
+  // appropriate reference label, we emit the address delta and use INT64_MAX as
+  // the line delta which is the signal that this is actually a
   // DW_LNE_end_sequence.
   if (!EndLabel)
     EndLabel = endSection(Section);

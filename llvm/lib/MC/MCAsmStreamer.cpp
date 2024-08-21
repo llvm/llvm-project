@@ -1772,7 +1772,7 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 
 void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
   MCStreamer::emitDwarfLocLabelDirective(Loc, Name);
-  OS << "\t.loc_label " << Name;
+  OS << ".loc_label\t" << Name;
   EmitEOL();
 }
 
