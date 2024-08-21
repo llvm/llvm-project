@@ -26,13 +26,13 @@ int main() {
     P = &A[0];
     *P = 3;
   }
-// clang-format off
+  // clang-format off
 // CHECK: OFFLOAD ERROR: Memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
 // NTRCE: Use 'OFFLOAD_TRACK_ALLOCATION_TRACES=true' to track device allocations
 // TRACE: Device pointer [[PTR]] does not point into any (current or prior) host-issued allocation.
 // TRACE: Closest host-issued allocation (distance 4096 bytes; might be by page):
 // TRACE: Last allocation of size 1073741824
-// clang-format on
+  // clang-format on
 #pragma omp target
   { P[-4] = 5; }
 
