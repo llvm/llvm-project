@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // This file contains classes used to discover if for a particular value
-// its definition preceeds and its uses follow a suspend block. This is
+// its definition precedes and its uses follow a suspend block. This is
 // referred to as a suspend crossing value.
 //
 // Using the information discovered we form a Coroutine Frame structure to
@@ -52,16 +52,6 @@ extern cl::opt<bool> UseNewDbgInfoFormat;
 #define DEBUG_TYPE "coro-suspend-crossing"
 
 enum { SmallVectorThreshold = 32 };
-
-static std::string getBasicBlockLabel(const BasicBlock *BB) {
-  if (BB->hasName())
-    return BB->getName().str();
-
-  std::string S;
-  raw_string_ostream OS(S);
-  BB->printAsOperand(OS, false);
-  return OS.str().substr(1);
-}
 
 // Provides two way mapping between the blocks and numbers.
 namespace {
@@ -134,7 +124,7 @@ class SuspendCrossingInfo {
 
 public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump(const ReversePostOrderTraversal<Function *> &RPOT) const;
+  void dump() const;
   void dump(StringRef Label, BitVector const &BV,
             const ReversePostOrderTraversal<Function *> &RPOT) const;
 #endif
@@ -226,16 +216,22 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
     if (BV[BBNo])
-      dbgs() << " " << getBasicBlockLabel(BB);
+      dbgs() << " " << BB->getName();
   }
   dbgs() << "\n";
 }
 
-LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(
-    const ReversePostOrderTraversal<Function *> &RPOT) const {
+LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
+  if (Block.empty())
+    return;
+
+  BasicBlock *const B = Mapping.indexToBlock(0);
+  Function *F = B->getParent();
+
+  ReversePostOrderTraversal<Function *> RPOT(F);
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
-    dbgs() << getBasicBlockLabel(BB) << ":\n";
+    dbgs() << BB->getName() << ":\n";
     dump("   Consumes", Block[BBNo].Consumes, RPOT);
     dump("      Kills", Block[BBNo].Kills, RPOT);
   }
@@ -351,7 +347,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   while (computeBlockData</*Initialize*/ false>(RPOT))
     ;
 
-  LLVM_DEBUG(dump(RPOT));
+  LLVM_DEBUG(dump());
 }
 
 namespace {
@@ -435,7 +431,7 @@ struct RematGraph {
   void dump() const {
     dbgs() << "Entry (";
     if (EntryNode->Node->getParent()->hasName())
-      dbgs() << getBasicBlockLabel(EntryNode->Node->getParent());
+      dbgs() << EntryNode->Node->getParent()->getName();
     else
       EntryNode->Node->getParent()->printAsOperand(dbgs(), false);
     dbgs() << ") : " << *EntryNode->Node << "\n";
@@ -2116,9 +2112,8 @@ static void movePHIValuesToInsertedBlock(BasicBlock *SuccBB,
   do {
     int Index = PN->getBasicBlockIndex(InsertedBB);
     Value *V = PN->getIncomingValue(Index);
-    PHINode *InputV =
-        PHINode::Create(V->getType(), 1,
-                        V->getName() + Twine(".") + getBasicBlockLabel(SuccBB));
+    PHINode *InputV = PHINode::Create(
+        V->getType(), 1, V->getName() + Twine(".") + SuccBB->getName());
     InputV->insertBefore(InsertedBB->begin());
     InputV->addIncoming(V, PredBB);
     PN->setIncomingValue(Index, InputV);
@@ -2163,10 +2158,10 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   Builder.CreateUnreachable();
 
   // Create a new cleanuppad which will be the dispatcher.
-  auto *NewCleanupPadBB = BasicBlock::Create(
-      CleanupPadBB->getContext(),
-      getBasicBlockLabel(CleanupPadBB) + Twine(".corodispatch"),
-      CleanupPadBB->getParent(), CleanupPadBB);
+  auto *NewCleanupPadBB =
+      BasicBlock::Create(CleanupPadBB->getContext(),
+                         CleanupPadBB->getName() + Twine(".corodispatch"),
+                         CleanupPadBB->getParent(), CleanupPadBB);
   Builder.SetInsertPoint(NewCleanupPadBB);
   auto *SwitchType = Builder.getInt8Ty();
   auto *SetDispatchValuePN =
@@ -2180,14 +2175,13 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   SmallVector<BasicBlock *, 8> Preds(predecessors(CleanupPadBB));
   for (BasicBlock *Pred : Preds) {
     // Create a new cleanuppad and move the PHI values to there.
-    auto *CaseBB =
-        BasicBlock::Create(CleanupPadBB->getContext(),
-                           getBasicBlockLabel(CleanupPadBB) + Twine(".from.") +
-                               getBasicBlockLabel(Pred),
-                           CleanupPadBB->getParent(), CleanupPadBB);
+    auto *CaseBB = BasicBlock::Create(CleanupPadBB->getContext(),
+                                      CleanupPadBB->getName() +
+                                          Twine(".from.") + Pred->getName(),
+                                      CleanupPadBB->getParent(), CleanupPadBB);
     updatePhiNodes(CleanupPadBB, Pred, CaseBB);
-    CaseBB->setName(getBasicBlockLabel(CleanupPadBB) + Twine(".from.") +
-                    getBasicBlockLabel(Pred));
+    CaseBB->setName(CleanupPadBB->getName() + Twine(".from.") +
+                    Pred->getName());
     Builder.SetInsertPoint(CaseBB);
     Builder.CreateBr(CleanupPadBB);
     movePHIValuesToInsertedBlock(CleanupPadBB, CaseBB, NewCleanupPadBB);
@@ -2277,8 +2271,7 @@ static void rewritePHIs(BasicBlock &BB) {
   SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
   for (BasicBlock *Pred : Preds) {
     auto *IncomingBB = ehAwareSplitEdge(Pred, &BB, LandingPad, ReplPHI);
-    IncomingBB->setName(getBasicBlockLabel(&BB) + Twine(".from.") +
-                        getBasicBlockLabel(Pred));
+    IncomingBB->setName(BB.getName() + Twine(".from.") + Pred->getName());
 
     // Stop the moving of values at ReplPHI, as this is either null or the PHI
     // that replaced the landing pad.
@@ -2758,7 +2751,7 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
   // Sort by dominance.
   SmallVector<Instruction *, 64> InsertionList(ToMove.begin(), ToMove.end());
   llvm::sort(InsertionList, [&Dom](Instruction *A, Instruction *B) -> bool {
-    // If a dominates b it should preceed (<) b.
+    // If a dominates b it should precede (<) b.
     return Dom.dominates(A, B);
   });
 
