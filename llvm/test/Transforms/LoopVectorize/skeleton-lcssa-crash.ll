@@ -12,8 +12,6 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    [[L_2:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label [[OUTER_BACKEDGE:%.*]], label [[INNER_PREHEADER:%.*]]
-; CHECK:       outer.backedge:
-; CHECK-NEXT:    br label [[OUTER]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
@@ -66,6 +64,8 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT1:%.*]], label [[INNER]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    br label [[OUTER]]
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

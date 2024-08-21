@@ -1542,11 +1542,11 @@ loop_b:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
 ; CHECK-NEXT:    br i1 %[[V]], label %loop_exit.split, label %loop_begin.backedge
 ;
-; CHECK:       loop_begin.backedge:
-; CHECK-NEXT:    br label %loop_begin
-;
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    br label %loop_begin.backedge
+;
+; CHECK:       loop_begin.backedge:
+; CHECK-NEXT:    br label %loop_begin
 ;
 ; CHECK:       loop_exit.split:
 ; CHECK-NEXT:    %[[A_LCSSA:.*]] = phi i32 [ %[[A]], %loop_a ]
@@ -1618,12 +1618,12 @@ loop_b:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
 ; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.backedge, label %loop_exit.split.loopexit
 ;
-; CHECK:       loop_begin.backedge:
-; CHECK-NEXT:    br label %loop_begin
-;
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    %[[A_LCSSA_B:.*]] = phi i32 [ %[[A]], %loop_begin ]
 ; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_begin.backedge:
+; CHECK-NEXT:    br label %loop_begin
 ;
 ; CHECK:       loop_exit.split.loopexit:
 ; CHECK-NEXT:    %[[A_LCSSA_A:.*]] = phi i32 [ %[[A]], %loop_a ]

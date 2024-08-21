@@ -92,10 +92,10 @@ define void @test_pr58158(i1 %c.1) {
 ; CHECK-NEXT:    br label [[OUTER_US]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
-; CHECK:       outer:
-; CHECK-NEXT:    br label [[OUTER_BACKEDGE:%.*]]
 ; CHECK:       outer.backedge:
 ; CHECK-NEXT:    br label [[OUTER]]
+; CHECK:       outer:
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE:%.*]]
 ;
 entry:
   %call = tail call i16 @bar()

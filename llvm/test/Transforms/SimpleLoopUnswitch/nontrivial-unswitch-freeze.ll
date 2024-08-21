@@ -631,10 +631,10 @@ define i32 @test10a(ptr %ptr, i1 %cond, ptr %a.ptr) {
 ; CHECK:       loop_a:
 ; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[LOOP_BEGIN_BACKEDGE:%.*]]
-; CHECK:       loop_begin.backedge:
-; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_BACKEDGE]]
+; CHECK:       loop_begin.backedge:
+; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit.split:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A]], [[LOOP_A]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
@@ -696,11 +696,11 @@ define i32 @test10b(ptr %ptr, i1 %cond, ptr %a.ptr) {
 ; CHECK:       loop_a:
 ; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_BEGIN_BACKEDGE:%.*]], label [[LOOP_EXIT_SPLIT_LOOPEXIT:%.*]]
-; CHECK:       loop_begin.backedge:
-; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    [[A_LCSSA1:%.*]] = phi i32 [ [[A]], [[LOOP_BEGIN]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT:%.*]]
+; CHECK:       loop_begin.backedge:
+; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit.split.loopexit:
 ; CHECK-NEXT:    [[A_LCSSA_PH:%.*]] = phi i32 [ [[A]], [[LOOP_A]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT]]

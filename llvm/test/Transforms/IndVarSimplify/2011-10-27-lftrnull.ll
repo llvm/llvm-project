@@ -11,12 +11,12 @@ define void @test() nounwind {
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond.loopexit:
 ; CHECK-NEXT:    br label [[WHILE_COND_BACKEDGE:%.*]]
+; CHECK:       while.cond.backedge:
+; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN165:%.*]], label [[WHILE_COND_BACKEDGE]]
-; CHECK:       while.cond.backedge:
-; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       if.then165:
 ; CHECK-NEXT:    br i1 undef, label [[WHILE_COND_BACKEDGE]], label [[FOR_BODY_LR_PH_I81:%.*]]
 ; CHECK:       for.body.lr.ph.i81:

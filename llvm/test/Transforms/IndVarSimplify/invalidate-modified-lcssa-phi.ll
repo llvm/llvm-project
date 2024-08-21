@@ -11,6 +11,8 @@ define void @test(i1 %c) {
 ; CHECK-NEXT:    br label [[HEADER_1:%.*]]
 ; CHECK:       header.1.loopexit:
 ; CHECK-NEXT:    br label [[HEADER_1_BACKEDGE:%.*]]
+; CHECK:       header.1.backedge:
+; CHECK-NEXT:    br label [[HEADER_1]]
 ; CHECK:       header.1:
 ; CHECK-NEXT:    br label [[HEADER_2:%.*]]
 ; CHECK:       header.2:
@@ -19,8 +21,6 @@ define void @test(i1 %c) {
 ; CHECK-NEXT:    br label [[HEADER_1_LOOPEXIT:%.*]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    br label [[HEADER_1_BACKEDGE]]
-; CHECK:       header.1.backedge:
-; CHECK-NEXT:    br label [[HEADER_1]]
 ;
 entry:
   br label %header.1

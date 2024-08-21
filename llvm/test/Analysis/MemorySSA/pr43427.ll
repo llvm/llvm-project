@@ -22,15 +22,15 @@
 ; CHECK-NEXT: MemoryUse([[NO2]])
 ; CHECK-NEXT:  %cleanup.dest = load i32, ptr undef, align 1
 
-; CHECK: lbl1.backedge:
-; CHECK-NEXT:  [[NO9]] = MemoryPhi({cleanup,[[NO7]]},{if.else,2})
-; CHECK-NEXT:   br label %lbl1
-
 ; CHECK: cleanup.cont:
 ; CHECK-NEXT: ; [[NO6:.*]] = MemoryDef([[NO7]])
 ; CHECK-NEXT:   store i16 undef, ptr %e, align 1
 ; CHECK-NEXT:  3 = MemoryDef([[NO6]])
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(i64 1, ptr null)
+
+; CHECK: lbl1.backedge:
+; CHECK-NEXT:  [[NO9]] = MemoryPhi({cleanup,[[NO7]]},{if.else,2})
+; CHECK-NEXT:   br label %lbl1
 
 define void @f() {
 entry:

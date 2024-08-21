@@ -389,7 +389,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
                     << BEBlock->getName() << "\n");
 
   // Move the new backedge block to right after the last backedge block.
-  Function::iterator InsertPos = ++BackedgeBlocks.back()->getIterator();
+  Function::iterator InsertPos = ++BackedgeBlocks.front()->getIterator();
   F->splice(InsertPos, F, BEBlock->getIterator());
 
   // Now that the block has been inserted into the function, create PHI nodes in
