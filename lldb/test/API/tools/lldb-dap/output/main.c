@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 int main() {
+  // Ensure multiple partial lines are detected and sent.
   printf("abc");
   printf("def");
   printf("ghi\n");
