@@ -32,8 +32,6 @@ struct RISCVExtensionBitmask {
 };
 } // namespace RISCVExtensionBitmaskTable
 
-static constexpr unsigned RISCVFeatureBitSize = 2;
-
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 

@@ -64,7 +64,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 #include <sstream>
@@ -14449,7 +14448,7 @@ static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
   llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Context);
   llvm::Type *Int64Ty = llvm::Type::getInt64Ty(Context);
   llvm::ArrayType *ArrayOfInt64Ty =
-      llvm::ArrayType::get(Int64Ty, llvm::RISCV::RISCVFeatureBitSize);
+      llvm::ArrayType::get(Int64Ty, llvm::RISCV::FeatureBitSize);
   llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
   llvm::Constant *RISCVFeaturesBits =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
@@ -14465,7 +14464,7 @@ static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
 }
 
 Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
-  const unsigned RISCVFeatureLength = llvm::RISCV::RISCVFeatureBitSize;
+  const unsigned RISCVFeatureLength = llvm::RISCV::FeatureBitSize;
   SmallVector<uint64_t, 2> RequireBitMasks(RISCVFeatureLength);
 
   for (auto Feat : FeaturesStrs) {

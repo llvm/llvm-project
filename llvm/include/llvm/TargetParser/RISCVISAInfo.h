@@ -21,6 +21,10 @@
 
 namespace llvm {
 
+namespace RISCV {
+static constexpr unsigned FeatureBitSize = 2;
+} // namespace RISCV
+
 class RISCVISAInfo {
 public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
