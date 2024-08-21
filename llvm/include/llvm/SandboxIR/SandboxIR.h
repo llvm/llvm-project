@@ -1024,9 +1024,7 @@ public:
   static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
                                                 Type *ResultTy, Context &Ctx);
 
-  void setShuffleMask(ArrayRef<int> Mask) {
-    cast<llvm::ShuffleVectorInst>(Val)->setShuffleMask(Mask);
-  }
+  void setShuffleMask(ArrayRef<int> Mask);
 
   ArrayRef<int> getShuffleMask() const {
     return cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask();
