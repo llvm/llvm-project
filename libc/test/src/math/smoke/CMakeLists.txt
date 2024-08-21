@@ -3325,6 +3325,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expm1_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expm1_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expm1
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expm1f_test
   SUITE
     libc-math-smoke-tests
@@ -3337,15 +3349,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  expm1_test
+  expm1f16_test
   SUITE
     libc-math-smoke-tests
   SRCS
-    expm1_test.cpp
+    expm1f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.math.expm1
-    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.expm1f16
 )
 
 add_fp_unittest(

@@ -522,8 +522,8 @@ define i1 @slt_and_shl_one(i8 %x, i8 %y) {
 
 define i1 @fold_eq_lhs(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_eq_lhs(
-; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i8 -1, %x
@@ -563,8 +563,8 @@ define i1 @fold_eq_lhs_fail_multiuse_shl(i8 %x, i8 %y) {
 define i1 @fold_ne_rhs(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @fold_ne_rhs(
 ; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[YY:%.*]], 123
-; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = xor i8 %yy, 123
@@ -622,8 +622,8 @@ define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
 define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 42, %b
@@ -635,9 +635,9 @@ define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_not_const_shr_and_1_ne_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[CMP_NOT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 42, %b
   %and = and i32 %shr, 1
@@ -648,8 +648,8 @@ define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 define i1 @test_const_shr_exact_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_exact_and_1_ne_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr exact i32 42, %b
