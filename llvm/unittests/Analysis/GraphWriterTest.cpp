@@ -12,6 +12,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -56,7 +57,10 @@ protected:
 static void writeCFGToDotFile(Function &F, std::string Name,
                               bool CFGOnly = false) {
   std::error_code EC;
-  raw_fd_ostream File(Name + ".dot", EC, sys::fs::OpenFlags::OF_Text);
+  llvm::unittest::TempDir Tmp("tmpdir", /*Unique=*/true);
+  SmallString<128> FileName(Tmp.path().begin(), Tmp.path().end());
+  sys::path::append(FileName, Name + ".dot");
+  raw_fd_ostream File(FileName, EC, sys::fs::OpenFlags::OF_Text);
 
   DOTFuncInfo CFGInfo(&F);
 
