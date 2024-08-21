@@ -54,6 +54,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
+#include "InstructionBreakpoint.h"
 #include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
@@ -158,6 +159,7 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
+  InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
   std::vector<std::string> pre_init_commands;
