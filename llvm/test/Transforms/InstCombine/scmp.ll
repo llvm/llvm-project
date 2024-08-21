@@ -269,8 +269,7 @@ define i8 @scmp_from_select_ge(i32 %x, i32 %y) {
 define i8 @scmp_of_sub_and_zero(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_of_sub_and_zero(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[DIFF:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[DIFF]], i32 0)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %diff = sub nsw i32 %x, %y
