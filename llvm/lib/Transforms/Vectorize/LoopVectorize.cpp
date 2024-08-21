@@ -8616,16 +8616,25 @@ static void addLiveOutsForFirstOrderRecurrences(
   // TODO: Should be replaced by
   // Plan->getScalarLoopRegion()->getSinglePredecessor() in the future once the
   // scalar region is modeled as well.
-  VPBasicBlock *ScalarPHVPBB = nullptr;
   auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
-  for (VPBlockBase *Succ : MiddleVPBB->getSuccessors()) {
-    if (isa<VPIRBasicBlock>(Succ))
-      continue;
-    assert(!ScalarPHVPBB && "Two candidates for ScalarPHVPBB?");
-    ScalarPHVPBB = cast<VPBasicBlock>(Succ);
+  BasicBlock *ExitBB = nullptr;
+  VPBasicBlock *ScalarPHVPBB = nullptr;
+  if (MiddleVPBB->getNumSuccessors() == 2) {
+    // Order is strict: first is the exit block, second is the scalar preheader.
+    ExitBB =
+        cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
+    ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
+  } else if (ExitingValuesToFix.empty()) {
+    ScalarPHVPBB = cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor());
+  } else {
+    ExitBB = cast<VPIRBasicBlock>(MiddleVPBB->getSingleSuccessor())
+                 ->getIRBasicBlock();
   }
-  if (!ScalarPHVPBB)
+  if (!ScalarPHVPBB) {
+    assert(ExitingValuesToFix.empty() &&
+           "missed inserting extracts for exiting values");
     return;
+  }
 
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB);
@@ -8690,7 +8699,8 @@ static void addLiveOutsForFirstOrderRecurrences(
     //     v1 = phi [v_init, vector.ph], [v2, vector.body]
     //     v2 = a[i, i+1, i+2, i+3]
     //     b[i] = v2 - v1
-    //     b[i, i+1, i+2, i+3] = v2 - v3
+    //     // Next, third phase will introduce v1' = splice(v1(3), v2(0, 1, 2))
+    //     b[i, i+1, i+2, i+3] = v2 - v1
     //     br cond, vector.body, middle.block
     //
     //   middle.block:
@@ -8733,10 +8743,6 @@ static void addLiveOutsForFirstOrderRecurrences(
     // from scalar loop only.
     if (ExitingValuesToFix.empty())
       continue;
-    // If there are multiple successors of the middle block, their order is
-    // fixed; the first successor must be the original exit block.
-    BasicBlock *ExitBB =
-        cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
     for (User *U : FORPhi->users()) {
       auto *UI = cast<Instruction>(U);
       if (UI->getParent() != ExitBB)
