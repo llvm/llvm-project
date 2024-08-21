@@ -82,20 +82,19 @@ char RISCVVectorPeephole::ID = 0;
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
 
-/// Given two VL operands, returns the one known to be the smallest or nullptr
-/// if unknown.
-static const MachineOperand *getKnownMinVL(const MachineOperand *LHS,
-                                           const MachineOperand *RHS) {
-  if (LHS->isReg() && RHS->isReg() && LHS->getReg().isVirtual() &&
-      LHS->getReg() == RHS->getReg())
-    return LHS;
-  if (LHS->isImm() && LHS->getImm() == RISCV::VLMaxSentinel)
-    return RHS;
-  if (RHS->isImm() && RHS->getImm() == RISCV::VLMaxSentinel)
-    return LHS;
-  if (!LHS->isImm() || !RHS->isImm())
-    return nullptr;
-  return LHS->getImm() <= RHS->getImm() ? LHS : RHS;
+/// Given two VL operands, do we know that LHS <= RHS?
+static bool isVLKnownLE(const MachineOperand &LHS,
+                        const MachineOperand &RHS) {
+  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
+      LHS.getReg() == RHS.getReg())
+    return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
+  if (!LHS.isImm() || !RHS.isImm())
+    return false;
+  return LHS.getImm() <= RHS.getImm();
 }
 
 static unsigned getSEWLMULRatio(const MachineInstr &MI) {
@@ -161,14 +160,13 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
     return false;
 
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-  const MachineOperand *MinVL = getKnownMinVL(&VL, &SrcVL);
-  if (!MinVL || MinVL == &SrcVL)
+  if (VL.isIdenticalTo(SrcVL) || !isVLKnownLE(VL, SrcVL))
     return false;
 
-  if (MinVL->isImm())
-    SrcVL.ChangeToImmediate(MinVL->getImm());
-  else if (MinVL->isReg())
-    SrcVL.ChangeToRegister(MinVL->getReg(), false);
+  if (VL.isImm())
+    SrcVL.ChangeToImmediate(VL.getImm());
+  else if (VL.isReg())
+    SrcVL.ChangeToRegister(VL.getReg(), false);
 
   // TODO: For instructions with a passthru, we could clear the passthru
   // and tail policy since we've just proven the tail is not demanded.
@@ -445,10 +443,11 @@ static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
 ///
 /// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
 /// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
+///    (where %vl1 <= %vl2, see related tryToReduceVL)
 ///
 /// ->
 ///
-/// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, min(vl1, vl2), sew, policy
+/// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, vl1, sew, policy
 bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
     return false;
@@ -480,8 +479,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   // so we don't need to handle a smaller source VL here.  However, the
   // user's VL may be larger
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-  const MachineOperand *MinVL = getKnownMinVL(&MI.getOperand(3), &SrcVL);
-  if (!MinVL || !MinVL->isIdenticalTo(SrcVL))
+  if (!isVLKnownLE(SrcVL, MI.getOperand(3)))
     return false;
 
   // If Src ends up using MI's passthru/VL, move it so it can access it.
