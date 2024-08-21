@@ -13,8 +13,6 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -178,13 +176,6 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
-
-  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-
-    // We need to register scavenge if the frame is very large.
-    return !isInt<32>(MFI.estimateStackSize(MF));
-  }
 };
 
 } // End llvm namespace
