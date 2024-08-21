@@ -3605,11 +3605,6 @@ most notably, the :ref:`fast-math flags <fastmath>` as well as the ``strictfp``
 and ``denormal-fp-math`` attributes. See their corresponding documentation for
 details.
 
-If the compiled code is executed in a non-default floating-point environment
-(this includes non-standard behavior such as subnormal flushing), the result is
-typically undefined behavior unless attributes like ``strictfp`` and
-``denormal-fp-math`` or :ref:`constrained intrinsics <constrainedfp>` are used.
-
 .. _floatenv:
 
 Floating-Point Environment
@@ -3620,11 +3615,12 @@ status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
 round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 
-Running LLVM code in an environment where these assumptions are not met can lead
-to undefined behavior. The ``strictfp`` and ``denormal-fp-math`` attributes as
-well as :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be used
-to weaken LLVM's assumptions and ensure defined behavior in non-default
-floating-point environments; see their respective documentation for details.
+Running LLVM code in an environment where these assumptions are not met
+typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
+attributes as well as :ref:`Constrained Floating-Point Intrinsics
+<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
+behavior in non-default floating-point environments; see their respective
+documentation for details.
 
 .. _floatnan:
 
