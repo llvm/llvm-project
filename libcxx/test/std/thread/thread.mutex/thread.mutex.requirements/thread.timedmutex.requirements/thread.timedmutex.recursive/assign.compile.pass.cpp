@@ -5,22 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 
 // <mutex>
 
-// class recursive_mutex;
+// class recursive_timed_mutex;
 
-// recursive_mutex();
+// recursive_timed_mutex& operator=(const recursive_timed_mutex&) = delete;
 
 #include <mutex>
+#include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    std::recursive_mutex m;
-
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::recursive_timed_mutex>::value, "");
