@@ -329,7 +329,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for fields.
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
-    assert(FD == FD->getFirstDecl());
+    FD = FD->getFirstDecl();
     // Note that we DO create fields and descriptors
     // for unnamed bitfields here, even though we later ignore
     // them everywhere. That's so the FieldDecl's getFieldIndex() matches.

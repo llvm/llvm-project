@@ -124,9 +124,9 @@ def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
 }]>;
 
 def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
-  uint64_t I = N->getSExtValue();
+  uint64_t I = N->getZExtValue();
   if (!Subtarget->is64Bit())
-    I |= 0xffffffffull << 32;
+    I |= maskLeadingOnes<uint64_t>(32);
   return CurDAG->getTargetConstant(llvm::Log2_64(~I), SDLoc(N),
                                    N->getValueType(0));
 }]>;

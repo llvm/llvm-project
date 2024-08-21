@@ -92,6 +92,7 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
+bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
@@ -656,15 +657,9 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
 // Inv
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inv(InterpState &S, CodePtr OpPC) {
-  using BoolT = PrimConv<PT_Bool>::T;
-  const T &Val = S.Stk.pop<T>();
-  const unsigned Bits = Val.bitWidth();
-  Boolean R;
-  Boolean::inv(BoolT::from(Val, Bits), &R);
-
-  S.Stk.push<BoolT>(R);
+inline bool Inv(InterpState &S, CodePtr OpPC) {
+  const auto &Val = S.Stk.pop<Boolean>();
+  S.Stk.push<Boolean>(!Val);
   return true;
 }
 
@@ -1574,7 +1569,7 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -1587,7 +1582,7 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd())
+  if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
   return true;
@@ -2731,7 +2726,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
   }
 
-  if (!FuncPtr.isValid())
+  if (!FuncPtr.isValid() || !F->getDecl())
     return Invalid(S, OpPC);
 
   assert(F);
