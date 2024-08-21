@@ -10,3 +10,8 @@
 .globl _foo
 _foo:
   ret
+
+; Upstream doesn't support the version directive and flags yet.  So the
+; upstream version of this test doesn't have the directive.
+; Instead it relies on the v0 default.
+.ptrauth_abi_version 0
