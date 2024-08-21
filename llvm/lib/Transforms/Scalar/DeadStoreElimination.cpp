@@ -2191,13 +2191,18 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
   // Worklist of MemoryAccesses that may be killed by
   // "KillingLocWrapper.MemDef".
   SmallSetVector<MemoryAccess *, 8> ToCheck;
+  // Track MemoryAccesses that have been deleted in the loop below, so we can
+  // skip them. Don't use SkipStores for this, which may contain reused
+  // MemoryAccess addresses.
+  SmallPtrSet<MemoryAccess *, 8> Deleted;
+  [[maybe_unused]] unsigned OrigNumSkipStores = SkipStores.size();
   ToCheck.insert(KillingLocWrapper.MemDef->getDefiningAccess());
 
   // Check if MemoryAccesses in the worklist are killed by
   // "KillingLocWrapper.MemDef".
   for (unsigned I = 0; I < ToCheck.size(); I++) {
     MemoryAccess *Current = ToCheck[I];
-    if (SkipStores.count(Current))
+    if (Deleted.contains(Current))
       continue;
     std::optional<MemoryAccess *> MaybeDeadAccess = getDomMemoryDef(
         KillingLocWrapper.MemDef, Current, KillingLocWrapper.MemLoc,
@@ -2242,7 +2247,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
       LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
                         << *DeadLocWrapper.DefInst << "\n  KILLER: "
                         << *KillingLocWrapper.DefInst << '\n');
-      deleteDeadInstruction(DeadLocWrapper.DefInst);
+      deleteDeadInstruction(DeadLocWrapper.DefInst, &Deleted);
       ++NumFastStores;
       Changed = true;
     } else {
@@ -2281,7 +2286,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
 
             // Remove killing store and remove any outstanding overlap
             // intervals for the updated store.
-            deleteDeadInstruction(KillingSI);
+            deleteDeadInstruction(KillingSI, &Deleted);
             auto I = IOLs.find(DeadSI->getParent());
             if (I != IOLs.end())
               I->second.erase(DeadSI);
@@ -2293,12 +2298,16 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
                           << *DeadLocWrapper.DefInst << "\n  KILLER: "
                           << *KillingLocWrapper.DefInst << '\n');
-        deleteDeadInstruction(DeadLocWrapper.DefInst);
+        deleteDeadInstruction(DeadLocWrapper.DefInst, &Deleted);
         ++NumFastStores;
         Changed = true;
       }
     }
   }
+
+  assert(SkipStores.size() - OrigNumSkipStores == Deleted.size() &&
+         "SkipStores and Deleted out of sync?");
+
   return {Changed, DeletedKillingLoc};
 }
 
