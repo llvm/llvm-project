@@ -16,21 +16,6 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-namespace llvm {
-
-std::ostream &operator<<(std::ostream &OS, const StringRef &S) {
-  OS << S.str();
-  return OS;
-}
-
-std::ostream &operator<<(std::ostream &OS,
-                         const std::pair<StringRef, StringRef> &P) {
-  OS << "(" << P.first << ", " << P.second << ")";
-  return OS;
-}
-
-}
-
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
