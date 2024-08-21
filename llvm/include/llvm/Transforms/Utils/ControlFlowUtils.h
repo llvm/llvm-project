@@ -105,6 +105,8 @@ struct ControlFlowHub {
   };
 
   void addBranch(BasicBlock *BB, BasicBlock *Succ0, BasicBlock *Succ1) {
+    assert(BB);
+    assert(Succ0 || Succ1);
     Branches.emplace_back(BB, Succ0, Succ1);
   }
 

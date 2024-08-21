@@ -1,6 +1,6 @@
 ; NOTE: Do not autogenerate
 ; RUN: opt < %s -fix-irreducible --verify-loop-info -S | FileCheck %s
-; RUN: opt < %s -passes="fix-irreducible,verify<loops>" -S | FileCheck %s
+; RUN: opt < %s -passes='fix-irreducible,verify<loops>' -S | FileCheck %s
 
 ; CHECK-LABEL: @unreachable(
 ; CHECK: entry:

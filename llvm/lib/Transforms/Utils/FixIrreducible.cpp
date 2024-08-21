@@ -199,7 +199,7 @@ static void createNaturalLoopInternal(LoopInfo &LI, DominatorTree &DT,
     Succ1 = Succ1 && Headers.count(Succ1) ? Succ1 : nullptr;
     CHub.addBranch(P, Succ0, Succ1);
 
-    LLVM_DEBUG(dbgs() << "Added internal branch: " << P->getName() << " -> "
+    LLVM_DEBUG(dbgs() << "Added branch: " << P->getName() << " -> "
                       << (Succ0 ? Succ0->getName() : "") << " "
                       << (Succ1 ? Succ1->getName() : "") << "\n");
   }

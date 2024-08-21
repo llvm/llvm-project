@@ -141,13 +141,6 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
   }
 }
 
-static bool isExitBlock(Loop *L, BasicBlock *Succ, LoopInfo &LI) {
-  Loop *SL = LI.getLoopFor(Succ);
-  if (SL == L || L->contains(SL))
-    return false;
-  return true;
-}
-
 static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   // To unify the loop exits, we need a list of the exiting blocks as
   // well as exit blocks. The functions for locating these lists both
@@ -162,16 +155,16 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   for (auto *BB : ExitingBlocks) {
     auto *Branch = cast<BranchInst>(BB->getTerminator());
     BasicBlock *Succ0 = Branch->getSuccessor(0);
-    Succ0 = isExitBlock(L, Succ0, LI) ? Succ0 : nullptr;
+    Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
     BasicBlock *Succ1 =
         Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
-    Succ1 = Succ1 && isExitBlock(L, Succ1, LI) ? Succ1 : nullptr;
+    Succ1 = L->contains(Succ1) ? nullptr : Succ1;
     CHub.addBranch(BB, Succ0, Succ1);
 
-    LLVM_DEBUG(dbgs() << "Added internal branch: " << BB->getName() << " -> "
-                      << (Succ0 ? Succ0->getName() : "") << " "
-                      << (Succ1 ? Succ1->getName() : "") << "\n");
+    LLVM_DEBUG(dbgs() << "Added exiting branch: " << BB->getName() << " -> {"
+                      << (Succ0 ? Succ0->getName() : "<none>") << ", "
+                      << (Succ1 ? Succ1->getName() : "<none>") << "}\n");
   }
 
   SmallVector<BasicBlock *, 8> GuardBlocks;
@@ -209,8 +202,7 @@ static bool runImpl(LoopInfo &LI, DominatorTree &DT) {
   bool Changed = false;
   auto Loops = LI.getLoopsInPreorder();
   for (auto *L : Loops) {
-    LLVM_DEBUG(dbgs() << "Loop: " << L->getHeader()->getName() << " (depth: "
-                      << LI.getLoopDepth(L->getHeader()) << ")\n");
+    LLVM_DEBUG(dbgs() << "Processing loop:\n"; L->print(dbgs()));
     Changed |= unifyLoopExits(DT, LI, L);
   }
   return Changed;
@@ -231,6 +223,8 @@ namespace llvm {
 
 PreservedAnalyses UnifyLoopExitsPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "===== Unifying loop exits in function " << F.getName()
+                    << "\n");
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 

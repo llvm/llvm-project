@@ -89,9 +89,10 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
                                       BBPredicates &GuardPredicates) {
   LLVMContext &Context = GuardBlocks.front()->getContext();
   BasicBlock *FirstGuardBlock = GuardBlocks.front();
+  Type *Int32Ty = Type::getInt32Ty(Context);
 
-  auto *Phi = PHINode::Create(Type::getInt32Ty(Context), Branches.size(),
-                              "merged.bb.idx", FirstGuardBlock);
+  auto *Phi = PHINode::Create(Int32Ty, Branches.size(), "merged.bb.idx",
+                              FirstGuardBlock);
 
   for (auto [BB, Succ0, Succ1] : Branches) {
     Value *Condition = redirectToHub(BB, Succ0, Succ1, FirstGuardBlock);
@@ -99,17 +100,17 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
     if (Succ0 && Succ1) {
       auto Succ0Iter = find(Outgoing, Succ0);
       auto Succ1Iter = find(Outgoing, Succ1);
-      Value *Id0 = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), Succ0Iter));
-      Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), Succ1Iter));
+      Value *Id0 =
+          ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), Succ0Iter));
+      Value *Id1 =
+          ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), Succ1Iter));
       IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
                                       BB->getTerminator()->getIterator());
     } else {
       // Get the index of the non-null successor.
       auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
-      IncomingId = ConstantInt::get(Type::getInt32Ty(Context),
-                                    std::distance(Outgoing.begin(), SuccIter));
+      IncomingId =
+          ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), SuccIter));
     }
     Phi->addIncoming(IncomingId, BB);
   }
@@ -119,7 +120,7 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
     LLVM_DEBUG(dbgs() << "Creating integer guard for " << Out->getName()
                       << "\n");
     auto *Cmp = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, Phi,
-                                 ConstantInt::get(Type::getInt32Ty(Context), I),
+                                 ConstantInt::get(Int32Ty, I),
                                  Out->getName() + ".predicate", GuardBlocks[I]);
     GuardPredicates[Out] = Cmp;
   }
@@ -244,7 +245,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
                         Phi->getName() + ".moved", FirstGuardBlock->begin());
     bool AllUndef = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
-      Value *V = UndefValue::get(Phi->getType());
+      Value *V = PoisonValue::get(Phi->getType());
       if (BB == Out) {
         V = NewPhi;
       } else if (Phi->getBasicBlockIndex(BB) != -1) {
@@ -257,7 +258,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     Value *NewV = NewPhi;
     if (AllUndef) {
       NewPhi->eraseFromParent();
-      NewV = UndefValue::get(Phi->getType());
+      NewV = PoisonValue::get(Phi->getType());
     }
     if (Phi->getNumOperands() == 0) {
       Phi->replaceAllUsesWith(NewV);
