@@ -5210,8 +5210,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmin_num:
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
-    case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
-    case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:

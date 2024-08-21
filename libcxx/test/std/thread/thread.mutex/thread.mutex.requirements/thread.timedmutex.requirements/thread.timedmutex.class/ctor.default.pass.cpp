@@ -6,18 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
+
 // <mutex>
 
-// class mutex;
+// class timed_mutex;
 
-// mutex(const mutex&) = delete;
+// timed_mutex();
 
 #include <mutex>
+#include <cassert>
 
-int main(int, char**)
-{
-    std::mutex m0;
-    std::mutex m1(m0);
+int main(int, char**) {
+  // The mutex is unlocked after default construction
+  {
+    std::timed_mutex m;
+    assert(m.try_lock());
+    m.unlock();
+  }
 
   return 0;
 }
