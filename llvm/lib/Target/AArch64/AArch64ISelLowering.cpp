@@ -1995,11 +1995,14 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   if (!RetTy || !RetTy->isScalableTy())
     return true;
 
-  if (RetTy->getScalarType()->isIntegerTy(32) && RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
+  if (RetTy->getScalarType()->isIntegerTy(32) &&
+      RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
     return false;
-  if (RetTy->getScalarType()->isIntegerTy(64) && RetTy->getElementCount() == ElementCount::get(2, RetTy->isScalableTy()))
+  if (RetTy->getScalarType()->isIntegerTy(64) &&
+      RetTy->getElementCount() == ElementCount::get(2, RetTy->isScalableTy()))
     return false;
-  if (RetTy->getScalarType()->isIntegerTy(64) && RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
+  if (RetTy->getScalarType()->isIntegerTy(64) &&
+      RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
     return false;
 
   return true;
@@ -21774,7 +21777,13 @@ static SDValue tryCombineWhileLo(SDNode *N,
   return SDValue(N, 0);
 }
 
-SDValue tryLowerPartialReductionToDot(SDNode *N, const AArch64Subtarget *Subtarget, SelectionDAG &DAG) {
+SDValue tryLowerPartialReductionToDot(SDNode *N,
+                                      const AArch64Subtarget *Subtarget,
+                                      SelectionDAG &DAG) {
+
+  if (!Subtarget->isSVEAvailable() && !Subtarget->isNeonAvailable())
+    return SDValue();
+
   SDLoc DL(N);
 
   // The narrower of the two operands. Used as the accumulator
@@ -21799,25 +21808,29 @@ SDValue tryLowerPartialReductionToDot(SDNode *N, const AArch64Subtarget *Subtarg
   EVT FullType = N->getValueType(0);
   // The type that is extended to the wide type. Should be an i8 or i16
   EVT ExtendedType = A.getValueType();
-  // The wide type with four times as many elements as the reduced type. Should be a vector of i32 or i64, the same as the fully-reduced type
+  // The wide type with four times as many elements as the reduced type. Should
+  // be a vector of i32 or i64, the same as the fully-reduced type
   EVT WideType = MulOp.getValueType();
   if (WideType.getScalarSizeInBits() != FullType.getScalarSizeInBits())
     return SDValue();
-  // Dot products operate on chunks of four elements so there must be four times as many elements in the wide type
-  if (WideType.getVectorMinNumElements() / FullType.getVectorMinNumElements() != 4)
+  // Dot products operate on chunks of four elements so there must be four times
+  // as many elements in the wide type
+  if (WideType.getVectorMinNumElements() / FullType.getVectorMinNumElements() !=
+      4)
     return SDValue();
   switch (FullType.getScalarSizeInBits()) {
-    case 32:
-      if (ExtendedType.getScalarSizeInBits() != 8)
-        return SDValue();
-      break;
-    case 64:
-      // i8 to i64 can be done with an extended i32 dot product
-      if (ExtendedType.getScalarSizeInBits() != 8 && ExtendedType.getScalarSizeInBits() != 16)
-        return SDValue();
-      break;
-    default:
+  case 32:
+    if (ExtendedType.getScalarSizeInBits() != 8)
       return SDValue();
+    break;
+  case 64:
+    // i8 to i64 can be done with an extended i32 dot product
+    if (ExtendedType.getScalarSizeInBits() != 8 &&
+        ExtendedType.getScalarSizeInBits() != 16)
+      return SDValue();
+    break;
+  default:
+    return SDValue();
   }
 
   unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
@@ -21838,8 +21851,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N, const AArch64Subtarget *Subtarg
                 Type.getScalarSizeInBits() == 64;
   SDValue Accumulator = NarrowOp;
   if (Extend) {
-    Type = Type.changeVectorElementType(
-        EVT::getIntegerVT(*DAG.getContext(), 32));
+    Type =
+        Type.changeVectorElementType(EVT::getIntegerVT(*DAG.getContext(), 32));
     // The accumulator is of the wider type so we insert a 0 accumulator and
     // add the proper one after extending
     Accumulator = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv4i32,
@@ -21850,9 +21863,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N, const AArch64Subtarget *Subtarg
   auto DotProduct = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Type,
                                 {IntrinsicId, Accumulator, A, B});
   if (Extend) {
-    auto Extended =
-        DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND, DL,
-                    NarrowOp.getValueType(), {DotProduct});
+    auto Extended = DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND,
+                                DL, NarrowOp.getValueType(), {DotProduct});
     auto AccAdd = DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
                               {NarrowOp, Extended});
     DotProduct = AccAdd;
@@ -21870,8 +21882,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
     break;
   case Intrinsic::experimental_vector_partial_reduce_add: {
     if (auto Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
-        return Dot;
-    return DAG.expandPartialReductionIntrinsic(N->getValueType(0), N->getOperand(1), N->getOperand(2), SDLoc(N));
+      return Dot;
+    return DAG.expandPartialReductionIntrinsic(
+        N->getValueType(0), N->getOperand(1), N->getOperand(2), SDLoc(N));
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

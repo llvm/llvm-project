@@ -8011,7 +8011,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
-    setValue(&I, DAG.expandPartialReductionIntrinsic(EVT::getEVT(I.getType()), getValue(I.getOperand(0)), getValue(I.getOperand(1)), sdl));
+    setValue(&I, DAG.expandPartialReductionIntrinsic(
+                     EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                     getValue(I.getOperand(1)), sdl));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
