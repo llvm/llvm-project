@@ -3584,16 +3584,31 @@ LLVM floating-point types fall into two categories:
 - The remaining types, which do not directly correspond to a standard IEEE
   format.
 
-For types that do correspond to an IEEE format, LLVM IR float operations behave
-like the corresponding operations in IEEE-754, with two exceptions: LLVM makes
-:ref:`specific assumptions about the state of the floating-point environment
-<floatenv>` and it implements :ref:`different rules for operations that return
-NaN values <floatnan>`.
+For floating-point operations acting on types with a corresponding IEEE format,
+unless otherwise specified the value returned by that operation matches that of
+the corresponding IEEE-754 operation executed in the :ref:`default
+floating-point environment <floatenv>`, except that the behavior of NaN results
+is instead :ref:`as specified here <floatnan>`. (This statement concerns only
+the returned *value*; we make no statement about status flags or
+traps/exceptions.) In particular, a floating-point instruction returning a
+non-NaN value is guaranteed to always return the same bit-identical result on
+all machines and optimization levels.
 
-This means that optimizations and backends cannot change the precision of these
-operations (unless there are fast-math flags), and frontends can rely on these
-operations deterministically providing perfectly rounded results as described
-in the standard (except when a NaN is returned).
+This means that optimizations and backends may not change the observed bitwise
+result of these operations in any way (unless NaNs are returned), and frontends
+can rely on these operations providing perfectly rounded results as described in
+the standard.
+
+Various flags and attributes can alter the behavior of these operations and thus
+make them not bit-identical across machines and optimization levels any more:
+most notably, the :ref:`fast-math flags <fastmath>` as well as the ``strictfp``
+and ``denormal-fp-math`` attributes. See their corresponding documentation for
+details.
+
+If the compiled code is executed in a non-default floating-point environment
+(this includes non-standard behavior such as subnormal flushing), the result is
+typically undefined behavior unless attributes like ``strictfp`` and
+``denormal-fp-math`` or :ref:`constrained intrinsics <constrainedfp>` are used.
 
 .. _floatenv:
 
@@ -3633,9 +3648,9 @@ representation and never change anything except possibly for the sign bit.
 
 Floating-point math operations that return a NaN are an exception from the
 general principle that LLVM implements IEEE-754 semantics. Unless specified
-otherwise, the following rules apply when a NaN value is returned: the result
-has a non-deterministic sign; the quiet bit and payload are
-non-deterministically chosen from the following set of options:
+otherwise, the following rules apply whenever the IEEE-754 semantics say that a
+NaN value is returned: the result has a non-deterministic sign; the quiet bit
+and payload are non-deterministically chosen from the following set of options:
 
 - The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
 - The quiet bit is set and the payload is copied from any input operand that is
