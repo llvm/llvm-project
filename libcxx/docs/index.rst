@@ -43,7 +43,6 @@ Getting Started with libc++
    Modules
    Hardening
    ReleaseProcedure
-   Status/Cxx14
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
