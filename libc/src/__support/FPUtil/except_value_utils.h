@@ -11,9 +11,9 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "cast.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
