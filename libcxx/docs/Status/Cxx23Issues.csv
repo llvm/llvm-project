@@ -20,7 +20,7 @@
 "`LWG3171 <https://wg21.link/LWG3171>`__","LWG2989 breaks ``directory_entry`` stream insertion","2020-11 (Virtual)","|Complete|","14.0",""
 "`LWG3306 <https://wg21.link/LWG3306>`__","``ranges::advance`` violates its preconditions","2020-11 (Virtual)","|Complete|","14.0","|ranges|"
 "`LWG3403 <https://wg21.link/LWG3403>`__","Domain of ``ranges::ssize(E)`` doesn't ``match ranges::size(E)``","2020-11 (Virtual)","","","|ranges|"
-"`LWG3404 <https://wg21.link/LWG3404>`__","Finish removing subrange's conversions from pair-like","2020-11 (Virtual)","","","|ranges|"
+"`LWG3404 <https://wg21.link/LWG3404>`__","Finish removing subrange's conversions from pair-like","2020-11 (Virtual)","|Complete|","13.0","|ranges|"
 "`LWG3405 <https://wg21.link/LWG3405>`__","``common_view``'s converting constructor is bad, too","2020-11 (Virtual)","|Complete|","14.0","|ranges|"
 "`LWG3406 <https://wg21.link/LWG3406>`__","``elements_view::begin()`` and ``elements_view::end()`` have incompatible constraints","2020-11 (Virtual)","|Complete|","16.0","|ranges|"
 "`LWG3419 <https://wg21.link/LWG3419>`__","[algorithms.requirements]/15 doesn't reserve as many rights as it intends to","2020-11 (Virtual)","|Nothing To Do|","",""
