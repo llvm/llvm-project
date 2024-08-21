@@ -1,5 +1,4 @@
-//===- OMPMapInfoFinalization.cpp
-//---------------------------------------------------===//
+//===- MapInfoFinalization.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +27,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -41,15 +40,15 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <iterator>
 
-namespace fir {
-#define GEN_PASS_DEF_OMPMAPINFOFINALIZATIONPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
+namespace flangomp {
+#define GEN_PASS_DEF_MAPINFOFINALIZATIONPASS
+#include "flang/Optimizer/OpenMP/Passes.h.inc"
+} // namespace flangomp
 
 namespace {
-class OMPMapInfoFinalizationPass
-    : public fir::impl::OMPMapInfoFinalizationPassBase<
-          OMPMapInfoFinalizationPass> {
+class MapInfoFinalizationPass
+    : public flangomp::impl::MapInfoFinalizationPassBase<
+          MapInfoFinalizationPass> {
 
   void genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                fir::FirOpBuilder &builder,
@@ -245,7 +244,7 @@ class OMPMapInfoFinalizationPass
       // all users appropriately, making sure to only add a single member link
       // per new generation for the original originating descriptor MapInfoOp.
       assert(llvm::hasSingleElement(op->getUsers()) &&
-             "OMPMapInfoFinalization currently only supports single users "
+             "MapInfoFinalization currently only supports single users "
              "of a MapInfoOp");
 
       if (!op.getMembers().empty()) {
