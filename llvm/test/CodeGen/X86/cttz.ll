@@ -393,9 +393,8 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ;
 ; X64-LABEL: cttz_i64_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsfq %rdi, %rcx
 ; X64-NEXT:    movl $64, %eax
-; X64-NEXT:    cmovneq %rcx, %rax
+; X64-NEXT:    rep bsfq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i64_zero_test:
