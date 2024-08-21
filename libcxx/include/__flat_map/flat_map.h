@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MAP_H
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
@@ -742,14 +743,14 @@ public:
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (const exception& __ex) {
       clear();
-      throw flat_map_restore_error(
+      throw __flat_map_restore_error(
           std::string("flat_map::erase: "
                       "Unable to restore flat_map to previous state. Clear out the containers to make the two "
                       "containers consistent. Reason: ") +
           __ex.what());
     } catch (...) {
       clear();
-      throw flat_map_restore_error(
+      throw __flat_map_restore_error(
           "flat_map::erase: "
           "Unable to restore flat_map to previous state. Clear out the containers to make the two "
           "containers consistent.");
@@ -1050,9 +1051,9 @@ private:
   }
 
   template <class _Container>
-  static consteval bool __failed_emplacement_has_side_effects() {
+  static consteval bool __emplacement_has_strong_exception_safety_guarantee() {
     // [container.reqmts] If an exception is thrown by an insert() or emplace() function while inserting a single
-    // element, that function has no effects. Except that there is exceptional cases...
+    // element, that function has no effects. Except it is specified otherwise in the container...
 
     // according to http://eel.is/c++draft/deque.modifiers#3 and http://eel.is/c++draft/vector.modifiers#2,
     // the only exceptions that can cause side effects on single emplacement are by move constructors of
@@ -1070,26 +1071,27 @@ private:
     }
   }
 
-  struct flat_map_restore_error : runtime_error {
+  struct __flat_map_restore_error : runtime_error {
     using runtime_error::runtime_error;
   };
 
   template <class _Container, class _Iter, class... _Args>
   _LIBCPP_HIDE_FROM_ABI ranges::iterator_t<_Container>
   __safe_emplace(_Container& __container, _Iter&& __iter, _Args&&... __args) {
-    if constexpr (!__failed_emplacement_has_side_effects<_Container>()) {
+    if constexpr (__emplacement_has_strong_exception_safety_guarantee<_Container>()) {
       // just let the exception be thrown as the container is still in its original state on exception
       return __container.emplace(__iter, std::forward<_Args>(__args)...);
     } else {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       try {
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+        return __container.emplace(__iter, std::forward<_Args>(__args)...);
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       } catch (const exception& __ex) {
         // The container might be in some unknown state and we can't get flat_map into consistent state
         // because we have two containers. The only possible solution is to clear them out
         clear();
-        throw flat_map_restore_error(
+        throw __flat_map_restore_error(
             std::string("flat_map::emplace: Emplacement on the underlying container has failed and has side effect. "
                         "Unable to restore flat_map to previous state. Clear out the containers to make the two "
                         "containers consistent. Reason: ") +
@@ -1098,7 +1100,7 @@ private:
         // The container might be in some unknown state and we can't get flat_map into consistent state
         // because we have two containers. The only possible solution is to clear them out
         clear();
-        throw flat_map_restore_error(
+        throw __flat_map_restore_error(
             "flat_map::emplace: Emplacement on the underlying container has failed and has side effect. "
             "Unable to restore flat_map to previous state. Clear out the containers to make the two "
             "containers consistent.");
@@ -1124,7 +1126,7 @@ private:
       // The container might be in some unknown state and we can't get flat_map into consistent state
       // because we have two containers. The only possible solution is to clear them out
       clear();
-      throw flat_map_restore_error(
+      throw __flat_map_restore_error(
           std::string("flat_map: Erasing on the underlying container has failed. "
                       "Unable to restore flat_map to previous state. Clear out the containers to make the two "
                       "containers consistent. Reason: ") +
@@ -1133,7 +1135,7 @@ private:
       // The container might be in some unknown state and we can't get flat_map into consistent state
       // because we have two containers. The only possible solution is to clear them out
       clear();
-      throw flat_map_restore_error(
+      throw __flat_map_restore_error(
           "flat_map: Erasing on the underlying container has failed. "
           "Unable to restore flat_map to previous state. Clear out the containers to make the two "
           "containers consistent.");
@@ -1152,7 +1154,7 @@ private:
       auto __mapped_it = __safe_emplace(__containers_.values, __it_mapped, std::forward<_MArgs>(__mapped_args)...);
       return iterator(std::move(__key_it), std::move(__mapped_it));
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const flat_map_restore_error&) {
+    } catch (const __flat_map_restore_error&) {
       // both containers already cleared out
       throw;
     } catch (...) {
@@ -1190,13 +1192,13 @@ private:
       auto __mapped_iter = __safe_erase(__containers_.values, __m_iter);
       return iterator(std::move(__key_iter), std::move(__mapped_iter));
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (const flat_map_restore_error&) {
+    } catch (const __flat_map_restore_error&) {
       // both containers already cleared out
       throw;
     } catch (...) {
       // If the second erase throws, the first erase already happened. The flat_map is inconsistent.
       clear();
-      throw flat_map_restore_error(
+      throw __flat_map_restore_error(
           "flat_map::erase: Key has been erased but exception thrown on erasing mapped value. To make flat_map in "
           "consistent state, clear out the flat_map");
     }
