@@ -95,8 +95,8 @@ std::string llvm::computeLTOCacheKey(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const std::set<GlobalValue::GUID> &CfiFunctionDefs,
-    const std::set<GlobalValue::GUID> &CfiFunctionDecls) {
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -237,9 +237,9 @@ std::string llvm::computeLTOCacheKey(
   std::set<GlobalValue::GUID> UsedTypeIds;
 
   auto AddUsedCfiGlobal = [&](GlobalValue::GUID ValueGUID) {
-    if (CfiFunctionDefs.count(ValueGUID))
+    if (CfiFunctionDefs.contains(ValueGUID))
       UsedCfiDefs.insert(ValueGUID);
-    if (CfiFunctionDecls.count(ValueGUID))
+    if (CfiFunctionDecls.contains(ValueGUID))
       UsedCfiDecls.insert(ValueGUID);
   };
 
@@ -1429,8 +1429,8 @@ class InProcessThinBackend : public ThinBackendProc {
   DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
-  std::set<GlobalValue::GUID> CfiFunctionDefs;
-  std::set<GlobalValue::GUID> CfiFunctionDecls;
+  DenseSet<GlobalValue::GUID> CfiFunctionDefs;
+  DenseSet<GlobalValue::GUID> CfiFunctionDecls;
 
   std::optional<Error> Err;
   std::mutex ErrMu;
