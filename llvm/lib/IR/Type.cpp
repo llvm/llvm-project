@@ -827,13 +827,13 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeAlloca);
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit,
-                          TargetExtType::CanBeAlloca);
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }
