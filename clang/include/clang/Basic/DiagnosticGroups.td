@@ -1482,6 +1482,10 @@ def NoDeref : DiagGroup<"noderef">;
 def BoundsSafetyCountedByEltTyUnknownSize :
   DiagGroup<"bounds-safety-counted-by-elt-type-unknown-size">;
 
+// counted_by warnings
+def CountedByAttribute
+    : DiagGroup<"get-counted-by-side-effects">;
+
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
 
