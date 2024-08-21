@@ -1537,7 +1537,8 @@ public:
   /// Returns true if epilogue vectorization is considered profitable, and
   /// false otherwise.
   /// \p VF is the vectorization factor chosen for the original loop.
-  bool isEpilogueVectorizationProfitable(const ElementCount VF) const;
+  bool isEpilogueVectorizationProfitable(const ElementCount VF,
+                                         const unsigned Multiplier) const;
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
@@ -4282,11 +4283,10 @@ getVScaleForTuning(const Loop *L, const TargetTransformInfo &TTI) {
 }
 
 bool LoopVectorizationPlanner::isMoreProfitable(
-    const VectorizationFactor &A, const VectorizationFactor &B) const {
+    const VectorizationFactor &A, const VectorizationFactor &B,
+    const unsigned MaxTripCount) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
-
-  unsigned MaxTripCount = PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop);
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -4334,6 +4334,13 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
   auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
   return CmpFn(RTCostA, RTCostB);
+}
+
+bool LoopVectorizationPlanner::isMoreProfitable(
+    const VectorizationFactor &A, const VectorizationFactor &B) const {
+  const unsigned MaxTripCount =
+      PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop);
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount);
 }
 
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
@@ -4648,7 +4655,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
 }
 
 bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
-    const ElementCount VF) const {
+    const ElementCount VF, const unsigned Multiplier) const {
   // FIXME: We need a much better cost-model to take different parameters such
   // as register pressure, code size increase and cost of extra branches into
   // account. For now we apply a very crude heuristic and only consider loops
@@ -4663,9 +4670,6 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   if (TTI.getMaxInterleaveFactor(VF) <= 1)
     return false;
 
-  unsigned Multiplier = 1;
-  if (VF.isScalable())
-    Multiplier = getVScaleForTuning(TheLoop, TTI).value_or(1);
   if ((Multiplier * VF.getKnownMinValue()) >= EpilogueVectorizationMinVF)
     return true;
   return false;
@@ -4711,7 +4715,11 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     return Result;
   }
 
-  if (!CM.isEpilogueVectorizationProfitable(MainLoopVF)) {
+  unsigned Multiplier = IC;
+  if (MainLoopVF.isScalable())
+    Multiplier = getVScaleForTuning(OrigLoop, TTI).value_or(1);
+
+  if (!CM.isEpilogueVectorizationProfitable(MainLoopVF, Multiplier)) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "
                          "this loop\n");
     return Result;
@@ -4730,16 +4738,20 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   ScalarEvolution &SE = *PSE.getSE();
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
+  unsigned MaxTripCount = 0;
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
       continue;
 
-    // Skip candidate VFs with widths >= the estimate runtime VF (scalable
-    // vectors) or the VF of the main loop (fixed vectors).
+    // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
+    // vectors) or > the VF of the main loop (fixed vectors).
     if ((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
          ElementCount::isKnownGE(NextVF.Width, EstimatedRuntimeVF)) ||
-        ElementCount::isKnownGE(NextVF.Width, MainLoopVF))
+        (NextVF.Width.isScalable() &&
+         ElementCount::isKnownGE(NextVF.Width, MainLoopVF)) ||
+        (!NextVF.Width.isScalable() && !MainLoopVF.isScalable() &&
+         ElementCount::isKnownGT(NextVF.Width, MainLoopVF)))
       continue;
 
     // If NextVF is greater than the number of remaining iterations, the
@@ -4750,6 +4762,14 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
         const SCEV *TC = createTripCountSCEV(TCType, PSE, OrigLoop);
         RemainingIterations = SE.getURemExpr(
             TC, SE.getConstant(TCType, MainLoopVF.getKnownMinValue() * IC));
+        const APInt MaxRemainingIterations =
+            SE.getUnsignedRangeMax(RemainingIterations);
+        // Guard against huge trip counts.
+        if (MaxRemainingIterations.getActiveBits() <= 32) {
+          MaxTripCount = MaxRemainingIterations.getZExtValue();
+          LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
+                            << MaxTripCount << "\n");
+        }
       }
       if (SE.isKnownPredicate(
               CmpInst::ICMP_UGT,
@@ -4758,7 +4778,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
         continue;
     }
 
-    if (Result.Width.isScalar() || isMoreProfitable(NextVF, Result))
+    if (Result.Width.isScalar() ||
+        isMoreProfitable(NextVF, Result, MaxTripCount))
       Result = NextVF;
   }
 
