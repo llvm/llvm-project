@@ -83,8 +83,7 @@ INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
 
 /// Given two VL operands, do we know that LHS <= RHS?
-static bool isVLKnownLE(const MachineOperand &LHS,
-                        const MachineOperand &RHS) {
+static bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
