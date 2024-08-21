@@ -852,7 +852,7 @@ struct StreamingVLOpConversion
       case arm_sme::TypeSize::Double:
         return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
       }
-      llvm_unreachable("unknown type in StreamingVLOpConversion");
+      llvm_unreachable("unknown type size in StreamingVLOpConversion");
     }();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
         streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));
