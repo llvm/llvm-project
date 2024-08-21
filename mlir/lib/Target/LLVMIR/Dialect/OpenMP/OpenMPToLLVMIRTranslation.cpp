@@ -1481,7 +1481,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
               counter);
 
           clone.setSymName(cloneName);
-
           return {privVar, clone};
         }
       }
