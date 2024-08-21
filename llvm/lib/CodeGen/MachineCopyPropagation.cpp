@@ -121,9 +121,8 @@ public:
   }
 };
 
-static std::optional<llvm::SmallVector<MachineInstr *>> moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst,
-                                               SUnit *Src,
-                                               ScheduleDAGMCP &DG) {
+static std::optional<llvm::SmallVector<MachineInstr *>>
+moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   MachineInstr *DstInstr = Dst->getInstr();
   MachineInstr *SrcInstr = Src->getInstr();
   MachineBasicBlock *MBB = SrcInstr->getParent();
@@ -185,15 +184,15 @@ static std::optional<llvm::SmallVector<MachineInstr *>> moveInstructionsOutOfThe
   // processing stage. In some context it does matter what the parent of the
   // instruction was: Namely when we are starting the traversal with the source
   // of the copy propagation. This instruction must have the destination as a
-  // dependency. In case of other instruction than has the destination as a dependency, this
-  // dependency would mean the end of the traversal, but in this scenario this
-  // must be ignored. Let's say that we can not control what nodes to process
-  // and we come across the copy source. How do I know what node has that copy
-  // source as their dependency? We can check of which node is the copy source
-  // the dependency of. This list will alway contain the source. To decide if we
-  // have it as dependency of another instruction, we must check in the already
-  // traversed list if any of the instructions that is depended on the source is
-  // contained. This would introduce extra costs.
+  // dependency. In case of other instruction than has the destination as a
+  // dependency, this dependency would mean the end of the traversal, but in
+  // this scenario this must be ignored. Let's say that we can not control what
+  // nodes to process and we come across the copy source. How do I know what
+  // node has that copy source as their dependency? We can check of which node
+  // is the copy source the dependency of. This list will alway contain the
+  // source. To decide if we have it as dependency of another instruction, we
+  // must check in the already traversed list if any of the instructions that is
+  // depended on the source is contained. This would introduce extra costs.
   ProcessSNodeChildren(Edges, Dst, true);
   while (!Edges.empty()) {
     const auto *Current = Edges.front();
@@ -1156,9 +1155,9 @@ static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
   return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
-void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
-                                           ScheduleDAGMCP &DG,
-                                           bool MoveDependenciesForBetterCopyPropagation) {
+void MachineCopyPropagation::propagateDefs(
+    MachineInstr &MI, ScheduleDAGMCP &DG,
+    bool MoveDependenciesForBetterCopyPropagation) {
   if (!Tracker.hasAnyCopies() && !Tracker.hasAnyInvalidCopies())
     return;
 
@@ -1204,7 +1203,8 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
       SUnit *DstSUnit = DG.getSUnit(Copy);
       SUnit *SrcSUnit = DG.getSUnit(&MI);
 
-      InstructionsToMove = moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit, DG);
+      InstructionsToMove =
+          moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit);
       if (!InstructionsToMove)
         continue;
     }
@@ -1273,8 +1273,8 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         // Unlike forward cp, we don't invoke propagateDefs here,
         // just let forward cp do COPY-to-COPY propagation.
         if (isBackwardPropagatableCopy(*CopyOperands, *MRI)) {
-          Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII,
-                                     UseCopyInstr, MoveDependenciesForBetterCopyPropagation);
+          Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII, UseCopyInstr,
+                                     MoveDependenciesForBetterCopyPropagation);
           Tracker.invalidateRegister(DefReg.asMCReg(), *TRI, *TII,
                                      UseCopyInstr);
           Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
@@ -1316,7 +1316,8 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
           }
         } else {
           Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI, *TII,
-                                     UseCopyInstr, MoveDependenciesForBetterCopyPropagation);
+                                     UseCopyInstr,
+                                     MoveDependenciesForBetterCopyPropagation);
         }
       }
     }
