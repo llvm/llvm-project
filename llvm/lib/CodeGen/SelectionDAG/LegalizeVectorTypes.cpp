@@ -7297,9 +7297,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   unsigned WideElts = WideVT.getVectorMinNumElements();
 
   // Generate a vp.reduce_op if it is custom/legal for the target.  This avoids
-  // need pad the source vector, because the inactive lanes can simply be
-  // disabled and not contribute to the result. To avoid possible recursion,
-  // only do this if the widened mask type is legal.
+  // needing to pad the source vector, because the inactive lanes can simply be
+  // disabled and not contribute to the result.
+  // TODO: VECREDUCE_FADD, VECREDUCE_FMUL aren't currently mapped correctly,
+  // and thus don't take this path.
   if (auto VPOpcode = ISD::getVPForBaseOpcode(Opc);
       VPOpcode && TLI.isOperationLegalOrCustom(*VPOpcode, WideVT)) {
     SDValue Start = NeutralElem;
