@@ -15,7 +15,7 @@ void func (
   P_10000(int s)
   P_10000(int t)
   P_10000(int u)
-  P_10000(int v) // expected-error {{too many function parameters; subsequent parameters are skipped}}
+  P_10000(int v) // expected-error {{too many function parameters; subsequent parameters will be ignored}}
   int w);
 
 extern double(*func2)(
@@ -25,5 +25,5 @@ extern double(*func2)(
   P_10000(int s)
   P_10000(int t)
   P_10000(int u)
-  P_10000(int v) // expected-error {{too many function parameters; subsequent parameters are skipped}}
+  P_10000(int v) // expected-error {{too many function parameters; subsequent parameters will be ignored}}
   int w);
