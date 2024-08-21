@@ -454,22 +454,6 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
   }
 }
 
-/// Check that the HANDLE_VP_TO_CONSTRAINEDFP maps to an existing intrinsic with
-/// the right amount of constrained-fp metadata args.
-TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
-#define VP_PROPERTY_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                  \
-  {                                                                            \
-    SmallVector<Intrinsic::IITDescriptor, 5> T;                                \
-    Intrinsic::getIntrinsicInfoTableEntries(Intrinsic::CFPID, T);              \
-    unsigned NumMetadataArgs = 0;                                              \
-    for (auto TD : T)                                                          \
-      NumMetadataArgs += (TD.Kind == Intrinsic::IITDescriptor::Metadata);      \
-    bool IsCmp = Intrinsic::CFPID == Intrinsic::experimental_constrained_fcmp; \
-    ASSERT_EQ(NumMetadataArgs, (unsigned)(IsCmp + HASROUND + HASEXCEPT));      \
-  }
-#include "llvm/IR/VPIntrinsics.def"
-}
-
 } // end anonymous namespace
 
 /// Check various properties of VPReductionIntrinsics

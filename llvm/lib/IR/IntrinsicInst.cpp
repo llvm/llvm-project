@@ -469,13 +469,16 @@ std::optional<unsigned>
 VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   switch (VPID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_MEMOP(POINTERPOS, ...) return POINTERPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return std::nullopt;
+  case Intrinsic::vp_store:
+  case Intrinsic::vp_scatter:
+  case Intrinsic::experimental_vp_strided_store:
+    return 1;
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_gather:
+  case Intrinsic::experimental_vp_strided_load:
+    return 0;
   }
-  return std::nullopt;
 }
 
 /// \return The data (payload) operand of this store or scatter.
@@ -489,13 +492,12 @@ Value *VPIntrinsic::getMemoryDataParam() const {
 std::optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {
   switch (VPID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_MEMOP(POINTERPOS, DATAPOS) return DATAPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return std::nullopt;
+  case Intrinsic::vp_store:
+  case Intrinsic::vp_scatter:
+  case Intrinsic::experimental_vp_strided_store:
+    return 0;
   }
-  return std::nullopt;
 }
 
 constexpr bool isVPIntrinsic(Intrinsic::ID ID) {
@@ -579,7 +581,7 @@ VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
   default:
     break;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CONSTRAINEDFP(HASRND, HASEXCEPT, CID) return Intrinsic::CID;
+#define VP_PROPERTY_CONSTRAINEDFP(CID) return Intrinsic::CID;
 #define END_REGISTER_VP_INTRINSIC(VPID) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
@@ -739,14 +741,9 @@ bool VPReductionIntrinsic::isVPReduction(Intrinsic::ID ID) {
 }
 
 bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CASTOP return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
+  // All of the vp.casts correspond to instructions
+  if (std::optional<unsigned> Opc = getFunctionalOpcodeForVP(ID))
+    return Instruction::isCast(*Opc);
   return false;
 }
 
