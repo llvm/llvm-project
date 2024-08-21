@@ -190,7 +190,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
   auto &DL = State.getMachineFunction().getDataLayout();
-  const Align StackAlign = DL.getStackAlignment();
+  const Align StackAlign = *DL.getStackAlignment();
   const Align FirstMemberAlign(PendingMembers[0].getExtraInfo());
   Align Alignment = std::min(FirstMemberAlign, StackAlign);
 

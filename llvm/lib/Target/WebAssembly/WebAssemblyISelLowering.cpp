@@ -1190,7 +1190,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
     int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+                                                 *Layout.getStackAlignment(),
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;

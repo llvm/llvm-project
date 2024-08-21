@@ -210,7 +210,7 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   }
 
   const Align StackAlign =
-      State.getMachineFunction().getDataLayout().getStackAlignment();
+      *State.getMachineFunction().getDataLayout().getStackAlignment();
   const Align MemAlign = ArgFlags.getNonZeroMemAlign();
   Align SlotAlign = std::min(MemAlign, StackAlign);
   if (!Subtarget.isTargetDarwin())
