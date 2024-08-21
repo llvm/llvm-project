@@ -7027,11 +7027,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       if (CM.selectUserVectorizationFactor(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
         buildVPlansWithVPRecipes(UserVF, UserVF);
-        if (!hasPlanWithVF(UserVF)) {
-          LLVM_DEBUG(dbgs()
-                     << "LV: No VPlan could be built for " << UserVF << ".\n");
-        }
-
         LLVM_DEBUG(printPlans(dbgs()));
         return;
       } else
@@ -7293,7 +7288,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   assert(BestFactor.Width == LegacyVF.Width &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
-         "when vectorizing, the scalar cost must be non-zero.");
+         "when vectorizing, the scalar cost must be computed.");
 #endif
 
   return BestFactor;
@@ -9824,7 +9819,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
 
-  // Plan how to best vectorize,
+  // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
   VectorizationFactor VF = LVP.computeBestVF();
   unsigned IC = 1;
