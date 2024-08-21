@@ -3967,7 +3967,7 @@ Floating-Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating-point value
+     - 16-bit floating-point value (IEEE-754 binary16)
 
    * - ``bfloat``
      - 16-bit "brain" floating-point value (7-bit significand).  Provides the
@@ -3976,23 +3976,19 @@ Floating-Point Types
        extensions and Arm's ARMv8.6-A extensions, among others.
 
    * - ``float``
-     - 32-bit floating-point value
+     - 32-bit floating-point value (IEEE-754 binary32)
 
    * - ``double``
-     - 64-bit floating-point value
+     - 64-bit floating-point value (IEEE-754 binary64)
 
    * - ``fp128``
-     - 128-bit floating-point value (113-bit significand)
+     - 128-bit floating-point value (IEEE-754 binary128)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
 
    * - ``ppc_fp128``
      - 128-bit floating-point value (two 64-bits)
-
-The binary format of half, float, double, and fp128 correspond to the
-IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
-respectively.
 
 X86_amx Type
 """"""""""""
