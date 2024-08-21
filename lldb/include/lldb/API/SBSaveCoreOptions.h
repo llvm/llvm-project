@@ -83,7 +83,7 @@ public:
   /// Add a memory region to save in the core file.
   ///
   /// \param region The memory region to save.
-  /// \returns An empty SBStatus upon success, or an error if the region is
+  /// \returns An empty SBError upon success, or an error if the region is
   /// invalid.
   /// \note Ranges that overlapped with be unioned into a single region this
   /// also supercedes stack minification. Specifying full regions and a

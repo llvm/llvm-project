@@ -450,7 +450,7 @@ public:
 
   void Append(const Entry &entry) { m_entries.emplace_back(entry); }
   
-  void Append(const B&& b, const S&& s, const T&& t) {
+  void Append(B&& b, S&& s, T&& t) {
     m_entries.emplace_back(Entry(b, s, t));
   }
 
