@@ -7316,16 +7316,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
                                           WideVT.getVectorElementCount());
         TLI.isTypeLegal(WideMaskVT)) {
       SDValue Start =
-        DAG.getNode(getExtendForIntVecReduction(N), dl, VT, NeutralElem);
+          DAG.getNode(getExtendForIntVecReduction(N), dl, VT, NeutralElem);
       SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
-      SDValue EVL =
-          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
-                              OrigVT.getVectorElementCount());
-      return DAG.getNode(*VPOpcode, dl, VT,
-                         {Start, Op, Mask, EVL}, Flags);
+      SDValue EVL = DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                                        OrigVT.getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, VT, {Start, Op, Mask, EVL}, Flags);
     }
   }
-
 
   if (WideVT.isScalableVector()) {
     unsigned GCD = std::gcd(OrigElts, WideElts);
