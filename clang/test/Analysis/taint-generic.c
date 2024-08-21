@@ -482,7 +482,7 @@ void complex_taint_queries(const int *p) {
 
   tmp += p[3] + p[3];
   clang_analyzer_dump_int(tmp); // expected-warning{{(((((conj_}} symbol complexity: 10
-  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} 10 is already to ocomplex to be traversed
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} 10 is already too complex to be traversed
 
   tmp += p[4] + p[4];
   tmp += p[5] + p[5];
