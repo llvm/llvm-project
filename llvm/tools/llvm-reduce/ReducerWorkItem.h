@@ -46,7 +46,7 @@ public:
   void print(raw_ostream &ROS, void *p = nullptr) const;
   bool verify(raw_fd_ostream *OS) const;
   std::unique_ptr<ReducerWorkItem> clone(const TargetMachine *TM,
-                                         MCContext * MCCtx) const;
+                                         MCContext *MCCtx) const;
 
   /// Return a number to indicate whether there was any reduction progress.
   uint64_t getComplexityScore() const {

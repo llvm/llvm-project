@@ -204,8 +204,8 @@ static void doTest(StringRef MIRFunc,
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                  nullptr, &TM->Options.MCOptions, false);
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   // This test is designed for the X86 backend; stop if it is not available.
   if (!TM)
     return;

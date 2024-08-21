@@ -239,8 +239,8 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
       LLVMTM.getMCRegisterInfo(), LLVMTM.getMCSubtargetInfo(), nullptr,
       &LLVMTM.Options.MCOptions, false);
   auto MMI = std::make_unique<llvm::MachineModuleInfo>(LLVMTM, *MCCtx);
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), MMI.get());
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }

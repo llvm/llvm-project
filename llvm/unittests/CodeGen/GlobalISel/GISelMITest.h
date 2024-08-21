@@ -123,8 +123,7 @@ protected:
     SmallString<512> MIRString;
     getTargetTestModuleString(MIRString, ExtraAssembly);
 
-    ModuleMMIPair =
-        createDummyModule(Context, *TM, *MCCtx, MIRString, "func");
+    ModuleMMIPair = createDummyModule(Context, *TM, *MCCtx, MIRString, "func");
     MF = getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
     collectCopies(Copies, MF);
     EntryMBB = &*MF->begin();

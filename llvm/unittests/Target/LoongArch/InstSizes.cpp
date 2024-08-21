@@ -73,9 +73,9 @@ void runChecks(
   M->setTargetTriple(TM->getTargetTriple().getTriple());
   M->setDataLayout(TM->createDataLayout());
 
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
 
   MachineModuleInfo MMI(*TM, MCCtx);
   bool Res = MParser->parseMachineFunctions(*M, MMI);

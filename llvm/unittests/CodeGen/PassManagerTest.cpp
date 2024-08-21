@@ -181,10 +181,9 @@ TEST_F(PassManagerTest, Basic) {
 
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
-  MCContext MCCtx(
-      LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
-      LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(), nullptr,
-      &LLVMTM->Options.MCOptions, false);
+  MCContext MCCtx(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
+                  LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(),
+                  nullptr, &LLVMTM->Options.MCOptions, false);
 
   MachineModuleInfo MMI(*LLVMTM, MCCtx);
 
@@ -236,10 +235,9 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MCContext MCCtx(
-      LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
-      LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(), nullptr,
-      &LLVMTM->Options.MCOptions, false);
+  MCContext MCCtx(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
+                  LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(),
+                  nullptr, &LLVMTM->Options.MCOptions, false);
   MachineModuleInfo MMI(*LLVMTM, MCCtx);
 
   LoopAnalysisManager LAM;

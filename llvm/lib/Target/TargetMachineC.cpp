@@ -312,10 +312,10 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
       break;
   }
 
-    MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                    TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
-                    &TM->Options.MCOptions, false);
-    auto MMI = TM->createMachineModuleInfo(MCCtx);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = TM->createMachineModuleInfo(MCCtx);
 
   if (TM->addPassesToEmitFile(pass, OS, nullptr, ft, *MMI)) {
     error = "TargetMachine can't emit a file of this type";

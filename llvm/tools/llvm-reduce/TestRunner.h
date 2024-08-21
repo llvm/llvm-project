@@ -45,7 +45,7 @@ public:
 
   const TargetMachine *getTargetMachine() const { return TM.get(); }
 
-  MCContext *getMCContext() const { return MCCtx.get();}
+  MCContext *getMCContext() const { return MCCtx.get(); }
 
   StringRef getToolName() const { return ToolName; }
 

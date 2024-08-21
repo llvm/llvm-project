@@ -426,14 +426,14 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (Conf.PreCodeGenPassesHook)
     Conf.PreCodeGenPassesHook(CodeGenPasses);
 
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   auto MMI = TM->createMachineModuleInfo(MCCtx);
 
   if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType, *MMI))
+                              DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
+                              *MMI))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(Mod);
 

@@ -198,7 +198,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     std::vector<Chunk> NoChunks = {{0, INT_MAX}};
     Oracle NoChunksCounter(NoChunks);
     std::unique_ptr<ReducerWorkItem> Clone =
-      Test.getProgram().clone(Test.getTargetMachine(), Test.getMCContext());
+        Test.getProgram().clone(Test.getTargetMachine(), Test.getMCContext());
     ExtractChunksFromModule(NoChunksCounter, *Clone);
     assert(Targets == NoChunksCounter.count() &&
            "number of chunks changes when reducing");

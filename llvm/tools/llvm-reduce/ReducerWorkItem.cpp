@@ -785,8 +785,7 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
 
 std::pair<std::unique_ptr<ReducerWorkItem>, bool>
 llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
-                           LLVMContext &Ctxt,
-                           std::unique_ptr<MCContext> &MCCtx,
+                           LLVMContext &Ctxt, std::unique_ptr<MCContext> &MCCtx,
                            std::unique_ptr<TargetMachine> &TM, bool IsMIR) {
   bool IsBitcode = false;
   Triple TheTriple;
@@ -825,8 +824,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MCCtx.reset(new MCContext(LLVMTM->getTargetTriple(),
-                              LLVMTM->getMCAsmInfo(),
+    MCCtx.reset(new MCContext(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
                               LLVMTM->getMCRegisterInfo(),
                               LLVMTM->getMCSubtargetInfo(), nullptr,
                               &LLVMTM->Options.MCOptions, false));

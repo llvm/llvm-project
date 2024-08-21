@@ -225,9 +225,9 @@ body:             |
   %1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p)
 ...
 )MIR";
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
@@ -339,9 +339,9 @@ body:             |
 ...
 )MIR";
 
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
@@ -380,9 +380,9 @@ body:             |
 ...
 )MIR";
 
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
@@ -481,9 +481,9 @@ body:             |
 ...
 )MIR";
 
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
@@ -573,9 +573,9 @@ body:             |
 
 ...
 )MIR";
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
@@ -607,9 +607,9 @@ body:             |
 
 ...
 )MIR";
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);

@@ -105,8 +105,7 @@ class MachineModuleInfo {
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
 public:
-  explicit MachineModuleInfo(const LLVMTargetMachine &TM,
-                             MCContext &Context);
+  explicit MachineModuleInfo(const LLVMTargetMachine &TM, MCContext &Context);
 
   /// Deleted copy constructor
   MachineModuleInfo(MachineModuleInfo &MMI) = delete;
@@ -121,12 +120,8 @@ public:
 
   const LLVMTargetMachine &getTarget() const { return TM; }
 
-  const MCContext &getContext() const {
-    return Context;
-  }
-  MCContext &getContext() {
-    return Context;
-  }
+  const MCContext &getContext() const { return Context; }
+  MCContext &getContext() { return Context; }
 
   const Module *getModule() const { return TheModule; }
 

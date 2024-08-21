@@ -24,9 +24,9 @@ void runChecks(
     std::function<void(const ARMBaseInstrInfo &, MachineFunction &, unsigned &)>
         Checks) {
   LLVMContext Context;
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
 
   auto MIRString = "--- |\n"
                    "  declare void @sizes()\n" +

@@ -155,9 +155,9 @@ body: |
 )MIR";
 
   LLVMContext Context;
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   std::unique_ptr<MIRParser> MIR;
   MachineModuleInfo MMI(*TM, MCCtx);
   std::unique_ptr<Module> M = parseMIR(Context, MIR, *TM, MIRString, MMI);
@@ -333,9 +333,9 @@ body: |
 
   LLVMContext Context;
   std::unique_ptr<MIRParser> MIR;
-  MCContext MCCtx(
-      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   MachineModuleInfo MMI(*TM, MCCtx);
   std::unique_ptr<Module> M = parseMIR(Context, MIR, *TM, MIRString, MMI);
   ASSERT_TRUE(M);
