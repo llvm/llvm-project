@@ -90,7 +90,7 @@ public:
   explicit MergeAllocPass(const memref::MergeAllocationOptions &o)
       : options{std::move(o)} {}
 };
-}
+} // namespace
 } // namespace mlir
 
 std::unique_ptr<mlir::Pass>
