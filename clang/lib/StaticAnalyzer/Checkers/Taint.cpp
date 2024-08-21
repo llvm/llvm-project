@@ -259,7 +259,7 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
 
   // HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
   if (const auto &Opts = State->getAnalysisManager().getAnalyzerOptions();
-      Sym->computeComplexity() >= Opts.MaxTaintedSymbolComplexity) {
+      Sym->computeComplexity() > Opts.MaxTaintedSymbolComplexity) {
     return {};
   }
 
