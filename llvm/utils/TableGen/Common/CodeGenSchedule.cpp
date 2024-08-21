@@ -43,7 +43,7 @@ namespace {
 
 // (instrs a, b, ...) Evaluate and union all arguments. Identical to AddOp.
 struct InstrsOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
   }
@@ -75,7 +75,7 @@ struct InstRegexOp : public SetTheory::Operator {
     return Result;
   }
 
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ArrayRef<const CodeGenInstruction *> Instructions =
         Target.getInstructionsByEnumValue();
