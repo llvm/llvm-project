@@ -2461,7 +2461,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Since callee will pop argument stack as a tail call, we must keep the
     // popped size 16-byte aligned.
-    Align StackAlign = DAG.getDataLayout().getStackAlignment();
+    Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
     NumBytes = alignTo(NumBytes, StackAlign);
 
     // SPDiff will be negative if this tail call requires more space than we
@@ -4711,9 +4711,8 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   if (canGuaranteeTCO(CallConv, TailCallOpt)) {
     // The only way to guarantee a tail call is if the callee restores its
     // argument area, but it must also keep the stack aligned when doing so.
-    const DataLayout &DL = DAG.getDataLayout();
-    StackArgSize = alignTo(StackArgSize, DL.getStackAlignment());
-
+    Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
+    StackArgSize = alignTo(StackArgSize, StackAlign);
     AFI->setArgumentStackToRestore(StackArgSize);
   }
   AFI->setArgumentStackSize(StackArgSize);
@@ -22030,7 +22029,7 @@ Align ARMTargetLowering::getABIAlignmentForCallingConv(
 
   // Avoid over-aligning vector parameters. It would require realigning the
   // stack and waste space for no real benefit.
-  return std::min(ABITypeAlign, DL.getStackAlignment());
+  return std::min(ABITypeAlign, Subtarget->getFrameLowering()->getStackAlign());
 }
 
 /// Return true if a type is an AAPCS-VFP homogeneous aggregate or one of

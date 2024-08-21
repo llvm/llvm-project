@@ -1189,9 +1189,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
-                                                 /*isSS=*/false);
+    Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, StackAlign,
+                                                 /*isSpillSlot=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
     for (SDValue Arg : drop_begin(OutVals, NumFixedArgs)) {
