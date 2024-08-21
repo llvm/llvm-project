@@ -1131,8 +1131,15 @@ def OperandSemantics {
 class SrcRegOrImm9<RegisterClass regClass, string opWidth, string operandType,
                    int immWidth, int OperandSemantics>
     : RegOrImmOperand<regClass, operandType> {
-  let DecoderMethod = "decodeSrcRegOrImm9<AMDGPUDisassembler::" # opWidth #
+  string DecoderMethodName = "decodeSrcRegOrImm9";
+  let DecoderMethod = DecoderMethodName # "<AMDGPUDisassembler::" # opWidth #
                       ", " # immWidth # ", " # OperandSemantics # ">";
+}
+
+class SrcRegOrImm9_t16<string operandType, int OperandSemantics, RegisterClass regClass = VS_16>
+    : SrcRegOrImm9<regClass, "OPW16", operandType, 16, OperandSemantics> {
+  let DecoderMethodName = "decodeOperand_VSrcT16";
+  let EncoderMethod = "getMachineOpValueT16";
 }
 
 def SSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT16", 16, OperandSemantics.INT>;
@@ -1175,32 +1182,16 @@ def VSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_BF16", 16, Operan
 def VSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP16", 16, OperandSemantics.FP16>;
 
 // True16 VOP3 operands.
-def VSrcT_b16 : RegOrImmOperand <VS_16, "OPERAND_REG_IMM_INT16"> {
-  let EncoderMethod = "getMachineOpValueT16";
-  let DecoderMethod = "decodeOperand_VSrcT16";
-}
-def VSrcT_bf16 : RegOrImmOperand <VS_16, "OPERAND_REG_IMM_BF16"> {
-  let EncoderMethod = "getMachineOpValueT16";
-  let DecoderMethod = "decodeOperand_VSrcT16";
-}
-def VSrcT_f16 : RegOrImmOperand <VS_16, "OPERAND_REG_IMM_FP16"> {
-  let EncoderMethod = "getMachineOpValueT16";
-  let DecoderMethod = "decodeOperand_VSrcT16";
-}
+def VSrcT_b16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_INT16", OperandSemantics.INT>;
+def VSrcT_bf16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_BF16", OperandSemantics.BF16>;
+def VSrcT_f16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_FP16", OperandSemantics.FP16>;
 
 // True16 VOP1/2/C operands.
-def VSrcT_b16_Lo128 : RegOrImmOperand <VS_16_Lo128, "OPERAND_REG_IMM_INT16"> {
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-  let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
-}
-def VSrcT_bf16_Lo128 : RegOrImmOperand <VS_16_Lo128, "OPERAND_REG_IMM_BF16"> {
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-  let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
-}
-def VSrcT_f16_Lo128 : RegOrImmOperand <VS_16_Lo128, "OPERAND_REG_IMM_FP16"> {
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-  let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
-}
+let DecoderMethodName = "decodeOperand_VSrcT16_Lo128", EncoderMethod = "getMachineOpValueT16Lo128" in {
+  def VSrcT_b16_Lo128 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_INT16", OperandSemantics.INT, VS_16_Lo128>;
+  def VSrcT_bf16_Lo128 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_BF16", OperandSemantics.BF16, VS_16_Lo128>;
+  def VSrcT_f16_Lo128 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_FP16",OperandSemantics.FP16, VS_16_Lo128>;
+} // End DecoderMethodName = "decodeOperand_VSrcT16_Lo128", EncoderMethod = "getMachineOpValueT16Lo128"
 
 // The current and temporary future default used case for fake VOP1/2/C.
 // For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
@@ -1303,6 +1294,10 @@ def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2INT16", 
 def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2BF16", 16, OperandSemantics.BF16>;
 def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2FP16", 16, OperandSemantics.FP16>;
 
+// True 16 Operands
+def VCSrcT_b16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_INT16", OperandSemantics.INT>;
+def VCSrcT_bf16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_BF16", OperandSemantics.BF16>;
+def VCSrcT_f16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_FP16", OperandSemantics.FP16>;
 //===----------------------------------------------------------------------===//
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
