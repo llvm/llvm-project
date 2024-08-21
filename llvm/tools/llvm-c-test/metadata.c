@@ -80,7 +80,7 @@ int llvm_is_a_value_as_metadata(void) {
   LLVMContextRef Context = LLVMGetModuleContext(M);
 
   {
-    LLVMValueRef Int = LLVMConstInt(LLVMInt32Type(), 0, 0);
+    LLVMValueRef Int = LLVMConstInt(LLVMInt32TypeInContext(Context), 0, 0);
     LLVMValueRef NodeMD = LLVMMDNode(&Int, 1);
     assert(LLVMIsAValueAsMetadata(NodeMD) == NodeMD);
     (void)NodeMD;
@@ -95,6 +95,24 @@ int llvm_is_a_value_as_metadata(void) {
     assert(LLVMIsAValueAsMetadata(Value) == NULL);
     (void)Value;
   }
+
+  return 0;
+}
+
+int llvm_vam_mav_extract(void) {
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+  LLVMContextRef Context = LLVMGetModuleContext(M);
+
+  LLVMValueRef Val = LLVMConstInt(LLVMInt32TypeInContext(Context), 0, 0);
+  LLVMMetadataRef MD = LLVMMDStringInContext2(Context, "foo", 3);
+
+  // construction
+  LLVMValueRef MAV = LLVMMetadataAsValue(Context, MD);
+  LLVMMetadataRef VAM = LLVMValueAsMetadata(Val);
+
+  // extraction
+  assert(LLVMMetadataAsValue(Context, VAM) == Val);
+  assert(LLVMValueAsMetadata(MAV) == MD);
 
   return 0;
 }

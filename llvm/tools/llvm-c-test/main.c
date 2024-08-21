@@ -56,6 +56,9 @@ static void print_usage(void) {
   fprintf(stderr, "  * --is-a-value-as-metadata\n");
   fprintf(stderr,
           "    Run test for checking if LLVMValueRef is a ValueAsMetadata\n");
+  fprintf(stderr, "  * --vam-mav-extract\n");
+  fprintf(stderr, "    Run test for extracting data from ValueAsMetadata and "
+                  "MetadataAsValue\n");
   fprintf(stderr, "  * --echo\n");
   fprintf(stderr, "    Read bitcode file from stdin - print it back out\n\n");
   fprintf(stderr, "  * --test-diagnostic-handler\n");
@@ -101,6 +104,8 @@ int main(int argc, char **argv) {
     return llvm_replace_md_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--is-a-value-as-metadata")) {
     return llvm_is_a_value_as_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--vam-mav-extract")) {
+    return llvm_vam_mav_extract();
   } else if (argc == 2 && !strcmp(argv[1], "--test-function-attributes")) {
     return llvm_test_function_attributes();
   } else if (argc == 2 && !strcmp(argv[1], "--test-callsite-attributes")) {
