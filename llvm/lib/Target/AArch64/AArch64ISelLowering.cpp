@@ -1784,7 +1784,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // We can lower all legal (or smaller) SVE types to `compact`.
     for (auto VT :
          {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv2f32,
-          MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16, MVT::nxv4i32, MVT::nxv4f32, MVT::nxv8i8, MVT::nxv8i16, MVT::nxv16i8})
+          MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16, MVT::nxv4i32, MVT::nxv4f32,
+          MVT::nxv8i8, MVT::nxv8i16, MVT::nxv16i8})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // If we have SVE, we can use SVE logic for legal (or smaller than legal)
