@@ -19,6 +19,7 @@ DEF_VALUE(Argument, Argument)
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_USER(Constant, Constant)
+DEF_USER(ConstantInt, ConstantInt)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
@@ -45,6 +46,8 @@ DEF_INSTR(Call,          OP(Call),          CallInst)
 DEF_INSTR(Invoke,        OP(Invoke),        InvokeInst)
 DEF_INSTR(CallBr,        OP(CallBr),        CallBrInst)
 DEF_INSTR(GetElementPtr, OP(GetElementPtr), GetElementPtrInst)
+DEF_INSTR(CatchSwitch,   OP(CatchSwitch),   CatchSwitchInst)
+DEF_INSTR(Switch,        OP(Switch),        SwitchInst)
 DEF_INSTR(UnOp,          OPCODES( \
                          OP(FNeg) \
                          ),                 UnaryOperator)
@@ -68,6 +71,7 @@ DEF_INSTR(BinaryOperator, OPCODES(\
                          OP(Or)   \
                          OP(Xor)  \
                          ),                 BinaryOperator)
+DEF_INSTR(AtomicRMW,     OP(AtomicRMW),     AtomicRMWInst)
 DEF_INSTR(AtomicCmpXchg, OP(AtomicCmpXchg), AtomicCmpXchgInst)
 DEF_INSTR(Alloca,         OP(Alloca),         AllocaInst)
 DEF_INSTR(Cast,   OPCODES(\

@@ -1427,6 +1427,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithFollowing:
+    case FormatStyle::RCPS_OwnLineWithBrace:
       return CurrentState.Indent;
     default:
       break;

@@ -44,6 +44,11 @@ function basicAlloc()
   allocate(basicAlloc)
 end
 
+function allocPtr()
+  real, pointer :: allocPtr
+  allocate(allocPtr) ! good enough for pointer
+end
+
 function sourcedAlloc()
   real, allocatable :: sourcedAlloc
   allocate(sourcedAlloc, source=0.)

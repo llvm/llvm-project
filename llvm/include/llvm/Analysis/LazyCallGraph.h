@@ -55,11 +55,8 @@
 namespace llvm {
 
 class Constant;
-class Function;
 template <class GraphType> struct GraphTraits;
 class Module;
-class TargetLibraryInfo;
-class Value;
 
 /// A lazily constructed view of the call graph of a module.
 ///
@@ -111,7 +108,6 @@ class LazyCallGraph {
 public:
   class Node;
   class EdgeSequence;
-  class SCC;
   class RefSCC;
 
   /// A class used to represent edges in the call graph.
