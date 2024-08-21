@@ -32,33 +32,32 @@
 struct P {
   int first;
   int second;
-  template<class T, class U>
+  template <class T, class U>
   bool operator==(const std::pair<T, U>& rhs) const {
     return MoveOnly(first) == rhs.first && MoveOnly(second) == rhs.second;
   }
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
-    using M = std::flat_map<int, char>;
-    std::vector<int> ks = {1,1,1,2,2,3,2,3,3};
-    std::vector<char> vs = {1,2,3,4,5,6,7,8,9};
-    auto m = M(ks, vs);
-    assert((m.keys() == std::vector<int>{1,2,3}));
-    LIBCPP_ASSERT((m.values() == std::vector<char>{1,4,6}));
+    using M              = std::flat_map<int, char>;
+    std::vector<int> ks  = {1, 1, 1, 2, 2, 3, 2, 3, 3};
+    std::vector<char> vs = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    auto m               = M(ks, vs);
+    assert((m.keys() == std::vector<int>{1, 2, 3}));
+    LIBCPP_ASSERT((m.values() == std::vector<char>{1, 4, 6}));
     m = M(std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert((m.keys() == std::vector<int>{1,2,3}));
-    LIBCPP_ASSERT((m.values() == std::vector<char>{1,4,6}));
+    assert((m.keys() == std::vector<int>{1, 2, 3}));
+    LIBCPP_ASSERT((m.values() == std::vector<char>{1, 4, 6}));
   }
   {
-    P expected[] = {{3,2}, {2,1}, {1,3}};
-    using Ks = std::deque<int, min_allocator<int>>;
-    using Vs = std::vector<MoveOnly, min_allocator<MoveOnly>>;
-    using M = std::flat_map<int, MoveOnly, std::greater<int>, Ks, Vs>;
-    Ks ks = {1,3,2};
+    P expected[] = {{3, 2}, {2, 1}, {1, 3}};
+    using Ks     = std::deque<int, min_allocator<int>>;
+    using Vs     = std::vector<MoveOnly, min_allocator<MoveOnly>>;
+    using M      = std::flat_map<int, MoveOnly, std::greater<int>, Ks, Vs>;
+    Ks ks        = {1, 3, 2};
     Vs vs;
     vs.push_back(3);
     vs.push_back(2);
@@ -71,36 +70,36 @@ int main(int, char**)
   {
     using A = test_allocator<int>;
     using M = std::flat_map<int, int, std::less<int>, std::vector<int, A>, std::deque<int, A>>;
-    auto ks = std::vector<int, A>({1,1,1,2,2,3,2,3,3}, A(5));
-    auto vs = std::deque<int, A>({1,1,1,2,2,3,2,3,3}, A(6));
-    auto m = M(std::move(ks), std::move(vs));
+    auto ks = std::vector<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(5));
+    auto vs = std::deque<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(6));
+    auto m  = M(std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert((m == M{{1,1}, {2,2}, {3,3}}));
+    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(m.keys().get_allocator() == A(5));
     assert(m.values().get_allocator() == A(6));
   }
   {
     using A = test_allocator<int>;
     using M = std::flat_map<int, int, std::less<int>, std::vector<int, A>, std::deque<int, A>>;
-    auto ks = std::vector<int, A>({1,1,1,2,2,3,2,3,3}, A(5));
-    auto vs = std::deque<int, A>({1,1,1,2,2,3,2,3,3}, A(6));
-    auto m = M(ks, vs, A(4)); // replaces the allocators
-    assert(!ks.empty()); // it was an lvalue above
-    assert(!vs.empty()); // it was an lvalue above
-    assert((m == M{{1,1}, {2,2}, {3,3}}));
+    auto ks = std::vector<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(5));
+    auto vs = std::deque<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(6));
+    auto m  = M(ks, vs, A(4)); // replaces the allocators
+    assert(!ks.empty());       // it was an lvalue above
+    assert(!vs.empty());       // it was an lvalue above
+    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(m.keys().get_allocator() == A(4));
     assert(m.values().get_allocator() == A(4));
   }
   {
     using A = test_allocator<int>;
     using M = std::flat_map<int, int, std::less<int>, std::vector<int, A>, std::deque<int, A>>;
-    auto ks = std::vector<int, A>({1,1,1,2,2,3,2,3,3}, A(5));
-    auto vs = std::deque<int, A>({1,1,1,2,2,3,2,3,3}, A(6));
-    M m = { ks, vs, A(4) }; // implicit ctor
-    assert(!ks.empty()); // it was an lvalue above
-    assert(!vs.empty()); // it was an lvalue above
-    assert((m == M{{1,1}, {2,2}, {3,3}}));
+    auto ks = std::vector<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(5));
+    auto vs = std::deque<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(6));
+    M m     = {ks, vs, A(4)}; // implicit ctor
+    assert(!ks.empty());      // it was an lvalue above
+    assert(!vs.empty());      // it was an lvalue above
+    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(m.keys().get_allocator() == A(4));
     assert(m.values().get_allocator() == A(4));
   }
@@ -108,14 +107,14 @@ int main(int, char**)
     using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1,1,1,2,2,3,2,3,3};
-    std::pmr::vector<int> vs = {1,1,1,2,2,3,2,3,3};
+    std::pmr::vector<int> ks = {1, 1, 1, 2, 2, 3, 2, 3, 3};
+    std::pmr::vector<int> vs = {1, 1, 1, 2, 2, 3, 2, 3, 3};
     assert(ks.get_allocator().resource() != &mr);
     assert(vs.get_allocator().resource() != &mr);
     vm.emplace_back(ks, vs);
     assert(ks.size() == 9); // ks' value is unchanged, since it was an lvalue above
     assert(vs.size() == 9); // vs' value is unchanged, since it was an lvalue above
-    assert((vm[0] == M{{1,1}, {2,2}, {3,3}}));
+    assert((vm[0] == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(vm[0].keys().get_allocator().resource() == &mr);
     assert(vm[0].values().get_allocator().resource() == &mr);
   }
@@ -123,14 +122,14 @@ int main(int, char**)
     using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1,1,1,2,2,3,2,3,3};
-    std::pmr::vector<int> vs = {1,1,1,2,2,3,2,3,3};
+    std::pmr::vector<int> ks = {1, 1, 1, 2, 2, 3, 2, 3, 3};
+    std::pmr::vector<int> vs = {1, 1, 1, 2, 2, 3, 2, 3, 3};
     assert(ks.get_allocator().resource() != &mr);
     assert(vs.get_allocator().resource() != &mr);
     vm.emplace_back(std::move(ks), std::move(vs));
     LIBCPP_ASSERT(ks.size() == 9); // ks' size is unchanged, since it uses a different allocator
     LIBCPP_ASSERT(vs.size() == 9); // vs' size is unchanged, since it uses a different allocator
-    assert((vm[0] == M{{1,1}, {2,2}, {3,3}}));
+    assert((vm[0] == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(vm[0].keys().get_allocator().resource() == &mr);
     assert(vm[0].values().get_allocator().resource() == &mr);
   }
@@ -223,6 +222,6 @@ int main(int, char**)
       assert(vm[0].values().get_allocator().resource() == &mr);
     }
   }
-  #endif
+#endif
   return 0;
 }

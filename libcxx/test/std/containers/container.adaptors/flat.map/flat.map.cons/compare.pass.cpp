@@ -25,11 +25,10 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = test_less<int>;
-    auto m = std::flat_map<int, char*, C>(C(3));
+    auto m  = std::flat_map<int, char*, C>(C(3));
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(3));
@@ -44,10 +43,10 @@ int main(int, char**)
     static_assert(!std::is_convertible_v<std::less<int>, std::flat_map<int, char*>>);
   }
   {
-    using C = test_less<int>;
+    using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using A2 = test_allocator<short>;
-    auto m = std::flat_map<int, short, C, std::vector<int, A1>, std::vector<short, A2>>(C(4), A1(5));
+    auto m   = std::flat_map<int, short, C, std::vector<int, A1>, std::vector<short, A2>>(C(4), A1(5));
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));
@@ -55,10 +54,10 @@ int main(int, char**)
     assert(m.values().get_allocator() == A2(5));
   }
   {
-    using C = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    std::flat_map<int, short, C, std::deque<int, A1>, std::deque<short, A2>> m = { C(4), A1(5) }; // implicit ctor
+    using C                                                                    = test_less<int>;
+    using A1                                                                   = test_allocator<int>;
+    using A2                                                                   = test_allocator<short>;
+    std::flat_map<int, short, C, std::deque<int, A1>, std::deque<short, A2>> m = {C(4), A1(5)}; // implicit ctor
     assert(m.empty());
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));

@@ -31,12 +31,12 @@
 
 template <class T>
 struct ThrowingMoveAllocator {
-  using value_type = T;
-  explicit ThrowingMoveAllocator() = default;
+  using value_type                                    = T;
+  explicit ThrowingMoveAllocator()                    = default;
   ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
   ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
-  T *allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T *p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
+  T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
+  void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
   friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
 };
 
@@ -48,17 +48,19 @@ struct ThrowingCopyComp {
 };
 
 struct MoveSensitiveComp {
-  MoveSensitiveComp() noexcept(false) = default;
+  MoveSensitiveComp() noexcept(false)                  = default;
   MoveSensitiveComp(const MoveSensitiveComp&) noexcept = default;
   MoveSensitiveComp(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; }
   MoveSensitiveComp& operator=(const MoveSensitiveComp&) noexcept(false) = default;
-  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; return *this; }  
+  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) {
+    rhs.is_moved_from_ = true;
+    return *this;
+  }
   bool operator()(const auto&, const auto&) const { return false; }
   bool is_moved_from_ = false;
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = std::flat_map<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);

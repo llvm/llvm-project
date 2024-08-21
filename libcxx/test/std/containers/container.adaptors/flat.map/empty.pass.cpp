@@ -21,8 +21,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     typedef std::flat_map<int, int> M;
     M m;

@@ -23,9 +23,9 @@
 
 int main(int, char**) {
   {
-    using M = std::flat_map<int, char>;
+    using M    = std::flat_map<int, char>;
     using Comp = std::less<int>; // the default
-    M m = {};
+    M m        = {};
     ASSERT_SAME_TYPE(M::key_compare, Comp);
     static_assert(!std::is_same_v<M::value_compare, Comp>);
     ASSERT_SAME_TYPE(decltype(m.key_comp()), Comp);
@@ -40,8 +40,8 @@ int main(int, char**) {
   }
   {
     using Comp = std::function<bool(int, int)>;
-    using M = std::flat_map<int, int, Comp>;
-    Comp comp = std::greater<int>();
+    using M    = std::flat_map<int, int, Comp>;
+    Comp comp  = std::greater<int>();
     M m({}, comp);
     ASSERT_SAME_TYPE(M::key_compare, Comp);
     ASSERT_SAME_TYPE(decltype(m.key_comp()), Comp);
@@ -50,7 +50,7 @@ int main(int, char**) {
     assert(!kc(1, 2));
     assert(kc(2, 1));
     auto vc = m.value_comp();
-    auto a = std::make_pair(1, 2);
+    auto a  = std::make_pair(1, 2);
     ASSERT_SAME_TYPE(decltype(vc(a, a)), bool);
     static_assert(!noexcept(vc(a, a)));
     assert(!vc({1, 2}, {2, 1}));
@@ -58,8 +58,8 @@ int main(int, char**) {
   }
   {
     using Comp = std::less<>;
-    using M = std::flat_map<int, int, Comp>;
-    M m = {};
+    using M    = std::flat_map<int, int, Comp>;
+    M m        = {};
     ASSERT_SAME_TYPE(M::key_compare, Comp);
     ASSERT_SAME_TYPE(decltype(m.key_comp()), Comp);
     ASSERT_SAME_TYPE(decltype(m.value_comp()), M::value_compare);
@@ -67,26 +67,26 @@ int main(int, char**) {
     assert(kc(1, 2));
     assert(!kc(2, 1));
     auto vc = m.value_comp();
-    auto a = std::make_pair(1, 2);
+    auto a  = std::make_pair(1, 2);
     ASSERT_SAME_TYPE(decltype(vc(a, a)), bool);
     assert(vc({1, 2}, {2, 1}));
     assert(!vc({2, 1}, {1, 2}));
   }
   {
     using Comp = std::function<bool(const std::vector<int>&, const std::vector<int>&)>;
-    using M = std::flat_map<std::vector<int>, int, Comp>;
-    Comp comp = [i=1](const auto& x, const auto& y) { return x[i] < y[i]; };
+    using M    = std::flat_map<std::vector<int>, int, Comp>;
+    Comp comp  = [i = 1](const auto& x, const auto& y) { return x[i] < y[i]; };
     M m({}, comp);
     auto vc = m.value_comp();
     static_assert(sizeof(vc) >= sizeof(Comp));
     comp = nullptr;
-    m = M({}, nullptr);
+    m    = M({}, nullptr);
     assert(m.key_comp() == nullptr);
     // At this point, m.key_comp() is disengaged.
     // But the std::function captured by copy inside `vc` remains valid.
-    auto a = std::make_pair(std::vector<int>{2,1,4}, 42);
-    auto b = std::make_pair(std::vector<int>{1,2,3}, 42);
-    auto c = std::make_pair(std::vector<int>{0,3,2}, 42);
+    auto a = std::make_pair(std::vector<int>{2, 1, 4}, 42);
+    auto b = std::make_pair(std::vector<int>{1, 2, 3}, 42);
+    auto c = std::make_pair(std::vector<int>{0, 3, 2}, 42);
     assert(vc(a, b));
     assert(vc(b, c));
     assert(!vc(b, a));

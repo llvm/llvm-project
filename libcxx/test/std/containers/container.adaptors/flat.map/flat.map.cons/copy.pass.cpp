@@ -21,15 +21,14 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = test_less<int>;
     std::vector<int, test_allocator<int>> ks({1, 3, 5}, test_allocator<int>(6));
     std::vector<char, test_allocator<char>> vs({2, 2, 1}, test_allocator<char>(7));
     using M = std::flat_map<int, char, C, decltype(ks), decltype(vs)>;
     auto mo = M(ks, vs, C(5));
-    auto m = mo;
+    auto m  = mo;
 
     assert(m.key_comp() == C(5));
     assert(m.keys() == ks);
@@ -45,14 +44,14 @@ int main(int, char**)
     assert(mo.values().get_allocator() == test_allocator<char>(7));
   }
   {
-    using C = test_less<int>;
+    using C  = test_less<int>;
     using Ks = std::vector<int, other_allocator<int>>;
     using Vs = std::vector<char, other_allocator<char>>;
-    auto ks = Ks({1, 3, 5}, other_allocator<int>(6));
-    auto vs = Vs({2, 2, 1}, other_allocator<char>(7));
-    using M = std::flat_map<int, char, C, Ks, Vs>;
-    auto mo = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
-    auto m = mo;
+    auto ks  = Ks({1, 3, 5}, other_allocator<int>(6));
+    auto vs  = Vs({2, 2, 1}, other_allocator<char>(7));
+    using M  = std::flat_map<int, char, C, Ks, Vs>;
+    auto mo  = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
+    auto m   = mo;
 
     assert(m.key_comp() == C(5));
     assert(m.keys() == ks);
@@ -71,18 +70,18 @@ int main(int, char**)
     using C = test_less<int>;
     std::pmr::monotonic_buffer_resource mr;
     using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
-    auto mo = M({{1,1}, {2,2}, {3,3}}, C(5), &mr);
-    auto m = mo;
+    auto mo = M({{1, 1}, {2, 2}, {3, 3}}, C(5), &mr);
+    auto m  = mo;
 
     assert(m.key_comp() == C(5));
-    assert((m == M{{1,1}, {2,2}, {3,3}}));
+    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
     auto [ks, vs] = std::move(m).extract();
     assert(ks.get_allocator().resource() == std::pmr::get_default_resource());
     assert(vs.get_allocator().resource() == std::pmr::get_default_resource());
 
     // mo is unchanged
     assert(mo.key_comp() == C(5));
-    assert((mo == M{{1,1}, {2,2}, {3,3}}));
+    assert((mo == M{{1, 1}, {2, 2}, {3, 3}}));
     auto [kso, vso] = std::move(mo).extract();
     assert(kso.get_allocator().resource() == &mr);
     assert(vso.get_allocator().resource() == &mr);

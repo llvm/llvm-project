@@ -38,11 +38,10 @@ struct EvilContainer : std::vector<int> {
   }
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
-    using M = std::flat_map<int, int, std::less<int>, EvilContainer, std::vector<int>>;
-    M mo = {{1,1}, {2,2}, {3,3}};
+    using M   = std::flat_map<int, int, std::less<int>, EvilContainer, std::vector<int>>;
+    M mo      = {{1, 1}, {2, 2}, {3, 3}};
     countdown = 1;
     try {
       M m = std::move(mo);
@@ -57,8 +56,8 @@ int main(int, char**)
     LIBCPP_ASSERT(mo.empty());
   }
   {
-    using M = std::flat_map<int, int, std::less<int>, std::vector<int>, EvilContainer>;
-    M mo = {{1,1}, {2,2}, {3,3}};
+    using M   = std::flat_map<int, int, std::less<int>, std::vector<int>, EvilContainer>;
+    M mo      = {{1, 1}, {2, 2}, {3, 3}};
     countdown = 1;
     try {
       M m = std::move(mo);

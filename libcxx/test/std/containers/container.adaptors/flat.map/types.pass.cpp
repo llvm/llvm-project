@@ -39,8 +39,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = std::flat_map<int, short>;
     static_assert(std::is_same_v<C::key_type, int>);

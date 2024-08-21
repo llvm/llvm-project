@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 
 static int expensive_comparisons = 0;
-static int cheap_comparisons = 0;
+static int cheap_comparisons     = 0;
 
 struct CompareCounter {
   int i_ = 0;
@@ -40,18 +40,17 @@ struct CompareCounter {
   }
 };
 
-int main(int, char**)
-{
-  const std::pair<int, int> expected[] = {{1,1}, {2,2}, {3,3}, {4,4}, {5,5}};
+int main(int, char**) {
+  const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
   {
     // insert(P&&)
     //   Unlike flat_set, here we can't use key_compare to compare value_type versus P,
     //   so we must eagerly convert to value_type.
-    using M = std::flat_map<CompareCounter, int, std::less<>>;
-    M m = {{1,1}, {2,2}, {4,4}, {5,5}};
-    expensive_comparisons = 0;
-    cheap_comparisons = 0;
-    std::same_as<std::pair<M::iterator, bool>> auto p = m.insert(std::make_pair(3,3)); // conversion happens first
+    using M                                           = std::flat_map<CompareCounter, int, std::less<>>;
+    M m                                               = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
+    expensive_comparisons                             = 0;
+    cheap_comparisons                                 = 0;
+    std::same_as<std::pair<M::iterator, bool>> auto p = m.insert(std::make_pair(3, 3)); // conversion happens first
     assert(expensive_comparisons >= 2);
     assert(cheap_comparisons == 0);
     assert(p == std::make_pair(m.begin() + 2, true));
@@ -59,11 +58,11 @@ int main(int, char**)
   }
   {
     // insert(const_iterator, P&&)
-    using M = std::flat_map<CompareCounter, int, std::less<>>;
-    M m = {{1,1}, {2,2}, {4,4}, {5,5}};
-    expensive_comparisons = 0;
-    cheap_comparisons = 0;
-    std::same_as<M::iterator> auto it = m.insert(m.begin(), std::make_pair(3,3));
+    using M                           = std::flat_map<CompareCounter, int, std::less<>>;
+    M m                               = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
+    expensive_comparisons             = 0;
+    cheap_comparisons                 = 0;
+    std::same_as<M::iterator> auto it = m.insert(m.begin(), std::make_pair(3, 3));
     assert(expensive_comparisons >= 2);
     assert(cheap_comparisons == 0);
     assert(it == m.begin() + 2);
@@ -71,11 +70,11 @@ int main(int, char**)
   }
   {
     // insert(value_type&&)
-    using M = std::flat_map<CompareCounter, int>;
-    M m = {{1,1}, {2,2}, {4,4}, {5,5}};
-    expensive_comparisons = 0;
-    cheap_comparisons = 0;
-    std::same_as<std::pair<M::iterator, bool>> auto p = m.insert(std::make_pair(3,3)); // conversion happens last
+    using M                                           = std::flat_map<CompareCounter, int>;
+    M m                                               = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
+    expensive_comparisons                             = 0;
+    cheap_comparisons                                 = 0;
+    std::same_as<std::pair<M::iterator, bool>> auto p = m.insert(std::make_pair(3, 3)); // conversion happens last
     assert(expensive_comparisons >= 2);
     assert(cheap_comparisons == 0);
     assert(p == std::make_pair(m.begin() + 2, true));
@@ -83,11 +82,11 @@ int main(int, char**)
   }
   {
     // insert(const_iterator, value_type&&)
-    using M = std::flat_map<CompareCounter, int>;
-    M m = {{1,1}, {2,2}, {4,4}, {5,5}};
-    expensive_comparisons = 0;
-    cheap_comparisons = 0;
-    std::same_as<M::iterator> auto it = m.insert(m.begin(), std::make_pair(3,3));
+    using M                           = std::flat_map<CompareCounter, int>;
+    M m                               = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
+    expensive_comparisons             = 0;
+    cheap_comparisons                 = 0;
+    std::same_as<M::iterator> auto it = m.insert(m.begin(), std::make_pair(3, 3));
     assert(expensive_comparisons >= 2);
     assert(cheap_comparisons == 0);
     assert(it == m.begin() + 2);
@@ -95,11 +94,11 @@ int main(int, char**)
   }
   {
     // emplace(Args&&...)
-    using M = std::flat_map<CompareCounter, int>;
-    M m = {{1,1}, {2,2}, {4,4}, {5,5}};
-    expensive_comparisons = 0;
-    cheap_comparisons = 0;
-    std::same_as<std::pair<M::iterator, bool>> auto p = m.emplace(std::make_pair(3,3)); // conversion happens first
+    using M                                           = std::flat_map<CompareCounter, int>;
+    M m                                               = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
+    expensive_comparisons                             = 0;
+    cheap_comparisons                                 = 0;
+    std::same_as<std::pair<M::iterator, bool>> auto p = m.emplace(std::make_pair(3, 3)); // conversion happens first
     assert(expensive_comparisons >= 2);
     assert(cheap_comparisons == 0);
     assert(p == std::make_pair(m.begin() + 2, true));

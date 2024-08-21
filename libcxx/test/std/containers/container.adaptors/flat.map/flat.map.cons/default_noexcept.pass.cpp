@@ -28,12 +28,11 @@
 #include "test_allocator.h"
 
 struct ThrowingCtorComp {
-    ThrowingCtorComp() noexcept(false) {}
-    bool operator()(const auto&, const auto&) const { return false; }
+  ThrowingCtorComp() noexcept(false) {}
+  bool operator()(const auto&, const auto&) const { return false; }
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_map<MoveOnly, MoveOnly>;
