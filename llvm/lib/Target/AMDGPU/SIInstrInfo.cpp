@@ -4613,14 +4613,40 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
+// Verify the illgal copy from VGPR to SGPR for generic opcode COPY
+bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI,
+                             StringRef &ErrInfo) const {
+  const MachineOperand &Dst = MI.getOperand(0);
+  const MachineOperand &Src = MI.getOperand(1);
+
+  if (Dst.isReg() && Src.isReg()) {
+    Register DstReg = Dst.getReg();
+    Register SrcReg = Src.getReg();
+    // This is a check for copy from an VGPR to SGPR
+    if (RI.isVGPR(MRI, SrcReg) && RI.isSGPRReg(MRI, DstReg)) {
+      ErrInfo = "illegal copy from VGPR to SGPR";
+      return false;
+    }
+  }
+  return true;
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
-  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
-    return true;
-
   const MachineFunction *MF = MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  if (SIInstrInfo::isGenericOpcode(MI.getOpcode())) {
+    // FIXME: At this point the COPY verify is done only for non-ssa forms.
+    // Find a better property to recognize the point where instruction selection
+    // is just done.
+    if (!MRI.isSSA() && MI.isCopy())
+      return verifyCopy(MI, MRI, ErrInfo);
+    
+    return true;
+  }
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
