@@ -5,24 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 
 // <mutex>
 
-// class mutex;
+// class recursive_mutex;
 
-// mutex();
+// recursive_mutex& operator=(const recursive_mutex&) = delete;
 
 #include <mutex>
 #include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-  static_assert(std::is_nothrow_default_constructible<std::mutex>::value, "");
-  std::mutex m;
-  ((void)m);
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::recursive_mutex>::value, "");
