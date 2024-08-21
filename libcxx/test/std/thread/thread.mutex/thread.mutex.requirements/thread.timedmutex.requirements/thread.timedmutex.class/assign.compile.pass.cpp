@@ -6,18 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
+
 // <mutex>
 
 // class timed_mutex;
 
-// timed_mutex(const timed_mutex&) = delete;
+// timed_mutex& operator=(const timed_mutex&) = delete;
 
 #include <mutex>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::timed_mutex m0;
-    std::timed_mutex m1(m0);
-
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::timed_mutex>::value, "");

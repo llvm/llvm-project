@@ -6,19 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
+
 // <mutex>
 
-// class timed_mutex;
+// class recursive_timed_mutex;
 
-// timed_mutex& operator=(const timed_mutex&) = delete;
+// recursive_timed_mutex();
 
 #include <mutex>
+#include <cassert>
 
-int main(int, char**)
-{
-    std::timed_mutex m0;
-    std::timed_mutex m1;
-    m1 = m0;
+int main(int, char**) {
+  // The mutex is unlocked after default construction
+  {
+    std::recursive_timed_mutex m;
+    assert(m.try_lock());
+    m.unlock();
+  }
 
   return 0;
 }
