@@ -546,7 +546,7 @@ define i64 @and_trunc_extra_use1(i64 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use1(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T]])
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[T]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y:%.*]], [[T]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
@@ -581,7 +581,7 @@ define i64 @and_trunc_extra_use1_commute(i64 %x, i32 %p) {
 define i64 @and_trunc_extra_use2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use2(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[T]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y:%.*]], [[T]]
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
@@ -635,7 +635,7 @@ define i64 @and_trunc_extra_use1_wider_src(i65 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use1_wider_src(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i65 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T]])
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[T]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y:%.*]], [[T]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
@@ -782,7 +782,7 @@ define i64 @evaluate_zexted_const_expr(i1 %c) {
 define i16 @zext_nneg_flag_drop(i8 %x, i16 %y) {
 ; CHECK-LABEL: @zext_nneg_flag_drop(
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X:%.*]] to i16
-; CHECK-NEXT:    [[OR1:%.*]] = or i16 [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i16 [[Y:%.*]], [[EXT]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i16 [[OR1]], 128
 ; CHECK-NEXT:    ret i16 [[OR2]]
 ;

@@ -281,7 +281,7 @@ define float @neg_unary_neg_multi_use(float %x, float %y) {
 define float @neg_mul(float %x, float %y) {
 ; CHECK-LABEL: @neg_mul(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = fsub float -0.0, %x
@@ -292,7 +292,7 @@ define float @neg_mul(float %x, float %y) {
 define float @unary_neg_mul(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_mul(
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %neg = fneg float %x
@@ -303,7 +303,7 @@ define float @unary_neg_mul(float %x, float %y) {
 define <2 x float> @neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_mul_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -314,7 +314,7 @@ define <2 x float> @neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @unary_neg_mul_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fneg <2 x float> %x
@@ -325,7 +325,7 @@ define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 define <2 x float> @neg_mul_vec_poison(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_mul_vec_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float poison, float -0.0>, %x
@@ -337,7 +337,7 @@ define <2 x float> @neg_mul_vec_poison(<2 x float> %x, <2 x float> %y) {
 define float @neg_sink_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_nsz(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg nsz float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub1 = fsub nsz float 0.0, %x
@@ -348,7 +348,7 @@ define float @neg_sink_nsz(float %x, float %y) {
 define float @neg_sink_multi_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
@@ -361,7 +361,7 @@ define float @neg_sink_multi_use(float %x, float %y) {
 define float @unary_neg_mul_multi_use(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_mul_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
@@ -449,7 +449,7 @@ declare double @llvm.sqrt.f64(double)
 define double @sqrt_squared2(double %f) {
 ; CHECK-LABEL: @sqrt_squared2(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[SQRT]], [[F]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[F]], [[SQRT]]
 ; CHECK-NEXT:    ret double [[MUL2]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %f)
@@ -1132,7 +1132,7 @@ for.body:
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
 ; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @g, i64 16) to i64) to double)
-; CHECK-NEXT:    [[R:%.*]] = fmul double [[FSUB]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], [[FSUB]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, i32 0, i64 2) to i64) to double)

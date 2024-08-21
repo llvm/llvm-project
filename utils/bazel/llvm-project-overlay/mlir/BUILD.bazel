@@ -257,6 +257,14 @@ gentbl_cc_library(
             ["--gen-typedef-defs"],
             "include/mlir/IR/BuiltinTypes.cpp.inc",
         ),
+        (
+            ["-gen-type-constraint-decls"],
+            "include/mlir/IR/BuiltinTypeConstraints.h.inc",
+        ),
+        (
+            ["-gen-type-constraint-defs"],
+            "include/mlir/IR/BuiltinTypeConstraints.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinTypes.td",
