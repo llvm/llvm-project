@@ -14491,7 +14491,7 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
     Result = (!Result) ? CmpV : Builder.CreateAnd(Result, CmpV);
   }
 
-  assert(Result && "Should has value here.");
+  assert(Result && "Should have value here.");
 
   return Result;
 }
