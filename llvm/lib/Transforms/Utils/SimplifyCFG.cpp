@@ -1583,6 +1583,26 @@ static void hoistLockstepIdenticalDbgVariableRecords(
   }
 }
 
+static bool areIdenticalUpToCommutativity(const Instruction *I1,
+                                          const Instruction *I2) {
+  if (I1->isIdenticalToWhenDefined(I2))
+    return true;
+
+  if (auto *Cmp1 = dyn_cast<CmpInst>(I1))
+    if (auto *Cmp2 = dyn_cast<CmpInst>(I2))
+      return Cmp1->getPredicate() == Cmp2->getSwappedPredicate() &&
+             Cmp1->getOperand(0) == Cmp2->getOperand(1) &&
+             Cmp1->getOperand(1) == Cmp2->getOperand(0);
+
+  if (I1->isCommutative() && I1->isSameOperationAs(I2)) {
+    return I1->getOperand(0) == I2->getOperand(1) &&
+           I1->getOperand(1) == I2->getOperand(0) &&
+           equal(drop_begin(I1->operands(), 2), drop_begin(I2->operands(), 2));
+  }
+
+  return false;
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If EqTermsOnly is
 /// given, only perform hoisting in case both blocks only contain a terminator.
@@ -1676,7 +1696,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+      if (AllInstsAreIdentical && (!areIdenticalUpToCommutativity(I1, I2) ||
                                    MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }

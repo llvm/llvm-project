@@ -723,6 +723,35 @@ let hasSideEffects = false in {
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Int32Regs>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", Int32Regs>;
+
+  // FP8 conversions.
+  multiclass CVT_TO_F8X2<string F8Name> {
+    def _f32 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f32 \t$dst, $src1, $src2;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def _f16x2 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Int32Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F8Name, "x2.f16x2 \t$dst, $src;"), []>,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+  }
+
+  defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
+  defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
+
+  class CVT_f16x2_fp8<string F8Name> :
+    NVPTXInst<(outs Int32Regs:$dst),
+              (ins Int16Regs:$src, CvtMode:$mode),
+              !strconcat("cvt${mode:base}${mode:relu}.f16x2.",
+              F8Name, "x2 \t$dst, $src;"), []>,
+    Requires<[hasPTX<81>, hasSM<89>]>;
+
+  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
+  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
 //-----------------------------------
