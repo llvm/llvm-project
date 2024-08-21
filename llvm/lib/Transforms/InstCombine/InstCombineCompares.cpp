@@ -4211,9 +4211,10 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
 
   auto Simplifies = [&](Value *Op, unsigned Idx) {
     // A comparison of ucmp/scmp with a constant will fold into an icmp.
+    const APInt *Dummy;
     return Op ||
            (isa<CmpIntrinsic>(SI->getOperand(Idx)) &&
-            SI->getOperand(Idx)->hasOneUse() && match(RHS, m_ImmConstant()));
+            SI->getOperand(Idx)->hasOneUse() && match(RHS, m_APInt(Dummy)));
   };
 
   // We only want to perform this transformation if it will not lead to
