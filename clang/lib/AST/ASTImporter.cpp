@@ -6613,10 +6613,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     // to adopt template parameters.
     // updateLookupTableForTemplateParameters(**ToTPListOrErr);
   } else { // Full specialization
-    if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), DC,
-                                *BeginLocOrErr, *IdLocOrErr, VarTemplate,
-                                ToTmpTy, nullptr, D->getStorageClass(),
-                                TemplateArgs))
+    if (GetImportedOrCreateDecl(
+            D2, D, Importer.getToContext(), DC, *BeginLocOrErr, *IdLocOrErr,
+            VarTemplate, ToTmpTy, nullptr, D->getStorageClass(), TemplateArgs))
       return D2;
   }
 
