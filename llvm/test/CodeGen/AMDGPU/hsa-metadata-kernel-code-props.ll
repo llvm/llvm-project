@@ -15,10 +15,7 @@
 ; CHECK:     .max_flat_workgroup_size: 1024
 ; CHECK:     .name:           test
 ; CHECK:     .private_segment_fixed_size: 0
-; GFX700:     .sgpr_count:     22
-; GFX803:     .sgpr_count:     24
-; GFX900:     .sgpr_count:     10
-; GFX1010:    .sgpr_count:     10
+; CHECK:     .sgpr_count:     10
 ; CHECK:     .symbol:         test.kd
 ; CHECK:     .vgpr_count:     {{3|6}}
 ; WAVE64:    .wavefront_size: 64
@@ -51,8 +48,8 @@ entry:
 
 ; CHECK:   .name:       num_spilled_sgprs
 ; GFX700:   .sgpr_spill_count: 10
-; GFX803:   .sgpr_spill_count: 0
-; GFX900:   .sgpr_spill_count: 0
+; GFX803:   .sgpr_spill_count: 10
+; GFX900:   .sgpr_spill_count: 62
 ; GFX1010:  .sgpr_spill_count: 60
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
