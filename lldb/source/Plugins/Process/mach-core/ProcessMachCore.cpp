@@ -593,19 +593,19 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<tid_t> used_tids;
+      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
-      std::vector<tid_t> tids;
+      std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
         assert(tids.size() == num_threads);
 
         // Find highest tid value.
-        tid_t highest_tid = 0;
+        lldb::tid_t highest_tid = 0;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] != LLDB_INVALID_THREAD_ID && tids[i] > highest_tid)
             highest_tid = tids[i];
         }
-        tid_t current_unused_tid = highest_tid + 1;
+        lldb::tid_t current_unused_tid = highest_tid + 1;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] == LLDB_INVALID_THREAD_ID) {
             tids[i] = current_unused_tid++;

@@ -108,16 +108,12 @@
 namespace llvm {
 
 template <class GraphType> struct GraphTraits;
-class BasicBlock;
 class Function;
 class Loop;
-class Instruction;
 class LLVMContext;
 class MemoryAccess;
 class MemorySSAWalker;
 class Module;
-class Use;
-class Value;
 class raw_ostream;
 
 namespace MSSAHelpers {
