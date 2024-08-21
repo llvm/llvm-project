@@ -1,4 +1,4 @@
-//===- MeshShardingExtensions.h - -----------------------------------------===//
+//===- MeshShardingExtensions.h - -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_FUNC_IR_SHARDINGINTERFACEIMPL_H_
-#define MLIR_DIALECT_FUNC_IR_SHARDINGINTERFACEIMPL_H_
+#ifndef MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#define MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGEXTENSIONS_H_
 
 namespace mlir {
 
 class DialectRegistry;
 
-namespace func {
+namespace tensor {
 
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
 
-} // namespace func
+} // namespace tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_FUNC_IR_SHARDINGINTERFACEIMPL_H_
+#endif // MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGEXTENSIONS_H_
