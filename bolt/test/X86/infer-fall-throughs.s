@@ -38,9 +38,7 @@ LLstart:
 # FDATA: 1 main #LLstart# 1 main #LLmore# 0 0
 LLmore:
         movl    $5, %eax
-LLmore_LLexit:
-        jmp     LLexit
-# FDATA: 1 main #LLmore_LLexit# 1 main #LLexit# 0 490
+# FDATA: 1 main #LLmore# 1 main #LLexit# 0 490
 LLexit:
         ret
 .LLmain_end:
