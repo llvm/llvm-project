@@ -6,19 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
+
 // <mutex>
 
-// class recursive_timed_mutex;
+// class mutex;
 
-// recursive_timed_mutex& operator=(const recursive_timed_mutex&) = delete;
+// mutex(const mutex&) = delete;
 
 #include <mutex>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::recursive_timed_mutex m0;
-    std::recursive_timed_mutex m1;
-    m1 = m0;
-
-  return 0;
-}
+static_assert(!std::is_copy_constructible<std::mutex>::value, "");

@@ -6,18 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
+
 // <mutex>
 
-// class recursive_mutex;
+// class mutex;
 
-// recursive_mutex(const recursive_mutex&) = delete;
+// mutex() noexcept;
 
 #include <mutex>
+#include <cassert>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::recursive_mutex m0;
-    std::recursive_mutex m1(m0);
+static_assert(std::is_nothrow_default_constructible<std::mutex>::value, "");
+
+int main(int, char**) {
+  // The mutex is unlocked after default construction
+  {
+    std::mutex m;
+    assert(m.try_lock());
+    m.unlock();
+  }
 
   return 0;
 }
