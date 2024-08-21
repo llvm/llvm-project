@@ -2014,19 +2014,3 @@ declare <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double>
 declare <vscale x 3 x i64> @llvm.vector.reverse.nxv3i64(<vscale x 3 x i64>)
 declare <vscale x 6 x i64> @llvm.vector.reverse.nxv6i64(<vscale x 6 x i64>)
 declare <vscale x 12 x i64> @llvm.vector.reverse.nxv12i64(<vscale x 12 x i64>)
-
-define <vscale x 8 x i64> @reverse_nxv8i64_optimized_vector_gather(<vscale x 8 x i64> %a) "target-features"="+optimized-vector-gather" {
-; CHECK-LABEL: reverse_nxv8i64_optimized_vector_gather:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v16
-; CHECK-NEXT:    vrsub.vx v24, v16, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v16, v8, v24
-; CHECK-NEXT:    vmv.v.v v8, v16
-; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64> %a)
-  ret <vscale x 8 x i64> %res
-}
