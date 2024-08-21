@@ -29,11 +29,15 @@ profiled_functions = function_names[: int(num_functions / 2)]
 function_contents = [
     f"""
 {name}:
+  .cfi_startproc
+  .cfi_personality 155, _personality_{i % 5}
+  .cfi_lsda 16, _exception{i % 3}
   add w0, w0, #{i % 4096}
   add w1, w1, #{i % 10}
   add w2, w0, #{i % 20}
   adrp x3, {name}@PAGE
   ret
+  .cfi_endproc
 """
     for i, name in enumerate(function_names)
 ]
@@ -77,6 +81,26 @@ with open(assembly_filepath, "w") as f:
 
 _main:
   ret
+
+_personality_0:
+  ret
+_personality_1:
+  ret
+_personality_2:
+  ret
+_personality_3:
+  ret
+_personality_4:
+  ret
+
+_exception0:
+  .quad 0x4200
+
+_exception1:
+  .quad 0x4210
+
+_exception2:
+  .quad 0x4220
 
 {"".join(function_contents)}
 

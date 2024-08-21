@@ -61,6 +61,14 @@ getRelocHash(const Reloc &reloc,
   return getRelocHash(kind, sectionIdx.value_or(0), 0, reloc.addend);
 }
 
+// Get a hash of the unwind info (after relocation).
+// This hash is not 100% accurate, but it's good enough for compression.
+//
+// Unwind info will be eliminated if it is the same with its neighboors.
+// We want to order functions such that the ones with similar unwind info
+// can stay together.
+// See more here:
+// https://faultlore.com/blah/compact-unwinding/#page-tables
 static uint64_t getUnwindInfoEncodingHash(const InputSection *isec) {
   for (Symbol *sym : isec->symbols) {
     if (auto *d = dyn_cast_or_null<Defined>(sym)) {

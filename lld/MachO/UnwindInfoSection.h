@@ -42,6 +42,7 @@ struct CompactUnwindEntry {
   Symbol *personality;
   InputSection *lsda;
 
+  // Relocate the entry to the given Symbol.
   void relocateOneCompactUnwindEntry(const Defined *d);
 };
 
