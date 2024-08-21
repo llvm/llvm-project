@@ -570,6 +570,14 @@ def executeBuiltinColon(cmd, cmd_shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
+def executeBuiltinUnset(cmd, shenv):
+    """executeBuiltinUnset - Handle the 'unset' command."""
+    raise InternalShellError(
+        cmd,
+        "'unset' command is not supported by the lit internal shell. Please use 'env -u VARIABLE' to unset environment variables.",
+    )
+
+
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
 
@@ -720,6 +728,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
         ":": executeBuiltinColon,
+        "unset": executeBuiltinUnset,
     }
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
