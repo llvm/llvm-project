@@ -1,4 +1,5 @@
-;; Ensure __llvm_gcov_(writeout|reset|init) have !kcfi_type with KCFI.
+;; Ensure __llvm_gcov_(writeout|reset|init) have the correct !kcfi_type
+;; with integer normalization.
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling | FileCheck %s
 
@@ -10,7 +11,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !9}
+!llvm.module.flags = !{!3, !4, !9, !10}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "a.c", directory: "")
@@ -22,6 +23,7 @@ entry:
 !7 = !{null}
 !8 = !DILocation(line: 2, column: 1, scope: !5)
 !9 = !{i32 4, !"kcfi", i32 1}
+!10 = !{i32 4, !"cfi-normalize-integers", i32 1}
 
 ; CHECK: define internal void @__llvm_gcov_writeout()
 ; CHECK-SAME: !kcfi_type ![[#TYPE:]]
@@ -30,4 +32,4 @@ entry:
 ; CHECK: define internal void @__llvm_gcov_init()
 ; CHECK-SAME: !kcfi_type ![[#TYPE]]
 
-; CHECK: ![[#TYPE]] = !{i32 -1522505972}
+; CHECK: ![[#TYPE]] = !{i32 -440107680}
