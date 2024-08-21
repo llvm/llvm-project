@@ -693,7 +693,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
   return Flags;
 }
 
-enum RegisterType { SRV, UAV, CBuffer, Sampler, C, I };
+enum RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
 
 static RegisterType getRegisterTypeIndex(StringRef Slot) {
   switch (Slot[0]) {
@@ -712,12 +712,11 @@ static RegisterType getRegisterTypeIndex(StringRef Slot) {
   case 'c':
   case 'C':
     return RegisterType::C;
-  // we don't need to check for 'i' here, because
-  // any attribute that has the 'i' register type
-  // will be immediately caught by handleResourceBindingAttr
-  // so it's impossible for the decl to already have an 'i' register type
+  case 'i':
+  case 'I':
+    return RegisterType::I;
   default:
-    llvm_unreachable("invalid register type");
+    return RegisterType::Invalid;
   }
 }
 
@@ -904,32 +903,12 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
 
   // Validate.
   if (!Slot.empty()) {
-    switch (Slot[0]) {
-    case 't':
-    case 'T':
-      regType = RegisterType::SRV;
-      break;
-    case 'u':
-    case 'U':
-      regType = RegisterType::UAV;
-      break;
-    case 'b':
-    case 'B ':
-      regType = RegisterType::CBuffer;
-      break;
-    case 's':
-    case 'S':
-      regType = RegisterType::Sampler;
-      break;
-    case 'c':
-    case 'C':
-      regType = RegisterType::C;
-      break;
-    case 'i':
-    case 'I':
+    regType = getRegisterTypeIndex(Slot);
+    if (regType == RegisterType::I) {
       Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
-    default:
+    }
+    if (regType == RegisterType::Invalid) {
       Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
       return;
     }
