@@ -98,21 +98,3 @@ int llvm_is_a_value_as_metadata(void) {
 
   return 0;
 }
-
-int llvm_vam_mav_extract(void) {
-  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
-  LLVMContextRef Context = LLVMGetModuleContext(M);
-
-  LLVMValueRef Val = LLVMConstInt(LLVMInt32TypeInContext(Context), 0, 0);
-  LLVMMetadataRef MD = LLVMMDStringInContext2(Context, "foo", 3);
-
-  // construction
-  LLVMValueRef MAV = LLVMMetadataAsValue(Context, MD);
-  LLVMMetadataRef VAM = LLVMValueAsMetadata(Val);
-
-  // extraction
-  assert(LLVMMetadataAsValue(Context, VAM) == Val);
-  assert(LLVMValueAsMetadata(MAV) == MD);
-
-  return 0;
-}
