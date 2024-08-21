@@ -182,7 +182,8 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
         if paper.is_implemented():
             dangling = [gh for gh in from_github if gh.paper_number == paper.paper_number and not gh.is_implemented()]
             if dangling:
-                raise RuntimeError(f"We found the following open tracking issues for a row which is already marked as implemented:\nrow: {row}\ntracking issues: {dangling}")
+                print(f"We found the following open tracking issues for a row which is already marked as implemented:\nrow: {row}\ntracking issues: {dangling}")
+                print("The Github issue should be closed if the work has indeed been done.")
             results.append(paper.for_printing())
         else:
             # Find any Github issues tracking this paper
@@ -208,11 +209,10 @@ CSV_FILES_TO_SYNC = [
     'Cxx17Papers.csv',
     'Cxx20Issues.csv',
     'Cxx20Papers.csv',
-    # TODO: The Github issues are not created yet.
-    # 'Cxx23Issues.csv',
-    # 'Cxx23Papers.csv',
-    # 'Cxx2cIssues.csv',
-    # 'Cxx2cPapers.csv',
+    'Cxx23Issues.csv',
+    'Cxx23Papers.csv',
+    'Cxx2cIssues.csv',
+    'Cxx2cPapers.csv',
 ]
 
 def main():
