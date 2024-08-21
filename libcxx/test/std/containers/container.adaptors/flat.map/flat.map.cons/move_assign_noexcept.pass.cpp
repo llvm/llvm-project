@@ -29,40 +29,62 @@
 #include "test_macros.h"
 
 struct MoveSensitiveComp {
-  MoveSensitiveComp() noexcept(false) = default;
+  MoveSensitiveComp() noexcept(false)                         = default;
   MoveSensitiveComp(const MoveSensitiveComp&) noexcept(false) = default;
   MoveSensitiveComp(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; }
   MoveSensitiveComp& operator=(const MoveSensitiveComp&) noexcept = default;
-  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; return *this; }
+  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) {
+    rhs.is_moved_from_ = true;
+    return *this;
+  }
   bool operator()(const auto&, const auto&) const { return false; }
   bool is_moved_from_ = false;
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = std::flat_map<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_map<MoveOnly, int, std::less<MoveOnly>, std::vector<MoveOnly, test_allocator<MoveOnly>>, std::vector<int, test_allocator<int>>>;
+    using C =
+        std::flat_map<MoveOnly,
+                      int,
+                      std::less<MoveOnly>,
+                      std::vector<MoveOnly, test_allocator<MoveOnly>>,
+                      std::vector<int, test_allocator<int>>>;
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_map<int, MoveOnly, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<MoveOnly, test_allocator<MoveOnly>>>;
+    using C =
+        std::flat_map<int,
+                      MoveOnly,
+                      std::less<int>,
+                      std::vector<int, test_allocator<int>>,
+                      std::vector<MoveOnly, test_allocator<MoveOnly>>>;
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_map<MoveOnly, int, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>, std::vector<int, other_allocator<int>>>;
+    using C =
+        std::flat_map<MoveOnly,
+                      int,
+                      std::less<MoveOnly>,
+                      std::vector<MoveOnly, other_allocator<MoveOnly>>,
+                      std::vector<int, other_allocator<int>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_map<int, MoveOnly, std::less<int>, std::vector<int, other_allocator<int>>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
+    using C =
+        std::flat_map<int,
+                      MoveOnly,
+                      std::less<int>,
+                      std::vector<int, other_allocator<int>>,
+                      std::vector<MoveOnly, other_allocator<MoveOnly>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
     // Test with a comparator that throws on copy-assignment.
-    using C = std::flat_map<int, int, std::function<bool(int,int)>>;
+    using C = std::flat_map<int, int, std::function<bool(int, int)>>;
     LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
   }
   {

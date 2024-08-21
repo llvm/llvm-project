@@ -22,11 +22,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, char>;
-    M m = {{1,'a'}, {2,'b'}, {4,'d'}, {5,'e'}, {8,'h'}};
+    M m     = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
     ASSERT_SAME_TYPE(decltype(m.lower_bound(0)), M::iterator);
     ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(0)), M::const_iterator);
     assert(m.lower_bound(0) == m.begin());
@@ -41,8 +40,13 @@ int main(int, char**)
     assert(std::as_const(m).lower_bound(9) == m.end());
   }
   {
-    using M = std::flat_map<int, char, std::greater<int>, std::deque<int, min_allocator<int>>, std::deque<char, min_allocator<char>>>;
-    M m = {{1,'a'}, {2,'b'}, {4,'d'}, {5,'e'}, {8,'h'}};
+    using M =
+        std::flat_map<int,
+                      char,
+                      std::greater<int>,
+                      std::deque<int, min_allocator<int>>,
+                      std::deque<char, min_allocator<char>>>;
+    M m = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
     ASSERT_SAME_TYPE(decltype(m.lower_bound(0)), M::iterator);
     ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(0)), M::const_iterator);
     assert(m.lower_bound(0) == m.end());
@@ -58,15 +62,15 @@ int main(int, char**)
   }
   {
     using M = std::flat_map<bool, bool>;
-    M m = {{true,false}, {false,true}};
+    M m     = {{true, false}, {false, true}};
     ASSERT_SAME_TYPE(decltype(m.lower_bound(0)), M::iterator);
     ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(0)), M::const_iterator);
     assert(m.lower_bound(true) == m.begin() + 1);
     assert(m.lower_bound(false) == m.begin());
-    m = {{true,true}};
+    m = {{true, true}};
     assert(m.lower_bound(true) == m.begin());
     assert(m.lower_bound(false) == m.begin());
-    m = {{false,false}};
+    m = {{false, false}};
     assert(std::as_const(m).lower_bound(true) == m.end());
     assert(std::as_const(m).lower_bound(false) == m.begin());
     m.clear();

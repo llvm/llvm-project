@@ -30,12 +30,11 @@ struct Mod256 {
   bool operator()(int x, int y) const { return (x % 256) < (y % 256); }
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   std::mt19937 randomness;
   std::pair<uint16_t, uint16_t> pairs[200];
   for (auto& pair : pairs) {
-    pair = { uint16_t(randomness()), uint16_t(randomness()) };
+    pair = {uint16_t(randomness()), uint16_t(randomness())};
   }
 
   {

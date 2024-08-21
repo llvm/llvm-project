@@ -38,7 +38,7 @@ struct Counter {
     }
   }
 };
-Counter g_counter = {0,0,0};
+Counter g_counter = {0, 0, 0};
 
 struct ThrowingAssignment {
   ThrowingAssignment(int i) : i_(i) {}
@@ -61,35 +61,32 @@ struct ThrowingComparator {
 };
 
 struct ErasurePredicate {
-  bool operator()(const auto& x) const {
-    return (3 <= x.first && x.first <= 5);
-  }
+  bool operator()(const auto& x) const { return (3 <= x.first && x.first <= 5); }
 };
 
-int main(int, char**)
-{
-  const std::pair<int, int> expected[] = {{1,1}, {2,2}, {3,3}, {4,4}, {5,5}, {6,6}, {7,7}, {8,8}};
+int main(int, char**) {
+  const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
   {
     using M = std::flat_map<ThrowingAssignment, int, ThrowingComparator>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {
       for (int second_throw = 1; second_throw < 99; ++second_throw) {
-        g_counter = {0,0,0};
-        M m = M({1,2,3,4,5,6,7,8}, {1,2,3,4,5,6,7,8});
+        g_counter = {0, 0, 0};
+        M m       = M({1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8});
         try {
           g_counter = {first_throw, second_throw, 0};
-          auto n = std::erase_if(m, ErasurePredicate());
+          auto n    = std::erase_if(m, ErasurePredicate());
           assert(n == 3);
           // If it didn't throw at all, we're done.
-          g_counter = {0,0,0};
-          assert((m == M{{1,1}, {2,2}, {6,6}, {7,7}, {8,8}}));
-          first_throw = 99;  // "done"
+          g_counter = {0, 0, 0};
+          assert((m == M{{1, 1}, {2, 2}, {6, 6}, {7, 7}, {8, 8}}));
+          first_throw = 99; // "done"
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size()); // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end())); // still sorted
+          assert(m.keys().size() == m.values().size());              // still sized correctly
+          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
           assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
-          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected+8));
+          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.
             break;
@@ -102,23 +99,23 @@ int main(int, char**)
     using M = std::flat_map<int, ThrowingAssignment, ThrowingComparator>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {
       for (int second_throw = 1; second_throw < 99; ++second_throw) {
-        g_counter = {0,0,0};
-        M m = M({1,2,3,4,5,6,7,8}, {1,2,3,4,5,6,7,8});
+        g_counter = {0, 0, 0};
+        M m       = M({1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8});
         try {
           g_counter = {first_throw, second_throw, 0};
-          auto n = std::erase_if(m, ErasurePredicate());
+          auto n    = std::erase_if(m, ErasurePredicate());
           assert(n == 3);
           // If it didn't throw at all, we're done.
-          g_counter = {0,0,0};
-          assert((m == M{{1,1}, {2,2}, {6,6}, {7,7}, {8,8}}));
-          first_throw = 99;  // "done"
+          g_counter = {0, 0, 0};
+          assert((m == M{{1, 1}, {2, 2}, {6, 6}, {7, 7}, {8, 8}}));
+          first_throw = 99; // "done"
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size()); // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end())); // still sorted
+          assert(m.keys().size() == m.values().size());              // still sized correctly
+          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
           assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
-          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected+8));
+          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.
             break;
@@ -128,28 +125,29 @@ int main(int, char**)
     }
   }
   {
-    using M = std::flat_map<ThrowingAssignment, int, ThrowingComparator, std::deque<ThrowingAssignment>, std::deque<int>>;
+    using M =
+        std::flat_map<ThrowingAssignment, int, ThrowingComparator, std::deque<ThrowingAssignment>, std::deque<int>>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {
       for (int second_throw = 1; second_throw < 99; ++second_throw) {
-        g_counter = {0,0,0};
-        std::deque<ThrowingAssignment> container = {5,6,7,8};
-        container.insert(container.begin(), {1,2,3,4});
-        M m = M(std::move(container), {1,2,3,4,5,6,7,8});
+        g_counter                                = {0, 0, 0};
+        std::deque<ThrowingAssignment> container = {5, 6, 7, 8};
+        container.insert(container.begin(), {1, 2, 3, 4});
+        M m = M(std::move(container), {1, 2, 3, 4, 5, 6, 7, 8});
         try {
           g_counter = {first_throw, second_throw, 0};
-          auto n = std::erase_if(m, ErasurePredicate());
+          auto n    = std::erase_if(m, ErasurePredicate());
           assert(n == 3);
           // If it didn't throw at all, we're done.
-          g_counter = {0,0,0};
-          assert((m == M{{1,1}, {2,2}, {6,6}, {7,7}, {8,8}}));
-          first_throw = 99;  // "done"
+          g_counter = {0, 0, 0};
+          assert((m == M{{1, 1}, {2, 2}, {6, 6}, {7, 7}, {8, 8}}));
+          first_throw = 99; // "done"
           break;
         } catch (int ex) {
           assert(ex == 42);
-          assert(m.keys().size() == m.values().size()); // still sized correctly
-          assert(std::is_sorted(m.begin(), m.end())); // still sorted
+          assert(m.keys().size() == m.values().size());              // still sized correctly
+          assert(std::is_sorted(m.begin(), m.end()));                // still sorted
           assert(std::adjacent_find(m.begin(), m.end()) == m.end()); // still contains no duplicates
-          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected+8));
+          LIBCPP_ASSERT(m.empty() || std::equal(m.begin(), m.end(), expected, expected + 8));
           if (g_counter.throws == 1) {
             // We reached the first throw but not the second throw.
             break;

@@ -26,7 +26,7 @@ struct A {
 };
 
 // Implement the operator< required in order to instantiate flat_map<A, X>
-bool operator<(A const& L, A const& R)  { return L.data < R.data; }
+bool operator<(A const& L, A const& R) { return L.data < R.data; }
 
 int main(int, char**) {
   A a;

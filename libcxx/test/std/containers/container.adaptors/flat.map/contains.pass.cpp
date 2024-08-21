@@ -21,51 +21,50 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, const char*>;
-    M m = {{1,""}, {2,""}, {4,""}, {5,""}, {8,""}};
+    M m     = {{1, ""}, {2, ""}, {4, ""}, {5, ""}, {8, ""}};
     assert(!m.contains(0));
-    assert( m.contains(1));
-    assert( m.contains(2));
+    assert(m.contains(1));
+    assert(m.contains(2));
     assert(!m.contains(3));
-    assert( m.contains(4));
-    assert( m.contains(5));
+    assert(m.contains(4));
+    assert(m.contains(5));
     assert(!m.contains(6));
     assert(!m.contains(7));
-    assert( std::as_const(m).contains(8));
+    assert(std::as_const(m).contains(8));
     assert(!std::as_const(m).contains(9));
     m.clear();
     assert(!m.contains(1));
   }
   {
     using M = std::flat_map<int, int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    M m = {{1,0}, {2,0}, {4,0}, {5,0}, {8,0}};
+    M m     = {{1, 0}, {2, 0}, {4, 0}, {5, 0}, {8, 0}};
     assert(!m.contains(0));
-    assert( m.contains(1));
-    assert( m.contains(2));
+    assert(m.contains(1));
+    assert(m.contains(2));
     assert(!m.contains(3));
-    assert( m.contains(4));
-    assert( m.contains(5));
+    assert(m.contains(4));
+    assert(m.contains(5));
     assert(!m.contains(6));
     assert(!m.contains(7));
-    assert( std::as_const(m).contains(8));
+    assert(std::as_const(m).contains(8));
     assert(!std::as_const(m).contains(9));
     m.clear();
     assert(!m.contains(1));
   }
   {
     using M = std::flat_map<bool, int>;
-    M m = {{true,1}, {false,2}};
-    assert( m.contains(true));
-    assert( m.contains(false));
-    m = {{true,3}};
-    assert( m.contains(true));
+    M m     = {{true, 1}, {false, 2}};
+    assert(m.contains(true));
+    assert(m.contains(false));
+    m = {{true, 3}};
+    assert(m.contains(true));
     assert(!m.contains(false));
-    m = {{false,4}};
+    m = {{false, 4}};
     assert(!std::as_const(m).contains(true));
-    assert( std::as_const(m).contains(false));
+    assert(std::as_const(m).contains(false));
     m.clear();
     assert(!m.contains(true));
     assert(!m.contains(false));

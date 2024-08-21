@@ -22,12 +22,11 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using A1 = limited_allocator<int, 10>;
     using A2 = limited_allocator<int, 20>;
-    using C = std::flat_map<int, int, std::less<int>, std::vector<int, A1>, std::vector<int, A2>>;
+    using C  = std::flat_map<int, int, std::less<int>, std::vector<int, A1>, std::vector<int, A2>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
     C c;
@@ -39,7 +38,7 @@ int main(int, char**)
   {
     using A1 = limited_allocator<int, 10>;
     using A2 = limited_allocator<int, 20>;
-    using C = std::flat_map<int, int, std::less<int>, std::vector<int, A2>, std::vector<int, A1>>;
+    using C  = std::flat_map<int, int, std::less<int>, std::vector<int, A2>, std::vector<int, A1>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
     C c;
@@ -53,8 +52,7 @@ int main(int, char**)
     using C = std::flat_map<int, int, std::less<int>, std::vector<int, A>, std::vector<int, A>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
-    const C::size_type max_dist =
-        static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
+    const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);
@@ -65,8 +63,7 @@ int main(int, char**)
     typedef std::flat_map<char, char> C;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
-    const C::size_type max_dist =
-        static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
+    const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);

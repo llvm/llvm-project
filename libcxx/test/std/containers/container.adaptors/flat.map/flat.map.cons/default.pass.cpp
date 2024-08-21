@@ -29,8 +29,7 @@ struct DefaultCtableComp {
   bool default_constructed_ = false;
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     std::flat_map<int, char*> m;
     assert(m.empty());

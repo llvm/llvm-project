@@ -27,34 +27,33 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-  using P = std::pair<int, short>;
-  P ar[] = {{1,1}, {1,2}, {1,3}, {2,4}, {2,5}, {3,6}, {2,7}, {3,8}, {3,9}};
-  P expected[] = {{1,1}, {2,4}, {3,6}};
+int main(int, char**) {
+  using P      = std::pair<int, short>;
+  P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
+  P expected[] = {{1, 1}, {2, 4}, {3, 6}};
   {
     using M = std::flat_map<int, short>;
-    auto m = M(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
+    auto m  = M(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
     assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
     LIBCPP_ASSERT(std::ranges::equal(m, expected));
   }
   {
     using M = std::flat_map<int, short, std::greater<int>, std::deque<int, min_allocator<int>>, std::deque<short>>;
-    auto m = M(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
-    assert((m.keys() == std::deque<int, min_allocator<int>>{3,2,1}));
-    LIBCPP_ASSERT((m.values() == std::deque<short>{6,4,1}));
+    auto m  = M(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
+    assert((m.keys() == std::deque<int, min_allocator<int>>{3, 2, 1}));
+    LIBCPP_ASSERT((m.values() == std::deque<short>{6, 4, 1}));
   }
   {
     // Test when the operands are of array type (also contiguous iterator type)
     using M = std::flat_map<int, short, std::greater<int>, std::vector<int, min_allocator<int>>>;
-    auto m = M(ar, ar);
+    auto m  = M(ar, ar);
     assert(m.empty());
   }
   {
     using A1 = test_allocator<int>;
     using A2 = test_allocator<short>;
-    using M = std::flat_map<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
-    auto m = M(ar, ar + 9, A1(5));
+    using M  = std::flat_map<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
+    auto m   = M(ar, ar + 9, A1(5));
     assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
     LIBCPP_ASSERT(std::ranges::equal(m, expected));
     assert(m.keys().get_allocator() == A1(5));
@@ -63,10 +62,10 @@ int main(int, char**)
   {
     using A1 = test_allocator<int>;
     using A2 = test_allocator<short>;
-    using M = std::flat_map<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
-    M m = { ar, ar + 9, A1(5) }; // implicit ctor
+    using M  = std::flat_map<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
+    M m      = {ar, ar + 9, A1(5)}; // implicit ctor
     assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected)); 
+    LIBCPP_ASSERT(std::ranges::equal(m, expected));
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }

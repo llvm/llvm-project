@@ -22,10 +22,9 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
-    using M = std::flat_map<int, char>;
+    using M   = std::flat_map<int, char>;
     auto make = [](std::initializer_list<int> il) {
       M m;
       for (int i : il) {
@@ -33,32 +32,32 @@ int main(int, char**)
       }
       return m;
     };
-    M m = make({1,2,3,4,5,6,7,8});
+    M m = make({1, 2, 3, 4, 5, 6, 7, 8});
     ASSERT_SAME_TYPE(decltype(m.erase(9)), M::size_type);
     auto n = m.erase(9);
     assert(n == 0);
-    assert(m == make({1,2,3,4,5,6,7,8}));
+    assert(m == make({1, 2, 3, 4, 5, 6, 7, 8}));
     n = m.erase(4);
     assert(n == 1);
-    assert(m == make({1,2,3,5,6,7,8}));
+    assert(m == make({1, 2, 3, 5, 6, 7, 8}));
     n = m.erase(1);
     assert(n == 1);
-    assert(m == make({2,3,5,6,7,8}));
+    assert(m == make({2, 3, 5, 6, 7, 8}));
     n = m.erase(8);
     assert(n == 1);
-    assert(m == make({2,3,5,6,7}));
+    assert(m == make({2, 3, 5, 6, 7}));
     n = m.erase(3);
     assert(n == 1);
-    assert(m == make({2,5,6,7}));
+    assert(m == make({2, 5, 6, 7}));
     n = m.erase(4);
     assert(n == 0);
-    assert(m == make({2,5,6,7}));
+    assert(m == make({2, 5, 6, 7}));
     n = m.erase(6);
     assert(n == 1);
-    assert(m == make({2,5,7}));
+    assert(m == make({2, 5, 7}));
     n = m.erase(7);
     assert(n == 1);
-    assert(m == make({2,5}));
+    assert(m == make({2, 5}));
     n = m.erase(2);
     assert(n == 1);
     assert(m == make({5}));
@@ -67,7 +66,7 @@ int main(int, char**)
     assert(m.empty());
   }
   {
-    using M = std::flat_map<int, int, std::greater<>, std::deque<int, min_allocator<int>>, std::deque<int>>;
+    using M   = std::flat_map<int, int, std::greater<>, std::deque<int, min_allocator<int>>, std::deque<int>>;
     auto make = [](std::initializer_list<int> il) {
       M m;
       for (int i : il) {
@@ -75,34 +74,34 @@ int main(int, char**)
       }
       return m;
     };
-    M::key_container_type container = {5,6,7,8};
-    container.insert(container.begin(), {1,2,3,4});
-    M m = M(std::move(container), {1,2,3,4,5,6,7,8});
+    M::key_container_type container = {5, 6, 7, 8};
+    container.insert(container.begin(), {1, 2, 3, 4});
+    M m = M(std::move(container), {1, 2, 3, 4, 5, 6, 7, 8});
     ASSERT_SAME_TYPE(decltype(m.erase(9)), M::size_type);
     auto n = m.erase(9);
     assert(n == 0);
-    assert(m == make({1,2,3,4,5,6,7,8}));
+    assert(m == make({1, 2, 3, 4, 5, 6, 7, 8}));
     n = m.erase(4);
     assert(n == 1);
-    assert(m == make({1,2,3,5,6,7,8}));
+    assert(m == make({1, 2, 3, 5, 6, 7, 8}));
     n = m.erase(1);
     assert(n == 1);
-    assert(m == make({2,3,5,6,7,8}));
+    assert(m == make({2, 3, 5, 6, 7, 8}));
     n = m.erase(8);
     assert(n == 1);
-    assert(m == make({2,3,5,6,7}));
+    assert(m == make({2, 3, 5, 6, 7}));
     n = m.erase(3);
     assert(n == 1);
-    assert(m == make({2,5,6,7}));
+    assert(m == make({2, 5, 6, 7}));
     n = m.erase(4);
     assert(n == 0);
-    assert(m == make({2,5,6,7}));
+    assert(m == make({2, 5, 6, 7}));
     n = m.erase(6);
     assert(n == 1);
-    assert(m == make({2,5,7}));
+    assert(m == make({2, 5, 7}));
     n = m.erase(7);
     assert(n == 1);
-    assert(m == make({2,5}));
+    assert(m == make({2, 5}));
     n = m.erase(2);
     assert(n == 1);
     assert(m == make({5}));

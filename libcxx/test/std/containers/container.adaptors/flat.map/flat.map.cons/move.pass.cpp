@@ -24,15 +24,14 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using C = test_less<int>;
     using A = test_allocator<int>;
     using M = std::flat_map<int, int, C, std::vector<int, A>, std::deque<int, A>>;
-    M mo = M({{1,1},{2,2},{3,1}}, C(5), A(7));
-    M m = std::move(mo);
-    assert((m == M{{1,1},{2,2},{3,1}}));
+    M mo    = M({{1, 1}, {2, 2}, {3, 1}}, C(5), A(7));
+    M m     = std::move(mo);
+    assert((m == M{{1, 1}, {2, 2}, {3, 1}}));
     assert(m.key_comp() == C(5));
     assert(m.keys().get_allocator() == A(7));
     assert(m.values().get_allocator() == A(7));
@@ -46,9 +45,9 @@ int main(int, char**)
     using C = test_less<int>;
     using A = min_allocator<int>;
     using M = std::flat_map<int, int, C, std::vector<int, A>, std::deque<int, A>>;
-    M mo = M({{1,1},{2,2},{3,1}}, C(5), A());
-    M m = std::move(mo);
-    assert((m == M{{1,1},{2,2},{3,1}}));
+    M mo    = M({{1, 1}, {2, 2}, {3, 1}}, C(5), A());
+    M m     = std::move(mo);
+    assert((m == M{{1, 1}, {2, 2}, {3, 1}}));
     assert(m.key_comp() == C(5));
     assert(m.keys().get_allocator() == A());
     assert(m.values().get_allocator() == A());
@@ -60,17 +59,17 @@ int main(int, char**)
   }
   {
     // A moved-from flat_map maintains its class invariant in the presence of moved-from comparators.
-    using M = std::flat_map<int, int, std::function<bool(int,int)>>;
-    M mo = M({{1,1},{2,2},{3,1}}, std::less<int>());
-    M m = std::move(mo);
+    using M = std::flat_map<int, int, std::function<bool(int, int)>>;
+    M mo    = M({{1, 1}, {2, 2}, {3, 1}}, std::less<int>());
+    M m     = std::move(mo);
     assert(m.size() == 3);
     assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
-    assert(m.key_comp()(1,2) == true);
+    assert(m.key_comp()(1, 2) == true);
 
     assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    LIBCPP_ASSERT(m.key_comp()(1,2) == true);
+    LIBCPP_ASSERT(m.key_comp()(1, 2) == true);
     LIBCPP_ASSERT(mo.empty());
-    mo.insert({{1,1},{2,2},{3,1}}); // insert has no preconditions
+    mo.insert({{1, 1}, {2, 2}, {3, 1}}); // insert has no preconditions
     assert(m == mo);
   }
   return 0;

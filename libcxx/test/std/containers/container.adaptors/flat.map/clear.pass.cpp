@@ -23,11 +23,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, int>;
-    M m = {{1,2}, {2,1}, {3,3}, {4,1}, {5,0}};
+    M m     = {{1, 2}, {2, 1}, {3, 3}, {4, 1}, {5, 0}};
     assert(m.size() == 5);
     ASSERT_NOEXCEPT(m.clear());
     ASSERT_SAME_TYPE(decltype(m.clear()), void);
@@ -35,8 +34,13 @@ int main(int, char**)
     assert(m.size() == 0);
   }
   {
-    using M = std::flat_map<int, int, std::greater<int>, std::deque<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>;
-    M m = {{1,2}, {2,1}, {3,3}, {4,1}, {5,0}};
+    using M =
+        std::flat_map<int,
+                      int,
+                      std::greater<int>,
+                      std::deque<int, min_allocator<int>>,
+                      std::vector<int, min_allocator<int>>>;
+    M m = {{1, 2}, {2, 1}, {3, 3}, {4, 1}, {5, 0}};
     assert(m.size() == 5);
     ASSERT_NOEXCEPT(m.clear());
     ASSERT_SAME_TYPE(decltype(m.clear()), void);
@@ -45,7 +49,7 @@ int main(int, char**)
   }
   {
     using M = std::flat_map<bool, bool>;
-    M m = {{true,false}, {false,true}};
+    M m     = {{true, false}, {false, true}};
     assert(m.size() == 2);
     ASSERT_NOEXCEPT(m.clear());
     ASSERT_SAME_TYPE(decltype(m.clear()), void);

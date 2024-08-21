@@ -27,17 +27,16 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
-    using C = test_less<int>;
+    using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using A2 = test_allocator<char>;
-    using M = std::flat_map<int, char, C, std::vector<int, A1>, std::vector<char, A2>>;
-    M mo = M({{1,1},{2,3},{3,2}}, C(5), A1(7));
-    M m = M({}, C(3), A1(7));
-    m = std::move(mo);
-    assert((m == M{{1,1},{2,3},{3,2}}));
+    using M  = std::flat_map<int, char, C, std::vector<int, A1>, std::vector<char, A2>>;
+    M mo     = M({{1, 1}, {2, 3}, {3, 2}}, C(5), A1(7));
+    M m      = M({}, C(3), A1(7));
+    m        = std::move(mo);
+    assert((m == M{{1, 1}, {2, 3}, {3, 2}}));
     assert(m.key_comp() == C(5));
     auto [ks, vs] = std::move(m).extract();
     assert(ks.get_allocator() == A1(7));
@@ -45,14 +44,14 @@ int main(int, char**)
     assert(mo.empty());
   }
   {
-    using C = test_less<int>;
+    using C  = test_less<int>;
     using A1 = other_allocator<int>;
     using A2 = other_allocator<char>;
-    using M = std::flat_map<int, char, C, std::deque<int, A1>, std::deque<char, A2>>;
-    M mo = M({{4,5},{5,4}}, C(5), A1(7));
-    M m = M({{1,1},{2,2},{3,3},{4,4}}, C(3), A1(7));
-    m = std::move(mo);
-    assert((m == M{{4,5},{5,4}}));
+    using M  = std::flat_map<int, char, C, std::deque<int, A1>, std::deque<char, A2>>;
+    M mo     = M({{4, 5}, {5, 4}}, C(5), A1(7));
+    M m      = M({{1, 1}, {2, 2}, {3, 3}, {4, 4}}, C(3), A1(7));
+    m        = std::move(mo);
+    assert((m == M{{4, 5}, {5, 4}}));
     assert(m.key_comp() == C(5));
     auto [ks, vs] = std::move(m).extract();
     assert(ks.get_allocator() == A1(7));
@@ -62,10 +61,10 @@ int main(int, char**)
   {
     using A = min_allocator<int>;
     using M = std::flat_map<int, int, std::greater<int>, std::vector<int, A>, std::vector<int, A>>;
-    M mo = M({{5,1},{4,2},{3,3}}, A());
-    M m = M({{4,4},{3,3},{2,2},{1,1}}, A());
-    m = std::move(mo);
-    assert((m == M{{5,1},{4,2},{3,3}}));
+    M mo    = M({{5, 1}, {4, 2}, {3, 3}}, A());
+    M m     = M({{4, 4}, {3, 3}, {2, 2}, {1, 1}}, A());
+    m       = std::move(mo);
+    assert((m == M{{5, 1}, {4, 2}, {3, 3}}));
     auto [ks, vs] = std::move(m).extract();
     assert(ks.get_allocator() == A());
     assert(vs.get_allocator() == A());
@@ -73,35 +72,38 @@ int main(int, char**)
   }
   {
     // A moved-from flat_map maintains its class invariant in the presence of moved-from elements.
-    using M = std::flat_map<std::pmr::string, int, std::less<>, std::pmr::vector<std::pmr::string>, std::pmr::vector<int>>;
+    using M =
+        std::flat_map<std::pmr::string, int, std::less<>, std::pmr::vector<std::pmr::string>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr1;
     std::pmr::monotonic_buffer_resource mr2;
-    M mo = M({{"short", 1}, {"very long string that definitely won't fit in the SSO buffer and therefore becomes empty on move", 2}}, &mr1);
-    M m = M({{"don't care", 3}}, &mr2);
-    m = std::move(mo);
+    M mo = M({{"short", 1},
+              {"very long string that definitely won't fit in the SSO buffer and therefore becomes empty on move", 2}},
+             &mr1);
+    M m  = M({{"don't care", 3}}, &mr2);
+    m    = std::move(mo);
     assert(m.size() == 2);
     assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
     assert(m.begin()->first.get_allocator().resource() == &mr2);
 
     assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    mo.insert({"foo",1});
+    mo.insert({"foo", 1});
     assert(mo.begin()->first.get_allocator().resource() == &mr1);
   }
   {
     // A moved-from flat_map maintains its class invariant in the presence of moved-from comparators.
-    using C = std::function<bool(int,int)>;
+    using C = std::function<bool(int, int)>;
     using M = std::flat_map<int, int, C>;
-    M mo = M({{1,3},{2,2},{3,1}}, std::less<int>());
-    M m = M({{1,1},{2,2}}, std::greater<int>());
-    m = std::move(mo);
+    M mo    = M({{1, 3}, {2, 2}, {3, 1}}, std::less<int>());
+    M m     = M({{1, 1}, {2, 2}}, std::greater<int>());
+    m       = std::move(mo);
     assert(m.size() == 3);
     assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
-    assert(m.key_comp()(1,2) == true);
+    assert(m.key_comp()(1, 2) == true);
 
     assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    LIBCPP_ASSERT(m.key_comp()(1,2) == true);
+    LIBCPP_ASSERT(m.key_comp()(1, 2) == true);
     LIBCPP_ASSERT(mo.empty());
-    mo.insert({{1,3},{2,2},{3,1}}); // insert has no preconditions
+    mo.insert({{1, 3}, {2, 2}, {3, 1}}); // insert has no preconditions
     LIBCPP_ASSERT(m == mo);
   }
   return 0;

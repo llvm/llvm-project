@@ -21,11 +21,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, const char*>;
-    M m = {{1,""}, {2,""}, {4,""}, {5,""}, {8,""}};
+    M m     = {{1, ""}, {2, ""}, {4, ""}, {5, ""}, {8, ""}};
     ASSERT_SAME_TYPE(decltype(m.count(0)), size_t);
     assert(m.count(0) == 0);
     assert(m.count(1) == 1);
@@ -40,7 +39,7 @@ int main(int, char**)
   }
   {
     using M = std::flat_map<int, int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    M m = {{1,0}, {2,0}, {4,0}, {5,0}, {8,0}};
+    M m     = {{1, 0}, {2, 0}, {4, 0}, {5, 0}, {8, 0}};
     ASSERT_SAME_TYPE(decltype(m.count(0)), size_t);
     assert(m.count(0) == 0);
     assert(m.count(1) == 1);
@@ -55,14 +54,14 @@ int main(int, char**)
   }
   {
     using M = std::flat_map<bool, int>;
-    M m = {{true,1}, {false,2}};
+    M m     = {{true, 1}, {false, 2}};
     ASSERT_SAME_TYPE(decltype(m.count(0)), size_t);
     assert(m.count(true) == 1);
     assert(m.count(false) == 1);
-    m = {{true,3}};
+    m = {{true, 3}};
     assert(m.count(true) == 1);
     assert(m.count(false) == 0);
-    m = {{false,4}};
+    m = {{false, 4}};
     assert(std::as_const(m).count(true) == 0);
     assert(std::as_const(m).count(false) == 1);
     m.clear();

@@ -24,59 +24,66 @@
 #include "test_macros.h"
 
 struct MoveNegates {
-    int value_ = 0;
-    MoveNegates() = default;
-    MoveNegates(int v) : value_(v) {}
-    MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
-    MoveNegates& operator=(MoveNegates&& rhs) { value_ = rhs.value_; rhs.value_ = -rhs.value_; return *this; }
-    ~MoveNegates() = default;
-    auto operator<=>(const MoveNegates&) const = default;
+  int value_    = 0;
+  MoveNegates() = default;
+  MoveNegates(int v) : value_(v) {}
+  MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
+  MoveNegates& operator=(MoveNegates&& rhs) {
+    value_     = rhs.value_;
+    rhs.value_ = -rhs.value_;
+    return *this;
+  }
+  ~MoveNegates()                             = default;
+  auto operator<=>(const MoveNegates&) const = default;
 };
 
 struct MoveClears {
-    int value_ = 0;
-    MoveClears() = default;
-    MoveClears(int v) : value_(v) {}
-    MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
-    MoveClears& operator=(MoveClears&& rhs) { value_ = rhs.value_; rhs.value_ = 0; return *this; }
-    ~MoveClears() = default;
-    auto operator<=>(const MoveClears&) const = default;
+  int value_   = 0;
+  MoveClears() = default;
+  MoveClears(int v) : value_(v) {}
+  MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
+  MoveClears& operator=(MoveClears&& rhs) {
+    value_     = rhs.value_;
+    rhs.value_ = 0;
+    return *this;
+  }
+  ~MoveClears()                             = default;
+  auto operator<=>(const MoveClears&) const = default;
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
   auto value_eq = [](auto&& p, auto&& q) { return p.first == q.first; };
   {
-    const std::pair<int, int> expected[] = { {1,1}, {2,2}, {3,3}, {4,4}, {5,5}, {6,6}, {7,7}, {8,8} };
+    const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
     using M = std::flat_map<MoveNegates, int, std::less<MoveNegates>, std::vector<MoveNegates>>;
-    M m = M(expected, expected + 8);
-    M m2 = M(expected, expected + 3);
+    M m     = M(expected, expected + 8);
+    M m2    = M(expected, expected + 3);
 
     m2 = std::move(m);
 
-    assert(std::equal(m2.begin(), m2.end(), expected, expected+8));
+    assert(std::equal(m2.begin(), m2.end(), expected, expected + 8));
     LIBCPP_ASSERT(m.empty());
-    assert(std::is_sorted(m.begin(), m.end(), m.value_comp())); // still sorted
+    assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));          // still sorted
     assert(std::adjacent_find(m.begin(), m.end(), value_eq) == m.end()); // still contains no duplicates
-    m.insert({1,1});
-    m.insert({2,2});
+    m.insert({1, 1});
+    m.insert({2, 2});
     assert(m.contains(1));
     assert(m.find(2) != m.end());
   }
   {
-    const std::pair<int, int> expected[] = { {1,1}, {2,2}, {3,3}, {4,4}, {5,5}, {6,6}, {7,7}, {8,8} };
+    const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
     using M = std::flat_map<MoveClears, int, std::less<MoveClears>, std::vector<MoveClears>>;
-    M m = M(expected, expected + 8);
-    M m2 = M(expected, expected + 3);
+    M m     = M(expected, expected + 8);
+    M m2    = M(expected, expected + 3);
 
     m2 = std::move(m);
 
-    assert(std::equal(m2.begin(), m2.end(), expected, expected+8));
+    assert(std::equal(m2.begin(), m2.end(), expected, expected + 8));
     LIBCPP_ASSERT(m.empty());
-    assert(std::is_sorted(m.begin(), m.end(), m.value_comp())); // still sorted
+    assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));          // still sorted
     assert(std::adjacent_find(m.begin(), m.end(), value_eq) == m.end()); // still contains no duplicates
-    m.insert({1,1});
-    m.insert({2,2});
+    m.insert({1, 1});
+    m.insert({2, 2});
     assert(m.contains(1));
     assert(m.find(2) != m.end());
   }

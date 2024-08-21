@@ -22,8 +22,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     // test_allocator is not propagated
     using C = test_less<int>;
@@ -31,8 +30,8 @@ int main(int, char**)
     std::vector<char, test_allocator<char>> vs({2, 2, 1}, test_allocator<char>(7));
     using M = std::flat_map<int, char, C, decltype(ks), decltype(vs)>;
     auto mo = M(ks, vs, C(5));
-    auto m = M({{3,3}, {4,4}, {5,5}}, C(3), test_allocator<int>(2));
-    m = mo;
+    auto m  = M({{3, 3}, {4, 4}, {5, 5}}, C(3), test_allocator<int>(2));
+    m       = mo;
 
     assert(m.key_comp() == C(5));
     assert(m.keys() == ks);
@@ -49,15 +48,15 @@ int main(int, char**)
   }
   {
     // other_allocator is propagated
-    using C = test_less<int>;
+    using C  = test_less<int>;
     using Ks = std::vector<int, other_allocator<int>>;
     using Vs = std::vector<char, other_allocator<char>>;
-    auto ks = Ks({1, 3, 5}, other_allocator<int>(6));
-    auto vs = Vs({2, 2, 1}, other_allocator<char>(7));
-    using M = std::flat_map<int, char, C, Ks, Vs>;
-    auto mo = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
-    auto m = M({{3,3}, {4,4}, {5,5}}, C(3), other_allocator<int>(2));
-    m = mo;
+    auto ks  = Ks({1, 3, 5}, other_allocator<int>(6));
+    auto vs  = Vs({2, 2, 1}, other_allocator<char>(7));
+    using M  = std::flat_map<int, char, C, Ks, Vs>;
+    auto mo  = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
+    auto m   = M({{3, 3}, {4, 4}, {5, 5}}, C(3), other_allocator<int>(2));
+    m        = mo;
 
     assert(m.key_comp() == C(5));
     assert(m.keys() == ks);
@@ -77,22 +76,22 @@ int main(int, char**)
     using M = std::flat_map<int, int, std::less<>, std::pmr::deque<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr1;
     std::pmr::monotonic_buffer_resource mr2;
-    M mo = M({{1,1}, {2,2}, {3,3}}, &mr1);
-    M m = M({{4,4}, {5,5}}, &mr2);
-    m = mo;
-    assert((m == M{{1,1}, {2,2}, {3,3}}));
+    M mo = M({{1, 1}, {2, 2}, {3, 3}}, &mr1);
+    M m  = M({{4, 4}, {5, 5}}, &mr2);
+    m    = mo;
+    assert((m == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(m.keys().get_allocator().resource() == &mr2);
     assert(m.values().get_allocator().resource() == &mr2);
 
     // mo is unchanged
-    assert((mo == M{{1,1}, {2,2}, {3,3}}));
+    assert((mo == M{{1, 1}, {2, 2}, {3, 3}}));
     assert(mo.keys().get_allocator().resource() == &mr1);
   }
   {
     // comparator is copied and invariant is preserved
     using M = std::flat_map<int, int, std::function<bool(int, int)>>;
-    M mo = M({{1,2}, {3,4}}, std::less<int>());
-    M m = M({{1,2}, {3,4}}, std::greater<int>());
+    M mo    = M({{1, 2}, {3, 4}}, std::less<int>());
+    M m     = M({{1, 2}, {3, 4}}, std::greater<int>());
     assert(m.key_comp()(2, 1) == true);
     assert(m != mo);
     m = mo;
@@ -102,9 +101,9 @@ int main(int, char**)
   {
     // self-assignment
     using M = std::flat_map<int, int>;
-    M m = {{1,2}, {3,4}};
-    m = static_cast<const M&>(m);
-    assert((m == M{{1,2}, {3,4}}));
+    M m     = {{1, 2}, {3, 4}};
+    m       = static_cast<const M&>(m);
+    assert((m == M{{1, 2}, {3, 4}}));
   }
   return 0;
 }
