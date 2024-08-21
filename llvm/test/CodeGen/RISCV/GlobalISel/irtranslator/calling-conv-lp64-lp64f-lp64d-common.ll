@@ -600,6 +600,54 @@ define i64 @caller_small_struct_ret() nounwind {
   ret i64 %5
 }
 
+; Check return of >2x xlen scalars
+
+define i256 @callee_large_scalar_ret() nounwind {
+  ; RV64I-LABEL: name: callee_large_scalar_ret
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -123456789
+  ; RV64I-NEXT:   G_STORE [[C]](s256), [[COPY]](p0) :: (store (s256), align 16)
+  ; RV64I-NEXT:   PseudoRET
+  ret i256 -123456789
+}
+
+define void @caller_large_scalar_ret() nounwind {
+  ; LP64-LABEL: name: caller_large_scalar_ret
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64-NEXT:   PseudoRET
+  ;
+  ; LP64F-LABEL: name: caller_large_scalar_ret
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64F-NEXT:   PseudoRET
+  ;
+  ; LP64D-LABEL: name: caller_large_scalar_ret
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64D-NEXT:   PseudoRET
+  %1 = call i256 @callee_large_scalar_ret()
+  ret void
+}
+
 ; Check return of >2x xlen structs
 
 %struct.large = type { i64, i64, i64, i64 }
