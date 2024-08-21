@@ -920,7 +920,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     unsigned StartIndex = 0;
     for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
       // If a value's mask is only used by the blend then is can be deadcoded.
-      // TODO: Fine the most expensive mask that can be deadcoded.
+      // TODO: Find the most expensive mask that can be deadcoded.
       VPValue *Mask = Blend->getMask(I);
       if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
         StartIndex = I;
