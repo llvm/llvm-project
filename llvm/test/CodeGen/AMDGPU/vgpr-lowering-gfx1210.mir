@@ -811,14 +811,14 @@ body:             |
     V_WMMA_LD_SCALE_PAIRED_B32 undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, implicit $exec
 
     ; GCN-NOT: s_set_vgpr_msb
-    ; GCN-NEXT: v_wmma_scale_bf16_16x16x128_f8f6f4 v[210:213], v[244:259] /*v[500:515]*/, v[244:259] /*v[500:515]*/, v[10:13], v1, v2
-    $vgpr210_vgpr211_vgpr212_vgpr213 = V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[244:259] /*v[500:515]*/, v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0
-    ; GCN-NEXT: v_wmma_scale_bf16_16x16x128_f8f6f4 v[210:213], v[100:115], v[100:115], v[10:13], v1, v2
-    $vgpr210_vgpr211_vgpr212_vgpr213 = V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_threeaddr undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[100:115], v[100:115], v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_threeaddr undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 1
-    ; GCN-NEXT: v_wmma_scale_bf16_16x16x128_f8f6f4 v[210:213], v[244:259] /*v[500:515]*/, v[0:15], v[10:13], v1, v2
-    $vgpr210_vgpr211_vgpr212_vgpr213 = V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[0:15], v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...

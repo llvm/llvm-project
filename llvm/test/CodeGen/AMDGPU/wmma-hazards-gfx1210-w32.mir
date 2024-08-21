@@ -865,18 +865,6 @@ body: |
 ...
 
 ---
-name: test_wmma_BF16_16x16x128_F8F6F4_D0_overlaps_C1
-body: |
-  bb.0:
-    ; GFX1210-LABEL: name: test_wmma_BF16_16x16x128_F8F6F4_D0_overlaps_C1
-    ; GFX1210: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
-    ; GFX1210-NEXT: V_NOP_e32 implicit $exec
-    ; GFX1210-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
-    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
-    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
-...
-
----
 name: test_wmma_scale_F32_16x16x128_F8F6F4_D0_overlaps_C1
 body: |
   bb.0:
@@ -886,18 +874,6 @@ body: |
     ; GFX1210-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-...
-
----
-name: test_wmma_scale_BF16_16x16x128_F8F6F4_D0_overlaps_C1
-body: |
-  bb.0:
-    ; GFX1210-LABEL: name: test_wmma_scale_BF16_16x16x128_F8F6F4_D0_overlaps_C1
-    ; GFX1210: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; GFX1210-NEXT: V_NOP_e32 implicit $exec
-    ; GFX1210-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19= V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19= V_WMMA_SCALE_BF16_16X16X128_F8F6F4_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 
 ---

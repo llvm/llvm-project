@@ -27,7 +27,8 @@ void test_global_add_half2(__global half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_global_global_min_f64
-// CHECK: call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmin ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A-LABEL:  test_global_global_min_f64$local
 // GFX90A:  global_atomic_min_f64
 void test_global_global_min_f64(__global double *addr, double x){
@@ -36,7 +37,8 @@ void test_global_global_min_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_global_max_f64
-// CHECK: call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmax ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A-LABEL:  test_global_max_f64$local
 // GFX90A:  global_atomic_max_f64
 void test_global_max_f64(__global double *addr, double x){
@@ -65,7 +67,8 @@ void test_flat_global_add_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_min_flat_f64
-// CHECK: call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmin ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A-LABEL:  test_flat_min_flat_f64$local
 // GFX90A:  flat_atomic_min_f64
 void test_flat_min_flat_f64(__generic double *addr, double x){
@@ -74,7 +77,8 @@ void test_flat_min_flat_f64(__generic double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_min_f64
-// CHECK: call double @llvm.amdgcn.flat.atomic.fmin.f64.p1.f64(ptr addrspace(1) %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmin ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A:  test_flat_global_min_f64$local
 // GFX90A:  global_atomic_min_f64
 void test_flat_global_min_f64(__global double *addr, double x){
@@ -83,7 +87,8 @@ void test_flat_global_min_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_max_flat_f64
-// CHECK: call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmax ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A-LABEL:  test_flat_max_flat_f64$local
 // GFX90A:  flat_atomic_max_f64
 void test_flat_max_flat_f64(__generic double *addr, double x){
@@ -92,7 +97,8 @@ void test_flat_max_flat_f64(__generic double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_max_f64
-// CHECK: call double @llvm.amdgcn.flat.atomic.fmax.f64.p1.f64(ptr addrspace(1) %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fmax ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX90A-LABEL:  test_flat_global_max_f64$local
 // GFX90A:  global_atomic_max_f64
 void test_flat_global_max_f64(__global double *addr, double x){

@@ -18940,48 +18940,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64: {
-    Intrinsic::ID IID;
-    llvm::Type *ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
-      IID = Intrinsic::amdgcn_global_atomic_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
-      IID = Intrinsic::amdgcn_global_atomic_fmax;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
-      IID = Intrinsic::amdgcn_flat_atomic_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
-      IID = Intrinsic::amdgcn_flat_atomic_fmax;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F =
-        CGM.getIntrinsic(IID, {ArgTy, Addr->getType(), Val->getType()});
-    return Builder.CreateCall(F, {Addr, Val});
-  }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_global_atomic_fadd_v2bf16;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_flat_atomic_fadd_v2bf16;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {Addr->getType()});
-    return Builder.CreateCall(F, {Addr, Val});
-  }
   case AMDGPU::BI__builtin_amdgcn_discard_b32:
   case AMDGPU::BI__builtin_amdgcn_discard_b128:
   case AMDGPU::BI__builtin_amdgcn_discard_b1024: {
@@ -19360,9 +19318,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
   case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x128_iu4:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x128_f8f6f4:
-  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
-  case AMDGPU::BI__builtin_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_f16:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_bf16:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f16_16x16x64_f16:
@@ -19610,17 +19566,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x128_f8f6f4:
-      ArgsForMatchingMatrixTypes = {5, 1};
-      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x128_f8f6f4;
-      break;
     case AMDGPU::BI__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
       ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4:
-      ArgsForMatchingMatrixTypes = {5, 1};
-      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_scale_bf16_16x16x128_f8f6f4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_f16:
       ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
@@ -20539,7 +20487,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64: {
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -20561,11 +20515,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
       BinOp = llvm::AtomicRMWInst::FMin;
       break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
     case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
       BinOp = llvm::AtomicRMWInst::FMax;
       break;
@@ -20605,7 +20565,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
-      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
+      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16) {
         llvm::Type *V2BF16Ty = FixedVectorType::get(
             llvm::Type::getBFloatTy(Builder.getContext()), 2);
         Val = Builder.CreateBitCast(Val, V2BF16Ty);
