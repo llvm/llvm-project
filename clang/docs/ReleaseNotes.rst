@@ -152,6 +152,9 @@ Resolutions to C++ Defect Reports
 - ``nullptr`` is now promoted to ``void*`` when passed to a C-style variadic function.
   (`CWG722: Can nullptr be passed to an ellipsis? <https://cplusplus.github.io/CWG/issues/722.html>`_)
 
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
 C Language Changes
 ------------------
 
