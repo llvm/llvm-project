@@ -202,6 +202,13 @@ InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
   return nullptr;
 }
 
+InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
+  for (auto &I : BB)
+    if (auto *Incr = dyn_cast<InstrProfIncrementInst>(&I))
+      return Incr;
+  return nullptr;
+}
+
 static void
 preorderVisit(const PGOCtxProfContext::CallTargetMapTy &Profiles,
               function_ref<void(const PGOCtxProfContext &)> Visitor) {
