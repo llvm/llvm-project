@@ -175,6 +175,7 @@ ArrayRef<BlockArgument> ParallelComputeFunctionArgs::lowerBounds() {
   return args.drop_front(2 + 1 * numLoops).take_front(numLoops);
 }
 
+[[maybe_unused]]
 ArrayRef<BlockArgument> ParallelComputeFunctionArgs::upperBounds() {
   return args.drop_front(2 + 2 * numLoops).take_front(numLoops);
 }

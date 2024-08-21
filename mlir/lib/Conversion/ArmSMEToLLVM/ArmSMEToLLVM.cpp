@@ -81,6 +81,8 @@ static Operation *createLoadTileSliceIntrinsic(
       break;
     }
   }
+  assert("unknown type in createLoadTileSliceIntrinsic" == nullptr);
+  return nullptr;
 }
 
 /// Helper to create an arm_sme.intr.st1*.(horiz|vert)' intrinsic.
@@ -125,6 +127,8 @@ static Operation *createStoreTileSliceIntrinsic(
           loc, maskOp, ptr, tileId, tileSliceI32);
     }
   }
+  assert("unknown type in createStoreTileSliceIntrinsic" == nullptr);
+  return nullptr;
 }
 
 IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
@@ -850,6 +854,8 @@ struct StreamingVLOpConversion
       case arm_sme::TypeSize::Double:
         return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
       }
+      assert("unknown type in StreamingVLOpConversion" == nullptr);
+      return nullptr;
     }();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
         streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));

@@ -94,6 +94,7 @@ public:
     Option(Pass &parent, StringRef arg, Args &&...args)
         : detail::PassOptions::Option<DataType, OptionParser>(
               parent.passOptions, arg, std::forward<Args>(args)...) {}
+    Option &operator=(const Option &other) = default; // gcc11
     using detail::PassOptions::Option<DataType, OptionParser>::operator=;
   };
   /// This class represents a specific pass option that contains a list of

@@ -736,6 +736,8 @@ static mlir::WalkResult unwrap(MlirWalkResult result) {
   case MlirWalkResultSkip:
     return mlir::WalkResult::skip();
   }
+  assert("unknown result in WalkResult::unwrap" == nullptr);
+  return {};
 }
 
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
