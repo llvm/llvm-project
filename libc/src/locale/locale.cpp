@@ -16,6 +16,6 @@ namespace LIBC_NAMESPACE_DECL {
 
 __locale_t c_locale = {nullptr};
 
-LIBC_THREAD_LOCAL locale_t locale = nullptr;
+locale_t locale = nullptr;
 
 } // namespace LIBC_NAMESPACE_DECL
