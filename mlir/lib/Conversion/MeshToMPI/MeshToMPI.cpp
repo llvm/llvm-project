@@ -45,15 +45,17 @@ struct ConvertUpdateHaloOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::UpdateHaloOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    // The input/output memref is assumed to be in C memory order.
     // Halos are exchanged as 2 blocks per dimension (one for each side: down
-    // and up). It is assumed that the last dim in a default memref is
-    // contiguous, hence iteration starts with the complete halo on the first
-    // dim which should be contiguous (unless the source is not). The size of
-    // the exchanged data will decrease when iterating over dimensions. That's
-    // good because the halos of last dim will be most fragmented.
+    // and up). For each haloed dimension `d`, the exchanged blocks are
+    // expressed as multi-dimensional subviews. The subviews include potential
+    // halos of higher dimensions `dh > d`, no halos for the lower dimensions
+    // `dl < d` and for dimension `d` the currently exchanged halo only.
+    // By iterating form higher to lower dimensions this also updates the halos
+    // in the 'corners'.
     // memref.subview is used to read and write the halo data from and to the
-    // local data. subviews and halos have dynamic and static values, so
-    // OpFoldResults are used whenever possible.
+    // local data. Because subviews and halos can have mixed dynamic and static
+    // shapes, OpFoldResults are used whenever possible.
 
     SymbolTableCollection symbolTableCollection;
     auto loc = op.getLoc();

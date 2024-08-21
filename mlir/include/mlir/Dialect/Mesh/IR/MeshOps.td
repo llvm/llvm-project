@@ -162,7 +162,7 @@ def Mesh_NeighborsLinearIndicesOp : Mesh_Op<"neighbors_linear_indices", [
   DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
 ]> {
   let summary =
-      "For given split axes get the linear index the direct neighbor processes.";
+      "For given split axes get the linear indices of the direct neighbor processes.";
   let description = [{
     Example:
     ```
@@ -172,8 +172,8 @@ def Mesh_NeighborsLinearIndicesOp : Mesh_Op<"neighbors_linear_indices", [
     Given `@mesh` with shape `(10, 20, 30)`,
           `device` = `(1, 2, 3)`
           `$split_axes` = `[1]`
-    it returns the linear indices of the processes at positions `(1, 1, 3)`: `633`
-    and `(1, 3, 3)`: `693`.
+    returns two indices, `633` and `693`, which correspond to the index of the previous
+    process `(1, 1, 3)`, and the next process `(1, 3, 3) along the split axis `1`.
 
     A negative value is returned if `$device` has no neighbor in the given
     direction along the given `split_axes`.

@@ -886,7 +886,7 @@ def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
   let summary = "Convert Mesh dialect to MPI dialect.";
   let description = [{
     This pass converts communication operations
-    from the Mesh dialect to operations from the MPI dialect.
+    from the Mesh dialect to the MPI dialect.
   }];
   let dependentDialects = [
     "memref::MemRefDialect",
