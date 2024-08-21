@@ -337,14 +337,14 @@ using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
 FunctionImporter::AddDefinitionStatus
 FunctionImporter::addDefinition(ImportMapTy &ImportList, StringRef FromModule,
                                 GlobalValue::GUID GUID) {
-  auto [It, Ins] =
+  auto [It, Inserted] =
       ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Definition);
-  if (Ins)
-    return FunctionImporter::Inserted;
+  if (Inserted)
+    return AddDefinitionStatus::Inserted;
   if (It->second == GlobalValueSummary::Definition)
-    return FunctionImporter::NoChange;
+    return AddDefinitionStatus::NoChange;
   It->second = GlobalValueSummary::Definition;
-  return FunctionImporter::ChangedToDefinition;
+  return AddDefinitionStatus::ChangedToDefinition;
 }
 
 void FunctionImporter::maybeAddDeclaration(ImportMapTy &ImportList,
@@ -413,7 +413,7 @@ class GlobalsImporter final {
         // Otherwise, definition should take precedence over declaration.
         if (FunctionImporter::addDefinition(
                 ImportList, RefSummary->modulePath(), VI.getGUID()) !=
-            FunctionImporter::Inserted)
+            FunctionImporter::AddDefinitionStatus::Inserted)
           break;
 
         // Only update stat and exports if we haven't already imported this
@@ -954,7 +954,7 @@ static void computeImportForFunction(
       // status.
       if (FunctionImporter::addDefinition(ImportList, ExportModulePath,
                                           VI.getGUID()) !=
-          FunctionImporter::NoChange) {
+          FunctionImporter::AddDefinitionStatus::NoChange) {
         NumImportedFunctionsThinLink++;
         if (IsHotCallsite)
           NumImportedHotFunctionsThinLink++;

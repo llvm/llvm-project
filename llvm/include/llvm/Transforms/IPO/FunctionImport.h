@@ -122,7 +122,7 @@ public:
   /// Import functions in Module \p M based on the supplied import list.
   Expected<bool> importFunctions(Module &M, const ImportMapTy &ImportList);
 
-  enum AddDefinitionStatus {
+  enum class AddDefinitionStatus {
     NoChange,
     Inserted,
     ChangedToDefinition,
