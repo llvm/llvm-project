@@ -1548,8 +1548,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // A + -B  -->  A - B
-  if (match(RHS, m_Neg(m_Value(B))))
-    return BinaryOperator::CreateSub(LHS, B);
+  if (match(RHS, m_Neg(m_Value(B)))) {
+    auto *Sub = BinaryOperator::CreateSub(LHS, B);
+    auto *OBO = cast<OverflowingBinaryOperator>(RHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO->hasNoSignedWrap());
+    return Sub;
+  }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -2715,8 +2719,10 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
                                                       Instruction &FMFSource) {
   Value *X, *Y;
   if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y)))) {
+    // Push into RHS which is more likely to simplify (const or another fneg).
+    // FIXME: It would be better to invert the transform.
     return cast<Instruction>(Builder.CreateFMulFMF(
-        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+        X, Builder.CreateFNegFMF(Y, &FMFSource), &FMFSource));
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {

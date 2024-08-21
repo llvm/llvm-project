@@ -25,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
@@ -6938,9 +6939,16 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       // by applying it to the function type.
       if (const auto *A = ATL.getAttrAs<LifetimeBoundAttr>()) {
         const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-        if (!MD || MD->isStatic()) {
+        int NoImplicitObjectError = -1;
+        if (!MD)
+          NoImplicitObjectError = 0;
+        else if (MD->isStatic())
+          NoImplicitObjectError = 1;
+        else if (MD->isExplicitObjectMemberFunction())
+          NoImplicitObjectError = 2;
+        if (NoImplicitObjectError != -1) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_no_object_param)
-              << !MD << A->getRange();
+              << NoImplicitObjectError << A->getRange();
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
               << isa<CXXDestructorDecl>(MD) << A->getRange();
@@ -12230,12 +12238,9 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   //    The main function shall not be declared with a linkage-specification.
   if (FD->isExternCContext() ||
       (FD->isExternCXXContext() &&
-       FD->getDeclContext()->getRedeclContext()->isTranslationUnit())) {
+       FD->getDeclContext()->getRedeclContext()->isTranslationUnit()))
     Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
         << FD->getLanguageLinkage();
-    FD->setInvalidDecl();
-    return;
-  }
 
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
@@ -18507,11 +18512,15 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       // the program is ill-formed, except when compiling with MSVC extensions
       // enabled.
       if (EltTy->isReferenceType()) {
-        Diag(NewFD->getLocation(), getLangOpts().MicrosoftExt ?
-                                    diag::ext_union_member_of_reference_type :
-                                    diag::err_union_member_of_reference_type)
-          << NewFD->getDeclName() << EltTy;
-        if (!getLangOpts().MicrosoftExt)
+        const bool HaveMSExt =
+            getLangOpts().MicrosoftExt &&
+            !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015);
+
+        Diag(NewFD->getLocation(),
+             HaveMSExt ? diag::ext_union_member_of_reference_type
+                       : diag::err_union_member_of_reference_type)
+            << NewFD->getDeclName() << EltTy;
+        if (!HaveMSExt)
           NewFD->setInvalidDecl();
       }
     }

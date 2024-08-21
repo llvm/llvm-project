@@ -816,17 +816,21 @@ class DebugCommunication(object):
             self.wait_for_event(filter=["process", "initialized"])
         return response
 
-    def request_next(self, threadId):
+    def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
-        args_dict = {"threadId": threadId}
+        args_dict = {"threadId": threadId, "granularity": granularity}
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_stepIn(self, threadId, targetId):
+    def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
-        args_dict = {"threadId": threadId, "targetId": targetId}
+        args_dict = {
+            "threadId": threadId,
+            "targetId": targetId,
+            "granularity": granularity,
+        }
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
