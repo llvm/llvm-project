@@ -37,8 +37,7 @@ namespace fputil {
 // The outputs of the constructors and most functions will be normalized.
 // To simplify and improve the efficiency, many functions will assume that the
 // inputs are normal.
-template <size_t Bits> class DyadicFloat {
-public:
+template <size_t Bits> struct DyadicFloat {
   using MantissaType = LIBC_NAMESPACE::UInt<Bits>;
 
   Sign sign = Sign::POS;
@@ -102,18 +101,116 @@ public:
     return exponent + (Bits - 1);
   }
 
-  // Assume that it is already normalized.
-  // Output is rounded correctly with respect to the current rounding mode.
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
+  generic_as() const {
+    using FPBits = FPBits<float16>;
+    using StorageType = typename FPBits::StorageType;
+
+    constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;
+
+    if (mantissa == 0)
+      return FPBits::zero(sign).get_val();
+
+    int unbiased_exp = get_unbiased_exponent();
+
+    if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
+      set_errno_if_required(ERANGE);
+      raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
+      switch (quick_get_round()) {
+      case FE_TONEAREST:
+        return FPBits::inf(sign).get_val();
+      case FE_TOWARDZERO:
+        return FPBits::max_normal(sign).get_val();
+      case FE_DOWNWARD:
+        if (sign.is_pos())
+          return FPBits::max_normal(Sign::POS).get_val();
+        return FPBits::inf(Sign::NEG).get_val();
+      case FE_UPWARD:
+        if (sign.is_neg())
+          return FPBits::max_normal(Sign::NEG).get_val();
+        return FPBits::inf(Sign::POS).get_val();
+      default:
+        __builtin_unreachable();
+      }
+    }
+
+    StorageType out_biased_exp = 0;
+    StorageType out_mantissa = 0;
+    bool round = false;
+    bool sticky = false;
+    bool underflow = false;
+
+    if (unbiased_exp < -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
+      sticky = true;
+      underflow = true;
+    } else if (unbiased_exp == -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
+      round = true;
+      MantissaType sticky_mask = (MantissaType(1) << (Bits - 1)) - 1;
+      sticky = (mantissa & sticky_mask) != 0;
+    } else {
+      int extra_fraction_len = EXTRA_FRACTION_LEN;
+
+      if (unbiased_exp < 1 - FPBits::EXP_BIAS) {
+        underflow = true;
+        extra_fraction_len += 1 - FPBits::EXP_BIAS - unbiased_exp;
+      } else {
+        out_biased_exp =
+            static_cast<StorageType>(unbiased_exp + FPBits::EXP_BIAS);
+      }
+
+      MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
+      round = (mantissa & round_mask) != 0;
+      MantissaType sticky_mask = round_mask - 1;
+      sticky = (mantissa & sticky_mask) != 0;
+
+      out_mantissa = static_cast<StorageType>(mantissa >> extra_fraction_len);
+    }
+
+    bool lsb = (out_mantissa & 1) != 0;
+
+    StorageType result =
+        FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
+
+    switch (quick_get_round()) {
+    case FE_TONEAREST:
+      if (round && (lsb || sticky))
+        ++result;
+      break;
+    case FE_DOWNWARD:
+      if (sign.is_neg() && (round || sticky))
+        ++result;
+      break;
+    case FE_UPWARD:
+      if (sign.is_pos() && (round || sticky))
+        ++result;
+      break;
+    default:
+      break;
+    }
+
+    if (round || sticky) {
+      int excepts = FE_INEXACT;
+      if (FPBits(result).is_inf()) {
+        set_errno_if_required(ERANGE);
+        excepts |= FE_OVERFLOW;
+      } else if (underflow) {
+        set_errno_if_required(ERANGE);
+        excepts |= FE_UNDERFLOW;
+      }
+      raise_except_if_required(excepts);
+    }
+
+    return FPBits(result).get_val();
+  }
+
   template <typename T, bool ShouldSignalExceptions,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
-  LIBC_INLINE constexpr T as() const {
-#if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    if constexpr (cpp::is_same_v<T, float16>)
-      return generic_as<T>();
-#endif
-
+  LIBC_INLINE constexpr T fast_as() const {
     if (LIBC_UNLIKELY(mantissa.is_zero()))
       return FPBits<T>::zero(sign).get_val();
 
@@ -234,6 +331,22 @@ public:
     return r;
   }
 
+  // Assume that it is already normalized.
+  // Output is rounded correctly with respect to the current rounding mode.
+  template <typename T, bool ShouldSignalExceptions,
+            typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                                            (FPBits<T>::FRACTION_LEN < Bits),
+                                        void>>
+  LIBC_INLINE constexpr T as() const {
+#if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
+    if constexpr (cpp::is_same_v<T, float16>) {
+      static_assert(ShouldSignalExceptions);
+      return generic_as<T>();
+    }
+#endif
+    return fast_as<T, ShouldSignalExceptions>();
+  }
+
   template <typename T,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
@@ -258,114 +371,6 @@ public:
     }
 
     return new_mant;
-  }
-
-private:
-  template <typename OutType>
-  LIBC_INLINE constexpr cpp::enable_if_t<
-      cpp::is_floating_point_v<OutType> &&
-          sizeof(typename FPBits<OutType>::StorageType) <= sizeof(MantissaType),
-      OutType>
-  generic_as() const {
-    using FPBits = FPBits<float16>;
-    using StorageType = typename FPBits::StorageType;
-
-    constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;
-
-    if (mantissa == 0)
-      return FPBits::zero(sign).get_val();
-
-    int unbiased_exp = get_unbiased_exponent();
-
-    if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
-      set_errno_if_required(ERANGE);
-      raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-
-      switch (quick_get_round()) {
-      case FE_TONEAREST:
-        return FPBits::inf(sign).get_val();
-      case FE_TOWARDZERO:
-        return FPBits::max_normal(sign).get_val();
-      case FE_DOWNWARD:
-        if (sign.is_pos())
-          return FPBits::max_normal(Sign::POS).get_val();
-        return FPBits::inf(Sign::NEG).get_val();
-      case FE_UPWARD:
-        if (sign.is_neg())
-          return FPBits::max_normal(Sign::NEG).get_val();
-        return FPBits::inf(Sign::POS).get_val();
-      default:
-        __builtin_unreachable();
-      }
-    }
-
-    StorageType out_biased_exp = 0;
-    StorageType out_mantissa = 0;
-    bool round = false;
-    bool sticky = false;
-    bool underflow = false;
-
-    if (unbiased_exp < -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
-      sticky = true;
-      underflow = true;
-    } else if (unbiased_exp == -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
-      round = true;
-      MantissaType sticky_mask = (MantissaType(1) << (Bits - 1)) - 1;
-      sticky = (mantissa & sticky_mask) != 0;
-    } else {
-      int extra_fraction_len = EXTRA_FRACTION_LEN;
-
-      if (unbiased_exp < 1 - FPBits::EXP_BIAS) {
-        underflow = true;
-        extra_fraction_len += 1 - FPBits::EXP_BIAS - unbiased_exp;
-      } else {
-        out_biased_exp =
-            static_cast<StorageType>(unbiased_exp + FPBits::EXP_BIAS);
-      }
-
-      MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
-      round = (mantissa & round_mask) != 0;
-      MantissaType sticky_mask = round_mask - 1;
-      sticky = (mantissa & sticky_mask) != 0;
-
-      out_mantissa = static_cast<StorageType>(mantissa >> extra_fraction_len);
-    }
-
-    bool lsb = (out_mantissa & 1) != 0;
-
-    StorageType result =
-        FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
-
-    switch (quick_get_round()) {
-    case FE_TONEAREST:
-      if (round && (lsb || sticky))
-        ++result;
-      break;
-    case FE_DOWNWARD:
-      if (sign.is_neg() && (round || sticky))
-        ++result;
-      break;
-    case FE_UPWARD:
-      if (sign.is_pos() && (round || sticky))
-        ++result;
-      break;
-    default:
-      break;
-    }
-
-    if (round || sticky) {
-      int excepts = FE_INEXACT;
-      if (FPBits(result).is_inf()) {
-        set_errno_if_required(ERANGE);
-        excepts |= FE_OVERFLOW;
-      } else if (underflow) {
-        set_errno_if_required(ERANGE);
-        excepts |= FE_UNDERFLOW;
-      }
-      raise_except_if_required(excepts);
-    }
-
-    return FPBits(result).get_val();
   }
 };
 
