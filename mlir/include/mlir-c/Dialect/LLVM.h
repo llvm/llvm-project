@@ -12,6 +12,7 @@
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Dialect/LLVMIR/LLVMOpsEnums.capi.h.inc"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,88 +107,13 @@ MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirLLVMStructTypeSetBody(MlirType structType, intptr_t nFieldTypes,
                           MlirType const *fieldTypes, bool isPacked);
 
-enum MlirLLVMCConv {
-  MlirLLVMCConvC = 0,
-  MlirLLVMCConvFast = 8,
-  MlirLLVMCConvCold = 9,
-  MlirLLVMCConvGHC = 10,
-  MlirLLVMCConvHiPE = 11,
-  MlirLLVMCConvAnyReg = 13,
-  MlirLLVMCConvPreserveMost = 14,
-  MlirLLVMCConvPreserveAll = 15,
-  MlirLLVMCConvSwift = 16,
-  MlirLLVMCConvCXX_FAST_TLS = 17,
-  MlirLLVMCConvTail = 18,
-  MlirLLVMCConvCFGuard_Check = 19,
-  MlirLLVMCConvSwiftTail = 20,
-  MlirLLVMCConvX86_StdCall = 64,
-  MlirLLVMCConvX86_FastCall = 65,
-  MlirLLVMCConvARM_APCS = 66,
-  MlirLLVMCConvARM_AAPCS = 67,
-  MlirLLVMCConvARM_AAPCS_VFP = 68,
-  MlirLLVMCConvMSP430_INTR = 69,
-  MlirLLVMCConvX86_ThisCall = 70,
-  MlirLLVMCConvPTX_Kernel = 71,
-  MlirLLVMCConvPTX_Device = 72,
-  MlirLLVMCConvSPIR_FUNC = 75,
-  MlirLLVMCConvSPIR_KERNEL = 76,
-  MlirLLVMCConvIntel_OCL_BI = 77,
-  MlirLLVMCConvX86_64_SysV = 78,
-  MlirLLVMCConvWin64 = 79,
-  MlirLLVMCConvX86_VectorCall = 80,
-  MlirLLVMCConvDUMMY_HHVM = 81,
-  MlirLLVMCConvDUMMY_HHVM_C = 82,
-  MlirLLVMCConvX86_INTR = 83,
-  MlirLLVMCConvAVR_INTR = 84,
-  MlirLLVMCConvAVR_BUILTIN = 86,
-  MlirLLVMCConvAMDGPU_VS = 87,
-  MlirLLVMCConvAMDGPU_GS = 88,
-  MlirLLVMCConvAMDGPU_CS = 90,
-  MlirLLVMCConvAMDGPU_KERNEL = 91,
-  MlirLLVMCConvX86_RegCall = 92,
-  MlirLLVMCConvAMDGPU_HS = 93,
-  MlirLLVMCConvMSP430_BUILTIN = 94,
-  MlirLLVMCConvAMDGPU_LS = 95,
-  MlirLLVMCConvAMDGPU_ES = 96,
-  MlirLLVMCConvAArch64_VectorCall = 97,
-  MlirLLVMCConvAArch64_SVE_VectorCall = 98,
-  MlirLLVMCConvWASM_EmscriptenInvoke = 99,
-  MlirLLVMCConvAMDGPU_Gfx = 100,
-  MlirLLVMCConvM68k_INTR = 101,
-};
-typedef enum MlirLLVMCConv MlirLLVMCConv;
-
 /// Creates a LLVM CConv attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMCConvAttrGet(MlirContext ctx,
                                                       MlirLLVMCConv cconv);
 
-enum MlirLLVMComdat {
-  MlirLLVMComdatAny = 0,
-  MlirLLVMComdatExactMatch = 1,
-  MlirLLVMComdatLargest = 2,
-  MlirLLVMComdatNoDeduplicate = 3,
-  MlirLLVMComdatSameSize = 4,
-};
-typedef enum MlirLLVMComdat MlirLLVMComdat;
-
 /// Creates a LLVM Comdat attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMComdatAttrGet(MlirContext ctx,
                                                        MlirLLVMComdat comdat);
-
-enum MlirLLVMLinkage {
-  MlirLLVMLinkagePrivate = 0,
-  MlirLLVMLinkageInternal = 1,
-  MlirLLVMLinkageAvailableExternally = 2,
-  MlirLLVMLinkageLinkonce = 3,
-  MlirLLVMLinkageWeak = 4,
-  MlirLLVMLinkageCommon = 5,
-  MlirLLVMLinkageAppending = 6,
-  MlirLLVMLinkageExternWeak = 7,
-  MlirLLVMLinkageLinkonceODR = 8,
-  MlirLLVMLinkageWeakODR = 9,
-  MlirLLVMLinkageExternal = 10,
-};
-typedef enum MlirLLVMLinkage MlirLLVMLinkage;
 
 /// Creates a LLVM Linkage attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -258,7 +184,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
     MlirLLVMTypeEncoding encoding);
 
 /// Constant to represent std::nullopt for dwarfAddressSpace to omit the field.
-#define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL -1
+#define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL (-1)
 
 /// Gets the base type from a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -269,22 +195,6 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx,
                                                        MlirAttribute name,
                                                        MlirAttribute directory);
 
-enum MlirLLVMDIEmissionKind {
-  MlirLLVMDIEmissionKindNone = 0,
-  MlirLLVMDIEmissionKindFull = 1,
-  MlirLLVMDIEmissionKindLineTablesOnly = 2,
-  MlirLLVMDIEmissionKindDebugDirectivesOnly = 3,
-};
-typedef enum MlirLLVMDIEmissionKind MlirLLVMDIEmissionKind;
-
-enum MlirLLVMDINameTableKind {
-  MlirLLVMDINameTableKindDefault = 0,
-  MlirLLVMDINameTableKindGNU = 1,
-  MlirLLVMDINameTableKindNone = 2,
-  MlirLLVMDINameTableKindApple = 3,
-};
-typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
-
 /// Creates a LLVM DICompileUnit attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
@@ -293,7 +203,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
 
 /// Creates a LLVM DIFlags attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx,
-                                                        uint64_t value);
+                                                        MlirLLVMDIFlags value);
 
 /// Creates a LLVM DILexicalBlock attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILexicalBlockAttrGet(
@@ -311,12 +221,18 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     MlirAttribute diFile, unsigned int line, unsigned int arg,
     unsigned int alignInBits, MlirAttribute diType, int64_t flags);
 
+/// Creates a LLVM DINamespaceAttr attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDINamespaceAttrGet(MlirContext ctx,
+                                                            MlirAttribute name,
+                                                            MlirAttribute scope,
+                                                            bool exportSymbols);
+
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(
     MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
     MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
     MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type);
+    MlirLLVMDISubprogramFlags subprogramFlags, MlirAttribute type);
 
 /// Gets the scope from this DISubprogramAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -329,6 +245,18 @@ mlirLLVMDISubprogramAttrGetLine(MlirAttribute diSubprogram);
 /// Gets the scope line from this DISubprogram.
 MLIR_CAPI_EXPORTED unsigned int
 mlirLLVMDISubprogramAttrGetScopeLine(MlirAttribute diSubprogram);
+
+/// Gets the linkage name from this DISubprogramAttr.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLLVMDISubprogramAttrGetLinkageName(MlirAttribute diSubprogram);
+
+/// Gets the name from this DISubprogramAttr.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLLVMDISubprogramAttrGetName(MlirAttribute diSubprogram);
+
+/// Gets the subprogram flags from this DISubprogramAttr.
+MLIR_CAPI_EXPORTED MlirLLVMDISubprogramFlags
+mlirLLVMDISubprogramAttrGetSubprogramFlags(MlirAttribute diSubprogram);
 
 /// Gets the compile unit from this DISubprogram.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -356,6 +284,68 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIModuleAttrGet(
 /// Gets the scope of this DIModuleAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule);
+
+/// Gets the api notes of this DIModuleAttr.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLLVMDIModuleAttrGetApinotes(MlirAttribute diModule);
+
+/// Gets the config macros of this DIModuleAttr.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLLVMDIModuleAttrGetConfigMacros(MlirAttribute diModule);
+
+/// Gets the file of this DIModuleAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDIModuleAttrGetFile(MlirAttribute diModule);
+
+/// Gets the include path of this DIModuleAttr.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLLVMDIModuleAttrGetIncludePath(MlirAttribute diModule);
+
+/// Gets whether this DIModuleAttr is a declaration.
+MLIR_CAPI_EXPORTED bool mlirLLVMDIModuleAttrGetIsDecl(MlirAttribute diModule);
+
+/// Creates a LLVM DISubrange attribute.
+///
+/// All parameters have the type IntegerAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubrangeAttrGet(
+    MlirContext ctx, MlirAttribute count, MlirAttribute lowerBound,
+    MlirAttribute upperBound, MlirAttribute stride);
+
+/// Creates a LLVM AtomicOrderingAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMAtomicOrderingAttrGet(MlirContext ctx, MlirLLVMAtomicOrdering ordering);
+
+/// Creates a LLVM AtomicBinOpAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMAtomicBinOpAttrGet(MlirContext ctx, MlirLLVMAtomicBinOp val);
+
+/// Creates a LLVM VisibilityAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMVisibilityAttrGet(MlirContext ctx, MlirLLVMVisibility visibility);
+
+/// Creates a LLVM UnnamedAddrAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMUnnamedAddrAttrGet(MlirContext ctx, MlirLLVMUnnamedAddr val);
+
+/// Creates a LLVM ICmpPredicateAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMICmpPredicateAttrGet(MlirContext ctx, MlirLLVMICmpPredicate val);
+
+/// Creates a LLVM FCmpPredicateAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMFCmpPredicateAttrGet(MlirContext ctx, MlirLLVMFCmpPredicate val);
+
+/// Creates a LLVM FramePointerKindAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMFramePointerKindAttrGet(MlirContext ctx, MlirLLVMFramePointerKind val);
+
+/// Creates a LLVM FastmathFlagsAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMFastmathFlagsAttrGet(MlirContext ctx, MlirLLVMFastmathFlags val);
+
+/// Creates a LLVM ModRefInfoAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMModRefInfoAttrGet(MlirContext ctx, MlirLLVMModRefInfo val);
 
 #ifdef __cplusplus
 }

@@ -6,6 +6,7 @@ mlir_tablegen(LLVMOps.cpp.inc -gen-op-defs)
 mlir_tablegen(LLVMOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(LLVMOpsDialect.cpp.inc -gen-dialect-defs)
 mlir_tablegen(LLVMOpsEnums.h.inc -gen-enum-decls)
+mlir_tablegen(LLVMOpsEnums.capi.h.inc -gen-enum-capi-decls)
 mlir_tablegen(LLVMOpsEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(LLVMOpsAttrDefs.h.inc -gen-attrdef-decls
               -attrdefs-dialect=llvm)

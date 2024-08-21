@@ -6190,6 +6190,10 @@ gentbl_cc_library(
             "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc",
         ),
         (
+            ["-gen-enum-capi-decls"],
+            "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.capi.h.inc"
+        )
+        (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc",
         ),
