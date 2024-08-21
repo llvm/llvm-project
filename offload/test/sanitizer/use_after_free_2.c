@@ -26,7 +26,7 @@ int main() {
 // CHECK: Device pointer [[PTR]] points into prior host-issued allocation:
 // CHECK: Last deallocation:
 // CHECK: Last allocation of size 1073741824
-  // clang-format on
+// clang-format on
 #pragma omp target
   { *P = 5; }
 }
