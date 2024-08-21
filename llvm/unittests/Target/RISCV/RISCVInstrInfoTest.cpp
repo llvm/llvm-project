@@ -30,6 +30,7 @@ class RISCVInstrInfoTest : public testing::TestWithParam<const char *> {
 protected:
   std::unique_ptr<RISCVTargetMachine> TM;
   std::unique_ptr<LLVMContext> Ctx;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<RISCVSubtarget> ST;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
@@ -52,11 +53,14 @@ protected:
         CodeGenOptLevel::Default)));
 
     Ctx = std::make_unique<LLVMContext>();
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     M = std::make_unique<Module>("Module", *Ctx);
     M->setDataLayout(TM->createDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*Ctx), false);
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(*TM, *MCCtx);
 
     ST = std::make_unique<RISCVSubtarget>(
         TM->getTargetTriple(), TM->getTargetCPU(), TM->getTargetCPU(),

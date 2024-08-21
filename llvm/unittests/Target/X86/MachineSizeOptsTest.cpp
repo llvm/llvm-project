@@ -43,6 +43,7 @@ class MachineSizeOptsTest : public testing::Test {
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<MachineModuleInfo> MMI;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<MIRParser> Parser;
   std::unique_ptr<Module> M;
   struct BFIData {
@@ -67,6 +68,9 @@ class MachineSizeOptsTest : public testing::Test {
 
   void SetUp() override {
     TM = createTargetMachine();
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     std::unique_ptr<MemoryBuffer> MBuffer =
         MemoryBuffer::getMemBuffer(MIRString);
     Parser = createMIRParser(std::move(MBuffer), Context);
@@ -77,7 +81,7 @@ class MachineSizeOptsTest : public testing::Test {
       report_fatal_error("parseIRModule failed");
     M->setTargetTriple(TM->getTargetTriple().getTriple());
     M->setDataLayout(TM->createDataLayout());
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(*TM, *MCCtx);
     if (Parser->parseMachineFunctions(*M, *MMI))
       report_fatal_error("parseMachineFunctions failed");
   }

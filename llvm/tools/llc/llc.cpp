@@ -674,8 +674,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     const char *argv0 = argv[0];
     LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
+    MCContext MCCtx(LLVMTM.getTargetTriple(), LLVMTM.getMCAsmInfo(),
+                    LLVMTM.getMCRegisterInfo(), LLVMTM.getMCSubtargetInfo(),
+                    nullptr, &LLVMTM.Options.MCOptions, false);
+    auto MMI = LLVMTM.createMachineModuleInfo(MCCtx);
     MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(&LLVMTM);
+        new MachineModuleInfoWrapperPass(*MMI);
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -710,7 +714,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(createFreeMachineFunctionPass());
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
+                   codegen::getFileType(), *MMI, NoVerify)) {
       reportError("target does not support generation of this file type");
     }
 
@@ -718,7 +722,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         ->Initialize(MMIWP->getMMI().getContext(), *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
-      if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
+      if (MIR->parseMachineFunctions(*M, *MMI))
         return 1;
     }
 
@@ -735,6 +739,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.run(*M2);
       CompileTwiceBuffer = Buffer;
       Buffer.clear();
+      MCCtx.reset();
     }
 
     PM.run(*M);

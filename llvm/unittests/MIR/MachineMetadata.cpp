@@ -225,8 +225,10 @@ body:             |
   %1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p)
 ...
 )MIR";
-
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
@@ -337,7 +339,10 @@ body:             |
 ...
 )MIR";
 
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
@@ -375,7 +380,10 @@ body:             |
 ...
 )MIR";
 
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
@@ -473,7 +481,10 @@ body:             |
 ...
 )MIR";
 
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
@@ -562,7 +573,10 @@ body:             |
 
 ...
 )MIR";
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
@@ -593,7 +607,10 @@ body:             |
 
 ...
 )MIR";
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(
+      TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+      TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/FileCheck/FileCheck.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -53,9 +54,11 @@ std::ostream &
 operator<<(std::ostream &OS, const MachineFunction &MF);
 }
 
-static std::unique_ptr<Module>
-parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
-         const TargetMachine &TM, StringRef MIRCode, MachineModuleInfo &MMI) {
+static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
+                                        std::unique_ptr<MIRParser> &MIR,
+                                        const TargetMachine &TM,
+                                        StringRef MIRCode,
+                                        MachineModuleInfo &MMI) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -75,9 +78,10 @@ parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
 }
 static std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
 createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
-                  StringRef MIRString, const char *FuncName) {
+                  MCContext &MCContext, StringRef MIRString,
+                  const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
-  auto MMI = std::make_unique<MachineModuleInfo>(&TM);
+  auto MMI = std::make_unique<MachineModuleInfo>(TM, MCContext);
   std::unique_ptr<Module> M = parseMIR(Context, MIR, TM, MIRString, *MMI);
   return make_pair(std::move(M), std::move(MMI));
 }
@@ -113,11 +117,14 @@ protected:
     TM = createTargetMachine();
     if (!TM)
       return;
-
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     SmallString<512> MIRString;
     getTargetTestModuleString(MIRString, ExtraAssembly);
 
-    ModuleMMIPair = createDummyModule(Context, *TM, MIRString, "func");
+    ModuleMMIPair =
+        createDummyModule(Context, *TM, *MCCtx, MIRString, "func");
     MF = getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
     collectCopies(Copies, MF);
     EntryMBB = &*MF->begin();
@@ -127,6 +134,7 @@ protected:
   }
 
   LLVMContext Context;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<LLVMTargetMachine> TM;
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>

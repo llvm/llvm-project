@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -70,8 +71,12 @@ protected:
     legacy::PassManager PM;
     PM.add(new AddMetadataPass(PalMDString));
     raw_svector_ostream OutStream(Elf);
+    MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                    TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                    &TM->Options.MCOptions, false);
+    MachineModuleInfo MMI(*TM, MCCtx);
     if (TM->addPassesToEmitFile(PM, OutStream, nullptr,
-                                CodeGenFileType::ObjectFile))
+                                CodeGenFileType::ObjectFile, MMI))
       report_fatal_error("Target machine cannot emit a file of this type");
 
     PM.run(*M);

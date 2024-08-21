@@ -32,9 +32,12 @@ protected:
   void SetUp() override {
     TM = State.createTargetMachine();
     Context = std::make_unique<LLVMContext>();
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     Mod = std::make_unique<Module>("X86SnippetRepetitorTest", *Context);
     Mod->setDataLayout(TM->createDataLayout());
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(*TM, *MCCtx);
     MF = &createVoidVoidPtrMachineFunction("TestFn", Mod.get(), MMI.get());
   }
 
@@ -57,6 +60,7 @@ protected:
 
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<LLVMContext> Context;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<Module> Mod;
   std::unique_ptr<MachineModuleInfo> MMI;
   MachineFunction *MF = nullptr;

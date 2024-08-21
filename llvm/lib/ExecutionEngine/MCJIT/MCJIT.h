@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/MC/MCContext.h"
 
 namespace llvm {
 class MCJIT;
@@ -169,7 +170,7 @@ class MCJIT : public ExecutionEngine {
   };
 
   std::unique_ptr<TargetMachine> TM;
-  MCContext *Ctx;
+  MCContext MCCtx;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   LinkingSymbolResolver Resolver;
   RuntimeDyld Dyld;

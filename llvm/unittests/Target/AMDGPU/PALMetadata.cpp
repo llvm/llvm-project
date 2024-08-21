@@ -27,6 +27,7 @@ class PALMetadata : public testing::Test {
 protected:
   std::unique_ptr<GCNTargetMachine> TM;
   std::unique_ptr<LLVMContext> Ctx;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<GCNSubtarget> ST;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
@@ -52,17 +53,20 @@ protected:
         Triple, CPU, FS, Options, std::nullopt, std::nullopt)));
 
     Ctx = std::make_unique<LLVMContext>();
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     M = std::make_unique<Module>("Module", *Ctx);
     M->setDataLayout(TM->createDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*Ctx), false);
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(*TM, *MCCtx);
 
     ST = std::make_unique<GCNSubtarget>(TM->getTargetTriple(),
                                         TM->getTargetCPU(),
                                         TM->getTargetFeatureString(), *TM);
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 1);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *ST, *MCCtx, 1);
   }
 };
 

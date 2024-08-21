@@ -19,6 +19,7 @@
 #include "TestRunner.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -179,10 +180,11 @@ int main(int Argc, char **Argv) {
     disableEnvironmentDebugFeatures();
 
   LLVMContext Context;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<TargetMachine> TM;
 
-  auto [OriginalProgram, InputIsBitcode] =
-      parseReducerWorkItem(ToolName, InputFilename, Context, TM, ReduceModeMIR);
+  auto [OriginalProgram, InputIsBitcode] = parseReducerWorkItem(
+      ToolName, InputFilename, Context, MCCtx, TM, ReduceModeMIR);
   if (!OriginalProgram) {
     return 1;
   }
@@ -194,8 +196,8 @@ int main(int Argc, char **Argv) {
 
   // Initialize test environment
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
-                    std::move(TM), ToolName, OutputFilename, InputIsBitcode,
-                    OutputBitcode);
+                    std::move(TM), std::move(MCCtx), ToolName, OutputFilename,
+                    InputIsBitcode, OutputBitcode);
 
   // This parses and writes out the testcase into a temporary file copy for the
   // test, rather than evaluating the source IR directly. This is for the

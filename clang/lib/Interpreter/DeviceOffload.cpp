@@ -16,8 +16,10 @@
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -88,8 +90,13 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
   llvm::raw_svector_ostream dest(PTXCode);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
-                                         llvm::CodeGenFileType::AssemblyFile)) {
+  llvm::MCContext MCCtx(
+      TargetMachine->getTargetTriple(), TargetMachine->getMCAsmInfo(),
+      TargetMachine->getMCRegisterInfo(), TargetMachine->getMCSubtargetInfo(),
+      nullptr, &TargetMachine->Options.MCOptions, false);
+  auto MMI = TargetMachine->createMachineModuleInfo(MCCtx);
+  if (TargetMachine->addPassesToEmitFile(
+          PM, dest, nullptr, llvm::CodeGenFileType::AssemblyFile, *MMI)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",
         llvm::inconvertibleErrorCode());

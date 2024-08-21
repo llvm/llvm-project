@@ -34,7 +34,7 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineModuleInfoWrapperPass;
+class MachineModuleInfo;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
@@ -375,27 +375,27 @@ public:
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
+  /// Creates a new instance of \c MachineModuleInfo to be used for code
+  /// generation for this \c TargetMachine
+  virtual std::unique_ptr<MachineModuleInfo>
+  createMachineModuleInfo(MCContext &Ctx) const = 0;
+
   /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
+  /// emitted. Typically this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  virtual bool
-  addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
-                      raw_pwrite_stream *, CodeGenFileType,
-                      bool /*DisableVerify*/ = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) {
+  /// \p MMI must be created externally before being passed to this function
+  virtual bool addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
+                                   raw_pwrite_stream *, CodeGenFileType,
+                                   MachineModuleInfo &MMI,
+                                   bool /*DisableVerify*/ = true) {
     return true;
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  ///
-  virtual bool addPassesToEmitMC(PassManagerBase &, MCContext *&,
-                                 raw_pwrite_stream &,
+  /// the MCJIT. This method returns true if machine code is not supported.
+  virtual bool addPassesToEmitMC(PassManagerBase &, raw_pwrite_stream &,
+                                 MachineModuleInfo &,
                                  bool /*DisableVerify*/ = true) {
     return true;
   }
@@ -459,15 +459,18 @@ public:
   /// for generating a pipeline of CodeGen passes.
   virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
 
+  /// Creates a new instance of \c MachineModuleInfo to be used for code
+  /// generation for this \c TargetMachine
+  virtual std::unique_ptr<MachineModuleInfo>
+  createMachineModuleInfo(MCContext &Ctx) const override;
+
   /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  bool
-  addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      bool DisableVerify = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
+  /// emitted. Typically this will involve several steps of code generation.
+  /// \p MMI must be created externally before being passed to this function
+  bool addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
+                           raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+                           MachineModuleInfo &MMI,
+                           bool DisableVerify = true) override;
 
   virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                                      raw_pwrite_stream *, CodeGenFileType,
@@ -478,11 +481,9 @@ public:
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
-                         raw_pwrite_stream &Out,
+  /// the MCJIT. This method returns true if machine code is not supported.
+  bool addPassesToEmitMC(PassManagerBase &PM, raw_pwrite_stream &Out,
+                         MachineModuleInfo &MMI,
                          bool DisableVerify = true) override;
 
   /// Returns true if the target is expected to pass all machine verifier

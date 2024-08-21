@@ -9,6 +9,7 @@
 #include "TestRunner.h"
 #include "ReducerWorkItem.h"
 #include "deltas/Utils.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
@@ -16,11 +17,12 @@ using namespace llvm;
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
-                       std::unique_ptr<TargetMachine> TM, StringRef ToolName,
+                       std::unique_ptr<TargetMachine> TM,
+                       std::unique_ptr<MCContext> MCCtx, StringRef ToolName,
                        StringRef OutputName, bool InputIsBitcode,
                        bool OutputBitcode)
     : TestName(TestName), ToolName(ToolName), TestArgs(TestArgs),
-      Program(std::move(Program)), TM(std::move(TM)),
+      Program(std::move(Program)), TM(std::move(TM)), MCCtx(std::move(MCCtx)),
       OutputFilename(OutputName), InputIsBitcode(InputIsBitcode),
       EmitBitcode(OutputBitcode) {
   assert(this->Program && "Initialized with null program?");
