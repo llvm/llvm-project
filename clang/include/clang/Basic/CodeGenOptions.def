@@ -177,6 +177,7 @@ CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(SplitColdCode     , 1, 0) ///< Set when -fsplit-cold-code is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
 CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
+CODEGENOPT(MipsMsa           , 1, 0) ///< Set when -Wa,-mmsa is enabled.
 CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
                                      ///< enabled.
 CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
