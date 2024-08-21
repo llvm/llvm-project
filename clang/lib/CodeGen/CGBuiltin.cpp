@@ -14464,7 +14464,7 @@ static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
 }
 
 Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
-  const unsigned RISCVFeatureLength = llvm::RISCV::FeatureBitSize;
+  const unsigned RISCVFeatureLength = llvm::RISCVISAInfo::FeatureBitSize;
   uint64_t RequireBitMasks[RISCVFeatureLength] = {0};
 
   for (auto Feat : FeaturesStrs) {
