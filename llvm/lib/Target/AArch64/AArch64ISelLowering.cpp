@@ -1790,7 +1790,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // If we have SVE, we can use SVE logic for legal (or smaller than legal)
     // NEON vectors in the lowest bits of the SVE register.
     for (auto VT : {MVT::v2i8, MVT::v2i16, MVT::v2i32, MVT::v2i64, MVT::v2f32,
-                    MVT::v2f64, MVT::v4i8, MVT::v4i16, MVT::v4i32, MVT::v4f32})
+                    MVT::v2f64, MVT::v4i8, MVT::v4i16, MVT::v4i32, MVT::v4f32,
+                    MVT::v8i8, MVT::v8i16, MVT::v16i8})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // Histcnt is SVE2 only
@@ -6660,8 +6661,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
     return SDValue();
 
   // We can use the SVE register containing the NEON vector in its lowest bits.
-  // TODO: check if ==2|4 is needed
-  if (IsFixedLength && (MinElmts == 2 || MinElmts == 4)) {
+  if (IsFixedLength) {
     EVT ScalableVecVT =
         MVT::getScalableVectorVT(ElmtVT.getSimpleVT(), MinElmts);
     EVT ScalableMaskVT = MVT::getScalableVectorVT(
