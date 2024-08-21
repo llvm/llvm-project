@@ -6,7 +6,7 @@
 define <4 x i32> @test_v4i32_xor_repeated_and_0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @test_v4i32_xor_repeated_and_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = and <4 x i32> %a, %b
@@ -18,7 +18,7 @@ define <4 x i32> @test_v4i32_xor_repeated_and_0(<4 x i32> %a, <4 x i32> %b, <4 x
 define <4 x i32> @test_v4i32_xor_repeated_and_1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @test_v4i32_xor_repeated_and_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = and <4 x i32> %a, %b
@@ -69,7 +69,7 @@ define <4 x i32> @test_v4i32_xor_bswap_const_poison(<4 x i32> %a0) {
 define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_and(
 ; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[Y_NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %x
@@ -83,7 +83,7 @@ define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @test_v4i32_demorgan_or(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_or(
 ; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y_NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %x
