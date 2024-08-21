@@ -2,8 +2,8 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("CodeGenDataTests") {
   deps = [
+    "//llvm/lib/CGData",
     "//llvm/lib/CodeGen",
-    "//llvm/lib/CodeGenData",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
