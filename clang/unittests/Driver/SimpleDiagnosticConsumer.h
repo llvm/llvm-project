@@ -15,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 struct SimpleDiagnosticConsumer : public clang::DiagnosticConsumer {
   void HandleDiagnostic(clang::DiagnosticsEngine::Level DiagLevel,
@@ -35,5 +36,20 @@ struct SimpleDiagnosticConsumer : public clang::DiagnosticConsumer {
   std::vector<llvm::SmallString<32>> Msgs;
   std::vector<llvm::SmallString<32>> Errors;
 };
+
+// Using SimpleDiagnosticConsumer, this function makes a clang Driver, suitable
+// for testing situations where it will only ever be used for emitting
+// diagnostics, such as being passed to `MultilibSet::select`.
+inline clang::driver::Driver diagnostic_test_driver() {
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
+      new clang::DiagnosticIDs());
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  auto *DiagConsumer = new SimpleDiagnosticConsumer;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts =
+      new clang::DiagnosticOptions();
+  clang::DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  return clang::driver::Driver("/bin/clang", "", Diags, "", InMemoryFileSystem);
+}
 
 #endif // CLANG_UNITTESTS_SIMPLEDIAGNOSTICCONSUMER_H

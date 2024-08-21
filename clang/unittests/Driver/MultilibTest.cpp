@@ -12,6 +12,7 @@
 
 #include "clang/Driver/Multilib.h"
 #include "../../lib/Driver/ToolChains/CommonArgs.h"
+#include "SimpleDiagnosticConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -153,16 +154,17 @@ TEST(MultilibTest, SetPriority) {
       Multilib("/foo", {}, {}, {"+foo"}),
       Multilib("/bar", {}, {}, {"+bar"}),
   });
+  Driver TheDriver = diagnostic_test_driver();
   Multilib::flags_list Flags1 = {"+foo", "-bar"};
   llvm::SmallVector<Multilib> Selection1;
-  ASSERT_TRUE(MS.select(Flags1, Selection1))
+  ASSERT_TRUE(MS.select(Flags1, Selection1, TheDriver))
       << "Flag set was {\"+foo\"}, but selection not found";
   ASSERT_TRUE(Selection1.back().gccSuffix() == "/foo")
       << "Selection picked " << Selection1.back() << " which was not expected";
 
   Multilib::flags_list Flags2 = {"+foo", "+bar"};
   llvm::SmallVector<Multilib> Selection2;
-  ASSERT_TRUE(MS.select(Flags2, Selection2))
+  ASSERT_TRUE(MS.select(Flags2, Selection2, TheDriver))
       << "Flag set was {\"+bar\"}, but selection not found";
   ASSERT_TRUE(Selection2.back().gccSuffix() == "/bar")
       << "Selection picked " << Selection2.back() << " which was not expected";
@@ -174,16 +176,17 @@ TEST(MultilibTest, SelectMultiple) {
       Multilib("/b", {}, {}, {"y"}),
   });
   llvm::SmallVector<Multilib> Selection;
+  Driver TheDriver = diagnostic_test_driver();
 
-  ASSERT_TRUE(MS.select({"x"}, Selection));
+  ASSERT_TRUE(MS.select({"x"}, Selection, TheDriver));
   ASSERT_EQ(1u, Selection.size());
   EXPECT_EQ("/a", Selection[0].gccSuffix());
 
-  ASSERT_TRUE(MS.select({"y"}, Selection));
+  ASSERT_TRUE(MS.select({"y"}, Selection, TheDriver));
   ASSERT_EQ(1u, Selection.size());
   EXPECT_EQ("/b", Selection[0].gccSuffix());
 
-  ASSERT_TRUE(MS.select({"y", "x"}, Selection));
+  ASSERT_TRUE(MS.select({"y", "x"}, Selection, TheDriver));
   ASSERT_EQ(2u, Selection.size());
   EXPECT_EQ("/a", Selection[0].gccSuffix());
   EXPECT_EQ("/b", Selection[1].gccSuffix());
@@ -277,7 +280,9 @@ Variants:
 Variants:
 - Flags: []
 )"));
-  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Dir'"))
+  EXPECT_TRUE(
+      StringRef(Diagnostic)
+          .contains("one of the 'Dir' and 'FatalError' keys must be specified"))
       << Diagnostic;
 
   EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
@@ -364,9 +369,10 @@ Mappings:
 - Match: -mfloat-abi=softfp
   Flags: [-mfloat-abi=soft]
 )"));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=soft"}, Selected));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected));
+  Driver TheDriver = diagnostic_test_driver();
+  EXPECT_TRUE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
 }
 
 TEST(MultilibTest, SelectSoftFP) {
@@ -377,9 +383,10 @@ Variants:
 - Dir: f
   Flags: [-mfloat-abi=softfp]
 )"));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected));
+  Driver TheDriver = diagnostic_test_driver();
+  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
 }
 
 TEST(MultilibTest, SelectHard) {
@@ -392,9 +399,10 @@ Variants:
 - Dir: h
   Flags: [-mfloat-abi=hard]
 )"));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected));
-  EXPECT_FALSE(MS.select({"-mfloat-abi=softfp"}, Selected));
-  EXPECT_TRUE(MS.select({"-mfloat-abi=hard"}, Selected));
+  Driver TheDriver = diagnostic_test_driver();
+  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected, TheDriver));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=hard"}, Selected, TheDriver));
 }
 
 TEST(MultilibTest, SelectFloatABI) {
@@ -412,11 +420,12 @@ Mappings:
 - Match: -mfloat-abi=softfp
   Flags: [-mfloat-abi=soft]
 )"));
-  MS.select({"-mfloat-abi=soft"}, Selected);
+  Driver TheDriver = diagnostic_test_driver();
+  MS.select({"-mfloat-abi=soft"}, Selected, TheDriver);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=softfp"}, Selected);
+  MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver);
   EXPECT_EQ("/f", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=hard"}, Selected);
+  MS.select({"-mfloat-abi=hard"}, Selected, TheDriver);
   EXPECT_EQ("/h", Selected.back().gccSuffix());
 }
 
@@ -437,15 +446,18 @@ Mappings:
 - Match: -mfloat-abi=softfp
   Flags: [-mfloat-abi=soft]
 )"));
-  MS.select({"-mfloat-abi=soft"}, Selected);
+  Driver TheDriver = diagnostic_test_driver();
+  MS.select({"-mfloat-abi=soft"}, Selected, TheDriver);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=softfp"}, Selected);
+  MS.select({"-mfloat-abi=softfp"}, Selected, TheDriver);
   EXPECT_EQ("/s", Selected.back().gccSuffix());
-  MS.select({"-mfloat-abi=hard"}, Selected);
+  MS.select({"-mfloat-abi=hard"}, Selected, TheDriver);
   EXPECT_EQ("/h", Selected.back().gccSuffix());
 }
 
 TEST(MultilibTest, SelectMClass) {
+  Driver TheDriver = diagnostic_test_driver();
+
   const char *MultilibSpec = YAML_PREAMBLE R"(
 Variants:
 - Dir: thumb/v6-m/nofp
@@ -494,44 +506,47 @@ Mappings:
   ASSERT_TRUE(parseYaml(MS, MultilibSpec));
 
   ASSERT_TRUE(MS.select({"--target=thumbv6m-none-unknown-eabi", "-mfpu=none"},
-                        Selected));
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v6-m/nofp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select({"--target=thumbv7m-none-unknown-eabi", "-mfpu=none"},
-                        Selected));
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v7-m/nofp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select({"--target=thumbv7em-none-unknown-eabi", "-mfpu=none"},
-                        Selected));
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v7e-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select(
-      {"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"},
+                Selected, TheDriver));
   EXPECT_EQ("/thumb/v8-m.main/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select(
-      {"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"},
+                Selected, TheDriver));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/nomve", Selected.back().gccSuffix());
 
   ASSERT_TRUE(
       MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv4-sp-d16"},
-                Selected));
+                Selected, TheDriver));
   EXPECT_EQ("/thumb/v7e-m/fpv4_sp_d16", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select(
-      {"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"}, Selected));
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"},
+                Selected, TheDriver));
   EXPECT_EQ("/thumb/v7e-m/fpv5_d16", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(
-      MS.select({"--target=thumbv8m.main-none-unknown-eabihf"}, Selected));
+  ASSERT_TRUE(MS.select({"--target=thumbv8m.main-none-unknown-eabihf"},
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v8-m.main/fp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(
-      MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf"}, Selected));
+  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf"},
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v8.1-m.main/fp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf",
                          "-mfpu=none", "-march=thumbv8.1m.main+dsp+mve"},
-                        Selected));
+                        Selected, TheDriver));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/mve", Selected.back().gccSuffix());
 }

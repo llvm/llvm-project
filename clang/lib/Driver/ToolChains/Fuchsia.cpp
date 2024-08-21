@@ -324,7 +324,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   Multilibs.setFilePathsCallback(FilePaths);
 
-  if (Multilibs.select(Flags, SelectedMultilibs)) {
+  if (Multilibs.select(Flags, SelectedMultilibs, D)) {
     // Ensure that -print-multi-directory only outputs one multilib directory.
     Multilib LastSelected = SelectedMultilibs.back();
     SelectedMultilibs = {LastSelected};
