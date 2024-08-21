@@ -25,7 +25,7 @@ llvm.func @test_phi_locations(%arg0: !llvm.ptr)  {
 #loc3 = loc("test.f90":9:5)
 #loc4 = loc(fused<#sp>[#loc1])
 
-// CHECK-LABEL: define void @test
+// CHECK-LABEL: define void @test_phi_locations
 // CHECK: phi i32{{.*}}!dbg ![[LOC1:[0-9]+]]
 // CHECK: phi i64{{.*}}!dbg ![[LOC2:[0-9]+]]
 // CHECK: ![[LOC1]] = !DILocation(line: 8, column: 2{{.*}})
