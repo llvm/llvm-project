@@ -10930,8 +10930,31 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       if (CanBeUsedAsScalar) {
         InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
         bool KeepScalar = ScalarCost <= ExtraCost;
-        if (KeepScalar && ScalarCost != TTI::TCC_Free &&
-            ExtraCost - ScalarCost <= TTI::TCC_Basic) {
+        // Try to keep original scalar if the user is the phi node from the same
+        // block as the root phis, currently vectorized. It allows to keep
+        // better ordering info of PHIs, being vectorized currently.
+        bool IsProfitablePHIUser =
+            (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
+                            VectorizableTree.front()->Scalars.size() > 2)) &&
+            VectorizableTree.front()->getOpcode() == Instruction::PHI &&
+            !Inst->hasNUsesOrMore(UsesLimit) &&
+            none_of(Inst->users(),
+                    [&](User *U) {
+                      auto *PHIUser = dyn_cast<PHINode>(U);
+                      return (!PHIUser ||
+                              PHIUser->getParent() !=
+                                  cast<Instruction>(
+                                      VectorizableTree.front()->getMainOp())
+                                      ->getParent()) &&
+                             !getTreeEntry(U);
+                    }) &&
+            count_if(Entry->Scalars, [&](Value *V) {
+              return ValueToExtUses->contains(V);
+            }) <= 2;
+        if (IsProfitablePHIUser) {
+          KeepScalar = true;
+        } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
+                   ExtraCost - ScalarCost <= TTI::TCC_Basic) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
             return ValueToExtUses->contains(V);
           });
