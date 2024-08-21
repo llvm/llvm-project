@@ -178,6 +178,16 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
+define <vscale x 8 x i1> @test_facge(<vscale x 8 x half> %a, <vscale x 8 x half> %b){ry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.facge.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+  ret <vscale x 8 x i1> %0
+}
+
+define <vscale x 8 x i1> @test_facgt(<vscale x 8 x half> %a, <vscale x 8 x half> %b){ry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.facgt.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+  ret <vscale x 8 x i1> %0
+}
+
 define <vscale x 8 x i1> @test_fcmpeq(<vscale x 8 x half> %a, <vscale x 8 x half> %b){
 ; CHECK-LABEL: define <vscale x 8 x i1> @test_fcmpeq(
 ; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) {

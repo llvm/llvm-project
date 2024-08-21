@@ -2149,6 +2149,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cmplo_wide:
   case Intrinsic::aarch64_sve_cmpls_wide:
   case Intrinsic::aarch64_sve_cmplt_wide:
+  case Intrinsic::aarch64_sve_facge:
+  case Intrinsic::aarch64_sve_facgt:
   case Intrinsic::aarch64_sve_fcmpeq:
   case Intrinsic::aarch64_sve_fcmpge:
   case Intrinsic::aarch64_sve_fcmpgt:
