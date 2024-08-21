@@ -94,7 +94,7 @@ void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 constexpr bool no_placement_new_in_user_code() { // cxx20-error {{constexpr function never produces a constant expression}}
   int a;
-  new (&a) int(42); // cxx20-note {{this placement new expression is not yet supported in constant expressions}}
+  new (&a) int(42); // cxx20-note {{this placement new expression is not supported in constant expressions before C++2c}}
   return a == 42;
 }
 

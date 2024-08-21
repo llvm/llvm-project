@@ -10009,7 +10009,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   bool IsNothrow = false;
   bool IsPlacement = false;
 
-  if (E->getNumPlacementArgs() && E->getNumPlacementArgs() == 1 &&
+  if (E->getNumPlacementArgs() == 1 &&
       E->getPlacementArg(0)->getType()->isNothrowT()) {
     // The only new-placement list we support is of the form (std::nothrow).
     //
@@ -10025,17 +10025,23 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
       return false;
     IsNothrow = true;
-  } else if (OperatorNew->isReservedGlobalPlacementOperator() &&
-             (Info.CurrentCall->isStdFunction() ||
-              Info.getLangOpts().CPlusPlus26)) {
-    if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
+  } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
+    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26) {
+      if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
+        return false;
+      if (Result.Designator.Invalid)
+        return false;
+      TargetType = E->getPlacementArg(0)->getType();
+      IsPlacement = true;
+    } else {
+      Info.FFDiag(E, diag::note_constexpr_new_placement)
+          << /*C++26 feature*/ 1 << E->getSourceRange();
       return false;
-    if (Result.Designator.Invalid)
-      return false;
-    TargetType = E->getPlacementArg(0)->getType();
-    IsPlacement = true;
+    }
   } else if (E->getNumPlacementArgs()) {
-    return Error(E, diag::note_constexpr_new_placement);
+    Info.FFDiag(E, diag::note_constexpr_new_placement)
+        << /*Unsupported*/ 0 << E->getSourceRange();
+    return false;
   } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
