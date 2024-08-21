@@ -870,17 +870,40 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
     lex();
     LaneBitmask Mask = LaneBitmask::getAll();
     if (consumeIfPresent(MIToken::colon)) {
-      // Parse lane mask.
-      if (Token.isNot(MIToken::IntegerLiteral) &&
-          Token.isNot(MIToken::HexLiteral))
-        return error("expected a lane mask");
-      static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
-                    "Use correct get-function for lane mask");
-      LaneBitmask::Type V;
-      if (getUint64(V))
-        return error("invalid lane mask value");
-      Mask = LaneBitmask(V);
-      lex();
+      if (consumeIfPresent(MIToken::lparen)) {
+        // We need to parse a list of literals
+        SmallVector<uint64_t, 2> Literals;
+        while (true) {
+          if (Token.isNot(MIToken::HexLiteral))
+            return error("expected a lane mask");
+          APInt V;
+          getHexUint(V);
+          Literals.push_back(V.getZExtValue());
+          // Lex past literal
+          lex();
+          if (Token.is(MIToken::rparen))
+            break;
+          else if (Token.isNot(MIToken::comma))
+            return error("expected a comma");
+          // Lex past comma
+          lex();
+        }
+        // Lex past rparen
+        lex();
+        Mask = LaneBitmask(APInt(LaneBitmask::BitWidth, Literals));
+      } else {
+        // Parse lane mask.
+        APInt V;
+        if (Token.is(MIToken::IntegerLiteral)) {
+          uint64_t UV;
+          if (getUint64(UV))
+            return error("invalid lane mask value");
+          V = APInt(LaneBitmask::BitWidth, UV);
+        } else if (getHexUint(V))
+          return error("expected a lane mask");
+        Mask = LaneBitmask(APInt(LaneBitmask::BitWidth, V.getZExtValue()));
+        lex();
+      }
     }
     MBB.addLiveIn(Reg, Mask);
   } while (consumeIfPresent(MIToken::comma));

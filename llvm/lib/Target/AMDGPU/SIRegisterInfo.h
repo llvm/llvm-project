@@ -377,7 +377,10 @@ public:
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
     // The assumption is that every lo16 subreg is an even bit and every hi16
     // is an adjacent odd bit or vice versa.
-    uint64_t Mask = LM.getAsInteger();
+    APInt MaskV = LM.getAsAPInt();
+    assert(MaskV.getActiveBits() <= 64 &&
+           "uint64_t is insufficient to represent lane bitmask operation");
+    uint64_t Mask = MaskV.getZExtValue();
     uint64_t Even = Mask & 0xAAAAAAAAAAAAAAAAULL;
     Mask = (Even >> 1) | Mask;
     uint64_t Odd = Mask & 0x5555555555555555ULL;

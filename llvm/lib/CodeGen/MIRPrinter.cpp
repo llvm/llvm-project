@@ -732,8 +732,14 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
         OS << ", ";
       First = false;
       OS << printReg(LI.PhysReg, &TRI);
-      if (!LI.LaneMask.all())
-        OS << ":0x" << PrintLaneMask(LI.LaneMask);
+      if (!LI.LaneMask.all()) {
+        OS << ":";
+        if (LI.LaneMask.getAsAPInt().getActiveBits() <= 64)
+          OS << PrintLaneMask(LI.LaneMask, /*FormatAsCLiterals=*/true);
+        else
+          OS << '(' << PrintLaneMask(LI.LaneMask, /*FormatAsCLiterals=*/true)
+             << ')';
+      }
     }
     OS << "\n";
     HasLineAttributes = true;

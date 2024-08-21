@@ -17,9 +17,9 @@ add_llvm_unittest(MCTests
   Disassembler.cpp
   DwarfLineTables.cpp
   DwarfLineTableHeaders.cpp
+  LaneBitmaskTest.cpp
   MCInstPrinter.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   MCDisassemblerTest.cpp
   )
-

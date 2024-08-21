@@ -653,7 +653,8 @@ static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
 static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 
 static void printMask(raw_ostream &OS, LaneBitmask Val) {
-  OS << "LaneBitmask(0x" << PrintLaneMask(Val) << ')';
+  OS << "LaneBitmask("
+     << PrintLaneMask(Val, /*FormatAsCLiteral=*/true) << ")";
 }
 
 // Try to combine Idx's compose map into Vec if it is compatible.
@@ -818,11 +819,11 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  for (const MaskRolOp *Ops =\n"
         "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
         "       Ops->Mask.any(); ++Ops) {\n"
-        "    LaneBitmask::Type M = LaneMask.getAsInteger() & "
-        "Ops->Mask.getAsInteger();\n"
+        "    APInt M = LaneMask.getAsAPInt() & "
+        "Ops->Mask.getAsAPInt();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
-        "      Result |= LaneBitmask((M << S) | (M >> (LaneBitmask::BitWidth - "
-        "S)));\n"
+        "      Result |= LaneBitmask(M.shl(S) | M.lshr(LaneBitmask::BitWidth - "
+        "S));\n"
         "    else\n"
         "      Result |= LaneBitmask(M);\n"
         "  }\n"
@@ -840,10 +841,10 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  for (const MaskRolOp *Ops =\n"
         "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
         "       Ops->Mask.any(); ++Ops) {\n"
-        "    LaneBitmask::Type M = LaneMask.getAsInteger();\n"
+        "    APInt M = LaneMask.getAsAPInt();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
-        "      Result |= LaneBitmask((M >> S) | (M << (LaneBitmask::BitWidth - "
-        "S)));\n"
+        "      Result |= LaneBitmask(M.lshr(S) | M.shl(LaneBitmask::BitWidth - "
+        "S));\n"
         "    else\n"
         "      Result |= LaneBitmask(M);\n"
         "  }\n"
@@ -1836,7 +1837,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     for (unsigned M = 0; M != NumModes; ++M)
       OS << ' ' << getModeName(M) << ':' << RC.RSI.get(M).SpillAlignment;
     OS << " }\n\tNumRegs: " << RC.getMembers().size() << '\n';
-    OS << "\tLaneMask: " << PrintLaneMask(RC.LaneMask) << '\n';
+    OS << "\tLaneMask: {"
+       << PrintLaneMask(RC.LaneMask, /*FormatAsCLiteral=*/true) << "}\n";
     OS << "\tHasDisjunctSubRegs: " << RC.HasDisjunctSubRegs << '\n';
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
     OS << "\tAllocatable: " << RC.Allocatable << '\n';
@@ -1864,7 +1866,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
 
   for (const CodeGenSubRegIndex &SRI : RegBank.getSubRegIndices()) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
-    OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
+    OS << "\tLaneMask: {"
+       << PrintLaneMask(SRI.LaneMask, /*FormatAsCLiteral=*/true) << "}\n";
     OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
     OS << "\tOffset: {";
     for (unsigned M = 0; M != NumModes; ++M)

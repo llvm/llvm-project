@@ -412,11 +412,11 @@ raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P) {
   if (P.Mask.none())
     return OS << ":*none*";
 
-  LaneBitmask::Type Val = P.Mask.getAsInteger();
-  if ((Val & 0xffff) == Val)
-    return OS << ':' << format("%04llX", Val);
-  if ((Val & 0xffffffff) == Val)
-    return OS << ':' << format("%08llX", Val);
+  APInt Val = P.Mask.getAsAPInt();
+  if (Val.getActiveBits() <= 16)
+    return OS << ':' << format("%04llX", Val.getZExtValue());
+  if (Val.getActiveBits() <= 32)
+    return OS << ':' << format("%08llX", Val.getZExtValue());
   return OS << ':' << PrintLaneMask(P.Mask);
 }
 
