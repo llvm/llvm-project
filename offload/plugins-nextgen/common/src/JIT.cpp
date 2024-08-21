@@ -24,6 +24,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -175,12 +176,15 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
-      reinterpret_cast<LLVMTargetMachine *>(TM));
+  llvm::MCContext MCCtx(
+      TargetMachine->getTargetTriple(), TargetMachine->getMCAsmInfo(),
+      TargetMachine->getMCRegisterInfo(), TargetMachine->getMCSubtargetInfo(),
+      nullptr, &TargetMachine->Options.MCOptions, false);
+  auto MMI = TargetMachine->createMachineModuleInfo(MCCtx);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /*DisableVerify=*/false, MMIWP);
+                          *MMI, /*DisableVerify=*/false);
 
   PM.run(M);
 }

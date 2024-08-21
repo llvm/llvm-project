@@ -13,8 +13,10 @@
 #include "Wasm.h"
 #include "IncrementalExecutor.h"
 
+#include <llvm/CodeGen/MachineModuleInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
+#include <llvm/MC/MCContext.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
 
@@ -57,8 +59,13 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::raw_fd_ostream OutputFile(llvm::StringRef(OutputFileName), Error);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, OutputFile, nullptr,
-                                         llvm::CodeGenFileType::ObjectFile)) {
+  llvm::MCContext MCCtx(
+      TargetMachine->getTargetTriple(), TargetMachine->getMCAsmInfo(),
+      TargetMachine->getMCRegisterInfo(), TargetMachine->getMCSubtargetInfo(),
+      nullptr, &TargetMachine->Options.MCOptions, false);
+  auto MMI = TargetMachine->createMachineModuleInfo(MCCtx);
+  if (TargetMachine->addPassesToEmitFile(
+          PM, OutputFile, nullptr, llvm::CodeGenFileType::ObjectFile, *MMI)) {
     return llvm::make_error<llvm::StringError>(
         "Wasm backend cannot produce object.", llvm::inconvertibleErrorCode());
   }
