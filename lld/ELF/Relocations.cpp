@@ -1495,7 +1495,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     // InputSectionBase::relocateAlloc().
     if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
         cast<Defined>(sym).section->name == ".toc")
-      ppc64noTocRelax.insert({&sym, addend});
+      ctx.ppc64noTocRelax.insert({&sym, addend});
 
     if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
         (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {

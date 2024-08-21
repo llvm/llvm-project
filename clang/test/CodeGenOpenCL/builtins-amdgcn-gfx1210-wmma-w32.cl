@@ -176,17 +176,6 @@ void test_amdgcn_wmma_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f 
   *out = __builtin_amdgcn_wmma_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c);
 }
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_wmma_bf16_16x16x128_f8f6f4(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x128.f8f6f4.v8bf16.v16i32(i32 1, <16 x i32> [[A:%.*]], i32 2, <16 x i32> [[B:%.*]], i16 0, <8 x bfloat> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
-// CHECK-GFX1210-NEXT:    ret void
-//
-void test_amdgcn_wmma_bf16_16x16x128_f8f6f4(global v8bf16* out, v16i a, v16i b, v8bf16 c)
-{
-  *out = __builtin_amdgcn_wmma_bf16_16x16x128_f8f6f4(1, a, 2, b, 0, c);
-}
-
 // CHECK-GFX1210-LABEL: @test_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(
 // CHECK-GFX1210-NEXT:  entry:
 // CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> [[A:%.*]], i32 2, <16 x i32> [[B:%.*]], i16 0, <8 x float> [[C:%.*]], i32 1, i32 [[SCALE_SRC0:%.*]], i32 2, i32 [[SCALE_SRC1:%.*]], i1 false, i1 true)
@@ -196,17 +185,6 @@ void test_amdgcn_wmma_bf16_16x16x128_f8f6f4(global v8bf16* out, v16i a, v16i b, 
 void test_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int scale_src0, int scale_src1)
 {
   *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, 0, 1);
-}
-
-// CHECK-GFX1210-LABEL: @test_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.scale.bf16.16x16x128.f8f6f4.v8bf16.v16i32(i32 1, <16 x i32> [[A:%.*]], i32 2, <16 x i32> [[B:%.*]], i16 0, <8 x bfloat> [[C:%.*]], i32 1, i32 [[SCALE_SRC0:%.*]], i32 2, i32 [[SCALE_SRC1:%.*]], i1 true, i1 false)
-// CHECK-GFX1210-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
-// CHECK-GFX1210-NEXT:    ret void
-//
-void test_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4(global v8bf16* out, v16i a, v16i b, v8bf16 c, int scale_src0, int scale_src1)
-{
-  *out = __builtin_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, 1, 0);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x64_bf16(

@@ -171,6 +171,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",
+    "AMDGPUMemoryUtils.cpp",
     "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
     "AMDGPUPostLegalizerCombiner.cpp",
