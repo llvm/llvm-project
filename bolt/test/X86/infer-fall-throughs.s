@@ -5,67 +5,46 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --split-functions \
-# RUN:         --print-split --print-only=chain --data=%t.fdata \
-# RUN:         --reorder-blocks=none \
+# RUN: llvm-bolt %t.exe -o %t.bolt \
+# RUN:         --print-estimate-edge-counts --data=%t.fdata \
 # RUN:     2>&1 | FileCheck --check-prefix=WITHOUTINFERENCE %s
-# RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --infer-fall-throughs \
-# RUN:         --print-split --print-only=chain --data=%t.fdata \
-# RUN:         --reorder-blocks=none \
+# RUN: llvm-bolt %t.exe -o %t.bolt --infer-fall-throughs \
+# RUN:         --print-estimate-edge-counts --data=%t.fdata \
 # RUN:     2>&1 | FileCheck --check-prefix=CORRECTINFERENCE %s
 
 
-# WITHOUTINFERENCE: Binary Function "chain" after split-functions
-# WITHOUTINFERENCE: {{^\.LBB00}}
-# WITHOUTINFERENCE: Successors: .Ltmp0 (mispreds: 0, count: 10), .LFT0 (mispreds: 0, count: 0)
+# WITHOUTINFERENCE: Binary Function "main" after estimate-edge-counts
+# WITHOUTINFERENCE: {{^\.Ltmp0}}
+# WITHOUTINFERENCE: Successors: .Ltmp1 (mispreds: 0, count: 10), .LFT0 (mispreds: 0, count: 0)
 # WITHOUTINFERENCE: {{^\.LFT0}}
 # WITHOUTINFERENCE: Exec Count : 490
 
-# CORRECTINFERENCE: Binary Function "chain" after split-functions
-# CORRECTINFERENCE: {{^\.LBB00}}
-# CORRECTINFERENCE: Successors: .Ltmp0 (mispreds: 0, count: 10), .LFT0 (inferred count: 490)
+# CORRECTINFERENCE: Binary Function "main" after estimate-edge-counts
+# CORRECTINFERENCE: {{^\.Ltmp0}}
+# CORRECTINFERENCE: Successors: .Ltmp1 (mispreds: 0, count: 10), .LFT0 (inferred count: 490)
 # CORRECTINFERENCE: {{^\.LFT0}}
 # CORRECTINFERENCE: Exec Count : 490
-
-
-        .text
-        .globl  chain
-        .type   chain, @function
-chain:
-        pushq   %rbp
-        movq    %rsp, %rbp
-        cmpl    $2, %edi
-LLstart:
-        jge     LLless
-# FDATA: 1 chain #LLstart# 1 chain #LLless# 0 10
-# FDATA: 1 chain #LLstart# 1 chain #LLmore# 0 0
-LLmore:
-        movl    $5, %eax
-LLmore_LLexit:
-        jmp     LLexit
-# FDATA: 1 chain #LLmore_LLexit# 1 chain #LLexit# 0 490
-LLless:
-        movl    $10, %eax
-LLdummy:
-        jmp     LLexit
-# FDATA: 1 chain #LLdummy# 1 chain #LLexit# 0 10
-LLexit:
-        popq    %rbp
-        ret
-LLchain_end:
-        .size   chain, LLchain_end-chain
 
 
         .globl  main
         .type   main, @function
 main:
-        pushq   %rbp
-        movq    %rsp, %rbp
-        movl    $1, %edi
-LLmain_chain:
-        call    chain
-# FDATA: 1 main #LLmain_chain# 1 chain 0 0 500
-        movl    $4, %edi
-        retq
-.Lmain_end:
-        .size   main, .Lmain_end-main
+LLmain_LLstart:
+        jmp     LLstart
+# FDATA: 1 main #LLmain_LLstart# 1 main #LLstart# 0 500
+LLstart:
+        jge     LLless
+# FDATA: 1 main #LLstart# 1 main #LLless# 0 10
+# FDATA: 1 main #LLstart# 1 main #LLmore# 0 0
+LLmore:
+        movl    $5, %eax
+LLmore_LLexit:
+        jmp     LLexit
+# FDATA: 1 main #LLmore_LLexit# 1 main #LLexit# 0 490
+LLless:
+        jmp     LLexit
+# FDATA: 1 main #LLless# 1 main #LLexit# 0 10
+LLexit:
+        ret
+.LLmain_end:
+        .size   main, .LLmain_end-main
