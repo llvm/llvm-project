@@ -3242,6 +3242,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return LT.first;
 
   case ISD::FNEG:
+    // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
+    if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
+         (Ty->isHalfTy() && ST->hasFullFP16())) &&
+        CxtI &&
+        ((CxtI->hasOneUse() &&
+          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+      return 0;
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
     // Increase the cost for half and bfloat types if not architecturally

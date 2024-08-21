@@ -1014,15 +1014,17 @@ MinidumpFileBuilder::AddMemoryList_32(Process::CoreFileMemoryRanges &ranges) {
   // With a size of the number of ranges as a 32 bit num
   // And then the size of all the ranges
   error = AddDirectory(StreamType::MemoryList,
-                       sizeof(llvm::support::ulittle32_t) +
+                       sizeof(llvm::minidump::MemoryListHeader) +
                            descriptors.size() *
                                sizeof(llvm::minidump::MemoryDescriptor));
   if (error.Fail())
     return error;
 
+  llvm::minidump::MemoryListHeader list_header;
   llvm::support::ulittle32_t memory_ranges_num =
       static_cast<llvm::support::ulittle32_t>(descriptors.size());
-  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
+  list_header.NumberOfMemoryRanges = memory_ranges_num;
+  m_data.AppendData(&list_header, sizeof(llvm::minidump::MemoryListHeader));
   // For 32b we can get away with writing off the descriptors after the data.
   // This means no cleanup loop needed.
   m_data.AppendData(descriptors.data(),
@@ -1044,9 +1046,10 @@ MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
   if (error.Fail())
     return error;
 
+  llvm::minidump::Memory64ListHeader list_header;
   llvm::support::ulittle64_t memory_ranges_num =
       static_cast<llvm::support::ulittle64_t>(ranges.size());
-  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle64_t));
+  list_header.NumberOfMemoryRanges = memory_ranges_num;
   // Capture the starting offset for all the descriptors so we can clean them up
   // if needed.
   offset_t starting_offset =
@@ -1058,8 +1061,8 @@ MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
       (ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
   llvm::support::ulittle64_t memory_ranges_base_rva =
       static_cast<llvm::support::ulittle64_t>(base_rva);
-  m_data.AppendData(&memory_ranges_base_rva,
-                    sizeof(llvm::support::ulittle64_t));
+  list_header.BaseRVA = memory_ranges_base_rva;
+  m_data.AppendData(&list_header, sizeof(llvm::minidump::Memory64ListHeader));
 
   bool cleanup_required = false;
   std::vector<MemoryDescriptor_64> descriptors;
