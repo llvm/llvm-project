@@ -1995,37 +1995,12 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   if (!RetTy || !RetTy->isScalableTy())
     return true;
 
-  Value *InputA;
-  Value *InputB;
-  if (match(I,
-            m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
-                m_Value(), m_OneUse(m_Mul(m_ZExtOrSExt(m_Value(InputA)),
-                                          m_ZExtOrSExt(m_Value(InputB))))))) {
-    VectorType *InputAType = dyn_cast<VectorType>(InputA->getType());
-    VectorType *InputBType = dyn_cast<VectorType>(InputB->getType());
-    if (!InputAType || !InputBType)
-      return true;
-    ElementCount ExpectedCount8 = ElementCount::get(8, RetTy->isScalableTy());
-    ElementCount ExpectedCount16 = ElementCount::get(16, RetTy->isScalableTy());
-    // Check that the input type is 4 times smaller than the output type. If the
-    // output type is 64 bit then we can accept 8 bit inputs if we do a 32 bit
-    // dot product and add a zext/sext.
-    if ((RetTy->getScalarType()->isIntegerTy(64) &&
-         InputAType->getElementType()->isIntegerTy(16) &&
-         InputAType->getElementCount() == ExpectedCount8 &&
-         InputAType == InputBType) ||
-        ((RetTy->getScalarType()->isIntegerTy(32) ||
-          RetTy->getScalarType()->isIntegerTy(64)) &&
-         InputAType->getElementType()->isIntegerTy(8) &&
-         InputAType->getElementCount() == ExpectedCount16 &&
-         InputAType == InputBType)) {
-      auto *Mul = cast<Instruction>(I->getOperand(1));
-      auto *Mul0 = cast<Instruction>(Mul->getOperand(0));
-      auto *Mul1 = cast<Instruction>(Mul->getOperand(1));
-      if (Mul0->getOpcode() == Mul1->getOpcode())
-        return false;
-    }
-  }
+  if (RetTy->getScalarType()->isIntegerTy(32) && RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
+    return false;
+  if (RetTy->getScalarType()->isIntegerTy(64) && RetTy->getElementCount() == ElementCount::get(2, RetTy->isScalableTy()))
+    return false;
+  if (RetTy->getScalarType()->isIntegerTy(64) && RetTy->getElementCount() == ElementCount::get(4, RetTy->isScalableTy()))
+    return false;
 
   return true;
 }
@@ -21799,6 +21774,92 @@ static SDValue tryCombineWhileLo(SDNode *N,
   return SDValue(N, 0);
 }
 
+SDValue tryLowerPartialReductionToDot(SDNode *N, const AArch64Subtarget *Subtarget, SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  // The narrower of the two operands. Used as the accumulator
+  auto NarrowOp = N->getOperand(1);
+  auto MulOp = N->getOperand(2);
+  if (MulOp->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  auto ExtA = MulOp->getOperand(0);
+  auto ExtB = MulOp->getOperand(1);
+  bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
+  if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
+    return SDValue();
+
+  auto A = ExtA->getOperand(0);
+  auto B = ExtB->getOperand(0);
+  if (A.getValueType() != B.getValueType())
+    return SDValue();
+
+  // The fully-reduced type. Should be a vector of i32 or i64
+  EVT FullType = N->getValueType(0);
+  // The type that is extended to the wide type. Should be an i8 or i16
+  EVT ExtendedType = A.getValueType();
+  // The wide type with four times as many elements as the reduced type. Should be a vector of i32 or i64, the same as the fully-reduced type
+  EVT WideType = MulOp.getValueType();
+  if (WideType.getScalarSizeInBits() != FullType.getScalarSizeInBits())
+    return SDValue();
+  // Dot products operate on chunks of four elements so there must be four times as many elements in the wide type
+  if (WideType.getVectorMinNumElements() / FullType.getVectorMinNumElements() != 4)
+    return SDValue();
+  switch (FullType.getScalarSizeInBits()) {
+    case 32:
+      if (ExtendedType.getScalarSizeInBits() != 8)
+        return SDValue();
+      break;
+    case 64:
+      // i8 to i64 can be done with an extended i32 dot product
+      if (ExtendedType.getScalarSizeInBits() != 8 && ExtendedType.getScalarSizeInBits() != 16)
+        return SDValue();
+      break;
+    default:
+      return SDValue();
+  }
+
+  unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
+
+  if (IsSExt)
+    DotIntrinsicId = Intrinsic::aarch64_sve_sdot;
+  else if (IsZExt)
+    DotIntrinsicId = Intrinsic::aarch64_sve_udot;
+
+  assert(DotIntrinsicId != Intrinsic::not_intrinsic &&
+         "Unexpected dot product case encountered.");
+
+  EVT Type = NarrowOp.getValueType();
+
+  // 8 bit input to 64 bit output can be done by doing a 32 bit dot product
+  // and extending the output
+  bool Extend = A->getValueType(0).getScalarSizeInBits() == 8 &&
+                Type.getScalarSizeInBits() == 64;
+  SDValue Accumulator = NarrowOp;
+  if (Extend) {
+    Type = Type.changeVectorElementType(
+        EVT::getIntegerVT(*DAG.getContext(), 32));
+    // The accumulator is of the wider type so we insert a 0 accumulator and
+    // add the proper one after extending
+    Accumulator = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv4i32,
+                              DAG.getConstant(0, DL, MVT::i32));
+  }
+
+  auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
+  auto DotProduct = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Type,
+                                {IntrinsicId, Accumulator, A, B});
+  if (Extend) {
+    auto Extended =
+        DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND, DL,
+                    NarrowOp.getValueType(), {DotProduct});
+    auto AccAdd = DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
+                              {NarrowOp, Extended});
+    DotProduct = AccAdd;
+  }
+  return DotProduct;
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -21808,97 +21869,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
   default:
     break;
   case Intrinsic::experimental_vector_partial_reduce_add: {
-    SDLoc DL(N);
-
-    bool IsValidDotProduct = true;
-
-    auto NarrowOp = N->getOperand(1);
-    auto MulOp = N->getOperand(2);
-    if (MulOp->getOpcode() != ISD::MUL)
-      IsValidDotProduct = false;
-
-    auto ExtA = MulOp->getOperand(0);
-    auto ExtB = MulOp->getOperand(1);
-    bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
-    bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-    if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
-      IsValidDotProduct = false;
-
-    unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
-
-    if (IsSExt && IsValidDotProduct)
-      DotIntrinsicId = Intrinsic::aarch64_sve_sdot;
-    else if (IsZExt && IsValidDotProduct)
-      DotIntrinsicId = Intrinsic::aarch64_sve_udot;
-
-    assert((!IsValidDotProduct || DotIntrinsicId != Intrinsic::not_intrinsic) &&
-           "Unexpected dot product case encountered.");
-
-    if (IsValidDotProduct) {
-      auto A = ExtA->getOperand(0);
-      auto B = ExtB->getOperand(0);
-      EVT Type = NarrowOp.getValueType();
-
-      // 8 bit input to 64 bit output can be done by doing a 32 bit dot product
-      // and extending the output
-      bool Extend = A->getValueType(0).getScalarSizeInBits() == 8 &&
-                    Type.getScalarSizeInBits() == 64;
-      SDValue Accumulator = NarrowOp;
-      if (Extend) {
-        Type = Type.changeVectorElementType(
-            EVT::getIntegerVT(*DAG.getContext(), 32));
-        // The accumulator is of the wider type so we insert a 0 accumulator and
-        // add the proper one after extending
-        Accumulator = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv4i32,
-                                  DAG.getConstant(0, DL, MVT::i32));
-      }
-
-      auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
-      auto DotProduct = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Type,
-                                    {IntrinsicId, Accumulator, A, B});
-      if (Extend) {
-        auto Extended =
-            DAG.getNode(IsZExt ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND, DL,
-                        NarrowOp.getValueType(), {DotProduct});
-        auto AccAdd = DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
-                                  {NarrowOp, Extended});
-        DotProduct = AccAdd;
-      }
-      return DotProduct;
-    } else {
-      // If the node doesn't match a dot product, lower to a series of ADDs
-      // instead.
-      SDValue Op0 = N->getOperand(1);
-      SDValue Op1 = N->getOperand(2);
-      EVT Type0 = Op0->getValueType(0);
-      EVT Type1 = Op1->getValueType(0);
-
-      // Canonicalise so that Op1 has the larger type
-      if (Type1.getVectorNumElements() > Type0.getVectorNumElements()) {
-        std::swap(Op0, Op1);
-        std::swap(Type0, Type1);
-      }
-
-      auto Type0Elements = Type0.getVectorNumElements();
-      auto Type1Elements = Type1.getVectorNumElements();
-
-      // If the types are equal then a single ADD is fine
-      if (Type0 == Type1)
-        return DAG.getNode(ISD::ADD, DL, Type0, {Op0, Op1});
-
-      // Otherwise, we need to add each subvector together so that the output is
-      // the intrinsic's return type. For example, <4 x i32>
-      // partial.reduction(<4 x i32> a, <16 x i32> b) becomes a + b[0..3] +
-      // b[4..7] + b[8..11] + b[12..15]
-      SDValue Add = Op0;
-      for (unsigned i = 0; i < Type1Elements / Type0Elements; i++) {
-        SDValue Subvec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Type0, Op1,
-                                     DAG.getConstant(i, DL, MVT::i64));
-
-        Add = DAG.getNode(ISD::ADD, DL, Type0, {Add, Subvec});
-      }
-      return Add;
-    }
+    if (auto Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
+        return Dot;
+    return DAG.expandPartialReductionIntrinsic(N->getValueType(0), N->getOperand(1), N->getOperand(2), SDLoc(N));
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
