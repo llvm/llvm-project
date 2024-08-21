@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
-// RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
-// RUN:   FileCheck %s --match-full-lines
+// RUN: FileCheck %s --match-full-lines
 
 func.func @cmpi_eq_i1(%v1 : i1, %v2 : i1) {
   vector.print str "@cmpi_eq_i1\n"
@@ -67,6 +67,21 @@ func.func @cmpi_eq() {
   // CHECK-LABEL: @cmpi_eq_i1
   // CHECK-NEXT:  1
   func.call @cmpi_eq_i1(%false_i1, %false_i1) : (i1, i1) -> ()
+
+  %false = arith.constant false
+  %true = arith.constant true
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%true, %true_i1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%false, %false_i1) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%true, %true_i1_n1) : (i1, i1) -> ()
 
   // ------------------------------------------------
   // TODO: Test i8, i16 etc..
