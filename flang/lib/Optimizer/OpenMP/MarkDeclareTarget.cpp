@@ -1,4 +1,16 @@
-#include "flang/Optimizer/Transforms/Passes.h"
+//===- MarkDeclareTarget.cpp -------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Mark functions called from explicit target code as implicitly declare target.
+//
+//===----------------------------------------------------------------------===//
+
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -10,14 +22,14 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
-namespace fir {
-#define GEN_PASS_DEF_OMPMARKDECLARETARGETPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
+namespace flangomp {
+#define GEN_PASS_DEF_MARKDECLARETARGETPASS
+#include "flang/Optimizer/OpenMP/Passes.h.inc"
+} // namespace flangomp
 
 namespace {
-class OMPMarkDeclareTargetPass
-    : public fir::impl::OMPMarkDeclareTargetPassBase<OMPMarkDeclareTargetPass> {
+class MarkDeclareTargetPass
+    : public flangomp::impl::MarkDeclareTargetPassBase<MarkDeclareTargetPass> {
 
   void markNestedFuncs(mlir::omp::DeclareTargetDeviceType parentDevTy,
                        mlir::omp::DeclareTargetCaptureClause parentCapClause,
