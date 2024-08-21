@@ -1990,7 +1990,8 @@ void request_launch(const llvm::json::Object &request) {
 
 // Check if the step-granularity is `instruction`
 static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
-  if (std::optional<llvm::StringRef> value = requestArgs.getString("granularity"))
+  if (std::optional<llvm::StringRef> value =
+          requestArgs.getString("granularity"))
     return value == "instruction";
   return false;
 }
@@ -2025,7 +2026,8 @@ static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
 //     },
 //     "granularity": {
 //       "$ref": "#/definitions/SteppingGranularity",
-//       "description": "Stepping granularity. If no granularity is specified, a granularity of `statement` is assumed."
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -2047,7 +2049,7 @@ void request_next(const llvm::json::Object &request) {
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
     if (hasInstructionGranularity(*arguments)) {
-      thread.StepInstruction(/*step_over=*/ true);
+      thread.StepInstruction(/*step_over=*/true);
     } else {
       thread.StepOver();
     }
@@ -3214,7 +3216,8 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     },
 //     "granularity": {
 //       "$ref": "#/definitions/SteppingGranularity",
-//       "description": "Stepping granularity. If no granularity is specified, a granularity of `statement` is assumed."
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //   },
 //   "required": [ "threadId" ]
 // },
@@ -3245,7 +3248,7 @@ void request_stepIn(const llvm::json::Object &request) {
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
     if (hasInstructionGranularity(*arguments)) {
-      thread.StepInstruction(/*step_over=*/ false);
+      thread.StepInstruction(/*step_over=*/false);
     } else {
       thread.StepInto(step_in_target.c_str(), run_mode);
     }

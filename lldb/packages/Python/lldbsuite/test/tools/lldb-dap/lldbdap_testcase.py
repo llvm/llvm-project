@@ -222,8 +222,12 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, targetId=None, waitForStop=True, granularity="statement"):
-        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId, granularity=granularity)
+    def stepIn(
+        self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
+    ):
+        self.dap_server.request_stepIn(
+            threadId=threadId, targetId=targetId, granularity=granularity
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None

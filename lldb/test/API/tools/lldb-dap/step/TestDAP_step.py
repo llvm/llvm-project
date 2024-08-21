@@ -74,8 +74,12 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
                     # stepping behavior here, because the generated assembly code
                     # depends highly on the compiler, its version, the operating
                     # system, and many more factors.
-                    self.stepOver(threadId=tid, waitForStop=True, granularity="instruction")
-                    self.stepIn(threadId=tid, waitForStop=True, granularity="instruction")
+                    self.stepOver(
+                        threadId=tid, waitForStop=True, granularity="instruction"
+                    )
+                    self.stepIn(
+                        threadId=tid, waitForStop=True, granularity="instruction"
+                    )
 
                     # only step one thread that is at the breakpoint and stop
                     break
