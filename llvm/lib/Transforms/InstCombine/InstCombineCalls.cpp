@@ -1505,8 +1505,8 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
 
 /// Return whether "X LOp (Y ROp Z)" is always equal to
 /// "(X LOp Y) ROp (X LOp Z)".
-static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool hasNUW,
-                                     bool hasNSW, Intrinsic::ID ROp) {
+static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID ROp) {
   switch (ROp) {
   case Intrinsic::umax:
   case Intrinsic::umin:
