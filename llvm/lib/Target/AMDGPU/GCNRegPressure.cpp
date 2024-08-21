@@ -320,8 +320,6 @@ static LaneBitmask getLanesWithProperty(
   }
 
   const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
-  // Be prepared for missing liveranges: We usually do not compute liveranges
-  // for physical registers on targets with many registers (GPUs).
   if (LR == nullptr)
     return SafeDefault;
   return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
@@ -336,10 +334,8 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
                                   const SIRegisterInfo *TRI,
                                   const LiveIntervals *LIS,
                                   bool Upward = false) {
-  for (const MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
     if (MO.isUndef())
-      continue;
-    if (!MO.readsReg())
       continue;
     const MachineInstr *MI = MO.getParent();
     SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -512,7 +508,8 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
 
-void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI) {
+void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI,
+                                            const SIRegisterInfo *TRI) {
   assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx = LIS.getInstructionIndex(*MI).getRegSlot();
@@ -520,8 +517,6 @@ void GCNUpwardRPTracker::bumpUpwardPressure(const MachineInstr *MI) {
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
 
-  const SIRegisterInfo *TRI =
-      MI->getMF()->getSubtarget<GCNSubtarget>().getRegisterInfo();
   RegOpers.collect(*MI, *TRI, *MRI, true, /*IgnoreDead=*/true);
   assert(RegOpers.DeadDefs.empty());
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
@@ -729,7 +724,8 @@ Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
   });
 }
 
-void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI) {
+void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
+                                                const SIRegisterInfo *TRI) {
   assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
@@ -737,8 +733,6 @@ void GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI) {
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
-  const SIRegisterInfo *TRI =
-      MI->getMF()->getSubtarget<GCNSubtarget>().getRegisterInfo();
   RegOpers.collect(*MI, *TRI, *MRI, true, /*IgnoreDead=*/false);
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
 
