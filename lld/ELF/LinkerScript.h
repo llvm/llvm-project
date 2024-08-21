@@ -13,6 +13,7 @@
 #include "InputSection.h"
 #include "Writer.h"
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -91,9 +92,8 @@ public:
 
 class ConstantExpr : public ScriptExpr {
 public:
-  ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
-  // ConstantExpr(uint64_t val)
-  //     : ScriptExpr(ExprKind::Constant), val_(val) {}
+  // ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
+  ConstantExpr(uint64_t val) : ScriptExpr(ExprKind::Constant), val_(val) {}
   std::function<ExprValue()> getVal() const {
     return [=] { return val_; };
   }
@@ -104,14 +104,14 @@ private:
 
 class DynamicExpr : public ScriptExpr {
 public:
-  static DynamicExpr create(std::function<ExprValue()> impl) {
-    return DynamicExpr(impl);
-  }
+  // static DynamicExpr create(std::function<ExprValue()> impl) {
+  //   return DynamicExpr(impl);
+  // }
   std::function<ExprValue()> getImpl() const { return impl_; }
-
-private:
   DynamicExpr(std::function<ExprValue()> impl)
       : ScriptExpr(ExprKind::Dynamic), impl_(impl) {}
+
+private:
   std::function<ExprValue()> impl_;
 };
 

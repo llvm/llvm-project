@@ -132,11 +132,16 @@ uint64_t ExprValue::getSectionOffset() const {
 }
 
 std::function<ExprValue()> ScriptExpr::getExpr() const {
+  // llvm::errs() << "getExpr: " << static_cast<int>(kind_) << ", " <<
+  // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
     return static_cast<const ConstantExpr *>(this)->getVal();
-  case ExprKind::Dynamic:
-    return static_cast<const DynamicExpr *>(this)->getImpl();
+  case ExprKind::Dynamic: {
+    auto expr = static_cast<const DynamicExpr *>(this);
+    // llvm::errs() << "expr = " <<
+    return expr->getImpl();
+  }
   default:
     return [] { return ExprValue(0); };
   };

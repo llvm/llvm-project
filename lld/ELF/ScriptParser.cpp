@@ -104,8 +104,8 @@ private:
   SymbolAssignment *readAssignment(StringRef tok);
   void readSort();
   Expr readAssert();
-  ScriptExpr readConstant();
-  DynamicExpr getPageSize();
+  ScriptExpr *readConstant();
+  DynamicExpr *getPageSize();
 
   Expr readMemoryAssignment(StringRef, StringRef, StringRef);
   void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
@@ -1322,9 +1322,9 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
   return lhs;
 }
 
-DynamicExpr ScriptParser::getPageSize() {
+DynamicExpr *ScriptParser::getPageSize() {
   std::string location = getCurrentLocation();
-  return DynamicExpr::create([=]() -> uint64_t {
+  return make<DynamicExpr>([=]() -> uint64_t {
     if (target)
       return config->commonPageSize;
     error(location + ": unable to calculate page size");
@@ -1332,15 +1332,15 @@ DynamicExpr ScriptParser::getPageSize() {
   });
 }
 
-ScriptExpr ScriptParser::readConstant() {
+ScriptExpr *ScriptParser::readConstant() {
   StringRef s = readParenName();
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
-    return DynamicExpr::create([] { return config->maxPageSize; });
+    return make<DynamicExpr>([] { return config->maxPageSize; });
   setError("unknown constant: " + s);
-  // return ConstantExpr(ExprValue(0));
-  return DynamicExpr::create([] { return 0; });
+  return make<ConstantExpr>(0);
+  // return DynamicExpr::create([] {return 0;});
 }
 
 // Parses Tok as an integer. It recognizes hexadecimal (prefixed with
@@ -1538,7 +1538,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "ASSERT")
     return readAssert();
   if (tok == "CONSTANT")
-    return readConstant().getExpr();
+    return readConstant()->getExpr();
   if (tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
     Expr e = readExpr();
