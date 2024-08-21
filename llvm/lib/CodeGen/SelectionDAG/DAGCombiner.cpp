@@ -15830,7 +15830,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // So not finding any maybe-poison operands is fine.
 
   for (unsigned OpNo : MaybePoisonOperandNumbers) {
-    // N0 can mutate during iteration, so make sure to refech the maybe poison
+    // N0 can mutate during iteration, so make sure to refetch the maybe poison
     // operands via the operand numbers. The typical scenario is that we have
     // something like this
     //   t262: i32 = freeze t181
