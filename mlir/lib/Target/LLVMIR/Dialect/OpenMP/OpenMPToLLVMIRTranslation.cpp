@@ -3248,15 +3248,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   if (!targetOp.getPrivateVars().empty()) {
-    auto privateVars = targetOp.getPrivateVars();
-    auto privateSyms = targetOp.getPrivateSyms();
+    OperandRange privateVars = targetOp.getPrivateVars();
+    std::optional<mlir::ArrayAttr> privateSyms = targetOp.getPrivateSyms();
     auto &firstTargetRegion = opInst.getRegion(0);
     auto &firstTargetBlock = firstTargetRegion.front();
     auto *regionArgsStart = firstTargetBlock.getArguments().begin();
     auto *privArgsStart = regionArgsStart + targetOp.getMapVars().size();
     auto *privArgsEnd = privArgsStart + targetOp.getPrivateVars().size();
     BitVector blockArgsBV(firstTargetBlock.getNumArguments(), false);
-    struct omp::PrivateClauseOps newPrivateClauses;
+    omp::PrivateClauseOps newPrivateClauses;
     MutableArrayRef argSubRangePrivates(privArgsStart, privArgsEnd);
     for (auto [privVar, privatizerNameAttr, blockArg] :
          llvm::zip_equal(privateVars, *privateSyms, argSubRangePrivates)) {
@@ -3330,9 +3330,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       //   store %v, %1          // %priv_arg0 replaced with the yield value
       //   omp.terminator
       // }
-      Block &firstBlock = firstTargetRegion.front();
-      Block *newBlock = rewriter.splitBlock(&firstBlock, firstBlock.begin());
-      rewriter.setInsertionPointToStart(&firstBlock);
+      Block *newBlock =
+          rewriter.splitBlock(&firstTargetBlock, firstTargetBlock.begin());
+      rewriter.setInsertionPointToStart(&firstTargetBlock);
       Location loc = targetOp.getLoc();
       rewriter.create<LLVM::BrOp>(loc, ValueRange(), newBlock);
 
@@ -3347,7 +3347,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
           std::next(secondBlockIter, (allocRegNumBlocks - 1));
       Block &clonedAllocRegEndBlock = *clonedAllocRegionEndIter;
 
-      Operation *br = firstBlock.getTerminator();
+      Operation *br = firstTargetBlock.getTerminator();
       LLVM::BrOp brOp = dyn_cast<LLVM::BrOp>(br);
       Operation *yield = clonedAllocRegEndBlock.getTerminator();
       omp::YieldOp yieldOp = dyn_cast<omp::YieldOp>(yield);
