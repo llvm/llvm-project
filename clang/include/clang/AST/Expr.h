@@ -537,8 +537,8 @@ public:
   /// semantically correspond to a bool.
   bool isKnownToHaveBooleanValue(bool Semantic = true) const;
 
-  /// isFlexibleArrayMemberLike - Check whether this array fits the idiom of a
-  /// flexible array member, depending on the value of -fstrict-flex-array.
+  /// Check whether this array fits the idiom of a flexible array member,
+  /// depending on the value of -fstrict-flex-array.
   /// When IgnoreTemplateOrMacroSubstitution is set, it doesn't consider sizes
   /// resulting from the substitution of a macro or a template as special sizes.
   bool isFlexibleArrayMemberLike(
