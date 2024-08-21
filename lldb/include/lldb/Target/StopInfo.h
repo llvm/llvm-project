@@ -123,6 +123,10 @@ public:
                              const char *description = nullptr,
                              std::optional<int> code = std::nullopt);
 
+  static lldb::StopInfoSP
+  CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                const char *description);
+
   static lldb::StopInfoSP CreateStopReasonToTrace(Thread &thread);
 
   static lldb::StopInfoSP

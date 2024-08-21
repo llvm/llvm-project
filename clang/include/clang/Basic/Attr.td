@@ -477,6 +477,9 @@ def TargetELF : TargetSpec {
 def TargetELFOrMachO : TargetSpec {
   let ObjectFormats = ["ELF", "MachO"];
 }
+def TargetWindowsArm64EC : TargetSpec {
+  let CustomCode = [{ Target.getTriple().isWindowsArm64EC() }];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
@@ -2046,6 +2049,17 @@ def Convergent : InheritableAttr {
   let Documentation = [ConvergentDocs];
   let SimpleHandler = 1;
 }
+
+def NoConvergent : InheritableAttr {
+  let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
+  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
+                             "functions and statements">;
+  let LangOpts = [CUDA];
+  let Documentation = [NoConvergentDocs];
+  let SimpleHandler = 1;
+}
+
+def : MutualExclusions<[Convergent, NoConvergent]>;
 
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
@@ -4027,6 +4041,12 @@ def SelectAny : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def HybridPatchable : InheritableAttr, TargetSpecificAttr<TargetWindowsArm64EC> {
+  let Spellings = [Declspec<"hybrid_patchable">, Clang<"hybrid_patchable">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [HybridPatchableDocs];
+}
+
 def Thread : Attr {
   let Spellings = [Declspec<"thread">];
   let LangOpts = [MicrosoftExt];
@@ -4447,7 +4467,7 @@ def ReleaseHandle : InheritableParamAttr {
 
 def UnsafeBufferUsage : InheritableAttr {
   let Spellings = [Clang<"unsafe_buffer_usage">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, Field]>;
   let Documentation = [UnsafeBufferUsageDocs];
 }
 
@@ -4579,9 +4599,15 @@ def HLSLResource : InheritableAttr {
           "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
           "FeedbackTexture2D", "FeedbackTexture2DArray"
         ],
-        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
-    DefaultBoolArgument<"isROV", /*default=*/0>
+        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
   ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLROV : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "is_rov">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 

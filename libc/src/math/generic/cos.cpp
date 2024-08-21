@@ -19,26 +19,6 @@
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/math/generic/sincos_eval.h"
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-#include "range_reduction_double_fma.h"
-
-using LIBC_NAMESPACE::fma::FAST_PASS_EXPONENT;
-using LIBC_NAMESPACE::fma::ONE_TWENTY_EIGHT_OVER_PI;
-using LIBC_NAMESPACE::fma::range_reduction_small;
-using LIBC_NAMESPACE::fma::SIN_K_PI_OVER_128;
-
-LIBC_INLINE constexpr bool NO_FMA = false;
-#else
-#include "range_reduction_double_nofma.h"
-
-using LIBC_NAMESPACE::nofma::FAST_PASS_EXPONENT;
-using LIBC_NAMESPACE::nofma::ONE_TWENTY_EIGHT_OVER_PI;
-using LIBC_NAMESPACE::nofma::range_reduction_small;
-using LIBC_NAMESPACE::nofma::SIN_K_PI_OVER_128;
-
-LIBC_INLINE constexpr bool NO_FMA = true;
-#endif // LIBC_TARGET_CPU_HAS_FMA
-
 // TODO: We might be able to improve the performance of large range reduction of
 // non-FMA targets further by operating directly on 25-bit chunks of 128/pi and
 // pre-split SIN_K_PI_OVER_128, but that might double the memory footprint of

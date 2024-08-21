@@ -1,4 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 \
+! RUN: | FileCheck %s
 
 ! Checks lowering of OpenMP variables with implicitly determined DSAs.
 
@@ -106,12 +107,9 @@ end subroutine
 !CHECK:       %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:       %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFimplicit_dsa_test4Ez"}
 !CHECK:       %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:       omp.parallel {
-!CHECK:         %[[PRIV_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test4Ex"}
+!CHECK:       omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV_X:.*]] : {{.*}}, {{.*}} %{{.*}}#0 -> %[[PRIV_Z:.*]] : {{.*}}, {{.*}} %{{.*}}#0 -> %[[PRIV_Y:.*]] : {{.*}}) {
 !CHECK:         %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         %[[PRIV_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFimplicit_dsa_test4Ez"}
 !CHECK:         %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         %[[PRIV_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFimplicit_dsa_test4Ey"}
 !CHECK:         %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         omp.task {
 !CHECK-NEXT:      %[[PRIV2_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test4Ex"}
@@ -162,8 +160,7 @@ end subroutine
 !CHECK-LABEL: func @_QPimplicit_dsa_test5
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFimplicit_dsa_test5Ex"}
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFimplicit_dsa_test5Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.parallel {
-!CHECK:     %[[PRIV_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test5Ex"}
+!CHECK: omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV_X:.*]] : {{.*}}) {
 !CHECK:     %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test5Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   omp.task {
 !CHECK:     %[[PRIV2_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test5Ex"}
@@ -209,24 +206,16 @@ end subroutine
 !CHECK-NEXT:    %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[TEMP3:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<i32>
 !CHECK-NEXT:    hlfir.assign %[[TEMP3]] to %[[PRIV_Z_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
-!CHECK:         omp.parallel {
-!CHECK:           %[[PRIV2_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test6Ex"}
+!CHECK:         omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV2_X:.*]] : {{.*}}, {{.*}} %{{.*}}#0 -> %[[PRIV2_Y:.*]] : {{.*}}) {
 !CHECK:           %[[PRIV2_X_DECL:.*]]:2 = hlfir.declare %[[PRIV2_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NOT:       hlfir.assign
-!CHECK:           %[[PRIV2_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFimplicit_dsa_test6Ey"}
 !CHECK:           %[[PRIV2_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV2_Y]] {uniq_name = "_QFimplicit_dsa_test6Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NOT:       hlfir.assign
 !CHECK:           hlfir.assign %{{.*}} to %[[PRIV2_X_DECL]]
 !CHECK:         }
-!CHECK:         omp.parallel {
-!CHECK-NEXT:      %[[PRIV3_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFimplicit_dsa_test6Ex"}
+!CHECK:         omp.parallel private({{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV3_X:.*]] : {{.*}}, {{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV3_Z:.*]] : {{.*}}) {
 !CHECK-NEXT:      %[[PRIV3_X_DECL:.*]]:2 = hlfir.declare %[[PRIV3_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:      %[[TEMP4:.*]] = fir.load %[[PRIV_X_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT:      hlfir.assign %[[TEMP4]] to %[[PRIV3_X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
-!CHECK-NEXT:      %[[PRIV3_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFimplicit_dsa_test6Ez"}
 !CHECK-NEXT:      %[[PRIV3_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV3_Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:      %[[TEMP5:.*]] = fir.load %[[PRIV_Z_DECL]]#0 : !fir.ref<i32>
-!CHECK-NEXT:      hlfir.assign %[[TEMP5]] to %[[PRIV3_Z_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
 !CHECK:           hlfir.assign %{{.*}} to %[[PRIV_Y_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:         }
 !CHECK:       }

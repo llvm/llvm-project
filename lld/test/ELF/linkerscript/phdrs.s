@@ -7,8 +7,8 @@ PHDRS {all PT_LOAD FILEHDR PHDRS ;}
 SECTIONS {
   . = 0x10000200;
   .text : {*(.text*)} :all
-  .foo : {*(.foo.*)} :all
-  .data : {*(.data.*)} :all}
+  .foo : {*(.foo.*)} :"all"
+  .data : {*(.data.*)} : "all"}
 
 # RUN: ld.lld -o 1 -T 1.lds a.o
 # RUN: llvm-readelf -Sl 1 | FileCheck %s
@@ -103,6 +103,12 @@ PHDRS { text PT_LOAD ;
 # RUN: not ld.lld -T unclosed.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED %s
 #     UNCLOSED:error: unclosed.lds:1: unexpected EOF
 # UNCLOSED-NOT:{{.}}
+
+#--- unclosed2.lds
+PHDRS { text PT_LOAD
+
+# RUN: not ld.lld -T unclosed2.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED2 %s
+# UNCLOSED2: error: unclosed2.lds:1: unexpected header attribute:
 
 #--- a.s
 .global _start

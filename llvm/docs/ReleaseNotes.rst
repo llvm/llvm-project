@@ -106,6 +106,14 @@ Changes to the RISC-V Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+* Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
+* ``-mcpu=sifive-p470`` was added.
+* Added Hazard3 CPU as taped out for RP2350: ``-mcpu=rp2350-hazard3`` (32-bit
+  only).
+* Fixed length vector support using RVV instructions now requires VLEN>=64. This
+  means Zve32x and Zve32f will also require Zvl64b. The prior support was
+  largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -129,6 +137,8 @@ Changes to the X86 Backend
   generally seen in the wild (Clang never generates them!), so this is
   not expected to result in real-world compatibility problems.
 
+* Support ISA of ``AVX10.2-256`` and ``AVX10.2-512``.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -143,6 +153,36 @@ Changes to the C API
   * ``LLVMX86_MMXTypeKind``
   * ``LLVMX86MMXTypeInContext``
   * ``LLVMX86MMXType``
+
+ * The following functions are added to further support non-null-terminated strings:
+
+  * ``LLVMGetNamedFunctionWithLength``
+  * ``LLVMGetNamedGlobalWithLength``
+
+* The following functions are added to access the ``LLVMContextRef`` associated
+   with ``LLVMValueRef`` and ``LLVMBuilderRef`` objects:
+
+  * ``LLVMGetValueContext``
+  * ``LLVMGetBuilderContext``
+
+* The new pass manager can now be invoked with a custom alias analysis pipeline, using
+  the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
+
+* It is now also possible to run the new pass manager on a single function, by calling
+  ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
+
+* Support for creating instructions with custom synchronization scopes has been added:
+
+  * ``LLVMGetSyncScopeID`` to map a synchronization scope name to an ID.
+  * ``LLVMBuildFenceSyncScope``, ``LLVMBuildAtomicRMWSyncScope`` and
+    ``LLVMBuildAtomicCmpXchgSyncScope`` versions of the existing builder functions
+    with an additional synchronization scope ID parameter.
+  * ``LLVMGetAtomicSyncScopeID`` and ``LLVMSetAtomicSyncScopeID`` to get and set the
+    synchronization scope of any atomic instruction.
+  * ``LLVMIsAtomic`` to check if an instruction is atomic, for use with the above functions.
+    Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
+    ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
+
 
 Changes to the CodeGen infrastructure
 -------------------------------------

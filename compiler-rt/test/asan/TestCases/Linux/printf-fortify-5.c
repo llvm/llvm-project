@@ -1,7 +1,8 @@
 // RUN: %clang -fPIC -shared -O2 -D_FORTIFY_SOURCE=2 -D_DSO %s -o %t.so
 // RUN: %clang_asan -o %t %t.so %s
 // RUN: not %run %t 2>&1 | FileCheck %s
-// REQUIRES: glibc-2.27
+/// Incompatible with pass_object_info style fortified source since glibc 2.40.
+// REQUIRES: glibc-2.27 && !glibc-2.40
 #ifdef _DSO
 #include <stdio.h>
 #include <stdlib.h>

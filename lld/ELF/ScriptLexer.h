@@ -10,6 +10,7 @@
 #define LLD_ELF_SCRIPT_LEXER_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -23,14 +24,20 @@ protected:
     // The remaining content to parse and the filename.
     StringRef s, filename;
     const char *begin = nullptr;
+    size_t lineNumber = 1;
+    // True if the script is opened as an absolute path under the --sysroot
+    // directory.
+    bool isUnderSysroot = false;
+
     Buffer() = default;
-    Buffer(MemoryBufferRef mb)
-        : s(mb.getBuffer()), filename(mb.getBufferIdentifier()),
-          begin(mb.getBufferStart()) {}
+    Buffer(MemoryBufferRef mb);
   };
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;
   SmallVector<Buffer, 0> buffers;
+
+  // Used to detect INCLUDE() cycles.
+  llvm::DenseSet<StringRef> activeFilenames;
 
   struct Token {
     StringRef str;
@@ -44,6 +51,7 @@ protected:
   // curTok holds the cached return value of peek() and is invalid when the
   // expression state changes.
   StringRef curTok;
+  size_t prevTokLine = 1;
   // The inExpr state when curTok is cached.
   bool curTokState = false;
   bool eof = false;
@@ -67,12 +75,8 @@ public:
   std::vector<MemoryBufferRef> mbs;
   bool inExpr = false;
 
-  size_t lastLineNumber = 0;
-  size_t lastLineNumberOffset = 0;
-
 private:
   StringRef getLine();
-  size_t getLineNumber();
   size_t getColumnNumber();
 };
 

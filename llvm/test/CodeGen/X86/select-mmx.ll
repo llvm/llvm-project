@@ -51,9 +51,9 @@ define i64 @test47(i64 %arg)  {
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
   %cond = icmp eq i64 %arg, 0
-  %slct = select i1 %cond, x86_mmx bitcast (i64 7 to x86_mmx), x86_mmx bitcast (i64 0 to x86_mmx)
-  %psll = tail call x86_mmx @llvm.x86.mmx.psll.w(x86_mmx %slct, x86_mmx %slct)
-  %retc = bitcast x86_mmx %psll to i64
+  %slct = select i1 %cond, <1 x i64> bitcast (i64 7 to <1 x i64>), <1 x i64> bitcast (i64 0 to <1 x i64>)
+  %psll = tail call <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64> %slct, <1 x i64> %slct)
+  %retc = bitcast <1 x i64> %psll to i64
   ret i64 %retc
 }
 
@@ -104,13 +104,13 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
   %cond = icmp eq i64 %arg, 0
-  %xmmx = bitcast i64 %x to x86_mmx
-  %ymmx = bitcast i64 %y to x86_mmx
-  %slct = select i1 %cond, x86_mmx %xmmx, x86_mmx %ymmx
-  %psll = tail call x86_mmx @llvm.x86.mmx.psll.w(x86_mmx %slct, x86_mmx %slct)
-  %retc = bitcast x86_mmx %psll to i64
+  %xmmx = bitcast i64 %x to <1 x i64>
+  %ymmx = bitcast i64 %y to <1 x i64>
+  %slct = select i1 %cond, <1 x i64> %xmmx, <1 x i64> %ymmx
+  %psll = tail call <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64> %slct, <1 x i64> %slct)
+  %retc = bitcast <1 x i64> %psll to i64
   ret i64 %retc
 }
 
-declare x86_mmx @llvm.x86.mmx.psll.w(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64>, <1 x i64>)
 

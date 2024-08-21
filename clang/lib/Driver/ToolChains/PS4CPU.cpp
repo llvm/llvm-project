@@ -141,6 +141,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
 
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -177,7 +179,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
     AddLTOFlag(Twine("-threads=") + Threads);
 
-  CmdArgs.push_back(Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
+  if (*LTOArgs)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
@@ -236,6 +240,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
 
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -314,10 +320,6 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args, StringRef Platform,
                                    const char *EnvVar)
     : Generic_ELF(D, Triple, Args) {
-  if (Args.hasArg(clang::driver::options::OPT_static))
-    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
-        << "-static" << Platform;
-
   // Determine where to find the PS4/PS5 libraries.
   // If -isysroot was passed, use that as the SDK base path.
   // If not, we use the EnvVar if it exists; otherwise use the driver's

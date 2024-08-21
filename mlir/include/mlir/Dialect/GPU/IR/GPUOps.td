@@ -21,6 +21,7 @@ include "mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
@@ -1196,8 +1197,13 @@ def AnyIntegerOrFloatOr1DVector :
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
-    The `subgroup_reduce` op reduces the value of every lane (work item) across
-    a subgroup. The result is equal for all lanes.
+    The `subgroup_reduce` op reduces the values of lanes (work items) across a
+    subgroup.
+
+    The subgroup is divided into clusters of `cluster_size` contiguous lanes
+    each, and a reduction is done for every lane of each cluster (in parallel).
+    The result is equal for all lanes in a cluster. When `cluster_size` is
+    omitted, there is a single cluster covering the entire subgroup.
 
     When the reduced value is of a vector type, each vector element is reduced
     independently. Only 1-d vector types are allowed.
@@ -1205,13 +1211,15 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     Example:
 
     ```mlir
-    %1 = gpu.subgroup_reduce add %a : (f32) -> (f32)
-    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> (vector<4xf16>)
+    %1 = gpu.subgroup_reduce add %a : (f32) -> f32
+    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> vector<4xf16>
+    %3 = gpu.subgroup_reduce add %c cluster_size(4) : (f32) -> f32
     ```
 
     If `uniform` flag is set either none or all lanes of a subgroup need to execute
-    this op in convergence. The reduction operation must be one
-    of:
+    this op in convergence.
+
+    The reduction operation must be one of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
     *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
@@ -1221,12 +1229,29 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
   let arguments = (ins
     AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
-    UnitAttr:$uniform
+    UnitAttr:$uniform,
+    OptionalAttr<I32Attr>:$cluster_size
   );
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
+  let builders = [
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform), [{
+      build($_builder, $_state, value, op, uniform, /*cluster_size=*/ nullptr);
+    }]>,
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform,
+               "std::optional<uint32_t>":$cluster_size), [{
+      build($_builder, $_state, value, op, uniform, cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+    }]>
+  ];
+
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
-                          (`uniform` $uniform^)? attr-dict
+                          (`uniform` $uniform^)?
+                          (`cluster_size` `(` $cluster_size^ `)`)?
+                          attr-dict
                           `:` functional-type(operands, results) }];
 
   let hasFolder = 1;
@@ -1249,17 +1274,11 @@ def GPU_ShuffleMode : I32EnumAttr<"ShuffleMode",
 def GPU_ShuffleModeAttr : EnumAttr<GPU_Dialect, GPU_ShuffleMode,
                                    "shuffle_mode">;
 
-def I32I64F32OrF64 : TypeConstraint<Or<[I32.predicate,
-                                        I64.predicate,
-                                        F32.predicate,
-                                        F64.predicate]>,
-                                       "i32, i64, f32 or f64">;
-
 def GPU_ShuffleOp : GPU_Op<
     "shuffle", [Pure, AllTypesMatch<["value", "shuffleResult"]>]>,
-    Arguments<(ins I32I64F32OrF64:$value, I32:$offset, I32:$width,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width,
                GPU_ShuffleModeAttr:$mode)>,
-    Results<(outs I32I64F32OrF64:$shuffleResult, I1:$valid)> {
+    Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
     The "shuffle" op moves values to a across lanes (a.k.a., invocations,
@@ -1347,10 +1366,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
-      SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins SymbolNameAttr:$sym_name,
-          OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
-          OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
+      NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1379,7 +1395,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     gpu.module @symbol_name {
       gpu.func {}
         ...
-      gpu.module_end
     }
     // Module with offloading handler and target attributes.
     gpu.module @symbol_name2 <#gpu.select_object<1>> [
@@ -1387,7 +1402,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
         #rocdl.target<chip = "gfx90a">] {
       gpu.func {}
         ...
-      gpu.module_end
     }
     ```
   }];
@@ -1399,8 +1413,18 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
                    "ArrayRef<Attribute>":$targets,
                    CArg<"Attribute", "{}">:$handler)>
   ];
+
+  let arguments = (ins
+      SymbolNameAttr:$sym_name,
+      OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
+      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler);
   let regions = (region SizedRegion<1>:$bodyRegion);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $sym_name
+    (`<` $offloadingHandler^ `>`)?
+    ($targets^)?
+    attr-dict-with-keyword $bodyRegion
+  }];
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.
@@ -1413,17 +1437,6 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-}
-
-def GPU_ModuleEndOp : GPU_Op<"module_end", [
-  Terminator, HasParent<"GPUModuleOp">
-]> {
-  let summary = "A pseudo op that marks the end of a gpu.module.";
-  let description = [{
-    This op terminates the only block inside the only region of a `gpu.module`.
-  }];
-
-  let assemblyFormat = "attr-dict";
 }
 
 def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
