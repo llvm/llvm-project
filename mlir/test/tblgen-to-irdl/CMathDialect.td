@@ -25,7 +25,6 @@ def CMath_ComplexType : CMath_Type<"ComplexType", "complex"> {
 
 // CHECK:      irdl.operation @identity {
 // CHECK-NEXT:   %0 = irdl.base "!cmath.complex"
-// CHECK-NEXT:   irdl.operands()
 // CHECK-NEXT:   irdl.results(%0)
 // CHECK-NEXT: }
 def CMath_IdentityOp : CMath_Op<"identity"> {
