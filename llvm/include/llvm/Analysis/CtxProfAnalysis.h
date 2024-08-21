@@ -9,6 +9,8 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
@@ -17,6 +19,12 @@
 namespace llvm {
 
 class CtxProfAnalysis;
+
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    DenseMap<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
 
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
@@ -64,6 +72,8 @@ public:
     assert(isFunctionKnown(F));
     return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
   }
+
+  const CtxProfFlatProfile flatten() const;
 
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &) {

@@ -7221,6 +7221,22 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   unsigned ShuffleOrOp = S.isAltShuffle() ?
                 (unsigned) Instruction::ShuffleVector : S.getOpcode();
+  auto CreateOperandNodes = [&](TreeEntry *TE, const auto &Operands) {
+    // Postpone PHI nodes creation
+    SmallVector<unsigned> PHIOps;
+    for (unsigned I : seq<unsigned>(Operands.size())) {
+      ArrayRef<Value *> Op = Operands[I];
+      if (Op.empty())
+        continue;
+      InstructionsState S = getSameOpcode(Op, *TLI);
+      if (S.getOpcode() != Instruction::PHI || S.isAltShuffle())
+        buildTree_rec(Op, Depth + 1, {TE, I});
+      else
+        PHIOps.push_back(I);
+    }
+    for (unsigned I : PHIOps)
+      buildTree_rec(Operands[I], Depth + 1, {TE, I});
+  };
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
       auto *PH = cast<PHINode>(VL0);
@@ -7232,10 +7248,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Keeps the reordered operands to avoid code duplication.
       PHIHandler Handler(*DT, PH, VL);
       Handler.buildOperands();
-      for (unsigned I : seq<unsigned>(0, PH->getNumOperands()))
+      for (unsigned I : seq<unsigned>(PH->getNumOperands()))
         TE->setOperand(I, Handler.getOperands(I));
-      for (unsigned I : seq<unsigned>(0, PH->getNumOperands()))
-        buildTree_rec(Handler.getOperands(I), Depth + 1, {TE, I});
+      SmallVector<ArrayRef<Value *>> Operands(PH->getNumOperands());
+      for (unsigned I : seq<unsigned>(PH->getNumOperands()))
+        Operands[I] = Handler.getOperands(I);
+      CreateOperandNodes(TE, Operands);
       return;
     }
     case Instruction::ExtractValue:
@@ -10906,8 +10924,31 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       if (CanBeUsedAsScalar) {
         InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
         bool KeepScalar = ScalarCost <= ExtraCost;
-        if (KeepScalar && ScalarCost != TTI::TCC_Free &&
-            ExtraCost - ScalarCost <= TTI::TCC_Basic) {
+        // Try to keep original scalar if the user is the phi node from the same
+        // block as the root phis, currently vectorized. It allows to keep
+        // better ordering info of PHIs, being vectorized currently.
+        bool IsProfitablePHIUser =
+            (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
+                            VectorizableTree.front()->Scalars.size() > 2)) &&
+            VectorizableTree.front()->getOpcode() == Instruction::PHI &&
+            !Inst->hasNUsesOrMore(UsesLimit) &&
+            none_of(Inst->users(),
+                    [&](User *U) {
+                      auto *PHIUser = dyn_cast<PHINode>(U);
+                      return (!PHIUser ||
+                              PHIUser->getParent() !=
+                                  cast<Instruction>(
+                                      VectorizableTree.front()->getMainOp())
+                                      ->getParent()) &&
+                             !getTreeEntry(U);
+                    }) &&
+            count_if(Entry->Scalars, [&](Value *V) {
+              return ValueToExtUses->contains(V);
+            }) <= 2;
+        if (IsProfitablePHIUser) {
+          KeepScalar = true;
+        } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
+                   ExtraCost - ScalarCost <= TTI::TCC_Basic) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
             return ValueToExtUses->contains(V);
           });

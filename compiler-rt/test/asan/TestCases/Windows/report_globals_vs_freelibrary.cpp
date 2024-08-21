@@ -1,6 +1,6 @@
 // RUN: %clang_cl_asan %LD %Od -DDLL %s %Fe%t.dll
 // RUN: %clang_cl_asan %Od -DEXE %s %Fe%te.exe
-// RUN: %env_asan_opts=report_globals=1:verbosity=3 %run %te.exe %t.dll 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=report_globals=2 %run %te.exe %t.dll 2>&1 | FileCheck %s
 
 #include <windows.h>
 #include <stdio.h>

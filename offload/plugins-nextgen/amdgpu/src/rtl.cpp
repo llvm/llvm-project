@@ -4715,8 +4715,18 @@ private:
       }
       if (DeviceNode != Node)
         continue;
-
+      void *DevicePtr = (void *)Event->memory_fault.virtual_address;
+      std::string S;
+      llvm::raw_string_ostream OS(S);
+      OS << llvm::format("Memory access fault by GPU %" PRIu32
+                         " (agent 0x%" PRIx64
+                         ") at virtual address %p. Reasons: %s",
+                         Node, Event->memory_fault.agent.handle,
+                         (void *)Event->memory_fault.virtual_address,
+                         llvm::join(Reasons, ", ").c_str());
       ErrorReporter::reportKernelTraces(AMDGPUDevice, *KernelTraceInfoRecord);
+      ErrorReporter::reportMemoryAccessError(AMDGPUDevice, DevicePtr, S,
+                                             /*Abort*/ true);
     }
 
     // Abort the execution since we do not recover from this error.

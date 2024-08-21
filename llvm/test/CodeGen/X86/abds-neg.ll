@@ -853,9 +853,8 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq %rsi, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    subq %rsi, %rdi
-; X64-NEXT:    cmovgeq %rdi, %rax
+; X64-NEXT:    subq %rdi, %rsi
+; X64-NEXT:    cmovgeq %rsi, %rax
 ; X64-NEXT:    retq
   %cmp = icmp slt i64 %a, %b
   %ab = sub i64 %a, %b
@@ -907,14 +906,14 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ;
 ; X64-LABEL: abd_cmp_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    subq %rdi, %rax
-; X64-NEXT:    movq %rcx, %r8
-; X64-NEXT:    sbbq %rsi, %r8
-; X64-NEXT:    subq %rdx, %rdi
-; X64-NEXT:    sbbq %rcx, %rsi
-; X64-NEXT:    cmovgeq %rdi, %rax
-; X64-NEXT:    cmovgeq %rsi, %r8
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    subq %rdx, %rax
+; X64-NEXT:    movq %rsi, %r8
+; X64-NEXT:    sbbq %rcx, %r8
+; X64-NEXT:    subq %rdi, %rdx
+; X64-NEXT:    sbbq %rsi, %rcx
+; X64-NEXT:    cmovgeq %rdx, %rax
+; X64-NEXT:    cmovgeq %rcx, %r8
 ; X64-NEXT:    movq %r8, %rdx
 ; X64-NEXT:    retq
   %cmp = icmp slt i128 %a, %b

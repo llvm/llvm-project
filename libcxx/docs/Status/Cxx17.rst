@@ -45,7 +45,12 @@ Paper Status
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
    .. [#note-P0154] P0154: The required macros are only implemented as of clang 19.
    .. [#note-P0452] P0452: The changes to ``std::transform_inclusive_scan`` and ``std::transform_exclusive_scan`` have not yet been implemented.
-   .. [#note-P0156] P0156: This paper was reverted in Kona.
+   .. [#note-P0156] P0156: That paper was pulled out of the draft at the 2017-01 meeting in Kona.
+   .. [#note-P0181] P0181: That paper was pulled out of the draft at the 2017-01 meeting in Kona.
+   .. [#note-P0067] P0067: That paper was resolved by `P0067R5 <https://wg21.link/P0067R5>`__.
+   .. [#note-LWG2587] LWG2587: That LWG issue was resolved by `LWG2567 <https://wg21.link/LWG2567>`__.
+   .. [#note-LWG2588] LWG2588: That LWG issue was resolved by `LWG2568 <https://wg21.link/LWG2568>`__.
+   .. [#note-LWG2955] LWG2955: That LWG issue was resolved by `P0682R1 <https://wg21.link/P0682R1>`__.
 
 .. _issues-status-cxx17:
 
