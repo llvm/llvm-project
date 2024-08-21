@@ -17,10 +17,10 @@ int main() {
   char *A = (char *)malloc(N);
 #pragma omp target map(A[ : N])
   { A[N] = 3; }
-  // clang-format off
+// clang-format off
 // CHECK: OFFLOAD ERROR: Memory access fault by GPU {{.*}} (agent 0x{{.*}}) at virtual address [[PTR:0x[0-9a-z]*]]. Reasons: {{.*}}
 // CHECK: Device pointer [[PTR]] does not point into any (current or prior) host-issued allocation.
 // CHECK: Closest host-issued allocation (distance 1 byte; might be by page):
 // CHECK: Last allocation of size 1073741824
-  // clang-format on
+// clang-format on
 }
