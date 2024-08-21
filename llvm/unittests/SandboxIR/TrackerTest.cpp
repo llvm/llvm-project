@@ -808,9 +808,8 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   auto It = BB->begin();
   auto *SVI = cast<sandboxir::ShuffleVectorInst>(&*It++);
 
-  SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
-
   // Check setShuffleMask.
+  SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
   Ctx.save();
   SVI->setShuffleMask(ArrayRef<int>({0, 0}));
   EXPECT_THAT(SVI->getShuffleMask(),
@@ -818,7 +817,6 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   Ctx.revert();
   EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
 }
-
 
 TEST_F(TrackerTest, AtomicRMWSetters) {
   parseIR(C, R"IR(
