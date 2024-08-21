@@ -88,10 +88,10 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
-// The hash is produced in \p Key.
-void llvm::computeLTOCacheKey(
-    SmallString<40> &Key, const Config &Conf, const ModuleSummaryIndex &Index,
-    StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
+// Returns the hash in its hexadecimal representation.
+std::string llvm::computeLTOCacheKey(
+    const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
+    const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
@@ -355,7 +355,7 @@ void llvm::computeLTOCacheKey(
     }
   }
 
-  Key = toHex(Hasher.result());
+  return toHex(Hasher.result());
 }
 
 static void thinLTOResolvePrevailingGUID(
@@ -1488,11 +1488,10 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
-    SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
-                       ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
-                       CfiFunctionDecls);
+    std::string Key = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;

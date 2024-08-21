@@ -559,6 +559,31 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+/// This is not used by any of the opcodes directly. It's used by
+/// EvalEmitter to do the final lvalue-to-rvalue conversion.
+bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckConstant(S, OpPC, Ptr))
+    return false;
+
+  if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckActive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckMutable(S, OpPC, Ptr))
+    return false;
+  return true;
+}
+
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
