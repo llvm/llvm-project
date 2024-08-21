@@ -14443,12 +14443,11 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
 }
 
 static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
-                                   CodeGenModule &CGM,
-                                   llvm::LLVMContext &Context) {
-  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Context);
-  llvm::Type *Int64Ty = llvm::Type::getInt64Ty(Context);
+                                   CodeGenModule &CGM) {
+  llvm::Type *Int32Ty = Builder.getInt32Ty();
+  llvm::Type *Int64Ty = Builder.getInt64Ty();
   llvm::ArrayType *ArrayOfInt64Ty =
-      llvm::ArrayType::get(Int64Ty, llvm::RISCV::FeatureBitSize);
+      llvm::ArrayType::get(Int64Ty, llvm::RISCVISAInfo::FeatureBitSize);
   llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
   llvm::Constant *RISCVFeaturesBits =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
@@ -14484,8 +14483,8 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
       continue;
 
     Value *Mask = Builder.getInt64(RequireBitMasks[Idx]);
-    Value *Bitset = Builder.CreateAnd(
-        loadRISCVFeatureBits(Idx, Builder, CGM, getLLVMContext()), Mask);
+    Value *Bitset =
+        Builder.CreateAnd(loadRISCVFeatureBits(Idx, Builder, CGM), Mask);
     Value *CmpV = Builder.CreateICmpEQ(Bitset, Mask);
     Result = (!Result) ? CmpV : Builder.CreateAnd(Result, CmpV);
   }

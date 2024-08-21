@@ -83,7 +83,7 @@ public:
   /// Return the group id and bit position of __riscv_feature_bits.  Returns
   /// <-1, -1> if not supported.
   static std::pair<int, int> getRISCVFeaturesBitsInfo(StringRef Ext);
-  
+
   // The maximum value of group id from getRISCVFeaturesBitsInfo.
   static constexpr unsigned FeatureBitSize = 2;
 
