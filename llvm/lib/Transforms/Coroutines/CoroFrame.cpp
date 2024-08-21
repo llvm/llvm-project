@@ -1121,7 +1121,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
 
-  assert(Shape.getPromiseAlloca() &&
+  AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
+  assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
   DIFile *DFile = DIS->getFile();
