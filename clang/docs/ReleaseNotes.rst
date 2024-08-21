@@ -1407,6 +1407,11 @@ Crash and bug fixes
 - Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
   more total time than the eymbolic execution itself. (#GH97298)
 
+- In clang-18, we regressed in terms of analysis time for projects having many
+  nested loops with buffer indexing or shifting or other binary operations.
+  For example, functions computing different hash values. Some of this slowdown
+  was attributed to taint analysis, which is fixed now. (#GH105493)
+
 - ``std::addressof``, ``std::as_const``, ``std::forward``,
   ``std::forward_like``, ``std::move``, ``std::move_if_noexcept``, are now
   modeled just like their builtin counterpart. (#GH94193)
