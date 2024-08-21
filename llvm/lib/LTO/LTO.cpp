@@ -330,8 +330,8 @@ std::string llvm::computeLTOCacheKey(
   // Include the hash for all type identifiers used by this module.
   for (GlobalValue::GUID TId : UsedTypeIds) {
     auto TidIter = Index.typeIds().equal_range(TId);
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      AddTypeIdSummary(It->second.first, It->second.second);
+    for (const auto &I : make_range(TidIter))
+      AddTypeIdSummary(I.second.first, I.second.second);
   }
 
   AddUnsigned(UsedCfiDefs.size());
