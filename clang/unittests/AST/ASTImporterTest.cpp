@@ -9919,7 +9919,7 @@ TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingVarTemplate) {
   testImport(FromLastD);
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase, VarTemplatedLambdaInGlobalScope) {
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplatedLambdaWithCircularDeps) {
   Decl *FromTU = getTuDecl(
       R"(
         namespace { template <typename> auto m = [] {}; }
