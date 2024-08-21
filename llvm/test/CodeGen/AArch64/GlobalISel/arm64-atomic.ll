@@ -106,11 +106,10 @@ define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 ; CHECK-OUTLINE-O1-LABEL: val_compare_and_swap_from_load:
 ; CHECK-OUTLINE-O1:       ; %bb.0:
 ; CHECK-OUTLINE-O1-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-OUTLINE-O1-NEXT:    ldr w8, [x2]
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
 ; CHECK-OUTLINE-O1-NEXT:    mov w0, w1
+; CHECK-OUTLINE-O1-NEXT:    ldr w1, [x2]
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
-; CHECK-OUTLINE-O1-NEXT:    mov w1, w8
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_cas4_acq
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-OUTLINE-O1-NEXT:    ret
@@ -6026,8 +6025,8 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
-; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov w1, w2
 ; CHECK-OUTLINE-O1-NEXT:    mov w0, w19
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
@@ -6133,8 +6132,8 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
-; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov w1, w2
 ; CHECK-OUTLINE-O1-NEXT:    mov w0, w19
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
@@ -6238,8 +6237,8 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
-; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov w19, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov w1, w2
 ; CHECK-OUTLINE-O1-NEXT:    mov w0, w19
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
@@ -6336,8 +6335,8 @@ define { i64, i1 } @cmpxchg_i64(ptr %ptr, i64 %desired, i64 %new) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
-; CHECK-OUTLINE-O1-NEXT:    mov x19, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov x19, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    mov x0, x19
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
@@ -6434,8 +6433,8 @@ define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
-; CHECK-OUTLINE-O1-NEXT:    mov x19, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov x19, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    mov x0, x19
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x3

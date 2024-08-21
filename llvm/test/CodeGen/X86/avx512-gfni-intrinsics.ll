@@ -10,18 +10,18 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineinvqb_128(<16 x i8>
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineinvqb $5, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0xcf,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xcf,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineinvqb $4, %xmm1, %xmm0, %xmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xcf,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineinvqb $4, %xmm1, %xmm0, %xmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xcf,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xcf,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa %xmm4, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineinvqb_128:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineinvqb $5, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0xcf,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xcf,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineinvqb $4, %xmm1, %xmm0, %xmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xcf,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineinvqb $4, %xmm1, %xmm0, %xmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xcf,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xcf,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa %xmm4, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineinvqb_128:
@@ -69,18 +69,18 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineinvqb_256(<32 x i8>
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineinvqb $5, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0xcf,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xcf,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineinvqb $4, %ymm1, %ymm0, %ymm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xcf,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa %ymm3, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineinvqb $4, %ymm1, %ymm0, %ymm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xcf,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xcf,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa %ymm4, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineinvqb_256:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineinvqb $5, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0xcf,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xcf,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineinvqb $4, %ymm1, %ymm0, %ymm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xcf,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa %ymm3, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineinvqb $4, %ymm1, %ymm0, %ymm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xcf,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xcf,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa %ymm4, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineinvqb_256:
@@ -135,18 +135,18 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineinvqb_512(<64 x i8>
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineinvqb $5, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0xcf,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0xcf,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineinvqb $4, %zmm1, %zmm0, %zmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xcf,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa64 %zmm3, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineinvqb $4, %zmm1, %zmm0, %zmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xcf,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0xcf,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa64 %zmm4, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineinvqb_512:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineinvqb $5, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0xcf,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0xcf,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineinvqb $4, %zmm1, %zmm0, %zmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xcf,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa64 %zmm3, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineinvqb $4, %zmm1, %zmm0, %zmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xcf,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0xcf,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa64 %zmm4, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineinvqb_512:
@@ -221,18 +221,18 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineqb_128(<16 x i8> %s
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineqb $5, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0xce,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xce,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineqb $4, %xmm1, %xmm0, %xmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xce,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineqb $4, %xmm1, %xmm0, %xmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xce,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xce,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa %xmm4, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineqb_128:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineqb $5, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0xce,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xce,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineqb $4, %xmm1, %xmm0, %xmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xce,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineqb $4, %xmm1, %xmm0, %xmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0x89,0xce,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xce,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa %xmm4, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineqb_128:
@@ -280,18 +280,18 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineqb_256(<32 x i8> %s
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineqb $5, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0xce,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xce,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineqb $4, %ymm1, %ymm0, %ymm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xce,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa %ymm3, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineqb $4, %ymm1, %ymm0, %ymm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xce,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xce,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa %ymm4, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineqb_256:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineqb $5, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0xce,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xce,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineqb $4, %ymm1, %ymm0, %ymm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xce,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa %ymm3, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineqb $4, %ymm1, %ymm0, %ymm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xa9,0xce,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xce,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa %ymm4, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineqb_256:
@@ -346,18 +346,18 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineqb_512(<64 x i8> %s
 ; X86BW:       # %bb.0:
 ; X86BW-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
 ; X86BW-NEXT:    vgf2p8affineqb $5, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0xce,0xd1,0x05]
-; X86BW-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0xce,0xd9,0x03]
-; X86BW-NEXT:    vgf2p8affineqb $4, %zmm1, %zmm0, %zmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xce,0xc9,0x04]
-; X86BW-NEXT:    vmovdqa64 %zmm3, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc3]
+; X86BW-NEXT:    vgf2p8affineqb $4, %zmm1, %zmm0, %zmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xce,0xe1,0x04]
+; X86BW-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0xce,0xc1,0x03]
+; X86BW-NEXT:    vmovdqa64 %zmm4, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcc]
 ; X86BW-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64BW-LABEL: test_vgf2p8affineqb_512:
 ; X64BW:       # %bb.0:
 ; X64BW-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
 ; X64BW-NEXT:    vgf2p8affineqb $5, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0xce,0xd1,0x05]
-; X64BW-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0xce,0xd9,0x03]
-; X64BW-NEXT:    vgf2p8affineqb $4, %zmm1, %zmm0, %zmm1 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xce,0xc9,0x04]
-; X64BW-NEXT:    vmovdqa64 %zmm3, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc3]
+; X64BW-NEXT:    vgf2p8affineqb $4, %zmm1, %zmm0, %zmm4 {%k1} {z} # encoding: [0x62,0xf3,0xfd,0xc9,0xce,0xe1,0x04]
+; X64BW-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0xce,0xc1,0x03]
+; X64BW-NEXT:    vmovdqa64 %zmm4, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcc]
 ; X64BW-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86NOBW-LABEL: test_vgf2p8affineqb_512:

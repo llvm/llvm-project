@@ -232,10 +232,9 @@ define i32 @bextr32_a2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl (%eax), %esi
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %esi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $1, %eax
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    decl %eax
 ; X86-NOBMI-NEXT:    andl %esi, %eax
@@ -302,10 +301,9 @@ define i32 @bextr32_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl (%eax), %esi
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %esi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $1, %eax
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    decl %eax
 ; X86-NOBMI-NEXT:    andl %esi, %eax
@@ -439,10 +437,9 @@ define i32 @bextr32_a5_skipextrauses(i32 %val, i32 %numskipbits, i32 %numlowbits
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl %eax, %ecx
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %edi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $1, %esi
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %esi
 ; X86-NOBMI-NEXT:    decl %esi
 ; X86-NOBMI-NEXT:    andl %edi, %esi
@@ -2344,10 +2341,9 @@ define i32 @bextr32_b2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl (%eax), %esi
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %esi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $-1, %eax
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl %esi, %eax
@@ -2414,10 +2410,9 @@ define i32 @bextr32_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl (%eax), %esi
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %esi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $-1, %eax
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %eax
 ; X86-NOBMI-NEXT:    notl %eax
 ; X86-NOBMI-NEXT:    andl %esi, %eax
@@ -2551,10 +2546,9 @@ define i32 @bextr32_b5_skipextrauses(i32 %val, i32 %numskipbits, i32 %numlowbits
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl %eax, %ecx
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    shrl %cl, %edi
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl $-1, %esi
-; X86-NOBMI-NEXT:    movl %edx, %ecx
 ; X86-NOBMI-NEXT:    shll %cl, %esi
 ; X86-NOBMI-NEXT:    notl %esi
 ; X86-NOBMI-NEXT:    andl %edi, %esi

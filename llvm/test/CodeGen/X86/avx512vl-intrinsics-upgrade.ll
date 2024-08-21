@@ -10720,9 +10720,9 @@ declare i8 @llvm.x86.avx512.ptestm.d.128(<4 x i32>, <4 x i32>,i8)
 define i8@test_int_x86_avx512_ptestm_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestm_d_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestmd %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x08,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestmd %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x08,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
@@ -10779,9 +10779,9 @@ declare i8 @llvm.x86.avx512.ptestm.q.128(<2 x i64>, <2 x i64>, i8)
 define i8@test_int_x86_avx512_ptestm_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestm_q_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestmq %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x08,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestmq %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x08,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
@@ -10810,9 +10810,9 @@ declare i8 @llvm.x86.avx512.ptestm.q.256(<4 x i64>, <4 x i64>, i8)
 define i8@test_int_x86_avx512_ptestm_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestm_q_256:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestmq %ymm1, %ymm0, %k0 # encoding: [0x62,0xf2,0xfd,0x28,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestmq %ymm1, %ymm0, %k0 # encoding: [0x62,0xf2,0xfd,0x28,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
@@ -10843,9 +10843,9 @@ declare i8 @llvm.x86.avx512.ptestnm.d.128(<4 x i32>, <4 x i32>, i8 %x2)
 define i8@test_int_x86_avx512_ptestnm_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestnm_d_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestnmd %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0x7e,0x08,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestnmd %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0x7e,0x08,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
@@ -10902,9 +10902,9 @@ declare i8 @llvm.x86.avx512.ptestnm.q.128(<2 x i64>, <2 x i64>, i8 %x2)
 define i8@test_int_x86_avx512_ptestnm_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestnm_q_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestnmq %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfe,0x08,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestnmq %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfe,0x08,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
@@ -10933,9 +10933,9 @@ declare i8 @llvm.x86.avx512.ptestnm.q.256(<4 x i64>, <4 x i64>, i8 %x2)
 define i8@test_int_x86_avx512_ptestnm_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_ptestnm_q_256:
 ; X86:       # %bb.0:
+; X86-NEXT:    vptestnmq %ymm1, %ymm0, %k0 # encoding: [0x62,0xf2,0xfe,0x28,0x27,0xc1]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vptestnmq %ymm1, %ymm0, %k0 # encoding: [0x62,0xf2,0xfe,0x28,0x27,0xc1]
 ; X86-NEXT:    kandw %k1, %k0, %k1 # encoding: [0xc5,0xfc,0x41,0xc9]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]

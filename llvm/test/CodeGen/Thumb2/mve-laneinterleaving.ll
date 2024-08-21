@@ -65,13 +65,13 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-LABEL: ext_add_trunc_i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmov.f32 s6, s7
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.f32 s8, s3
+; CHECK-NEXT:    vmov.f32 s8, s2
+; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov.f32 s2, s5
-; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    add.w r12, r1, r0
 ; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    vmov r0, s0

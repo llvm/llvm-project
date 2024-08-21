@@ -1880,10 +1880,10 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm10
 ; AVX-NEXT:    vmovdqa 48(%rdi), %xmm2
-; AVX-NEXT:    vmovdqa 32(%rdi), %xmm1
-; AVX-NEXT:    vmovdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm7 = xmm2[0],xmm6[1,2,3],xmm2[4],xmm6[5,6,7]
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm0
+; AVX-NEXT:    vmovdqa 32(%rdi), %xmm1
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm8 = xmm1[0],xmm6[1,2,3],xmm1[4],xmm6[5,6,7]
 ; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vpackusdw %xmm7, %xmm8, %xmm7

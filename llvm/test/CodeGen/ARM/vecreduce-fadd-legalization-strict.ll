@@ -92,21 +92,21 @@ define double @test_v1f64_neutral(<1 x double> %a) nounwind {
 define fp128 @test_v1f128(<1 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-LABEL: test_v1f128:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    str r0, [sp]
 ; CHECK-NEXT:    str r1, [sp, #4]
 ; CHECK-NEXT:    str r2, [sp, #8]
 ; CHECK-NEXT:    str r3, [sp, #12]
-; CHECK-NEXT:    ldr r0, [sp, #32]
-; CHECK-NEXT:    ldr r1, [sp, #36]
-; CHECK-NEXT:    ldr r2, [sp, #40]
-; CHECK-NEXT:    ldr r3, [sp, #44]
+; CHECK-NEXT:    ldr r0, [sp, #24]
+; CHECK-NEXT:    ldr r1, [sp, #28]
+; CHECK-NEXT:    ldr r2, [sp, #32]
+; CHECK-NEXT:    ldr r3, [sp, #36]
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    pop {r4, r5, r11, lr}
+; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v1f128(fp128 %s, <1 x fp128> %a)
   ret fp128 %b

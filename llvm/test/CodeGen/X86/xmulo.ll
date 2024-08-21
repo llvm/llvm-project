@@ -210,14 +210,14 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl %edx, %ecx
-; WIN32-NEXT:    movl %edi, %esi
 ; WIN32-NEXT:    movl %edx, %ebx
 ; WIN32-NEXT:    sarl $31, %ecx
-; WIN32-NEXT:    imull %ecx, %esi
 ; WIN32-NEXT:    mull %ecx
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl %edx, %ecx
 ; WIN32-NEXT:    movl %eax, %ebp
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, %esi
+; WIN32-NEXT:    imull %ecx, %esi
+; WIN32-NEXT:    movl %edx, %ecx
 ; WIN32-NEXT:    addl %eax, %ecx
 ; WIN32-NEXT:    addl %esi, %ecx
 ; WIN32-NEXT:    movl %edi, %eax
@@ -973,14 +973,14 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl %edx, %ecx
-; WIN32-NEXT:    movl %edi, %esi
 ; WIN32-NEXT:    movl %edx, %ebp
 ; WIN32-NEXT:    sarl $31, %ecx
-; WIN32-NEXT:    imull %ecx, %esi
 ; WIN32-NEXT:    mull %ecx
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl %edx, %ecx
 ; WIN32-NEXT:    movl %eax, %ebx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, %esi
+; WIN32-NEXT:    imull %ecx, %esi
+; WIN32-NEXT:    movl %edx, %ecx
 ; WIN32-NEXT:    addl %eax, %ecx
 ; WIN32-NEXT:    addl %esi, %ecx
 ; WIN32-NEXT:    movl %edi, %eax

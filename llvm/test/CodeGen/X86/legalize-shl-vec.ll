@@ -80,12 +80,12 @@ define <2 x i256> @test_srl(<2 x i256> %In) nounwind {
 ; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    shldl $28, %edx, %esi
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    shldl $28, %ebx, %edx
 ; X86-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    shldl $28, %ecx, %ebx
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    shldl $28, %edi, %esi
@@ -162,12 +162,12 @@ define <2 x i256> @test_sra(<2 x i256> %In) nounwind {
 ; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    shldl $26, %edx, %esi
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    shldl $26, %ebx, %edx
 ; X86-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    shldl $26, %ecx, %ebx
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    shldl $26, %edi, %esi

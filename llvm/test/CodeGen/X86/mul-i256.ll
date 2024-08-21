@@ -305,13 +305,13 @@ define void @test(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    movq 8(%rdi), %r11
 ; X64-NEXT:    movq 16(%rdi), %r10
 ; X64-NEXT:    movq (%rsi), %r9
-; X64-NEXT:    movq 8(%rsi), %r14
 ; X64-NEXT:    movq 24(%rdi), %r15
-; X64-NEXT:    imulq %r9, %r15
 ; X64-NEXT:    movq %r9, %rax
 ; X64-NEXT:    mulq %r10
-; X64-NEXT:    movq 16(%rsi), %r8
 ; X64-NEXT:    movq %rax, %rdi
+; X64-NEXT:    movq 16(%rsi), %r8
+; X64-NEXT:    movq 8(%rsi), %r14
+; X64-NEXT:    imulq %r9, %r15
 ; X64-NEXT:    imulq %r14, %r10
 ; X64-NEXT:    addq %rdx, %r10
 ; X64-NEXT:    addq %r15, %r10

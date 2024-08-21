@@ -3220,8 +3220,8 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ebx, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 32(%esp,%edi), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebp, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebp, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload

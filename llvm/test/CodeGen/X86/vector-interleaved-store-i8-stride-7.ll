@@ -2684,29 +2684,29 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa 16(%rsi), %xmm4
 ; SSE-NEXT:    movdqa 16(%rdx), %xmm3
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm1[0,1,2,3,6,6,6,6]
-; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 16(%r8), %xmm6
 ; SSE-NEXT:    movdqa %xmm1, %xmm15
-; SSE-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 16(%r9), %xmm5
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
-; SSE-NEXT:    pand %xmm10, %xmm0
-; SSE-NEXT:    movdqa 16(%rcx), %xmm7
 ; SSE-NEXT:    movdqa {{.*#+}} xmm10 = [255,255,255,255,255,0,255,255,255,255,255,255,0,255,255,255]
+; SSE-NEXT:    pand %xmm10, %xmm0
 ; SSE-NEXT:    movdqa %xmm4, %xmm8
-; SSE-NEXT:    movdqa %xmm4, %xmm13
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm4[8],xmm8[9],xmm4[9],xmm8[10],xmm4[10],xmm8[11],xmm4[11],xmm8[12],xmm4[12],xmm8[13],xmm4[13],xmm8[14],xmm4[14],xmm8[15],xmm4[15]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm8[0,1,2,3,4,5,5,7]
-; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE-NEXT:    movdqa %xmm10, %xmm2
 ; SSE-NEXT:    pandn %xmm1, %xmm2
 ; SSE-NEXT:    por %xmm0, %xmm2
 ; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,0,0,255,255,255,255,255,0,0,255,255,255]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm1, %xmm11
 ; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    movdqa 16(%rcx), %xmm7
+; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 16(%r8), %xmm6
+; SSE-NEXT:    movdqa 16(%r9), %xmm5
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm4, %xmm13
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm1, %xmm11
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm3[0,1,2,3,6,6,6,6]
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -4340,7 +4340,6 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm7, %zmm0
 ; AVX512-FCP-NEXT:    vpermq {{.*#+}} zmm7 = zmm0[0,1,0,1,4,5,4,5]
 ; AVX512-FCP-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm16, %zmm7
-; AVX512-FCP-NEXT:    vmovdqa64 (%r10), %ymm17
 ; AVX512-FCP-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm15, %zmm7
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,ymm4[14,u,u],zero,zero,zero,zero,ymm4[15,u,u],zero,zero,zero,zero,ymm4[16,u,u],zero,zero,zero,zero,ymm4[17,u,u],zero,zero,zero,zero,ymm4[18]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm15 = ymm3[0,1,14],zero,ymm3[u,u,0,1,14,15],zero,ymm3[u,u,13,2,3,16],zero,ymm3[u,u,28,29,16,17],zero,ymm3[u,u,19,28,29,18],zero
@@ -4352,6 +4351,7 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm11 = ymm6[u,u,u,u],zero,ymm6[14,u,u,u,u,u],zero,ymm6[15,u,u,u,u,u],zero,ymm6[16,u,u,u,u,u],zero,ymm6[17,u,u,u,u,u]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm12 = ymm5[u,u,u,u,14],zero,ymm5[u,u,u,u,u,15],zero,ymm5[u,u,u,u,u,16],zero,ymm5[u,u,u,u,u,17],zero,ymm5[u,u,u,u,u]
 ; AVX512-FCP-NEXT:    vpor %ymm11, %ymm12, %ymm11
+; AVX512-FCP-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512-FCP-NEXT:    vpunpckhbw {{.*#+}} xmm8 = xmm8[8],xmm9[8],xmm8[9],xmm9[9],xmm8[10],xmm9[10],xmm8[11],xmm9[11],xmm8[12],xmm9[12],xmm8[13],xmm9[13],xmm8[14],xmm9[14],xmm8[15],xmm9[15]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[2,u,u,u,9,8,5,4,u,u,u,11,10,7,6,u]
 ; AVX512-FCP-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[0,1,0,1]
@@ -4369,7 +4369,6 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    # ymm10 = mem[0,1,0,1]
 ; AVX512-FCP-NEXT:    vpermd %ymm8, %ymm10, %ymm8
 ; AVX512-FCP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm8, %ymm8
-; AVX512-FCP-NEXT:    vmovdqa64 %ymm17, %ymm12
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm10 = zero,ymm12[13,u,u,u,u],zero,zero,ymm12[14,u,u,u,u],zero,zero,ymm12[15,u,u,u,u],zero,zero,ymm12[16,u,u,u,u],zero,zero,ymm12[17,u,u]
 ; AVX512-FCP-NEXT:    vinserti64x4 $1, %ymm10, %zmm8, %zmm8
 ; AVX512-FCP-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm8
@@ -4619,7 +4618,6 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm7, %zmm0
 ; AVX512DQ-FCP-NEXT:    vpermq {{.*#+}} zmm7 = zmm0[0,1,0,1,4,5,4,5]
 ; AVX512DQ-FCP-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm16, %zmm7
-; AVX512DQ-FCP-NEXT:    vmovdqa64 (%r10), %ymm17
 ; AVX512DQ-FCP-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm15, %zmm7
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,ymm4[14,u,u],zero,zero,zero,zero,ymm4[15,u,u],zero,zero,zero,zero,ymm4[16,u,u],zero,zero,zero,zero,ymm4[17,u,u],zero,zero,zero,zero,ymm4[18]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm15 = ymm3[0,1,14],zero,ymm3[u,u,0,1,14,15],zero,ymm3[u,u,13,2,3,16],zero,ymm3[u,u,28,29,16,17],zero,ymm3[u,u,19,28,29,18],zero
@@ -4631,6 +4629,7 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm11 = ymm6[u,u,u,u],zero,ymm6[14,u,u,u,u,u],zero,ymm6[15,u,u,u,u,u],zero,ymm6[16,u,u,u,u,u],zero,ymm6[17,u,u,u,u,u]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm12 = ymm5[u,u,u,u,14],zero,ymm5[u,u,u,u,u,15],zero,ymm5[u,u,u,u,u,16],zero,ymm5[u,u,u,u,u,17],zero,ymm5[u,u,u,u,u]
 ; AVX512DQ-FCP-NEXT:    vpor %ymm11, %ymm12, %ymm11
+; AVX512DQ-FCP-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512DQ-FCP-NEXT:    vpunpckhbw {{.*#+}} xmm8 = xmm8[8],xmm9[8],xmm8[9],xmm9[9],xmm8[10],xmm9[10],xmm8[11],xmm9[11],xmm8[12],xmm9[12],xmm8[13],xmm9[13],xmm8[14],xmm9[14],xmm8[15],xmm9[15]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} xmm8 = xmm8[2,u,u,u,9,8,5,4,u,u,u,11,10,7,6,u]
 ; AVX512DQ-FCP-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[0,1,0,1]
@@ -4648,7 +4647,6 @@ define void @store_i8_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    # ymm10 = mem[0,1,0,1]
 ; AVX512DQ-FCP-NEXT:    vpermd %ymm8, %ymm10, %ymm8
 ; AVX512DQ-FCP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm8, %ymm8
-; AVX512DQ-FCP-NEXT:    vmovdqa64 %ymm17, %ymm12
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm10 = zero,ymm12[13,u,u,u,u],zero,zero,ymm12[14,u,u,u,u],zero,zero,ymm12[15,u,u,u,u],zero,zero,ymm12[16,u,u,u,u],zero,zero,ymm12[17,u,u]
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $1, %ymm10, %zmm8, %zmm8
 ; AVX512DQ-FCP-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm8
@@ -5329,10 +5327,10 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm14[3,3,3,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,1,2,3]
-; SSE-NEXT:    pand %xmm6, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,0,255,255,255,255,255,255,0,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm2, %xmm11
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,0,255,255,255,255,255,255,0,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm6, %xmm0
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,0,3]
 ; SSE-NEXT:    movdqa %xmm6, %xmm2
@@ -5928,11 +5926,12 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    pandn %xmm10, %xmm15
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm14[1,1,2,1]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm2[0,1,2,3,7,5,6,4]
+; SSE-NEXT:    movdqa %xmm6, %xmm0
 ; SSE-NEXT:    movdqa %xmm6, %xmm2
 ; SSE-NEXT:    pandn %xmm10, %xmm2
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm8[1,1,2,2,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,0,2,1]
-; SSE-NEXT:    pand %xmm6, %xmm10
+; SSE-NEXT:    pand %xmm0, %xmm10
 ; SSE-NEXT:    por %xmm10, %xmm2
 ; SSE-NEXT:    pand %xmm12, %xmm2
 ; SSE-NEXT:    por %xmm15, %xmm2
@@ -5941,9 +5940,9 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,0,255,255,255,255,255,255,0,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm0, %xmm15
 ; SSE-NEXT:    pandn %xmm10, %xmm15
+; SSE-NEXT:    movdqa %xmm13, %xmm3
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm13[1,1,1,1,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,0,0,0]
-; SSE-NEXT:    movdqa %xmm13, %xmm3
 ; SSE-NEXT:    pand %xmm0, %xmm10
 ; SSE-NEXT:    por %xmm10, %xmm15
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm11[1,1,1,1,4,5,6,7]

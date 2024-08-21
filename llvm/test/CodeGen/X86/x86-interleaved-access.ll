@@ -1277,34 +1277,33 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(ptr %ptr){
 ; AVX1-NEXT:    vmovdqu (%rdi), %xmm11
 ; AVX1-NEXT:    vmovups 64(%rdi), %xmm0
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vmovdqu 48(%rdi), %xmm13
 ; AVX1-NEXT:    vmovdqu 96(%rdi), %xmm5
-; AVX1-NEXT:    vmovdqu 80(%rdi), %xmm4
-; AVX1-NEXT:    vmovdqu 144(%rdi), %xmm10
 ; AVX1-NEXT:    vmovdqu 112(%rdi), %xmm2
-; AVX1-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqu 144(%rdi), %xmm10
 ; AVX1-NEXT:    vmovdqu 160(%rdi), %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [128,128,128,128,128,0,3,6,9,12,15,2,5,8,11,14]
-; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; AVX1-NEXT:    vpshufb %xmm9, %xmm5, %xmm6
 ; AVX1-NEXT:    vpshufb %xmm9, %xmm10, %xmm7
-; AVX1-NEXT:    vpshufb %xmm9, %xmm11, %xmm8
-; AVX1-NEXT:    vpshufb %xmm9, %xmm13, %xmm9
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm14 = [1,4,7,10,13,128,128,128,128,128,128,u,u,u,u,u]
 ; AVX1-NEXT:    vpshufb %xmm14, %xmm5, %xmm5
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm15 = [128,128,128,128,128,0,3,6,9,12,15,u,u,u,u,u]
 ; AVX1-NEXT:    vpshufb %xmm15, %xmm2, %xmm12
-; AVX1-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vpor %xmm5, %xmm12, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vpshufb %xmm14, %xmm10, %xmm10
 ; AVX1-NEXT:    vpshufb %xmm15, %xmm3, %xmm12
 ; AVX1-NEXT:    vpor %xmm10, %xmm12, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm0
+; AVX1-NEXT:    vmovdqu 48(%rdi), %xmm13
+; AVX1-NEXT:    vmovdqu 80(%rdi), %xmm4
+; AVX1-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vpshufb %xmm9, %xmm11, %xmm8
+; AVX1-NEXT:    vpshufb %xmm9, %xmm13, %xmm9
+; AVX1-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vpshufb %xmm14, %xmm11, %xmm11
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vpshufb %xmm15, %xmm1, %xmm12
+; AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vpshufb %xmm15, %xmm0, %xmm12
 ; AVX1-NEXT:    vpor %xmm11, %xmm12, %xmm1
 ; AVX1-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vpshufb %xmm14, %xmm13, %xmm11

@@ -332,11 +332,11 @@ define void @store_i256(ptr %ptr, i256 %v) {
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    subq $40, %rsp
 ; CHECK-O3-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-O3-NEXT:    movq %rsi, (%rsp)
 ; CHECK-O3-NEXT:    movq %rdi, %rax
 ; CHECK-O3-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-O3-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-O3-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-O3-NEXT:    movq %rsi, (%rsp)
 ; CHECK-O3-NEXT:    movq %rsp, %rdx
 ; CHECK-O3-NEXT:    movl $32, %edi
 ; CHECK-O3-NEXT:    movq %rax, %rsi

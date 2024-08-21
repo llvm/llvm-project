@@ -844,26 +844,26 @@ define void @store_i64_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movapd 64(%rdi), %xmm5
 ; SSE-NEXT:    movapd (%rdi), %xmm1
 ; SSE-NEXT:    movapd (%rsi), %xmm4
-; SSE-NEXT:    movapd 16(%rsi), %xmm7
-; SSE-NEXT:    movapd 64(%rsi), %xmm9
-; SSE-NEXT:    movapd 48(%rdi), %xmm6
+; SSE-NEXT:    movapd (%rdx), %xmm0
+; SSE-NEXT:    movapd %xmm1, %xmm8
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm4[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; SSE-NEXT:    movapd 16(%rdi), %xmm0
 ; SSE-NEXT:    movapd 32(%rdi), %xmm3
-; SSE-NEXT:    movapd 16(%rdi), %xmm2
+; SSE-NEXT:    movapd 48(%rdi), %xmm6
+; SSE-NEXT:    movapd 64(%rsi), %xmm9
+; SSE-NEXT:    movapd 16(%rsi), %xmm7
 ; SSE-NEXT:    movapd 32(%rsi), %xmm11
 ; SSE-NEXT:    movapd 48(%rsi), %xmm10
 ; SSE-NEXT:    movapd 64(%rdx), %xmm15
-; SSE-NEXT:    movapd (%rdx), %xmm0
 ; SSE-NEXT:    movapd 16(%rdx), %xmm12
 ; SSE-NEXT:    movapd 32(%rdx), %xmm13
 ; SSE-NEXT:    movapd 48(%rdx), %xmm14
-; SSE-NEXT:    movapd %xmm1, %xmm8
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm4[0]
 ; SSE-NEXT:    movapd %xmm8, (%rsp) # 16-byte Spill
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    movapd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
 ; SSE-NEXT:    movapd %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    movapd %xmm0, %xmm2
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm7[0]
 ; SSE-NEXT:    movapd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm12[0],xmm0[1]

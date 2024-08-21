@@ -1145,12 +1145,12 @@ define arm_aapcs_vfpcc <5 x i32> @test_unsigned_v5f16_v5i32(<5 x half> %f) {
 ; CHECK-NEXT:    vmovx.f16 s4, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s8, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s0, s0
-; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vcvt.u32.f16 s6, s6
-; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s4, s4
-; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
+; CHECK-NEXT:    vcvt.u32.f16 s6, s6
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vcvt.u32.f16 s2, s2
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
 ; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    vmov q2[3], q2[1], r2, r1
@@ -1170,11 +1170,11 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f16_v6i32(<6 x half> %f) {
 ; CHECK-NEXT:    vcvt.u32.f16 s10, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s0, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s4, s2
-; CHECK-NEXT:    vcvt.u32.f16 s2, s2
-; CHECK-NEXT:    vcvt.u32.f16 s8, s8
-; CHECK-NEXT:    vcvt.u32.f16 s6, s6
-; CHECK-NEXT:    vmov r1, s10
 ; CHECK-NEXT:    vmovx.f16 s2, s2
+; CHECK-NEXT:    vcvt.u32.f16 s6, s6
+; CHECK-NEXT:    vcvt.u32.f16 s8, s8
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    vcvt.u32.f16 s2, s2
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r2, r1
 ; CHECK-NEXT:    vmov r1, s6
@@ -1197,11 +1197,11 @@ define arm_aapcs_vfpcc <7 x i32> @test_unsigned_v7f16_v7i32(<7 x half> %f) {
 ; CHECK-NEXT:    vcvt.u32.f16 s12, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s0, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s4, s2
-; CHECK-NEXT:    vcvt.u32.f16 s2, s2
-; CHECK-NEXT:    vcvt.u32.f16 s10, s10
-; CHECK-NEXT:    vcvt.u32.f16 s8, s8
-; CHECK-NEXT:    vmov r1, s12
 ; CHECK-NEXT:    vmovx.f16 s2, s2
+; CHECK-NEXT:    vcvt.u32.f16 s8, s8
+; CHECK-NEXT:    vcvt.u32.f16 s10, s10
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    vcvt.u32.f16 s2, s2
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s6, s3
 ; CHECK-NEXT:    vmov q3[2], q3[0], r2, r1
@@ -1231,9 +1231,9 @@ define arm_aapcs_vfpcc <8 x i32> @test_unsigned_v8f16_v8i32(<8 x half> %f) {
 ; CHECK-NEXT:    vcvt.u32.f16 s14, s2
 ; CHECK-NEXT:    vcvt.u32.f16 s2, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s0, s0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vcvt.u32.f16 s6, s6
 ; CHECK-NEXT:    vcvt.u32.f16 s4, s4
+; CHECK-NEXT:    vcvt.u32.f16 s6, s6
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s12, s3
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
@@ -1739,14 +1739,13 @@ define arm_aapcs_vfpcc <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-NEXT:    mov r8, r0
 ; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    mov r9, r3
-; CHECK-NEXT:    vmov r3, s16
 ; CHECK-NEXT:    vldr s20, .LCPI30_0
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r2, #0
 ; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    mov r9, r3
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    it gt
@@ -1769,9 +1768,9 @@ define arm_aapcs_vfpcc <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    str.w r0, [r8, #25]
-; CHECK-NEXT:    vmov r4, s19
+; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    vmov r7, s17
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    vmov r4, s19
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    mov r10, r3
@@ -1922,23 +1921,20 @@ define arm_aapcs_vfpcc <4 x i100> @test_unsigned_v4f32_v4i100(<4 x float> %f) {
 define arm_aapcs_vfpcc <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v4f32_v4i128:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    .save {r4, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r6, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10}
 ; CHECK-NEXT:    vpush {d8, d9, d10}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vmov r0, s19
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    vmov r5, s18
 ; CHECK-NEXT:    vldr s20, .LCPI31_0
 ; CHECK-NEXT:    vcmp.f32 s19, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s19, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #0
+; CHECK-NEXT:    vcmp.f32 s19, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s19, #0
 ; CHECK-NEXT:    it gt
@@ -1970,9 +1966,9 @@ define arm_aapcs_vfpcc <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    str r0, [r4, #48]
+; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    vmov r7, s16
 ; CHECK-NEXT:    vmov r6, s17
-; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
@@ -2087,8 +2083,7 @@ define arm_aapcs_vfpcc <4 x i128> @test_unsigned_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    str r0, [r4]
 ; CHECK-NEXT:    vpop {d8, d9, d10}
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    pop {r4, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI31_0:
@@ -3735,9 +3730,9 @@ define arm_aapcs_vfpcc <8 x i32> @test_unsigned_v8f16_v8i32_duplicate(<8 x half>
 ; CHECK-NEXT:    vcvt.u32.f16 s14, s2
 ; CHECK-NEXT:    vcvt.u32.f16 s2, s1
 ; CHECK-NEXT:    vcvt.u32.f16 s0, s0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vcvt.u32.f16 s6, s6
 ; CHECK-NEXT:    vcvt.u32.f16 s4, s4
+; CHECK-NEXT:    vcvt.u32.f16 s6, s6
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vcvt.u32.f16 s12, s3
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0

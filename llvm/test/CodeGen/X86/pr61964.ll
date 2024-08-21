@@ -22,9 +22,8 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm2, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splitTransposeDecode_8_avx2:
@@ -58,9 +57,8 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; XOPAVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm1
-; XOPAVX1-NEXT:    vmovaps %ymm2, %ymm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: splitTransposeDecode_8_avx2:
