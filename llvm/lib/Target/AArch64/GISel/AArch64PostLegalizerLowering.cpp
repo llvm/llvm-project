@@ -1296,6 +1296,11 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
                      F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
   AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
                                         RuleConfig, ST);
   return Impl.combineMachineInstrs();

@@ -24,7 +24,7 @@ struct FunctionInfo;
 struct MergedFunctionsInfo {
   std::vector<FunctionInfo> MergedFunctions;
 
-  void clear() { MergedFunctions.clear(); }
+  void clear();
 
   /// Query if a MergedFunctionsInfo object is valid.
   ///

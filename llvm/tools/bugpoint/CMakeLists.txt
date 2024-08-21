@@ -37,5 +37,5 @@ add_llvm_tool(bugpoint
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
-  EXPORT_SYMBOLS_FOR_PLUGINS
   )
+export_executable_symbols_for_plugins(bugpoint)

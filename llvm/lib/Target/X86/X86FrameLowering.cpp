@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -2616,7 +2617,7 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // object.
   // We need to factor in additional offsets applied during the prologue to the
   // frame, base, and stack pointer depending on which is used.
-  int Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
+  int64_t Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t StackSize = MFI.getStackSize();
@@ -4140,6 +4141,14 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
   // emitPrologue if it gets called and emits CFI.
   MF.setHasWinCFI(false);
 
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If the frame is big enough that we might need to scavenge a register to
+  // handle huge offsets, reserve a stack slot for that now.
+  if (!isInt<32>(MFI.estimateStackSize(MF))) {
+    int FI = MFI.CreateStackObject(SlotSize, Align(SlotSize), false);
+    RS->addScavengingFrameIndex(FI);
+  }
+
   // If we are using Windows x64 CFI, ensure that the stack is always 8 byte
   // aligned. The format doesn't support misaligned stack adjustments.
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
@@ -4458,6 +4467,16 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
     FP = TRI->getFrameRegister(MF);
   if (TRI->hasBasePointer(MF))
     BP = TRI->getBaseRegister();
+
+  // Currently only inline asm and function call can clobbers fp/bp. So we can
+  // do some quick test and return early.
+  if (!MF.hasInlineAsm()) {
+    X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+    if (!X86FI->getFPClobberedByCall())
+      FP = 0;
+    if (!X86FI->getBPClobberedByCall())
+      BP = 0;
+  }
   if (!FP && !BP)
     return;
 

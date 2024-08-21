@@ -44,6 +44,11 @@ function basicAlloc()
   allocate(basicAlloc)
 end
 
+function allocPtr()
+  real, pointer :: allocPtr
+  allocate(allocPtr) ! good enough for pointer
+end
+
 function sourcedAlloc()
   real, allocatable :: sourcedAlloc
   allocate(sourcedAlloc, source=0.)
@@ -121,6 +126,7 @@ integer function defdBySize()
 end
 
 character(40) function defdByIomsg()
+  !WARNING: IOMSG= is useless without either ERR= or IOSTAT=
   write(123,*,iomsg=defdByIomsg)
 end
 

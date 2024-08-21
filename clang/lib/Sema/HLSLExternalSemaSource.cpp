@@ -96,8 +96,11 @@ struct BuiltinTypeDeclBuilder {
         nullptr, false, InClassInitStyle::ICIS_NoInit);
     Field->setAccess(Access);
     Field->setImplicit(true);
-    for (Attr *A : Attrs)
-      Field->addAttr(A);
+    for (Attr *A : Attrs) {
+      if (A)
+        Field->addAttr(A);
+    }
+
     Record->addDecl(Field);
     Fields[Name] = Field;
     return *this;
@@ -116,12 +119,15 @@ struct BuiltinTypeDeclBuilder {
             QualType(TTD->getTypeForDecl(), 0));
     }
     // add handle member
-    llvm::SmallVector<Attr *, 2> Attrs;
     Attr *ResourceClassAttr =
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC);
     Attr *ResourceAttr =
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV);
-    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr}, Access);
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
+    Attr *ROVAttr =
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr;
+    addMemberVariable("h", Ty, {ResourceClassAttr, ResourceAttr, ROVAttr},
+                      Access);
+
     return *this;
   }
 

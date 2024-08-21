@@ -2134,6 +2134,23 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  class TemplateTypeParmTypeBitfields {
+    friend class TemplateTypeParmType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    /// The depth of the template parameter.
+    unsigned Depth : 15;
+
+    /// Whether this is a template parameter pack.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ParameterPack : 1;
+
+    /// The index of the template parameter.
+    unsigned Index : 16;
+  };
+
   class SubstTemplateTypeParmTypeBitfields {
     friend class SubstTemplateTypeParmType;
 
@@ -2257,6 +2274,7 @@ protected:
     TypeWithKeywordBitfields TypeWithKeywordBits;
     ElaboratedTypeBitfields ElaboratedTypeBits;
     VectorTypeBitfields VectorTypeBits;
+    TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
@@ -3989,6 +4007,10 @@ enum class VectorKind {
 
   /// is RISC-V RVV fixed-length mask vector
   RVVFixedLengthMask,
+
+  RVVFixedLengthMask_1,
+  RVVFixedLengthMask_2,
+  RVVFixedLengthMask_4
 };
 
 /// Represents a GCC generic vector type. This type is created using
@@ -6131,51 +6153,29 @@ public:
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  // Helper data collector for canonical types.
-  struct CanonicalTTPTInfo {
-    unsigned Depth : 15;
-    unsigned ParameterPack : 1;
-    unsigned Index : 16;
-  };
+  // The associated TemplateTypeParmDecl for the non-canonical type.
+  TemplateTypeParmDecl *TTPDecl;
 
-  union {
-    // Info for the canonical type.
-    CanonicalTTPTInfo CanTTPTInfo;
-
-    // Info for the non-canonical type.
-    TemplateTypeParmDecl *TTPDecl;
-  };
-
-  /// Build a non-canonical type.
-  TemplateTypeParmType(TemplateTypeParmDecl *TTPDecl, QualType Canon)
+  TemplateTypeParmType(unsigned D, unsigned I, bool PP,
+                       TemplateTypeParmDecl *TTPDecl, QualType Canon)
       : Type(TemplateTypeParm, Canon,
              TypeDependence::DependentInstantiation |
-                 (Canon->getDependence() & TypeDependence::UnexpandedPack)),
-        TTPDecl(TTPDecl) {}
-
-  /// Build the canonical type.
-  TemplateTypeParmType(unsigned D, unsigned I, bool PP)
-      : Type(TemplateTypeParm, QualType(this, 0),
-             TypeDependence::DependentInstantiation |
-                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)) {
-    CanTTPTInfo.Depth = D;
-    CanTTPTInfo.Index = I;
-    CanTTPTInfo.ParameterPack = PP;
-  }
-
-  const CanonicalTTPTInfo& getCanTTPTInfo() const {
-    QualType Can = getCanonicalTypeInternal();
-    return Can->castAs<TemplateTypeParmType>()->CanTTPTInfo;
+                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
+        TTPDecl(TTPDecl) {
+    assert(!TTPDecl == Canon.isNull());
+    TemplateTypeParmTypeBits.Depth = D;
+    TemplateTypeParmTypeBits.Index = I;
+    TemplateTypeParmTypeBits.ParameterPack = PP;
   }
 
 public:
-  unsigned getDepth() const { return getCanTTPTInfo().Depth; }
-  unsigned getIndex() const { return getCanTTPTInfo().Index; }
-  bool isParameterPack() const { return getCanTTPTInfo().ParameterPack; }
-
-  TemplateTypeParmDecl *getDecl() const {
-    return isCanonicalUnqualified() ? nullptr : TTPDecl;
+  unsigned getDepth() const { return TemplateTypeParmTypeBits.Depth; }
+  unsigned getIndex() const { return TemplateTypeParmTypeBits.Index; }
+  bool isParameterPack() const {
+    return TemplateTypeParmTypeBits.ParameterPack;
   }
+
+  TemplateTypeParmDecl *getDecl() const { return TTPDecl; }
 
   IdentifierInfo *getIdentifier() const;
 

@@ -736,14 +736,16 @@ public:
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
+  const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
 
-  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
-                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
-      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
+  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+                Type *CanIVTy, LLVMContext &LLVMCtx,
+                LoopVectorizationCostModel &CM)
+      : TTI(TTI), TLI(TLI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -796,7 +798,7 @@ public:
   /// Return the cost of this recipe, taking into account if the cost
   /// computation should be skipped and the ForceTargetInstructionCost flag.
   /// Also takes care of printing the cost for debugging.
-  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -860,9 +862,11 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
 protected:
-  /// Compute the cost of this recipe using the legacy cost model and the
-  /// underlying instructions.
-  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
+  /// Compute the cost of this recipe either using a recipe's specialized
+  /// implementation or using the legacy cost model and the underlying
+  /// instructions.
+  virtual InstructionCost computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -1426,6 +1430,10 @@ public:
   /// processing State.VF elements.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   unsigned getOpcode() const { return Opcode; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1670,6 +1678,14 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() == 1 && "must have a single operand");
     return true;
   }
 

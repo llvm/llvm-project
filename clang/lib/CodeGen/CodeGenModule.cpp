@@ -1134,6 +1134,11 @@ void CodeGenModule::Release() {
                               CodeGenOpts.SanitizeCfiCanonicalJumpTables);
   }
 
+  if (CodeGenOpts.SanitizeCfiICallNormalizeIntegers) {
+    getModule().addModuleFlag(llvm::Module::Override, "cfi-normalize-integers",
+                              1);
+  }
+
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
     // KCFI assumes patchable-function-prefix is the same for all indirectly
@@ -1220,8 +1225,14 @@ void CodeGenModule::Release() {
           (LangOpts.PointerAuthInitFiniAddressDiscrimination
            << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC) |
           (LangOpts.PointerAuthELFGOT
-           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT);
-      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT ==
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT) |
+          (LangOpts.PointerAuthIndirectGotos
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS) |
+          (LangOpts.PointerAuthTypeInfoVTPtrDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR) |
+          (LangOpts.PointerAuthFunctionTypeDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR);
+      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                         AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                     "Update when new enum items are defined");
       if (PAuthABIVersion != 0) {
@@ -5911,13 +5922,13 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
 
     llvm::CallBase *newCall;
     if (isa<llvm::CallInst>(callSite)) {
-      newCall =
-          llvm::CallInst::Create(newFn, newArgs, newBundles, "", callSite);
+      newCall = llvm::CallInst::Create(newFn, newArgs, newBundles, "",
+                                       callSite->getIterator());
     } else {
       auto *oldInvoke = cast<llvm::InvokeInst>(callSite);
-      newCall = llvm::InvokeInst::Create(newFn, oldInvoke->getNormalDest(),
-                                         oldInvoke->getUnwindDest(), newArgs,
-                                         newBundles, "", callSite);
+      newCall = llvm::InvokeInst::Create(
+          newFn, oldInvoke->getNormalDest(), oldInvoke->getUnwindDest(),
+          newArgs, newBundles, "", callSite->getIterator());
     }
     newArgs.clear(); // for the next iteration
 

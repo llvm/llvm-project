@@ -169,21 +169,39 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoTAIL_MEDIUM:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
-  case LoongArch::PseudoBRIND:
+  case LoongArch::PseudoBRIND: {
     // If the PseudoBRIND is used to table jump, then emit a label to annotate
     // the `jr` instruction.
     if (!LArchAnnotateTableJump)
       return false;
+
+    auto CreateSymbol = [&]() {
+      MachineFunction *MF = MBB.getParent();
+      MBBI->setPreInstrSymbol(*MF,
+                              MF->getContext().createNamedTempSymbol("jrtb_"));
+    };
+
     for (auto &MI : MBB.instrs()) {
       for (auto MO : MI.operands()) {
         if (!MO.isJTI())
           continue;
-        MachineFunction *MF = MBB.getParent();
-        MBBI->setPreInstrSymbol(
-            *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
+        CreateSymbol();
+        return false;
+      }
+      if (MI.memoperands_empty())
+        continue;
+      for (auto *Op : MI.memoperands()) {
+        auto *Pval = Op->getPseudoValue();
+        if (!Pval)
+          continue;
+        if (Pval->kind() != PseudoSourceValue::JumpTable)
+          continue;
+        CreateSymbol();
         return false;
       }
     }
+    break;
+  }
   }
   return false;
 }

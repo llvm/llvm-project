@@ -14,6 +14,8 @@
 using namespace llvm;
 using namespace gsym;
 
+void MergedFunctionsInfo::clear() { MergedFunctions.clear(); }
+
 llvm::Error MergedFunctionsInfo::encode(FileWriter &Out) const {
   Out.writeU32(MergedFunctions.size());
   for (const auto &F : MergedFunctions) {

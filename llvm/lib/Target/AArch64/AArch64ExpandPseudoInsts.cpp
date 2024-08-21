@@ -1291,40 +1291,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
   }
-  case AArch64::LOADgotAUTH: {
-    Register DstReg = MI.getOperand(0).getReg();
-    const MachineOperand &MO1 = MI.getOperand(1);
 
-    MachineOperand GAHiOp(MO1);
-    MachineOperand GALoOp(MO1);
-    GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
-    GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-
-    DebugLoc DL = MI.getDebugLoc();
-    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), AArch64::X16)
-        .add(GAHiOp);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X16)
-        .addReg(AArch64::X16)
-        .add(GALoOp)
-        .addImm(0);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), DstReg)
-        .addReg(AArch64::X16)
-        .addImm(0);
-
-    assert(MO1.isGlobal());
-    assert(MO1.getGlobal()->getValueType() != nullptr);
-    unsigned AuthOpcode = MO1.getGlobal()->getValueType()->isFunctionTy()
-                              ? AArch64::AUTIA
-                              : AArch64::AUTDA;
-    BuildMI(MBB, MBBI, DL, TII->get(AuthOpcode), DstReg)
-        .addReg(DstReg)
-        .addReg(AArch64::X16);
-
-    MI.eraseFromParent();
-    return true;
-  }
   case AArch64::LOADgot: {
     MachineFunction *MF = MBB.getParent();
     Register DstReg = MI.getOperand(0).getReg();

@@ -127,10 +127,10 @@ let Predicates = [HasStdExtZvbb] in {
   defm VWSLL_V  : VSHT_IV_V_X_I<"vwsll", 0b110101>;
 } // Predicates = [HasStdExtZvbb]
 
-let Predicates = [HasStdExtZvbc] in {
+let Predicates = [HasStdExtZvbcOrZvbc32e] in {
   defm VCLMUL_V  : VCLMUL_MV_V_X<"vclmul", 0b001100>;
   defm VCLMULH_V : VCLMUL_MV_V_X<"vclmulh", 0b001101>;
-} // Predicates = [HasStdExtZvbc]
+} // Predicates = [HasStdExtZvbcOrZvbc32e]
 
 let Predicates = [HasStdExtZvkb] in {
   defm VANDN_V  : VALU_IV_V_X<"vandn", 0b000001>;
@@ -149,6 +149,14 @@ let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
   def VGMUL_VV : PALUVs2NoVmBinary<0b101000, 0b10001, OPMVV, "vgmul.vv">,
                  SchedBinaryMC<"WriteVGMULV", "ReadVGMULV", "ReadVGMULV">;
 } // Predicates = [HasStdExtZvkg]
+
+let Predicates = [HasStdExtZvkgs], RVVConstraint = VS2Constraint in {
+  def VGHSH_VS : PALUVVNoVmTernary<0b100011, OPMVV, "vghsh.vs">,
+                 SchedTernaryMC<"WriteVGHSHV", "ReadVGHSHV", "ReadVGHSHV",
+                                "ReadVGHSHV">;
+  def VGMUL_VS : PALUVs2NoVmBinary<0b101001, 0b10001, OPMVV, "vgmul.vs">,
+                 SchedBinaryMC<"WriteVGMULV", "ReadVGMULV", "ReadVGMULV">;
+} // Predicates = [HasStdExtZvkgs]
 
 let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = Sha2Constraint in {
   def VSHA2CH_VV : PALUVVNoVmTernary<0b101110, OPMVV, "vsha2ch.vv">,

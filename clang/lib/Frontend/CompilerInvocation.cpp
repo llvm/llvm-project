@@ -1510,6 +1510,8 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
           Discrimination::Constant, InitFiniPointerConstantDiscriminator);
     }
   }
+  Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
+  Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
   Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
 }
 
@@ -1517,7 +1519,8 @@ static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
-  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthIndirectGotos)
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthReturns &&
+      !LangOpts.PointerAuthAuthTraps && !LangOpts.PointerAuthIndirectGotos)
     return;
 
   CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
@@ -3650,6 +3653,11 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_ftrigraphs);
   }
 
+  if (T.isOSzOS() && !Opts.ZOSExt)
+    GenerateArg(Consumer, OPT_fno_zos_extensions);
+  else if (Opts.ZOSExt)
+    GenerateArg(Consumer, OPT_fzos_extensions);
+
   if (Opts.Blocks && !(Opts.OpenCL && Opts.OpenCLVersion == 200))
     GenerateArg(Consumer, OPT_fblocks);
 
@@ -4051,6 +4059,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
+  Opts.ZOSExt =
+      Args.hasFlag(OPT_fzos_extensions, OPT_fno_zos_extensions, T.isOSzOS());
+
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
@@ -4254,6 +4265,20 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+  }
+
+  if (auto *A =
+          Args.getLastArg(OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
+    for (int i = 0, n = A->getNumValues(); i != n; ++i) {
+      Opts.OverflowPatternExclusionMask |=
+          llvm::StringSwitch<unsigned>(A->getValue(i))
+              .Case("none", LangOptionsBase::None)
+              .Case("all", LangOptionsBase::All)
+              .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+              .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
+              .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+              .Default(0);
+    }
   }
 
   // Parse -fsanitize= arguments.
