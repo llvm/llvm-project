@@ -801,7 +801,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   // isValidOperands
   auto *LLVMArgV1 = LLVMF.getArg(0);
   auto *LLVMArgV2 = LLVMF.getArg(1);
-  ArrayRef<int> Mask({1, 2});
+  SmallVector<int, 2> Mask({1, 2});
   EXPECT_EQ(
       sandboxir::ShuffleVectorInst::isValidOperands(ArgV1, ArgV2, Mask),
       llvm::ShuffleVectorInst::isValidOperands(LLVMArgV1, LLVMArgV2, Mask));
