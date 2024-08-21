@@ -743,7 +743,8 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
 TEST_F(SandboxIRTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
-  %ins0 = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 0, i32 2>
+  %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 0, i32 2>
+  %extr = extractelement <2 x i8> <i8 0, i8 1>, i32 0
   ret void
 }
 )IR");
@@ -754,12 +755,13 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   auto *ArgV2 = F.getArg(1);
   auto *BB = &*F.begin();
   auto It = BB->begin();
-  auto *SI = cast<sandboxir::ShuffleVectorInst>(&*It++);
+  auto *SVI = cast<sandboxir::ShuffleVectorInst>(&*It++);
+  auto *EEI = cast<sandboxir::ExtractElementInst>(&*It++);
   auto *Ret = &*It++;
 
-  EXPECT_EQ(SI->getOpcode(), sandboxir::Instruction::Opcode::ShuffleVector);
-  EXPECT_EQ(SI->getOperand(0), ArgV1);
-  EXPECT_EQ(SI->getOperand(1), ArgV2);
+  EXPECT_EQ(SVI->getOpcode(), sandboxir::Instruction::Opcode::ShuffleVector);
+  EXPECT_EQ(SVI->getOperand(0), ArgV1);
+  EXPECT_EQ(SVI->getOperand(1), ArgV2);
 
   // In order to test all the methods we need masks of different lengths, so we
   // can't simply reuse one of the instructions created above. This helper
@@ -788,6 +790,14 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
           ArgV1, ArgV2, ArrayRef<int>({0, 1}), BB, Ctx, "NewShuffleAtEndOfBB"));
   EXPECT_EQ(NewI2->getPrevNode(), Ret);
 
+  // Test the path that creates a folded constant. We're currently using an
+  // extractelement instruction with a constant operand in the textual IR above
+  // to obtain a constant vector to work with.
+  // TODO: Refactor this once sandboxir::ConstantVector lands.
+  auto *ShouldBeConstant = sandboxir::ShuffleVectorInst::create(
+      EEI->getOperand(0), EEI->getOperand(0), ArrayRef<int>({0, 3}), BB, Ctx);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+
   // isValidOperands
   auto *LLVMArgV1 = LLVMF.getArg(0);
   auto *LLVMArgV2 = LLVMF.getArg(1);
@@ -810,20 +820,24 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   }
 
   // getType
-  EXPECT_EQ(SI->getType(), ArgV1->getType());
+  EXPECT_EQ(SVI->getType(), ArgV1->getType());
 
   // getMaskValue
-  EXPECT_EQ(SI->getMaskValue(0), 0);
-  EXPECT_EQ(SI->getMaskValue(1), 2);
+  EXPECT_EQ(SVI->getMaskValue(0), 0);
+  EXPECT_EQ(SVI->getMaskValue(1), 2);
 
-  // getShuffleMask/getShuffleMaskForBitcode
+  // getShuffleMask / getShuffleMaskForBitcode
   {
-    EXPECT_THAT(SI->getShuffleMask(),
+    EXPECT_THAT(SVI->getShuffleMask(),
                 testing::ContainerEq(ArrayRef<int>({0, 2})));
 
     SmallVector<int, 2> Result;
-    sandboxir::ShuffleVectorInst::getShuffleMask(SI->getShuffleMaskForBitcode(),
-                                                 Result);
+    SVI->getShuffleMask(Result);
+    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
+
+    Result.clear();
+    sandboxir::ShuffleVectorInst::getShuffleMask(
+        SVI->getShuffleMaskForBitcode(), Result);
     EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
   }
 
@@ -867,7 +881,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     EXPECT_TRUE(I->increasesLength());
   }
 
-  // isSingleSourceMask
+  // isSingleSource / isSingleSourceMask
   {
     auto *I = CreateShuffleWithMask(0, 1);
     EXPECT_TRUE(I->isSingleSource());
@@ -885,7 +899,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         I->getShuffleMask(), 2));
   }
 
-  // isIdentityMask
+  // isIdentity / isIdentityMask
   {
     auto *I = CreateShuffleWithMask(0, 1);
     EXPECT_TRUE(I->isIdentity());
@@ -917,7 +931,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   EXPECT_TRUE(CreateShuffleWithMask(0, 1, 2, 3)->isConcat());
   EXPECT_FALSE(CreateShuffleWithMask(0, 3)->isConcat());
 
-  // isSelectMask
+  // isSelect / isSelectMask
   {
     auto *I = CreateShuffleWithMask(0, 3);
     EXPECT_TRUE(I->isSelect());
@@ -935,7 +949,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         sandboxir::ShuffleVectorInst::isSelectMask(I->getShuffleMask(), 2));
   }
 
-  // isReverseMask
+  // isReverse / isReverseMask
   {
     auto *I = CreateShuffleWithMask(1, 0);
     EXPECT_TRUE(I->isReverse());
@@ -953,7 +967,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         sandboxir::ShuffleVectorInst::isReverseMask(I->getShuffleMask(), 2));
   }
 
-  // isZeroEltSplatMask
+  // isZeroEltSplat / isZeroEltSplatMask
   {
     auto *I = CreateShuffleWithMask(0, 0);
     EXPECT_TRUE(I->isZeroEltSplat());
@@ -971,7 +985,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         I->getShuffleMask(), 2));
   }
 
-  // isTransposeMask
+  // isTranspose / isTransposeMask
   {
     auto *I = CreateShuffleWithMask(0, 2);
     EXPECT_TRUE(I->isTranspose());
@@ -989,7 +1003,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         sandboxir::ShuffleVectorInst::isTransposeMask(I->getShuffleMask(), 2));
   }
 
-  // isSpliceMask
+  // isSplice / isSpliceMask
   {
     auto *I = CreateShuffleWithMask(1, 2);
     int Index;
@@ -1096,7 +1110,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     EXPECT_THAT(M, testing::ContainerEq(ArrayRef<int>({2, 0, 3, 1})));
   }
 
-  // isInterleaveMask
+  // isInterleave / isInterleaveMask
   {
     auto *I = CreateShuffleWithMask(0, 2, 1, 3);
     EXPECT_TRUE(I->isInterleave(2));
@@ -1115,10 +1129,17 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   }
 
   // isDeInterleaveMaskOfFactor
-  EXPECT_TRUE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
-      ArrayRef<int>({0, 2}), 2));
-  EXPECT_FALSE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
-      ArrayRef<int>({0, 1}), 2));
+  {
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({0, 2}), 2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({0, 1}), 2));
+
+    unsigned Index;
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({1, 3}), 2, Index));
+    EXPECT_EQ(Index, 1u);
+  }
 
   // isBitRotateMask
   {
