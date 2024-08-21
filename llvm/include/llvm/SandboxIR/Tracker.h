@@ -59,6 +59,7 @@ class StoreInst;
 class Instruction;
 class Tracker;
 class AllocaInst;
+class CatchSwitchInst;
 class SwitchInst;
 class ConstantInt;
 
@@ -261,6 +262,23 @@ public:
     dbgs() << "\n";
   }
 #endif
+};
+
+class CatchSwitchAddHandler : public IRChangeBase {
+  CatchSwitchInst *CSI;
+  unsigned HandlerIdx;
+
+public:
+  CatchSwitchAddHandler(CatchSwitchInst *CSI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "CatchSwitchAddHandler"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
+#endif // NDEBUG
 };
 
 class SwitchAddCase : public IRChangeBase {

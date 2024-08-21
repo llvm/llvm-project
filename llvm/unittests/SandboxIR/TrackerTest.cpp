@@ -644,6 +644,74 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, CatchSwitchInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  bb0:
+    %cs0 = catchswitch within none [label %handler0, label %handler1] unwind to caller
+  bb1:
+    %cs1 = catchswitch within %cs0 [label %handler0, label %handler1] unwind label %cleanup
+  handler0:
+    ret void
+  handler1:
+    ret void
+  cleanup:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler0")));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler1")));
+  auto *CS0 = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+  auto *CS1 = cast<sandboxir::CatchSwitchInst>(&*BB1->begin());
+
+  // Check setParentPad().
+  auto *OrigPad = CS0->getParentPad();
+  auto *NewPad = CS1;
+  EXPECT_NE(NewPad, OrigPad);
+  Ctx.save();
+  CS0->setParentPad(NewPad);
+  EXPECT_EQ(CS0->getParentPad(), NewPad);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getParentPad(), OrigPad);
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CS1->getUnwindDest();
+  auto *NewUnwindDest = BB0;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  Ctx.save();
+  CS1->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CS1->getUnwindDest(), NewUnwindDest);
+  Ctx.revert();
+  EXPECT_EQ(CS1->getUnwindDest(), OrigUnwindDest);
+  // Check setSuccessor().
+  auto *OrigSuccessor = CS0->getSuccessor(0);
+  auto *NewSuccessor = BB0;
+  EXPECT_NE(NewSuccessor, OrigSuccessor);
+  Ctx.save();
+  CS0->setSuccessor(0, NewSuccessor);
+  EXPECT_EQ(CS0->getSuccessor(0), NewSuccessor);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getSuccessor(0), OrigSuccessor);
+  // Check addHandler().
+  Ctx.save();
+  CS0->addHandler(BB0);
+  EXPECT_EQ(CS0->getNumHandlers(), 3u);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getNumHandlers(), 2u);
+  auto HIt = CS0->handler_begin();
+  EXPECT_EQ(*HIt++, Handler0);
+  EXPECT_EQ(*HIt++, Handler1);
+}
+
 TEST_F(TrackerTest, SwitchInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {

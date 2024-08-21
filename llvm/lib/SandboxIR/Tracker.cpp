@@ -160,6 +160,16 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
+CatchSwitchAddHandler::CatchSwitchAddHandler(CatchSwitchInst *CSI)
+    : CSI(CSI), HandlerIdx(CSI->getNumHandlers()) {}
+
+void CatchSwitchAddHandler::revert(Tracker &Tracker) {
+  // TODO: This should ideally use sandboxir::CatchSwitchInst::removeHandler()
+  // once it gets implemented.
+  auto *LLVMCSI = cast<llvm::CatchSwitchInst>(CSI->Val);
+  LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
+}
+
 void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
 
 #ifndef NDEBUG

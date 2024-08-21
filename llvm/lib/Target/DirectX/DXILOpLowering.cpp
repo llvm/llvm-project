@@ -1,15 +1,12 @@
-//===- DXILOpLower.cpp - Lowering LLVM intrinsic to DIXLOp function -------===//
+//===- DXILOpLowering.cpp - Lowering to DXIL operations -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file This file contains passes and utilities to lower llvm intrinsic call
-/// to DXILOp function call.
-//===----------------------------------------------------------------------===//
 
+#include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
@@ -145,17 +142,11 @@ public:
 };
 } // namespace
 
-namespace {
-/// A pass that transforms external global definitions into declarations.
-class DXILOpLowering : public PassInfoMixin<DXILOpLowering> {
-public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    if (OpLowerer(M).lowerIntrinsics())
-      return PreservedAnalyses::none();
-    return PreservedAnalyses::all();
-  }
-};
-} // namespace
+PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &) {
+  if (OpLowerer(M).lowerIntrinsics())
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
 
 namespace {
 class DXILOpLoweringLegacy : public ModulePass {
