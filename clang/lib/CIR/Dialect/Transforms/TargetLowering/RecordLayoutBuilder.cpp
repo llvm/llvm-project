@@ -29,7 +29,7 @@ namespace {
 /// Keeps track of which empty subobjects exist at different offsets while
 /// laying out a C++ class.
 class EmptySubobjectMap {
-  const CIRLowerContext &Context;
+  [[maybe_unused]] const CIRLowerContext &Context;
   uint64_t CharWidth;
 
   /// The class whose empty entries we're keeping track of.

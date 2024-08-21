@@ -385,9 +385,6 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
     resultImag =
         builder.createUnaryOp(loc, mlir::cir::UnaryOpKind::Minus, operandImag);
     break;
-
-  default:
-    llvm_unreachable("unsupported complex unary op kind");
   }
 
   auto result = builder.createComplexCreate(loc, resultReal, resultImag);
