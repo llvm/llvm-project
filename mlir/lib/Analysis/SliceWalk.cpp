@@ -104,9 +104,11 @@ getBlockPredecessorOperands(BlockArgument blockArg) {
 
 std::optional<SmallVector<Value>>
 mlir::getControlFlowPredecessors(Value value) {
-  SmallVector<Value> result;
   if (OpResult opResult = dyn_cast<OpResult>(value)) {
-    auto regionOp = dyn_cast<RegionBranchOpInterface>(opResult.getOwner());
+    if (auto selectOp = opResult.getDefiningOp<SelectLikeOpInterface>())
+      return SmallVector<Value>(
+          {selectOp.getTrueValue(), selectOp.getFalseValue()});
+    auto regionOp = opResult.getDefiningOp<RegionBranchOpInterface>();
     // If the interface is not implemented, there are no control flow
     // predecessors to work with.
     if (!regionOp)
