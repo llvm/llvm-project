@@ -808,8 +808,7 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
 
 // A memory location wrapper that represents a MemoryLocation, `MemLoc`,
 // defined by `MemDef`.
-class MemoryLocationWrapper {
-public:
+struct MemoryLocationWrapper {
   MemoryLocationWrapper(MemoryLocation MemLoc, MemoryDef *MemDef)
       : MemLoc(MemLoc), MemDef(MemDef) {
     assert(MemLoc.Ptr && "MemLoc should be not null");
@@ -825,8 +824,7 @@ public:
 
 // A memory def wrapper that represents a MemoryDef and the MemoryLocation(s)
 // defined by this MemoryDef.
-class MemoryDefWrapper {
-public:
+struct MemoryDefWrapper {
   MemoryDefWrapper(MemoryDef *MemDef, std::optional<MemoryLocation> MemLoc) {
     DefInst = MemDef->getMemoryInst();
     if (MemLoc.has_value())
@@ -2176,15 +2174,15 @@ struct DSEState {
   // killed by `KillingLocWrapper.MemDef`. Return whether
   // any changes were made, and whether `KillingLocWrapper.DefInst` was deleted.
   std::pair<bool, bool>
-  eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper);
+  eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper);
 
   // Try to eliminate dead defs killed by `KillingDefWrapper` and return the
   // change state: whether make any change.
-  bool eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper);
+  bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
 std::pair<bool, bool>
-DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
+DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
   bool Changed = false;
   bool DeletedKillingLoc = false;
   unsigned ScanLimit = MemorySSAScanLimit;
@@ -2304,7 +2302,7 @@ DSEState::eliminateDeadDefs(MemoryLocationWrapper &KillingLocWrapper) {
   return {Changed, DeletedKillingLoc};
 }
 
-bool DSEState::eliminateDeadDefs(MemoryDefWrapper &KillingDefWrapper) {
+bool DSEState::eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper) {
   if (!KillingDefWrapper.DefinedLocation.has_value()) {
     LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
                       << *KillingDefWrapper.DefInst << "\n");
