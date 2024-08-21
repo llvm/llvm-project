@@ -382,9 +382,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasX87 = true;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
-    } else if (Feature == "+bid-encoding")
-      HasBIDENCODING = true;
-
+    }
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
                            .Case("+avx512f", AVX512F)
                            .Case("+avx2", AVX2)

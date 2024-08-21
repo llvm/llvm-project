@@ -279,6 +279,16 @@ FPClassTest unknown_sign(FPClassTest Mask);
 /// Write a human readable form of \p Mask to \p OS
 raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
 
+ // ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
+// Multiple encoding forms for the storage of decimal floating-point
+// values have been defined for use on various platforms. This
+// enumeration provides an enumerator for each known encoding.
+enum class DecimalFloatMode : uint8_t {
+  BID, // Binary Integer Decimal.
+  DPD, // Densely Packed Decimal.
+  None // No decimal floating-point in target.
+};
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

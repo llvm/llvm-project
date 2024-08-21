@@ -1682,6 +1682,9 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
                                 ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
 
+  // Set the decimal floating-point ABI.
+  TC.setDecimalFloatABI(Args, EffectiveTriple);
+
   // Add the target features
   getTargetFeatures(TC.getDriver(), EffectiveTriple, Args, CmdArgs, false);
 

@@ -353,6 +353,13 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
           .Case("softfp", llvm::FloatABI::Soft)
           .Case("hard", llvm::FloatABI::Hard)
           .Default(llvm::FloatABI::Default);
+  // Set decimal float ABI type;
+  assert((CodeGenOpts.DecimalFloatABI == "hard" ||
+          CodeGenOpts.DecimalFloatABI == "default " ||
+          CodeGenOpts.DecimalFloatABI == "libgcc:bid" ||
+          CodeGenOpts.DecimalFloatABI == "libgcc:dpd" ||
+          CodeGenOpts.DecimalFloatABI.empty()) &&
+         "Invalid Decimal Floating Point ABI!");
   Options.DecimalFloatABIType =
       llvm::StringSwitch<llvm::DecimalFloatABI>(CodeGenOpts.DecimalFloatABI)
           .Case("libgcc:bid", llvm::DecimalFloatABI::Libgcc_BID)

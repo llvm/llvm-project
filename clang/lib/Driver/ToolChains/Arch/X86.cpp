@@ -273,44 +273,4 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+prefer-no-gather");
   if (Args.hasArg(options::OPT_mno_scatter))
     Features.push_back("+prefer-no-scatter");
-
-  // -mdecimal-float-abi
-  x86::DecimalFloatABI ABI = x86::getX86DecimalFloatABI(D, Triple, Args);
-  if (ABI == DecimalFloatABI::Invalid)
-    ABI = x86::getDefaultX86DecimalFloatABI(Triple, Args);
-  if (ABI != x86::DecimalFloatABI::None && ABI != x86::DecimalFloatABI::Default)
-      Features.push_back("+bid-encoding");
-}
-
-x86::DecimalFloatABI
-x86::getDefaultX86DecimalFloatABI(const llvm::Triple &Triple,
-                                  const ArgList &Args) {
-  if (const Arg *A = Args.getLastArg(options::OPT_fdecimal_floating_point))
-    return DecimalFloatABI::Libgcc_BID;
-  else
-    return DecimalFloatABI::None;
-}
-
-// Get the decimal float ABI type from the command line arguments
-// -mdecimal-float-abi=.
-x86::DecimalFloatABI x86::getX86DecimalFloatABI(const Driver &D,
-                                                const llvm::Triple &Triple,
-                                                const ArgList &Args) {
-  x86::DecimalFloatABI ABI = x86::DecimalFloatABI::Invalid;
-  if (const Arg *A = Args.getLastArg(options::OPT_mdecimal_float_abi_EQ)) {
-    StringRef Val = A->getValue();
-    ABI = llvm::StringSwitch<x86::DecimalFloatABI>(A->getValue())
-              .Case("libgcc:bid", DecimalFloatABI::Libgcc_BID)
-              .Case("libgcc:dpd", DecimalFloatABI::Libgcc_DPD)
-              .Case("hard", DecimalFloatABI::Hard)
-              .Default(DecimalFloatABI::None);
-    if (ABI != x86::DecimalFloatABI::None &&
-        ABI != x86::DecimalFloatABI::Default) {
-      // X86 targets only allow BID encoding.
-      if (ABI != x86::DecimalFloatABI::Libgcc_BID)
-        D.Diag(diag::err_drv_unsupported_decimal_fp_encoding_for_target)
-            << Val << "X86";
-    }
-  }
-  return ABI;
 }

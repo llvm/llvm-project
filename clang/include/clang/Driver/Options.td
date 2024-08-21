@@ -4286,7 +4286,7 @@ let Flags = [TargetSpecific] in {
 def mfloat_abi_EQ : Joined<["-"], "mfloat-abi=">, Group<m_Group>, Values<"soft,softfp,hard">;
 def mdecimal_float_abi_EQ : Joined<["-"], "mdecimal-float-abi=">, Group<m_Group>,
 Visibility<[ClangOption, CC1Option]>,
-  Values<"libgcc:bid,libgcc:dpd,hard">,
+  Values<"hard,default,libgcc:bid,libgcc:dpd">,
   HelpText<"The decimal float encoding to use">,
   MarshallingInfoString<CodeGenOpts<"DecimalFloatABI">>;
 def mfpmath_EQ : Joined<["-"], "mfpmath=">, Group<m_Group>;

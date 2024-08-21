@@ -501,8 +501,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // C23 decimal floating point extensions.
   // FIXME: Define to 202311L when support for C23 decimal floating point
   // FIXME: extensions is feature complete.
-  if (!LangOpts.CPlusPlus && LangOpts.DecimalFloatingPoint &&
-      TI.hasDecimalFloatingPoint())
+  if (!LangOpts.CPlusPlus && LangOpts.DecimalFloatingPoint)
     Builder.defineMacro("__STDC_IEC_60559_DFP__", "197001L");
 
   if (LangOpts.ObjC)

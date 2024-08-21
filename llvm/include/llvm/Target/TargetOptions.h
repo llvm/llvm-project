@@ -32,12 +32,12 @@ namespace llvm {
     };
   }
 
-   enum class DecimalFloatABI {
+  enum class DecimalFloatABI {
     Default,    // Target-specific.
     None,       // No decimal floating-point support.
+    Hard,       // Hardware with target-specific encoding.
     Libgcc_BID, // libgcc with BID encoding.
-    Libgcc_DPD, // libgcc with DPD encoding.
-    Hard        // Hardware with target-specific encoding.
+    Libgcc_DPD  // libgcc with DPD encoding.
   };
 
   namespace FPOpFusion {

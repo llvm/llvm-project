@@ -618,6 +618,9 @@ public:
   ComputeLLVMTriple(const llvm::opt::ArgList &Args,
                     types::ID InputType = types::TY_INVALID) const;
 
+   void setDecimalFloatABI(const llvm::opt::ArgList &Args,
+                          const llvm::Triple &Triple) const;
+
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
   /// target, which may take into account the command line arguments. For
   /// example, on Darwin the -mmacosx-version-min= command line argument (which

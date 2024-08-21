@@ -4471,6 +4471,25 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
+static void SetDFPEnablementMode(TargetOptions & Opts, llvm::Triple T) {
+  // TODO: Add support for other architectures.
+  switch (T.getArch()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::aarch64:
+    Opts.setDecimalFloatingPointMode(llvm::DecimalFloatMode::BID);
+    break;
+  case llvm::Triple::sparc:
+    Opts.setDecimalFloatingPointMode(llvm::DecimalFloatMode::DPD);
+    break;
+  default:
+    Opts.setDecimalFloatingPointMode(llvm::DecimalFloatMode::None);
+	  break;
+  }
+}
+
 bool CompilerInvocation::CreateFromArgsImpl(
     CompilerInvocation &Res, ArrayRef<const char *> CommandLineArgs,
     DiagnosticsEngine &Diags, const char *Argv0) {
@@ -4510,6 +4529,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
+  SetDFPEnablementMode(Res.getTargetOpts(), T);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
 
