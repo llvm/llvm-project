@@ -837,7 +837,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
   bool ret_val = result ? PyObject_IsTrue(result) : false;
   Py_XDECREF(result);
 
-  return result;
+  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
