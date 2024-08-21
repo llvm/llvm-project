@@ -80,8 +80,8 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-INLOOP-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP14]] to i64
 ; IF-EVL-INLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP23]], [[EVL_BASED_IV]]
 ; IF-EVL-INLOOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP12]]
-; IF-EVL-INLOOP-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-INLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-INLOOP-NEXT:    [[TMP18:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-INLOOP-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:
 ; IF-EVL-INLOOP-NEXT:    store i32 [[TMP22]], ptr [[ADDR]], align 4
 ; IF-EVL-INLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -135,7 +135,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-OUTLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP11]], align 4, !alias.scope [[META0:![0-9]+]]
 ; NO-VP-OUTLOOP-NEXT:    [[TMP12]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
-; NO-VP-OUTLOOP-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-OUTLOOP-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO-VP-OUTLOOP:       middle.block:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP12]])
@@ -192,7 +192,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-INLOOP-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]])
 ; NO-VP-INLOOP-NEXT:    [[TMP12]] = add i32 [[TMP11]], [[VEC_PHI]]
 ; NO-VP-INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
-; NO-VP-INLOOP-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-INLOOP-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO-VP-INLOOP:       middle.block:
 ; NO-VP-INLOOP-NEXT:    store i32 [[TMP12]], ptr [[ADDR]], align 4

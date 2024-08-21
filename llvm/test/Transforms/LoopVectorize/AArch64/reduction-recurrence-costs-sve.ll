@@ -95,7 +95,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-NEXT:    [[TMP57]] = or <vscale x 4 x i32> [[TMP55]], [[WIDE_MASKED_GATHER11]]
 ; DEFAULT-NEXT:    [[TMP58]] = or <vscale x 4 x i32> [[TMP56]], [[WIDE_MASKED_GATHER12]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; DEFAULT-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP59:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP59]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i32> [[TMP58]], [[TMP57]]
@@ -348,7 +348,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP21]] = or <vscale x 4 x i16> [[TMP19]], [[VEC_PHI]]
 ; DEFAULT-NEXT:    [[TMP22]] = or <vscale x 4 x i16> [[TMP20]], [[VEC_PHI1]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i16> [[TMP22]], [[TMP21]]

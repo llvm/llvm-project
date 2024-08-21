@@ -61,7 +61,7 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP27]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD3]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP12]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
@@ -159,7 +159,7 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP27]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD3]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP12]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]

@@ -54,7 +54,7 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
@@ -129,7 +129,7 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 
 ; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
@@ -200,7 +200,7 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
@@ -271,7 +271,7 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
@@ -342,7 +342,7 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
@@ -446,7 +446,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP12]]
 ; SCALABLE-NEXT:    [[PREDPHI]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[VEC_PHI]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
-; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; SCALABLE:       middle.block:
 ; SCALABLE-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[PREDPHI]])

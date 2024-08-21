@@ -33,7 +33,7 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = udiv <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -137,7 +137,7 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -241,7 +241,7 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = urem <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -345,7 +345,7 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = srem <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
@@ -452,8 +452,8 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -506,8 +506,8 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -583,8 +583,8 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -637,8 +637,8 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -711,8 +711,8 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -761,8 +761,8 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -835,8 +835,8 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -885,8 +885,8 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -960,8 +960,8 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[PREDPHI]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp uge i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -1012,8 +1012,8 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    store <32 x i8> [[PREDPHI]], ptr [[TMP4]], align 1
 ; FIXED-NEXT:    store <32 x i8> [[PREDPHI2]], ptr [[TMP5]], align 1
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
