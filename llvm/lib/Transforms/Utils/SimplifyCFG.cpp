@@ -7131,6 +7131,60 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+// Try to fold switch with manually selected default branch.
+// For example, for the switch
+//   switch (v) { case 0: case 1: case 2: ... case MaxC: default: }
+//     (continuous cases value from 0 to MaxC)
+//   and, v = select (x u<= MaxC), x, AnotherC.
+// so "AnotherC" is the de-facto default branch, and it will be folded to
+//   switch (x) { case 0: case 1: case 2: ... case MaxC:  default -> AnotherC: }
+static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
+  Value *Cond;
+  ConstantInt *Bound, *DefaultCase;
+  ICmpInst::Predicate Pred;
+  if (!match(SI->getCondition(),
+             m_Select(m_ICmp(Pred, m_Value(Cond), m_ConstantInt(Bound)),
+                      m_Deferred(Cond), m_ConstantInt(DefaultCase))))
+    return false;
+
+  ConstantRange OuterRange =
+      ConstantRange::makeExactICmpRegion(Pred, Bound->getValue());
+  if (!OuterRange.getLower().isZero())
+    return false;
+
+  bool HasDefault = !SI->defaultDestUndefined();
+
+  // In an ideal situation, if default is reachable, the range of switch cases
+  // should be continuous, and should match the range of ICmp. That is,
+  //   MaxCase (declared below) + 1 = SI->getNumCases() = OuterRange.Upper.
+  // Checking it partially here can be a fast-fail path
+  if (HasDefault && OuterRange.getUpper() != SI->getNumCases())
+    return false;
+
+  APInt Min = SI->case_begin()->getCaseValue()->getValue(), Max = Min;
+  for (const auto &Case : SI->cases()) {
+    const APInt &CaseVal = Case.getCaseValue()->getValue();
+    if (CaseVal.ult(Min))
+      Min = CaseVal;
+    if (CaseVal.ugt(Max))
+      Max = CaseVal;
+  }
+
+  // If the switch has default, the cases should be continuous from 0 to some
+  // value. Otherwise, check whether all the cases satisfy the predicate, that
+  // is, all the cases are in the range `OuterRange`.
+  if ((HasDefault && Min.isZero() && Max == SI->getNumCases() - 1) ||
+      (!HasDefault && Max.ult(OuterRange.getUpper()))) {
+    SI->setCondition(Cond);
+    if (auto It = SI->findCaseValue(DefaultCase); It != SI->case_end())
+      SI->setDefaultDest(It->getCaseSuccessor());
+
+    return true;
+  }
+
+  return false;
+}
+
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -7167,6 +7221,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
+    return requestResimplify();
+
+  if (simplifySwitchWithImplicitDefault(SI))
     return requestResimplify();
 
   // The conversion from switch to lookup tables results in difficult-to-analyze
