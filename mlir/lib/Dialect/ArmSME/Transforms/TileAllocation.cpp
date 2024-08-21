@@ -137,8 +137,7 @@ static ArrayRef<TileMask> getMasks(ArmSMETileType type) {
   case ArmSMETileType::ZAQ:
     return ZA_Q_MASKS;
   }
-  assert("unknown type in getMasks" == nullptr);
-  return {};
+  llvm_unreachable("unknown type in getMasks");
 }
 
 class TileAllocator {

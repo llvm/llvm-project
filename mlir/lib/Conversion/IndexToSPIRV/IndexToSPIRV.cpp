@@ -310,8 +310,7 @@ struct ConvertIndexCmpPattern final : OpConversionPattern<CmpOp> {
     case IndexCmpPredicate::ULT:
       return rewriteCmpOp<spirv::ULessThanOp>(op, adaptor, rewriter);
     }
-    assert("Unknown predicate in ConvertIndexCmpPattern" == nullptr);
-    return failure();
+    llvm_unreachable("Unknown predicate in ConvertIndexCmpPattern");
   }
 };
 

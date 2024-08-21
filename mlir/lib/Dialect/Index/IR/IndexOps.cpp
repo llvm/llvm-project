@@ -594,8 +594,7 @@ static bool compareSameArgs(IndexCmpPredicate pred) {
   case IndexCmpPredicate::ULT:
     return false;
   }
-  assert("unknown predicate in compareSameArgs" == nullptr);
-  return {};
+  llvm_unreachable("unknown predicate in compareSameArgs");
 }
 
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
