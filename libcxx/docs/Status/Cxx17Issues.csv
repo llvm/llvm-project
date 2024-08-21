@@ -160,7 +160,7 @@
 "`LWG2685 <https://wg21.link/LWG2685>`__","shared_ptr deleters must not throw on move construction","2016-06 (Oulu)","|Complete|","",""
 "`LWG2687 <https://wg21.link/LWG2687>`__","{inclusive,exclusive}_scan misspecified","2016-06 (Oulu)","","",""
 "`LWG2688 <https://wg21.link/LWG2688>`__","clamp misses preconditions and has extraneous condition on result","2016-06 (Oulu)","|Complete|","",""
-"`LWG2689 <https://wg21.link/LWG2689>`__","Parallel versions of std::copy and std::move shouldn't be in order","2016-06 (Oulu)","|Nothing to do|","",""
+"`LWG2689 <https://wg21.link/LWG2689>`__","Parallel versions of std::copy and std::move shouldn't be in order","2016-06 (Oulu)","|Nothing To Do|","",""
 "`LWG2698 <https://wg21.link/LWG2698>`__","Effect of assign() on iterators/pointers/references","2016-06 (Oulu)","|Complete|","",""
 "`LWG2704 <https://wg21.link/LWG2704>`__","recursive_directory_iterator's members should require '``*this`` is dereferenceable'","2016-06 (Oulu)","|Complete|","",""
 "`LWG2706 <https://wg21.link/LWG2706>`__","Error reporting for recursive_directory_iterator::pop() is under-specified","2016-06 (Oulu)","|Complete|","",""
