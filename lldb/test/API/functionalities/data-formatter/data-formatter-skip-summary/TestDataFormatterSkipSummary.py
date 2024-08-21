@@ -167,7 +167,7 @@ class SkipSummaryDataFormatterTestCase(TestBase):
             gcc_version_output = system([[lldbutil.which(self.getCompiler()), "-v"]])
             self.trace("my output:", gcc_version_output)
             for line in gcc_version_output.split(os.linesep):
-                m = re.search("\(Apple Inc\. build ([0-9]+)\)", line)
+                m = re.search(r"\(Apple Inc\. build ([0-9]+)\)", line)
                 self.trace("line:", line)
                 if m:
                     gcc_build = int(m.group(1))

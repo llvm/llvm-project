@@ -284,7 +284,7 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
             results.append(gh.for_printing())
             continue
         elif paper.status != gh.status:
-            print(f"We found a CSV row and a Github issue with different statuses:\nrow: {row}\Github issue: {gh}")
+            print(rf"We found a CSV row and a Github issue with different statuses:\nrow: {row}\Github issue: {gh}")
         results.append(row)
 
     return results

@@ -53,9 +53,9 @@ def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     # '@' followed by alphanum is a user name
-    str = re.sub("@(?=\w)", "@<!-- -->", str)
+    str = re.sub(r"@(?=\w)", "@<!-- -->", str)
     # '#' followed by digits is considered an issue number
-    str = re.sub("#(?=\d)", "#<!-- -->", str)
+    str = re.sub(r"#(?=\d)", "#<!-- -->", str)
     return str
 
 
@@ -474,7 +474,7 @@ class ReleaseWorkflow:
     def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
         commit = self.repo.get_commit(cherry_pick_sha)
         message = commit.commit.message
-        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        m = re.search(r"\(cherry picked from commit ([0-9a-f]+)\)", message)
         if not m:
             return None
         return self.repo.get_commit(m.group(1))

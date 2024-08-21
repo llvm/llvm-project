@@ -14,7 +14,7 @@ It searches for line numbers in the files and replaces them with a relative
 line number reference.
 """
 
-USAGE = """Example usage:
+USAGE = r"""Example usage:
     find -type f clang/test/CodeCompletion | grep -v /Inputs/ | \\
     xargs relative_lines.py --dry-run --verbose --near=100 \\
     --pattern='-code-completion-at[ =]%s:(\d+)' \\

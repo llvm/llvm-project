@@ -17,13 +17,13 @@ def remove_prefix(i, d=0):
             p = r.group(1)
             s = re.sub("=" + p + ",", "=", s)
             s = re.sub("," + p + "([, \n])", "\\1", s)
-            s = re.sub("\s+-?-check-prefix=" + p + "([ \n])", "\\1", s)
+            s = re.sub(r"\s+-?-check-prefix=" + p + "([ \n])", r"\1", s)
         else:
             s = re.sub(
-                "-?-check-prefixes=([\w-]+)(\Z|[ \t\n])", "--check-prefix=\\1\\2", s
+                r"-?-check-prefixes=([\w-]+)(\Z|[ \t\n])", r"--check-prefix=\1\2", s
             )
             t = re.search(
-                "-?-check-(?:prefix|prefixes)=([^ ]+)\s+-?-check-(?:prefix|prefixes)=([^ ]+)",
+                r"-?-check-(?:prefix|prefixes)=([^ ]+)\s+-?-check-(?:prefix|prefixes)=([^ ]+)",
                 s,
             )
             while t:
@@ -31,10 +31,10 @@ def remove_prefix(i, d=0):
                     t.group(), "--check-prefixes=" + t.group(1) + "," + t.group(2), s
                 )
                 t = re.search(
-                    "-?-check-(?:prefix|prefixes)=([^ ]+)\s+-?-check-(?:prefix|prefixes)=([^ ]+)",
+                    r"-?-check-(?:prefix|prefixes)=([^ ]+)\s+-?-check-(?:prefix|prefixes)=([^ ]+)",
                     s,
                 )
-            s = re.sub("\s+-?-check-prefix=CHECK[ \t]*\n", "\n", s)
+            s = re.sub(r"\s+-?-check-prefix=CHECK[ \t]*\n", "\n", s)
         f.truncate(0)
         f.seek(0)
         f.write(s)
