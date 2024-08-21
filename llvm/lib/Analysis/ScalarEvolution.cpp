@@ -6871,7 +6871,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
         APInt MinVal = APInt::getZero(BitWidth);
-        if (!CanBeNull || llvm::isKnownNonZero(V, DL))
+        if (llvm::isKnownNonZero(V, DL))
           MinVal = Align;
         ConservativeResult = ConservativeResult.intersectWith(
             ConstantRange::getNonEmpty(MinVal, MaxVal + 1), RangeType);
