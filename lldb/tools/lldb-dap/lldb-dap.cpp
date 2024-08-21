@@ -1677,6 +1677,9 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
   body.try_emplace("supportsDisassembleRequest", true);
+  // The debug adapter supports stepping granularities (argument `granularity`)
+  // for the stepping requests.
+  body.try_emplace("supportsSteppingGranularity", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -1985,6 +1988,14 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SendJSON(CreateEventObject("initialized"));
 }
 
+// Check if the step-granularity is `instruction`
+static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
+  if (std::optional<llvm::StringRef> value =
+          requestArgs.getString("granularity"))
+    return value == "instruction";
+  return false;
+}
+
 // "NextRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -2012,6 +2023,11 @@ void request_launch(const llvm::json::Object &request) {
 //     "threadId": {
 //       "type": "integer",
 //       "description": "Execute 'next' for this thread."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -2032,7 +2048,11 @@ void request_next(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepOver();
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/true);
+    } else {
+      thread.StepOver();
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
@@ -3193,6 +3213,11 @@ void request_stackTrace(const llvm::json::Object &request) {
 //     "targetId": {
 //       "type": "integer",
 //       "description": "Optional id of the target to step into."
+//     },
+//     "granularity": {
+//       "$ref": "#/definitions/SteppingGranularity",
+//       "description": "Stepping granularity. If no granularity is specified, a
+//                       granularity of `statement` is assumed."
 //     }
 //   },
 //   "required": [ "threadId" ]
@@ -3223,7 +3248,11 @@ void request_stepIn(const llvm::json::Object &request) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepInto(step_in_target.c_str(), run_mode);
+    if (hasInstructionGranularity(*arguments)) {
+      thread.StepInstruction(/*step_over=*/false);
+    } else {
+      thread.StepInto(step_in_target.c_str(), run_mode);
+    }
   } else {
     response["success"] = llvm::json::Value(false);
   }
