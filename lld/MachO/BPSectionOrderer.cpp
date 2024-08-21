@@ -64,17 +64,17 @@ getRelocHash(const Reloc &reloc,
 static uint64_t getUnwindInfoEncodingHash(const InputSection *isec) {
   for (Symbol *sym : isec->symbols) {
     if (auto *d = dyn_cast_or_null<Defined>(sym)) {
-      if (auto *ue = d->unwindEntry()) {
-        CompactUnwindEntry cu;
-        cu.relocateOneCompactUnwindEntry(d);
-        if (cu.lsda)
-          return xxHash64("HAS LSDA");
-        StringRef name = cu.personality ? cu.personality->getName().empty()
-                                              ? "<unnamed>"
-                                              : cu.personality->getName()
-                                        : "<none>";
-        return xxHash64((name + ";" + Twine::utohexstr(cu.encoding)).str());
-      }
+      if (!d->unwindEntry())
+        continue;
+      CompactUnwindEntry cu;
+      cu.relocateOneCompactUnwindEntry(d);
+      if (cu.lsda)
+        return xxHash64("HAS LSDA");
+      StringRef name = (cu.personality == nullptr) ? "<none>"
+                       : cu.personality->getName().empty()
+                           ? "<unnamed>"
+                           : cu.personality->getName();
+      return xxHash64((name + ";" + Twine::utohexstr(cu.encoding)).str());
     }
   }
   return 0;

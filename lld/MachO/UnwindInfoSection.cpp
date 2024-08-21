@@ -111,10 +111,12 @@ CREATE_LAYOUT_CLASS(CompactUnwind, FOR_EACH_CU_FIELD);
 
 void lld::macho::CompactUnwindEntry::relocateOneCompactUnwindEntry(
     const Defined *d) {
-  ConcatInputSection *unwindEntry = d->unwindEntry();
-  assert(unwindEntry);
-
   functionAddress = d->getVA();
+
+  ConcatInputSection *unwindEntry = d->unwindEntry();
+  if (!unwindEntry)
+    return;
+
   // If we have DWARF unwind info, create a slimmed-down CU entry that points
   // to it.
   if (unwindEntry->getName() == section_names::ehFrame) {
@@ -126,12 +128,11 @@ void lld::macho::CompactUnwindEntry::relocateOneCompactUnwindEntry(
     // would instead encode the largest possible offset to a valid CFI record,
     // but since we don't keep track of that, just encode zero -- the start of
     // the section is always the start of a CFI record.
-    uint64_t dwarfOffsetHint =
-        d->unwindEntry()->outSecOff <= DWARF_SECTION_OFFSET
-            ? d->unwindEntry()->outSecOff
-            : 0;
+    uint64_t dwarfOffsetHint = unwindEntry->outSecOff <= DWARF_SECTION_OFFSET
+                                   ? unwindEntry->outSecOff
+                                   : 0;
     encoding = target->modeDwarfEncoding | dwarfOffsetHint;
-    const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
+    const FDE &fde = cast<ObjFile>(d->getFile())->fdes[unwindEntry];
     functionLength = fde.funcLength;
     // Omit the DWARF personality from compact-unwind entry so that we
     // don't need to encode it.
@@ -388,13 +389,7 @@ Symbol *UnwindInfoSectionImpl::canonicalizePersonality(Symbol *personality) {
 void UnwindInfoSectionImpl::relocateCompactUnwind(
     std::vector<CompactUnwindEntry> &cuEntries) {
   parallelFor(0, symbolsVec.size(), [&](size_t i) {
-    CompactUnwindEntry &cu = cuEntries[i];
-    const Defined *d = symbolsVec[i].second;
-    cu.functionAddress = d->getVA();
-    if (!d->unwindEntry())
-      return;
-
-    cu.relocateOneCompactUnwindEntry(d);
+    cuEntries[i].relocateOneCompactUnwindEntry(symbolsVec[i].second);
   });
 }
 
