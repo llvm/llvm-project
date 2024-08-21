@@ -4,14 +4,14 @@
 ; RUN: opt -passes=loop-vectorize -debug -disable-output -pass-remarks-missed=loop-vectorize %s 2>&1 | FileCheck %s
 ; CHECK-NOT: LV: We can vectorize this loop
 ; CHECK: LV: Not vectorizing: Cannot prove legality
+; CHECK-NOT: LV: We can vectorize this loop
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
-target triple = "aarch64-unknown-linux-gnu"
 
-@a = dso_local global [32000 x i32] zeroinitializer, align 4
-@b = dso_local global [32000 x i32] zeroinitializer, align 4
+@a = global [32000 x i32] zeroinitializer, align 4
+@b = global [32000 x i32] zeroinitializer, align 4
 
-define dso_local void @foo() local_unnamed_addr {
+define void @foo() {
 entry:
   %.pre = load i32, ptr getelementptr inbounds (i8, ptr @a, i64 4), align 4
   %.pre17 = load i32, ptr @a, align 4

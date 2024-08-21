@@ -1521,12 +1521,21 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
     SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
 
+  if (Result) {
+    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+                      << (LAI->getRuntimePointerChecking()->Need
+                              ? " (with a runtime bound check)"
+                              : "")
+                      << "!\n");
+  }
+
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
+                         "due to SCEVThreshold");
     reportVectorizationFailure("Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);
@@ -1534,13 +1543,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       Result = false;
     else
       return false;
-  }
-  if (Result) {
-    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
-                      << (LAI->getRuntimePointerChecking()->Need
-                              ? " (with a runtime bound check)"
-                              : "")
-                      << "!\n");
   }
 
   // Okay! We've done all the tests. If any have failed, return false. Otherwise
