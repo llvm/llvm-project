@@ -76,12 +76,13 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "f
   def SCALAR_FCVTPUH  : SInst<"vcvtp_u16", "(1U)1", "Sh">;
   def SCALAR_FCVTPUH1 : SInst<"vcvtp_u32", "(1U>)1", "Sh">;
   def SCALAR_FCVTPUH2 : SInst<"vcvtp_u64", "(1U>>)1", "Sh">;
-  let isVCVT_N = 1, ImmChecks = [ImmCheck<1, ImmCheck1_16>] in {
+  let ImmChecks = [ImmCheck<1, ImmCheck1_16>] in {
     def SCALAR_SCVTFSHO : SInst<"vcvth_n_f16", "(1F)(1!)I", "sUs">;
     def SCALAR_SCVTFSH1O: SInst<"vcvth_n_f16", "(1F<)(1!)I", "iUi">;
     def SCALAR_SCVTFSH2O: SInst<"vcvth_n_f16", "(1F<<)(1!)I", "lUl">;
-    def SCALAR_FCVTZSHO : SInst<"vcvt_n_s16", "(1S)1I", "Sh">;
   }
+    def SCALAR_FCVTZSHO : SInst<"vcvt_n_s16", "(1S)1I", "Sh",
+                                [ImmCheck<1, ImmCheckCvt, 0>]>;
     def SCALAR_FCVTZSH1O: SInst<"vcvt_n_s32", "(1S>)1I", "Sh",
                                 [ImmCheck<1, ImmCheckCvt, 0>]>;
     def SCALAR_FCVTZSH2O: SInst<"vcvt_n_s64", "(1S>>)1I", "Sh",

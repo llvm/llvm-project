@@ -372,7 +372,7 @@ public:
   /// Emit all the range checks for the immediates.
   void createRangeChecks(raw_ostream &o);
 
-  // Emit all the ImmCheckTypes to arm_immcheck_types.h
+  // Emit all the ImmCheckTypes to arm_immcheck_types.inc
   void createImmCheckTypes(raw_ostream &OS);
 
   /// Create the SVETypeFlags used in CGBuiltins
@@ -1196,18 +1196,18 @@ void SVEEmitter::createIntrinsic(
     // Collate a list of range/option checks for the immediates.
     SmallVector<ImmCheck, 2> ImmChecks;
     for (auto *R : ImmCheckList) {
-      int64_t Arg = R->getValueAsInt("Arg");
-      int64_t EltSizeArg = R->getValueAsInt("TypeContextArg");
+      int64_t ArgIdx = R->getValueAsInt("ImmArgIdx");
+      int64_t EltSizeArgIdx = R->getValueAsInt("TypeContextArgIdx");
       int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
-      assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
+      assert(ArgIdx >= 0 && Kind >= 0 && "ImmArgIdx and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
       char Mod;
       unsigned NumVectors;
-      std::tie(Mod, NumVectors) = getProtoModifier(Proto, EltSizeArg + 1);
-      if (EltSizeArg >= 0)
+      std::tie(Mod, NumVectors) = getProtoModifier(Proto, EltSizeArgIdx + 1);
+      if (EltSizeArgIdx >= 0)
         ElementSizeInBits = SVEType(TS, Mod, NumVectors).getElementSizeInBits();
-      ImmChecks.push_back(ImmCheck(Arg, Kind, ElementSizeInBits));
+      ImmChecks.push_back(ImmCheck(ArgIdx, Kind, ElementSizeInBits));
     }
 
     Out.push_back(std::make_unique<Intrinsic>(

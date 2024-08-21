@@ -413,11 +413,11 @@ public:
     for (const auto *I : ImmCheckList) {
       unsigned EltSizeInBits = 0, VecSizeInBits = 0;
 
-      ArgIdx = I->getValueAsInt("Arg");
-      TypeArgIdx = I->getValueAsInt("TypeContextArg");
+      ArgIdx = I->getValueAsInt("ImmArgIdx");
+      TypeArgIdx = I->getValueAsInt("TypeContextArgIdx");
       Kind = I->getValueAsDef("Kind")->getValueAsInt("Value");
 
-      assert((ArgIdx >= 0 && Kind >= 0) && "Arg and Kind must be nonnegative");
+      assert((ArgIdx >= 0 && Kind >= 0) && "ImmArgIdx and Kind must be nonnegative");
 
       if (TypeArgIdx >= 0) {
         EltSizeInBits = getParamType(TypeArgIdx).getElementSizeInBits();
@@ -1492,7 +1492,7 @@ Intrinsic::DagEmitter::emitDagCall(DagInit *DI, bool MatchMangledName) {
     N = emitDagArg(DI->getArg(0), "").second;
   std::optional<std::string> MangledName;
   if (MatchMangledName) {
-    if (Intr.getRecord()->getValueAsBit("isLaneQ"))
+    if(Intr.getRecord()->getValueAsString("Name").ends_with("laneq"))
       N += "q";
     MangledName = Intr.mangleName(N, ClassS);
   }
@@ -1975,7 +1975,6 @@ void NeonEmitter::createIntrinsic(Record *R,
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
-
   bool IsUnavailable = OperationRec->getValueAsBit("Unavailable");
   std::string CartesianProductWith = std::string(R->getValueAsString("CartesianProductWith"));
 
