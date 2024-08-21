@@ -710,21 +710,28 @@ uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
 uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }
 
 DWARFCompileUnit *DWARFUnit::GetSkeletonUnit() {
-  if (m_skeleton_unit == nullptr && IsDWOUnit()) {
+  if (m_skeleton_unit.load() == nullptr && IsDWOUnit()) {
     SymbolFileDWARFDwo *dwo =
         llvm::dyn_cast_or_null<SymbolFileDWARFDwo>(&GetSymbolFileDWARF());
     // Do a reverse lookup if the skeleton compile unit wasn't set.
-    if (dwo)
-      m_skeleton_unit = dwo->GetBaseSymbolFile().GetSkeletonUnit(this);
+    DWARFUnit *candidate_skeleton_unit =
+        dwo ? dwo->GetBaseSymbolFile().GetSkeletonUnit(this) : nullptr;
+    if (candidate_skeleton_unit)
+      (void)LinkToSkeletonUnit(*candidate_skeleton_unit);
+    // Linking may fail due to a race, so be sure to return the actual value.
   }
-  return llvm::dyn_cast_or_null<DWARFCompileUnit>(m_skeleton_unit);
+  return llvm::dyn_cast_or_null<DWARFCompileUnit>(m_skeleton_unit.load());
 }
 
 bool DWARFUnit::LinkToSkeletonUnit(DWARFUnit &skeleton_unit) {
-  if (m_skeleton_unit && m_skeleton_unit != &skeleton_unit)
-    return false;
-  m_skeleton_unit = &skeleton_unit;
-  return true;
+  DWARFUnit *expected_unit = nullptr;
+  if (m_skeleton_unit.compare_exchange_strong(expected_unit, &skeleton_unit))
+    return true;
+  if (expected_unit == &skeleton_unit) {
+    // Exchange failed because it already contained the right  value.
+    return true;
+  }
+  return false; // Already linked to a different unit.
 }
 
 bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
@@ -1016,7 +1023,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  offset_t offset = GetStrOffsetsBase() + index * 4;
+  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
 }
 

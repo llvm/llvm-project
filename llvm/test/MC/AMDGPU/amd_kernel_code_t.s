@@ -131,17 +131,17 @@ unknown_workitem_private_segment_byte_size:
 	s_endpgm
 
 ; ASM-LABEL: unknown_granulated_workitem_vgpr_count:
-; ASM: granulated_workitem_vgpr_count = ((0&4294967232)|(unknown&63))&63
-; ASM: granulated_wavefront_sgpr_count = (((0&4294967232)|(unknown&63))>>6)&15
-; ASM: priority = (((0&4294967232)|(unknown&63))>>10)&3
-; ASM: float_mode = (((0&4294967232)|(unknown&63))>>12)&255
-; ASM: priv = (((0&4294967232)|(unknown&63))>>20)&1
-; ASM: enable_dx10_clamp = (((0&4294967232)|(unknown&63))>>21)&1
-; ASM: debug_mode = (((0&4294967232)|(unknown&63))>>22)&1
-; ASM: enable_ieee_mode = (((0&4294967232)|(unknown&63))>>23)&1
-; ASM: enable_wgp_mode = (((0&4294967232)|(unknown&63))>>29)&1
-; ASM: enable_mem_ordered = (((0&4294967232)|(unknown&63))>>30)&1
-; ASM: enable_fwd_progress = (((0&4294967232)|(unknown&63))>>31)&1
+; ASM: granulated_workitem_vgpr_count = (unknown&63)&63
+; ASM: granulated_wavefront_sgpr_count = 0
+; ASM: priority = 0
+; ASM: float_mode = 0
+; ASM: priv = 0
+; ASM: enable_dx10_clamp = 0
+; ASM: debug_mode = 0
+; ASM: enable_ieee_mode = 0
+; ASM: enable_wgp_mode = 0
+; ASM: enable_mem_ordered = 0
+; ASM: enable_fwd_progress = 0
 .section .unknown_granulated_workitem_vgpr_count
 unknown_granulated_workitem_vgpr_count:
 	.amd_kernel_code_t
@@ -150,17 +150,9 @@ unknown_granulated_workitem_vgpr_count:
 	s_endpgm
 
 ; ASM-LABEL: unknown_enable_sgpr_workgroup_id_x:
-; ASM: enable_sgpr_private_segment_wave_byte_offset = ((0&4294967167)|((unknown&1)<<7))&1
-; ASM: user_sgpr_count = (((0&4294967167)|((unknown&1)<<7))>>1)&31
-; ASM: enable_trap_handler = (((0&4294967167)|((unknown&1)<<7))>>6)&1
-; ASM: enable_sgpr_workgroup_id_x = (((0&4294967167)|((unknown&1)<<7))>>7)&1
-; ASM: enable_sgpr_workgroup_id_y = (((0&4294967167)|((unknown&1)<<7))>>8)&1
-; ASM: enable_sgpr_workgroup_id_z = (((0&4294967167)|((unknown&1)<<7))>>9)&1
-; ASM: enable_sgpr_workgroup_info = (((0&4294967167)|((unknown&1)<<7))>>10)&1
-; ASM: enable_vgpr_workitem_id = (((0&4294967167)|((unknown&1)<<7))>>11)&3
-; ASM: enable_exception_msb = (((0&4294967167)|((unknown&1)<<7))>>13)&3
-; ASM: granulated_lds_size = (((0&4294967167)|((unknown&1)<<7))>>15)&511
-; ASM: enable_exception = (((0&4294967167)|((unknown&1)<<7))>>24)&127
+; ASM: enable_sgpr_workgroup_id_x = (((unknown&1)<<7)>>7)&1
+; ASM: enable_sgpr_workgroup_id_y = 0
+; ASM: enable_sgpr_workgroup_id_z = 0
 .section .unknown_enable_sgpr_workgroup_id_x
 unknown_enable_sgpr_workgroup_id_x:
 	.amd_kernel_code_t

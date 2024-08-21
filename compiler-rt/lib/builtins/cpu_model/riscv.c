@@ -16,10 +16,15 @@ struct {
 
 #define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
 struct {
-  unsigned vendorID;
   unsigned length;
   unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
 } __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
+
+struct {
+  unsigned mVendorID;
+  unsigned mArchID;
+  unsigned mImplID;
+} __riscv_cpu_model __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
@@ -244,8 +249,10 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // will be cleared to -1, and its value set to 0.
   // This unsets all extension bitmask bits.
 
-  // Init vendor extension
-  __riscv_vendor_feature_bits.vendorID = Hwprobes[2].value;
+  // Init VendorID, ArchID, ImplID
+  __riscv_cpu_model.mVendorID = Hwprobes[2].value;
+  __riscv_cpu_model.mArchID = Hwprobes[3].value;
+  __riscv_cpu_model.mImplID = Hwprobes[4].value;
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
@@ -328,14 +335,18 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
 static int FeaturesBitCached = 0;
 
-void __init_riscv_feature_bits() CONSTRUCTOR_ATTRIBUTE;
+void __init_riscv_feature_bits(void *) CONSTRUCTOR_ATTRIBUTE;
 
 // A constructor function that sets __riscv_feature_bits, and
 // __riscv_vendor_feature_bits to the right values.  This needs to run
 // only once.  This constructor is given the highest priority and it should
 // run before constructors without the priority set.  However, it still runs
 // after ifunc initializers and needs to be called explicitly there.
-void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
+
+// PlatformArgs allows the platform to provide pre-computed data and access it
+// without extra effort. For example, Linux could pass the vDSO object to avoid
+// an extra system call.
+void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits(void *PlatformArgs) {
 
   if (FeaturesBitCached)
     return;
@@ -345,9 +356,9 @@ void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
-      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0},
-      {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
-      {RISCV_HWPROBE_KEY_MVENDORID, 0},
+      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0}, {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
+      {RISCV_HWPROBE_KEY_MVENDORID, 0},     {RISCV_HWPROBE_KEY_MARCHID, 0},
+      {RISCV_HWPROBE_KEY_MIMPID, 0},
   };
   if (initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0])))
     return;

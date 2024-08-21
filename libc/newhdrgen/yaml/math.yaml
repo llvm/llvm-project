@@ -37,6 +37,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atan2
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+      - type: double
   - name: atan2f
     standards:
       - stdc
@@ -44,6 +51,13 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: atan2l
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double
   - name: atanf
     standards:
       - stdc
@@ -214,6 +228,20 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: dsqrtl
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
+  - name: dsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: erff
     standards:
       - stdc
@@ -1195,6 +1223,25 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
+  - name: fsqrt
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: double
+  - name: fsqrtl
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: long double
+  - name: fsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: float
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fsub
     standards:
       - stdc
@@ -2323,13 +2370,42 @@ functions:
     arguments:
       - type: const long double *
       - type: const long double *
+  - name: totalordermag
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const double *
+      - type: const double *
+  - name: totalordermagf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float *
+      - type: const float *
+  - name: totalordermagl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const long double *
+      - type: const long double *
+  - name: totalordermagf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const float128 *
+      - type: const float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalordermagf16
     standards:
       - stdc
     return_type: int
     arguments:
-      - type: _Float16 *
-      - type: _Float16 *
+      - type: const _Float16 *
+      - type: const _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: trunc
     standards:

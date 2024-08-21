@@ -2165,6 +2165,24 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
     return instCombineSVENoActiveUnaryZero(IC, II);
+  case Intrinsic::aarch64_sve_prf:
+  case Intrinsic::aarch64_sve_prfb_gather_index:
+  case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfb_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfb_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfd_gather_index:
+  case Intrinsic::aarch64_sve_prfd_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfd_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfd_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfh_gather_index:
+  case Intrinsic::aarch64_sve_prfh_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfh_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfh_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfw_gather_index:
+  case Intrinsic::aarch64_sve_prfw_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfw_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfw_gather_uxtw_index:
+    return instCombineSVENoActiveUnaryErase(IC, II, 0);
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
@@ -3224,6 +3242,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return LT.first;
 
   case ISD::FNEG:
+    // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
+    if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
+         (Ty->isHalfTy() && ST->hasFullFP16())) &&
+        CxtI &&
+        ((CxtI->hasOneUse() &&
+          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+      return 0;
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
     // Increase the cost for half and bfloat types if not architecturally
@@ -3411,8 +3438,26 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return LT.first;
 }
 
-static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
-  return Opcode == Instruction::Load ? SVEGatherOverhead : SVEScatterOverhead;
+// This function returns gather/scatter overhead either from
+// user-provided value or specialized values per-target from \p ST.
+static unsigned getSVEGatherScatterOverhead(unsigned Opcode,
+                                            const AArch64Subtarget *ST) {
+  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+         "Should be called on only load or stores.");
+  switch (Opcode) {
+  case Instruction::Load:
+    if (SVEGatherOverhead.getNumOccurrences() > 0)
+      return SVEGatherOverhead;
+    return ST->getGatherOverhead();
+    break;
+  case Instruction::Store:
+    if (SVEScatterOverhead.getNumOccurrences() > 0)
+      return SVEScatterOverhead;
+    return ST->getScatterOverhead();
+    break;
+  default:
+    llvm_unreachable("Shouldn't have reached here");
+  }
 }
 
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
@@ -3444,9 +3489,7 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind,
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   // Add on an overhead cost for using gathers/scatters.
-  // TODO: At the moment this is applied unilaterally for all CPUs, but at some
-  // point we may want a per-CPU overhead.
-  MemOpCost *= getSVEGatherScatterOverhead(Opcode);
+  MemOpCost *= getSVEGatherScatterOverhead(Opcode, ST);
   return LT.first * MemOpCost * getMaxNumElements(LegalVF);
 }
 
