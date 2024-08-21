@@ -274,6 +274,24 @@ public:
     return createBinop(lhs, mlir::cir::BinOpKind::Mul, val);
   }
 
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<mlir::cir::SelectOp>(loc, trueValue.getType(), condition,
+                                       trueValue, falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
+  }
+
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
                                   mlir::Value imag) {
     auto resultComplexTy =
