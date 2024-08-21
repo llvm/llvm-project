@@ -33,17 +33,14 @@ LLmain_LLstart:
         jmp     LLstart
 # FDATA: 1 main #LLmain_LLstart# 1 main #LLstart# 0 500
 LLstart:
-        jge     LLless
-# FDATA: 1 main #LLstart# 1 main #LLless# 0 10
+        jge     LLexit
+# FDATA: 1 main #LLstart# 1 main #LLexit# 0 10
 # FDATA: 1 main #LLstart# 1 main #LLmore# 0 0
 LLmore:
         movl    $5, %eax
 LLmore_LLexit:
         jmp     LLexit
 # FDATA: 1 main #LLmore_LLexit# 1 main #LLexit# 0 490
-LLless:
-        jmp     LLexit
-# FDATA: 1 main #LLless# 1 main #LLexit# 0 10
 LLexit:
         ret
 .LLmain_end:
