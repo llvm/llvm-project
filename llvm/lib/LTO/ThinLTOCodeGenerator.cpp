@@ -382,13 +382,13 @@ public:
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
-    SmallString<40> Key;
-    computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
-                       ResolvedODR, DefinedGVSummaries);
+    std::string Key =
+        computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
+                           ResolvedODR, DefinedGVSummaries);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
+    sys::path::append(EntryPath, CachePath, Twine("llvmcache-", Key));
   }
 
   // Access the path to this entry in the cache.

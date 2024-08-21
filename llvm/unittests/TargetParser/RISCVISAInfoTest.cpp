@@ -1071,6 +1071,7 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0
@@ -1125,7 +1126,6 @@ Experimental extensions
     ssctr                1.0
     ssnpm                1.0
     sspm                 1.0
-    ssqosid              1.0
     supm                 1.0
 
 Supported Profiles
