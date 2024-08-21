@@ -2981,7 +2981,7 @@ enum CXTypeKind {
   CXType_BTFTagAttributed = 178,
 
   // HLSL Intangible Types
-  CXType_HLSLResource = 179,
+  CXType_HLSLResource = 179
 };
 
 /**

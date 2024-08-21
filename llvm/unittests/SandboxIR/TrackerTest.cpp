@@ -644,6 +644,329 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, CatchSwitchInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  bb0:
+    %cs0 = catchswitch within none [label %handler0, label %handler1] unwind to caller
+  bb1:
+    %cs1 = catchswitch within %cs0 [label %handler0, label %handler1] unwind label %cleanup
+  handler0:
+    ret void
+  handler1:
+    ret void
+  cleanup:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler0")));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler1")));
+  auto *CS0 = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+  auto *CS1 = cast<sandboxir::CatchSwitchInst>(&*BB1->begin());
+
+  // Check setParentPad().
+  auto *OrigPad = CS0->getParentPad();
+  auto *NewPad = CS1;
+  EXPECT_NE(NewPad, OrigPad);
+  Ctx.save();
+  CS0->setParentPad(NewPad);
+  EXPECT_EQ(CS0->getParentPad(), NewPad);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getParentPad(), OrigPad);
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CS1->getUnwindDest();
+  auto *NewUnwindDest = BB0;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  Ctx.save();
+  CS1->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CS1->getUnwindDest(), NewUnwindDest);
+  Ctx.revert();
+  EXPECT_EQ(CS1->getUnwindDest(), OrigUnwindDest);
+  // Check setSuccessor().
+  auto *OrigSuccessor = CS0->getSuccessor(0);
+  auto *NewSuccessor = BB0;
+  EXPECT_NE(NewSuccessor, OrigSuccessor);
+  Ctx.save();
+  CS0->setSuccessor(0, NewSuccessor);
+  EXPECT_EQ(CS0->getSuccessor(0), NewSuccessor);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getSuccessor(0), OrigSuccessor);
+  // Check addHandler().
+  Ctx.save();
+  CS0->addHandler(BB0);
+  EXPECT_EQ(CS0->getNumHandlers(), 3u);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getNumHandlers(), 2u);
+  auto HIt = CS0->handler_begin();
+  EXPECT_EQ(*HIt++, Handler0);
+  EXPECT_EQ(*HIt++, Handler1);
+}
+
+TEST_F(TrackerTest, SwitchInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  entry:
+    switch i32 %cond0, label %default [ i32 0, label %bb0
+                                        i32 1, label %bb1 ]
+  bb0:
+    ret void
+  bb1:
+    ret void
+  default:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMEntry = getBasicBlockByName(LLVMF, "entry");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Cond1 = F.getArg(1);
+  auto *Entry = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMEntry));
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Switch = cast<sandboxir::SwitchInst>(&*Entry->begin());
+
+  // Check setCondition().
+  auto *OrigCond = Switch->getCondition();
+  auto *NewCond = Cond1;
+  EXPECT_NE(NewCond, OrigCond);
+  Ctx.save();
+  Switch->setCondition(NewCond);
+  EXPECT_EQ(Switch->getCondition(), NewCond);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getCondition(), OrigCond);
+  // Check setDefaultDest().
+  auto *OrigDefaultDest = Switch->getDefaultDest();
+  auto *NewDefaultDest = Entry;
+  EXPECT_NE(NewDefaultDest, OrigDefaultDest);
+  Ctx.save();
+  Switch->setDefaultDest(NewDefaultDest);
+  EXPECT_EQ(Switch->getDefaultDest(), NewDefaultDest);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getDefaultDest(), OrigDefaultDest);
+  // Check setSuccessor().
+  auto *OrigSucc = Switch->getSuccessor(0);
+  auto *NewSucc = Entry;
+  EXPECT_NE(NewSucc, OrigSucc);
+  Ctx.save();
+  Switch->setSuccessor(0, NewSucc);
+  EXPECT_EQ(Switch->getSuccessor(0), NewSucc);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
+  // Check addCase().
+  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
+  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
+  auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  Ctx.save();
+  Switch->addCase(FortyTwo, Entry);
+  EXPECT_EQ(Switch->getNumCases(), 3u);
+  EXPECT_EQ(Switch->findCaseDest(Entry), FortyTwo);
+  EXPECT_EQ(Switch->findCaseValue(FortyTwo)->getCaseSuccessor(), Entry);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  // Check removeCase().
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(Zero));
+  EXPECT_EQ(Switch->getNumCases(), 1u);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+}
+
+TEST_F(TrackerTest, AtomicRMWSetters) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %arg) {
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %arg acquire, align 128
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *RMW = cast<sandboxir::AtomicRMWInst>(&*It++);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = RMW->getAlign();
+  Align NewAlign(1024);
+  EXPECT_NE(NewAlign, OrigAlign);
+  RMW->setAlignment(NewAlign);
+  EXPECT_EQ(RMW->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getAlign(), OrigAlign);
+
+  // Check setVolatile().
+  Ctx.save();
+  auto OrigIsVolatile = RMW->isVolatile();
+  bool NewIsVolatile = true;
+  EXPECT_NE(NewIsVolatile, OrigIsVolatile);
+  RMW->setVolatile(NewIsVolatile);
+  EXPECT_EQ(RMW->isVolatile(), NewIsVolatile);
+  Ctx.revert();
+  EXPECT_EQ(RMW->isVolatile(), OrigIsVolatile);
+
+  // Check setOrdering().
+  Ctx.save();
+  auto OrigOrdering = RMW->getOrdering();
+  auto NewOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  RMW->setOrdering(NewOrdering);
+  EXPECT_EQ(RMW->getOrdering(), NewOrdering);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getOrdering(), OrigOrdering);
+
+  // Check setSyncScopeID().
+  Ctx.save();
+  auto OrigSSID = RMW->getSyncScopeID();
+  auto NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  RMW->setSyncScopeID(NewSSID);
+  EXPECT_EQ(RMW->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(RMW->getSyncScopeID(), OrigSSID);
+}
+
+TEST_F(TrackerTest, AtomicCmpXchgSetters) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
+  %cmpxchg = cmpxchg ptr %ptr, i8 %cmp, i8 %new monotonic monotonic, align 128
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *CmpXchg = cast<sandboxir::AtomicCmpXchgInst>(&*It++);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = CmpXchg->getAlign();
+  Align NewAlign(1024);
+  EXPECT_NE(NewAlign, OrigAlign);
+  CmpXchg->setAlignment(NewAlign);
+  EXPECT_EQ(CmpXchg->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getAlign(), OrigAlign);
+
+  // Check setVolatile().
+  Ctx.save();
+  auto OrigIsVolatile = CmpXchg->isVolatile();
+  bool NewIsVolatile = true;
+  EXPECT_NE(NewIsVolatile, OrigIsVolatile);
+  CmpXchg->setVolatile(NewIsVolatile);
+  EXPECT_EQ(CmpXchg->isVolatile(), NewIsVolatile);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->isVolatile(), OrigIsVolatile);
+
+  // Check setWeak().
+  Ctx.save();
+  auto OrigIsWeak = CmpXchg->isWeak();
+  bool NewIsWeak = true;
+  EXPECT_NE(NewIsWeak, OrigIsWeak);
+  CmpXchg->setWeak(NewIsWeak);
+  EXPECT_EQ(CmpXchg->isWeak(), NewIsWeak);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->isWeak(), OrigIsWeak);
+
+  // Check setSuccessOrdering().
+  Ctx.save();
+  auto OrigSuccessOrdering = CmpXchg->getSuccessOrdering();
+  auto NewSuccessOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewSuccessOrdering, OrigSuccessOrdering);
+  CmpXchg->setSuccessOrdering(NewSuccessOrdering);
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), NewSuccessOrdering);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getSuccessOrdering(), OrigSuccessOrdering);
+
+  // Check setFailureOrdering().
+  Ctx.save();
+  auto OrigFailureOrdering = CmpXchg->getFailureOrdering();
+  auto NewFailureOrdering = AtomicOrdering::SequentiallyConsistent;
+  EXPECT_NE(NewFailureOrdering, OrigFailureOrdering);
+  CmpXchg->setFailureOrdering(NewFailureOrdering);
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), NewFailureOrdering);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getFailureOrdering(), OrigFailureOrdering);
+
+  // Check setSyncScopeID().
+  Ctx.save();
+  auto OrigSSID = CmpXchg->getSyncScopeID();
+  auto NewSSID = SyncScope::SingleThread;
+  EXPECT_NE(NewSSID, OrigSSID);
+  CmpXchg->setSyncScopeID(NewSSID);
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(CmpXchg->getSyncScopeID(), OrigSSID);
+}
+
+TEST_F(TrackerTest, AllocaInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  %alloca = alloca i32, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Alloca = cast<sandboxir::AllocaInst>(&*It++);
+
+  // Check setAllocatedType().
+  Ctx.save();
+  auto *OrigTy = Alloca->getAllocatedType();
+  auto *NewTy = Type::getInt64Ty(C);
+  EXPECT_NE(NewTy, OrigTy);
+  Alloca->setAllocatedType(NewTy);
+  EXPECT_EQ(Alloca->getAllocatedType(), NewTy);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAllocatedType(), OrigTy);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = Alloca->getAlign();
+  Align NewAlign(128);
+  EXPECT_NE(NewAlign, OrigAlign);
+  Alloca->setAlignment(NewAlign);
+  EXPECT_EQ(Alloca->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAlign(), OrigAlign);
+
+  // Check setUsedWithInAlloca().
+  Ctx.save();
+  auto OrigWIA = Alloca->isUsedWithInAlloca();
+  bool NewWIA = true;
+  EXPECT_NE(NewWIA, OrigWIA);
+  Alloca->setUsedWithInAlloca(NewWIA);
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), NewWIA);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), OrigWIA);
+}
+
 TEST_F(TrackerTest, CallBrSetters) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg) {
@@ -779,6 +1102,15 @@ bb2:
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
 
+  // Check removeIncomingValueIf(FromBB1).
+  Ctx.save();
+  PHI->removeIncomingValueIf(
+      [&](unsigned Idx) { return PHI->getIncomingBlock(Idx) == BB1; });
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   // Check removeIncomingValue() remove all.
   Ctx.save();
   PHI->removeIncomingValue(0u);
@@ -838,4 +1170,65 @@ define void @foo(ptr %arg0, i8 %val) {
   EXPECT_TRUE(Store->isVolatile());
   Ctx.revert();
   EXPECT_FALSE(Store->isVolatile());
+}
+
+TEST_F(TrackerTest, Flags) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg) {
+  %add = add i32 %arg, %arg
+  %fadd = fadd float %farg, %farg
+  %udiv = udiv i32 %arg, %arg
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Add = &*It++;
+  auto *FAdd = &*It++;
+  auto *UDiv = &*It++;
+
+#define CHECK_FLAG(I, GETTER, SETTER)                                          \
+  {                                                                            \
+    Ctx.save();                                                                \
+    bool OrigFlag = I->GETTER();                                               \
+    bool NewFlag = !OrigFlag;                                                  \
+    I->SETTER(NewFlag);                                                        \
+    EXPECT_EQ(I->GETTER(), NewFlag);                                           \
+    Ctx.revert();                                                              \
+    EXPECT_EQ(I->GETTER(), OrigFlag);                                          \
+  }
+
+  CHECK_FLAG(Add, hasNoUnsignedWrap, setHasNoUnsignedWrap);
+  CHECK_FLAG(Add, hasNoSignedWrap, setHasNoSignedWrap);
+  CHECK_FLAG(FAdd, isFast, setFast);
+  CHECK_FLAG(FAdd, hasAllowReassoc, setHasAllowReassoc);
+  CHECK_FLAG(UDiv, isExact, setIsExact);
+  CHECK_FLAG(FAdd, hasNoNaNs, setHasNoNaNs);
+  CHECK_FLAG(FAdd, hasNoInfs, setHasNoInfs);
+  CHECK_FLAG(FAdd, hasNoSignedZeros, setHasNoSignedZeros);
+  CHECK_FLAG(FAdd, hasAllowReciprocal, setHasAllowReciprocal);
+  CHECK_FLAG(FAdd, hasAllowContract, setHasAllowContract);
+  CHECK_FLAG(FAdd, hasApproxFunc, setHasApproxFunc);
+
+  // Check setFastMathFlags().
+  FastMathFlags OrigFMF = FAdd->getFastMathFlags();
+  FastMathFlags NewFMF;
+  NewFMF.setAllowReassoc(true);
+  EXPECT_TRUE(NewFMF != OrigFMF);
+
+  Ctx.save();
+  FAdd->setFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  Ctx.revert();
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
+
+  // Check copyFastMathFlags().
+  Ctx.save();
+  FAdd->copyFastMathFlags(NewFMF);
+  EXPECT_FALSE(FAdd->getFastMathFlags() != NewFMF);
+  Ctx.revert();
+  EXPECT_FALSE(FAdd->getFastMathFlags() != OrigFMF);
 }

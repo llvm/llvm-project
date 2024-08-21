@@ -221,7 +221,8 @@ struct Config {
   bool allowMultipleDefinition;
   bool fatLTOObjects;
   bool androidPackDynRelocs = false;
-  bool armThumbPLTs = false;
+  bool armHasArmISA = false;
+  bool armHasThumb2ISA = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
@@ -580,6 +581,11 @@ struct Ctx {
   // before a possible `sym = expr;`.
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
+  // The set of TOC entries (.toc + addend) for which we should not apply
+  // toc-indirect to toc-relative relaxation. const Symbol * refers to the
+  // STT_SECTION symbol associated to the .toc input section.
+  llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
   void reset();
 

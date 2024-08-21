@@ -28,7 +28,7 @@ s_mov_b32 s1, s[0:2] 1
 // NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_mov_b32 s1, xnack_mask_lo 1
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: xnack_mask_lo register not available on this GPU
 
 s_mov_b32 s1, s s0
 // NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -58,7 +58,7 @@ s_mov_b32 s1, s[0:2] vcc_lo
 // NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_mov_b32 s1, xnack_mask_lo s1
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: xnack_mask_lo register not available on this GPU
 
 exp mrt0 v1, v2, v3, v4000 off
 // NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range

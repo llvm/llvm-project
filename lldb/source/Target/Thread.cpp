@@ -143,6 +143,12 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
       idx, g_thread_properties[idx].default_uint_value);
 }
 
+uint64_t ThreadProperties::GetSingleThreadPlanTimeout() const {
+  const uint32_t idx = ePropertySingleThreadPlanTimeout;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_thread_properties[idx].default_uint_value);
+}
+
 // Thread Event Data
 
 llvm::StringRef Thread::ThreadEventData::GetFlavorString() {
@@ -813,12 +819,17 @@ bool Thread::ShouldStop(Event *event_ptr) {
   // decide whether they still need to do more work.
 
   bool done_processing_current_plan = false;
-
   if (!current_plan->PlanExplainsStop(event_ptr)) {
     if (current_plan->TracerExplainsStop()) {
       done_processing_current_plan = true;
       should_stop = false;
     } else {
+      // Leaf plan that does not explain the stop should be popped.
+      // The plan should be push itself later again before resuming to stay
+      // as leaf.
+      if (current_plan->IsLeafPlan())
+        PopPlan();
+
       // If the current plan doesn't explain the stop, then find one that does
       // and let it handle the situation.
       ThreadPlan *plan_ptr = current_plan;
@@ -1715,6 +1726,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "instrumentation break";
   case eStopReasonProcessorTrace:
     return "processor trace";
+  case eStopReasonInterrupt:
+    return "async interrupt";
   }
 
   return "StopReason = " + std::to_string(reason);
@@ -1735,7 +1748,7 @@ std::string Thread::RunModeAsString(lldb::RunMode mode) {
 
 size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
-                         bool stop_format, bool only_stacks) {
+                         bool stop_format, bool show_hidden, bool only_stacks) {
 
   if (!only_stacks) {
     ExecutionContext exe_ctx(shared_from_this());
@@ -1782,7 +1795,7 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, selected_frame_marker);
+        show_frame_unique, show_hidden, selected_frame_marker);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
@@ -1880,9 +1893,11 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
 
 size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                                    uint32_t num_frames, bool show_frame_info,
-                                   uint32_t num_frames_with_source) {
-  return GetStackFrameList()->GetStatus(
-      strm, first_frame, num_frames, show_frame_info, num_frames_with_source);
+                                   uint32_t num_frames_with_source,
+                                   bool show_hidden) {
+  return GetStackFrameList()->GetStatus(strm, first_frame, num_frames,
+                                        show_frame_info, num_frames_with_source,
+                                        /*show_unique*/ false, show_hidden);
 }
 
 Unwind &Thread::GetUnwinder() {

@@ -632,6 +632,7 @@ static bool isRelroSection(const OutputSection *sec) {
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
+  RF_HIP_FATBIN = 1 << 19,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
@@ -728,6 +729,15 @@ unsigned elf::getSectionRank(OutputSection &osec) {
   // sections, place non-NOBITS sections first.
   if (osec.type == SHT_NOBITS)
     rank |= RF_BSS;
+
+  // Put HIP fatbin related sections further away to avoid wasting relocation
+  // range to jump over them.  Make sure .hip_fatbin is the furthest.
+  if (osec.name == ".hipFatBinSegment")
+    rank |= RF_HIP_FATBIN;
+  if (osec.name == ".hip_gpubin_handle")
+    rank |= RF_HIP_FATBIN | 2;
+  if (osec.name == ".hip_fatbin")
+    rank |= RF_HIP_FATBIN | RF_WRITE | 3;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -1790,7 +1800,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // that we can correctly decide if a dynamic relocation is needed. This is
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
-    ppc64noTocRelax.clear();
     scanRelocations<ELFT>();
     reportUndefinedSymbols();
     postScanRelocations();

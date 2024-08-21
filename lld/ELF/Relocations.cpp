@@ -459,7 +459,8 @@ private:
 // InputSectionBase.
 class RelocationScanner {
 public:
-  template <class ELFT> void scanSection(InputSectionBase &s);
+  template <class ELFT>
+  void scanSection(InputSectionBase &s, bool isEH = false);
 
 private:
   InputSectionBase *sec;
@@ -1494,7 +1495,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     // InputSectionBase::relocateAlloc().
     if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
         cast<Defined>(sym).section->name == ".toc")
-      ppc64noTocRelax.insert({&sym, addend});
+      ctx.ppc64noTocRelax.insert({&sym, addend});
 
     if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
         (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
@@ -1617,10 +1618,11 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
                       });
 }
 
-template <class ELFT> void RelocationScanner::scanSection(InputSectionBase &s) {
+template <class ELFT>
+void RelocationScanner::scanSection(InputSectionBase &s, bool isEH) {
   sec = &s;
   getter = OffsetGetter(s);
-  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>(!isEH);
   if (rels.areRelocsCrel())
     scan<ELFT>(rels.crels);
   else if (rels.areRelocsRel())
@@ -1658,7 +1660,7 @@ template <class ELFT> void elf::scanRelocations() {
     RelocationScanner scanner;
     for (Partition &part : partitions) {
       for (EhInputSection *sec : part.ehFrame->sections)
-        scanner.template scanSection<ELFT>(*sec);
+        scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
       if (part.armExidx && part.armExidx->isLive())
         for (InputSection *sec : part.armExidx->exidxSections)
           if (sec->isLive())

@@ -356,7 +356,7 @@ static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
   return true;
 }
 
-void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {  
+void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   auto *VD = cast<ValueDecl>(D);
   if (!isLegalTypeForHLSLSV_DispatchThreadID(VD->getType())) {
     Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
@@ -1045,6 +1045,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_saturate:
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
       return true;
@@ -1106,6 +1107,18 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             TheCall, /*CheckForFloatArgs*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_normalize: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic

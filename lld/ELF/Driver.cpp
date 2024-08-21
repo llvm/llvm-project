@@ -123,6 +123,7 @@ void Ctx::reset() {
   needsTlsLd.store(false, std::memory_order_relaxed);
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
+  ppc64noTocRelax.clear();
   ltoAllVtablesHaveTypeInfos = false;
 }
 
@@ -1003,6 +1004,15 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     const Elf_Shdr_Impl<ELFT> &sec = objSections[i];
     if (sec.sh_info == inputObj->cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_CREL) {
+        auto crels =
+            CHECK(obj.crels(sec), "could not retrieve cg profile rela section");
+        for (const auto &rel : crels.first)
+          symbolIndices.push_back(rel.getSymbol(false));
+        for (const auto &rel : crels.second)
+          symbolIndices.push_back(rel.getSymbol(false));
+        break;
+      }
       if (sec.sh_type == SHT_RELA) {
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");

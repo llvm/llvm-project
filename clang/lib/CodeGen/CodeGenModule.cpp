@@ -116,8 +116,6 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   default:
     return createDefaultTargetCodeGenInfo(CGM);
 
-  case llvm::Triple::le32:
-    return createPNaClTargetCodeGenInfo(CGM);
   case llvm::Triple::m68k:
     return createM68kTargetCodeGenInfo(CGM);
   case llvm::Triple::mips:
@@ -343,10 +341,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), Types(*this), VTables(*this),
+      VMContext(M.getContext()), VTables(*this),
       SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
+  Types.reset(new CodeGenTypes(*this));
   llvm::LLVMContext &LLVMContext = M.getContext();
   VoidTy = llvm::Type::getVoidTy(LLVMContext);
   Int8Ty = llvm::Type::getInt8Ty(LLVMContext);
@@ -405,7 +404,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (LangOpts.Sanitize.has(SanitizerKind::Thread) ||
       (!CodeGenOpts.RelaxedAliasing && CodeGenOpts.OptimizationLevel > 0))
     TBAA.reset(new CodeGenTBAA(Context, getTypes(), TheModule, CodeGenOpts,
-                               getLangOpts(), getCXXABI().getMangleContext()));
+                               getLangOpts()));
 
   // If debug info or coverage generation is enabled, create the CGDebugInfo
   // object.
@@ -1136,6 +1135,11 @@ void CodeGenModule::Release() {
                               CodeGenOpts.SanitizeCfiCanonicalJumpTables);
   }
 
+  if (CodeGenOpts.SanitizeCfiICallNormalizeIntegers) {
+    getModule().addModuleFlag(llvm::Module::Override, "cfi-normalize-integers",
+                              1);
+  }
+
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
     // KCFI assumes patchable-function-prefix is the same for all indirectly
@@ -1218,8 +1222,18 @@ void CodeGenModule::Release() {
           (LangOpts.PointerAuthVTPtrTypeDiscrimination
            << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR) |
           (LangOpts.PointerAuthInitFini
-           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI);
-      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI) |
+          (LangOpts.PointerAuthInitFiniAddressDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC) |
+          (LangOpts.PointerAuthELFGOT
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT) |
+          (LangOpts.PointerAuthIndirectGotos
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS) |
+          (LangOpts.PointerAuthTypeInfoVTPtrDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR) |
+          (LangOpts.PointerAuthFunctionTypeDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR);
+      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                         AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                     "Update when new enum items are defined");
       if (PAuthABIVersion != 0) {
@@ -1452,12 +1466,12 @@ void CodeGenModule::EmitBackendOptionsMetadata(
 
 void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {
   // Make sure that this type is translated.
-  Types.UpdateCompletedType(TD);
+  getTypes().UpdateCompletedType(TD);
 }
 
 void CodeGenModule::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
   // Make sure that this type is translated.
-  Types.RefreshTypeCacheForClass(RD);
+  getTypes().RefreshTypeCacheForClass(RD);
 }
 
 llvm::MDNode *CodeGenModule::getTBAATypeInfo(QualType QTy) {
@@ -2082,37 +2096,53 @@ void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority,
 void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   if (Fns.empty()) return;
 
-  // Ctor function type is void()*.
-  llvm::FunctionType* CtorFTy = llvm::FunctionType::get(VoidTy, false);
-  llvm::Type *CtorPFTy = llvm::PointerType::get(CtorFTy,
-      TheModule.getDataLayout().getProgramAddressSpace());
+  const PointerAuthSchema &InitFiniAuthSchema =
+      getCodeGenOpts().PointerAuth.InitFiniPointers;
 
-  // Get the type of a ctor entry, { i32, void ()*, i8* }.
-  llvm::StructType *CtorStructTy = llvm::StructType::get(
-      Int32Ty, CtorPFTy, VoidPtrTy);
+  // Ctor function type is ptr.
+  llvm::PointerType *PtrTy = llvm::PointerType::get(
+      getLLVMContext(), TheModule.getDataLayout().getProgramAddressSpace());
+
+  // Get the type of a ctor entry, { i32, ptr, ptr }.
+  llvm::StructType *CtorStructTy = llvm::StructType::get(Int32Ty, PtrTy, PtrTy);
 
   // Construct the constructor and destructor arrays.
-  ConstantInitBuilder builder(*this);
-  auto ctors = builder.beginArray(CtorStructTy);
+  ConstantInitBuilder Builder(*this);
+  auto Ctors = Builder.beginArray(CtorStructTy);
   for (const auto &I : Fns) {
-    auto ctor = ctors.beginStruct(CtorStructTy);
-    ctor.addInt(Int32Ty, I.Priority);
-    ctor.add(I.Initializer);
+    auto Ctor = Ctors.beginStruct(CtorStructTy);
+    Ctor.addInt(Int32Ty, I.Priority);
+    if (InitFiniAuthSchema) {
+      llvm::Constant *StorageAddress =
+          (InitFiniAuthSchema.isAddressDiscriminated()
+               ? llvm::ConstantExpr::getIntToPtr(
+                     llvm::ConstantInt::get(
+                         IntPtrTy,
+                         llvm::ConstantPtrAuth::AddrDiscriminator_CtorsDtors),
+                     PtrTy)
+               : nullptr);
+      llvm::Constant *SignedCtorPtr = getConstantSignedPointer(
+          I.Initializer, InitFiniAuthSchema.getKey(), StorageAddress,
+          llvm::ConstantInt::get(
+              SizeTy, InitFiniAuthSchema.getConstantDiscrimination()));
+      Ctor.add(SignedCtorPtr);
+    } else {
+      Ctor.add(I.Initializer);
+    }
     if (I.AssociatedData)
-      ctor.add(I.AssociatedData);
+      Ctor.add(I.AssociatedData);
     else
-      ctor.addNullPointer(VoidPtrTy);
-    ctor.finishAndAddTo(ctors);
+      Ctor.addNullPointer(PtrTy);
+    Ctor.finishAndAddTo(Ctors);
   }
 
-  auto list =
-    ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
-                                /*constant*/ false,
-                                llvm::GlobalValue::AppendingLinkage);
+  auto List = Ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
+                                          /*constant*/ false,
+                                          llvm::GlobalValue::AppendingLinkage);
 
   // The LTO linker doesn't seem to like it when we set an alignment
   // on appending variables.  Take it off as a workaround.
-  list->setAlignment(std::nullopt);
+  List->setAlignment(std::nullopt);
 
   Fns.clear();
 }
@@ -5376,6 +5406,10 @@ void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
   GO.setComdat(TheModule.getOrInsertComdat(GO.getName()));
 }
 
+const ABIInfo &CodeGenModule::getABIInfo() {
+  return getTargetCodeGenInfo().getABIInfo();
+}
+
 /// Pass IsTentative as true if you want to create a tentative definition.
 void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
                                             bool IsTentative) {
@@ -5893,13 +5927,13 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
 
     llvm::CallBase *newCall;
     if (isa<llvm::CallInst>(callSite)) {
-      newCall =
-          llvm::CallInst::Create(newFn, newArgs, newBundles, "", callSite);
+      newCall = llvm::CallInst::Create(newFn, newArgs, newBundles, "",
+                                       callSite->getIterator());
     } else {
       auto *oldInvoke = cast<llvm::InvokeInst>(callSite);
-      newCall = llvm::InvokeInst::Create(newFn, oldInvoke->getNormalDest(),
-                                         oldInvoke->getUnwindDest(), newArgs,
-                                         newBundles, "", callSite);
+      newCall = llvm::InvokeInst::Create(
+          newFn, oldInvoke->getNormalDest(), oldInvoke->getUnwindDest(),
+          newArgs, newBundles, "", callSite->getIterator());
     }
     newArgs.clear(); // for the next iteration
 
@@ -7783,8 +7817,6 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->Manglings = std::move(Manglings);
 
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
-
-  NewBuilder->TBAA = std::move(TBAA);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
 }

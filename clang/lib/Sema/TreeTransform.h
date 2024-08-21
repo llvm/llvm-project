@@ -2079,10 +2079,11 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
+  OMPClause *RebuildOMPNumTeamsClause(ArrayRef<Expr *> VarList,
+                                      SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(NumTeams, StartLoc,
+    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(VarList, StartLoc,
                                                         LParenLoc, EndLoc);
   }
 
@@ -2090,12 +2091,12 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPThreadLimitClause(Expr *ThreadLimit,
+  OMPClause *RebuildOMPThreadLimitClause(ArrayRef<Expr *> VarList,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(
-        ThreadLimit, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(VarList, StartLoc,
+                                                           LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'priority' clause.
@@ -4028,6 +4029,20 @@ public:
                                       NumExpansions);
   }
 
+  ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+                               LambdaScopeInfo *LSI) {
+    for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
+      if (Expr *Init = PVD->getInit())
+        LSI->ContainsUnexpandedParameterPack |=
+            Init->containsUnexpandedParameterPack();
+      else if (PVD->hasUninstantiatedDefaultArg())
+        LSI->ContainsUnexpandedParameterPack |=
+            PVD->getUninstantiatedDefaultArg()
+                ->containsUnexpandedParameterPack();
+    }
+    return getSema().BuildLambdaExpr(StartLoc, EndLoc, LSI);
+  }
+
   /// Build an empty C++1z fold-expression with the given operator.
   ///
   /// By default, produces the fallback value for the fold-expression, or
@@ -5825,7 +5840,8 @@ QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
     TypeLocBuilder &TLB, DependentAddressSpaceTypeLoc TL) {
   const DependentAddressSpaceType *T = TL.getTypePtr();
 
-  QualType pointeeType = getDerived().TransformType(T->getPointeeType());
+  QualType pointeeType =
+      getDerived().TransformType(TLB, TL.getPointeeTypeLoc());
 
   if (pointeeType.isNull())
     return QualType();
@@ -5858,9 +5874,7 @@ QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
     NewTL.setAttrNameLoc(TL.getAttrNameLoc());
 
   } else {
-    TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(
-        Result, getDerived().getBaseLocation());
-    TransformType(TLB, DI->getTypeLoc());
+    TLB.TypeWasModifiedSafely(Result);
   }
 
   return Result;
@@ -8284,6 +8298,7 @@ StmtResult
 TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
   bool DeclChanged = false;
   SmallVector<Decl *, 4> Decls;
+  LambdaScopeInfo *LSI = getSema().getCurLambda();
   for (auto *D : S->decls()) {
     Decl *Transformed = getDerived().TransformDefinition(D->getLocation(), D);
     if (!Transformed)
@@ -8291,6 +8306,15 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
 
     if (Transformed != D)
       DeclChanged = true;
+
+    if (LSI && isa<TypeDecl>(Transformed))
+      LSI->ContainsUnexpandedParameterPack |=
+          getSema()
+              .getASTContext()
+              .getTypeDeclType(cast<TypeDecl>(Transformed))
+              .getCanonicalType()
+              .getTypePtr()
+              ->containsUnexpandedParameterPack();
 
     Decls.push_back(Transformed);
   }
@@ -10662,7 +10686,7 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10709,7 +10733,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10755,7 +10779,7 @@ TreeTransform<Derived>::TransformOMPInReductionClause(OMPInReductionClause *C) {
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
           /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
   }
@@ -10937,7 +10961,7 @@ bool transformOMPMappableExprListClause(
           TT.getSema().Context, /*NamingClass=*/nullptr,
           MapperIdScopeSpec.getWithLocInContext(TT.getSema().Context),
           MapperIdInfo, /*ADL=*/true, Decls.begin(), Decls.end(),
-          /*KnownDependent=*/false));
+          /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false));
     } else {
       UnresolvedMappers.push_back(nullptr);
     }
@@ -10994,21 +11018,31 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNumTeamsClause(OMPNumTeamsClause *C) {
-  ExprResult E = getDerived().TransformExpr(C->getNumTeams());
-  if (E.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
   return getDerived().RebuildOMPNumTeamsClause(
-      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPThreadLimitClause(OMPThreadLimitClause *C) {
-  ExprResult E = getDerived().TransformExpr(C->getThreadLimit());
-  if (E.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
   return getDerived().RebuildOMPThreadLimitClause(
-      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -14523,7 +14557,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   CXXMethodDecl *NewCallOperator =
       getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
-  NewCallOperator->setLexicalDeclContext(getSema().CurContext);
 
   // Enter the scope of the lambda.
   getSema().buildLambdaScope(LSI, NewCallOperator, E->getIntroducerRange(),
@@ -14591,6 +14624,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         }
         NewVDs.push_back(NewVD);
         getSema().addInitCapture(LSI, NewVD, C->getCaptureKind() == LCK_ByRef);
+        // Cases we want to tackle:
+        //   ([C(Pack)] {}, ...)
+        // But rule out cases e.g.
+        //    [...C = Pack()] {}
+        if (NewC.EllipsisLoc.isInvalid())
+          LSI->ContainsUnexpandedParameterPack |=
+              Init.get()->containsUnexpandedParameterPack();
       }
 
       if (Invalid)
@@ -14658,6 +14698,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
     }
 
+    // This is not an init-capture; however it contains an unexpanded pack e.g.
+    //  ([Pack] {}(), ...)
+    if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
+      LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
+
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
                                  EllipsisLoc);
@@ -14669,9 +14714,12 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto TPL = getDerived().TransformTemplateParameterList(
       E->getTemplateParameterList());
   LSI->GLTemplateParameterList = TPL;
-  if (TPL)
+  if (TPL) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
+    LSI->ContainsUnexpandedParameterPack |=
+        TPL->containsUnexpandedParameterPack();
+  }
 
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since
@@ -14710,6 +14758,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     if (NewCallOpType.isNull())
       return ExprError();
+    LSI->ContainsUnexpandedParameterPack |=
+        NewCallOpType->containsUnexpandedParameterPack();
     NewCallOpTSI =
         NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
   }
@@ -14824,8 +14874,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   Class->setTypeForDecl(nullptr);
   getSema().Context.getTypeDeclType(Class);
 
-  return getSema().BuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(),
-                                   &LSICopy);
+  return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
+                                        Body.get()->getEndLoc(), &LSICopy);
 }
 
 template<typename Derived>

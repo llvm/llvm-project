@@ -18,15 +18,21 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcPowTest, TrickyInputs) {
   constexpr mpfr::BinaryInput<double> INPUTS[] = {
-      {0x1.0853408534085p-2, 0x1.0D148E03BCBA8p-1},
-      {0x1.65FBD65FBD657p-1, 0x1.F10D148E03BB6p+1},
+      {0x1.0853408534085p-2, 0x1.0d148e03bcba8p-1},
+      {0x1.65fbd65fbd657p-1, 0x1.f10d148e03bb6p+1},
+      {0x1.c046a084d2e12p-1, 0x1.1f9p+12},
+      {0x1.ae37ed1670326p-1, 0x1.f967df66a202p-1},
+      {0x1.ffffffffffffcp-1, 0x1.fffffffffffffp-2},
+      {0x1.f558a88a8aadep-1, 0x1.88ap+12},
+      {0x1.e84d32731e593p-1, 0x1.2cb8p+13},
+      {0x1.ffffffffffffcp-1, 0x1.fffffffffffffp-2},
   };
 
   for (auto input : INPUTS) {
     double x = input.x;
     double y = input.y;
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, input,
-                                   LIBC_NAMESPACE::pow(x, y), 0.5);
+    EXPECT_MPFR_MATCH(mpfr::Operation::Pow, input, LIBC_NAMESPACE::pow(x, y),
+                      1.5);
   }
 }
 

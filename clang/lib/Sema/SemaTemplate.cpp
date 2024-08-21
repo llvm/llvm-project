@@ -1079,6 +1079,9 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
     return true;
   }
 
+  if (CheckConceptUseInDefinition(CD, TypeConstr->TemplateNameLoc))
+    return true;
+
   bool WereArgsSpecified = TypeConstr->LAngleLoc.isValid();
 
   if (!WereArgsSpecified &&
@@ -1664,10 +1667,7 @@ class ConstraintRefersToContainingTemplateChecker
   }
 
   void CheckNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
-    assert(D->getDepth() <= TemplateDepth &&
-           "Nothing should reference a value below the actual template depth, "
-           "depth is likely wrong");
-    if (D->getDepth() != TemplateDepth)
+    if (D->getDepth() < TemplateDepth)
       Result = true;
 
     // Necessary because the type of the NTTP might be what refers to the parent
@@ -1691,10 +1691,7 @@ public:
   using inherited::TransformTemplateTypeParmType;
   QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
                                          TemplateTypeParmTypeLoc TL, bool) {
-    assert(TL.getDecl()->getDepth() <= TemplateDepth &&
-           "Nothing should reference a value below the actual template depth, "
-           "depth is likely wrong");
-    if (TL.getDecl()->getDepth() != TemplateDepth)
+    if (TL.getDecl()->getDepth() < TemplateDepth)
       Result = true;
     return inherited::TransformTemplateTypeParmType(
         TLB, TL,
@@ -3332,10 +3329,16 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
-    // Only substitute for the innermost template argument list.
+    // Only substitute for the innermost template argument list.  NOTE: Some
+    // external resugarers rely on leaving a Subst* node here.  Make the
+    // substitution non-final in that case.  Note that these external resugarers
+    // will still miss some information in this representation, because we don't
+    // provide enough context in the Subst* nodes in order to tell different
+    // template type alias specializations apart.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(Template, SugaredConverted,
-                                               /*Final=*/true);
+    TemplateArgLists.addOuterTemplateArguments(
+        Template, SugaredConverted,
+        /*Final=*/!getLangOpts().RetainSubstTemplateTypeParmTypeAstNodes);
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -4358,13 +4361,13 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
 
   auto *CSD = ImplicitConceptSpecializationDecl::Create(
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
-      SugaredConverted);
+      CanonicalConverted);
   ConstraintSatisfaction Satisfaction;
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(
-          *TemplateArgs, SugaredConverted);
-  MultiLevelTemplateArgumentList MLTAL(NamedConcept, SugaredConverted,
-                                       /*Final=*/true);
+          *TemplateArgs, CanonicalConverted);
+  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CanonicalConverted,
+                                       /*Final=*/false);
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
@@ -4436,7 +4439,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
       Context, R.getNamingClass(), SS.getWithLocInContext(Context),
       TemplateKWLoc, R.getLookupNameInfo(), RequiresADL, TemplateArgs,
-      R.begin(), R.end(), KnownDependent);
+      R.begin(), R.end(), KnownDependent,
+      /*KnownInstantiationDependent=*/false);
 
   // Model the templates with UnresolvedTemplateTy. The expression should then
   // either be transformed in an instantiation or be diagnosed in
@@ -5582,7 +5586,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, NewContext, /*Final=*/true, SugaredConverted,
+        Template, NewContext, /*Final=*/false, CanonicalConverted,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
@@ -8440,10 +8444,9 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
   return NewDecl;
 }
 
-Decl *Sema::ActOnConceptDefinition(
+ConceptDecl *Sema::ActOnStartConceptDefinition(
     Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr,
-    const ParsedAttributesView &Attrs) {
+    const IdentifierInfo *Name, SourceLocation NameLoc) {
   DeclContext *DC = CurContext;
 
   if (!DC->getRedeclContext()->isFileContext()) {
@@ -8479,11 +8482,8 @@ Decl *Sema::ActOnConceptDefinition(
     }
   }
 
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
-    return nullptr;
-
   ConceptDecl *NewDecl =
-      ConceptDecl::Create(Context, DC, NameLoc, Name, Params, ConstraintExpr);
+      ConceptDecl::Create(Context, DC, NameLoc, Name, Params);
 
   if (NewDecl->hasAssociatedConstraints()) {
     // C++2a [temp.concept]p4:
@@ -8492,23 +8492,63 @@ Decl *Sema::ActOnConceptDefinition(
     NewDecl->setInvalidDecl();
   }
 
-  // Check for conflicting previous declaration.
-  DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NameLoc);
+  DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NewDecl->getBeginLoc());
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                         forRedeclarationInCurContext());
   LookupName(Previous, S);
-  FilterLookupForScope(Previous, DC, S, /*ConsiderLinkage=*/false,
-                       /*AllowInlineNamespace*/false);
-  bool AddToScope = true;
-  CheckConceptRedefinition(NewDecl, Previous, AddToScope);
+  FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage=*/false,
+                       /*AllowInlineNamespace*/ false);
 
-  ActOnDocumentableDecl(NewDecl);
-  if (AddToScope)
-    PushOnScopeChains(NewDecl, S);
-
-  ProcessDeclAttributeList(S, NewDecl, Attrs);
+  // We cannot properly handle redeclarations until we parse the constraint
+  // expression, so only inject the name if we are sure we are not redeclaring a
+  // symbol
+  if (Previous.empty())
+    PushOnScopeChains(NewDecl, S, true);
 
   return NewDecl;
+}
+
+static bool RemoveLookupResult(LookupResult &R, NamedDecl *C) {
+  bool Found = false;
+  LookupResult::Filter F = R.makeFilter();
+  while (F.hasNext()) {
+    NamedDecl *D = F.next();
+    if (D == C) {
+      F.erase();
+      Found = true;
+      break;
+    }
+  }
+  F.done();
+  return Found;
+}
+
+ConceptDecl *
+Sema::ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
+                                   Expr *ConstraintExpr,
+                                   const ParsedAttributesView &Attrs) {
+  assert(!C->hasDefinition() && "Concept already defined");
+  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
+    return nullptr;
+  C->setDefinition(ConstraintExpr);
+  ProcessDeclAttributeList(S, C, Attrs);
+
+  // Check for conflicting previous declaration.
+  DeclarationNameInfo NameInfo(C->getDeclName(), C->getBeginLoc());
+  LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
+                        forRedeclarationInCurContext());
+  LookupName(Previous, S);
+  FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage=*/false,
+                       /*AllowInlineNamespace*/ false);
+  bool WasAlreadyAdded = RemoveLookupResult(Previous, C);
+  bool AddToScope = true;
+  CheckConceptRedefinition(C, Previous, AddToScope);
+
+  ActOnDocumentableDecl(C);
+  if (!WasAlreadyAdded && AddToScope)
+    PushOnScopeChains(C, S);
+
+  return C;
 }
 
 void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
@@ -8551,6 +8591,16 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
   }
   // We unwrap canonical decl late to check for module visibility.
   Context.setPrimaryMergedDecl(NewDecl, OldConcept->getCanonicalDecl());
+}
+
+bool Sema::CheckConceptUseInDefinition(ConceptDecl *Concept,
+                                       SourceLocation Loc) {
+  if (!Concept->isInvalidDecl() && !Concept->hasDefinition()) {
+    Diag(Loc, diag::err_recursive_concept) << Concept;
+    Diag(Concept->getLocation(), diag::note_declared_at);
+    return true;
+  }
+  return false;
 }
 
 /// \brief Strips various properties off an implicit instantiation
@@ -9051,7 +9101,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
 bool
 Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
-  assert(!isa<TemplateDecl>(Member) && "Only for non-template members");
+  assert(!Member->isTemplateDecl() && !Member->getDescribedTemplate() &&
+         "Only for non-template members");
 
   // Try to find the member we are instantiating.
   NamedDecl *FoundInstantiation = nullptr;
@@ -9062,21 +9113,25 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   if (Previous.empty()) {
     // Nowhere to look anyway.
   } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Member)) {
-    SmallVector<FunctionDecl *> Candidates;
-    bool Ambiguous = false;
-    for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
-           I != E; ++I) {
-      CXXMethodDecl *Method =
-          dyn_cast<CXXMethodDecl>((*I)->getUnderlyingDecl());
+    UnresolvedSet<8> Candidates;
+    for (NamedDecl *Candidate : Previous) {
+      auto *Method = dyn_cast<CXXMethodDecl>(Candidate->getUnderlyingDecl());
+      // Ignore any candidates that aren't member functions.
       if (!Method)
         continue;
+
       QualType Adjusted = Function->getType();
       if (!hasExplicitCallingConv(Adjusted))
         Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+      // Ignore any candidates with the wrong type.
       // This doesn't handle deduced return types, but both function
       // declarations should be undeduced at this point.
+      // FIXME: The exception specification should probably be ignored when
+      // comparing the types.
       if (!Context.hasSameType(Adjusted, Method->getType()))
         continue;
+
+      // Ignore any candidates with unsatisfied constraints.
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
           (CheckFunctionConstraints(Method, Satisfaction,
@@ -9084,29 +9139,53 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
                                     /*ForOverloadResolution=*/true) ||
            !Satisfaction.IsSatisfied))
         continue;
-      Candidates.push_back(Method);
-      FunctionDecl *MoreConstrained =
-          Instantiation ? getMoreConstrainedFunction(
-                              Method, cast<FunctionDecl>(Instantiation))
-                        : Method;
-      if (!MoreConstrained) {
-        Ambiguous = true;
-        continue;
-      }
-      if (MoreConstrained == Method) {
-        Ambiguous = false;
-        FoundInstantiation = *I;
-        Instantiation = Method;
-        InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
-        MSInfo = Method->getMemberSpecializationInfo();
+
+      Candidates.addDecl(Candidate);
+    }
+
+    // If we have no viable candidates left after filtering, we are done.
+    if (Candidates.empty())
+      return false;
+
+    // Find the function that is more constrained than every other function it
+    // has been compared to.
+    UnresolvedSetIterator Best = Candidates.begin();
+    CXXMethodDecl *BestMethod = nullptr;
+    for (UnresolvedSetIterator I = Candidates.begin(), E = Candidates.end();
+         I != E; ++I) {
+      auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
+      if (I == Best ||
+          getMoreConstrainedFunction(Method, BestMethod) == Method) {
+        Best = I;
+        BestMethod = Method;
       }
     }
+
+    FoundInstantiation = *Best;
+    Instantiation = BestMethod;
+    InstantiatedFrom = BestMethod->getInstantiatedFromMemberFunction();
+    MSInfo = BestMethod->getMemberSpecializationInfo();
+
+    // Make sure the best candidate is more constrained than all of the others.
+    bool Ambiguous = false;
+    for (UnresolvedSetIterator I = Candidates.begin(), E = Candidates.end();
+         I != E; ++I) {
+      auto *Method = cast<CXXMethodDecl>(I->getUnderlyingDecl());
+      if (I != Best &&
+          getMoreConstrainedFunction(Method, BestMethod) != BestMethod) {
+        Ambiguous = true;
+        break;
+      }
+    }
+
     if (Ambiguous) {
       Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
           << Member << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
-      for (FunctionDecl *Candidate : Candidates)
+      for (NamedDecl *Candidate : Candidates) {
+        Candidate = Candidate->getUnderlyingDecl();
         Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
             << Candidate;
+      }
       return true;
     }
   } else if (isa<VarDecl>(Member)) {
@@ -10039,8 +10118,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   //  instantiated from the member definition associated with its class
   //  template.
   UnresolvedSet<8> TemplateMatches;
-  FunctionDecl *NonTemplateMatch = nullptr;
-  TemplateSpecCandidateSet FailedCandidates(D.getIdentifierLoc());
+  OverloadCandidateSet NonTemplateMatches(D.getBeginLoc(),
+                                          OverloadCandidateSet::CSK_Normal);
+  TemplateSpecCandidateSet FailedTemplateCandidates(D.getIdentifierLoc());
   for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();
        P != PEnd; ++P) {
     NamedDecl *Prev = *P;
@@ -10052,9 +10132,18 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
           if (Method->getPrimaryTemplate()) {
             TemplateMatches.addDecl(Method, P.getAccess());
           } else {
-            // FIXME: Can this assert ever happen?  Needs a test.
-            assert(!NonTemplateMatch && "Multiple NonTemplateMatches");
-            NonTemplateMatch = Method;
+            OverloadCandidate &C = NonTemplateMatches.addCandidate();
+            C.FoundDecl = P.getPair();
+            C.Function = Method;
+            C.Viable = true;
+            ConstraintSatisfaction S;
+            if (Method->getTrailingRequiresClause() &&
+                (CheckFunctionConstraints(Method, S, D.getIdentifierLoc(),
+                                          /*ForOverloadResolution=*/true) ||
+                 !S.IsSatisfied)) {
+              C.Viable = false;
+              C.FailureKind = ovl_fail_constraints_not_satisfied;
+            }
           }
         }
       }
@@ -10064,16 +10153,16 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (!FunTmpl)
       continue;
 
-    TemplateDeductionInfo Info(FailedCandidates.getLocation());
+    TemplateDeductionInfo Info(FailedTemplateCandidates.getLocation());
     FunctionDecl *Specialization = nullptr;
     if (TemplateDeductionResult TDK = DeduceTemplateArguments(
             FunTmpl, (HasExplicitTemplateArgs ? &TemplateArgs : nullptr), R,
             Specialization, Info);
         TDK != TemplateDeductionResult::Success) {
       // Keep track of almost-matches.
-      FailedCandidates.addCandidate()
-          .set(P.getPair(), FunTmpl->getTemplatedDecl(),
-               MakeDeductionFailureInfo(Context, TDK, Info));
+      FailedTemplateCandidates.addCandidate().set(
+          P.getPair(), FunTmpl->getTemplatedDecl(),
+          MakeDeductionFailureInfo(Context, TDK, Info));
       (void)TDK;
       continue;
     }
@@ -10087,7 +10176,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
         CUDA().IdentifyTarget(Specialization,
                               /* IgnoreImplicitHDAttr = */ true) !=
             CUDA().IdentifyTarget(D.getDeclSpec().getAttributes())) {
-      FailedCandidates.addCandidate().set(
+      FailedTemplateCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),
           MakeDeductionFailureInfo(
               Context, TemplateDeductionResult::CUDATargetMismatch, Info));
@@ -10097,12 +10186,40 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     TemplateMatches.addDecl(Specialization, P.getAccess());
   }
 
-  FunctionDecl *Specialization = NonTemplateMatch;
+  FunctionDecl *Specialization = nullptr;
+  if (!NonTemplateMatches.empty()) {
+    unsigned Msg = 0;
+    OverloadCandidateDisplayKind DisplayKind;
+    OverloadCandidateSet::iterator Best;
+    switch (NonTemplateMatches.BestViableFunction(*this, D.getIdentifierLoc(),
+                                                  Best)) {
+    case OR_Success:
+    case OR_Deleted:
+      Specialization = cast<FunctionDecl>(Best->Function);
+      break;
+    case OR_Ambiguous:
+      Msg = diag::err_explicit_instantiation_ambiguous;
+      DisplayKind = OCD_AmbiguousCandidates;
+      break;
+    case OR_No_Viable_Function:
+      Msg = diag::err_explicit_instantiation_no_candidate;
+      DisplayKind = OCD_AllCandidates;
+      break;
+    }
+    if (Msg) {
+      PartialDiagnostic Diag = PDiag(Msg) << Name;
+      NonTemplateMatches.NoteCandidates(
+          PartialDiagnosticAt(D.getIdentifierLoc(), Diag), *this, DisplayKind,
+          {});
+      return true;
+    }
+  }
+
   if (!Specialization) {
     // Find the most specialized function template specialization.
     UnresolvedSetIterator Result = getMostSpecialized(
-        TemplateMatches.begin(), TemplateMatches.end(), FailedCandidates,
-        D.getIdentifierLoc(),
+        TemplateMatches.begin(), TemplateMatches.end(),
+        FailedTemplateCandidates, D.getIdentifierLoc(),
         PDiag(diag::err_explicit_instantiation_not_known) << Name,
         PDiag(diag::err_explicit_instantiation_ambiguous) << Name,
         PDiag(diag::note_explicit_instantiation_candidate));

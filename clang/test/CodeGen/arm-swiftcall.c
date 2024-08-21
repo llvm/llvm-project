@@ -112,13 +112,13 @@ TEST(struct_1);
 // CHECK-LABEL: define{{.*}} @return_struct_1()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align 4
 // CHECK:   @llvm.memset
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, i16, \[2 x i8\], float, float }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i16, \[2 x i8\], float, float }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i16, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 3
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 4
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i16, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i16 [[SECOND]], 1
@@ -127,37 +127,37 @@ TEST(struct_1);
 // CHECK:   ret [[UAGG]] [[T3]]
 // CHECK-LABEL: define{{.*}} @take_struct_1(i32 %0, i16 %1, float %2, float %3)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store i32 %0, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store i16 %1, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 3
 // CHECK:   store float %2, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 4
 // CHECK:   store float %3, ptr [[T0]], align 4
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_struct_1()
 // CHECK:   [[TMP:%.*]] = alloca [[REC]], align 4
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG]] @return_struct_1()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store i32 [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store i16 [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 2
 // CHECK:   store float [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 4
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 3
 // CHECK:   store float [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i16, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 4
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align 4
 // CHECK:   call [[SWIFTCC]] void @take_struct_1(i32 [[FIRST]], i16 [[SECOND]], float [[THIRD]], float [[FOURTH]])
 // CHECK:   ret void
@@ -173,13 +173,13 @@ TEST(struct_2);
 // CHECK-LABEL: define{{.*}} @return_struct_2()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align 4
 // CHECK:   @llvm.memcpy
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, i32, float, float }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i32, float, float }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 2
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 3
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
@@ -188,37 +188,37 @@ TEST(struct_2);
 // CHECK:   ret [[UAGG]] [[T3]]
 // CHECK-LABEL: define{{.*}} @take_struct_2(i32 %0, i32 %1, float %2, float %3)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store i32 %0, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store i32 %1, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 2
 // CHECK:   store float %2, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 3
 // CHECK:   store float %3, ptr [[T0]], align 4
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_struct_2()
 // CHECK:   [[TMP:%.*]] = alloca [[REC]], align 4
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG]] @return_struct_2()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store i32 [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store i32 [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 2
 // CHECK:   store float [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 3
 // CHECK:   store float [[T1]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align 4
 // CHECK:   call [[SWIFTCC]] void @take_struct_2(i32 [[FIRST]], i32 [[SECOND]], float [[THIRD]], float [[FOURTH]])
 // CHECK:   ret void
@@ -237,18 +237,18 @@ TEST(struct_misaligned_1)
 // CHECK-LABEL: define{{.*}} @return_struct_misaligned_1()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align
 // CHECK:   @llvm.memset
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, i8 }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i8 }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i8, ptr [[T0]], align
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8 }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i8 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_struct_misaligned_1(i32 %0, i8 %1)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store i32 %0, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store i8 %1, ptr [[T0]], align
 // CHECK:   ret void
 
@@ -275,32 +275,32 @@ TEST(union_het_fp)
 // CHECK-LABEL: define{{.*}} @return_union_het_fp()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align {{(4|8)}}
 // CHECK:   @llvm.memcpy
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, i32 }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i32 }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align {{(4|8)}}
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32 }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_union_het_fp(i32 %0, i32 %1)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store i32 %0, ptr [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store i32 %1, ptr [[T0]], align {{(4|8)}}
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_union_het_fp()
 // CHECK:   [[TMP:%.*]] = alloca [[REC]], align {{(4|8)}}
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG]] @return_union_het_fp()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store i32 [[T1]], ptr [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store i32 [[T1]], ptr [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align {{(4|8)}}
 // CHECK:   call [[SWIFTCC]] void @take_union_het_fp(i32 [[FIRST]], i32 [[SECOND]])
 // CHECK:   ret void
@@ -314,9 +314,9 @@ TEST(union_hom_fp)
 // CHECK-LABEL: define{{.*}} void @test_union_hom_fp()
 // CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 4
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] float @return_union_hom_fp()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ float }]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ float }]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   store float [[CALL]], ptr [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load float, ptr [[T0]], align 4
 // CHECK:   call [[SWIFTCC]] void @take_union_hom_fp(float [[FIRST]])
 // CHECK:   ret void
@@ -329,25 +329,25 @@ TEST(union_hom_fp_partial)
 // CHECK-LABEL: define{{.*}} void @test_union_hom_fp_partial()
 // CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 16
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG:{ float, float, float, float }]] @return_union_hom_fp_partial()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ float, float, float, float }]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ float, float, float, float }]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 2
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 3
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align
 // CHECK:   call [[SWIFTCC]] void @take_union_hom_fp_partial(float [[FIRST]], float [[SECOND]], float [[THIRD]], float [[FOURTH]])
 // CHECK:   ret void
@@ -360,25 +360,25 @@ TEST(union_het_fpv_partial)
 // CHECK-LABEL: define{{.*}} void @test_union_het_fpv_partial()
 // CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 16
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG:{ i32, i32, float, float }]] @return_union_het_fpv_partial()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, i32, float, float }]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i32, float, float }]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store i32 [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store i32 [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 2
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 3
 // CHECK:   store float [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 3
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP]], i32 0, i32 3
 // CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align
 // CHECK:   call [[SWIFTCC]] void @take_union_het_fpv_partial(i32 [[FIRST]], i32 [[SECOND]], float [[THIRD]], float [[FOURTH]])
 // CHECK:   ret void
@@ -397,35 +397,35 @@ TEST(int8)
 // CHECK:   store
 // CHECK:   load
 // CHECK:   store
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ <4 x i32>, <4 x i32> }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ <4 x i32>, <4 x i32> }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load <4 x i32>, ptr [[T0]], align
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, <4 x i32> }]] poison, <4 x i32> [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], <4 x i32> [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_int8(<4 x i32> %0, <4 x i32> %1)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store <4 x i32> %0, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store <4 x i32> %1, ptr [[T0]], align
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_int8()
 // CHECK:   [[TMP1:%.*]] = alloca [[REC]], align
 // CHECK:   [[TMP2:%.*]] = alloca [[REC]], align
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG]] @return_int8()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store <4 x i32> [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store <4 x i32> [[T1]], ptr [[T0]], align
 // CHECK:   [[V:%.*]] = load [[REC]], ptr [[TMP1]], align
 // CHECK:   store [[REC]] [[V]], ptr [[TMP2]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP2]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP2]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load <4 x i32>, ptr [[T0]], align
 // CHECK:   call [[SWIFTCC]] void @take_int8(<4 x i32> [[FIRST]], <4 x i32> [[SECOND]])
 // CHECK:   ret void
@@ -436,35 +436,35 @@ TEST(int5)
 // CHECK:   store
 // CHECK:   load
 // CHECK:   store
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ <4 x i32>, i32 }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ <4 x i32>, i32 }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, i32 }]] poison, <4 x i32> [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_int5(<4 x i32> %0, i32 %1)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 0
 // CHECK:   store <4 x i32> %0, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[V]], i32 0, i32 1
 // CHECK:   store i32 %1, ptr [[T0]], align
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_int5()
 // CHECK:   [[TMP1:%.*]] = alloca [[REC]], align
 // CHECK:   [[TMP2:%.*]] = alloca [[REC]], align
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG]] @return_int5()
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
 // CHECK:   store <4 x i32> [[T1]], ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
 // CHECK:   store i32 [[T1]], ptr [[T0]], align
 // CHECK:   [[V:%.*]] = load [[REC]], ptr [[TMP1]], align
 // CHECK:   store [[REC]] [[V]], ptr [[TMP2]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP2]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, ptr [[T0]], align
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP2]], i32 0, i32 1
+// CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, ptr [[T0]], align
 // CHECK:   call [[SWIFTCC]] void @take_int5(<4 x i32> [[FIRST]], i32 [[SECOND]])
 // CHECK:   ret void

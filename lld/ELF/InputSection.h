@@ -61,7 +61,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output, Class };
 
   Kind kind() const { return (Kind)sectionKind; }
 
@@ -148,7 +148,9 @@ public:
                    uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
                    Kind sectionKind);
 
-  static bool classof(const SectionBase *s) { return s->kind() != Output; }
+  static bool classof(const SectionBase *s) {
+    return s->kind() != Output && s->kind() != Class;
+  }
 
   // The file which contains this section. Its dynamic type is usually
   // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
@@ -496,12 +498,6 @@ inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
 }
-
-// The set of TOC entries (.toc + addend) for which we should not apply
-// toc-indirect to toc-relative relaxation. const Symbol * refers to the
-// STT_SECTION symbol associated to the .toc input section.
-extern llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
-
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);
