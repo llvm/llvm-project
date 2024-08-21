@@ -27919,6 +27919,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     return S;
   if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N2, N3, CC, DAG))
     return S;
+  if (SDValue ABD = foldSelectToABD(N0, N1, N2, N3, CC, DL))
+    return ABD;
 
   return SDValue();
 }
