@@ -101,7 +101,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 }
 
 define i64 @atomicrmw_usub_cond_sub_i64(ptr %ptr, i64 %val) {
-; CHECK-LABEL: atomicrmw_usub_cond_i64:
+; CHECK-LABEL: atomicrmw_usub_cond_sub_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    ld %s2, (, %s0)
