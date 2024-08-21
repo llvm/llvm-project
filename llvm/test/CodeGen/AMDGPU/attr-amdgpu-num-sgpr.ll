@@ -4,8 +4,8 @@
 
 ; ALL-LABEL: {{^}}max_10_sgprs:
 
-; ALL: SGPRBlocks: 2
-; ALL: NumSGPRsForWavesPerEU: 22
+; ALL: SGPRBlocks: 1
+; ALL: NumSGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_sgprs() #0 {
   %one = load volatile i32, ptr addrspace(4) undef
   %two = load volatile i32, ptr addrspace(4) undef
@@ -125,7 +125,7 @@ declare i64 @llvm.amdgcn.dispatch.id() #1
 declare ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #1
 declare ptr addrspace(4) @llvm.amdgcn.queue.ptr() #1
 
-attributes #0 = { nounwind "amdgpu-num-sgpr"="18" }
+attributes #0 = { nounwind "amdgpu-num-sgpr"="14" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "amdgpu-num-sgpr"="12" }
 attributes #3 = { nounwind "amdgpu-num-sgpr"="11" }

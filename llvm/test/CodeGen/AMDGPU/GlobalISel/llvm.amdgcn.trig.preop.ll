@@ -42,9 +42,6 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[6:7], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; CI-NEXT:    s_add_i32 s10, s10, s15
-; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
-; CI-NEXT:    s_mov_b32 flat_scratch_lo, s11
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
@@ -62,9 +59,6 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[6:7], 0x8
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; VI-NEXT:    s_add_i32 s10, s10, s15
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s11
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
@@ -82,8 +76,6 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s2, s[6:7], 0x8
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
-; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
@@ -93,10 +85,6 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ;
 ; GFX10-LABEL: s_trig_preop_f64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_add_u32 s10, s10, s15
-; GFX10-NEXT:    s_addc_u32 s11, s11, 0
-; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
-; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX10-NEXT:    s_load_dword s2, s[6:7], 0x8
@@ -125,9 +113,6 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; CI-LABEL: s_trig_preop_f64_imm:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; CI-NEXT:    s_add_i32 s10, s10, s15
-; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
-; CI-NEXT:    s_mov_b32 flat_scratch_lo, s11
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], 7
 ; CI-NEXT:    s_add_u32 s0, s0, 4
@@ -143,9 +128,6 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; VI-LABEL: s_trig_preop_f64_imm:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; VI-NEXT:    s_add_i32 s10, s10, s15
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s11
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], 7
 ; VI-NEXT:    s_add_u32 s0, s0, 4
@@ -161,8 +143,6 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; GFX9-LABEL: s_trig_preop_f64_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
-; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], 7
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
@@ -171,10 +151,6 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ;
 ; GFX10-LABEL: s_trig_preop_f64_imm:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_add_u32 s10, s10, s15
-; GFX10-NEXT:    s_addc_u32 s11, s11, 0
-; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
-; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], 7

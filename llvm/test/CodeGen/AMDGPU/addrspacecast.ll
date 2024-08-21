@@ -69,7 +69,7 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 ; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
 ; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
 ; SI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s9
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s9
+; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
 ; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
 ; HSA: buffer_store_dword [[K]], [[PTR]], s[[[BASELO]]:[[RSRCHI]]], 0 offen
@@ -254,8 +254,8 @@ define amdgpu_kernel void @cast_neg1_flat_to_group_addrspacecast() #0 {
 ; HSA-LABEL: {{^}}cast_0_private_to_flat_addrspacecast:
 ; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
 ; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
-; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s9
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
+; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
+; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s5
 ; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: flat_store_dword v[[[LO]]:[[HI]]], v[[K]]
@@ -279,8 +279,8 @@ define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
 
 ; HSA-DAG: s_mov_b64 s[{{[0-9]+}}:[[RSRCHI:[0-9]+]]], s[2:3]
 ; HSA-DAG: s_mov_b64 s[[[BASELO:[0-9]+]]:[[BASEHI:[0-9]+]]], s[0:1]
-; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s9
-; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
+; CI-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s7
+; GFX9-DAG: s_add_u32 s[[BASELO]], s[[BASELO]], s5
 ; HSA-DAG: s_addc_u32 s[[BASEHI]], s[[BASEHI]], 0
 ; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], -1{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
