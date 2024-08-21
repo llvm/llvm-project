@@ -289,7 +289,7 @@ bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
   // The scalar or element type of the new build vector.
   LLT ElemTy = DstTy.getScalarType();
   // The scalar or element type of the old build vector.
-  LLT InputElemTy = MRI.getType(BV->getReg(0)).getScalarType();
+  LLT InputElemTy = MRI.getType(BV->getReg(0)).getElementType();
 
   // Check legality of new build vector, the scalar casts, and profitability of
   // the many casts.
@@ -302,10 +302,11 @@ bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
   MatchInfo = [=](MachineIRBuilder &B) {
     SmallVector<Register> Casts;
     unsigned Elements = BV->getNumSources();
-    for (unsigned I = 0; I < Elements; ++I)
-      Casts.push_back(
-          B.buildInstr(Cast->getOpcode(), {ElemTy}, {BV->getSourceReg(I)})
-              .getReg(0));
+    for (unsigned I = 0; I < Elements; ++I) {
+      auto CastI =
+          B.buildInstr(Cast->getOpcode(), {ElemTy}, {BV->getSourceReg(I)});
+      Casts.push_back(CastI.getReg(0));
+    }
 
     B.buildBuildVector(Dst, Casts);
   };

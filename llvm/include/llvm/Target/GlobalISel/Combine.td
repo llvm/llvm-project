@@ -1865,8 +1865,6 @@ class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
          [{ return Helper.matchCastOfBuildVector(*${Cast}, *${Build}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
 
-def buildvector_of_zext : buildvector_of_opcode<G_ZEXT>;
-def buildvector_of_anyext : buildvector_of_opcode<G_ANYEXT>;
 def buildvector_of_truncate : buildvector_of_opcode<G_TRUNC>;
 
 def cast_combines: GICombineGroup<[
@@ -1883,8 +1881,6 @@ def cast_combines: GICombineGroup<[
   anyext_of_anyext,
   anyext_of_zext,
   anyext_of_sext,
-//  buildvector_of_zext,
-//  buildvector_of_anyext,
   buildvector_of_truncate
 ]>;
 
