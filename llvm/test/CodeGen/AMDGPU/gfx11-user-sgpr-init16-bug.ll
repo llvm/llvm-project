@@ -36,8 +36,8 @@
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN-NEXT: .amdhsa_wavefront_size32
-; GCN-NEXT: .amdhsa_uses_dynamic_stack
-; GCN-NEXT: .amdhsa_enable_private_segment
+; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
+; GCN-NEXT: .amdhsa_enable_private_segment 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_y 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
@@ -65,8 +65,8 @@ define amdgpu_kernel void @minimal_kernel_inputs() #0 {
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN-NEXT: .amdhsa_wavefront_size32
-; GCN-NEXT: .amdhsa_uses_dynamic_stack
-; GCN-NEXT: .amdhsa_enable_private_segment
+; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
+; GCN-NEXT: .amdhsa_enable_private_segment 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_y 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
@@ -98,8 +98,8 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN-NEXT: .amdhsa_wavefront_size32
-; GCN-NEXT: .amdhsa_uses_dynamic_stack
-; GCN-NEXT: .amdhsa_enable_private_segment
+; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
+; GCN-NEXT: .amdhsa_enable_private_segment 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_y 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
@@ -145,8 +145,8 @@ define amdgpu_kernel void @queue_ptr() #1 {
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN-NEXT: .amdhsa_wavefront_size32
-; GCN-NEXT: .amdhsa_uses_dynamic_stack
-; GCN-NEXT: .amdhsa_enable_private_segment
+; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
+; GCN-NEXT: .amdhsa_enable_private_segment 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 1
