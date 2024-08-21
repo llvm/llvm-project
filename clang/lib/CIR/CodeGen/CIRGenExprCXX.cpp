@@ -115,8 +115,6 @@ CIRGenFunction::buildCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   const auto *MPT = MemFnExpr->getType()->castAs<MemberPointerType>();
   const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
-  const auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
 
   // Emit the 'this' pointer.
   Address This = Address::invalid();

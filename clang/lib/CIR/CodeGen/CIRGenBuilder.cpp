@@ -65,4 +65,4 @@ mlir::cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
   return create<mlir::cir::ConstantOp>(loc, intTy,
                                        mlir::cir::IntAttr::get(t, C));
 }
-}; // namespace cir
+} // namespace cir

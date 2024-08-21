@@ -881,9 +881,10 @@ public:
       Offset %= EltSize;
     } else if (auto StructTy = mlir::dyn_cast<mlir::cir::StructType>(Ty)) {
       auto Elts = StructTy.getMembers();
-      unsigned Pos = 0;
+      int64_t Pos = 0;
       for (size_t I = 0; I < Elts.size(); ++I) {
-        auto EltSize = Layout.getTypeAllocSize(Elts[I]);
+        int64_t EltSize =
+            (int64_t)Layout.getTypeAllocSize(Elts[I]).getFixedValue();
         unsigned AlignMask = Layout.getABITypeAlign(Elts[I]).value() - 1;
         Pos = (Pos + AlignMask) & ~AlignMask;
         if (Offset < Pos + EltSize) {
