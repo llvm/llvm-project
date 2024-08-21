@@ -18,7 +18,8 @@ include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect location attributes.
 class Builtin_LocationAttr<string name, list<Trait> traits = []>
-    : AttrDef<Builtin_Dialect, name, traits, "::mlir::LocationAttr"> {
+    : AttrDef<Builtin_Dialect, name, traits # [NativeAttrTrait<"IsLocation">],
+              "::mlir::LocationAttr"> {
   let cppClassName = name;
   let mnemonic = ?;
 }

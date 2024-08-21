@@ -377,4 +377,15 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
 }
 
 
+// Test custom location handling.
+def TestCustomLocationAttr
+    : Test_Attr<"TestCustomLocation", [NativeAttrTrait<"IsLocation">]> {
+  let mnemonic = "custom_location";
+  let parameters = (ins "mlir::StringAttr":$file, "unsigned":$line);
+
+  // Choose a silly separator token so we know it's hitting this code path
+  // and not another.
+  let assemblyFormat = "`<` $file `*` $line `>`";
+}
+
 #endif // TEST_ATTRDEFS

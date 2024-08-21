@@ -153,6 +153,29 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
   return success();
 }
 
+ParseResult Parser::parseDialectLocation(LocationAttr &loc) {
+  consumeToken(Token::bare_identifier);
+
+  if (parseToken(Token::less,
+                 "expected `<` to start dialect location attribute"))
+    return failure();
+
+  Attribute locAttr = parseAttribute(Type{});
+  // No attribute parsed, someone else has returned an error already.
+  if (!locAttr)
+    return failure();
+
+  loc = llvm::dyn_cast<LocationAttr>(locAttr);
+  if (!loc)
+    return emitError() << "expected a location attribute";
+
+  if (parseToken(Token::greater,
+                 "expected `>` to end dialect location attribute"))
+    return failure();
+
+  return success();
+}
+
 ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
   // Handle aliases.
   if (getToken().is(Token::hash_identifier)) {
@@ -186,6 +209,9 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
     loc = UnknownLoc::get(getContext());
     return success();
   }
+
+  if (getToken().getSpelling() == "dialect")
+    return parseDialectLocation(loc);
 
   return emitWrongTokenError("expected location instance");
 }
