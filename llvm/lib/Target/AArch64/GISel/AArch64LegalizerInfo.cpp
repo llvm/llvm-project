@@ -950,6 +950,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarOrElt(0, s8)
       .widenVectorEltsToVectorMinSize(0, 64)
+      .widenScalarOrEltToNextPow2(0)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();

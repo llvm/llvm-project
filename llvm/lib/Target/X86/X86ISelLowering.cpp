@@ -26118,6 +26118,21 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(),
                          {Src, PassThru, Mask});
     }
+    case TRUNCATE2_TO_REG: {
+      SDValue Src = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue PassThru = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
+
+      if (isAllOnesConstant(Mask))
+        return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), {Src, Src2});
+
+      MVT Src2VT = Src2.getSimpleValueType();
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, Src2VT.getVectorNumElements());
+      Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(),
+                         {Src, Src2, PassThru, Mask});
+    }
     case CVTPS2PH_MASK: {
       SDValue Src = Op.getOperand(1);
       SDValue Rnd = Op.getOperand(2);
@@ -33807,6 +33822,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VFPEXTS)
   NODE_NAME_CASE(VFPEXTS_SAE)
   NODE_NAME_CASE(VFPROUND)
+  NODE_NAME_CASE(VFPROUND2)
+  NODE_NAME_CASE(VFPROUND2_RND)
   NODE_NAME_CASE(STRICT_VFPROUND)
   NODE_NAME_CASE(VMFPROUND)
   NODE_NAME_CASE(VFPROUND_RND)
@@ -34043,7 +34060,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTS2UI)
   NODE_NAME_CASE(CVTS2SI_RND)
   NODE_NAME_CASE(CVTS2UI_RND)
-  NODE_NAME_CASE(CVTNE2PS2BF16)
   NODE_NAME_CASE(CVTNEPS2BF16)
   NODE_NAME_CASE(MCVTNEPS2BF16)
   NODE_NAME_CASE(DPBF16PS)
@@ -34091,6 +34107,27 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2IUBS)
   NODE_NAME_CASE(CVTTP2IBS_SAE)
   NODE_NAME_CASE(CVTTP2IUBS_SAE)
+  NODE_NAME_CASE(VCVTNE2PH2BF8)
+  NODE_NAME_CASE(VCVTNE2PH2BF8S)
+  NODE_NAME_CASE(VCVTNE2PH2HF8)
+  NODE_NAME_CASE(VCVTNE2PH2HF8S)
+  NODE_NAME_CASE(VCVTBIASPH2BF8)
+  NODE_NAME_CASE(VCVTBIASPH2BF8S)
+  NODE_NAME_CASE(VCVTBIASPH2HF8)
+  NODE_NAME_CASE(VCVTBIASPH2HF8S)
+  NODE_NAME_CASE(VCVTNEPH2BF8)
+  NODE_NAME_CASE(VCVTNEPH2BF8S)
+  NODE_NAME_CASE(VCVTNEPH2HF8)
+  NODE_NAME_CASE(VCVTNEPH2HF8S)
+  NODE_NAME_CASE(VMCVTBIASPH2BF8)
+  NODE_NAME_CASE(VMCVTBIASPH2BF8S)
+  NODE_NAME_CASE(VMCVTBIASPH2HF8)
+  NODE_NAME_CASE(VMCVTBIASPH2HF8S)
+  NODE_NAME_CASE(VMCVTNEPH2BF8)
+  NODE_NAME_CASE(VMCVTNEPH2BF8S)
+  NODE_NAME_CASE(VMCVTNEPH2HF8)
+  NODE_NAME_CASE(VMCVTNEPH2HF8S)
+  NODE_NAME_CASE(VCVTHF82PH)
   NODE_NAME_CASE(AESENC128KL)
   NODE_NAME_CASE(AESDEC128KL)
   NODE_NAME_CASE(AESENC256KL)

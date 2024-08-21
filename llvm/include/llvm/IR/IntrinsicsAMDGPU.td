@@ -3100,10 +3100,6 @@ multiclass AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> {
     def NAME#"_"#kind : AMDGPUMFp8SmfmacIntrinsic<DestTy>;
 }
 
-// bf16 atomics use v2i16 argument since there is no bf16 data type in the llvm.
-def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUAtomicRtn<llvm_v2i16_ty>;
-def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUAtomicRtn<llvm_v2i16_ty>;
-
 defset list<Intrinsic> AMDGPUMFMAIntrinsics940 = {
 def int_amdgcn_mfma_i32_16x16x32_i8     : AMDGPUMfmaIntrinsic<llvm_v4i32_ty,  llvm_i64_ty>;
 def int_amdgcn_mfma_i32_32x32x16_i8     : AMDGPUMfmaIntrinsic<llvm_v16i32_ty, llvm_i64_ty>;
