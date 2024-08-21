@@ -115,9 +115,6 @@ static cl::opt<std::string> PartitionSummariesOutput(
              "the partitions created for each module"));
 
 #ifndef NDEBUG
-static cl::opt<bool> TimeBuild("amdgpu-module-splitting-time-trace", cl::Hidden,
-                               cl::desc("enable and print timers"));
-
 static cl::opt<bool>
     UseLockFile("amdgpu-module-splitting-serial-execution", cl::Hidden,
                 cl::desc("use a lock file so only one process in the system "
@@ -129,17 +126,13 @@ static cl::opt<bool>
                         cl::Hidden,
                         cl::desc("print all proposals received and whether "
                                  "they were rejected or accepted"));
+#endif
 
 struct SplitModuleTimer : NamedRegionTimer {
   SplitModuleTimer(StringRef Name, StringRef Desc)
       : NamedRegionTimer(Name, Desc, DEBUG_TYPE, "AMDGPU Module Splitting",
-                         TimeBuild) {}
+                         TimePassesIsEnabled) {}
 };
-#else
-struct SplitModuleTimer {
-  SplitModuleTimer(StringRef Name, StringRef Desc) {}
-};
-#endif
 
 //===----------------------------------------------------------------------===//
 // Utils
@@ -157,9 +150,18 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
   return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
 }
 
+/// Checks whether a given function is non-copyable.
+///
+/// Non-copyable functions cannot be cloned into multiple partitions, and only
+/// one copy of the function can be present across all partitions.
+///
+/// External functions fall into this category. If we were to clone them, we
+/// would end up with multiple symbol definitions and a very unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  return AMDGPU::isEntryFunctionCC(F.getCallingConv()) ||
-         F.hasExternalLinkage() || !F.isDefinitionExact();
+  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
+             ? F.hasExternalLinkage()
+             : true && "Kernel w/o external linkage?");
+  return F.hasExternalLinkage() || !F.isDefinitionExact();
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -305,7 +307,7 @@ public:
   void buildGraph(CallGraph &CG);
 
 #ifndef NDEBUG
-  void verifyGraph() const;
+  bool verifyGraph() const;
 #endif
 
   bool empty() const { return Nodes.empty(); }
@@ -372,11 +374,9 @@ public:
   Node(unsigned ID, const GlobalValue &GV, CostType IndividualCost,
        bool IsNonCopyable)
       : ID(ID), GV(GV), IndividualCost(IndividualCost),
-        IsNonCopyable(IsNonCopyable), IsGraphEntry(false) {
+        IsNonCopyable(IsNonCopyable), IsEntryFnCC(false), IsGraphEntry(false) {
     if (auto *Fn = dyn_cast<Function>(&GV))
       IsEntryFnCC = AMDGPU::isEntryFunctionCC(Fn->getCallingConv());
-    else
-      IsEntryFnCC = false;
   }
 
   /// An 0-indexed ID for the node. The maximum ID (exclusive) is the number of
@@ -434,7 +434,7 @@ public:
   /// rules regarding dependencies traversal.
   ///
   /// \param[out] BV The bitvector where the bits should be set.
-  void setDependenciesBits(BitVector &BV) const {
+  void getDependencies(BitVector &BV) const {
     visitAllDependencies([&](const Node &N) { BV.set(N.getID()); });
   }
 
@@ -554,7 +554,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
     // Functions with an Entry CC are always graph entry points too.
     if (N->isEntryFunctionCC()) {
       N->markAsGraphEntry();
-      N->setDependenciesBits(NodesReachableByKernels);
+      N->getDependencies(NodesReachableByKernels);
     } else if (!N->hasAnyIncomingEdgesOfKind(EdgeKind::DirectCall))
       CandidateEntryPoints.push_back(N);
   }
@@ -570,62 +570,101 @@ void SplitGraph::buildGraph(CallGraph &CG) {
   }
 
 #ifndef NDEBUG
-  verifyGraph();
+  assert(verifyGraph());
 #endif
 }
 
 #ifndef NDEBUG
-void SplitGraph::verifyGraph() const {
+bool SplitGraph::verifyGraph() const {
   unsigned ExpectedID = 0;
   // Exceptionally using a set here in case IDs are messed up.
   DenseSet<const Node *> SeenNodes;
   DenseSet<const Function *> SeenFunctionNodes;
   for (const Node *N : Nodes) {
-    assert(N->getID() == (ExpectedID++) && "Node IDs are incorrect!");
-    assert(SeenNodes.insert(N).second && "Node seen more than once!");
-    assert(&getNode(N->getID()) == N);
+    if (N->getID() != (ExpectedID++)) {
+      errs() << "Node IDs are incorrect!\n";
+      return false;
+    }
+
+    if (!SeenNodes.insert(N).second) {
+      errs() << "Node seen more than once!\n";
+      return false;
+    }
+
+    if (&getNode(N->getID()) != N) {
+      errs() << "getNode doesn't return the right node\n";
+      return false;
+    }
 
     for (const Edge *E : N->IncomingEdges) {
-      assert(E->Src && E->Dst);
-      assert(E->Dst == N);
-      assert(find(E->Src->OutgoingEdges, E) != E->Src->OutgoingEdges.end());
+      if (!E->Src || !E->Dst || (E->Dst != N) ||
+          (find(E->Src->OutgoingEdges, E) == E->Src->OutgoingEdges.end())) {
+        errs() << "ill-formed incoming edges\n";
+        return false;
+      }
     }
 
     for (const Edge *E : N->OutgoingEdges) {
-      assert(E->Src && E->Dst);
-      assert(E->Src == N);
-      assert(find(E->Dst->IncomingEdges, E) != E->Dst->IncomingEdges.end());
+      if (!E->Src || !E->Dst || (E->Src != N) ||
+          (find(E->Dst->IncomingEdges, E) == E->Dst->IncomingEdges.end())) {
+        errs() << "ill-formed outgoing edges\n";
+        return false;
+      }
     }
 
     const Function &Fn = N->getFunction();
     if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv())) {
-      assert(!N->hasAnyIncomingEdges() && "Kernels cannot have incoming edges");
+      if (N->hasAnyIncomingEdges()) {
+        errs() << "Kernels cannot have incoming edges\n";
+        return false;
+      }
     }
-    assert(!Fn.isDeclaration() && "declarations shouldn't have nodes!");
+
+    if (Fn.isDeclaration()) {
+      errs() << "declarations shouldn't have nodes!\n";
+      return false;
+    }
 
     auto [It, Inserted] = SeenFunctionNodes.insert(&Fn);
-    assert(Inserted && "one function has multiple nodes!");
+    if (!Inserted) {
+      errs() << "one function has multiple nodes!\n";
+      return false;
+    }
   }
-  assert(ExpectedID == Nodes.size() && "Node IDs out of sync!");
 
-  assert(createNodesBitVector().size() == getNumNodes());
+  if (ExpectedID != Nodes.size()) {
+    errs() << "Node IDs out of sync!\n";
+    return false;
+  }
+
+  if (createNodesBitVector().size() != getNumNodes()) {
+    errs() << "nodes bit vector doesn't have the right size!\n";
+    return false;
+  }
 
   // Check we respect the promise of Node::isKernel
   BitVector BV = createNodesBitVector();
   for (const Node *N : nodes()) {
     if (N->isGraphEntryPoint())
-      N->setDependenciesBits(BV);
+      N->getDependencies(BV);
   }
 
   // Ensure each function in the module has an associated node.
   for (const auto &Fn : M) {
-    if (!Fn.isDeclaration())
-      assert(SeenFunctionNodes.contains(&Fn) &&
-             "Fn has no associated node in the graph!");
+    if (!Fn.isDeclaration()) {
+      if (!SeenFunctionNodes.contains(&Fn)) {
+        errs() << "Fn has no associated node in the graph!\n";
+        return false;
+      }
+    }
   }
 
-  assert(BV.all() &&
-         "not all nodes are reachable through the graph's entry points!");
+  if (!BV.all()) {
+    errs() << "not all nodes are reachable through the graph's entry points!\n";
+    return false;
+  }
+
+  return true;
 }
 #endif
 
@@ -943,7 +982,7 @@ void RecursiveSearchSplitting::setupWorkList() {
     for (auto MI = NodeEC.member_begin(I); MI != NodeEC.member_end(); ++MI) {
       const SplitGraph::Node &N = SG.getNode(*MI);
       if (N.isGraphEntryPoint())
-        N.setDependenciesBits(Cluster);
+        N.getDependencies(Cluster);
     }
     WorkList.emplace_back(std::move(Cluster));
   }
