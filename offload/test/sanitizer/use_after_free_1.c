@@ -33,7 +33,7 @@ int main() {
 // TRACE: Device pointer [[PTR]] points into prior host-issued allocation:
 // TRACE: Last deallocation:
 // TRACE: Last allocation of size 1073741824
-  // clang-format on
+// clang-format on
 #pragma omp target
   { *P = 5; }
 }
