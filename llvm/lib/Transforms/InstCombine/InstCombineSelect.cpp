@@ -3640,6 +3640,51 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
   return false;
 }
 
+static Value *foldSelectAddConstant(SelectInst &SI,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Cmp;
+  Instruction *FAdd;
+  ConstantFP *C;
+
+  // select((fcmp OGT/OLT, X, 0), (fadd X, C), C) => fadd((select (fcmp OGT/OLT,
+  // X, 0), X, 0), C)
+
+  // This transformation enables the possibility of transforming fcmp + sel into
+  // a fmax/fmin.
+
+  // OneUse check for `Cmp` is necessary because it makes sure that other
+  // InstCombine folds don't undo this transformation and cause an infinite
+  // loop.
+  if (match(&SI, m_Select(m_OneUse(m_Value(Cmp)), m_OneUse(m_Instruction(FAdd)),
+                          m_ConstantFP(C))) ||
+      match(&SI, m_Select(m_OneUse(m_Value(Cmp)), m_ConstantFP(C),
+                          m_OneUse(m_Instruction(FAdd))))) {
+    Value *X;
+    CmpInst::Predicate Pred;
+    if (!match(Cmp, m_FCmp(Pred, m_Value(X), m_AnyZeroFP())))
+      return nullptr;
+
+    if (Pred != CmpInst::FCMP_OGT && Pred != CmpInst::FCMP_OLT)
+      return nullptr;
+
+    if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
+      return nullptr;
+
+    FastMathFlags FMF = FAdd->getFastMathFlags();
+    FMF |= SI.getFastMathFlags();
+
+    Value *NewSelect = Builder.CreateSelect(
+        Cmp, X, ConstantFP::getZero(C->getType()), SI.getName() + ".new", &SI);
+    cast<Instruction>(NewSelect)->setFastMathFlags(FMF);
+
+    Value *NewFAdd =
+        Builder.CreateFAddFMF(NewSelect, C, FAdd, FAdd->getName() + ".new");
+    return NewFAdd;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4035,6 +4080,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
     return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectAddConstant(SI, Builder)) {
+    return replaceInstUsesWith(SI, V);
+  }
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
