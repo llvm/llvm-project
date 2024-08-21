@@ -9919,6 +9919,19 @@ TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingVarTemplate) {
   testImport(FromLastD);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplatedLambdaInGlobalScope) {
+  Decl *FromTU = getTuDecl(
+      R"(
+        namespace { template <typename> auto m = [] {}; }
+        void bar() { auto n = m<int>; }
+      )",
+      Lang_CXX14, "input0.cc");
+  FunctionDecl *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("bar")));
+  FunctionDecl *ToF = Import(FromF, Lang_CXX14);
+  EXPECT_TRUE(ToF);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
