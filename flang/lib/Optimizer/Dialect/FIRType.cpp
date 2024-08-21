@@ -165,16 +165,20 @@ struct RecordTypeStorage : public mlir::TypeStorage {
     setTypeList(typeList);
   }
 
+  bool isPacked() const { return packed; }
+  void pack(bool p) { packed = p; }
+
 protected:
   std::string name;
   bool finalized;
+  bool packed;
   std::vector<RecordType::TypePair> lens;
   std::vector<RecordType::TypePair> types;
 
 private:
   RecordTypeStorage() = delete;
   explicit RecordTypeStorage(llvm::StringRef name)
-      : name{name}, finalized{false} {}
+      : name{name}, finalized{false}, packed{false} {}
 };
 
 } // namespace detail
@@ -972,6 +976,10 @@ RecordType::TypeList fir::RecordType::getLenParamList() const {
 }
 
 bool fir::RecordType::isFinalized() const { return getImpl()->isFinalized(); }
+
+void fir::RecordType::pack(bool p) { getImpl()->pack(p); }
+
+bool fir::RecordType::isPacked() const { return getImpl()->isPacked(); }
 
 detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();

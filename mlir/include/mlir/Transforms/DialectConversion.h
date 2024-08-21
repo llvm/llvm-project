@@ -391,6 +391,21 @@ private:
       return callback(derivedType, results);
     };
   }
+  /// With callback of form: `std::optional<LogicalResult>(
+  ///     T, SmallVectorImpl<Type> &, bool)`.
+  template <typename T, typename FnT>
+  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &, bool>,
+                   ConversionCallbackFn>
+  wrapCallback(FnT &&callback) const {
+    return [callback = std::forward<FnT>(callback)](
+               Type type, SmallVectorImpl<Type> &results,
+               bool isPacked) -> std::optional<LogicalResult> {
+      T derivedType = dyn_cast<T>(type);
+      if (!derivedType)
+        return std::nullopt;
+      return callback(derivedType, results, isPacked);
+    };
+  }
 
   /// Register a type conversion.
   void registerConversion(ConversionCallbackFn callback) {

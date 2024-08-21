@@ -17,6 +17,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <vector>
 
@@ -51,9 +53,12 @@ private:
   SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
   // Returns amount of padding that was needed for alignment
-  std::size_t DoSymbol(Symbol &);
+  std::size_t DoSymbol(Symbol &,
+                       std::optional<const size_t> newAlign = std::nullopt);
   SizeAndAlignment GetSizeAndAlignment(const Symbol &, bool entire);
   std::size_t Align(std::size_t, std::size_t);
+  std::optional<size_t> CompAlignment(const Symbol &);
+  std::optional<size_t> HasSpecialAlign(const Symbol &, Scope &);
 
   SemanticsContext &context_;
   std::size_t offset_{0};
@@ -64,6 +69,60 @@ private:
   std::map<MutableSymbolRef, SizeAndAlignment, SymbolAddressCompare>
       equivalenceBlock_;
 };
+
+static bool isReal8OrLarger(const Fortran::semantics::DeclTypeSpec *type) {
+  return ((type->IsNumeric(common::TypeCategory::Real) ||
+           type->IsNumeric(common::TypeCategory::Complex)) &&
+          evaluate::ToInt64(type->numericTypeSpec().kind()) > 4);
+}
+
+std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
+  size_t max_align{0};
+  bool contain_double{false};
+  const auto derivedTypeSpec{sym.GetType()->AsDerived()};
+  DirectComponentIterator directs{*derivedTypeSpec};
+  for (auto it = directs.begin(); it != directs.end(); ++it) {
+    auto type{it->GetType()};
+    auto s{GetSizeAndAlignment(*it, true)};
+    if (isReal8OrLarger(type)) {
+      max_align = std::max(max_align, 4UL);
+      contain_double = true;
+    } else if (type->AsDerived()) {
+      if (const auto newAlgin = CompAlignment(*it)) {
+        max_align = std::max(max_align, s.alignment);
+      } else {
+        return std::nullopt;
+      }
+    } else {
+      max_align = std::max(max_align, s.alignment);
+    }
+  }
+
+  if (contain_double)
+    return max_align;
+  else
+    return std::nullopt;
+}
+
+std::optional<size_t> ComputeOffsetsHelper::HasSpecialAlign(const Symbol &sym,
+                                                            Scope &scope) {
+  // On AIX, if the component that is not the first component and is
+  // a float of 8 bytes or larger, it has the 4-byte alignment.
+  // Only set the special alignment for bind(c) derived type on that platform.
+  if (const auto type = sym.GetType()) {
+    auto &symOwner{sym.owner()};
+    if (symOwner.symbol() && symOwner.IsDerivedType() &&
+        symOwner.symbol()->attrs().HasAny({semantics::Attr::BIND_C}) &&
+        &sym != &(*scope.GetSymbols().front())) {
+      if (isReal8OrLarger(type)) {
+        return 4UL;
+      } else if (type->AsDerived()) {
+        return CompAlignment(sym);
+      }
+    }
+  }
+  return std::nullopt;
+}
 
 void ComputeOffsetsHelper::Compute(Scope &scope) {
   for (Scope &child : scope.children()) {
@@ -113,7 +172,15 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     if (!FindCommonBlockContaining(*symbol) &&
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
-      DoSymbol(*symbol);
+
+      std::optional<size_t> newAlign{std::nullopt};
+      // Handle special alignment requirement for AIX
+      auto triple{llvm::Triple(llvm::Triple::normalize(
+         llvm::sys::getDefaultTargetTriple()))};
+      if (triple.getOS() == llvm::Triple::OSType::AIX) {
+        newAlign = HasSpecialAlign(*symbol, scope);
+      }
+      DoSymbol(*symbol, newAlign);
       if (auto *generic{symbol->detailsIf<GenericDetails>()}) {
         if (Symbol * specific{generic->specific()};
             specific && !FindCommonBlockContaining(*specific)) {
@@ -313,7 +380,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
   return result;
 }
 
-std::size_t ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
+std::size_t ComputeOffsetsHelper::DoSymbol(Symbol &symbol,
+                                           std::optional<const size_t> newAlign) {
   if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
     return 0;
   }
@@ -322,12 +390,16 @@ std::size_t ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
     return 0;
   }
   std::size_t previousOffset{offset_};
-  offset_ = Align(offset_, s.alignment);
+  size_t alignVal{s.alignment};
+  if (newAlign) {
+    alignVal = newAlign.value();
+  }
+  offset_ = Align(offset_, alignVal);
   std::size_t padding{offset_ - previousOffset};
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
   offset_ += s.size;
-  alignment_ = std::max(alignment_, s.alignment);
+  alignment_ = std::max(alignment_, alignVal);
   return padding;
 }
 
