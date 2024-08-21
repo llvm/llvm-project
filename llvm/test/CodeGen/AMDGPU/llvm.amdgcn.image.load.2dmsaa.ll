@@ -7,10 +7,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -20,7 +20,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1(<8 x i32> inreg %rsrc, i3
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -47,10 +47,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask2(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask2(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -60,7 +60,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask2(<8 x i32> inreg %rsrc, i3
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask2(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -87,10 +87,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask4(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask4(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -100,7 +100,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask4(<8 x i32> inreg %rsrc, i3
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask4(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -127,10 +127,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask8(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask8(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -140,7 +140,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask8(<8 x i32> inreg %rsrc, i3
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask8(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -167,10 +167,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_reverse(<8 x i32> inreg %rsrc, i
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_reverse(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -180,7 +180,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_reverse(<8 x i32> inreg %rsrc, i
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_reverse(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 3
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
@@ -208,10 +208,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_vaddr(<8 x i32> inreg %rsrc, i32
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_vaddr(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S0:%.*]], i32 [[T0:%.*]], i32 [[S1:%.*]], i32 [[T1:%.*]], i32 [[S2:%.*]], i32 [[T2:%.*]], i32 [[S3:%.*]], i32 [[T3:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S0]], i32 [[T0]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S1]], i32 [[T1]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S2]], i32 [[T2]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S3]], i32 [[T3]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S0]], i32 [[T0]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S1]], i32 [[T1]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S2]], i32 [[T2]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S3]], i32 [[T3]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -221,10 +221,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_vaddr(<8 x i32> inreg %rsrc, i32
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_vaddr(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S0:%.*]], i32 [[T0:%.*]], i32 [[S1:%.*]], i32 [[T1:%.*]], i32 [[S2:%.*]], i32 [[T2:%.*]], i32 [[S3:%.*]], i32 [[T3:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S0]], i32 [[T0]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S1]], i32 [[T1]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S2]], i32 [[T2]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S3]], i32 [[T3]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S0]], i32 [[T0]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S1]], i32 [[T1]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S2]], i32 [[T2]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S3]], i32 [[T3]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -247,14 +247,14 @@ define amdgpu_ps [8 x float] @load_2dmsaa_v8f32(<8 x i32> inreg %rsrc, i32 %s, i
 ; NO-MSAA-LABEL: define amdgpu_ps [8 x float] @load_2dmsaa_v8f32(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I4:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I5:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I6:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I7:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I4:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I5:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I6:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I7:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I8:%.*]] = insertvalue [8 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I9:%.*]] = insertvalue [8 x float] [[I8]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I10:%.*]] = insertvalue [8 x float] [[I9]], float [[I2]], 2
@@ -268,7 +268,7 @@ define amdgpu_ps [8 x float] @load_2dmsaa_v8f32(<8 x i32> inreg %rsrc, i32 %s, i
 ; MSAA-LABEL: define amdgpu_ps [8 x float] @load_2dmsaa_v8f32(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -311,20 +311,20 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_interleaved(<8 x i32> inreg %rsr
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_interleaved(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I1:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I3:%.*]] = insertvalue [4 x float] [[I1]], float [[I2]], 1
-; NO-MSAA-NEXT:    [[I4:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I4:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I3]], float [[I4]], 2
-; NO-MSAA-NEXT:    [[I6:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I6:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I7:%.*]] = insertvalue [4 x float] [[I5]], float [[I6]], 3
 ; NO-MSAA-NEXT:    ret [4 x float] [[I7]]
 ;
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_interleaved(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I4:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -351,8 +351,8 @@ define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId01(<8 x i32> inreg %rsrc, 
 ; NO-MSAA-LABEL: define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId01(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I3:%.*]] = insertvalue [2 x float] [[I2]], float [[I1]], 1
 ; NO-MSAA-NEXT:    ret [2 x float] [[I3]]
@@ -360,7 +360,7 @@ define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId01(<8 x i32> inreg %rsrc, 
 ; MSAA-LABEL: define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId01(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x float] undef, float [[I]], 0
@@ -379,8 +379,8 @@ define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId23(<8 x i32> inreg %rsrc, 
 ; NO-MSAA-LABEL: define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId23(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I3:%.*]] = insertvalue [2 x float] [[I2]], float [[I1]], 1
 ; NO-MSAA-NEXT:    ret [2 x float] [[I3]]
@@ -388,7 +388,7 @@ define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId23(<8 x i32> inreg %rsrc, 
 ; MSAA-LABEL: define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId23(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 3
 ; MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x float] undef, float [[I]], 0
@@ -409,8 +409,8 @@ define amdgpu_ps [2 x <2 x float>] @load_2dmsaa_v2v2f32_dmask3(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [2 x <2 x float>] @load_2dmsaa_v2v2f32_dmask3(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [2 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [2 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    ret [2 x <2 x float>] [[I5]]
@@ -418,8 +418,8 @@ define amdgpu_ps [2 x <2 x float>] @load_2dmsaa_v2v2f32_dmask3(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [2 x <2 x float>] @load_2dmsaa_v2v2f32_dmask3(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I4:%.*]] = insertvalue [2 x <2 x float>] undef, <2 x float> [[I]], 0
 ; MSAA-NEXT:    [[I5:%.*]] = insertvalue [2 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; MSAA-NEXT:    ret [2 x <2 x float>] [[I5]]
@@ -439,10 +439,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask3(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask3(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -452,8 +452,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask3(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask3(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -495,10 +495,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask5(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask5(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 5, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 5, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 5, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 5, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 5, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 5, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 5, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 5, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -508,8 +508,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask5(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask5(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -551,10 +551,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask6(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask6(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 6, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 6, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 6, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 6, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 6, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 6, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 6, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 6, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -564,8 +564,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask6(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask6(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -607,10 +607,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask9(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask9(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 9, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 9, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 9, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 9, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 9, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 9, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 9, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 9, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -620,8 +620,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask9(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask9(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -663,10 +663,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask10(<8 x i32> inreg 
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask10(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 10, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 10, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 10, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 10, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 10, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 10, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 10, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 10, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -676,8 +676,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask10(<8 x i32> inreg 
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask10(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -719,10 +719,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask12(<8 x i32> inreg 
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask12(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 12, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 12, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 12, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 12, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 12, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 12, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 12, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 12, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -732,8 +732,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask12(<8 x i32> inreg 
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask12(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -772,8 +772,8 @@ define amdgpu_ps [2 x half] @load_2dmsaa_v2f16_fragId01(<8 x i32> inreg %rsrc, i
 ; NO-MSAA-LABEL: define amdgpu_ps [2 x half] @load_2dmsaa_v2f16_fragId01(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call half @llvm.amdgcn.image.load.2dmsaa.f16.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call half @llvm.amdgcn.image.load.2dmsaa.f16.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call half @llvm.amdgcn.image.load.2dmsaa.f16.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call half @llvm.amdgcn.image.load.2dmsaa.f16.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x half] undef, half [[I]], 0
 ; NO-MSAA-NEXT:    [[I3:%.*]] = insertvalue [2 x half] [[I2]], half [[I1]], 1
 ; NO-MSAA-NEXT:    ret [2 x half] [[I3]]
@@ -781,7 +781,7 @@ define amdgpu_ps [2 x half] @load_2dmsaa_v2f16_fragId01(<8 x i32> inreg %rsrc, i
 ; MSAA-LABEL: define amdgpu_ps [2 x half] @load_2dmsaa_v2f16_fragId01(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x half> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f16.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x half> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f16.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x half> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x half> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = insertvalue [2 x half] undef, half [[I]], 0
@@ -800,10 +800,10 @@ define amdgpu_ps [4 x float] @load_2darraymsaa_v4f32_dmask1(<8 x i32> inreg %rsr
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2darraymsaa_v4f32_dmask1(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[SLICE:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -813,7 +813,7 @@ define amdgpu_ps [4 x float] @load_2darraymsaa_v4f32_dmask1(<8 x i32> inreg %rsr
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2darraymsaa_v4f32_dmask1(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[SLICE:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -843,10 +843,10 @@ define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask3(<8 x i32> in
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask3(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[SLICE:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
@@ -856,8 +856,8 @@ define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask3(<8 x i32> in
 ; MSAA-LABEL: define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask3(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[SLICE:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -901,10 +901,10 @@ define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7(<8 x i32> inreg %
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] undef, <3 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <3 x float>] [[I4]], <3 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <3 x float>] [[I5]], <3 x float> [[I2]], 2
@@ -914,9 +914,9 @@ define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7(<8 x i32> inreg %
 ; MSAA-LABEL: define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> undef, float [[TMP3]], i64 0
 ; MSAA-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -968,10 +968,10 @@ define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7_group1(<8 x i32> 
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7_group1(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 5, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 6, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 [[S]], i32 [[T]], i32 7, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 5, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 6, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 7, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] undef, <3 x float> [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x <3 x float>] [[I4]], <3 x float> [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x <3 x float>] [[I5]], <3 x float> [[I2]], 2
@@ -981,9 +981,9 @@ define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7_group1(<8 x i32> 
 ; MSAA-LABEL: define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7_group1(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 2, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 4, i32 [[S]], i32 [[T]], i32 4, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> undef, float [[TMP3]], i64 0
 ; MSAA-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
@@ -1030,11 +1030,11 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_sections(<8 x i32> inreg %rsrc, 
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_sections(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], float [[VDATA:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    call void @llvm.amdgcn.image.store.2dmsaa.f32.i32(float [[VDATA]], i32 1, i32 [[S]], i32 [[T]], i32 [[FRAGID]], <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    call void @llvm.amdgcn.image.store.2dmsaa.f32.i32.v8i32(float [[VDATA]], i32 1, i32 [[S]], i32 [[T]], i32 [[FRAGID]], <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -1044,11 +1044,11 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_sections(<8 x i32> inreg %rsrc, 
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_sections(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], float [[VDATA:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
-; MSAA-NEXT:    call void @llvm.amdgcn.image.store.2dmsaa.f32.i32(float [[VDATA]], i32 1, i32 [[S]], i32 [[T]], i32 [[FRAGID]], <8 x i32> [[RSRC]], i32 0, i32 0)
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    call void @llvm.amdgcn.image.store.2dmsaa.f32.i32.v8i32(float [[VDATA]], i32 1, i32 [[S]], i32 [[T]], i32 [[FRAGID]], <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP1]], i64 2
 ; MSAA-NEXT:    [[I3:%.*]] = extractelement <4 x float> [[TMP1]], i64 3
 ; MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
@@ -1074,10 +1074,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -1085,20 +1085,20 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i3
 ; NO-MSAA-NEXT:    [[I8:%.*]] = trunc i32 [[COND]] to i1
 ; NO-MSAA-NEXT:    br i1 [[I8]], label [[IF_EQUAL:%.*]], label [[IF_UNEQUAL:%.*]]
 ; NO-MSAA:       if_equal:
-; NO-MSAA-NEXT:    [[I9:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I10:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I11:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I12:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I9:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I10:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I11:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I12:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I13:%.*]] = insertvalue [4 x float] undef, float [[I9]], 0
 ; NO-MSAA-NEXT:    [[I14:%.*]] = insertvalue [4 x float] [[I13]], float [[I10]], 1
 ; NO-MSAA-NEXT:    [[I15:%.*]] = insertvalue [4 x float] [[I14]], float [[I11]], 2
 ; NO-MSAA-NEXT:    [[I16:%.*]] = insertvalue [4 x float] [[I15]], float [[I12]], 3
 ; NO-MSAA-NEXT:    br label [[MERGE:%.*]]
 ; NO-MSAA:       if_unequal:
-; NO-MSAA-NEXT:    [[I17:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I18:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I19:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I20:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I17:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I18:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I19:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I20:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I21:%.*]] = insertvalue [4 x float] undef, float [[I17]], 0
 ; NO-MSAA-NEXT:    [[I22:%.*]] = insertvalue [4 x float] [[I21]], float [[I18]], 1
 ; NO-MSAA-NEXT:    [[I23:%.*]] = insertvalue [4 x float] [[I22]], float [[I19]], 2
@@ -1111,7 +1111,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i3
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
@@ -1123,7 +1123,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i3
 ; MSAA-NEXT:    [[I8:%.*]] = trunc i32 [[COND]] to i1
 ; MSAA-NEXT:    br i1 [[I8]], label [[IF_EQUAL:%.*]], label [[IF_UNEQUAL:%.*]]
 ; MSAA:       if_equal:
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I9:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
 ; MSAA-NEXT:    [[I10:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
 ; MSAA-NEXT:    [[I11:%.*]] = extractelement <4 x float> [[TMP1]], i64 2
@@ -1134,7 +1134,7 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i3
 ; MSAA-NEXT:    [[I16:%.*]] = insertvalue [4 x float] [[I15]], float [[I12]], 3
 ; MSAA-NEXT:    br label [[MERGE:%.*]]
 ; MSAA:       if_unequal:
-; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I17:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; MSAA-NEXT:    [[I18:%.*]] = extractelement <4 x float> [[TMP2]], i64 1
 ; MSAA-NEXT:    [[I19:%.*]] = extractelement <4 x float> [[TMP2]], i64 2
@@ -1188,10 +1188,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1_different_rsrc(<8 x i32> 
 ; NO-MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1_different_rsrc(
 ; NO-MSAA-SAME: <8 x i32> inreg [[RSRC1:%.*]], <8 x i32> inreg [[RSRC2:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; NO-MSAA-NEXT:  main_body:
-; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC1]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC1]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC2]], i32 0, i32 0)
-; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC2]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC1]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I1:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC1]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I2:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC2]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[I3:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC2]], i32 0, i32 0)
 ; NO-MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; NO-MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; NO-MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
@@ -1201,10 +1201,10 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1_different_rsrc(<8 x i32> 
 ; MSAA-LABEL: define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1_different_rsrc(
 ; MSAA-SAME: <8 x i32> inreg [[RSRC1:%.*]], <8 x i32> inreg [[RSRC2:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) #[[ATTR0]] {
 ; MSAA-NEXT:  main_body:
-; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC1]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC1]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
-; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC2]], i32 0, i32 0)
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC2]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
 ; MSAA-NEXT:    [[I3:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
 ; MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0

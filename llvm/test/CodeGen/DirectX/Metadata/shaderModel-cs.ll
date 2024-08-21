@@ -8,8 +8,10 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; CHECK: ![[SM]] = !{!"cs", i32 6, i32 6}
 
 ; ANALYSIS: Shader Model Version : 6.6
-; ANALYSIS: DXIL Version : 1.6
-; ANALYSIS: Shader Stage : compute
+; ANALYSIS-NEXT: DXIL Version : 1.6
+; ANALYSIS-NEXT: Shader Stage : compute
+; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-EMPTY:
 
 define void @entry() #0 {
 entry:

@@ -3,29 +3,29 @@
 
 ; TODO-GFX13: Add GlobalISel support.
 
-@sem = internal addrspace(3) global target("amdgcn.semaphore") poison
-@sem2 = internal addrspace(3) global target("amdgcn.semaphore") poison
-@sem3 = internal addrspace(3) global target("amdgcn.semaphore") poison
+@sem = internal addrspace(3) global target("amdgcn.semaphore", 0) poison
+@sem2 = internal addrspace(3) global target("amdgcn.semaphore", 0) poison
+@sem3 = internal addrspace(3) global target("amdgcn.semaphore", 3) poison
 
 define amdgpu_kernel void @test_sema() {
 ; GFX13-LABEL: test_sema:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_sema_set_limit 0x2000
 ; GFX13-NEXT:    s_sema_set_limit 0x4000
-; GFX13-NEXT:    s_sema_set_limit 0x6003
-; GFX13-NEXT:    s_sema_signal 1
+; GFX13-NEXT:    s_sema_set_limit 0x2000
+; GFX13-NEXT:    s_sema_set_limit 0x2003
 ; GFX13-NEXT:    s_sema_signal 2
-; GFX13-NEXT:    s_sema_signal 0x303
-; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_sema_signal 1
+; GFX13-NEXT:    s_sema_signal 0x731
 ; GFX13-NEXT:    s_sema_wait 2
-; GFX13-NEXT:    s_sema_wait 4
+; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
   call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 0)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 7)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)

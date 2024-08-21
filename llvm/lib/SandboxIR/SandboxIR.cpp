@@ -1236,6 +1236,51 @@ static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
   }
 }
 
+CatchSwitchInst *CatchSwitchInst::create(Value *ParentPad, BasicBlock *UnwindBB,
+                                         unsigned NumHandlers,
+                                         BBIterator WhereIt,
+                                         BasicBlock *WhereBB, Context &Ctx,
+                                         const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::CatchSwitchInst *LLVMCSI = Builder.CreateCatchSwitch(
+      ParentPad->Val, cast<llvm::BasicBlock>(UnwindBB->Val), NumHandlers, Name);
+  return Ctx.createCatchSwitchInst(LLVMCSI);
+}
+
+Value *CatchSwitchInst::getParentPad() const {
+  return Ctx.getValue(cast<llvm::CatchSwitchInst>(Val)->getParentPad());
+}
+
+void CatchSwitchInst::setParentPad(Value *ParentPad) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&CatchSwitchInst::getParentPad,
+                                       &CatchSwitchInst::setParentPad>>(this);
+  cast<llvm::CatchSwitchInst>(Val)->setParentPad(ParentPad->Val);
+}
+
+BasicBlock *CatchSwitchInst::getUnwindDest() const {
+  return cast_or_null<BasicBlock>(
+      Ctx.getValue(cast<llvm::CatchSwitchInst>(Val)->getUnwindDest()));
+}
+
+void CatchSwitchInst::setUnwindDest(BasicBlock *UnwindDest) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&CatchSwitchInst::getUnwindDest,
+                                       &CatchSwitchInst::setUnwindDest>>(this);
+  cast<llvm::CatchSwitchInst>(Val)->setUnwindDest(
+      cast<llvm::BasicBlock>(UnwindDest->Val));
+}
+
+void CatchSwitchInst::addHandler(BasicBlock *Dest) {
+  Ctx.getTracker().emplaceIfTracking<CatchSwitchAddHandler>(this);
+  cast<llvm::CatchSwitchInst>(Val)->addHandler(
+      cast<llvm::BasicBlock>(Dest->Val));
+}
+
 SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
                                BasicBlock::iterator WhereIt,
                                BasicBlock *WhereBB, Context &Ctx,
@@ -1953,6 +1998,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new GetElementPtrInst(LLVMGEP, *this));
     return It->second.get();
   }
+  case llvm::Instruction::CatchSwitch: {
+    auto *LLVMCatchSwitchInst = cast<llvm::CatchSwitchInst>(LLVMV);
+    It->second = std::unique_ptr<CatchSwitchInst>(
+        new CatchSwitchInst(LLVMCatchSwitchInst, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Switch: {
     auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
     It->second =
@@ -2116,6 +2167,10 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
       std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
+}
+CatchSwitchInst *Context::createCatchSwitchInst(llvm::CatchSwitchInst *I) {
+  auto NewPtr = std::unique_ptr<CatchSwitchInst>(new CatchSwitchInst(I, *this));
+  return cast<CatchSwitchInst>(registerValue(std::move(NewPtr)));
 }
 SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
   auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));

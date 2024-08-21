@@ -3402,7 +3402,7 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
   if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
     return { BUFOps, nullptr };
 
-  if (TSFlags & SIInstrFlags::VIMAGE)
+  if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE))
     return { VIMGOps, nullptr };
 
   if (TSFlags & SIInstrFlags::EXP)
