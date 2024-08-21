@@ -193,7 +193,7 @@
 "`LWG2859 <https://wg21.link/LWG2859>`__","Definition of *reachable* in [ptr.launder] misses pointer arithmetic from pointer-interconvertible object","2020-02 (Prague)","","",""
 "`LWG3018 <https://wg21.link/LWG3018>`__","``shared_ptr``\  of function type","2020-02 (Prague)","|Nothing To Do|","",""
 "`LWG3050 <https://wg21.link/LWG3050>`__","Conversion specification problem in ``chrono::duration``\  constructor","2020-02 (Prague)","|Complete|","19.0","|chrono|"
-"`LWG3141 <https://wg21.link/LWG3141>`__","``CopyConstructible``\  doesn't preserve source values","2020-02 (Prague)","|Nothing to do|","",""
+"`LWG3141 <https://wg21.link/LWG3141>`__","``CopyConstructible``\  doesn't preserve source values","2020-02 (Prague)","|Nothing To Do|","",""
 "`LWG3150 <https://wg21.link/LWG3150>`__","``UniformRandomBitGenerator``\  should validate ``min``\  and ``max``\ ","2020-02 (Prague)","|Complete|","13.0","|ranges|"
 "`LWG3175 <https://wg21.link/LWG3175>`__","The ``CommonReference``\  requirement of concept ``SwappableWith``\  is not satisfied in the example","2020-02 (Prague)","|Complete|","13.0",""
 "`LWG3194 <https://wg21.link/LWG3194>`__","``ConvertibleTo``\  prose does not match code","2020-02 (Prague)","|Complete|","13.0",""
