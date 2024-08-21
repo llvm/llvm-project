@@ -1868,6 +1868,11 @@ Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
+void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
+  Ctx.getTracker().emplaceIfTracking<ShuffleVectorSetMask>(this);
+  cast<llvm::ShuffleVectorInst>(Val)->setShuffleMask(Mask);
+}
+
 Constant *ShuffleVectorInst::getShuffleMaskForBitcode() const {
   return Ctx.getOrCreateConstant(
       cast<llvm::ShuffleVectorInst>(Val)->getShuffleMaskForBitcode());
