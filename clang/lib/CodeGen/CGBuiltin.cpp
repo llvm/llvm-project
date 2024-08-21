@@ -3712,9 +3712,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       if (!ME->HasSideEffects(getContext()) && IsFlexibleArrayMember &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
-        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
-          Result = GetCountedByFieldExprGEP(ME, FAMDecl, CountFD);
+        FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        if (FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+          QualType CountTy = CountFD->getType();
+
+          MemberExpr *NewME = MemberExpr::Create(
+              Ctx, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
+              ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), CountFD,
+              ME->getFoundDecl(),
+              DeclarationNameInfo(CountFD->getDeclName(),
+                                  CountFD->getLocation()),
+              nullptr, CountTy, VK_PRValue, OK_Ordinary, ME->isNonOdrUse());
+          Result = EmitScalarExpr(UnaryOperator::Create(
+              Ctx, NewME, UO_AddrOf, Ctx.getPointerType(CountTy), VK_LValue,
+              OK_Ordinary, SourceLocation(), false, FPOptionsOverride()));
+        }
       }
     }
 
