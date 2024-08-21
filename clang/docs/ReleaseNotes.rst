@@ -310,6 +310,9 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash caused by long chains of ``sizeof`` and other similar operators
   that can be followed by a non-parenthesized expression. (#GH45061)
 
+- Fixed a crash when function has more than 65536 parameters.
+  Now a diagnostic is emitted. (#GH35741)
+
 OpenACC Specific Changes
 ------------------------
 

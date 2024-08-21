@@ -480,4 +480,108 @@ define i1 @test_select_inverse_nonconst4(i64 %x, i64 %y, i64 %z, i1 %cond) {
   ret i1 %sel
 }
 
+define i1 @sel_icmp_two_cmp(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_extra_use1(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_extra_use1(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    call void @use.i8(i8 [[V1]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  call void @use.i8(i8 %v1)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_extra_use2(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_extra_use2(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    call void @use.i8(i8 [[SEL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  call void @use.i8(i8 %sel)
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_not_const(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i8 %b) {
+; CHECK-LABEL: @sel_icmp_two_cmp_not_const(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SEL]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, %b
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_cmp_and_simplify(i1 %c, i32 %a1, i32 %a2) {
+; CHECK-LABEL: @sel_icmp_cmp_and_simplify(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %v, i8 0
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_cmp_and_no_simplify(i1 %c, i32 %a1, i32 %a2, i8 %b) {
+; CHECK-LABEL: @sel_icmp_cmp_and_no_simplify(
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %v, i8 %b
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_cmp_and_no_simplify_comm(i1 %c, i32 %a1, i32 %a2, i8 %b) {
+; CHECK-LABEL: @sel_icmp_cmp_and_no_simplify_comm(
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[B:%.*]], i8 [[V]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %b, i8 %v
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
 declare void @use(i1)
+declare void @use.i8(i8)
