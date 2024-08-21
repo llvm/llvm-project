@@ -399,7 +399,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(lldb::SBProcess &process) {
-  char buffer[1024];
+  char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
     g_dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
