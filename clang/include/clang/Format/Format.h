@@ -988,6 +988,11 @@ struct FormatStyle {
   /// \version 3.7
   bool AllowShortLoopsOnASingleLine;
 
+  /// If ``true``, ``namespace a { class b; }`` can be put on a single a single
+  /// line.
+  /// \version 19
+  bool AllowShortNamespacesOnASingleLine;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {

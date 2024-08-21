@@ -28314,6 +28314,118 @@ TEST_F(FormatTest, KeepFormFeed) {
                Style);
 }
 
+TEST_F(FormatTest, ShortNamespacesOption) {
+  FormatStyle style = getLLVMStyle();
+  style.AllowShortNamespacesOnASingleLine = true;
+  style.FixNamespaceComments = false;
+
+  // Basic functionality
+  verifyFormat("namespace foo { class bar; }", style);
+  verifyFormat("namespace foo::bar { class baz; }", style);
+  verifyFormat("namespace { class bar; }", style);
+  verifyFormat("namespace foo {\n"
+               "class bar;\n"
+               "class baz;\n"
+               "}",
+               style);
+
+  // Trailing comments prevent merging
+  verifyFormat("namespace foo {\n"
+               "namespace baz { class qux; } // comment\n"
+               "}",
+               style);
+
+  // Make sure code doesn't walk to far on unbalanced code
+  verifyFormat("namespace foo {", style);
+  verifyFormat("namespace foo {\n"
+               "class baz;",
+               style);
+  verifyFormat("namespace foo {\n"
+               "namespace bar { class baz; }",
+               style);
+
+  // Nested namespaces
+  verifyFormat("namespace foo { namespace bar { class baz; } }", style);
+  verifyFormat("namespace foo {\n"
+               "namespace bar { class baz; }\n"
+               "namespace quar { class quaz; }\n"
+               "}",
+               style);
+
+  // Varying inner content
+  verifyFormat("namespace foo {\n"
+               "int f() { return 5; }\n"
+               "}",
+               style);
+  verifyFormat("namespace foo { template <T> struct bar; }", style);
+  verifyFormat("namespace foo { constexpr int num = 42; }", style);
+
+  // Validate wrapping scenarios around the ColumnLimit
+  style.ColumnLimit = 64;
+
+  // Validate just under the ColumnLimit
+  verifyFormat(
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      style);
+
+  // Validate just over the ColumnLimit
+  verifyFormat("namespace foo {\n"
+               "namespace bar { namespace baz { class quux; } }\n"
+               "}",
+               style);
+
+  verifyFormat("namespace foo {\n"
+               "namespace bar {\n"
+               "namespace baz { namespace qux { class quux; } }\n"
+               "}\n"
+               "}",
+               style);
+
+  // Validate that the ColumnLimit logic accounts for trailing content as well
+  verifyFormat("namespace foo {\n"
+               "namespace bar { namespace baz { class qux; } }\n"
+               "} // extra",
+               style);
+
+  // No ColumnLimit, allows long nested one-liners, but also leaves multi-line
+  // instances alone
+  style.ColumnLimit = 0;
+  verifyFormat("namespace foo { namespace bar { namespace baz { namespace qux "
+               "{ class quux; } } } }",
+               style);
+
+  verifyNoChange("namespace foo {\n"
+                 "namespace bar {\n"
+                 "namespace baz { namespace qux { class quux; } }\n"
+                 "}\n"
+                 "}",
+                 style);
+
+  // This option doesn't really work with FixNamespaceComments and nested
+  // namespaces. Code should use the concatenated namespace syntax.  e.g.
+  // 'namespace foo::bar'
+  style.FixNamespaceComments = true;
+
+  verifyFormat(
+      "namespace foo {\n"
+      "namespace bar { namespace baz { class qux; } } // namespace bar\n"
+      "} // namespace foo",
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      style);
+
+  // This option doesn't really make any sense with ShortNamespaceLines = 0
+  style.ShortNamespaceLines = 0;
+
+  verifyFormat(
+      "namespace foo {\n"
+      "namespace bar {\n"
+      "namespace baz { class qux; } // namespace baz\n"
+      "} // namespace bar\n"
+      "} // namespace foo",
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

@@ -420,6 +420,15 @@ private:
         TheLine->First != LastNonComment) {
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
+
+    if (TheLine->Last->is(tok::l_brace)) {
+      if (Style.AllowShortNamespacesOnASingleLine &&
+          TheLine->First->is(tok::kw_namespace)) {
+        if (unsigned result = tryMergeNamespace(I, E, Limit))
+          return result;
+      }
+    }
+
     // Try to merge a control statement block with left brace unwrapped.
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
@@ -614,6 +623,62 @@ private:
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
     return 1;
+  }
+
+  unsigned tryMergeNamespace(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
+                             SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+                             unsigned Limit) {
+    if (Limit == 0)
+      return 0;
+    if (I[1]->InPPDirective != (*I)->InPPDirective ||
+        (I[1]->InPPDirective && I[1]->First->HasUnescapedNewline)) {
+      return 0;
+    }
+    if (I + 2 == E || I[2]->Type == LT_Invalid)
+      return 0;
+
+    Limit = limitConsideringMacros(I + 1, E, Limit);
+
+    if (!nextTwoLinesFitInto(I, Limit))
+      return 0;
+
+    // Check if it's a namespace inside a namespace, and call recursively if so
+    // '3' is the sizes of the whitespace and closing brace for " _inner_ }"
+    if (I[1]->First->is(tok::kw_namespace)) {
+      if (I[1]->Last->is(TT_LineComment))
+        return 0;
+
+      unsigned inner_limit = Limit - I[1]->Last->TotalLength - 3;
+      unsigned inner_result = tryMergeNamespace(I + 1, E, inner_limit);
+      if (!inner_result)
+        return 0;
+      // check if there is even a line after the inner result
+      if (I + 2 + inner_result >= E)
+        return 0;
+      // check that the line after the inner result starts with a closing brace
+      // which we are permitted to merge into one line
+      if (I[2 + inner_result]->First->is(tok::r_brace) &&
+          !I[2 + inner_result]->First->MustBreakBefore &&
+          !I[1 + inner_result]->Last->is(TT_LineComment) &&
+          nextNLinesFitInto(I, I + 2 + inner_result + 1, Limit)) {
+        return 2 + inner_result;
+      }
+      return 0;
+    }
+
+    // There's no inner namespace, so we are considering to merge at most one
+    // line.
+
+    // The line which is in the namespace should end with semicolon
+    if (I[1]->Last->isNot(tok::semi))
+      return 0;
+
+    // Last, check that the third line starts with a closing brace.
+    if (I[2]->First->isNot(tok::r_brace) || I[2]->First->MustBreakBefore)
+      return 0;
+
+    // If so, merge all three lines.
+    return 2;
   }
 
   unsigned tryMergeSimpleControlStatement(
@@ -914,6 +979,23 @@ private:
     if (I[1]->First->MustBreakBefore || I[2]->First->MustBreakBefore)
       return false;
     return 1 + I[1]->Last->TotalLength + 1 + I[2]->Last->TotalLength <= Limit;
+  }
+
+  bool nextNLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
+                         SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+                         unsigned Limit) {
+    unsigned joinedLength = 0;
+    for (SmallVectorImpl<AnnotatedLine *>::const_iterator J = I + 1; J != E;
+         ++J) {
+
+      if ((*J)->First->MustBreakBefore)
+        return false;
+
+      joinedLength += 1 + (*J)->Last->TotalLength;
+      if (joinedLength > Limit)
+        return false;
+    }
+    return true;
   }
 
   bool containsMustBreak(const AnnotatedLine *Line) {
