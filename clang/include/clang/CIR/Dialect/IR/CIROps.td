@@ -762,6 +762,46 @@ def TernaryOp : CIR_Op<"ternary",
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+def SelectOp : CIR_Op<"select", [Pure,
+    AllTypesMatch<["true_value", "false_value", "result"]>]> {
+  let summary = "Yield one of two values based on a boolean value";
+  let description = [{
+    The `cir.select` operation takes three operands. The first operand
+    `condition` is a boolean value of type `!cir.bool`. The second and the third
+    operand can be of any CIR types, but their types must be the same. If the
+    first operand is `true`, the operation yields its second operand. Otherwise,
+    the operation yields its third operand.
+
+    Example:
+
+    ```mlir
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.const #cir.int<42> : !s32i
+    %2 = cir.const #cir.int<72> : !s32i
+    %3 = cir.select if %0 then %1 else %2 : (!cir.bool, !s32i, !s32i) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_BoolType:$condition, CIR_AnyType:$true_value,
+                       CIR_AnyType:$false_value);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    `if` $condition `then` $true_value `else` $false_value
+    `:` `(`
+      qualified(type($condition)) `,`
+      qualified(type($true_value)) `,`
+      qualified(type($false_value))
+    `)` `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 

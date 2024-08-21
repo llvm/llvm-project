@@ -1383,6 +1383,19 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SelectOp::fold(FoldAdaptor adaptor) {
+  auto condition = adaptor.getCondition();
+  if (!condition)
+    return nullptr;
+
+  auto conditionValue = mlir::cast<mlir::cir::BoolAttr>(condition).getValue();
+  return conditionValue ? getTrueValue() : getFalseValue();
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
 

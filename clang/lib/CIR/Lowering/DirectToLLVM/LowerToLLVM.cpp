@@ -2987,6 +2987,60 @@ public:
   }
 };
 
+class CIRSelectOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::SelectOp> {
+public:
+  using OpConversionPattern<mlir::cir::SelectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::SelectOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto getConstantBool = [](mlir::Value value) -> std::optional<bool> {
+      auto definingOp = mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(
+          value.getDefiningOp());
+      if (!definingOp)
+        return std::nullopt;
+
+      auto constValue =
+          mlir::dyn_cast<mlir::cir::BoolAttr>(definingOp.getValue());
+      if (!constValue)
+        return std::nullopt;
+
+      return constValue.getValue();
+    };
+
+    // Two special cases in the LLVMIR codegen of select op:
+    // - select %0, %1, false => and %0, %1
+    // - select %0, true, %1 => or %0, %1
+    auto trueValue = op.getTrueValue();
+    auto falseValue = op.getFalseValue();
+    if (mlir::isa<mlir::cir::BoolType>(trueValue.getType())) {
+      if (std::optional<bool> falseValueBool = getConstantBool(falseValue);
+          falseValueBool.has_value() && !*falseValueBool) {
+        // select %0, %1, false => and %0, %1
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(
+            op, adaptor.getCondition(), adaptor.getTrueValue());
+        return mlir::success();
+      }
+      if (std::optional<bool> trueValueBool = getConstantBool(trueValue);
+          trueValueBool.has_value() && *trueValueBool) {
+        // select %0, true, %1 => or %0, %1
+        rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(
+            op, adaptor.getCondition(), adaptor.getFalseValue());
+        return mlir::success();
+      }
+    }
+
+    auto llvmCondition = rewriter.create<mlir::LLVM::TruncOp>(
+        op.getLoc(), mlir::IntegerType::get(op->getContext(), 1),
+        adaptor.getCondition());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
+        op, llvmCondition, adaptor.getTrueValue(), adaptor.getFalseValue());
+
+    return mlir::success();
+  }
+};
+
 class CIRBrOpLowering : public mlir::OpConversionPattern<mlir::cir::BrOp> {
 public:
   using OpConversionPattern<mlir::cir::BrOp>::OpConversionPattern;
@@ -3835,20 +3889,20 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRReturnLowering>(patterns.getContext());
   patterns.add<CIRAllocaLowering>(converter, dataLayout, patterns.getContext());
   patterns.add<
-      CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
-      CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
-      CIRBitPopcountOpLowering, CIRAtomicCmpXchgLowering, CIRAtomicXchgLowering,
-      CIRAtomicFetchLowering, CIRByteswapOpLowering, CIRRotateOpLowering,
-      CIRBrCondOpLowering, CIRPtrStrideOpLowering, CIRCallLowering,
-      CIRTryCallLowering, CIREhInflightOpLowering, CIRUnaryOpLowering,
-      CIRBinOpLowering, CIRBinOpOverflowOpLowering, CIRShiftOpLowering,
-      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRFuncLowering,
-      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRComplexCreateOpLowering, CIRComplexRealOpLowering,
-      CIRComplexImagOpLowering, CIRComplexRealPtrOpLowering,
-      CIRComplexImagPtrOpLowering, CIRVAStartLowering, CIRVAEndLowering,
-      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
+      CIRCmpOpLowering, CIRSelectOpLowering, CIRBitClrsbOpLowering,
+      CIRBitClzOpLowering, CIRBitCtzOpLowering, CIRBitFfsOpLowering,
+      CIRBitParityOpLowering, CIRBitPopcountOpLowering,
+      CIRAtomicCmpXchgLowering, CIRAtomicXchgLowering, CIRAtomicFetchLowering,
+      CIRByteswapOpLowering, CIRRotateOpLowering, CIRBrCondOpLowering,
+      CIRPtrStrideOpLowering, CIRCallLowering, CIRTryCallLowering,
+      CIREhInflightOpLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+      CIRBinOpOverflowOpLowering, CIRShiftOpLowering, CIRLoadLowering,
+      CIRConstantLowering, CIRStoreLowering, CIRFuncLowering, CIRCastOpLowering,
+      CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRComplexCreateOpLowering,
+      CIRComplexRealOpLowering, CIRComplexImagOpLowering,
+      CIRComplexRealPtrOpLowering, CIRComplexImagPtrOpLowering,
+      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
       CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
       CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
       CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
