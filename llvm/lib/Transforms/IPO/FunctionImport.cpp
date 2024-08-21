@@ -334,6 +334,25 @@ using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
 
 } // anonymous namespace
 
+FunctionImporter::AddDefinitionStatus
+FunctionImporter::addDefinition(ImportMapTy &ImportList, StringRef FromModule,
+                                GlobalValue::GUID GUID) {
+  auto [It, Ins] =
+      ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Definition);
+  if (Ins)
+    return FunctionImporter::Inserted;
+  if (It->second == GlobalValueSummary::Definition)
+    return FunctionImporter::NoChange;
+  It->second = GlobalValueSummary::Definition;
+  return FunctionImporter::ChangedToDefinition;
+}
+
+void FunctionImporter::maybeAddDeclaration(ImportMapTy &ImportList,
+                                           StringRef FromModule,
+                                           GlobalValue::GUID GUID) {
+  ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -392,17 +411,13 @@ class GlobalsImporter final {
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
         // Otherwise, definition should take precedence over declaration.
-        auto [Iter, Inserted] =
-            ImportList[RefSummary->modulePath()].try_emplace(
-                VI.getGUID(), GlobalValueSummary::Definition);
+        if (FunctionImporter::addDefinition(
+                ImportList, RefSummary->modulePath(), VI.getGUID()) !=
+            FunctionImporter::Inserted)
+          break;
+
         // Only update stat and exports if we haven't already imported this
         // variable.
-        if (!Inserted) {
-          // Set the value to 'std::min(existing-value, new-value)' to make
-          // sure a definition takes precedence over a declaration.
-          Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
-          break;
-        }
         NumImportedGlobalVarsThinLink++;
         // Any references made by this variable will be marked exported
         // later, in ComputeCrossModuleImport, after import decisions are
@@ -887,8 +902,8 @@ static void computeImportForFunction(
           // If insert doesn't happen, there must be an existing entry keyed by
           // VI. Note `ExportLists` only keeps track of exports due to imported
           // definitions.
-          ImportList[DeclSourceModule].try_emplace(
-              VI.getGUID(), GlobalValueSummary::Declaration);
+          FunctionImporter::maybeAddDeclaration(ImportList, DeclSourceModule,
+                                                VI.getGUID());
         }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
@@ -937,21 +952,15 @@ static void computeImportForFunction(
 
       // Try emplace the definition entry, and update stats based on insertion
       // status.
-      auto [Iter, Inserted] = ImportList[ExportModulePath].try_emplace(
-          VI.getGUID(), GlobalValueSummary::Definition);
-
-      // We previously decided to import this GUID definition if it was already
-      // inserted in the set of imports from the exporting module.
-      if (Inserted || Iter->second == GlobalValueSummary::Declaration) {
+      if (FunctionImporter::addDefinition(ImportList, ExportModulePath,
+                                          VI.getGUID()) !=
+          FunctionImporter::NoChange) {
         NumImportedFunctionsThinLink++;
         if (IsHotCallsite)
           NumImportedHotFunctionsThinLink++;
         if (IsCriticalCallsite)
           NumImportedCriticalFunctionsThinLink++;
       }
-
-      if (Iter->second == GlobalValueSummary::Declaration)
-        Iter->second = GlobalValueSummary::Definition;
 
       // Any calls/references made by this function will be marked exported
       // later, in ComputeCrossModuleImport, after import decisions are
@@ -1300,13 +1309,8 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     if (Summary->modulePath() == ModulePath)
       continue;
     // Add an entry to provoke importing by thinBackend.
-    auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
-        GUID, Summary->importType());
-    if (!Inserted) {
-      // Use 'std::min' to make sure definition (with enum value 0) takes
-      // precedence over declaration (with enum value 1).
-      Iter->second = std::min(Iter->second, Summary->importType());
-    }
+    FunctionImporter::addGUID(ImportList, Summary->modulePath(), GUID,
+                              Summary->importType());
   }
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
