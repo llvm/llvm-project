@@ -22,5 +22,5 @@ int main() {
 // CHECK: Device pointer [[PTR]] does not point into any (current or prior) host-issued allocation.
 // CHECK: Closest host-issued allocation (distance 1 byte; might be by page):
 // CHECK: Last allocation of size 1073741824
-  // clang-format on
+// clang-format on
 }
