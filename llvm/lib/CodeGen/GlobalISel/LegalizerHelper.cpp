@@ -9133,9 +9133,9 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (NewAlign > Alignment && !TRI->hasStackRealignment(MF)) {
+    if (!TRI->hasStackRealignment(MF)) {
       const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-      NewAlign = std::min(NewAlign, TFL->getStackAlign());
+      NewAlign = std::min(NewAlign, std::max(Alignment, TFL->getStackAlign()));
     }
 
     if (NewAlign > Alignment) {
