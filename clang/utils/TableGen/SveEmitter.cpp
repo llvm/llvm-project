@@ -1527,8 +1527,9 @@ void SVEEmitter::createRangeChecks(raw_ostream &OS) {
 
     OS << "case SVE::BI__builtin_sve_" << Def->getMangledName() << ":\n";
     for (auto &Check : Def->getImmChecks())
-      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
-         << Check.getKind() << ", " << Check.getElementSizeInBits() << "));\n";
+      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
+         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
+         << "));\n";
     OS << "  break;\n";
 
     Emitted.insert(Def->getMangledName());
@@ -1722,8 +1723,9 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
 
     OS << "case SME::BI__builtin_sme_" << Def->getMangledName() << ":\n";
     for (auto &Check : Def->getImmChecks())
-      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
-         << Check.getKind() << ", " << Check.getElementSizeInBits() << "));\n";
+      OS << "ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
+         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
+         << "));\n";
     OS << "  break;\n";
 
     Emitted.insert(Def->getMangledName());

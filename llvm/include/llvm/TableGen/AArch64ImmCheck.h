@@ -15,20 +15,26 @@
 #define AARCH64_IMMCHECK_H
 
 class ImmCheck {
-  unsigned Arg;
+  int ImmArgIdx;
   unsigned Kind;
   unsigned ElementSizeInBits;
   unsigned VecSizeInBits;
+  int TypeArgIdx;
 
 public:
-  ImmCheck(unsigned Arg, unsigned Kind, unsigned ElementSizeInBits = 0,
-           unsigned VecSizeInBits = 128)
-      : Arg(Arg), Kind(Kind), ElementSizeInBits(ElementSizeInBits),
-        VecSizeInBits(VecSizeInBits) {}
+  ImmCheck(int ImmArgIdx, unsigned Kind, unsigned ElementSizeInBits = 0,
+           unsigned VecSizeInBits = 128, int TypeArgIdx = -1)
+      : ImmArgIdx(ImmArgIdx), Kind(Kind), ElementSizeInBits(ElementSizeInBits),
+        VecSizeInBits(VecSizeInBits), TypeArgIdx(TypeArgIdx) {}
   ImmCheck(const ImmCheck &Other) = default;
   ~ImmCheck() = default;
 
-  unsigned getArg() const { return Arg; }
+  bool operator==(const ImmCheck &other) const {
+    return other.getImmArgIdx() == ImmArgIdx && other.getKind() == Kind &&
+           other.getTypeArgIdx() == TypeArgIdx;
+  }
+  int getImmArgIdx() const { return ImmArgIdx; }
+  int getTypeArgIdx() const { return TypeArgIdx; }
   unsigned getKind() const { return Kind; }
   unsigned getElementSizeInBits() const { return ElementSizeInBits; }
   unsigned getVecSizeInBits() const { return VecSizeInBits; }

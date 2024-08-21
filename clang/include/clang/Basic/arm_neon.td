@@ -449,10 +449,10 @@ def VSHLL_N    : SInst<"vshll_n", "(>Q).I", "csiUcUsUi",
 // E.3.13 Shifts with insert
 def VSRI_N : WInst<"vsri_n", "...I",
                    "csilUcUsUiUlPcPsQcQsQiQlQUcQUsQUiQUlQPcQPs", 
-                    [ImmCheck<2, ImmCheckShiftRight>]>;
+                    [ImmCheck<2, ImmCheckShiftRight, 0>]>;
 def VSLI_N : WInst<"vsli_n", "...I",
                    "csilUcUsUiUlPcPsQcQsQiQlQUcQUsQUiQUlQPcQPs", 
-                   [ImmCheck<2, ImmCheckShiftLeft>]>;
+                   [ImmCheck<2, ImmCheckShiftLeft, 0>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -963,8 +963,8 @@ def SHLL_HIGH_N    : SOpInst<"vshll_high_n", ">.I", "HcHsHiHUcHUsHUi",
                              OP_LONG_HI>;
 
 ////////////////////////////////////////////////////////////////////////////////
-def SRI_N : WInst<"vsri_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftRight, 1>]>;
-def SLI_N : WInst<"vsli_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftLeft, 1>]>;
+def SRI_N : WInst<"vsri_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftRight, 0>]>;
+def SLI_N : WInst<"vsli_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftLeft, 0>]>;
 
 // Right shift narrow high
 def SHRN_HIGH_N    : IOpInst<"vshrn_high_n", "<(<q).I",

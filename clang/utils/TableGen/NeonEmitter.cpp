@@ -425,8 +425,13 @@ public:
       }
 
       ImmChecks.emplace_back(
-          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits));
+          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits, TypeArgIdx));
     }
+    llvm::sort(ImmChecks.begin(), ImmChecks.end(),
+               [](const ImmCheck &a, const ImmCheck &b) {
+                 return a.getImmArgIdx() < b.getImmArgIdx();
+               }); // Sort for comparison with other intrinsics which map to the
+                   // same builtin
   }
 
   /// Get the Record that this intrinsic is based off.
@@ -2167,27 +2172,33 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
 
 void NeonEmitter::genIntrinsicRangeCheckCode(
     raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
+  std::map<std::string, ArrayRef<ImmCheck>> Emitted;
+
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
-  // Ensure these are only emitted once.
-  std::set<std::string> Emitted;
-
   for (auto &Def : Defs) {
-    if (Emitted.find(Def->getMangledName()) != Emitted.end() ||
-        !Def->hasImmediate())
-      continue;
-
     // If the Def has a body (operation DAGs), it is not a __builtin_neon_
-    if (Def->hasBody())
+    if (Def->hasBody() || !Def->hasImmediate())
       continue;
 
+    // Sorted by immediate argument index
+    ArrayRef<ImmCheck> Checks = Def->getImmChecks();
+
+    const auto it = Emitted.find(Def->getMangledName());
+    if (it != Emitted.end()) {
+      assert(it->second.equals(Checks) &&
+             "Neon builtin's immediate range checks cannot be redefined.");
+      continue; // Ensure this is emitted only once
+    }
+
+    // Emit builtin's range checks
     OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ":\n";
-    for (const auto &Check : Def->getImmChecks()) {
-      OS << " ImmChecks.push_back(std::make_tuple(" << Check.getArg() << ", "
-         << Check.getKind() << ", " << Check.getElementSizeInBits() << ", "
-         << Check.getVecSizeInBits() << "));\n"
+    for (const auto &Check : Checks) {
+      OS << " ImmChecks.push_back(std::make_tuple(" << Check.getImmArgIdx()
+         << ", " << Check.getKind() << ", " << Check.getElementSizeInBits()
+         << ", " << Check.getVecSizeInBits() << "));\n"
          << " break;\n";
     }
-    Emitted.insert(Def->getMangledName());
+    Emitted[Def->getMangledName()] = Checks;
   }
 
   OS << "#endif\n\n";
