@@ -7227,6 +7227,22 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   unsigned ShuffleOrOp = S.isAltShuffle() ?
                 (unsigned) Instruction::ShuffleVector : S.getOpcode();
+  auto CreateOperandNodes = [&](TreeEntry *TE, const auto &Operands) {
+    // Postpone PHI nodes creation
+    SmallVector<unsigned> PHIOps;
+    for (unsigned I : seq<unsigned>(Operands.size())) {
+      ArrayRef<Value *> Op = Operands[I];
+      if (Op.empty())
+        continue;
+      InstructionsState S = getSameOpcode(Op, *TLI);
+      if (S.getOpcode() != Instruction::PHI || S.isAltShuffle())
+        buildTree_rec(Op, Depth + 1, {TE, I});
+      else
+        PHIOps.push_back(I);
+    }
+    for (unsigned I : PHIOps)
+      buildTree_rec(Operands[I], Depth + 1, {TE, I});
+  };
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
       auto *PH = cast<PHINode>(VL0);
@@ -7238,10 +7254,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Keeps the reordered operands to avoid code duplication.
       PHIHandler Handler(*DT, PH, VL);
       Handler.buildOperands();
-      for (unsigned I : seq<unsigned>(0, PH->getNumOperands()))
+      for (unsigned I : seq<unsigned>(PH->getNumOperands()))
         TE->setOperand(I, Handler.getOperands(I));
-      for (unsigned I : seq<unsigned>(0, PH->getNumOperands()))
-        buildTree_rec(Handler.getOperands(I), Depth + 1, {TE, I});
+      SmallVector<ArrayRef<Value *>> Operands(PH->getNumOperands());
+      for (unsigned I : seq<unsigned>(PH->getNumOperands()))
+        Operands[I] = Handler.getOperands(I);
+      CreateOperandNodes(TE, Operands);
       return;
     }
     case Instruction::ExtractValue:
