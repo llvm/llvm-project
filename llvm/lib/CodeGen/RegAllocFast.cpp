@@ -334,7 +334,7 @@ public:
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
 
-  void addRegClassCounts(MutableArrayRef<unsigned> RegClassDefCounts,
+  void addRegClassCounts(MutableArrayRef<unsigned> RegClassCounts,
                          Register Reg) const;
 
   void findAndSortDefOperandIndexes(const MachineInstr &MI);
@@ -1267,8 +1267,8 @@ void RegAllocFastImpl::dumpState() const {
 
 /// Count number of defs consumed from each register class by \p Reg
 void RegAllocFastImpl::addRegClassCounts(
-    MutableArrayRef<unsigned> RegClassDefCounts, Register Reg) const {
-  assert(RegClassDefCounts.size() == TRI->getNumRegClasses());
+    MutableArrayRef<unsigned> RegClassCounts, Register Reg) const {
+  assert(RegClassCounts.size() == TRI->getNumRegClasses());
 
   if (Reg.isVirtual()) {
     if (!shouldAllocateRegister(Reg))
@@ -1279,7 +1279,7 @@ void RegAllocFastImpl::addRegClassCounts(
       const TargetRegisterClass *IdxRC = TRI->getRegClass(RCIdx);
       // FIXME: Consider aliasing sub/super registers.
       if (OpRC->hasSubClassEq(IdxRC))
-        ++RegClassDefCounts[RCIdx];
+        ++RegClassCounts[RCIdx];
     }
 
     return;
@@ -1290,7 +1290,7 @@ void RegAllocFastImpl::addRegClassCounts(
     const TargetRegisterClass *IdxRC = TRI->getRegClass(RCIdx);
     for (MCRegAliasIterator Alias(Reg, TRI, true); Alias.isValid(); ++Alias) {
       if (IdxRC->contains(*Alias)) {
-        ++RegClassDefCounts[RCIdx];
+        ++RegClassCounts[RCIdx];
         break;
       }
     }
