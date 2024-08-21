@@ -170,6 +170,24 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   ];
 }
 
+def CompilerGeneratedNamesConversion : Pass<"compiler-generated-names",
+    "mlir::ModuleOp"> {
+  let summary = "Convert names of compiler generated globals";
+  let description = [{
+    Transforms names of compiler generated globals to avoid
+    characters that might be unsupported by some target toolchains.
+    All special symbols are replaced with a predefined 'X' character.
+    This is only done for uniqued names that are not externally facing.
+    The uniqued names always use '_Q' prefix, and the user entity names
+    are always lower cased, so using 'X' instead of the special symbols
+    will guarantee that the converted name will not conflict with the user
+    space. This pass does not affect the externally facing names,
+    because the expectation is that the compiler will not generate
+    externally facing names on its own, and these names cannot use
+    special symbols.
+  }];
+}
+
 def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
   let summary =
     "Perform store/load forwarding and potentially removing dead stores.";
