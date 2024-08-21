@@ -3218,6 +3218,7 @@ void request_stackTrace(const llvm::json::Object &request) {
 //       "$ref": "#/definitions/SteppingGranularity",
 //       "description": "Stepping granularity. If no granularity is specified, a
 //                       granularity of `statement` is assumed."
+//     }
 //   },
 //   "required": [ "threadId" ]
 // },
