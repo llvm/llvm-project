@@ -1,27 +1,19 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
-// TODO: Implement "Buffer", we use a substitute UDT
-// to test the 't' binding type for this test.
-
-template<typename T>
-struct [[hlsl::resource_class(SRV)]] MyTemplatedSRV {
-  T x;
+struct MySRV {
+  [[hlsl::resource_class(SRV)]] int x;
 };
 
-struct [[hlsl::resource_class(SRV)]] MySRV {
-  int x;
+struct MySampler {
+  [[hlsl::resource_class(Sampler)]] int x;
 };
 
-struct [[hlsl::resource_class(Sampler)]] MySampler {
-  int x;
+struct MyUAV {
+  [[hlsl::resource_class(UAV)]] int x;
 };
 
-struct [[hlsl::resource_class(UAV)]] MyUAV {
-  int x;
-};
-
-struct [[hlsl::resource_class(CBuffer)]] MyCBuffer {
-  int x;
+struct MyCBuffer {
+  [[hlsl::resource_class(CBuffer)]] int x;
 };
 
 // Valid: f is skipped, SRVBuf is bound to t0, UAVBuf is bound to u0

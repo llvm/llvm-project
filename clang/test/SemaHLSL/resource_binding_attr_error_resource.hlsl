@@ -3,74 +3,69 @@
 // This test validates the diagnostics that are emitted when a variable with a "resource" type
 // is bound to a register using the register annotation
 
-// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
-RWBuffer<int> a : register(b2, space1);
+/*
+template<typename T>
+struct [[hlsl::resource_class(SRV)]] MyTemplatedSRV {
+  T x;
+};
+
+struct [[hlsl::resource_class(SRV)]] MySRV {
+  int x;
+};
+
+struct [[hlsl::resource_class(Sampler)]] MySampler {
+  int x;
+};
+
+struct [[hlsl::resource_class(UAV)]] MyUAV {
+  int x;
+};
+
+struct [[hlsl::resource_class(CBuffer)]] MyCBuffer {
+  int x;
+};
+*/ 
+
+template<typename T>
+struct MyTemplatedSRV {
+  [[hlsl::resource_class(SRV)]] T x;
+};
+
+struct MySRV {
+  [[hlsl::resource_class(SRV)]] int x;
+};
+
+struct MySampler {
+  [[hlsl::resource_class(Sampler)]] int x;
+};
+
+struct MyUAV {
+  [[hlsl::resource_class(UAV)]] int x;
+};
+
+struct MyCBuffer {
+  [[hlsl::resource_class(CBuffer)]] int x;
+};
+
+
+// expected-error@+1  {{binding type 'i' ignored. The 'integer constant' binding type is no longer supported}}
+MySRV invalid : register(i2);
 
 // expected-error@+1  {{binding type 't' only applies to srv resources}}
-RWBuffer<int> b : register(t2, space1);
+MyUAV a : register(t2, space1);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture1D' (expected 't')}}
-// NOT YET IMPLEMENTED Texture1D<float> tex : register(u3);
+// expected-error@+1  {{binding type 'u' only applies to uav resources}}
+MySampler b : register(u2, space1);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 's' for register type 'Texture2D' (expected 't')}}
-// NOT YET IMPLEMENTED Texture2D<float> Texture : register(s0);
+// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
+MyTemplatedSRV<int> c : register(b2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMS' (expected 't')}}
-// NOT YET IMPLEMENTED Texture2DMS<float4, 4> T2DMS_t2 : register(u2)
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'RWTexture3D' (expected 'u')}}
-// NOT YET IMPLEMENTED RWTexture3D<float4> RWT3D_u1 : register(t1)
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'TextureCube' (expected 't')}}
-// NOT YET IMPLEMENTED TextureCube <float>  t8 : register(b8);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'TextureCubeArray' (expected 't')}}
-// NOT YET IMPLEMENTED TextureCubeArray TCubeArray_t2 : register(b2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture1DArray' (expected 't')}}
-// NOT YET IMPLEMENTED Texture1DArray T1DArray_t2 : register(b2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'B' for register type 'Texture2DArray' (expected 't')}}
-// NOT YET IMPLEMENTED Texture2DArray T2DArray_b2 : register(B2);
-
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMSArray' (expected 't')}}
-// NOT YET IMPLEMENTED Texture2DMSArray<float4> msTextureArray : register(u2, space2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'TextureCubeArray' (expected 't')}}
-// NOT YET IMPLEMENTED TextureCubeArray TCubeArray_f2 : register(u2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'TypedBuffer' (expected 't')}}
-// NOT YET IMPLEMENTED TypedBuffer tbuf : register(u2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'RawBuffer' (expected 't')}}
-// NOT YET IMPLEMENTED RawBuffer rbuf : register(u2);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'StructuredBuffer' (expected 'u')}}
-// NOT YET IMPLEMENTED StructuredBuffer ROVStructuredBuff_t2  : register(T2);
-
-// expected-error@+1 {{binding type 's' only applies to sampler state}}
-cbuffer f : register(s2, space1) {}
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'Sampler' (expected 's')}}
-// Can this type just be Sampler instead of SamplerState?
-// NOT YET IMPLEMENTED SamplerState MySampler : register(t3, space1);
-
-// expected-error@+1 {{binding type 's' only applies to sampler state}}
-tbuffer f : register(s2, space1) {}
-
-// NOT YET IMPLEMENTED : RTAccelerationStructure doesn't have any example tests in DXC
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2D' (expected 't')}}
-// NOT YET IMPLEMENTED FeedbackTexture2D<float> FBTex2D[3][] : register(u0, space26);
-
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2DArray' (expected 't')}}
-// NOT YET IMPLEMENTED FeedbackTexture2DArray<float> FBTex2DArr[3][2][] : register(u0, space27);
-
+// expected-error@+1  {{binding type 's' only applies to sampler state}}
+MyUAV d : register(s2, space1);
 
 // empty binding prefix cases:
 // expected-error@+1 {{expected identifier}}
-RWBuffer<int> c: register();
+MyTemplatedSRV<int> e: register();
 
 // expected-error@+1 {{expected identifier}}
-RWBuffer<int> d: register("");
+MyTemplatedSRV<int> f: register("");

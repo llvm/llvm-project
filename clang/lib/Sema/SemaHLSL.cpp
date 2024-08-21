@@ -496,16 +496,17 @@ static bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
   return false;
 }
 
+// get the record decl from a var decl that we expect
+// represents a resource
 static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   const Type *Ty = VD->getType()->getPointeeOrArrayElementType();
-  assert(Ty && "Resource class must have an element type.");
+  assert(Ty && "Resource must have an element type.");
 
   if (const auto *TheBuiltinTy = dyn_cast<BuiltinType>(Ty))
     return nullptr;
 
   CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
-  assert(TheRecordDecl &&
-         "Resource class should have a resource type declaration.");
+  assert(TheRecordDecl && "Resource should have a resource type declaration.");
   return TheRecordDecl;
 }
 
@@ -537,8 +538,9 @@ getSpecifiedHLSLAttrFromVarDeclOrRecordDecl(VarDecl *VD,
       return nullptr;
   }
 
-  // make a lambda that loops over the field members and checks for the
-  // templated attribute
+  // make a lambda that checks if the decl has the specified attr,
+  // and if not, loops over the field members and checks for the
+  // specified attribute
   auto f = [](RecordDecl *TheRecordDecl) -> const T * {
     for (auto *FD : TheRecordDecl->fields()) {
       const T *Attr = FD->getAttr<T>();
@@ -793,35 +795,30 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
-    const HLSLResourceAttr *resAttr = nullptr;
     const HLSLResourceClassAttr *resClassAttr = nullptr;
     if (CBufferOrTBuffer) {
-      resAttr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
       resClassAttr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
     } else if (TheVarDecl) {
-      resAttr = getSpecifiedHLSLAttrFromVarDeclOrRecordDecl<HLSLResourceAttr>(
-          TheVarDecl, nullptr);
       resClassAttr =
           getSpecifiedHLSLAttrFromVarDeclOrRecordDecl<HLSLResourceClassAttr>(
               TheVarDecl, nullptr);
     }
 
-    assert(resAttr && resClassAttr &&
+    assert(resClassAttr &&
            "any decl that set the resource flag on analysis should "
-           "have a resource attribute and resource class attribute attached.");
+           "have a resource class attribute attached.");
     const llvm::hlsl::ResourceClass DeclResourceClass =
         resClassAttr->getResourceClass();
 
     // confirm that the register type is bound to its expected resource class
-    static llvm::SmallVector<RegisterType>
-        ExpectedRegisterTypesForResourceClass = {
-            RegisterType::SRV,
-            RegisterType::UAV,
-            RegisterType::CBuffer,
-            RegisterType::Sampler,
-        };
+    static RegisterType ExpectedRegisterTypesForResourceClass[] = {
+        RegisterType::SRV,
+        RegisterType::UAV,
+        RegisterType::CBuffer,
+        RegisterType::Sampler,
+    };
     assert((int)DeclResourceClass <
-               ExpectedRegisterTypesForResourceClass.size() &&
+               std::size(ExpectedRegisterTypesForResourceClass) &&
            "DeclResourceClass has unexpected value");
 
     RegisterType ExpectedRegisterType =
@@ -833,8 +830,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
     return;
   }
 
-  // next, handle diagnostics for when the "basic" flag is set,
-  // including the legacy "i" and "b" register types.
+  // next, handle diagnostics for when the "basic" flag is set
   if (Flags.Basic) {
     if (Flags.DefaultGlobals) {
       if (regType == RegisterType::CBuffer)
@@ -854,9 +850,9 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 
   // finally, we handle the udt case
   if (Flags.UDT) {
-    const SmallVector<bool> ExpectedRegisterTypesForUDT = {
+    const bool ExpectedRegisterTypesForUDT[] = {
         Flags.SRV, Flags.UAV, Flags.CBV, Flags.Sampler, Flags.ContainsNumeric};
-    assert((int)regType < ExpectedRegisterTypesForUDT.size() &&
+    assert((int)regType < std::size(ExpectedRegisterTypesForUDT) &&
            "regType has unexpected value");
 
     if (!ExpectedRegisterTypesForUDT[(int)regType])

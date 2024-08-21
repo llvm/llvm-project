@@ -4613,7 +4613,7 @@ def HLSLROV : InheritableAttr {
 
 def HLSLResourceClass : InheritableAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let Subjects = SubjectList<[Struct]>;
+  let Subjects = SubjectList<[Field]>;
   let LangOpts = [HLSL];
   let Args = [
 	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
