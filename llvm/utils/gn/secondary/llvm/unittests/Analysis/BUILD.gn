@@ -23,6 +23,7 @@ unittest("AnalysisTests") {
     "CallGraphTest.cpp",
     "CaptureTrackingTest.cpp",
     "ConstraintSystemTest.cpp",
+    "CtxProfAnalysisTest.cpp",
     "DDGTest.cpp",
     "DXILResourceTest.cpp",
     "DomTreeUpdaterTest.cpp",
