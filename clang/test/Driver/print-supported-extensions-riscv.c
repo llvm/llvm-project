@@ -126,6 +126,7 @@
 // CHECK-NEXT:     sscofpmf             1.0       'Sscofpmf' (Count Overflow and Mode-Based Filtering)
 // CHECK-NEXT:     sscounterenw         1.0       'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     sscsrind             1.0       'Sscsrind' (Indirect CSR Access Supervisor Level)
+// CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
 // CHECK-NEXT:     ssstateen            1.0       'Ssstateen' (Supervisor-mode view of the state-enable extension)
 // CHECK-NEXT:     ssstrict             1.0       'Ssstrict' (No non-conforming extensions are present)
 // CHECK-NEXT:     sstc                 1.0       'Sstc' (Supervisor-mode timer interrupts)
@@ -178,7 +179,6 @@
 // CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
 // CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
 // CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
-// CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
 // CHECK-NEXT:     supm                 1.0       'Supm' (Indicates User-mode Pointer Masking)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles
