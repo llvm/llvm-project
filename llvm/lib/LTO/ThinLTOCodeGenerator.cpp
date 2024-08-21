@@ -407,9 +407,10 @@ public:
   // access the content in the cache.
   FileModuleCacheEntry(StringRef CachePath, std::string Key) {
     assert(!CachePath.empty());
+
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
+    sys::path::append(EntryPath, CachePath, Twine("llvmcache-", Key));
   }
 
   std::string getEntryPath() final { return EntryPath.str().str(); }
@@ -1013,11 +1014,11 @@ std::optional<std::string> ModuleCacheEntry::computeCacheKey(
   Conf.RelocModel = TMBuilder.RelocModel;
   Conf.CGOptLevel = TMBuilder.CGOptLevel;
   Conf.Freestanding = Freestanding;
-  SmallString<40> Key;
-  computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
-                     ResolvedODR, DefinedGVSummaries);
+  std::string Key =
+      computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
+                         ResolvedODR, DefinedGVSummaries);
 
-  return Key.str().str();
+  return Key;
 }
 
 Error ModuleCacheEntry::writeObject(const MemoryBuffer &OutputBuffer,
