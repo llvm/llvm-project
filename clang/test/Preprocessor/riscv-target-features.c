@@ -37,6 +37,7 @@
 // CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_sscsrind {{.*$}}
+// CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
 // CHECK-NOT: __riscv_sstc {{.*$}}
@@ -179,7 +180,6 @@
 // CHECK-NOT: __riscv_smnpm{{.*$}}
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
-// CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_supm{{.*$}}
 // CHECK-NOT: __riscv_zacas {{.*$}}
 // CHECK-NOT: __riscv_zalasr {{.*$}}
@@ -1416,6 +1416,14 @@
 // CHECK-SSCSRIND-EXT: __riscv_sscsrind  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32i_ssqosid1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64i_ssqosid1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
+// CHECK-SSQOSID-EXT: __riscv_ssqosid 1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32ismcdeleg1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMCDELEG-EXT %s
 // RUN: %clang --target=riscv64 \
@@ -1739,14 +1747,6 @@
 // RUN:   -march=rv64i_supm1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SUPM-EXT %s
 // CHECK-SUPM-EXT: __riscv_supm 1000000{{$}}
-
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_ssqosid1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_ssqosid1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-SSQOSID-EXT %s
-// CHECK-SSQOSID-EXT: __riscv_ssqosid 1000000{{$}}
 
 // Misaligned
 
