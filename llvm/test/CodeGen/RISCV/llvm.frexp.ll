@@ -641,8 +641,8 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV32IZFINXZDINX-NEXT:    mv s0, a4
 ; RV32IZFINXZDINX-NEXT:    mv s1, a3
 ; RV32IZFINXZDINX-NEXT:    mv s2, a2
-; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
 ; RV32IZFINXZDINX-NEXT:    call frexpf
@@ -691,8 +691,8 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV64IZFINXZDINX-NEXT:    mv s0, a4
 ; RV64IZFINXZDINX-NEXT:    mv s1, a3
 ; RV64IZFINXZDINX-NEXT:    mv s2, a2
-; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    mv a2, a1
+; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    call frexpf
@@ -923,8 +923,8 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV32IZFINXZDINX-NEXT:    mv s0, a4
 ; RV32IZFINXZDINX-NEXT:    mv s1, a3
 ; RV32IZFINXZDINX-NEXT:    mv s2, a2
-; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
 ; RV32IZFINXZDINX-NEXT:    call frexpf
@@ -965,8 +965,8 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV64IZFINXZDINX-NEXT:    mv s0, a4
 ; RV64IZFINXZDINX-NEXT:    mv s1, a3
 ; RV64IZFINXZDINX-NEXT:    mv s2, a2
-; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    mv a2, a1
+; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    call frexpf
@@ -1171,8 +1171,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    mv s0, a4
 ; RV32IZFINXZDINX-NEXT:    mv s1, a3
 ; RV32IZFINXZDINX-NEXT:    mv s2, a2
-; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 12
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
 ; RV32IZFINXZDINX-NEXT:    call frexpf
@@ -1212,8 +1212,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    mv s0, a4
 ; RV64IZFINXZDINX-NEXT:    mv s1, a3
 ; RV64IZFINXZDINX-NEXT:    mv s2, a2
-; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    mv a2, a1
+; RV64IZFINXZDINX-NEXT:    mv s3, a0
 ; RV64IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV64IZFINXZDINX-NEXT:    mv a0, a2
 ; RV64IZFINXZDINX-NEXT:    call frexpf

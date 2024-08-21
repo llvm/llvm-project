@@ -156,9 +156,8 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    sll a0, a0, a2
 ; CHECK-NEXT:    srli a4, a4, 1
 ; CHECK-NEXT:    srl a1, a4, a6
-; CHECK-NEXT:    or a3, a5, a3
 ; CHECK-NEXT:    or a1, a0, a1
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    or a0, a5, a3
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %b)
   ret i64 %or

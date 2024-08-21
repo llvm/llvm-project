@@ -460,9 +460,8 @@ define ptr @sdia(ptr %base, i64 %a, i64 %b) {
 ; RV32XTHEADMEMIDX-NEXT:    sltu a1, a3, a1
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a2, a1
 ; RV32XTHEADMEMIDX-NEXT:    sw a3, 0(a0)
-; RV32XTHEADMEMIDX-NEXT:    addi a5, a0, 64
 ; RV32XTHEADMEMIDX-NEXT:    sw a1, 4(a0)
-; RV32XTHEADMEMIDX-NEXT:    mv a0, a5
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 64
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: sdia:

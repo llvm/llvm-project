@@ -121,7 +121,7 @@ public:
   }
 };
 
-static bool moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst,
+static std::optional<llvm::SmallVector<MachineInstr *>> moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst,
                                                SUnit *Src,
                                                ScheduleDAGMCP &DG) {
   MachineInstr *DstInstr = Dst->getInstr();
@@ -129,7 +129,7 @@ static bool moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst,
   MachineBasicBlock *MBB = SrcInstr->getParent();
 
   if (DstInstr == nullptr || SrcInstr == nullptr)
-    return false;
+    return {};
   assert("This function only operates on a basic block level." &&
          MBB == SrcInstr->getParent());
 
@@ -199,19 +199,20 @@ static bool moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst,
     const auto *Current = Edges.front();
     Edges.pop();
     if (!ProcessSNodeChildren(Edges, Current, false))
-      return false;
+      return {};
   }
 
   // If all of the dependencies were deemed valid during the BFS then we
   // are moving them before the copy source here keeping their relative
   // order to each other.
+  llvm::SmallVector<MachineInstr *> InstructionsToMove;
   auto CurrentInst = SrcInstr->getIterator();
   for (int I = 0; I < SectionSize; I++) {
     if (SectionInstr[I])
-      MBB->splice(SrcInstr->getIterator(), MBB, CurrentInst->getIterator());
+      InstructionsToMove.push_back(&(*CurrentInst));
     ++CurrentInst;
   }
-  return true;
+  return InstructionsToMove;
 }
 
 static std::optional<DestSourcePair> isCopyInstr(const MachineInstr &MI,
@@ -1161,6 +1162,7 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
   if (!Tracker.hasAnyCopies() && !Tracker.hasAnyInvalidCopies())
     return;
 
+  std::optional<llvm::SmallVector<MachineInstr *>> InstructionsToMove = {};
   for (unsigned OpIdx = 0, OpEnd = MI.getNumOperands(); OpIdx != OpEnd;
        ++OpIdx) {
     MachineOperand &MODef = MI.getOperand(OpIdx);
@@ -1202,7 +1204,8 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
       SUnit *DstSUnit = DG.getSUnit(Copy);
       SUnit *SrcSUnit = DG.getSUnit(&MI);
 
-      if (!moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit, DG))
+      InstructionsToMove = moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit, DG);
+      if (!InstructionsToMove)
         continue;
     }
 
@@ -1234,6 +1237,10 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
       MaybeDeadCopies.insert(Copy);
       Changed = true;
       ++NumCopyBackwardPropagated;
+    } else if (InstructionsToMove) {
+      for (auto *I : *InstructionsToMove) {
+        MI.getParent()->splice(MI.getIterator(), MI.getParent(), I->getIterator());
+      }
     }
   }
 }

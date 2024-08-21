@@ -687,12 +687,11 @@ define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a3, a0, a1
 ; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    snez a0, a3
+; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_decrement_alt:
@@ -715,12 +714,11 @@ define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a3, a0, a1
 ; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    snez a0, a3
+; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_decrement_alt_dom:
