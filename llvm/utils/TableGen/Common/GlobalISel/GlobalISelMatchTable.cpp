@@ -687,10 +687,6 @@ StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
 }
 
-unsigned RuleMatcher::getNumOperands() const {
-  return Matchers.front()->getNumOperands();
-}
-
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
   InstructionMatcher &InsnMatcher = *Matchers.front();
   if (!InsnMatcher.predicates_empty())
@@ -1318,7 +1314,7 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
   Table << MatchTable::Opcode("GIM_CheckIntrinsicID")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -1344,6 +1340,7 @@ std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
 
 TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
+  assert(!IsVariadic && "Cannot use this on variadic operands!");
   if (TTIdx >= 0) {
     // Temp type index not assigned yet, so assign one and add the necessary
     // predicate.
@@ -1506,8 +1503,20 @@ StringRef InstructionOpcodeMatcher::getOperandType(unsigned OpIdx) const {
 
 void InstructionNumOperandsMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckNumOperands")
-        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+  StringRef Opc;
+  switch (CK) {
+  case CheckKind::Eq:
+    Opc = "GIM_CheckNumOperands";
+    break;
+  case CheckKind::GE:
+    Opc = "GIM_CheckNumOperandsGE";
+    break;
+  case CheckKind::LE:
+    Opc = "GIM_CheckNumOperandsLE";
+    break;
+  }
+  Table << MatchTable::Opcode(Opc) << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Expected")
         << MatchTable::ULEB128Value(NumOperands) << MatchTable::LineBreak;
 }
@@ -1695,12 +1704,14 @@ void MIFlagsInstructionPredicateMatcher::emitPredicateOpcodes(
 
 OperandMatcher &
 InstructionMatcher::addOperand(unsigned OpIdx, const std::string &SymbolicName,
-                               unsigned AllocatedTemporariesBaseID) {
-  Operands.emplace_back(new OperandMatcher(*this, OpIdx, SymbolicName,
-                                           AllocatedTemporariesBaseID));
+                               unsigned AllocatedTemporariesBaseID,
+                               bool IsVariadic) {
+  assert((Operands.empty() || !Operands.back()->isVariadic()) &&
+         "Cannot add more operands after a variadic operand");
+  Operands.emplace_back(new OperandMatcher(
+      *this, OpIdx, SymbolicName, AllocatedTemporariesBaseID, IsVariadic));
   if (!SymbolicName.empty())
     Rule.defineOperand(SymbolicName, *Operands.back());
-
   return *Operands.back();
 }
 
@@ -1726,9 +1737,10 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(Record *Reg, unsigned OpIdx,
 
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) {
-  if (NumOperandsCheck)
-    InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
+  if (canAddNumOperandsCheck()) {
+    InstructionNumOperandsMatcher(InsnVarID, getNumOperandMatchers())
         .emitPredicateOpcodes(Table, Rule);
+  }
 
   // First emit all instruction level predicates need to be verified before we
   // can verify operands.
@@ -1793,11 +1805,13 @@ void InstructionMatcher::optimize() {
 
   Stash.push_back(predicates_pop_front());
   if (Stash.back().get() == &OpcMatcher) {
-    if (NumOperandsCheck && OpcMatcher.isVariadicNumOperands() &&
-        getNumOperands() != 0)
-      Stash.emplace_back(
-          new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
-    NumOperandsCheck = false;
+    // FIXME: Is this even needed still? Why the isVariadicNumOperands check?
+    if (canAddNumOperandsCheck() && OpcMatcher.isVariadicNumOperands() &&
+        getNumOperandMatchers() != 0) {
+      Stash.emplace_back(new InstructionNumOperandsMatcher(
+          InsnVarID, getNumOperandMatchers()));
+    }
+    AllowNumOpsCheck = false;
 
     for (auto &OM : Operands)
       for (auto &OP : OM->predicates())
@@ -1862,11 +1876,13 @@ OperandRenderer::~OperandRenderer() {}
 
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
                                      unsigned NewInsnID, unsigned OldInsnID,
-                                     unsigned OpIdx, StringRef Name) {
-  if (NewInsnID == 0 && OldInsnID == 0) {
+                                     unsigned OpIdx, StringRef Name,
+                                     bool ForVariadic) {
+  if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0) {
     Table << MatchTable::Opcode("GIR_RootToRootCopy");
   } else {
-    Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
+    Table << MatchTable::Opcode(ForVariadic ? "GIR_CopyRemaining" : "GIR_Copy")
+          << MatchTable::Comment("NewInsnID")
           << MatchTable::ULEB128Value(NewInsnID)
           << MatchTable::Comment("OldInsnID")
           << MatchTable::ULEB128Value(OldInsnID);
@@ -1880,8 +1896,9 @@ void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
                                      RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+
   emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID, Operand.getOpIdx(),
-                    SymbolicName);
+                    SymbolicName, Operand.isVariadic());
 }
 
 //===- CopyPhysRegRenderer ------------------------------------------------===//
@@ -2086,7 +2103,7 @@ void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
         << MatchTable::ULEB128Value(InsnID)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -2127,10 +2144,10 @@ void CustomOperandRenderer::emitRenderOpcodes(MatchTable &Table,
 
 bool BuildMIAction::canMutate(RuleMatcher &Rule,
                               const InstructionMatcher *Insn) const {
-  if (!Insn)
+  if (!Insn || Insn->hasVariadicMatcher())
     return false;
 
-  if (OperandRenderers.size() != Insn->getNumOperands())
+  if (OperandRenderers.size() != Insn->getNumOperandMatchers())
     return false;
 
   for (const auto &Renderer : enumerate(OperandRenderers)) {

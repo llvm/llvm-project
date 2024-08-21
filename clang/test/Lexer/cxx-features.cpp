@@ -34,8 +34,16 @@
 
 // --- C++26 features ---
 
+#if check(variadic_friend, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_variadic_friend"
+#endif
+
 #if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
 #error "wrong value for __cpp_deleted_function"
+#endif
+
+#if check(pack_indexing, 202311, 202311, 202311, 202311, 202311, 202311, 202311)
+#error "wrong value for __cpp_pack_indexing"
 #endif
 
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)

@@ -65,11 +65,6 @@ struct CompilerContext {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                               const CompilerContext &rhs);
 
-/// Match \p context_chain against \p pattern, which may contain "Any"
-/// kinds. The \p context_chain should *not* contain any "Any" kinds.
-bool contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                    llvm::ArrayRef<CompilerContext> pattern);
-
 FLAGS_ENUM(TypeQueryOptions){
     e_none = 0u,
     /// If set, TypeQuery::m_context contains an exact context that must match
@@ -79,10 +74,13 @@ FLAGS_ENUM(TypeQueryOptions){
     /// If set, TypeQuery::m_context is a clang module compiler context. If not
     /// set TypeQuery::m_context is normal type lookup context.
     e_module_search = (1u << 1),
+    /// If set, the query will ignore all Module entries in the type context,
+    /// even for exact matches.
+    e_ignore_modules = (1u << 2),
     /// When true, the find types call should stop the query as soon as a single
     /// matching type is found. When false, the type query should find all
     /// matching types.
-    e_find_one = (1u << 2),
+    e_find_one = (1u << 3),
 };
 LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 
@@ -264,6 +262,10 @@ public:
   bool LanguageMatches(lldb::LanguageType language) const;
 
   bool GetExactMatch() const { return (m_options & e_exact_match) != 0; }
+
+  bool GetIgnoreModules() const { return (m_options & e_ignore_modules) != 0; }
+  void SetIgnoreModules() { m_options &= ~e_ignore_modules; }
+
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
   /// with the context being more complete for exact matches in clang modules.

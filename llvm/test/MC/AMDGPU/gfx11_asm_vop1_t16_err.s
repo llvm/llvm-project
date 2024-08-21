@@ -211,6 +211,18 @@ v_sqrt_f16_e32 v255.l, v1.l
 v_sqrt_f16_e32 v5.l, v199.l
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
+v_swap_b16_e32 v128.l, v0.l
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, 0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_swap_b16_e32 v0.l, 0xfe0b
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 v_trunc_f16_e32 v128, 0xfe0b
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 

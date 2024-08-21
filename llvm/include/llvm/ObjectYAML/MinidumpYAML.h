@@ -29,6 +29,7 @@ struct Stream {
     Exception,
     MemoryInfoList,
     MemoryList,
+    Memory64List,
     ModuleList,
     RawContent,
     SystemInfo,
@@ -98,11 +99,29 @@ struct ParsedMemoryDescriptor {
   minidump::MemoryDescriptor Entry;
   yaml::BinaryRef Content;
 };
+
+struct ParsedMemory64Descriptor {
+  static constexpr Stream::StreamKind Kind = Stream::StreamKind::Memory64List;
+  static constexpr minidump::StreamType Type =
+      minidump::StreamType::Memory64List;
+
+  minidump::MemoryDescriptor_64 Entry;
+  yaml::BinaryRef Content;
+};
 } // namespace detail
 
 using ModuleListStream = detail::ListStream<detail::ParsedModule>;
 using ThreadListStream = detail::ListStream<detail::ParsedThread>;
 using MemoryListStream = detail::ListStream<detail::ParsedMemoryDescriptor>;
+
+struct Memory64ListStream
+    : public detail::ListStream<detail::ParsedMemory64Descriptor> {
+  minidump::Memory64ListHeader Header;
+
+  explicit Memory64ListStream(
+      std::vector<detail::ParsedMemory64Descriptor> Entries = {})
+      : ListStream(Entries) {}
+};
 
 /// ExceptionStream minidump stream.
 struct ExceptionStream : public Stream {
@@ -244,6 +263,12 @@ template <> struct MappingContextTraits<minidump::MemoryDescriptor, BinaryRef> {
                       BinaryRef &Content);
 };
 
+template <>
+struct MappingContextTraits<minidump::MemoryDescriptor_64, BinaryRef> {
+  static void mapping(IO &IO, minidump::MemoryDescriptor_64 &Memory,
+                      BinaryRef &Content);
+};
+
 } // namespace yaml
 
 } // namespace llvm
@@ -269,11 +294,14 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ThreadListStream::entry_type)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(
+    llvm::MinidumpYAML::Memory64ListStream::entry_type)
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::MinidumpYAML::Stream>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::MemoryListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ThreadListStream::entry_type)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::Memory64ListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::minidump::MemoryInfo)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::MinidumpYAML::Object)

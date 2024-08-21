@@ -462,8 +462,7 @@ struct TransferReadToVectorLoadLowering
     // If there is broadcasting involved then we first load the unbroadcasted
     // vector, and then broadcast it with `vector.broadcast`.
     ArrayRef<int64_t> vectorShape = read.getVectorType().getShape();
-    SmallVector<int64_t> unbroadcastedVectorShape(vectorShape.begin(),
-                                                  vectorShape.end());
+    SmallVector<int64_t> unbroadcastedVectorShape(vectorShape);
     for (unsigned i : broadcastedDims)
       unbroadcastedVectorShape[i] = 1;
     VectorType unbroadcastedVectorType = read.getVectorType().cloneWith(
