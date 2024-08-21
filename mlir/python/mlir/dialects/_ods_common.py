@@ -65,7 +65,7 @@ def equally_sized_accessor(
           group.
     """
 
-    total_variadic_length = len(elements) - n_variadic + 1
+    total_variadic_length = len(elements) - n_preceding_simple
     # This should be enforced by the C++-side trait verifier.
     assert total_variadic_length % n_variadic == 0
 

@@ -145,7 +145,7 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    start, pg = _ods_equally_sized_accessor(operation.{1}s, {2}, {3}, {4}))Py";
+    start, pg = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
 /// element:
