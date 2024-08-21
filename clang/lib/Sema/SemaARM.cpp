@@ -12,6 +12,7 @@
 
 #include "clang/Sema/SemaARM.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -447,7 +448,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     break;
   case ImmCheckType::ImmCheckLaneIndex:
     if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / (1 * EltBitWidth)) - 1))
+                                        (VecBitWidth / EltBitWidth) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckLaneIndexCompRotate:

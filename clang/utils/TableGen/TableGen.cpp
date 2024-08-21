@@ -235,9 +235,10 @@ cl::opt<ActionType> Action(
                    "Generate ARM NEON sema support for clang"),
         clEnumValN(GenArmNeonTest, "gen-arm-neon-test",
                    "Generate ARM NEON tests for clang"),
-        clEnumValN(GenArmImmCheckTypes, "gen-arm-immcheck-types",
-                   "Generate arm_immchecktypes.h (immediate range check types)"
-                   " for clang"),
+        clEnumValN(
+            GenArmImmCheckTypes, "gen-arm-immcheck-types",
+            "Generate arm_immcheck_types.inc (immediate range check types)"
+            " for clang"),
         clEnumValN(GenArmSveHeader, "gen-arm-sve-header",
                    "Generate arm_sve.h for clang"),
         clEnumValN(GenArmSveBuiltins, "gen-arm-sve-builtins",

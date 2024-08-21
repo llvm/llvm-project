@@ -15,7 +15,6 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringRef.h"
