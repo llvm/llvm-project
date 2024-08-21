@@ -8,11 +8,16 @@
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <memory>
+#include <utility>
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
@@ -33,6 +38,37 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
   }
+
+  if (MMDAI.ShaderStage == Triple::EnvironmentType::Compute) {
+    // For all HLSL Shader functions
+    for (auto &F : M.functions()) {
+      if (!F.hasFnAttribute("hlsl.shader"))
+        continue;
+
+      // Get numthreads attribute value
+      StringRef NumThreadsStr =
+          F.getFnAttribute("hlsl.numthreads").getValueAsString();
+      SmallVector<StringRef> NumThreadsVec;
+      NumThreadsStr.split(NumThreadsVec, ',');
+      if (NumThreadsVec.size() != 3) {
+        report_fatal_error(Twine(F.getName()) +
+                               ": Invalid numthreads specified",
+                           /* gen_crash_diag */ false);
+      }
+      FunctionProperties EFP;
+      auto Zip =
+          llvm::zip(NumThreadsVec, MutableArrayRef<unsigned>(EFP.NumThreads));
+      for (auto It : Zip) {
+        StringRef Str = std::get<0>(It);
+        APInt V;
+        assert(!Str.getAsInteger(10, V) &&
+               "Failed to parse numthreads components as integer values");
+        unsigned &Num = std::get<1>(It);
+        Num = V.getLimitedValue();
+      }
+      MMDAI.FunctionPropertyMap.emplace(std::make_pair(std::addressof(F), EFP));
+    }
+  }
   return MMDAI;
 }
 
@@ -42,6 +78,20 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
+  for (auto MapItem : FunctionPropertyMap) {
+    MapItem.first->getReturnType()->print(OS, false, true);
+    OS << " " << MapItem.first->getName() << "(";
+    FunctionType *FT = MapItem.first->getFunctionType();
+    for (unsigned I = 0, Sz = FT->getNumParams(); I < Sz; ++I) {
+      if (I)
+        OS << ",";
+      FT->getParamType(I)->print(OS);
+    }
+    OS << ")\n";
+    OS << "  NumThreads: " << MapItem.second.NumThreads[0] << ","
+       << MapItem.second.NumThreads[1] << "," << MapItem.second.NumThreads[2]
+       << "\n";
+  }
 }
 
 //===----------------------------------------------------------------------===//

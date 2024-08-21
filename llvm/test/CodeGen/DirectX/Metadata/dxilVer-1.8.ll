@@ -9,6 +9,8 @@ target triple = "dxil-pc-shadermodel6.8-compute"
 ; ANALYSIS-NEXT: DXIL Version : 1.8
 ; ANALYSIS-NEXT: Shader Stage : compute
 ; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-NEXT: void entry()
+; ANALYSIS-NEXT: NumThreads: 1,2,1
 ; ANALYSIS-EMPTY:
 
 define void @entry() #0 {

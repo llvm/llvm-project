@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_DXILMETADATA_H
 #define LLVM_ANALYSIS_DXILMETADATA_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/VersionTuple.h"
@@ -19,12 +20,16 @@ namespace llvm {
 
 namespace dxil {
 
+struct FunctionProperties {
+  unsigned NumThreads[3];
+};
+
 struct ModuleMetadataInfo {
   VersionTuple DXILVersion{};
   VersionTuple ShaderModelVersion{};
   Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
   VersionTuple ValidatorVersion{};
-
+  std::unordered_map<Function *, FunctionProperties> FunctionPropertyMap{};
   void print(raw_ostream &OS) const;
 };
 
