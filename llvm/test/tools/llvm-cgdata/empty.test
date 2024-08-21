@@ -1,0 +1,35 @@
+# Test no input file
+RUN: not llvm-cgdata --convert --output - 2>&1 | FileCheck %s --check-prefix=NOFILE --ignore-case
+NOFILE: error: No input file is specified.
+
+# Test for empty cgdata file, which is invalid.
+RUN: touch %t_emptyfile.cgtext
+RUN: not llvm-cgdata --convert %t_emptyfile.cgtext --format text 2>&1 | FileCheck %s --check-prefix=EMPTY
+EMPTY: {{.}}emptyfile.cgtext: empty codegen data
+
+# Test for empty header in the text format. It can be converted to a valid binary file.
+RUN: printf '#' > %t_emptyheader.cgtext
+RUN: llvm-cgdata --convert %t_emptyheader.cgtext --format binary -o %t_emptyheader.cgdata
+
+# Without any cgdata other than the header, no data shows by default.
+RUN: llvm-cgdata --show %t_emptyheader.cgdata | count 0
+
+# The version number appears when asked, as it's in the header
+RUN: llvm-cgdata --show --cgdata-version %t_emptyheader.cgdata | FileCheck %s --check-prefix=VERSION
+VERSION: Version: 1
+
+# When converting a binary file (w/ the header only) to a text file, it's an empty file as the text format does not have an explicit header.
+RUN: llvm-cgdata --convert %t_emptyheader.cgdata --format text | count 0
+
+# Synthesize a header only cgdata.
+# struct Header {
+#   uint64_t Magic;
+#   uint32_t Version;
+#   uint32_t DataKind;
+#   uint64_t OutlinedHashTreeOffset;
+# }
+RUN: printf '\xffcgdata\x81' > %t_header.cgdata
+RUN: printf '\x01\x00\x00\x00' >> %t_header.cgdata
+RUN: printf '\x00\x00\x00\x00' >> %t_header.cgdata
+RUN: printf '\x18\x00\x00\x00\x00\x00\x00\x00' >> %t_header.cgdata
+RUN: diff %t_header.cgdata %t_emptyheader.cgdata

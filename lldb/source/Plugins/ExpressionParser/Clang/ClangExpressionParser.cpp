@@ -1223,19 +1223,22 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
     clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
 
+    auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+
     if (ast_context.getExternalSource()) {
-      auto module_wrapper =
+      auto *module_wrapper =
           new ExternalASTSourceWrapper(ast_context.getExternalSource());
 
-      auto ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+      auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
 
-      auto multiplexer =
-          new SemaSourceWithPriorities(*module_wrapper, *ast_source_wrapper);
-      IntrusiveRefCntPtr<ExternalASTSource> Source(multiplexer);
-      ast_context.setExternalSource(Source);
+      auto *multiplexer =
+          new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
+
+      ast_context.setExternalSource(multiplexer);
     } else {
       ast_context.setExternalSource(ast_source);
     }
+    m_compiler->getSema().addExternalSource(ast_source_wrapper);
     decl_map->InstallASTContext(*m_ast_context);
   }
 
