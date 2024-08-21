@@ -582,6 +582,11 @@ struct Ctx {
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
+  // The set of TOC entries (.toc + addend) for which we should not apply
+  // toc-indirect to toc-relative relaxation. const Symbol * refers to the
+  // STT_SECTION symbol associated to the .toc input section.
+  llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
+
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);

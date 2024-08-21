@@ -21,7 +21,13 @@
 
 #include <memory>
 #include <mutex>
+#include <sys/resource.h>
 #include <unistd.h>
+
+#ifndef HAVE_GETTID
+#include <sys/syscall.h>
+pid_t gettid() { return ((pid_t)syscall(SYS_gettid)); }
+#endif
 
 using namespace lldb_private;
 
@@ -120,7 +126,10 @@ TEST_F(ElfCoreTest, PopulatePrpsInfoTest) {
   ASSERT_EQ(prpsinfo_opt->pr_state, 0);
   ASSERT_EQ(prpsinfo_opt->pr_sname, 'R');
   ASSERT_EQ(prpsinfo_opt->pr_zomb, 0);
-  ASSERT_EQ(prpsinfo_opt->pr_nice, 0);
+  int priority = getpriority(PRIO_PROCESS, getpid());
+  if (priority == -1)
+    ASSERT_EQ(errno, 0);
+  ASSERT_EQ(prpsinfo_opt->pr_nice, priority);
   ASSERT_EQ(prpsinfo_opt->pr_flag, 0UL);
   ASSERT_EQ(prpsinfo_opt->pr_uid, getuid());
   ASSERT_EQ(prpsinfo_opt->pr_gid, getgid());

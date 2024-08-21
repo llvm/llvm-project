@@ -571,7 +571,7 @@ public:
   /// Returns the index into an array.
   int64_t getIndex() const {
     if (!isBlockPointer())
-      return 0;
+      return getIntegerRepresentation();
 
     if (isZero())
       return 0;
