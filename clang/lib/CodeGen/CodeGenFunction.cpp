@@ -2923,7 +2923,6 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
   bool HasDefault = false;
   unsigned DefaultIndex = 0;
-  // Check the each candidate function.
 
   SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> CurrOptions(
       Options);
@@ -2935,6 +2934,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
                getPrioiryFromAttrString(RHS.Conditions.Features[0]);
       });
 
+  // Check the each candidate function.
   for (unsigned Index = 0; Index < CurrOptions.size(); Index++) {
 
     if (CurrOptions[Index].Conditions.Features[0].starts_with("default")) {
@@ -2954,8 +2954,6 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     if (TargetAttrFeats.empty())
       continue;
 
-    // Only one conditions need to be checked for the current version:
-    //
     // FeaturesCondition: The bitmask of the required extension has been
     // enabled by the runtime object.
     // (__riscv_feature_bits.features[i] & REQUIRED_BITMASK) ==
@@ -2974,9 +2972,9 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // else
     //     return DefaultVersion;
 
-    // TODO: Add a condition to check the length due to runtime library version
-    // constraints. Without checking the length before access, it may result in
-    // accessing an incorrect memory address. Currently, the length must be 1.
+    // TODO: Add a condition to check the length before accessing elements.
+    // Without checking the length first, we may access an incorrect memory 
+    // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
 
     for (auto &Feat : TargetAttrFeats) {
