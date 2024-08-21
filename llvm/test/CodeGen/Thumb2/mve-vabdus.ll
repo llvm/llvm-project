@@ -374,17 +374,17 @@ define void @vabd_loop_s32(ptr nocapture readonly %x, ptr nocapture readonly %y,
 ; CHECK-NEXT:  .LBB17_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vmov.f32 s12, s10
 ; CHECK-NEXT:    vmov.f32 s8, s6
 ; CHECK-NEXT:    vmov r7, s4
 ; CHECK-NEXT:    vmov.f32 s6, s7
+; CHECK-NEXT:    vmov r4, s12
 ; CHECK-NEXT:    vmov r3, s8
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
-; CHECK-NEXT:    vmov.f32 s12, s10
 ; CHECK-NEXT:    vmov.f32 s10, s5
 ; CHECK-NEXT:    vmov.f32 s14, s11
-; CHECK-NEXT:    vmov r4, s12
-; CHECK-NEXT:    asr.w r12, r3, #31
 ; CHECK-NEXT:    subs.w r8, r3, r4
+; CHECK-NEXT:    asr.w r12, r3, #31
 ; CHECK-NEXT:    sbc.w r12, r12, r4, asr #31
 ; CHECK-NEXT:    vmov r4, s10
 ; CHECK-NEXT:    vmov.f32 s10, s9

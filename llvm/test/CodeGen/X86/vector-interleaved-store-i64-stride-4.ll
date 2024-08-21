@@ -6745,15 +6745,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -7040,15 +7040,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512-FCP-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512-FCP-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512-FCP-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512-FCP-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512-FCP-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512-FCP-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512-FCP-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512-FCP-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512-FCP-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -7335,15 +7335,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512DQ-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512DQ-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512DQ-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512DQ-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512DQ-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512DQ-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512DQ-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512DQ-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512DQ-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512DQ-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512DQ-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512DQ-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512DQ-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -7630,15 +7630,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512DQ-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512DQ-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -7925,15 +7925,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512BW-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512BW-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512BW-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512BW-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512BW-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512BW-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512BW-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512BW-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512BW-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512BW-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512BW-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512BW-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512BW-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512BW-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512BW-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -8220,15 +8220,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-FCP-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512BW-FCP-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512BW-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512BW-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512BW-FCP-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512BW-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -8515,15 +8515,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512DQ-BW-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512DQ-BW-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512DQ-BW-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512DQ-BW-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-BW-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512DQ-BW-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512DQ-BW-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm14, %zmm13
@@ -8810,15 +8810,15 @@ define void @store_i64_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 320(%rdx), %zmm7
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 256(%rdx), %zmm8
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rdx), %zmm14
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdx), %zmm11
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdx), %zmm10
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 384(%rcx), %zmm23
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 320(%rcx), %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 256(%rcx), %zmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rcx), %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rcx), %zmm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rcx), %zmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rdx), %zmm12
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rcx), %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} zmm9 = [0,0,0,8,0,0,1,9]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm14, %zmm13

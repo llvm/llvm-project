@@ -3132,8 +3132,8 @@ define <4 x i32> @trunc_v4i64_v4i32(ptr %in) nounwind {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-48]!
 ; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldp x8, x10, [sp]
-; NONEON-NOSVE-NEXT:    stp w8, w10, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret

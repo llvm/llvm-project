@@ -18,11 +18,11 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm6 = xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm1
 ; AVX1-NEXT:    vmovaps %ymm2, %ymm0
 ; AVX1-NEXT:    retq
@@ -31,10 +31,9 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
-; AVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
+; AVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splitTransposeDecode_8_avx2:
@@ -55,11 +54,11 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; XOPAVX1-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm6 = xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
 ; XOPAVX1-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3]
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
 ; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; XOPAVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm1
 ; XOPAVX1-NEXT:    vmovaps %ymm2, %ymm0
 ; XOPAVX1-NEXT:    retq
@@ -68,10 +67,9 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; XOPAVX2-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
-; XOPAVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
 ; XOPAVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
 ; XOPAVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1
-; XOPAVX2-NEXT:    vmovdqa %ymm2, %ymm0
+; XOPAVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shuffle.i = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27>
   %shuffle.i59 = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>

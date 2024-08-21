@@ -843,12 +843,12 @@ define void @store_i64_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    subq $24, %rsp
 ; SSE-NEXT:    movapd 64(%rdi), %xmm5
 ; SSE-NEXT:    movapd (%rdi), %xmm1
-; SSE-NEXT:    movapd 16(%rdi), %xmm2
-; SSE-NEXT:    movapd 32(%rdi), %xmm3
-; SSE-NEXT:    movapd 48(%rdi), %xmm6
-; SSE-NEXT:    movapd 64(%rsi), %xmm9
 ; SSE-NEXT:    movapd (%rsi), %xmm4
 ; SSE-NEXT:    movapd 16(%rsi), %xmm7
+; SSE-NEXT:    movapd 64(%rsi), %xmm9
+; SSE-NEXT:    movapd 48(%rdi), %xmm6
+; SSE-NEXT:    movapd 32(%rdi), %xmm3
+; SSE-NEXT:    movapd 16(%rdi), %xmm2
 ; SSE-NEXT:    movapd 32(%rsi), %xmm11
 ; SSE-NEXT:    movapd 48(%rsi), %xmm10
 ; SSE-NEXT:    movapd 64(%rdx), %xmm15

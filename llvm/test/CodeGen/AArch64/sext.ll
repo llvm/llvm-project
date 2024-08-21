@@ -337,9 +337,9 @@ define <3 x i64> @sext_v3i16_v3i64(<3 x i16> %a) {
 ; CHECK-GI-LABEL: sext_v3i16_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    smov x8, v0.h[0]
 ; CHECK-GI-NEXT:    smov x9, v0.h[1]
 ; CHECK-GI-NEXT:    smov x10, v0.h[2]
+; CHECK-GI-NEXT:    smov x8, v0.h[0]
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
@@ -362,9 +362,9 @@ define <3 x i64> @sext_v3i32_v3i64(<3 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: sext_v3i32_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    smov x8, v0.s[0]
 ; CHECK-GI-NEXT:    smov x9, v0.s[1]
 ; CHECK-GI-NEXT:    smov x10, v0.s[2]
+; CHECK-GI-NEXT:    smov x8, v0.s[0]
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
@@ -547,18 +547,11 @@ entry:
 }
 
 define <4 x i64> @sext_v4i32_v4i64(<4 x i32> %a) {
-; CHECK-SD-LABEL: sext_v4i32_v4i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v1.2d, v0.4s, #0
-; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_v4i32_v4i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v2.2d, v0.2s, #0
-; CHECK-GI-NEXT:    sshll2 v1.2d, v0.4s, #0
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_v4i32_v4i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll2 v1.2d, v0.4s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ret
 entry:
   %c = sext <4 x i32> %a to <4 x i64>
   ret <4 x i64> %c
@@ -671,18 +664,11 @@ entry:
 }
 
 define <8 x i32> @sext_v8i16_v8i32(<8 x i16> %a) {
-; CHECK-SD-LABEL: sext_v8i16_v8i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_v8i16_v8i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_v8i16_v8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
 entry:
   %c = sext <8 x i16> %a to <8 x i32>
   ret <8 x i32> %c
@@ -716,21 +702,19 @@ entry:
 define <8 x i64> @sext_v8i32_v8i64(<8 x i32> %a) {
 ; CHECK-SD-LABEL: sext_v8i32_v8i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll v5.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    sshll2 v3.2d, v1.4s, #0
+; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    sshll v2.2d, v1.2s, #0
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v8i32_v8i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v4.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    sshll2 v5.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    sshll v2.2d, v1.2s, #0
+; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    sshll2 v3.2d, v1.4s, #0
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -816,18 +800,11 @@ entry:
 }
 
 define <16 x i16> @sext_v16i8_v16i16(<16 x i8> %a) {
-; CHECK-SD-LABEL: sext_v16i8_v16i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_v16i8_v16i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll2 v1.8h, v0.16b, #0
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_v16i8_v16i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ret
 entry:
   %c = sext <16 x i8> %a to <16 x i16>
   ret <16 x i16> %c
@@ -902,21 +879,19 @@ entry:
 define <16 x i32> @sext_v16i16_v16i32(<16 x i16> %a) {
 ; CHECK-SD-LABEL: sext_v16i16_v16i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll v5.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    sshll2 v4.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-SD-NEXT:    mov v0.16b, v5.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v16i16_v16i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v4.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll2 v5.4s, v0.8h, #0
 ; CHECK-GI-NEXT:    sshll v2.4s, v1.4h, #0
+; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
 ; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -964,30 +939,28 @@ entry:
 define <16 x i64> @sext_v16i32_v16i64(<16 x i32> %a) {
 ; CHECK-SD-LABEL: sext_v16i32_v16i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sshll2 v17.2d, v0.4s, #0
-; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    sshll v18.2d, v1.2s, #0
+; CHECK-SD-NEXT:    sshll2 v16.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    sshll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    sshll v4.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v5.2d, v2.4s, #0
-; CHECK-SD-NEXT:    sshll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    sshll v6.2d, v3.2s, #0
-; CHECK-SD-NEXT:    mov v1.16b, v17.16b
+; CHECK-SD-NEXT:    sshll2 v1.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    mov v2.16b, v18.16b
 ; CHECK-SD-NEXT:    mov v3.16b, v16.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v16i32_v16i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v16.2d, v0.2s, #0
+; CHECK-GI-NEXT:    sshll2 v19.2d, v1.4s, #0
 ; CHECK-GI-NEXT:    sshll2 v17.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    sshll v18.2d, v1.2s, #0
-; CHECK-GI-NEXT:    sshll2 v19.2d, v1.4s, #0
+; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    sshll v4.2d, v2.2s, #0
-; CHECK-GI-NEXT:    sshll2 v5.2d, v2.4s, #0
 ; CHECK-GI-NEXT:    sshll v6.2d, v3.2s, #0
 ; CHECK-GI-NEXT:    sshll2 v7.2d, v3.4s, #0
-; CHECK-GI-NEXT:    mov v0.16b, v16.16b
+; CHECK-GI-NEXT:    sshll2 v5.2d, v2.4s, #0
 ; CHECK-GI-NEXT:    mov v1.16b, v17.16b
 ; CHECK-GI-NEXT:    mov v2.16b, v18.16b
 ; CHECK-GI-NEXT:    mov v3.16b, v19.16b

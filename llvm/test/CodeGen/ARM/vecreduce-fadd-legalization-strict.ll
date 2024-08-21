@@ -96,15 +96,14 @@ define fp128 @test_v1f128(<1 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-NEXT:    push {r4, r5, r11, lr}
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldr r12, [sp, #32]
-; CHECK-NEXT:    ldr lr, [sp, #36]
-; CHECK-NEXT:    ldr r4, [sp, #40]
-; CHECK-NEXT:    ldr r5, [sp, #44]
-; CHECK-NEXT:    stm sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    mov r1, lr
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    str r1, [sp, #4]
+; CHECK-NEXT:    str r2, [sp, #8]
+; CHECK-NEXT:    str r3, [sp, #12]
+; CHECK-NEXT:    ldr r0, [sp, #32]
+; CHECK-NEXT:    ldr r1, [sp, #36]
+; CHECK-NEXT:    ldr r2, [sp, #40]
+; CHECK-NEXT:    ldr r3, [sp, #44]
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    pop {r4, r5, r11, lr}
@@ -194,15 +193,14 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-NEXT:    push {r4, r5, r11, lr}
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldr r12, [sp, #48]
-; CHECK-NEXT:    ldr lr, [sp, #52]
-; CHECK-NEXT:    ldr r4, [sp, #56]
-; CHECK-NEXT:    ldr r5, [sp, #60]
-; CHECK-NEXT:    stm sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    mov r1, lr
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    str r1, [sp, #4]
+; CHECK-NEXT:    str r2, [sp, #8]
+; CHECK-NEXT:    str r3, [sp, #12]
+; CHECK-NEXT:    ldr r0, [sp, #48]
+; CHECK-NEXT:    ldr r1, [sp, #52]
+; CHECK-NEXT:    ldr r2, [sp, #56]
+; CHECK-NEXT:    ldr r3, [sp, #60]
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr r4, [sp, #32]
 ; CHECK-NEXT:    ldr r5, [sp, #40]

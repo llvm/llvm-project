@@ -26,10 +26,10 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vadd.vi v12, v11, -16
 ; CHECK-NEXT:    vrgather.vv v9, v8, v12, v0.t
-; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vadd.vi v12, v11, 1
 ; CHECK-NEXT:    vrgather.vv v13, v10, v12
 ; CHECK-NEXT:    vadd.vi v10, v11, -15
+; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vrgather.vv v13, v8, v10, v0.t
 ; CHECK-NEXT:    vmsne.vi v8, v13, 0
 ; CHECK-NEXT:    vmv.v.v v0, v9

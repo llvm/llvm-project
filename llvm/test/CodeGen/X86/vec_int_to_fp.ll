@@ -2686,10 +2686,9 @@ define <8 x float> @uitofp_8i16_to_8f32(<8 x i16> %a) {
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: uitofp_8i16_to_8f32:
@@ -2732,10 +2731,9 @@ define <8 x float> @uitofp_8i8_to_8f32(<16 x i8> %a) {
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: uitofp_8i8_to_8f32:
@@ -2780,10 +2778,9 @@ define <8 x float> @uitofp_16i8_to_8f32(<16 x i8> %a) {
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: uitofp_16i8_to_8f32:
@@ -5162,16 +5159,14 @@ define float @extract0_sitofp_v4i32_f32i_multiuse1(<4 x i32> %x) nounwind {
 define float @extract0_sitofp_v4i32_f32_multiuse2(<4 x i32> %x, ptr %p) nounwind {
 ; SSE-LABEL: extract0_sitofp_v4i32_f32_multiuse2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; SSE-NEXT:    movss %xmm0, (%rdi)
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract0_sitofp_v4i32_f32_multiuse2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm1
 ; AVX-NEXT:    vmovss %xmm0, (%rdi)
-; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 0
   %r = sitofp i32 %e to float

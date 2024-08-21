@@ -3320,27 +3320,24 @@ define <4 x i64> @sext_4i1_to_4i64(<4 x i1> %mask) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: sext_4i1_to_4i64:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pslld $31, %xmm0
 ; SSSE3-NEXT:    psrad $31, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,1,1]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_4i1_to_4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pslld $31, %xmm0
 ; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    pmovsxdq %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: sext_4i1_to_4i64:
@@ -3370,18 +3367,16 @@ define <4 x i64> @sext_4i1_to_4i64(<4 x i1> %mask) {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pslld $31, %xmm0
 ; X86-SSE2-NEXT:    psrad $31, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,1,1]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: sext_4i1_to_4i64:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    pslld $31, %xmm0
 ; X86-SSE41-NEXT:    psrad $31, %xmm0
-; X86-SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
 ; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
-; X86-SSE41-NEXT:    movdqa %xmm2, %xmm0
+; X86-SSE41-NEXT:    pmovsxdq %xmm0, %xmm0
 ; X86-SSE41-NEXT:    retl
   %extmask = sext <4 x i1> %mask to <4 x i64>
   ret <4 x i64> %extmask

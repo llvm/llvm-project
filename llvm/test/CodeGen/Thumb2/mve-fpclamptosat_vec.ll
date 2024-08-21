@@ -622,23 +622,23 @@ define arm_aapcs_vfpcc <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    vmovx.f16 s6, s0
 ; CHECK-NEXT:    vcvt.s32.f16 s10, s0
 ; CHECK-NEXT:    vmovx.f16 s0, s3
-; CHECK-NEXT:    vcvt.s32.f16 s5, s3
-; CHECK-NEXT:    vcvt.s32.f16 s12, s0
-; CHECK-NEXT:    vmovx.f16 s0, s2
-; CHECK-NEXT:    vcvt.s32.f16 s7, s2
-; CHECK-NEXT:    vcvt.s32.f16 s14, s0
-; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    vmovx.f16 s4, s1
-; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vmovx.f16 s0, s2
+; CHECK-NEXT:    vcvt.s32.f16 s5, s3
+; CHECK-NEXT:    vcvt.s32.f16 s7, s2
 ; CHECK-NEXT:    vcvt.s32.f16 s8, s1
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vcvt.s32.f16 s14, s0
+; CHECK-NEXT:    vcvt.s32.f16 s12, s0
 ; CHECK-NEXT:    vmov q4[2], q4[0], r2, r1
 ; CHECK-NEXT:    vmov r1, s12
-; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    vcvt.s32.f16 s4, s4
-; CHECK-NEXT:    vmov q4[3], q4[1], r2, r1
+; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    vcvt.s32.f16 s6, s6
+; CHECK-NEXT:    vmov q4[3], q4[1], r2, r1
 ; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
@@ -1704,23 +1704,23 @@ define arm_aapcs_vfpcc <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    vmovx.f16 s6, s0
 ; CHECK-NEXT:    vcvt.s32.f16 s10, s0
 ; CHECK-NEXT:    vmovx.f16 s0, s3
-; CHECK-NEXT:    vcvt.s32.f16 s5, s3
-; CHECK-NEXT:    vcvt.s32.f16 s12, s0
-; CHECK-NEXT:    vmovx.f16 s0, s2
-; CHECK-NEXT:    vcvt.s32.f16 s7, s2
-; CHECK-NEXT:    vcvt.s32.f16 s14, s0
-; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    vmovx.f16 s4, s1
-; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vmovx.f16 s0, s2
+; CHECK-NEXT:    vcvt.s32.f16 s5, s3
+; CHECK-NEXT:    vcvt.s32.f16 s7, s2
 ; CHECK-NEXT:    vcvt.s32.f16 s8, s1
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vcvt.s32.f16 s14, s0
+; CHECK-NEXT:    vcvt.s32.f16 s12, s0
 ; CHECK-NEXT:    vmov q4[2], q4[0], r2, r1
 ; CHECK-NEXT:    vmov r1, s12
-; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    vcvt.s32.f16 s4, s4
-; CHECK-NEXT:    vmov q4[3], q4[1], r2, r1
+; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    vcvt.s32.f16 s6, s6
+; CHECK-NEXT:    vmov q4[3], q4[1], r2, r1
 ; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1

@@ -136,9 +136,8 @@ define i64 @load_i64(ptr %p) {
 ;
 ; RV32I-FAST-LABEL: load_i64:
 ; RV32I-FAST:       # %bb.0:
-; RV32I-FAST-NEXT:    lw a2, 0(a0)
 ; RV32I-FAST-NEXT:    lw a1, 4(a0)
-; RV32I-FAST-NEXT:    mv a0, a2
+; RV32I-FAST-NEXT:    lw a0, 0(a0)
 ; RV32I-FAST-NEXT:    ret
 ;
 ; RV64I-FAST-LABEL: load_i64:

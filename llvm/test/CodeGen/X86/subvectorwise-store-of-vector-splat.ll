@@ -1659,17 +1659,19 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    movzbl 13(%rdi), %eax
 ; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; SCALAR-NEXT:    movzbl 12(%rdi), %r15d
 ; SCALAR-NEXT:    movzbl 11(%rdi), %eax
 ; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 6(%rdi), %r10d
 ; SCALAR-NEXT:    movzbl 10(%rdi), %ebp
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r10b
 ; SCALAR-NEXT:    movzbl 9(%rdi), %r14d
 ; SCALAR-NEXT:    movzbl 8(%rdi), %eax
 ; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    movzbl 7(%rdi), %r12d
-; SCALAR-NEXT:    movzbl 6(%rdi), %r10d
 ; SCALAR-NEXT:    movzbl 5(%rdi), %r9d
 ; SCALAR-NEXT:    movzbl 4(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 12(%rdi), %r15d
 ; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
 ; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
 ; SCALAR-NEXT:    movzbl (%rdi), %eax
@@ -1680,11 +1682,9 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    notb %r8b
-; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    notb %bl
 ; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; SCALAR-NEXT:    notb %r10b
 ; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    notb %r12b
 ; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
@@ -4756,8 +4756,10 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movzbl 8(%rdi), %r14d
 ; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
 ; SCALAR-NEXT:    movzbl 6(%rdi), %r10d
-; SCALAR-NEXT:    movzbl 5(%rdi), %r15d
 ; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl 5(%rdi), %r15d
 ; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
 ; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
 ; SCALAR-NEXT:    movzbl (%rdi), %eax
@@ -4769,8 +4771,6 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    notb %r8b
-; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    movl %r15d, %r9d
 ; SCALAR-NEXT:    notb %r9b
@@ -6694,8 +6694,10 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movzbl 8(%rdi), %r14d
 ; SCALAR-NEXT:    movzbl 7(%rdi), %ebp
 ; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
-; SCALAR-NEXT:    movzbl 5(%rdi), %ebx
 ; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl 5(%rdi), %ebx
 ; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
 ; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
 ; SCALAR-NEXT:    movzbl (%rdi), %eax
@@ -6707,8 +6709,6 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    notb %r8b
-; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    movl %ebx, %r9d
 ; SCALAR-NEXT:    notb %r9b
@@ -6761,12 +6761,13 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movb %r11b, 15(%rdx)
 ; SCALAR-NEXT:    movb %r8b, 14(%rdx)
 ; SCALAR-NEXT:    movb %al, 13(%rdx)
-; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 4(%rdx)
 ; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %r13b, 11(%rdx)
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %r15b, 10(%rdx)
-; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %sil, 9(%rdx)
 ; SCALAR-NEXT:    movb %r12b, 8(%rdx)
 ; SCALAR-NEXT:    movb %r14b, 7(%rdx)
@@ -6775,13 +6776,13 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movl %r9d, %r11d
 ; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
-; SCALAR-NEXT:    movb %r8b, 4(%rdx)
 ; SCALAR-NEXT:    movb %bpl, 3(%rdx)
 ; SCALAR-NEXT:    movb %dil, 2(%rdx)
 ; SCALAR-NEXT:    movb %cl, 1(%rdx)
 ; SCALAR-NEXT:    movl %ecx, %r14d
-; SCALAR-NEXT:    movl %r10d, %esi
 ; SCALAR-NEXT:    movb %r10b, (%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movl %r10d, %esi
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %cl, 31(%rdx)
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
@@ -6799,7 +6800,6 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %bl, 23(%rdx)
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
-; SCALAR-NEXT:    movb %al, 22(%rdx)
 ; SCALAR-NEXT:    movb %r11b, 21(%rdx)
 ; SCALAR-NEXT:    movb %r8b, 20(%rdx)
 ; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload

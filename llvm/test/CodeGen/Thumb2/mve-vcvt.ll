@@ -266,10 +266,8 @@ define arm_aapcs_vfpcc <2 x double> @foo_float_int64(<2 x i64> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_l2d
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_l2d
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -290,10 +288,8 @@ define arm_aapcs_vfpcc <2 x double> @foo_float_uint64(<2 x i64> %src) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_ul2d
-; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_ul2d
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4

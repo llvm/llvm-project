@@ -2361,10 +2361,9 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    snez a2, s1
 ; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a2, a2, s0
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
-; CHECK-NOV-NEXT:    mv a0, a2
+; CHECK-NOV-NEXT:    and a0, a2, s0
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -2768,10 +2767,9 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    snez a2, s1
 ; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a2, a2, s0
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
-; CHECK-NOV-NEXT:    mv a0, a2
+; CHECK-NOV-NEXT:    and a0, a2, s0
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -3173,10 +3171,9 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    snez a2, s2
 ; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a2, a2, s1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
-; CHECK-NOV-NEXT:    mv a0, a2
+; CHECK-NOV-NEXT:    and a0, a2, s1
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

@@ -11,7 +11,7 @@ define i32 @check_lr_liveness(ptr %arg) #1 {
   ; CHECK-NEXT:   successors: %bb.4(0x20000000), %bb.1(0x60000000)
   ; CHECK-NEXT:   liveins: $x0, $lr
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x8 = COPY $x0
+  ; CHECK-NEXT:   renamable $x8 = COPY killed $x0
   ; CHECK-NEXT:   renamable $w0 = MOVi32imm -536870206
   ; CHECK-NEXT:   CBNZX killed renamable $x8, %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -38,7 +38,7 @@ define i32 @check_lr_liveness(ptr %arg) #1 {
   ; CHECK-NEXT: bb.3.bb2:
   ; CHECK-NEXT:   liveins: $w0, $lr
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT:   RET_ReallyLR implicit killed $w0
 bb:
   %icmp = icmp eq ptr %arg, null
   %or = or i1 %icmp, false

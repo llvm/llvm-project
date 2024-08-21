@@ -88,13 +88,12 @@ define i300 @test4(i300 %a, i300 %b) nounwind {
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    movl %eax, %edi
@@ -341,8 +340,8 @@ define i300 @test4(i300 %a, i300 %b) nounwind {
 ; X86-NEXT:    movl %eax, %ebp
 ; X86-NEXT:    addl %edi, %ebp
 ; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %edi, %esi
 ; X86-NEXT:    movl %edx, %ebx

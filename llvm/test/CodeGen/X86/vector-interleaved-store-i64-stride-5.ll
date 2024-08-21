@@ -7394,20 +7394,20 @@ define void @store_i64_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-LABEL: store_i64_stride5_vf64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $2264, %rsp # imm = 0x8D8
-; AVX-NEXT:    vmovaps 192(%rdi), %ymm14
-; AVX-NEXT:    vmovaps 160(%rdi), %ymm4
 ; AVX-NEXT:    vmovaps 96(%rdi), %ymm5
+; AVX-NEXT:    vmovaps 160(%rdi), %ymm4
 ; AVX-NEXT:    vmovaps 64(%rcx), %ymm1
-; AVX-NEXT:    vmovaps 128(%rcx), %ymm0
 ; AVX-NEXT:    vmovaps (%rcx), %ymm2
+; AVX-NEXT:    vmovaps 128(%rcx), %ymm0
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = mem[2,3,2,3]
 ; AVX-NEXT:    vmovaps 16(%rdx), %xmm6
 ; AVX-NEXT:    vmovups %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm2[1],ymm6[1],ymm2[3],ymm6[3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm3[0,1],ymm2[2,3,4,5,6,7]
-; AVX-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = mem[2,3,2,3]
+; AVX-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm2[1],ymm6[1],ymm2[3],ymm6[3]
 ; AVX-NEXT:    vmovaps 80(%rdx), %xmm3
+; AVX-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    vmovaps 192(%rdi), %ymm14
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = mem[2,3,2,3]
 ; AVX-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm3[1],ymm1[3],ymm3[3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3,4,5,6,7]

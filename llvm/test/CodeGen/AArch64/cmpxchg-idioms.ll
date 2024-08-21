@@ -31,10 +31,10 @@ define i32 @test_return(ptr %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w20, -32
-; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w19, w1
-; OUTLINE-ATOMICS-NEXT:    mov w0, w1
+; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w1, w2
+; OUTLINE-ATOMICS-NEXT:    mov w0, w19
 ; OUTLINE-ATOMICS-NEXT:    mov x2, x8
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
@@ -81,10 +81,10 @@ define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w20, -32
-; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w19, w1
-; OUTLINE-ATOMICS-NEXT:    mov w0, w1
+; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w1, w2
+; OUTLINE-ATOMICS-NEXT:    mov w0, w19
 ; OUTLINE-ATOMICS-NEXT:    mov x2, x8
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w19, uxtb
@@ -126,10 +126,10 @@ define void @test_conditional(ptr %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w20, -32
-; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w19, w1
-; OUTLINE-ATOMICS-NEXT:    mov w0, w1
+; OUTLINE-ATOMICS-NEXT:    mov x8, x0
 ; OUTLINE-ATOMICS-NEXT:    mov w1, w2
+; OUTLINE-ATOMICS-NEXT:    mov w0, w19
 ; OUTLINE-ATOMICS-NEXT:    mov x2, x8
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w19

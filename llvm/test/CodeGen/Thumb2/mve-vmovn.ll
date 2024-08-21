@@ -330,8 +330,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmovn32_t2(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vmovn32_t2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s5, s0
 ; CHECK-NEXT:    vmov.f32 s7, s2
+; CHECK-NEXT:    vmov.f32 s5, s0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 ;
@@ -420,8 +420,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmovn32_b4(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vmovn32_b4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s5, s1
 ; CHECK-NEXT:    vmov.f32 s7, s3
+; CHECK-NEXT:    vmov.f32 s5, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 ;

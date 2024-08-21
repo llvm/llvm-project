@@ -543,9 +543,8 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    sra a1, a3, a5
 ; RV32I-NEXT:    bltz a6, .LBB5_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srai a4, a4, 31
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    mv a1, a4
+; RV32I-NEXT:    srai a1, a4, 31
 ; RV32I-NEXT:    j .LBB5_3
 ; RV32I-NEXT:  .LBB5_2:
 ; RV32I-NEXT:    lbu a4, 1(a0)
@@ -1203,9 +1202,8 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sra a1, a3, a5
 ; RV64I-NEXT:    bltz a6, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sraiw a3, a4, 31
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    mv a1, a3
+; RV64I-NEXT:    sraiw a1, a4, 31
 ; RV64I-NEXT:    j .LBB8_3
 ; RV64I-NEXT:  .LBB8_2:
 ; RV64I-NEXT:    lbu a4, 1(a0)

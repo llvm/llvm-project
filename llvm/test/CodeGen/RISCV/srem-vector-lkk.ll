@@ -21,10 +21,9 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    lh s0, 12(a1)
 ; RV32I-NEXT:    lh s1, 8(a1)
 ; RV32I-NEXT:    lh s2, 4(a1)
-; RV32I-NEXT:    lh a2, 0(a1)
 ; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    lh a0, 0(a1)
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    li a1, -124
@@ -113,10 +112,9 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    lh s0, 24(a1)
 ; RV64I-NEXT:    lh s1, 16(a1)
 ; RV64I-NEXT:    lh s2, 8(a1)
-; RV64I-NEXT:    lh a2, 0(a1)
 ; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    lh a0, 0(a1)
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    li a1, -124
@@ -209,10 +207,9 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    lh s0, 12(a1)
 ; RV32I-NEXT:    lh s1, 8(a1)
 ; RV32I-NEXT:    lh s2, 4(a1)
-; RV32I-NEXT:    lh a2, 0(a1)
 ; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    lh a0, 0(a1)
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    li a1, 95
@@ -294,10 +291,9 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    lh s0, 24(a1)
 ; RV64I-NEXT:    lh s1, 16(a1)
 ; RV64I-NEXT:    lh s2, 8(a1)
-; RV64I-NEXT:    lh a2, 0(a1)
 ; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    lh a0, 0(a1)
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    li a1, 95
@@ -775,10 +771,9 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lh s0, 12(a1)
 ; RV32I-NEXT:    lh s1, 8(a1)
-; RV32I-NEXT:    lh a2, 4(a1)
 ; RV32I-NEXT:    mv s2, a0
+; RV32I-NEXT:    lh a0, 4(a1)
 ; RV32I-NEXT:    li a1, 654
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    li a1, 23
@@ -852,10 +847,9 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lh s0, 24(a1)
 ; RV64I-NEXT:    lh s1, 16(a1)
-; RV64I-NEXT:    lh a2, 8(a1)
 ; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    lh a0, 8(a1)
 ; RV64I-NEXT:    li a1, 654
-; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    li a1, 23
@@ -1091,11 +1085,10 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) nounwind {
 ; RV32I-NEXT:    lw s3, 20(a1)
 ; RV32I-NEXT:    lw s4, 8(a1)
 ; RV32I-NEXT:    lw s5, 12(a1)
-; RV32I-NEXT:    lw a3, 0(a1)
-; RV32I-NEXT:    lw a1, 4(a1)
 ; RV32I-NEXT:    mv s6, a0
+; RV32I-NEXT:    lw a0, 0(a1)
+; RV32I-NEXT:    lw a1, 4(a1)
 ; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __moddi3
 ; RV32I-NEXT:    mv s7, a0
@@ -1160,11 +1153,10 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    lw s3, 20(a1)
 ; RV32IM-NEXT:    lw s4, 8(a1)
 ; RV32IM-NEXT:    lw s5, 12(a1)
-; RV32IM-NEXT:    lw a3, 0(a1)
-; RV32IM-NEXT:    lw a1, 4(a1)
 ; RV32IM-NEXT:    mv s6, a0
+; RV32IM-NEXT:    lw a0, 0(a1)
+; RV32IM-NEXT:    lw a1, 4(a1)
 ; RV32IM-NEXT:    li a2, 1
-; RV32IM-NEXT:    mv a0, a3
 ; RV32IM-NEXT:    li a3, 0
 ; RV32IM-NEXT:    call __moddi3
 ; RV32IM-NEXT:    mv s7, a0
@@ -1220,10 +1212,9 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    ld s0, 24(a1)
 ; RV64I-NEXT:    ld s1, 16(a1)
-; RV64I-NEXT:    ld a2, 8(a1)
 ; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    ld a0, 8(a1)
 ; RV64I-NEXT:    li a1, 654
-; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    li a1, 23

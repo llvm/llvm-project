@@ -919,13 +919,13 @@ define void @load_i64_stride6_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movaps 16(%rdi), %xmm7
 ; SSE-NEXT:    movaps 48(%rdi), %xmm1
 ; SSE-NEXT:    movaps 144(%rdi), %xmm2
-; SSE-NEXT:    movaps 96(%rdi), %xmm11
 ; SSE-NEXT:    movaps 240(%rdi), %xmm3
 ; SSE-NEXT:    movaps 192(%rdi), %xmm12
 ; SSE-NEXT:    movaps 336(%rdi), %xmm4
-; SSE-NEXT:    movaps 288(%rdi), %xmm9
 ; SSE-NEXT:    movaps %xmm9, %xmm14
+; SSE-NEXT:    movaps 288(%rdi), %xmm9
 ; SSE-NEXT:    movlhps {{.*#+}} xmm14 = xmm14[0],xmm4[0]
+; SSE-NEXT:    movaps 96(%rdi), %xmm11
 ; SSE-NEXT:    movaps %xmm14, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm4[1]
 ; SSE-NEXT:    movaps %xmm12, %xmm4
@@ -2502,10 +2502,9 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-LABEL: load_i64_stride6_vf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    subq $488, %rsp # imm = 0x1E8
-; AVX2-NEXT:    vmovaps 320(%rdi), %ymm10
+; AVX2-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-NEXT:    vmovaps 288(%rdi), %ymm12
 ; AVX2-NEXT:    vmovups %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-NEXT:    vmovaps 480(%rdi), %ymm4
 ; AVX2-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovaps 128(%rdi), %ymm0
@@ -2514,6 +2513,7 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm1
 ; AVX2-NEXT:    vmovaps 48(%rdi), %xmm5
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm5[0]
+; AVX2-NEXT:    vmovaps 320(%rdi), %ymm10
 ; AVX2-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[2],ymm0[2]
 ; AVX2-NEXT:    vmovaps %ymm0, %ymm15
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2716,10 +2716,9 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-LABEL: load_i64_stride6_vf16:
 ; AVX2-FP:       # %bb.0:
 ; AVX2-FP-NEXT:    subq $488, %rsp # imm = 0x1E8
-; AVX2-FP-NEXT:    vmovaps 320(%rdi), %ymm10
+; AVX2-FP-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-FP-NEXT:    vmovaps 288(%rdi), %ymm12
 ; AVX2-FP-NEXT:    vmovups %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-FP-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-FP-NEXT:    vmovaps 480(%rdi), %ymm4
 ; AVX2-FP-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FP-NEXT:    vmovaps 128(%rdi), %ymm0
@@ -2728,6 +2727,7 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-NEXT:    vmovaps (%rdi), %xmm1
 ; AVX2-FP-NEXT:    vmovaps 48(%rdi), %xmm5
 ; AVX2-FP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm5[0]
+; AVX2-FP-NEXT:    vmovaps 320(%rdi), %ymm10
 ; AVX2-FP-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[2],ymm0[2]
 ; AVX2-FP-NEXT:    vmovaps %ymm0, %ymm15
 ; AVX2-FP-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2930,10 +2930,9 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-LABEL: load_i64_stride6_vf16:
 ; AVX2-FCP:       # %bb.0:
 ; AVX2-FCP-NEXT:    subq $488, %rsp # imm = 0x1E8
-; AVX2-FCP-NEXT:    vmovaps 320(%rdi), %ymm10
+; AVX2-FCP-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-FCP-NEXT:    vmovaps 288(%rdi), %ymm12
 ; AVX2-FCP-NEXT:    vmovups %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-FCP-NEXT:    vmovaps 512(%rdi), %ymm7
 ; AVX2-FCP-NEXT:    vmovaps 480(%rdi), %ymm4
 ; AVX2-FCP-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FCP-NEXT:    vmovaps 128(%rdi), %ymm0
@@ -2942,6 +2941,7 @@ define void @load_i64_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-NEXT:    vmovaps (%rdi), %xmm1
 ; AVX2-FCP-NEXT:    vmovaps 48(%rdi), %xmm5
 ; AVX2-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm5[0]
+; AVX2-FCP-NEXT:    vmovaps 320(%rdi), %ymm10
 ; AVX2-FCP-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[2],ymm0[2]
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, %ymm15
 ; AVX2-FCP-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill

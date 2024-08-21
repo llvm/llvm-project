@@ -96,9 +96,8 @@ define void @test_memcpy_args(ptr %Storage) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rsi
-; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    movq (%rdi), %rdi
 ; CHECK-NEXT:    movl $1024, %edx # imm = 0x400
 ; CHECK-NEXT:    callq __llvm_memcpy_element_unordered_atomic_4@PLT
 ; CHECK-NEXT:    popq %rax
@@ -210,9 +209,8 @@ define void @test_memmove_args(ptr %Storage) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rsi
-; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    movq (%rdi), %rdi
 ; CHECK-NEXT:    movl $1024, %edx # imm = 0x400
 ; CHECK-NEXT:    callq __llvm_memmove_element_unordered_atomic_4@PLT
 ; CHECK-NEXT:    popq %rax

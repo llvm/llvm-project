@@ -195,11 +195,10 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    vmovq %xmm0, (%rdi)
-; AVX1-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: umulo_v3i32:
@@ -213,11 +212,10 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    vmovq %xmm0, (%rdi)
-; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: umulo_v3i32:
@@ -313,10 +311,9 @@ define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX1-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: umulo_v4i32:
@@ -330,10 +327,9 @@ define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX2-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: umulo_v4i32:
@@ -529,12 +525,11 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm7 = xmm8[0,1],xmm7[2,3],xmm8[4,5],xmm7[6,7]
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm7, %xmm5
 ; AVX1-NEXT:    vpxor %xmm6, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm1
 ; AVX1-NEXT:    vmovq %xmm1, 16(%rdi)
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX1-NEXT:    vmovaps %ymm2, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm0
+; AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: umulo_v6i32:
@@ -548,10 +543,10 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rdi)
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
@@ -701,12 +696,11 @@ define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm7 = xmm8[0,1],xmm7[2,3],xmm8[4,5],xmm7[6,7]
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm7, %xmm5
 ; AVX1-NEXT:    vpxor %xmm6, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm1
 ; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdi)
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX1-NEXT:    vmovaps %ymm2, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm0
+; AVX1-NEXT:    vpmulld %xmm3, %xmm4, %xmm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: umulo_v8i32:
@@ -720,10 +714,9 @@ define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rdi)
-; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: umulo_v8i32:

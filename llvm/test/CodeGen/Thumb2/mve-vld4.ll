@@ -10,17 +10,15 @@ define void @vld4_v2i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vmov.f32 s10, s7
 ; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    vmov.f32 s8, s3
 ; CHECK-NEXT:    vmov.f32 s12, s1
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    add r2, r3
-; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    add.w r12, r2, r0
 ; CHECK-NEXT:    vmov r2, s8
+; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    vmov r3, s12

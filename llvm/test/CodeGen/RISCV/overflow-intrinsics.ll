@@ -686,10 +686,10 @@ define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_decrement_alt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a3, a0, a1
-; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    seqz a4, a0
 ; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    sw a0, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    mv a0, a3
@@ -714,10 +714,10 @@ define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_decrement_alt_dom:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a3, a0, a1
-; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    seqz a4, a0
 ; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    snez a3, a3
 ; RV32-NEXT:    sw a0, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    mv a0, a3
@@ -830,10 +830,9 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a3, a1
 ; RV64-NEXT:    sext.w a4, a0
-; RV64-NEXT:    sltu a3, a4, a3
 ; RV64-NEXT:    subw a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(a2)
-; RV64-NEXT:    mv a0, a3
+; RV64-NEXT:    sltu a0, a4, a3
 ; RV64-NEXT:    ret
   %ov = icmp ugt i32 %y, %x
   %s = sub i32 %x, %y
@@ -929,19 +928,17 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) {
 ; RV32-LABEL: usubo_ugt_constant_op1_i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a0, 255
-; RV32-NEXT:    sltiu a2, a2, 45
 ; RV32-NEXT:    addi a0, a0, -45
 ; RV32-NEXT:    sb a0, 0(a1)
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    sltiu a0, a2, 45
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: usubo_ugt_constant_op1_i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a0, 255
-; RV64-NEXT:    sltiu a2, a2, 45
 ; RV64-NEXT:    addi a0, a0, -45
 ; RV64-NEXT:    sb a0, 0(a1)
-; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    sltiu a0, a2, 45
 ; RV64-NEXT:    ret
   %ov = icmp ugt i8 45, %x
   %s = add i8 %x, -45

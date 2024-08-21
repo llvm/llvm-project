@@ -1218,11 +1218,11 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    addq %rcx, %r9
 ; X64-NEXT:    adcq %rsi, %rdx
 ; X64-NEXT:    movq %rdx, %r12
-; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %r8

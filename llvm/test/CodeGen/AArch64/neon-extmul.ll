@@ -296,13 +296,12 @@ define <8 x i64> @extmuladds_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b) 
 ; CHECK-SD-LABEL: extmuladds_v8i8_i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    sshll2 v6.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-SD-NEXT:    saddw2 v5.2d, v5.2d, v6.4s
+; CHECK-SD-NEXT:    sshll2 v6.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    saddw v0.2d, v2.2d, v1.2s
 ; CHECK-SD-NEXT:    saddw2 v1.2d, v3.2d, v1.4s
+; CHECK-SD-NEXT:    saddw2 v3.2d, v5.2d, v6.4s
 ; CHECK-SD-NEXT:    saddw v2.2d, v4.2d, v6.2s
-; CHECK-SD-NEXT:    mov v3.16b, v5.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extmuladds_v8i8_i64:
@@ -334,13 +333,12 @@ define <8 x i64> @extmuladdu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b) 
 ; CHECK-SD-LABEL: extmuladdu_v8i8_i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ushll2 v6.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddw2 v5.2d, v5.2d, v6.4s
+; CHECK-SD-NEXT:    ushll2 v6.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    uaddw v0.2d, v2.2d, v1.2s
 ; CHECK-SD-NEXT:    uaddw2 v1.2d, v3.2d, v1.4s
+; CHECK-SD-NEXT:    uaddw2 v3.2d, v5.2d, v6.4s
 ; CHECK-SD-NEXT:    uaddw v2.2d, v4.2d, v6.2s
-; CHECK-SD-NEXT:    mov v3.16b, v5.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extmuladdu_v8i8_i64:

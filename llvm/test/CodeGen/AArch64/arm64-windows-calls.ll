@@ -130,8 +130,7 @@ define dso_local void @copy_notcxx14aggregate(ptr inreg noalias sret(%struct.Not
 define dso_local [2 x i64] @copy_notpod(ptr %x) {
 ; CHECK-LABEL: copy_notpod:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x1, [x0]
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ldp x0, x1, [x0]
 ; CHECK-NEXT:    ret
   %x2 = load [2 x i64], ptr %x
   ret [2 x i64] %x2

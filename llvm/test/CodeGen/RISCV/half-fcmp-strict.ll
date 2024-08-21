@@ -235,9 +235,8 @@ define i32 @fcmp_one(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    csrr a2, fflags
 ; CHECKIZHINX-NEXT:    flt.h a4, a1, a0
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
-; CHECKIZHINX-NEXT:    or a2, a4, a3
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    or a0, a4, a3
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_one:
@@ -334,9 +333,8 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    flt.h a4, a1, a0
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
 ; CHECKIZHINX-NEXT:    or a3, a4, a3
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ueq:
@@ -388,9 +386,8 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    csrr a2, fflags
 ; CHECKIZHINX-NEXT:    fle.h a3, a0, a1
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ugt:
@@ -432,9 +429,8 @@ define i32 @fcmp_uge(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    csrr a2, fflags
 ; CHECKIZHINX-NEXT:    flt.h a3, a0, a1
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_uge:
@@ -476,9 +472,8 @@ define i32 @fcmp_ult(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    csrr a2, fflags
 ; CHECKIZHINX-NEXT:    fle.h a3, a1, a0
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ult:
@@ -520,9 +515,8 @@ define i32 @fcmp_ule(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    csrr a2, fflags
 ; CHECKIZHINX-NEXT:    flt.h a3, a1, a0
 ; CHECKIZHINX-NEXT:    csrw fflags, a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ule:

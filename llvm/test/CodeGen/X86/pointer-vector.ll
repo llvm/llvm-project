@@ -5,9 +5,8 @@
 define <8 x ptr> @SHUFF0(<4 x ptr> %ptrv) nounwind {
 ; CHECK-LABEL: SHUFF0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,1,2]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,1]
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,1,2]
 ; CHECK-NEXT:    retl
 entry:
   %G = shufflevector <4 x ptr> %ptrv, <4 x ptr> %ptrv, <8 x i32> <i32 2, i32 7, i32 1, i32 2, i32 4, i32 5, i32 1, i32 1>

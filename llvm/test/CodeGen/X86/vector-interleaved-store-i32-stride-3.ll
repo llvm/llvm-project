@@ -714,13 +714,13 @@ define void @store_i32_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps 16(%rsi), %xmm9
 ; SSE-NEXT:    movaps 32(%rsi), %xmm10
 ; SSE-NEXT:    movaps 48(%rsi), %xmm11
-; SSE-NEXT:    movaps 16(%rdx), %xmm0
-; SSE-NEXT:    movaps 32(%rdx), %xmm3
 ; SSE-NEXT:    movaps 48(%rdx), %xmm8
+; SSE-NEXT:    movaps 32(%rdx), %xmm3
 ; SSE-NEXT:    movaps %xmm5, %xmm12
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm11[1]
 ; SSE-NEXT:    movaps %xmm5, %xmm13
 ; SSE-NEXT:    movaps %xmm5, %xmm6
+; SSE-NEXT:    movaps 16(%rdx), %xmm0
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm6 = xmm6[0],xmm11[0],xmm6[1],xmm11[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,3],xmm11[3,3]
 ; SSE-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill

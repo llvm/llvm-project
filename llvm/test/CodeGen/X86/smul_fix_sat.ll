@@ -266,10 +266,10 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl $2, %edx, %ecx
 ; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    movl $2147483647, %ebp # imm = 0x7FFFFFFF
@@ -277,7 +277,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    cmpl $-2, %edx
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    cmovll %esi, %ecx
-; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    shrdl $2, %edx, %edi

@@ -199,8 +199,7 @@ define <2 x i32> @vld2lanei32_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vld2.32 {d16[1], d17[1]}, [r3]!
 ; DEFAULT-NEXT:    vadd.i32 d16, d16, d17
 ; DEFAULT-NEXT:    str r3, [r0]
-; DEFAULT-NEXT:    vmov r2, r1, d16
-; DEFAULT-NEXT:    mov r0, r2
+; DEFAULT-NEXT:    vmov r0, r1, d16
 ; DEFAULT-NEXT:    mov pc, lr
 ;
 ; BASIC-LABEL: vld2lanei32_update:
@@ -213,9 +212,7 @@ define <2 x i32> @vld2lanei32_update(ptr %ptr, ptr %B) nounwind {
 ; BASIC-NEXT:    vld2.32 {d16[1], d17[1]}, [r0]!
 ; BASIC-NEXT:    vadd.i32 d16, d16, d17
 ; BASIC-NEXT:    str r0, [r1]
-; BASIC-NEXT:    vmov r2, r3, d16
-; BASIC-NEXT:    mov r0, r2
-; BASIC-NEXT:    mov r1, r3
+; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
   %A = load ptr, ptr %ptr
   %tmp1 = load <2 x i32>, ptr %B
@@ -238,8 +235,7 @@ define <2 x i32> @vld2lanei32_odd_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vld2.32 {d16[1], d17[1]}, [r3], r1
 ; DEFAULT-NEXT:    vadd.i32 d16, d16, d17
 ; DEFAULT-NEXT:    str r3, [r0]
-; DEFAULT-NEXT:    vmov r2, r1, d16
-; DEFAULT-NEXT:    mov r0, r2
+; DEFAULT-NEXT:    vmov r0, r1, d16
 ; DEFAULT-NEXT:    mov pc, lr
 ;
 ; BASIC-LABEL: vld2lanei32_odd_update:
@@ -253,9 +249,7 @@ define <2 x i32> @vld2lanei32_odd_update(ptr %ptr, ptr %B) nounwind {
 ; BASIC-NEXT:    vld2.32 {d16[1], d17[1]}, [r0], r2
 ; BASIC-NEXT:    vadd.i32 d16, d16, d17
 ; BASIC-NEXT:    str r0, [r1]
-; BASIC-NEXT:    vmov r2, r3, d16
-; BASIC-NEXT:    mov r0, r2
-; BASIC-NEXT:    mov r1, r3
+; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
   %A = load ptr, ptr %ptr
   %tmp1 = load <2 x i32>, ptr %B
@@ -538,9 +532,8 @@ define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; DEFAULT-NEXT:    vadd.i16 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i16 q8, q10, q12
 ; DEFAULT-NEXT:    str lr, [r0]
-; DEFAULT-NEXT:    vmov r12, r1, d16
+; DEFAULT-NEXT:    vmov r0, r1, d16
 ; DEFAULT-NEXT:    vmov r2, r3, d17
-; DEFAULT-NEXT:    mov r0, r12
 ; DEFAULT-NEXT:    pop {r11, lr}
 ; DEFAULT-NEXT:    mov pc, lr
 ;
@@ -558,11 +551,8 @@ define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8
 ; BASIC-NEXT:    str r0, [r3]
-; BASIC-NEXT:    vmov r1, lr, d16
-; BASIC-NEXT:    vmov r2, r12, d17
-; BASIC-NEXT:    mov r0, r1
-; BASIC-NEXT:    mov r1, lr
-; BASIC-NEXT:    mov r3, r12
+; BASIC-NEXT:    vmov r0, r1, d16
+; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    pop {r11, lr}
 ; BASIC-NEXT:    mov pc, lr
   %A = load ptr, ptr %ptr
@@ -704,8 +694,7 @@ define <8 x i8> @vld4lanei8_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-NEXT:    vadd.i8 d20, d18, d19
 ; DEFAULT-NEXT:    str r3, [r0]
 ; DEFAULT-NEXT:    vadd.i8 d16, d16, d20
-; DEFAULT-NEXT:    vmov r2, r1, d16
-; DEFAULT-NEXT:    mov r0, r2
+; DEFAULT-NEXT:    vmov r0, r1, d16
 ; DEFAULT-NEXT:    mov pc, lr
 ;
 ; BASIC-LABEL: vld4lanei8_update:
@@ -721,9 +710,7 @@ define <8 x i8> @vld4lanei8_update(ptr %ptr, ptr %B) nounwind {
 ; BASIC-NEXT:    vadd.i8 d20, d18, d19
 ; BASIC-NEXT:    str r0, [r3]
 ; BASIC-NEXT:    vadd.i8 d16, d16, d20
-; BASIC-NEXT:    vmov r1, r2, d16
-; BASIC-NEXT:    mov r0, r1
-; BASIC-NEXT:    mov r1, r2
+; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
   %A = load ptr, ptr %ptr
   %tmp1 = load <8 x i8>, ptr %B

@@ -1645,7 +1645,6 @@ define void @store_i8_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vpshufb %xmm8, %xmm7, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovdqa (%rdx), %xmm3
-; AVX-NEXT:    vmovdqa 16(%rdx), %xmm1
 ; AVX-NEXT:    vpshufb %xmm8, %xmm9, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vpshufb %xmm8, %xmm6, %xmm0
@@ -1660,6 +1659,7 @@ define void @store_i8_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vpshufb %xmm11, %xmm14, %xmm15
 ; AVX-NEXT:    vpor %xmm2, %xmm15, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa 16(%rdx), %xmm1
 ; AVX-NEXT:    vpshufb %xmm10, %xmm6, %xmm6
 ; AVX-NEXT:    vpshufb %xmm11, %xmm13, %xmm15
 ; AVX-NEXT:    vpor %xmm6, %xmm15, %xmm0

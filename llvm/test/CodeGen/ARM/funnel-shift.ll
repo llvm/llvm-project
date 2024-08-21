@@ -374,11 +374,10 @@ define i32 @fshr_i32_const_overshift(i32 %x, i32 %y) {
 define i64 @fshr_i64_const_overshift(i64 %x, i64 %y) {
 ; CHECK-LABEL: fshr_i64_const_overshift:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r2, r0, #23
 ; CHECK-NEXT:    lsl r1, r1, #23
-; CHECK-NEXT:    orr r2, r2, r3, lsr #9
+; CHECK-NEXT:    lsl r2, r0, #23
 ; CHECK-NEXT:    orr r1, r1, r0, lsr #9
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    orr r0, r2, r3, lsr #9
 ; CHECK-NEXT:    bx lr
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %y, i64 105)
   ret i64 %f

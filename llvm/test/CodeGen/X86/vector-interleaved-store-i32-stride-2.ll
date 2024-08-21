@@ -1321,14 +1321,14 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ;
 ; AVX2-LABEL: store_i32_stride2_vf64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps 224(%rdi), %ymm0
-; AVX2-NEXT:    vmovaps 192(%rdi), %ymm3
-; AVX2-NEXT:    vmovaps 160(%rdi), %ymm6
-; AVX2-NEXT:    vmovaps 128(%rdi), %ymm8
 ; AVX2-NEXT:    vmovaps (%rdi), %ymm1
+; AVX2-NEXT:    vmovaps 96(%rdi), %ymm9
+; AVX2-NEXT:    vmovaps 128(%rdi), %ymm8
+; AVX2-NEXT:    vmovaps 192(%rdi), %ymm3
+; AVX2-NEXT:    vmovaps 224(%rdi), %ymm0
+; AVX2-NEXT:    vmovaps 160(%rdi), %ymm6
 ; AVX2-NEXT:    vmovaps 32(%rdi), %ymm4
 ; AVX2-NEXT:    vmovaps 64(%rdi), %ymm7
-; AVX2-NEXT:    vmovaps 96(%rdi), %ymm9
 ; AVX2-NEXT:    vmovaps 192(%rsi), %ymm10
 ; AVX2-NEXT:    vmovaps 160(%rsi), %ymm11
 ; AVX2-NEXT:    vmovaps 128(%rsi), %ymm12
@@ -1393,14 +1393,14 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ;
 ; AVX2-FP-LABEL: store_i32_stride2_vf64:
 ; AVX2-FP:       # %bb.0:
-; AVX2-FP-NEXT:    vmovaps 224(%rdi), %ymm0
-; AVX2-FP-NEXT:    vmovaps 192(%rdi), %ymm3
-; AVX2-FP-NEXT:    vmovaps 160(%rdi), %ymm6
-; AVX2-FP-NEXT:    vmovaps 128(%rdi), %ymm8
 ; AVX2-FP-NEXT:    vmovaps (%rdi), %ymm1
+; AVX2-FP-NEXT:    vmovaps 96(%rdi), %ymm9
+; AVX2-FP-NEXT:    vmovaps 128(%rdi), %ymm8
+; AVX2-FP-NEXT:    vmovaps 192(%rdi), %ymm3
+; AVX2-FP-NEXT:    vmovaps 224(%rdi), %ymm0
+; AVX2-FP-NEXT:    vmovaps 160(%rdi), %ymm6
 ; AVX2-FP-NEXT:    vmovaps 32(%rdi), %ymm4
 ; AVX2-FP-NEXT:    vmovaps 64(%rdi), %ymm7
-; AVX2-FP-NEXT:    vmovaps 96(%rdi), %ymm9
 ; AVX2-FP-NEXT:    vmovaps 192(%rsi), %ymm10
 ; AVX2-FP-NEXT:    vmovaps 160(%rsi), %ymm11
 ; AVX2-FP-NEXT:    vmovaps 128(%rsi), %ymm12
@@ -1465,14 +1465,14 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ;
 ; AVX2-FCP-LABEL: store_i32_stride2_vf64:
 ; AVX2-FCP:       # %bb.0:
-; AVX2-FCP-NEXT:    vmovaps 224(%rdi), %ymm0
-; AVX2-FCP-NEXT:    vmovaps 192(%rdi), %ymm3
-; AVX2-FCP-NEXT:    vmovaps 160(%rdi), %ymm6
-; AVX2-FCP-NEXT:    vmovaps 128(%rdi), %ymm8
 ; AVX2-FCP-NEXT:    vmovaps (%rdi), %ymm1
+; AVX2-FCP-NEXT:    vmovaps 96(%rdi), %ymm9
+; AVX2-FCP-NEXT:    vmovaps 128(%rdi), %ymm8
+; AVX2-FCP-NEXT:    vmovaps 192(%rdi), %ymm3
+; AVX2-FCP-NEXT:    vmovaps 224(%rdi), %ymm0
+; AVX2-FCP-NEXT:    vmovaps 160(%rdi), %ymm6
 ; AVX2-FCP-NEXT:    vmovaps 32(%rdi), %ymm4
 ; AVX2-FCP-NEXT:    vmovaps 64(%rdi), %ymm7
-; AVX2-FCP-NEXT:    vmovaps 96(%rdi), %ymm9
 ; AVX2-FCP-NEXT:    vmovaps 192(%rsi), %ymm10
 ; AVX2-FCP-NEXT:    vmovaps 160(%rsi), %ymm11
 ; AVX2-FCP-NEXT:    vmovaps 128(%rsi), %ymm12

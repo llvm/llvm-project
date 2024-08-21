@@ -9,10 +9,10 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV6-NEXT:    .pad #60
 ; THUMBV6-NEXT:    sub sp, #60
 ; THUMBV6-NEXT:    mov r6, r3
-; THUMBV6-NEXT:    mov r1, r2
-; THUMBV6-NEXT:    str r2, [sp, #52] @ 4-byte Spill
 ; THUMBV6-NEXT:    mov r4, r0
 ; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r1, r2
+; THUMBV6-NEXT:    str r2, [sp, #52] @ 4-byte Spill
 ; THUMBV6-NEXT:    ldr r2, [sp, #88]
 ; THUMBV6-NEXT:    str r2, [sp, #48] @ 4-byte Spill
 ; THUMBV6-NEXT:    movs r5, #0

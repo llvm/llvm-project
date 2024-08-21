@@ -208,11 +208,11 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    bsrl %ebp, %ebp
 ; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl $31, %ebp
 ; X86-NEXT:    orl $32, %ebp
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    cmovnel %edx, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    orl $64, %ebp
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    orl %ebx, %edx
