@@ -13,10 +13,9 @@
 #include <unistd.h>
 #endif
 
-#include "llvm/ADT/StringRef.h"
 #include "DAP.h"
 #include "OutputRedirector.h"
-
+#include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
 
