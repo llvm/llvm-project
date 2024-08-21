@@ -218,7 +218,7 @@
 "`LWG3269 <https://wg21.link/LWG3269>`__","Parse manipulators do not specify the result of the extraction from stream","2020-02 (Prague)","","","|chrono|"
 "`LWG3270 <https://wg21.link/LWG3270>`__","Parsing and formatting ``%j``\  with ``duration``\ s","2020-02 (Prague)","|Partial|","","|chrono| |format|"
 "`LWG3280 <https://wg21.link/LWG3280>`__","View converting constructors can cause constraint recursion and are unneeded","2020-02 (Prague)","|Complete|","15.0","|ranges|"
-"`LWG3281 <https://wg21.link/LWG3281>`__","Conversion from ``*pair-like*``\  types to ``subrange``\  is a silent semantic promotion","2020-02 (Prague)","|Complete|","15.0","|ranges|"
+"`LWG3281 <https://wg21.link/LWG3281>`__","Conversion from ``*pair-like*``\  types to ``subrange``\  is a silent semantic promotion","2020-02 (Prague)","|Complete|","13.0","|ranges|"
 "`LWG3282 <https://wg21.link/LWG3282>`__","``subrange``\  converting constructor should disallow derived to base conversions","2020-02 (Prague)","|Complete|","15.0","|ranges|"
 "`LWG3284 <https://wg21.link/LWG3284>`__","``random_access_iterator``\  semantic constraints accidentally promote difference type using unary negate","2020-02 (Prague)","|Nothing To Do|","","|ranges|"
 "`LWG3285 <https://wg21.link/LWG3285>`__","The type of a customization point object shall satisfy ``semiregular``\ ","2020-02 (Prague)","|Nothing To Do|","","|ranges|"
