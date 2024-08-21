@@ -9409,10 +9409,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
   }
 
-  unsigned BaseOpc;
   ISD::CondCode CC;
-  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Unhandled reduction");
@@ -9423,7 +9420,6 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
-    BaseOpc = ISD::AND;
     break;
   }
   case ISD::VECREDUCE_OR:
@@ -9431,7 +9427,6 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     // vcpop x != 0
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETNE;
-    BaseOpc = ISD::OR;
     break;
   case ISD::VECREDUCE_XOR:
   case ISD::VP_REDUCE_XOR: {
@@ -9440,11 +9435,11 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     Vec = DAG.getNode(ISD::AND, DL, XLenVT, Vec, One);
     CC = ISD::SETNE;
-    BaseOpc = ISD::XOR;
     break;
   }
   }
 
+  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
   SDValue SetCC = DAG.getSetCC(DL, XLenVT, Vec, Zero, CC);
   SetCC = DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), SetCC);
 
@@ -9457,6 +9452,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   // 0 for an inactive vector, and so we've already received the neutral value:
   // AND gives us (0 == 0) -> 1 and OR/XOR give us (0 != 0) -> 0. Therefore we
   // can simply include the start value.
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   return DAG.getNode(BaseOpc, DL, Op.getValueType(), SetCC, Op.getOperand(0));
 }
 
