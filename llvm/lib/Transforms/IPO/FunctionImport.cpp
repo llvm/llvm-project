@@ -1814,10 +1814,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = F.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing function"
@@ -1853,10 +1850,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing global"
@@ -1876,10 +1870,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = GA.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing alias"
