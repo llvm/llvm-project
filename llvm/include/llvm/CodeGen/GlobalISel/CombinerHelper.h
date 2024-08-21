@@ -900,6 +900,9 @@ public:
   bool matchExtOfExt(const MachineInstr &FirstMI, const MachineInstr &SecondMI,
                      BuildFnTy &MatchInfo);
 
+  bool matchCastOfBuildVector(const MachineInstr &CastMI,
+                              const MachineInstr &BVMI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
