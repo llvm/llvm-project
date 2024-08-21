@@ -211,8 +211,6 @@ MDNode *MachineLoop::getLoopID() const {
             break;
           }
         }
-        if (!MD)
-          return nullptr;
         if (!LoopID)
           LoopID = MD;
         else if (MD != LoopID)

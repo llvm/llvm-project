@@ -111,7 +111,7 @@ for.body5:                                        ; preds = %for.body, %for.body
 ;     }
 ; }
 ; CHECK-LABEL: test3_multilatch:
-; ALIGN: .p2align 4, 0x90
+; ALIGN: .p2align 6, 0x90
 ; ALIGN-NEXT: .LBB2_1: # %while.cond
 define dso_local i32 @test3_multilatch() #0 {
 entry:
