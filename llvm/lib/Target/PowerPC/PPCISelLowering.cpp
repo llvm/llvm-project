@@ -12032,6 +12032,12 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Lowered);
     return;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    SDValue Lowered = LowerSCALAR_TO_VECTOR(SDValue(N, 0), DAG);
+    if (Lowered)
+      Results.push_back(Lowered);
+    return;
+  }
   case ISD::FSHL:
   case ISD::FSHR:
     // Don't handle funnel shifts here.
