@@ -8,6 +8,7 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "UnwindInfoSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -60,6 +61,25 @@ getRelocHash(const Reloc &reloc,
   return getRelocHash(kind, sectionIdx.value_or(0), 0, reloc.addend);
 }
 
+static uint64_t getUnwindInfoEncodingHash(const InputSection *isec) {
+  for (Symbol *sym : isec->symbols) {
+    if (auto *d = dyn_cast_or_null<Defined>(sym)) {
+      if (auto *ue = d->unwindEntry()) {
+        CompactUnwindEntry cu;
+        cu.relocateOneCompactUnwindEntry(d);
+        if (cu.lsda)
+          return xxHash64("HAS LSDA");
+        StringRef name = cu.personality ? cu.personality->getName().empty()
+                                              ? "<unnamed>"
+                                              : cu.personality->getName()
+                                        : "<none>";
+        return xxHash64((name + ";" + Twine::utohexstr(cu.encoding)).str());
+      }
+    }
+  }
+  return 0;
+}
+
 static void constructNodesForCompression(
     const SmallVector<const InputSection *> &sections,
     const DenseMap<const InputSection *, uint64_t> &sectionToIdx,
@@ -75,6 +95,8 @@ static void constructNodesForCompression(
   for (unsigned sectionIdx : sectionIdxs) {
     const auto *isec = sections[sectionIdx];
     constexpr unsigned windowSize = 4;
+
+    hashes.push_back(getUnwindInfoEncodingHash(isec));
 
     for (size_t i = 0; i < isec->data.size(); i++) {
       auto window = isec->data.drop_front(i).take_front(windowSize);
