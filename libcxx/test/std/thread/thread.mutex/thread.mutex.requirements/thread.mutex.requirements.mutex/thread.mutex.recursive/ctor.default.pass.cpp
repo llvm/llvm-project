@@ -10,17 +10,21 @@
 
 // <mutex>
 
-// class timed_mutex;
+// class recursive_mutex;
 
-// timed_mutex();
+// recursive_mutex();
 
 #include <mutex>
-
-#include "test_macros.h"
+#include <cassert>
+#include <type_traits>
 
 int main(int, char**) {
-  std::timed_mutex m;
-  (void)m;
+  // The mutex is unlocked after default construction
+  {
+    std::recursive_mutex m;
+    assert(m.try_lock());
+    m.unlock();
+  }
 
   return 0;
 }
