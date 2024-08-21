@@ -1027,16 +1027,6 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 // Type Constraints
 //===----------------------------------------------------------------------===//
 
-static const char *const typeConstraintDecl = R"(
-bool {0}(::mlir::Type type);
-)";
-
-static const char *const typeConstraintDef = R"(
-bool {0}(::mlir::Type type) {
-  return ({1});
-}
-)";
-
 /// Find all type constraints for which a C++ function should be generated.
 static std::vector<Constraint>
 getAllTypeConstraints(const llvm::RecordKeeper &records) {
@@ -1058,12 +1048,22 @@ getAllTypeConstraints(const llvm::RecordKeeper &records) {
 
 static void emitTypeConstraintDecls(const llvm::RecordKeeper &records,
                                     raw_ostream &os) {
+  static const char *const typeConstraintDecl = R"(
+bool {0}(::mlir::Type type);
+)";
+
   for (Constraint constr : getAllTypeConstraints(records))
     os << strfmt(typeConstraintDecl, *constr.getCppFunctionName());
 }
 
 static void emitTypeConstraintDefs(const llvm::RecordKeeper &records,
                                    raw_ostream &os) {
+  static const char *const typeConstraintDef = R"(
+bool {0}(::mlir::Type type) {
+  return ({1});
+}
+)";
+
   for (Constraint constr : getAllTypeConstraints(records)) {
     FmtContext ctx;
     ctx.withSelf("type");
