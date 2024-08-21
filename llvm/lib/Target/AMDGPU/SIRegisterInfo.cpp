@@ -2396,7 +2396,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
-      return spillSGPR(MI, Index, RS);
+      return spillSGPR(MI, Index, RS, nullptr, nullptr, false, false, NeedsCFI);
     }
 
     // SGPR register restore
