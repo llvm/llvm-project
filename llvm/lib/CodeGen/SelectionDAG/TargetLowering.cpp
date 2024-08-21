@@ -8739,7 +8739,10 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
         isCondCodeLegalOrCustom(IsOrderedInf ? OrderedCmpOpcode
                                              : UnorderedCmpOpcode,
                                 OperandVT.getScalarType().getSimpleVT()) &&
-        isOperationLegalOrCustom(ISD::FABS, OperandVT.getScalarType())) {
+        isOperationLegalOrCustom(ISD::FABS, OperandVT.getScalarType()) &&
+        (isOperationLegal(ISD::ConstantFP, OperandVT.getScalarType()) ||
+         (OperandVT.isVector() &&
+          isOperationLegalOrCustom(ISD::BUILD_VECTOR, OperandVT)))) {
       // isinf(x) --> fabs(x) == inf
       SDValue Abs = DAG.getNode(ISD::FABS, DL, OperandVT, Op);
       SDValue Inf =
