@@ -16586,7 +16586,7 @@ ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
 }
 
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
-                                              const Expr *SrcExpr) {
+                                              Expr *SrcExpr) {
   if (!DstType->isFunctionPointerType() ||
       !SrcExpr->getType()->isFunctionType())
     return false;

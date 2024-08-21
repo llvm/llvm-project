@@ -356,8 +356,8 @@ static std::vector<FixItHint> handleReturnType(const FunctionDecl *Function,
   if (!TypeText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
-  Function->getAssociatedConstraints(ExistingConstraints);
+  SmallVector<Expr *, 3> ExistingConstraints;
+  const_cast<FunctionDecl *>(Function)->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
     // consider subsumption?
@@ -404,8 +404,8 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
   if (!ConditionText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
-  Function->getAssociatedConstraints(ExistingConstraints);
+  SmallVector<Expr *, 3> ExistingConstraints;
+  const_cast<FunctionDecl *>(Function)->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
     // consider subsumption?

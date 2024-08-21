@@ -76,7 +76,7 @@ enum class TemplateSubstitutionKind : char {
   class MultiLevelTemplateArgumentList {
     /// The template argument list at a certain template depth
 
-    using ArgList = ArrayRef<TemplateArgument>;
+    using ArgList = MutableArrayRef<TemplateArgument>;
     struct ArgumentListLevel {
       llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
       ArgList Args;
@@ -199,8 +199,7 @@ enum class TemplateSubstitutionKind : char {
       assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
       assert(Index <
              TemplateArgumentLists[getNumLevels() - Depth - 1].Args.size());
-      const_cast<TemplateArgument &>(
-          TemplateArgumentLists[getNumLevels() - Depth - 1].Args[Index]) = Arg;
+      TemplateArgumentLists[getNumLevels() - Depth - 1].Args[Index] = Arg;
     }
 
     /// Add a new outmost level to the multi-level template argument

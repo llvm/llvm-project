@@ -3864,7 +3864,7 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   }
 
   S.NoteTemplateLocation(*Template);
-  SmallVector<const Expr *, 3> PartialAC, TemplateAC;
+  SmallVector<Expr *, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
   S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
@@ -4190,7 +4190,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // the set of specializations, based on the closest partial specialization
   // that it represents. That is,
   VarDecl *InstantiationPattern = Template->getTemplatedDecl();
-  const TemplateArgumentList *PartialSpecArgs = nullptr;
+  TemplateArgumentList *PartialSpecArgs = nullptr;
   bool AmbiguousPartialSpec = false;
   typedef PartialSpecMatchResult MatchResult;
   SmallVector<MatchResult, 4> Matched;
@@ -4764,7 +4764,7 @@ bool Sema::CheckTemplateTypeArgument(
 static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, TemplateTypeParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     TemplateArgumentLoc &Output) {
   Output = Param->getDefaultArgument();
@@ -4824,7 +4824,7 @@ static bool SubstDefaultTemplateArgument(
 static bool SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, NonTypeTemplateParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     TemplateArgumentLoc &Output) {
   Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Param, Template,
@@ -4874,7 +4874,7 @@ static bool SubstDefaultTemplateArgument(
 static TemplateName SubstDefaultTemplateArgument(
     Sema &SemaRef, TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, TemplateTemplateParmDecl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted,
     NestedNameSpecifierLoc &QualifierLoc) {
   Sema::InstantiatingTemplate Inst(
@@ -4909,7 +4909,7 @@ static TemplateName SubstDefaultTemplateArgument(
 TemplateArgumentLoc Sema::SubstDefaultTemplateArgumentIfAvailable(
     TemplateDecl *Template, SourceLocation TemplateLoc,
     SourceLocation RAngleLoc, Decl *Param,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    MutableArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg) {
   HasDefaultArg = false;
 
@@ -7167,7 +7167,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       // C++20[temp.func.order]p2
       //   [...] If both deductions succeed, the partial ordering selects the
       // more constrained template (if one exists) as determined below.
-      SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
+      SmallVector<Expr *, 3> ParamsAC, TemplateAC;
       Params->getAssociatedConstraints(ParamsAC);
       // C++2a[temp.arg.template]p3
       //   [...] In this comparison, if P is unconstrained, the constraints on A
@@ -7514,7 +7514,7 @@ Sema::BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
 static bool MatchTemplateParameterKind(
     Sema &S, NamedDecl *New,
     const Sema::TemplateCompareNewDeclInfo &NewInstFrom, NamedDecl *Old,
-    const NamedDecl *OldInstFrom, bool Complain,
+    NamedDecl *OldInstFrom, bool Complain,
     Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   // Check the actual kind (type, non-type, template).
   if (Old->getKind() != New->getKind()) {
@@ -7684,7 +7684,7 @@ void DiagnoseTemplateParameterListArityMismatch(Sema &S,
 
 bool Sema::TemplateParameterListsAreEqual(
     const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
-    const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
+    NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
     TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   if (Old->size() != New->size() && Kind != TPL_TemplateTemplateArgumentMatch) {
     if (Complain)

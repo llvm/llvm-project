@@ -10391,7 +10391,7 @@ public:
 
   // Emit as a 'note' the specific overload candidate
   void NoteOverloadCandidate(
-      const NamedDecl *Found, const FunctionDecl *Fn,
+      const NamedDecl *Found, FunctionDecl *Fn,
       OverloadCandidateRewriteKind RewriteKind = OverloadCandidateRewriteKind(),
       QualType DestType = QualType(), bool TakingAddress = false);
 
@@ -10404,7 +10404,7 @@ public:
   /// optionally emitting a diagnostic if the address can't be taken.
   ///
   /// Returns false if taking the address of the function is illegal.
-  bool checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
+  bool checkAddressOfFunctionIsAvailable(FunctionDecl *Function,
                                          bool Complain = false,
                                          SourceLocation Loc = SourceLocation());
 
@@ -11638,7 +11638,7 @@ public:
   TemplateArgumentLoc SubstDefaultTemplateArgumentIfAvailable(
       TemplateDecl *Template, SourceLocation TemplateLoc,
       SourceLocation RAngleLoc, Decl *Param,
-      ArrayRef<TemplateArgument> SugaredConverted,
+      MutableArrayRef<TemplateArgument> SugaredConverted,
       ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
   /// Returns the top most location responsible for the definition of \p N.
@@ -11837,13 +11837,13 @@ public:
   // the named decl, or the important information we need about it in order to
   // do constraint comparisons.
   class TemplateCompareNewDeclInfo {
-    const NamedDecl *ND = nullptr;
+    NamedDecl *ND = nullptr;
     const DeclContext *DC = nullptr;
     const DeclContext *LexicalDC = nullptr;
     SourceLocation Loc;
 
   public:
-    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
+    TemplateCompareNewDeclInfo(NamedDecl *ND) : ND(ND) {}
     TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
                                const DeclContext *LexicalDeclCtx,
                                SourceLocation Loc)
@@ -11858,7 +11858,10 @@ public:
     // for constraint comparison, so make sure we can check that.
     bool isInvalid() const { return !ND && !DC; }
 
-    const NamedDecl *getDecl() const { return ND; }
+    NamedDecl *getDecl() { return ND; }
+    const NamedDecl *getDecl() const { 
+      return const_cast<TemplateCompareNewDeclInfo *>(this)->getDecl();
+    }
 
     bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
 
@@ -11898,7 +11901,7 @@ public:
   /// otherwise.
   bool TemplateParameterListsAreEqual(
       const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
-      const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
+      NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
       TemplateParameterListEqualKind Kind,
       SourceLocation TemplateArgLoc = SourceLocation());
 
@@ -12800,7 +12803,7 @@ public:
     union {
       /// The list of template arguments we are substituting, if they
       /// are not part of the entity.
-      const TemplateArgument *TemplateArgs;
+      TemplateArgument *TemplateArgs;
 
       /// The list of argument expressions in a synthesized call.
       const Expr *const *CallArgs;
@@ -12819,9 +12822,12 @@ public:
       CXXSpecialMemberKind SpecialMember;
     };
 
-    ArrayRef<TemplateArgument> template_arguments() const {
+    MutableArrayRef<TemplateArgument> template_arguments() {
       assert(Kind != DeclaringSpecialMember);
       return {TemplateArgs, NumTemplateArgs};
+    }
+    ArrayRef<TemplateArgument> template_arguments() const {
+      return const_cast<CodeSynthesisContext *>(this)->template_arguments();
     }
 
     /// The template deduction info object associated with the
@@ -12873,21 +12879,21 @@ public:
     /// Note that we are instantiating a type alias template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TypeAliasTemplateDecl *Entity,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating a default argument in a
     /// template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateParameter Param, TemplateDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are substituting either explicitly-specified or
     /// deduced template arguments during function template argument deduction.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionTemplateDecl *FunctionTemplate,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           CodeSynthesisContext::SynthesisKind Kind,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
@@ -12896,7 +12902,7 @@ public:
     /// argument deduction for a class template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12905,7 +12911,7 @@ public:
     /// specialization.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ClassTemplatePartialSpecializationDecl *PartialSpec,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12914,7 +12920,7 @@ public:
     /// specialization.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           VarTemplatePartialSpecializationDecl *PartialSpec,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -12922,28 +12928,28 @@ public:
     /// parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ParmVarDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are substituting prior template arguments into a
     /// non-type parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           NamedDecl *Template, NonTypeTemplateParmDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     /// Note that we are substituting prior template arguments into a
     /// template template parameter.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           NamedDecl *Template, TemplateTemplateParmDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     /// Note that we are checking the default template argument
     /// against the template parameter for a given template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Template, NamedDecl *Param,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     struct ConstraintsCheck {};
@@ -12952,7 +12958,7 @@ public:
     /// constraints).
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ConstraintsCheck, NamedDecl *Template,
-                          ArrayRef<TemplateArgument> TemplateArgs,
+                          MutableArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange);
 
     struct ConstraintSubstitution {};
@@ -13026,7 +13032,7 @@ public:
         Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
         SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
         Decl *Entity, NamedDecl *Template = nullptr,
-        ArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
+        MutableArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
         sema::TemplateDeductionInfo *DeductionInfo = nullptr);
 
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;
@@ -13072,8 +13078,8 @@ public:
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
-      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
+      NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      std::optional<MutableArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
       bool SkipForSpecialization = false);
@@ -13676,7 +13682,7 @@ public:
   /// Usually this should not be used, and template argument deduction should be
   /// used in its place.
   FunctionDecl *InstantiateFunctionDeclaration(
-      FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+      FunctionTemplateDecl *FTD, TemplateArgumentList *Args,
       SourceLocation Loc,
       CodeSynthesisContext::SynthesisKind CSC =
           CodeSynthesisContext::ExplicitTemplateArgumentSubstitution);
@@ -13705,7 +13711,7 @@ public:
                                      bool AtEndOfTU = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-      const TemplateArgumentList *PartialSpecArgs,
+      TemplateArgumentList *PartialSpecArgs,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
@@ -14346,7 +14352,7 @@ public:
   /// A diagnostic is emitted if it is not, false is returned, and
   /// PossibleNonPrimary will be set to true if the failure might be due to a
   /// non-primary expression being used as an atomic constraint.
-  bool CheckConstraintExpression(const Expr *CE, Token NextToken = Token(),
+  bool CheckConstraintExpression(Expr *CE, Token NextToken = Token(),
                                  bool *PossibleNonPrimary = nullptr,
                                  bool IsTrailingRequiresClause = false);
 
@@ -14366,7 +14372,7 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
       const MultiLevelTemplateArgumentList &TemplateArgLists,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
     llvm::SmallVector<Expr *, 4> Converted;
@@ -14398,7 +14404,7 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template, ArrayRef<Expr *> ConstraintExprs,
       llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgList,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
@@ -14409,7 +14415,7 @@ public:
   /// occurred and satisfaction could not be determined.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckConstraintSatisfaction(const Expr *ConstraintExpr,
+  bool CheckConstraintSatisfaction(Expr *ConstraintExpr,
                                    ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
@@ -14418,7 +14424,7 @@ public:
   /// an error occurred and satisfaction could not be determined.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckFunctionConstraints(const FunctionDecl *FD,
+  bool CheckFunctionConstraints(FunctionDecl *FD,
                                 ConstraintSatisfaction &Satisfaction,
                                 SourceLocation UsageLoc = SourceLocation(),
                                 bool ForOverloadResolution = false);
@@ -14429,14 +14435,14 @@ public:
   // for figuring out the relative 'depth' of the constraint. The depth of the
   // 'primary template' and the 'instantiated from' templates aren't necessarily
   // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
+  bool AreConstraintExpressionsEqual(NamedDecl *Old,
                                      const Expr *OldConstr,
                                      const TemplateCompareNewDeclInfo &New,
                                      const Expr *NewConstr);
 
   // Calculates whether the friend function depends on an enclosing template for
   // the purposes of [temp.friend] p9.
-  bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
+  bool FriendConstraintsDependOnEnclosingTemplate(FunctionDecl *FD);
 
   /// \brief Ensure that the given template arguments satisfy the constraints
   /// associated with the given template, emitting a diagnostic if they do not.
@@ -14458,7 +14464,7 @@ public:
 
   bool CheckInstantiatedFunctionTemplateConstraints(
       SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
+      MutableArrayRef<TemplateArgument> TemplateArgs,
       ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
@@ -14475,7 +14481,7 @@ public:
                                 bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
-      NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints);
+      NamedDecl *ConstrainedDecl, ArrayRef<Expr *> AssociatedConstraints);
 
   /// \brief Check whether the given declaration's associated constraints are
   /// at least as constrained than another declaration's according to the
@@ -14485,8 +14491,8 @@ public:
   /// at least constrained than D2, and false otherwise.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool IsAtLeastAsConstrained(NamedDecl *D1, MutableArrayRef<const Expr *> AC1,
-                              NamedDecl *D2, MutableArrayRef<const Expr *> AC2,
+  bool IsAtLeastAsConstrained(NamedDecl *D1, MutableArrayRef<Expr *> AC1,
+                              NamedDecl *D2, MutableArrayRef<Expr *> AC2,
                               bool &Result);
 
   /// If D1 was not at least as constrained as D2, but would've been if a pair
@@ -14494,8 +14500,8 @@ public:
   /// repeated in two separate places in code.
   /// \returns true if such a diagnostic was emitted, false otherwise.
   bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-      NamedDecl *D1, ArrayRef<const Expr *> AC1, NamedDecl *D2,
-      ArrayRef<const Expr *> AC2);
+      NamedDecl *D1, ArrayRef<Expr *> AC1, NamedDecl *D2,
+      ArrayRef<Expr *> AC2);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
@@ -14526,7 +14532,7 @@ private:
   /// function.
   bool
   SetupConstraintScope(FunctionDecl *FD,
-                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
                        const MultiLevelTemplateArgumentList &MLTAL,
                        LocalInstantiationScope &Scope);
 
@@ -14535,7 +14541,7 @@ private:
   /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
   std::optional<MultiLevelTemplateArgumentList>
   SetupConstraintCheckingTemplateArgumentsAndScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+      FunctionDecl *FD, std::optional<MutableArrayRef<TemplateArgument>> TemplateArgs,
       LocalInstantiationScope &Scope);
 
   ///@}

@@ -3070,12 +3070,12 @@ template <typename TemplateDeclT>
 static TemplateDeductionResult
 CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
                                 ArrayRef<TemplateArgument> SugaredDeducedArgs,
-                                ArrayRef<TemplateArgument> CanonicalDeducedArgs,
+                                MutableArrayRef<TemplateArgument> CanonicalDeducedArgs,
                                 TemplateDeductionInfo &Info) {
-  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
+  llvm::SmallVector<Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
-  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  std::optional<MutableArrayRef<TemplateArgument>> Innermost;
   // If we don't need to replace the deduced template arguments,
   // we can add them immediately as the inner-most argument list.
   if (!DeducedArgsNeedReplacement(Template))
@@ -3524,7 +3524,7 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   ExtParameterInfoBuilder ExtParamInfos;
 
   MultiLevelTemplateArgumentList MLTAL(FunctionTemplate,
-                                       SugaredExplicitArgumentList->asArray(),
+                                       SugaredExplicitArgumentList->asMutableArray(),
                                        /*Final=*/true);
 
   // Instantiate the types of each of the function parameters given the
@@ -3766,7 +3766,7 @@ static TemplateDeductionResult instantiateExplicitSpecifierDeferred(
     Sema &S, FunctionDecl *Specialization,
     const MultiLevelTemplateArgumentList &SubstArgs,
     TemplateDeductionInfo &Info, FunctionTemplateDecl *FunctionTemplate,
-    ArrayRef<TemplateArgument> DeducedArgs) {
+    MutableArrayRef<TemplateArgument> DeducedArgs) {
   auto GetExplicitSpecifier = [](FunctionDecl *D) {
     return isa<CXXConstructorDecl>(D)
                ? cast<CXXConstructorDecl>(D)->getExplicitSpecifier()
@@ -3877,7 +3877,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     Owner = FD->getLexicalDeclContext();
   }
   MultiLevelTemplateArgumentList SubstArgs(
-      FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
+      FunctionTemplate, CanonicalDeducedArgumentList->asMutableArray(),
       /*Final=*/false);
   Specialization = cast_or_null<FunctionDecl>(
       SubstDecl(FD, Owner, SubstArgs));
@@ -5717,7 +5717,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
       !Context.hasSameType(FD1->getReturnType(), FD2->getReturnType()))
     return nullptr;
 
-  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  llvm::SmallVector<Expr *, 3> AC1, AC2;
   FT1->getAssociatedConstraints(AC1);
   FT2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
@@ -5822,7 +5822,7 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   if (FunctionDecl *P = FD2->getTemplateInstantiationPattern(false))
     F2 = P;
 
-  llvm::SmallVector<const Expr *, 1> AC1, AC2;
+  llvm::SmallVector<Expr *, 1> AC1, AC2;
   F1->getAssociatedConstraints(AC1);
   F2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
@@ -6057,7 +6057,7 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   if (!TemplateArgumentListAreEqual(S.getASTContext())(P1, P2))
     return nullptr;
 
-  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  llvm::SmallVector<Expr *, 3> AC1, AC2;
   P1->getAssociatedConstraints(AC1);
   P2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;

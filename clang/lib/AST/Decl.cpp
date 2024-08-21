@@ -4162,6 +4162,11 @@ FunctionDecl::getTemplateSpecializationInfo() const {
 
 const TemplateArgumentList *
 FunctionDecl::getTemplateSpecializationArgs() const {
+  return const_cast<FunctionDecl *>(this)->getTemplateSpecializationArgs();
+}
+
+TemplateArgumentList *
+FunctionDecl::getTemplateSpecializationArgs() {
   if (FunctionTemplateSpecializationInfo *Info
         = TemplateOrSpecialization
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
