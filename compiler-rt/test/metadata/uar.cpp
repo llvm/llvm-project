@@ -3,6 +3,7 @@
 // RUN: %clangxx %s -O1 -o %t -mcmodel=large -fexperimental-sanitize-metadata=covered,uar -fsanitize=address,signed-integer-overflow,alignment && %t | FileCheck %s --check-prefixes=CHECK-LARGE
 
 // CHECK: metadata add version 2
+// CHECK: with_noreturn_tail_call: features=0
 // CHECK: empty: features=0 stack_args=0
 // CHECK: simple: features=0 stack_args=0
 // CHECK: builtins: features=0 stack_args=0
@@ -13,7 +14,6 @@
 // CHECK: more_stack_args: features=6 stack_args=32
 // CHECK: struct_stack_args: features=6 stack_args=144
 // CHECK: with_tail_call: features=2
-// CHECK: with_noreturn_tail_call: features=0
 // CHECK: local_array: features=0
 // CHECK: local_alloca: features=0
 // CHECK: escaping_alloca: features=2
@@ -29,10 +29,10 @@
 // CHECK-LARGE: more_stack_args: features=6 stack_args=32
 // CHECK-LARGE: struct_stack_args: features=6 stack_args=144
 // CHECK-LARGE: with_tail_call: features=2
-// CHECK-LARGE: with_noreturn_tail_call: features=0
 // CHECK-LARGE: local_array: features=0
 // CHECK-LARGE: local_alloca: features=0
 // CHECK-LARGE: escaping_alloca: features=2
+// CHECK-LARGE: with_noreturn_tail_call: features=0
 
 __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
   [[maybe_unused]] static const volatile void *sink;
