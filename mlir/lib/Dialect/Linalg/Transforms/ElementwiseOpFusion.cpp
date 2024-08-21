@@ -121,7 +121,7 @@ llvm::SmallDenseSet<int> mlir::linalg::getPreservedProducerResults(
       preservedProducerResults.insert(producerResult.index());
 
       // In case the operand can't be dropped
-      opOperandsToIgnore.pop_back_val();
+      (void)opOperandsToIgnore.pop_back_val();
     }
   }
   return preservedProducerResults;
