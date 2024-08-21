@@ -30,4 +30,4 @@ func.func @nested_loop(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i3
 
 // CHECK-LABEL:   func.func @nested_loop
 // CHECK:         ^bb1(%{{.*}}: i32, %[[BB1_ARG1:.*]]: i32):
-// CHECK:           arith.addi %[[BB1_ARG1]]
+// CHECK:           arith.addi %[[BB1_ARG1]],
