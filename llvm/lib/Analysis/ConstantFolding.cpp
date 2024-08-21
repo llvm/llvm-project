@@ -1783,17 +1783,23 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
 }
 
 #if defined(HAS_IEE754_FLOAT128)
+float128 ConvertToQuad(const APFloat &Apf) {
+  APInt Api = Apf.bitcastToAPInt();
+  __uint128_t Uint128 =
+      ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
+      Api.extractBitsAsZExtValue(64, 0);
+  return llvm::bit_cast<float128>(Uint128);
+}
+#endif
+
+#if defined(HAS_IEE754_FLOAT128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
   llvm_fenv_clearexcept();
-
   if (!V.isValidIEEEQuad())
     return nullptr;
 
-  APInt Api = V.bitcastToAPInt();
-  __uint128_t Int128 = ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
-                       Api.extractBitsAsZExtValue(64, 0);
-  float128 Result = NativeFP(llvm::bit_cast<float128>(Int128));
+  float128 Result = NativeFP(ConvertToQuad(V));
 
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
@@ -2129,15 +2135,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         APFloat Value = Op->getValueAPF();
         if (!Value.isValidIEEEQuad())
           return nullptr;
-        APInt Api = Value.bitcastToAPInt();
-        __uint128_t Int128 =
-            ((__uint128_t)Api.extractBitsAsZExtValue(64, 64) << 64) +
-            Api.extractBitsAsZExtValue(64, 0);
 
-        float128 Result = logf128(llvm::bit_cast<float128>(Int128));
+        float128 Result = logf128(ConvertToQuad(Value));
         return GetConstantFoldFPValue128(Result, Ty);
       }
-
       LibFunc Fp128Func = NotLibFunc;
       if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
