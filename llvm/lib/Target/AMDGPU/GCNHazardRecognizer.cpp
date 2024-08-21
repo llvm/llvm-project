@@ -977,16 +977,17 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
   if (ST.hasDstSelForwardingHazard()) {
     const int Shift16DefWaitstates = 1;
 
-    auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
+    auto IsShift16BitDefFn = [this, VALU](const MachineInstr &ProducerMI) {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      const MachineOperand *ForwardedDst = getDstSelForwardingOperand(MI, ST);
+      const MachineOperand *ForwardedDst =
+          getDstSelForwardingOperand(ProducerMI, ST);
       if (ForwardedDst) {
         return consumesDstSelForwardingOperand(VALU, ForwardedDst, TRI);
       }
 
-      if (MI.isInlineAsm()) {
+      if (ProducerMI.isInlineAsm()) {
         // Assume inline asm has dst forwarding hazard
-        for (auto &Def : MI.all_defs()) {
+        for (auto &Def : ProducerMI.all_defs()) {
           if (consumesDstSelForwardingOperand(VALU, &Def, TRI))
             return true;
         }
@@ -1106,16 +1107,16 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   if (ST.hasDstSelForwardingHazard()) {
     const int Shift16DefWaitstates = 1;
 
-    auto IsShift16BitDefFn = [this, &IA](const MachineInstr &MI) {
-      const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
+    auto IsShift16BitDefFn = [this, &IA](const MachineInstr &ProducerMI) {
+      const MachineOperand *Dst = getDstSelForwardingOperand(ProducerMI, ST);
       // Assume inline asm reads the dst
       if (Dst)
         return IA->modifiesRegister(Dst->getReg(), &TRI) ||
                IA->readsRegister(Dst->getReg(), &TRI);
 
-      if (MI.isInlineAsm()) {
+      if (ProducerMI.isInlineAsm()) {
         // If MI is inline asm, assume it has dst forwarding hazard
-        for (auto &Def : MI.all_defs()) {
+        for (auto &Def : ProducerMI.all_defs()) {
           if (IA->modifiesRegister(Def.getReg(), &TRI) ||
               IA->readsRegister(Def.getReg(), &TRI)) {
             return true;
