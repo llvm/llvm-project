@@ -13,6 +13,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -791,6 +792,33 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
+
+TEST_F(TrackerTest, ShuffleVectorInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
+  %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 1, i32 2>
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *SVI = cast<sandboxir::ShuffleVectorInst>(&*It++);
+
+  SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
+
+  // Check setShuffleMask.
+  Ctx.save();
+  SVI->setShuffleMask(ArrayRef<int>({0, 0}));
+  EXPECT_THAT(SVI->getShuffleMask(),
+              testing::Not(testing::ElementsAreArray(OrigMask)));
+  Ctx.revert();
+  EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
+}
+
 
 TEST_F(TrackerTest, AtomicRMWSetters) {
   parseIR(C, R"IR(
