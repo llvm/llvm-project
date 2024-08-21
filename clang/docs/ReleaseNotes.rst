@@ -152,6 +152,9 @@ Resolutions to C++ Defect Reports
 - ``nullptr`` is now promoted to ``void*`` when passed to a C-style variadic function.
   (`CWG722: Can nullptr be passed to an ellipsis? <https://cplusplus.github.io/CWG/issues/722.html>`_)
 
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
 C Language Changes
 ------------------
 
@@ -287,6 +290,8 @@ Bug Fixes to C++ Support
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
+- Fixed an assertion failure about a constraint of a friend function template references to a value with greater
+  template depth than the friend function template. (#GH98258)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -304,6 +309,9 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash caused by long chains of ``sizeof`` and other similar operators
   that can be followed by a non-parenthesized expression. (#GH45061)
+
+- Fixed a crash when function has more than 65536 parameters.
+  Now a diagnostic is emitted. (#GH35741)
 
 OpenACC Specific Changes
 ------------------------
