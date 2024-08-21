@@ -444,6 +444,21 @@ TEST(DataLayout, ParseNonIntegralAddrSpace) {
         FailedWithMessage("address space 0 cannot be non-integral"));
 }
 
+TEST(DataLayout, GetStackAlignment) {
+  DataLayout Default;
+  EXPECT_FALSE(Default.getStackAlignment().has_value());
+
+  std::pair<StringRef, Align> Cases[] = {
+      {"S8", Align(1)},
+      {"S64", Align(8)},
+      {"S32768", Align(4096)},
+  };
+  for (auto [Layout, Val] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getStackAlignment(), Val) << Layout;
+  }
+}
+
 TEST(DataLayout, GetPointerSizeInBits) {
   std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
       {"", 64, 64, 64},

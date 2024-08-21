@@ -220,15 +220,9 @@ public:
 
   bool isIllegalInteger(uint64_t Width) const { return !isLegalInteger(Width); }
 
-  /// Returns true if the given alignment exceeds the natural stack alignment.
-  bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
-  }
-
-  Align getStackAlignment() const {
-    assert(StackNaturalAlign && "StackNaturalAlign must be defined");
-    return *StackNaturalAlign;
-  }
+  /// Returns the natural stack alignment, or MaybeAlign() if one wasn't
+  /// specified.
+  MaybeAlign getStackAlignment() const { return StackNaturalAlign; }
 
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
