@@ -149,7 +149,7 @@ flang/lib/Lower/OpenMP.cpp function `genDeclareTargetIntGlobal`.
 
 There are currently two passes within Flang that are related to the processing 
 of `declare target`:
-* `MarkDeclareTarget` - This pass is in charge of marking functions captured
+* `OMPMarkDeclareTarget` - This pass is in charge of marking functions captured
 (called from) in `target` regions or other `declare target` marked functions as
 `declare target`. It does so recursively, i.e. nested calls will also be 
 implicitly marked. It currently will try to mark things as conservatively as 
@@ -157,7 +157,7 @@ possible, e.g. if captured in a `target` region it will apply `nohost`, unless
 it encounters a `host` `declare target` in which case it will apply the `any` 
 device type. Functions are handled similarly, except we utilise the parent's 
 device type where possible.
-* `FunctionFiltering` - This is executed after the `MarkDeclareTarget`
+* `OMPFunctionFiltering` - This is executed after the `OMPMarkDeclareTarget`
 pass, and its job is to conservatively remove host functions from
 the module where possible when compiling for the device. This helps make 
 sure that most incompatible code for the host is not lowered for the 
