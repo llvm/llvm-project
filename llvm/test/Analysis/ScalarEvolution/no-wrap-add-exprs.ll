@@ -379,3 +379,19 @@ define void @dereferenceable_arg(ptr dereferenceable(128) %len_addr, ptr derefer
 
   ret void
 }
+
+define void @dereferenceable_or_null_arg(ptr dereferenceable_or_null(128) %len_addr, ptr dereferenceable_or_null(128) align(8) %len_addr2) {
+; CHECK-LABEL: 'dereferenceable_or_null_arg'
+; CHECK-NEXT:  Classifying expressions for: @dereferenceable_or_null_arg
+; CHECK-NEXT:    %ptr = bitcast ptr %len_addr to ptr
+; CHECK-NEXT:    --> %len_addr U: [0,-128) S: full-set
+; CHECK-NEXT:    %ptr2 = bitcast ptr %len_addr2 to ptr
+; CHECK-NEXT:    --> %len_addr2 U: [0,-135) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:  Determining loop execution counts for: @dereferenceable_or_null_arg
+;
+  entry:
+  %ptr = bitcast ptr %len_addr to ptr
+  %ptr2 = bitcast ptr %len_addr2 to ptr
+
+  ret void
+}

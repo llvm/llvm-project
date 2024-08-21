@@ -909,7 +909,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     if (!AI->isArrayAllocation()) {
       DerefBytes =
           DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinValue();
-      CanBeNull = false;
+      CanBeNull = AI->getType()->getPointerAddressSpace() != 0;
       CanBeFreed = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
