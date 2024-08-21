@@ -32,7 +32,7 @@ int main() {
 // TRACE: Device pointer [[PTR]] does not point into any (current or prior) host-issued allocation.
 // TRACE: Closest host-issued allocation (distance 4096 bytes; might be by page):
 // TRACE: Last allocation of size 1073741824
-  // clang-format on
+// clang-format on
 #pragma omp target
   { P[-4] = 5; }
 
