@@ -3,38 +3,6 @@ if( WIN32 AND NOT CYGWIN )
   set(PURE_WINDOWS 1)
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "AIX")
-  set(AIX 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "DragonFly")
-  set(DRAGONFLY 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-  set(FREEBSD 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-  set(HAIKU 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  set(LINUX 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
-  set(NETBSD 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
-  set(OPENBSD 1)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL "SunOS")
-  set(SOLARIS 1)
-endif()
-
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
@@ -49,7 +17,7 @@ include(CheckCompilerVersion)
 include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 
-if (ANDROID OR DRAGONFLY OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SOLARIS)
+if (ANDROID OR CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD|Haiku|Linux|NetBSD|OpenBSD|SunOS")
   set(HAVE_DLFCN_H 1)
   set(HAVE_ERRNO_H 1)
   set(HAVE_FCNTL_H 1)
@@ -68,7 +36,7 @@ if (ANDROID OR DRAGONFLY OR FREEBSD OR HAIKU OR LINUX OR NETBSD OR OPENBSD OR SO
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_TERMIOS_H 1)
   set(HAVE_UNISTD_H 1)
-elseif (AIX OR CYGWIN)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "AIX" OR CYGWIN)
   set(HAVE_DLFCN_H 1)
   set(HAVE_ERRNO_H 1)
   set(HAVE_FCNTL_H 1)
