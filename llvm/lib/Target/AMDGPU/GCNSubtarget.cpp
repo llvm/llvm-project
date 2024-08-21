@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "GCNSubtarget.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
-#include "GCNSubtarget.h"
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -41,29 +41,30 @@ using namespace llvm;
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef AMDGPUSubtarget
 
-static cl::opt<bool> EnablePowerSched(
-  "amdgpu-enable-power-sched",
-  cl::desc("Enable scheduling to minimize mAI power bursts"),
-  cl::init(false));
+static cl::opt<bool>
+    EnablePowerSched("amdgpu-enable-power-sched",
+                     cl::desc("Enable scheduling to minimize mAI power bursts"),
+                     cl::init(false));
 
 static cl::opt<bool> EnableVGPRIndexMode(
-  "amdgpu-vgpr-index-mode",
-  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
-  cl::init(false));
+    "amdgpu-vgpr-index-mode",
+    cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
+    cl::init(false));
 
 static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
 
-static cl::opt<unsigned> NSAThreshold("amdgpu-nsa-threshold",
-                                      cl::desc("Number of addresses from which to enable MIMG NSA."),
-                                      cl::init(3), cl::Hidden);
+static cl::opt<unsigned>
+    NSAThreshold("amdgpu-nsa-threshold",
+                 cl::desc("Number of addresses from which to enable MIMG NSA."),
+                 cl::init(3), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
 
-GCNSubtarget &
-GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
-                                              StringRef GPU, StringRef FS) {
+GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
+                                                            StringRef GPU,
+                                                            StringRef FS) {
   // Determine default and user-specified characteristics
   //
   // We want to be able to turn these off, but making this a subtarget feature
@@ -75,7 +76,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
 
-  // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by default
+  // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
+  // default
   if (isAmdHsaOS())
     FullFS += "+flat-for-global,+unaligned-access-mode,+trap-handler,";
 
@@ -100,8 +102,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // the first amdgcn target that supports flat addressing. Other OSes defaults
   // to the first amdgcn target.
   if (Gen == AMDGPUSubtarget::INVALID) {
-     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
-                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+    Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
+                                       : AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
   if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
@@ -332,7 +334,7 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
 }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                      unsigned NumRegionInstrs) const {
+                                       unsigned NumRegionInstrs) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
@@ -392,7 +394,7 @@ GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
 
   if (isXNACKEnabled())
     return 4; // XNACK, VCC (in that order).
-  return 2; // VCC.
+  return 2;   // VCC.
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
@@ -412,8 +414,7 @@ unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                         unsigned NumSGPRs,
                                         unsigned NumVGPRs) const {
   unsigned Occupancy =
-    std::min(getMaxWavesPerEU(),
-             getOccupancyWithLocalMemSize(LDSSize, F));
+      std::min(getMaxWavesPerEU(), getOccupancyWithLocalMemSize(LDSSize, F));
   if (NumSGPRs)
     Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
   if (NumVGPRs)
@@ -454,8 +455,8 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
     // default/requested minimum/maximum number of waves per execution unit.
     if (Requested && Requested > getMaxNumSGPRs(WavesPerEU.first, false))
       Requested = 0;
-    if (WavesPerEU.second &&
-        Requested && Requested < getMinNumSGPRs(WavesPerEU.second))
+    if (WavesPerEU.second && Requested &&
+        Requested < getMinNumSGPRs(WavesPerEU.second))
       Requested = 0;
 
     if (Requested)
@@ -524,8 +525,8 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     // default/requested minimum/maximum number of waves per execution unit.
     if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
       Requested = 0;
-    if (WavesPerEU.second &&
-        Requested && Requested < getMinNumVGPRs(WavesPerEU.second))
+    if (WavesPerEU.second && Requested &&
+        Requested < getMinNumVGPRs(WavesPerEU.second))
       Requested = 0;
 
     if (Requested)
@@ -548,8 +549,8 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
 void GCNSubtarget::adjustSchedDependency(
     SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
     const TargetSchedModel *SchedModel) const {
-  if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
-      !Def->isInstr() || !Use->isInstr())
+  if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() || !Def->isInstr() ||
+      !Use->isInstr())
     return;
 
   MachineInstr *DefI = Def->getInstr();
@@ -620,7 +621,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
       if (!Visited.insert(SU).second)
         continue;
 
-      LLVM_DEBUG(dbgs() << "Inserting edge from\n" ; DAG->dumpNode(*From);
+      LLVM_DEBUG(dbgs() << "Inserting edge from\n"; DAG->dumpNode(*From);
                  dbgs() << "to\n"; DAG->dumpNode(*SU); dbgs() << '\n');
 
       if (SU != From && From != &DAG->ExitSU && DAG->canAddEdge(SU, From))
@@ -648,7 +649,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
     const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
     if (!ST.hasMAIInsts())
       return;
-    DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+    DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
     const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
     if (!TSchedModel || DAG->SUnits.empty())
       return;
@@ -659,12 +660,12 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
     // rather than VALU to prevent power consumption bursts and throttle.
     auto LastSALU = DAG->SUnits.begin();
     auto E = DAG->SUnits.end();
-    SmallPtrSet<SUnit*, 32> Visited;
+    SmallPtrSet<SUnit *, 32> Visited;
     for (SUnit &SU : DAG->SUnits) {
       MachineInstr &MAI = *SU.getInstr();
       if (!TII->isMAI(MAI) ||
-           MAI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
-           MAI.getOpcode() == AMDGPU::V_ACCVGPR_READ_B32_e64)
+          MAI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
+          MAI.getOpcode() == AMDGPU::V_ACCVGPR_READ_B32_e64)
         continue;
 
       unsigned Lat = TSchedModel->computeInstrLatency(&MAI) - 1;
@@ -675,7 +676,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
       // Find up to Lat independent scalar instructions as early as
       // possible such that they can be scheduled after this MFMA.
-      for ( ; Lat && LastSALU != E; ++LastSALU) {
+      for (; Lat && LastSALU != E; ++LastSALU) {
         if (Visited.count(&*LastSALU))
           continue;
 
