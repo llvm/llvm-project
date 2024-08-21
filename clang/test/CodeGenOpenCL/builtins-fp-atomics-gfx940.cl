@@ -18,7 +18,8 @@ half2 test_flat_add_f32(__generic float *addr, float x) {
 }
 
 // CHECK-LABEL: test_flat_add_2f16
-// CHECK: call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p0.v2f16(ptr %{{.*}}, <2 x half> %{{.*}})
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
 // GFX940-LABEL:  test_flat_add_2f16
 // GFX940: flat_atomic_pk_add_f16
 half2 test_flat_add_2f16(__generic half2 *addr, half2 x) {
