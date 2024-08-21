@@ -2119,9 +2119,12 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrologEndLoc = DebugLoc();
   }
   // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement.
+  // line 0 and came back, in which case it is not a new statement. We also
+  // mark is_stmt for the first non-0 line in each BB, in case a predecessor BB
+  // ends with a different line.
   unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && DL.getLine() != OldLine)
+  if (DL.getLine() &&
+      (DL.getLine() != OldLine || PrevInstBB != MI->getParent()))
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();
