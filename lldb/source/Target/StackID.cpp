@@ -19,12 +19,13 @@ using namespace lldb_private;
 
 bool StackID::IsCFAOnStack(Process &process) const {
   if (m_cfa_on_stack == eLazyBoolCalculate) {
-    m_cfa_on_stack = eLazyBoolNo;
+    // Conservatively assume stack memory
+    m_cfa_on_stack = eLazyBoolYes;
     if (m_cfa != LLDB_INVALID_ADDRESS) {
       MemoryRegionInfo mem_info;
       if (process.GetMemoryRegionInfo(m_cfa, mem_info).Success())
-        if (mem_info.IsStackMemory() == MemoryRegionInfo::eYes)
-          m_cfa_on_stack = eLazyBoolYes;
+        if (mem_info.IsStackMemory() == MemoryRegionInfo::eNo)
+          m_cfa_on_stack = eLazyBoolNo;
     }
   }
   return m_cfa_on_stack == eLazyBoolYes;
