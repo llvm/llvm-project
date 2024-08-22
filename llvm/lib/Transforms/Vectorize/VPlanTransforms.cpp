@@ -852,8 +852,9 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+/// Try to simplify recipe \p R. Returns any new recipes introduced during
+/// simplification, as a candidate for further simplification.
+static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
@@ -868,11 +869,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (UniqueValues.size() == 1) {
       Blend->replaceAllUsesWith(*UniqueValues.begin());
       Blend->eraseFromParent();
-      return;
+      return nullptr;
     }
 
     if (Blend->isNormalized())
-      return;
+      return nullptr;
 
     // Normalize the blend so its first incoming value is used as the initial
     // value with the others blended into it.
@@ -907,7 +908,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
     recursivelyDeleteDeadRecipes(DeadMask);
-    return;
+    return nullptr;
   }
 
   VPValue *A;
@@ -920,7 +921,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        return;
+        return nullptr;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
@@ -955,6 +956,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
+    return nullptr;
   }
 
   // Simplify (X && Y) || (X && !Y) -> X.
@@ -968,11 +970,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       X == X1 && Y == Y1) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
     R.eraseFromParent();
-    return;
+    return nullptr;
   }
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+    R.getVPSingleValue()->replaceAllUsesWith(A);
+  return nullptr;
 }
 
 /// Try to simplify the recipes in \p Plan.
@@ -981,8 +984,10 @@ static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(), Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo);
+    for (auto &R : make_early_inc_range(*VPBB)) {
+      VPRecipeBase *NewR = simplifyRecipe(R, TypeInfo);
+      while (NewR)
+        NewR = simplifyRecipe(*NewR, TypeInfo);
     }
   }
 }
