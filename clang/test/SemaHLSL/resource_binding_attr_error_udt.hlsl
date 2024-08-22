@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+template<typename T>
+struct MyTemplatedUAV {
+  [[hlsl::resource_class(UAV)]] T x;
+};
+
 struct MySRV {
   [[hlsl::resource_class(SRV)]] int x;
 };
@@ -83,7 +88,7 @@ Eg9 e9 : register(c0);
 
 struct Eg10{
   // expected-error@+1{{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  RWBuffer<int> a : register(u9);
+  MyTemplatedUAV<int> a : register(u9);
 };
 Eg10 e10;
 
@@ -117,7 +122,7 @@ struct Eg13{
 Eg13 e13 : register(u9) : register(u10) : register(u11);
 
 struct Eg14{
- RWBuffer<int> r1;  
+ MyTemplatedUAV<int> r1;  
 };
 // expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg14 e14 : register(t9);

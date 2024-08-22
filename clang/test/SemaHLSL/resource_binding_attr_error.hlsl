@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+template<typename T>
+struct MyTemplatedSRV {
+  [[hlsl::resource_class(SRV)]] T x;
+};
+
 // valid, The register keyword in this statement isn't binding a resource, rather it is
 // specifying a constant register binding offset within the $Globals cbuffer, which is legacy behavior from DX9.
 float a : register(c0);
@@ -35,7 +40,7 @@ cbuffer C : register(b 2) {}
 cbuffer D : register(b 2, space 3) {}
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-static RWBuffer<float> U : register(u5);
+static MyTemplatedSRV<float> U : register(u5);
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static float sa : register(c1);
@@ -49,25 +54,25 @@ groupshared float fa[10] : register(c5);
 
 void foo() {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  RWBuffer<float> U : register(u3);
+  MyTemplatedSRV<float> U : register(u3);
 }
 void foo2() {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  extern RWBuffer<float> U2 : register(u5);
+  extern MyTemplatedSRV<float> U2 : register(u5);
 }
 
 // expected-error@+1 {{binding type 'u' only applies to UAV resources}}
 float b : register(u0, space1);
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-void bar(RWBuffer<float> U : register(u3)) {
+void bar(MyTemplatedSRV<float> U : register(u3)) {
 
 }
 
 struct S {  
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
-  RWBuffer<float> U : register(u3);
+  MyTemplatedSRV<float> U : register(u3);
 };
 
 // expected-error@+1 {{binding type 'z' is invalid}}
-RWBuffer<float> U3 : register(z5);
+MyTemplatedSRV<float> U3 : register(z5);

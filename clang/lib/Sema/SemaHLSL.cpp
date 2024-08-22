@@ -500,7 +500,7 @@ static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   return TheRecordDecl;
 }
 
-static void setResourceClassFlagsFromDeclResourceClass(
+static void updateResourceClassFlagsFromDeclResourceClass(
     RegisterBindingFlags &Flags, llvm::hlsl::ResourceClass DeclResourceClass) {
   switch (DeclResourceClass) {
   case llvm::hlsl::ResourceClass::SRV:
@@ -523,31 +523,14 @@ static const T *getSpecifiedHLSLAttrFromRecordDecl(RecordDecl *TheRecordDecl) {
   if (!TheRecordDecl)
     return nullptr;
 
-  // make a lambda that checks if the decl has the specified attr,
-  // and if not, loops over the field members and checks for the
-  // specified attribute
-  auto f = [](RecordDecl *TheRecordDecl) -> const T * {
-    if (TheRecordDecl->hasAttr<T>())
-      return TheRecordDecl->getAttr<T>();
-    for (auto *FD : TheRecordDecl->fields()) {
-      const T *Attr = FD->getAttr<T>();
-      if (Attr)
-        return Attr;
-    }
-    return nullptr;
-  };
-
-  // if the member's base type is a ClassTemplateSpecializationDecl,
-  // check if it has a member handle with a resource class attr
-  // this is necessary while resources like RWBuffer are defined externally
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl)) {
-    auto TheCXXRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
-    TheCXXRecordDecl = TheCXXRecordDecl->getCanonicalDecl();
-
-    return f(TheCXXRecordDecl);
+  if (TheRecordDecl->hasAttr<T>())
+    return TheRecordDecl->getAttr<T>();
+  for (auto *FD : TheRecordDecl->fields()) {
+    const T *Attr = FD->getAttr<T>();
+    if (Attr)
+      return Attr;
   }
-
-  return f(TheRecordDecl);
+  return nullptr;
 }
 
 template <typename T>
@@ -562,18 +545,34 @@ static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
   return getSpecifiedHLSLAttrFromRecordDecl<T>(TheRecordDecl);
 }
 
-static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
+static void updateFlagsFromType(QualType TheQualTy,
+                                RegisterBindingFlags &Flags);
+
+static void updateResourceClassFlagsFromRecordDecl(RegisterBindingFlags &Flags,
+                                                   const RecordDecl *RD) {
+  if (!RD)
+    return;
+
+  if (RD->isCompleteDefinition()) {
+    for (auto Field : RD->fields()) {
+      QualType T = Field->getType();
+      updateFlagsFromType(T, Flags);
+    }
+  }
+}
+
+static void updateFlagsFromType(QualType TheQualTy,
+                                RegisterBindingFlags &Flags) {
   // if the member's type is a numeric type, set the ContainsNumeric flag
   if (TheQualTy->isIntegralOrEnumerationType() || TheQualTy->isFloatingType()) {
     Flags.ContainsNumeric = true;
     return;
   }
 
-  // otherwise, if the member's base type is not a record type, return
   const clang::Type *TheBaseType = TheQualTy.getTypePtr();
   while (TheBaseType->isArrayType())
     TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
-
+  // otherwise, if the member's base type is not a record type, return
   const RecordType *TheRecordTy = TheBaseType->getAs<RecordType>();
   if (!TheRecordTy)
     return;
@@ -581,30 +580,15 @@ static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
   RecordDecl *SubRecordDecl = TheRecordTy->getDecl();
   const HLSLResourceClassAttr *Attr =
       getSpecifiedHLSLAttrFromRecordDecl<HLSLResourceClassAttr>(SubRecordDecl);
-  // find the attr if it's on the member (the handle) of the resource
+  // find the attr if it's on the member, or on any of the member's fields
   if (Attr) {
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
-    setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
+    updateResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
   }
 
-  // recurse if there are more fields to analyze
+  // otherwise, dig deeper and recurse into the member
   else {
-    for (auto Field : SubRecordDecl->fields()) {
-      setFlagsFromType(Field->getType(), Flags);
-    }
-  }
-}
-
-static void setResourceClassFlagsFromRecordDecl(RegisterBindingFlags &Flags,
-                                                const RecordDecl *RD) {
-  if (!RD)
-    return;
-
-  if (RD->isCompleteDefinition()) {
-    for (auto Field : RD->fields()) {
-      QualType T = Field->getType();
-      setFlagsFromType(T, Flags);
-    }
+    updateResourceClassFlagsFromRecordDecl(Flags, SubRecordDecl);
   }
 }
 
@@ -657,7 +641,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
       llvm::hlsl::ResourceClass DeclResourceClass =
           resClassAttr->getResourceClass();
       Flags.Resource = true;
-      setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
+      updateResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     } else {
       const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
       while (TheBaseType->isArrayType())
@@ -670,7 +654,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
         assert(TheRecordTy && "The Qual Type should be Record Type");
         const RecordDecl *TheRecordDecl = TheRecordTy->getDecl();
         // recurse through members, set appropriate resource class flags.
-        setResourceClassFlagsFromRecordDecl(Flags, TheRecordDecl);
+        updateResourceClassFlagsFromRecordDecl(Flags, TheRecordDecl);
       } else
         Flags.Other = true;
     }
