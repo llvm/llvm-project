@@ -2784,8 +2784,8 @@ func.func @omp_workshare_multiple_blocks() {
   return
 }
 
-// CHECK-LABEL: func @omp_workshare.loop_wrapper
-func.func @omp_workshare.loop_wrapper(%idx : index) {
+// CHECK-LABEL: func @omp_workshare_loop_wrapper
+func.func @omp_workshare_loop_wrapper(%idx : index) {
   // CHECK-NEXT: omp.workshare {
   omp.workshare {
     // CHECK-NEXT: omp.workshare.loop_wrapper
@@ -2801,8 +2801,8 @@ func.func @omp_workshare.loop_wrapper(%idx : index) {
   return
 }
 
-// CHECK-LABEL: func @omp_workshare.loop_wrapper_attrs
-func.func @omp_workshare.loop_wrapper_attrs(%idx : index) {
+// CHECK-LABEL: func @omp_workshare_loop_wrapper_attrs
+func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
   // CHECK-NEXT: omp.workshare {
   omp.workshare {
     // CHECK-NEXT: omp.workshare.loop_wrapper {
