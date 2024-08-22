@@ -584,11 +584,11 @@ struct Allocator {
     void *allocated;
     if (t) {
       AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache *cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
