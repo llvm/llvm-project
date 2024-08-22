@@ -7,3 +7,4 @@
   .fpu none
 
 @ CHECK-ATTR-NOT:     TagName: FP_arch
+
