@@ -2090,7 +2090,8 @@ public:
   /// information for a set of outlining candidates. Returns std::nullopt if the
   /// candidates are not suitable for outlining. \p MinRepeates is the minimum
   /// number of times the instruction sequence must be repeated.
-  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+  virtual std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs,
       unsigned MinRepeates) const {
@@ -2098,7 +2099,8 @@ public:
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
   }
 
-  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+  virtual std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     return getOutliningCandidateInfo(MMI, RepeatedSequenceLocs,
