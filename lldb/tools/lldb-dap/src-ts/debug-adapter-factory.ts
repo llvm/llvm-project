@@ -18,10 +18,10 @@ export class LLDBDapDescriptorFactory
     try {
       const fileStats = await vscode.workspace.fs.stat(pathUri);
       if (!(fileStats.type & vscode.FileType.File)) {
-        this.showErrorMessage(pathUri.path);
+        this.showLLDBDapNotFoundMessage(pathUri.path);
       }
     } catch (err) {
-      this.showErrorMessage(pathUri.path);
+      this.showLLDBDapNotFoundMessage(pathUri.path);
     }
   }
 
@@ -45,21 +45,18 @@ export class LLDBDapDescriptorFactory
   /**
    * Shows a message box when the debug adapter's path is not found
    */
-  private static showErrorMessage(path: string) {
+  private static async showLLDBDapNotFoundMessage(path: string) {
     const openSettingsAction = "Open Settings";
-    vscode.window
-      .showErrorMessage(
-        `Debug adapter path: ${path} is not a valid file`,
-        { modal: false },
-        openSettingsAction,
-      )
-      .then((callBackValue) => {
-        if (openSettingsAction === callBackValue) {
-          vscode.commands.executeCommand(
-            "workbench.action.openSettings",
-            "lldb-dap.executable-path",
-          );
-        }
-      });
+    const callbackValue = await vscode.window.showErrorMessage(
+      `Debug adapter path: ${path} is not a valid file`,
+      openSettingsAction,
+    );
+
+    if (openSettingsAction === callbackValue) {
+      vscode.commands.executeCommand(
+        "workbench.action.openSettings",
+        "lldb-dap.executable-path",
+      );
+    }
   }
 }
