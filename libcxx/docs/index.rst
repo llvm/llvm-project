@@ -43,7 +43,6 @@ Getting Started with libc++
    Modules
    Hardening
    ReleaseProcedure
-   Status/Cxx14
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
@@ -169,11 +168,16 @@ to be formally supported and listed here, please work with the libc++ team to se
 up testing for your configuration.
 
 
-C++ Dialect Support
-===================
+C++ Standards Conformance
+=========================
+
+Libc++ provides full support for C++11 and C++14, and provides most of newer standards
+with a few omissions. The conformance status of the library's tip is tracked in real-time
+using `this page <https://github.com/orgs/llvm/projects/31>`_. The conformance status of
+this release is described in the pages below:
 
 * C++11 - Complete
-* :ref:`C++14 - Complete <cxx14-status>`
+* C++14 - Complete
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`

@@ -582,7 +582,6 @@ define i32 @split_hoist_and(i32 %0) nounwind {
 ; X64-NEXT:    lock btsl $3, v32(%rip)
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    shll $3, %eax
-; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    retq
   %2 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %3 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)

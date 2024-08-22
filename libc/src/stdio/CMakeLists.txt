@@ -101,7 +101,7 @@ list(APPEND scanf_deps
       libc.hdr.types.FILE
 )
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   list(APPEND scanf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file

@@ -12,27 +12,11 @@ define i1 @lshr_ctlz_cmpeq_one_i64(i64 %in) nounwind {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
-; X64-BSR-LABEL: lshr_ctlz_cmpeq_one_i64:
-; X64-BSR:       # %bb.0:
-; X64-BSR-NEXT:    testq %rdi, %rdi
-; X64-BSR-NEXT:    je .LBB0_1
-; X64-BSR-NEXT:  # %bb.2: # %cond.false
-; X64-BSR-NEXT:    bsrq %rdi, %rax
-; X64-BSR-NEXT:    xorq $63, %rax
-; X64-BSR-NEXT:    shrl $6, %eax
-; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
-; X64-BSR-NEXT:    retq
-; X64-BSR-NEXT:  .LBB0_1:
-; X64-BSR-NEXT:    movl $64, %eax
-; X64-BSR-NEXT:    shrl $6, %eax
-; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
-; X64-BSR-NEXT:    retq
-;
-; X64-LZCNT-LABEL: lshr_ctlz_cmpeq_one_i64:
-; X64-LZCNT:       # %bb.0:
-; X64-LZCNT-NEXT:    testq %rdi, %rdi
-; X64-LZCNT-NEXT:    sete %al
-; X64-LZCNT-NEXT:    retq
+; X64-LABEL: lshr_ctlz_cmpeq_one_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 0)
   %lshr = lshr i64 %ctlz, 6
   %icmp = icmp eq i64 %lshr, 1
@@ -81,27 +65,11 @@ define i1 @lshr_ctlz_cmpne_zero_i64(i64 %in) nounwind {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
-; X64-BSR-LABEL: lshr_ctlz_cmpne_zero_i64:
-; X64-BSR:       # %bb.0:
-; X64-BSR-NEXT:    testq %rdi, %rdi
-; X64-BSR-NEXT:    je .LBB2_1
-; X64-BSR-NEXT:  # %bb.2: # %cond.false
-; X64-BSR-NEXT:    bsrq %rdi, %rax
-; X64-BSR-NEXT:    xorq $63, %rax
-; X64-BSR-NEXT:    shrl $6, %eax
-; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
-; X64-BSR-NEXT:    retq
-; X64-BSR-NEXT:  .LBB2_1:
-; X64-BSR-NEXT:    movl $64, %eax
-; X64-BSR-NEXT:    shrl $6, %eax
-; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
-; X64-BSR-NEXT:    retq
-;
-; X64-LZCNT-LABEL: lshr_ctlz_cmpne_zero_i64:
-; X64-LZCNT:       # %bb.0:
-; X64-LZCNT-NEXT:    testq %rdi, %rdi
-; X64-LZCNT-NEXT:    sete %al
-; X64-LZCNT-NEXT:    retq
+; X64-LABEL: lshr_ctlz_cmpne_zero_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 0)
   %lshr = lshr i64 %ctlz, 6
   %icmp = icmp ne i64 %lshr, 0
