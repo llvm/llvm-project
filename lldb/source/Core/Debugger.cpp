@@ -1869,8 +1869,7 @@ void Debugger::HandleThreadEvent(const EventSP &event_sp) {
     ThreadSP thread_sp(
         Thread::ThreadEventData::GetThreadFromEvent(event_sp.get()));
     if (thread_sp) {
-      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format,
-                           /*show_hidden*/ true);
+      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format);
     }
   }
 }

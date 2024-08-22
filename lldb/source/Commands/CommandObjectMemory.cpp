@@ -1570,8 +1570,7 @@ protected:
 
     const bool stop_format = false;
     for (auto thread : thread_list) {
-      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format,
-                        /*should_filter*/ false);
+      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
