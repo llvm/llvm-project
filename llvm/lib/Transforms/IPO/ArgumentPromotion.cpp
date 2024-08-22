@@ -489,7 +489,8 @@ static bool allCallersPassValidPointerForArgument(
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
-                         SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
+                         SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec,
+                         bool ArgNotModified) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
     return true;
@@ -711,8 +712,10 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
   // If store instructions are allowed, the path from the entry of the function
   // to each load may be not free of instructions that potentially invalidate
-  // the load, and this is an admissible situation.
-  if (AreStoresAllowed)
+  // the load, and this is an admissible situation. If we have already
+  // determined that the pointer Arg is not modified in the function (for all
+  // Calls) then we can similarly conclude analysis here.
+  if (AreStoresAllowed || ArgNotModified)
     return true;
 
   // Okay, now we know that the argument is only used by load instructions, and
@@ -760,6 +763,33 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
   });
 }
 
+// Try to prove that all Calls to F do not modify the memory pointed to by Arg.
+// This can provide us with more opportunities to perform Argument Promotion in
+// cases where simply looking at a Function's instructions is insufficient to
+// prove that the pointer argument is not invalidated before all loads from it.
+static bool callDoesNotModifyArg(Function *F, unsigned ArgNo,
+                                 FunctionAnalysisManager &FAM) {
+  // Find all Users of F that are Calls, and see if they may modify Arg.
+  for (User *U : F->users()) {
+    auto *Call = dyn_cast<CallInst>(U);
+    if (!Call)
+      continue;
+
+    Value *ArgOp = Call->getArgOperand(ArgNo);
+    assert(ArgOp->getType()->isPointerTy() && "Argument must be Pointer Type!");
+
+    MemoryLocation Loc = MemoryLocation::getForArgument(Call, ArgNo, nullptr);
+
+    AAResults &AAR = FAM.getResult<AAManager>(*Call->getFunction());
+    // Bail out as soon as we find a Call where Arg may be modified.
+    if (isModSet(AAR.getModRefInfo(Call, Loc)))
+      return false;
+  }
+
+  // All Calls do not modify the Arg.
+  return true;
+}
+
 /// PromoteArguments - This method checks the specified function to see if there
 /// are any promotable arguments and if it is safe to promote the function (for
 /// example, all callers are direct).  If safe to promote some arguments, it
@@ -790,11 +820,13 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     return nullptr;
 
   // First check: see if there are any pointer arguments!  If not, quick exit.
-  SmallVector<Argument *, 16> PointerArgs;
-  for (Argument &I : F->args())
-    if (I.getType()->isPointerTy())
-      PointerArgs.push_back(&I);
-  if (PointerArgs.empty())
+  SmallVector<unsigned, 16> PointerArgNos;
+  for (unsigned I = 0; I < F->arg_size(); ++I) {
+    Argument *Arg = F->getArg(I);
+    if (Arg->getType()->isPointerTy())
+      PointerArgNos.push_back(I);
+  }
+  if (PointerArgNos.empty())
     return nullptr;
 
   // Second check: make sure that all callers are direct callers.  We can't
@@ -829,7 +861,8 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
   unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
-  for (Argument *PtrArg : PointerArgs) {
+  for (const auto &ArgIdx : PointerArgNos) {
+    Argument *PtrArg = F->getArg(ArgIdx);
     // Replace sret attribute with noalias. This reduces register pressure by
     // avoiding a register copy.
     if (PtrArg->hasStructRetAttr()) {
@@ -843,10 +876,15 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
       }
     }
 
+    // Check if we can determine ahead of time that the argument is never
+    // modified by a call to this function.
+    bool ArgNotModified = callDoesNotModifyArg(F, ArgIdx, FAM);
+
     // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
 
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts,
+                     ArgNotModified)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
