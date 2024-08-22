@@ -5164,13 +5164,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
                    Res.getCASOpts());
 
   // BEGIN MCCAS
-  if (!Res.getFrontendOpts().CompilationCachingServicePath.empty())
+  if (!Res.getFrontendOpts().CompilationCachingServicePath.empty()) {
     if (Res.getCodeGenOpts().UseCASBackend)
       Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
           << "-fcas-backend";
-  if (Res.getFrontendOpts().WriteOutputAsCASID) {
-    Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
-        << "-fcasid-output";
+    if (Res.getFrontendOpts().WriteOutputAsCASID)
+      Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+          << "-fcasid-output";
   }
   // END MCCAS
 
