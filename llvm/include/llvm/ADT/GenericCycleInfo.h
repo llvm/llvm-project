@@ -140,6 +140,9 @@ public:
   /// it, otherwise return nullptr.
   BlockT *getCyclePredecessor() const;
 
+  void verifyCycle() const;
+  void verifyCycleNest() const;
+
   /// Iteration over child cycles.
   //@{
   using const_child_iterator_base =
@@ -277,9 +280,8 @@ public:
 
   /// Methods for debug and self-test.
   //@{
-#ifndef NDEBUG
-  bool validateTree() const;
-#endif
+  void verifyCycleNest(bool VerifyFull = false) const;
+  void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   Printable print(const CycleT *Cycle) { return Cycle->print(Context); }

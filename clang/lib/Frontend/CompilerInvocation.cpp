@@ -4267,7 +4267,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
-  if (auto *A = Args.getLastArg(OPT_fsanitize_overflow_pattern_exclusion_EQ)) {
+  if (auto *A =
+          Args.getLastArg(OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
     for (int i = 0, n = A->getNumValues(); i != n; ++i) {
       Opts.OverflowPatternExclusionMask |=
           llvm::StringSwitch<unsigned>(A->getValue(i))

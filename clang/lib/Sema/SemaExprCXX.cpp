@@ -1646,12 +1646,23 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     return ExprError(Diag(TyBeginLoc, diag::err_init_for_function_type)
                        << Ty << FullRange);
 
-  // C++17 [expr.type.conv]p2:
-  //   If the type is cv void and the initializer is (), the expression is a
-  //   prvalue of the specified type that performs no initialization.
-  if (!Ty->isVoidType() &&
-      RequireCompleteType(TyBeginLoc, ElemTy,
-                          diag::err_invalid_incomplete_type_use, FullRange))
+  // C++17 [expr.type.conv]p2, per DR2351:
+  //   If the type is cv void and the initializer is () or {}, the expression is
+  //   a prvalue of the specified type that performs no initialization.
+  if (Ty->isVoidType()) {
+    if (Exprs.empty())
+      return new (Context) CXXScalarValueInitExpr(
+          Ty.getUnqualifiedType(), TInfo, Kind.getRange().getEnd());
+    if (ListInitialization &&
+        cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
+      return CXXFunctionalCastExpr::Create(
+          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
+          Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
+          Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
+    }
+  } else if (RequireCompleteType(TyBeginLoc, ElemTy,
+                                 diag::err_invalid_incomplete_type_use,
+                                 FullRange))
     return ExprError();
 
   //   Otherwise, the expression is a prvalue of the specified type whose

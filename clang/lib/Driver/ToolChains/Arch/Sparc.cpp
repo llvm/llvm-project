@@ -179,6 +179,11 @@ void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
       Features.push_back("-hard-quad-float");
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mv8plus, options::OPT_mno_v8plus)) {
+    if (A->getOption().matches(options::OPT_mv8plus))
+      Features.push_back("+v8plus");
+  }
+
   if (Args.hasArg(options::OPT_ffixed_g1))
     Features.push_back("+reserve-g1");
 

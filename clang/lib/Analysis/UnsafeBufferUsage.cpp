@@ -402,9 +402,9 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
 
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
-  if (Arg0Ty->isConstantArrayType()) {
-    const APSInt ConstArrSize =
-        APSInt(cast<ConstantArrayType>(Arg0Ty)->getSize());
+  if (auto *ConstArrTy =
+          Finder->getASTContext().getAsConstantArrayType(Arg0Ty)) {
+    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
 
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
@@ -2664,7 +2664,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
   // Note: the code below expects the declaration to not use any type sugar like
   // typedef.
-  if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
+  if (auto CAT = Ctx.getAsConstantArrayType(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
     // FIXME: support multi-dimensional arrays
@@ -2797,8 +2797,7 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
     return {};
   }
   case FixitStrategy::Kind::Array: {
-    if (VD->isLocalVarDecl() &&
-        isa<clang::ConstantArrayType>(VD->getType().getCanonicalType()))
+    if (VD->isLocalVarDecl() && Ctx.getAsConstantArrayType(VD->getType()))
       return fixVariableWithArray(VD, Tracker, Ctx, Handler);
 
     DEBUG_NOTE_DECL_FAIL(VD, " : not a local const-size array");
