@@ -33,27 +33,15 @@ auto three_way_strong(int x, int y) {
 // NONCANONICAL-AFTER-NEXT:   %[[#NEGONE:]] = cir.const #cir.int<-1> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#ONE:]] = cir.const #cir.int<1> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#CMP_TO_NEGONE:]] = cir.cmp(eq, %[[#CMP3WAY_RESULT]], %[[#NEGONE]]) : !s8i, !cir.bool
-// NONCANONICAL-AFTER-NEXT:   %[[#A:]] = cir.ternary(%[[#CMP_TO_NEGONE]], true {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#ONE]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }, false {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#CMP3WAY_RESULT]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }) : (!cir.bool) -> !s8i
+// NONCANONICAL-AFTER-NEXT:   %[[#A:]] = cir.select if %[[#CMP_TO_NEGONE]] then %[[#ONE]] else %[[#CMP3WAY_RESULT]] : (!cir.bool, !s8i, !s8i) -> !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#ZERO:]] = cir.const #cir.int<0> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#TWO:]] = cir.const #cir.int<2> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#CMP_TO_ZERO:]] = cir.cmp(eq, %[[#A]], %[[#ZERO]]) : !s8i, !cir.bool
-// NONCANONICAL-AFTER-NEXT:   %[[#B:]] = cir.ternary(%[[#CMP_TO_ZERO]], true {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#TWO]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }, false {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#A]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }) : (!cir.bool) -> !s8i
+// NONCANONICAL-AFTER-NEXT:   %[[#B:]] = cir.select if %[[#CMP_TO_ZERO]] then %[[#TWO]] else %[[#A]] : (!cir.bool, !s8i, !s8i) -> !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#ONE2:]] = cir.const #cir.int<1> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#THREE:]] = cir.const #cir.int<3> : !s8i
 // NONCANONICAL-AFTER-NEXT:   %[[#CMP_TO_ONE:]] = cir.cmp(eq, %[[#B]], %[[#ONE2]]) : !s8i, !cir.bool
-// NONCANONICAL-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[#CMP_TO_ONE]], true {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#THREE]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }, false {
-// NONCANONICAL-AFTER-NEXT:     cir.yield %[[#B]] : !s8i
-// NONCANONICAL-AFTER-NEXT:   }) : (!cir.bool) -> !s8i
+// NONCANONICAL-AFTER-NEXT:   %{{.+}} = cir.select if %[[#CMP_TO_ONE]] then %[[#THREE]] else %[[#B]] : (!cir.bool, !s8i, !s8i) -> !s8i
 //      NONCANONICAL-AFTER: }
 
 auto three_way_weak(float x, float y) {
@@ -74,19 +62,7 @@ auto three_way_weak(float x, float y) {
 // AFTER-NEXT:   %[[#CMP_LT:]] = cir.cmp(lt, %[[#LHS]], %[[#RHS]]) : !cir.float, !cir.bool
 // AFTER-NEXT:   %[[#CMP_EQ:]] = cir.cmp(eq, %[[#LHS]], %[[#RHS]]) : !cir.float, !cir.bool
 // AFTER-NEXT:   %[[#CMP_GT:]] = cir.cmp(gt, %[[#LHS]], %[[#RHS]]) : !cir.float, !cir.bool
-// AFTER-NEXT:   %[[#CMP_EQ_RES:]] = cir.ternary(%[[#CMP_EQ]], true {
-// AFTER-NEXT:     cir.yield %[[#EQ]] : !s8i
-// AFTER-NEXT:   }, false {
-// AFTER-NEXT:     cir.yield %[[#UNORDERED]] : !s8i
-// AFTER-NEXT:   }) : (!cir.bool) -> !s8i
-// AFTER-NEXT:   %[[#CMP_GT_RES:]] = cir.ternary(%[[#CMP_GT]], true {
-// AFTER-NEXT:     cir.yield %[[#GT]] : !s8i
-// AFTER-NEXT:   }, false {
-// AFTER-NEXT:     cir.yield %[[#CMP_EQ_RES]] : !s8i
-// AFTER-NEXT:   }) : (!cir.bool) -> !s8i
-// AFTER-NEXT:   %{{.+}} = cir.ternary(%[[#CMP_LT]], true {
-// AFTER-NEXT:     cir.yield %[[#LT]] : !s8i
-// AFTER-NEXT:   }, false {
-// AFTER-NEXT:     cir.yield %[[#CMP_GT_RES]] : !s8i
-// AFTER-NEXT:   }) : (!cir.bool) -> !s8i
+// AFTER-NEXT:   %[[#CMP_EQ_RES:]] = cir.select if %[[#CMP_EQ]] then %[[#EQ]] else %[[#UNORDERED]] : (!cir.bool, !s8i, !s8i) -> !s8i
+// AFTER-NEXT:   %[[#CMP_GT_RES:]] = cir.select if %[[#CMP_GT]] then %[[#GT]] else %[[#CMP_EQ_RES]] : (!cir.bool, !s8i, !s8i) -> !s8i
+// AFTER-NEXT:   %{{.+}} = cir.select if %[[#CMP_LT]] then %[[#LT]] else %[[#CMP_GT_RES]] : (!cir.bool, !s8i, !s8i) -> !s8i
 //      AFTER: }
