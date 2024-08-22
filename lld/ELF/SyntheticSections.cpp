@@ -1017,9 +1017,9 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || config->shared)
-        mainPart->relaDyn->addReloc({target->tlsGotRel, this, offset,
-                                     DynamicReloc::AgainstSymbolWithTargetVA,
-                                     *s, 0, R_ABS});
+        ctx.mainPart->relaDyn->addReloc(
+            {target->tlsGotRel, this, offset,
+             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1027,7 +1027,8 @@ void MipsGotSection::build() {
       if (s == nullptr) {
         if (!config->shared)
           continue;
-        mainPart->relaDyn->addReloc({target->tlsModuleIndexRel, this, offset});
+        ctx.mainPart->relaDyn->addReloc(
+            {target->tlsModuleIndexRel, this, offset});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
@@ -1035,15 +1036,15 @@ void MipsGotSection::build() {
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !config->shared)
           continue;
-        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *this,
-                                          offset, *s);
+        ctx.mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *this,
+                                              offset, *s);
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
         if (!s->isPreemptible)
           continue;
         offset += config->wordsize;
-        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *this, offset,
-                                          *s);
+        ctx.mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *this,
+                                              offset, *s);
       }
     }
 
@@ -1055,8 +1056,8 @@ void MipsGotSection::build() {
     // Dynamic relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * config->wordsize;
-      mainPart->relaDyn->addSymbolReloc(target->relativeRel, *this, offset,
-                                        *p.first);
+      ctx.mainPart->relaDyn->addSymbolReloc(target->relativeRel, *this, offset,
+                                            *p.first);
     }
     if (!config->isPic)
       continue;
@@ -1066,15 +1067,15 @@ void MipsGotSection::build() {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * config->wordsize;
-        mainPart->relaDyn->addReloc({target->relativeRel, this, offset, l.first,
-                                     int64_t(pi * 0x10000)});
+        ctx.mainPart->relaDyn->addReloc({target->relativeRel, this, offset,
+                                         l.first, int64_t(pi * 0x10000)});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * config->wordsize;
-      mainPart->relaDyn->addReloc({target->relativeRel, this, offset,
-                                   DynamicReloc::AddendOnlyWithTargetVA,
-                                   *p.first.first, p.first.second, R_ABS});
+      ctx.mainPart->relaDyn->addReloc({target->relativeRel, this, offset,
+                                       DynamicReloc::AddendOnlyWithTargetVA,
+                                       *p.first.first, p.first.second, R_ABS});
     }
   }
 }
@@ -1473,10 +1474,11 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
-      if (mainPart->memtagGlobalDescriptors->isNeeded()) {
-        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagGlobalDescriptors);
+      if (ctx.mainPart->memtagGlobalDescriptors->isNeeded()) {
+        addInSec(DT_AARCH64_MEMTAG_GLOBALS,
+                 *ctx.mainPart->memtagGlobalDescriptors);
         addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
-               mainPart->memtagGlobalDescriptors->getSize());
+               ctx.mainPart->memtagGlobalDescriptors->getSize());
       }
     }
   }
@@ -1617,7 +1619,7 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
 
   size_t index = symTab->getSymbolIndex(*sym);
   assert((index != 0 || (type != target->gotRel && type != target->pltRel) ||
-          !mainPart->dynSymTab->getParent()) &&
+          !ctx.mainPart->dynSymTab->getParent()) &&
          "GOT or PLT relocation must refer to symbol in dynamic symbol table");
   return index;
 }
@@ -2149,7 +2151,7 @@ void SymbolTableBaseSection::finalizeContents() {
 
   // Only the main partition's dynsym indexes are stored in the symbols
   // themselves. All other partitions use a lookup table.
-  if (this == mainPart->dynSymTab.get()) {
+  if (this == ctx.mainPart->dynSymTab.get()) {
     size_t i = 0;
     for (const SymbolTableEntry &s : symbols)
       s.sym->dynsymIndex = ++i;
@@ -2193,7 +2195,7 @@ void SymbolTableBaseSection::addSymbol(Symbol *b) {
 }
 
 size_t SymbolTableBaseSection::getSymbolIndex(const Symbol &sym) {
-  if (this == mainPart->dynSymTab.get())
+  if (this == ctx.mainPart->dynSymTab.get())
     return sym.dynsymIndex;
 
   // Initializes symbol lookup tables lazily. This is used only for -r,
@@ -3968,7 +3970,7 @@ void elf::combineEhSections() {
     llvm::append_range(eh.dependentSections, sec->dependentSections);
   }
 
-  if (!mainPart->armExidx)
+  if (!ctx.mainPart->armExidx)
     return;
   llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
     // Ignore dead sections and the partition end marker (.part.end),
@@ -4439,13 +4441,15 @@ size_t PartitionIndexSection::getSize() const {
 
 void PartitionIndexSection::finalizeContents() {
   for (size_t i = 1; i != partitions.size(); ++i)
-    partitions[i].nameStrTab = mainPart->dynStrTab->addString(partitions[i].name);
+    partitions[i].nameStrTab =
+        ctx.mainPart->dynStrTab->addString(partitions[i].name);
 }
 
 void PartitionIndexSection::writeTo(uint8_t *buf) {
   uint64_t va = getVA();
   for (size_t i = 1; i != partitions.size(); ++i) {
-    write32(buf, mainPart->dynStrTab->getVA() + partitions[i].nameStrTab - va);
+    write32(buf,
+            ctx.mainPart->dynStrTab->getVA() + partitions[i].nameStrTab - va);
     write32(buf + 4, partitions[i].elfHeader->getVA() - (va + 4));
 
     SyntheticSection *next = i == partitions.size() - 1
@@ -4922,7 +4926,6 @@ template <class ELFT> void elf::createSyntheticSections() {
 InStruct elf::in;
 
 std::vector<Partition> elf::partitions;
-Partition *elf::mainPart;
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
