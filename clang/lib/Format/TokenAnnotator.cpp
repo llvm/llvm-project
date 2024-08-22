@@ -4591,8 +4591,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (BeforeLeft->is(tok::coloncolon)) {
       const auto *Prev = BeforeLeft->Previous;
       return Left.is(tok::star) && Prev &&
-             !Prev->endsSequence(tok::identifier, TT_FunctionTypeLParen) &&
-             Style.PointerAlignment != FormatStyle::PAS_Right;
+             !Prev->endsSequence(tok::identifier, TT_FunctionTypeLParen);
     }
     return !BeforeLeft->isOneOf(tok::l_paren, tok::l_square);
   }
