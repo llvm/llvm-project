@@ -70,7 +70,6 @@ class VScanfFormat<int I> : IndexedAttribute<"S", I>;
 
 // Builtin can be constant evaluated
 def Constexpr : Attribute<"E">;
-def ConstexprSince : Attribute<"O">;
 // Builtin is immediate and must be constant evaluated. Implies Constexpr, and will only be supported in C++20 mode.
 def Consteval : Attribute<"EG">;
 
@@ -86,7 +85,6 @@ class Builtin {
   // to #undef them.
   bit RequiresUndef = 0;
   bit BuiltinPrefixedAliasIsConstexpr = 0;
-  string UnprefixedOnlyConstexprSince = "";
 }
 
 class CustomEntry {
@@ -103,7 +101,6 @@ class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Languages = languages;
   bit AddBuiltinPrefixedAlias = 0;
   bit BuiltinPrefixedAliasIsConstexpr = 0;
-  string UnprefixedOnlyConstexprSince = "";
 }
 
 class MSLibBuiltin<string header> : LibBuiltin<header, "ALL_MS_LANGUAGES">;

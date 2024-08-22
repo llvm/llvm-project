@@ -14803,10 +14803,10 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_frexpf16:
   case Builtin::BI__builtin_frexpf128: {
     const auto *FDecl = E->getDirectCallee();
-    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
-    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
-        Info.Ctx.getLangOpts().LangStd)
-      return false;
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
+        return false;
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
@@ -14907,9 +14907,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fmaxf128: {
     // TODO: Handle sNaN.
     const auto *FDecl = E->getDirectCallee();
-    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
-    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
-        Info.Ctx.getLangOpts().LangStd)
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
       return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
@@ -14933,9 +14933,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fminf128: {
     // TODO: Handle sNaN.
     const auto *FDecl = E->getDirectCallee();
-    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
-    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
-        Info.Ctx.getLangOpts().LangStd)
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
       return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||

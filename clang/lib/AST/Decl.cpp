@@ -71,6 +71,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 
 using namespace clang;
 
@@ -3064,6 +3065,17 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
+}
+
+void FunctionDecl::setConstexprBuiltinSinceVersion(IdentifierInfo *I) {
+  static const std::unordered_set<std::string> constexprFunctions = {
+      "__builtin_frexp", "__builtin_frexpf", "__builtin_frexpl",
+      "__builtin_fmax",  "__builtin_fmaxf",  "__builtin_fmaxl",
+      "__builtin_fmin",  "__builtin_fminf",  "__builtin_fminl"};
+  bool isConstExpr =
+      constexprFunctions.find(I->getName().str()) != constexprFunctions.end();
+  isConstExpr ? setConstexprSinceVersion(clang::LangStandard::lang_cxx23)
+              : setConstexprSinceVersion(clang::LangStandard::lang_cxx20);
 }
 
 void FunctionDecl::getNameForDiagnostic(
