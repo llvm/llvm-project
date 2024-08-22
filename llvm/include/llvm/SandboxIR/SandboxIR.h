@@ -130,6 +130,7 @@ class CallBrInst;
 class FuncletPadInst;
 class CatchPadInst;
 class CleanupPadInst;
+class CatchReturnInst;
 class GetElementPtrInst;
 class CastInst;
 class PtrToIntInst;
@@ -262,6 +263,7 @@ protected:
   friend class FuncletPadInst;        // For getting `Val`.
   friend class CatchPadInst;          // For getting `Val`.
   friend class CleanupPadInst;        // For getting `Val`.
+  friend class CatchReturnInst;       // For getting `Val`.
   friend class GetElementPtrInst;     // For getting `Val`.
   friend class CatchSwitchInst;       // For getting `Val`.
   friend class SwitchInst;            // For getting `Val`.
@@ -687,6 +689,7 @@ protected:
   friend class CallBrInst;         // For getTopmostLLVMInstruction().
   friend class CatchPadInst;       // For getTopmostLLVMInstruction().
   friend class CleanupPadInst;     // For getTopmostLLVMInstruction().
+  friend class CatchReturnInst;    // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst;  // For getTopmostLLVMInstruction().
   friend class CatchSwitchInst;    // For getTopmostLLVMInstruction().
   friend class SwitchInst;         // For getTopmostLLVMInstruction().
@@ -1914,6 +1917,30 @@ public:
   }
 };
 
+class CatchReturnInst
+    : public SingleLLVMInstructionImpl<llvm::CatchReturnInst> {
+  CatchReturnInst(llvm::CatchReturnInst *CRI, Context &Ctx)
+      : SingleLLVMInstructionImpl(ClassID::CatchRet, Opcode::CatchRet, CRI,
+                                  Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static CatchReturnInst *create(CatchPadInst *CatchPad, BasicBlock *BB,
+                                 BBIterator WhereIt, BasicBlock *WhereBB,
+                                 Context &Ctx);
+  CatchPadInst *getCatchPad() const;
+  void setCatchPad(CatchPadInst *CatchPad);
+  BasicBlock *getSuccessor() const;
+  void setSuccessor(BasicBlock *NewSucc);
+  unsigned getNumSuccessors() {
+    return cast<llvm::CatchReturnInst>(Val)->getNumSuccessors();
+  }
+  Value *getCatchSwitchParentPad() const;
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CatchRet;
+  }
+};
+
 class GetElementPtrInst final
     : public SingleLLVMInstructionImpl<llvm::GetElementPtrInst> {
   /// Use Context::createGetElementPtrInst(). Don't call
@@ -2820,6 +2847,8 @@ protected:
   friend CatchPadInst; // For createCatchPadInst()
   CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
   friend CleanupPadInst; // For createCleanupPadInst()
+  CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
+  friend CatchReturnInst; // For createCatchReturnInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
