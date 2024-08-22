@@ -5145,7 +5145,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult || E->getType()->isVoidType())
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x
