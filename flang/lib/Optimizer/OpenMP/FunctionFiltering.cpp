@@ -1,4 +1,4 @@
-//===- OMPFunctionFiltering.cpp -------------------------------------------===//
+//===- FunctionFiltering.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -21,18 +21,18 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace fir {
-#define GEN_PASS_DEF_OMPFUNCTIONFILTERING
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
+namespace flangomp {
+#define GEN_PASS_DEF_FUNCTIONFILTERING
+#include "flang/Optimizer/OpenMP/Passes.h.inc"
+} // namespace flangomp
 
 using namespace mlir;
 
 namespace {
-class OMPFunctionFilteringPass
-    : public fir::impl::OMPFunctionFilteringBase<OMPFunctionFilteringPass> {
+class FunctionFilteringPass
+    : public flangomp::impl::FunctionFilteringBase<FunctionFilteringPass> {
 public:
-  OMPFunctionFilteringPass() = default;
+  FunctionFilteringPass() = default;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();

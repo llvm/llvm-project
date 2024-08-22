@@ -46,6 +46,8 @@ class Defined;
 class Symbol;
 class BitcodeCompiler;
 class OutputSection;
+class LinkerScript;
+struct Partition;
 struct PhdrEntry;
 
 enum ELFKind : uint8_t {
@@ -482,10 +484,12 @@ struct DuplicateSymbol {
 
 struct Ctx {
   LinkerDriver driver;
+  LinkerScript *script;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart;
+  Partition *mainPart;
   PhdrEntry *tlsPhdr;
   struct OutSections {
     OutputSection *elfHeader;
