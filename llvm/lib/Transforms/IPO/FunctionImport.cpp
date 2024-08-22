@@ -897,10 +897,7 @@ static void computeImportForFunction(
         if (ImportDeclaration && SummaryForDeclImport) {
           StringRef DeclSourceModule = SummaryForDeclImport->modulePath();
 
-          // Since definition takes precedence over declaration for the same VI,
-          // try emplace <VI, declaration> pair without checking insert result.
-          // If insert doesn't happen, there must be an existing entry keyed by
-          // VI. Note `ExportLists` only keeps track of exports due to imported
+          // Note `ExportLists` only keeps track of exports due to imported
           // definitions.
           FunctionImporter::maybeAddDeclaration(ImportList, DeclSourceModule,
                                                 VI.getGUID());
