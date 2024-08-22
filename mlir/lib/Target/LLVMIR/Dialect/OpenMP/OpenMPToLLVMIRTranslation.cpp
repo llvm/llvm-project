@@ -2083,8 +2083,8 @@ convertToDeviceClauseKind(mlir::omp::DeclareTargetDeviceType deviceClause) {
 
 static llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind
 convertToCaptureClauseKind(
-    mlir::omp::DeclareTargetCaptureClause captureClasue) {
-  switch (captureClasue) {
+    mlir::omp::DeclareTargetCaptureClause captureClause) {
+  switch (captureClause) {
   case mlir::omp::DeclareTargetCaptureClause::to:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
   case mlir::omp::DeclareTargetCaptureClause::link:
