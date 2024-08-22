@@ -311,7 +311,7 @@ entry:
 define half @copysign_negnan(half %a) {
 ; CHECK-LABEL: @copysign_negnan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half 0xH7E00, half [[A:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half nan, half [[A:%.*]])
 ; CHECK-NEXT:    ret half [[RET]]
 ;
 entry:
@@ -322,7 +322,7 @@ entry:
 define half @copysign_neginf(half %a) {
 ; CHECK-LABEL: @copysign_neginf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half 0xH7C00, half [[A:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.copysign.f16(half pinf, half [[A:%.*]])
 ; CHECK-NEXT:    ret half [[RET]]
 ;
 entry:

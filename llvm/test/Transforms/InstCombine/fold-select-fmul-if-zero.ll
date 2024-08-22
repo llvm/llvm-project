@@ -377,7 +377,7 @@ define float @fmul_by_neg0_if_0_oeq_zero_f32(float %x) {
 define float @fmul_by_neginf_if_0_oeq_zero_f32(float %x) {
 ; CHECK-LABEL: @fmul_by_neginf_if_0_oeq_zero_f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SCALED_X:%.*]] = fmul float [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[SCALED_X:%.*]] = fmul float [[X]], ninf
 ; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select i1 [[X_IS_ZERO]], float [[SCALED_X]], float [[X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
@@ -390,7 +390,7 @@ define float @fmul_by_neginf_if_0_oeq_zero_f32(float %x) {
 define float @fmul_by_posinf_if_0_oeq_zero_f32(float %x) {
 ; CHECK-LABEL: @fmul_by_posinf_if_0_oeq_zero_f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SCALED_X:%.*]] = fmul float [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[SCALED_X:%.*]] = fmul float [[X]], pinf
 ; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select i1 [[X_IS_ZERO]], float [[SCALED_X]], float [[X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
@@ -403,7 +403,7 @@ define float @fmul_by_posinf_if_0_oeq_zero_f32(float %x) {
 define float @fmul_by_qnan_if_0_oeq_zero_f32(float %x) {
 ; CHECK-LABEL: @fmul_by_qnan_if_0_oeq_zero_f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select i1 [[X_IS_ZERO]], float 0x7FF8000000000000, float [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select i1 [[X_IS_ZERO]], float nan, float [[X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -659,7 +659,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_known_never_nan_inf_neg(float %
 define float @fmul_by_var_if_0_oeq_zero_f32_assume_finite_fmul_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_assume_finite_fmul_nsz(
 ; CHECK-NEXT:    [[FABS_Y:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[FABS_Y]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[FABS_Y]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE]])
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
@@ -676,7 +676,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_assume_finite_fmul_nsz(float %x, flo
 define float @fmul_by_var_if_not_one_0_zero_f32_assume_finite_fmul_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_not_one_0_zero_f32_assume_finite_fmul_nsz(
 ; CHECK-NEXT:    [[FABS_Y:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[FABS_Y]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[FABS_Y]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE]])
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;

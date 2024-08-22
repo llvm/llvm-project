@@ -53,7 +53,7 @@ define i1 @test3(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
@@ -134,7 +134,7 @@ define i1 @test6(double %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], pinf
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP_I]], [[LAND_RHS]] ]
@@ -182,7 +182,7 @@ define i1 @test8(float %x) {
 ; CHECK-LABEL: define i1 @test8(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq float [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq float [[ABS]], pinf
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 true
@@ -248,7 +248,7 @@ define i1 @test11_and(float %x, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[RET1]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false

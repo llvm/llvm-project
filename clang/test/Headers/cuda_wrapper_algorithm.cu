@@ -16,7 +16,7 @@ extern "C" bool cmp(double a, double b) { return a<b; }
 
 // CHECK-LABEL: @test_std_min(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// CHECK-NEXT:    ret double nan
 //
 extern "C" double test_std_min() {
   return std::min(__builtin_nan(""), 0.0);
@@ -24,7 +24,7 @@ extern "C" double test_std_min() {
 
 // CHECK-LABEL: @test_std_min_cmp(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// CHECK-NEXT:    ret double nan
 //
 extern "C" double test_std_min_cmp() {
   return std::min(__builtin_nan(""), 0.0, cmp);
@@ -32,7 +32,7 @@ extern "C" double test_std_min_cmp() {
 
 // CHECK-LABEL: @test_std_max(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// CHECK-NEXT:    ret double nan
 //
 extern "C" double test_std_max() {
   return std::max(__builtin_nan(""), 0.0);
@@ -40,7 +40,7 @@ extern "C" double test_std_max() {
 
 // CHECK-LABEL: @test_std_max_cmp(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// CHECK-NEXT:    ret double nan
 //
 extern "C" double test_std_max_cmp() {
   return std::max(__builtin_nan(""), 0.0, cmp);

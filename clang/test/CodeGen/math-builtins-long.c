@@ -40,16 +40,16 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   __builtin_frexpl(f,i);
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // F80: store x86_fp80 pinf, ptr
+  // PPC: store ppc_fp128 pinf, ptr
+  // X86F128: store fp128 pinf, ptr
+  // PPCF128: store fp128 pinf, ptr
   *l = __builtin_huge_vall();
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // F80: store x86_fp80 pinf, ptr
+  // PPC: store ppc_fp128 pinf, ptr
+  // X86F128: store fp128 pinf, ptr
+  // PPCF128: store fp128 pinf, ptr
   *l = __builtin_infl();
 
   // F80: call x86_fp80 @ldexpl(x86_fp80 noundef %{{.+}}, i32 noundef %{{.+}})

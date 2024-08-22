@@ -3,7 +3,7 @@
 define float @nan(float %a) {
 ; CHECK-LABEL: define float @nan(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = fadd float [[A]], 0x7FF8000000000000
+; CHECK-NEXT:    [[T:%.*]] = fadd float [[A]], nan
 ; CHECK-NEXT:    [[T1:%.*]] = fadd float [[T]], 0x7FFA000000000000
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[T1]], 0x7FF4000000000000
 ; CHECK-NEXT:    ret float [[T1]]
@@ -17,8 +17,8 @@ define float @nan(float %a) {
 define float @inf(float %a) {
 ; CHECK-LABEL: define float @inf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[T:%.*]] = fadd float [[A]], 0x7FF0000000000000
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[T]], 0xFFF0000000000000
+; CHECK-NEXT:    [[T:%.*]] = fadd float [[A]], pinf
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[T]], ninf
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %t = fadd float %a, pinf

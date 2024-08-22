@@ -5,7 +5,7 @@ define i1 @f32_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -30,7 +30,7 @@ define i1 @f32_not_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_not_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -55,7 +55,7 @@ define i1 @f64_fcnan_fcinf(double %a) {
 ; CHECK-LABEL: define i1 @f64_fcnan_fcinf(
 ; CHECK-SAME: double [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i64 = bitcast double %a to i64
@@ -80,7 +80,7 @@ define i1 @f32_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -104,7 +104,7 @@ define i1 @f32_fcinf_strictfp(float %a) strictfp {
 define i1 @f32_fcposinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcposinf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -126,7 +126,7 @@ define i1 @f32_fcposinf_strictfp(float %a) strictfp {
 define i1 @f32_fcneginf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcneginf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], 0xFFF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], ninf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -253,7 +253,7 @@ define <2 x i1> @f32_fcnan_fcinf_vec(<2 x float> %a) {
 ; CHECK-LABEL: define <2 x i1> @f32_fcnan_fcinf_vec(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[TMP1]], <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[TMP1]], <float pinf, float pinf>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -278,7 +278,7 @@ define <2 x i1> @f32_fcinf_vec(<2 x float> %a) {
 ; CHECK-LABEL: define <2 x i1> @f32_fcinf_vec(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[TMP1]], <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[TMP1]], <float pinf, float pinf>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -389,7 +389,7 @@ define i1 @f32_fcnan_fcinf_wrong_pred(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_wrong_pred(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -748,7 +748,7 @@ define i1 @isnan_idiom_wrong_pred2(double %x) {
 ; CHECK-LABEL: define i1 @isnan_idiom_wrong_pred2(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq double [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq double [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %bits = bitcast double %x to i64

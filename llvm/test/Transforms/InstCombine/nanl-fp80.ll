@@ -7,7 +7,7 @@
 
 define x86_fp80 @nanl_empty() {
 ; CHECK-LABEL: define x86_fp80 @nanl_empty() {
-; CHECK-NEXT:    ret x86_fp80 0xK7FFFC000000000000000
+; CHECK-NEXT:    ret x86_fp80 nan
 ;
   %res = call x86_fp80 @nanl(ptr @empty)
   ret x86_fp80 %res

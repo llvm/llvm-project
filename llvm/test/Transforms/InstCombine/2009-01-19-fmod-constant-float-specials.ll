@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep 0x7FF8000000000000 | count 12
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep nan | count 12
 ; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep "0\.0" | count 3
 ; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep "3\.5" | count 1
 ;
@@ -13,8 +13,8 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF0000000000000, ptr %x, align 4
-	store float 0x7FF8000000000000, ptr %y, align 4
+	store float pinf, ptr %x, align 4
+	store float nan, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -34,7 +34,7 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF0000000000000, ptr %x, align 4
+	store float pinf, ptr %x, align 4
 	store float 0.000000e+00, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
@@ -53,7 +53,7 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF0000000000000, ptr %x, align 4
+	store float pinf, ptr %x, align 4
 	store float 3.500000e+00, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
@@ -72,8 +72,8 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF0000000000000, ptr %x, align 4
-	store float 0x7FF0000000000000, ptr %y, align 4
+	store float pinf, ptr %x, align 4
+	store float pinf, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -91,8 +91,8 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF8000000000000, ptr %x, align 4
-	store float 0x7FF0000000000000, ptr %y, align 4
+	store float nan, ptr %x, align 4
+	store float pinf, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -110,7 +110,7 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF8000000000000, ptr %x, align 4
+	store float nan, ptr %x, align 4
 	store float 0.000000e+00, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
@@ -129,7 +129,7 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF8000000000000, ptr %x, align 4
+	store float nan, ptr %x, align 4
 	store float 3.500000e+00, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
@@ -148,8 +148,8 @@ entry:
 	%y = alloca float		; <ptr> [#uses=2]
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store float 0x7FF8000000000000, ptr %x, align 4
-	store float 0x7FF8000000000000, ptr %y, align 4
+	store float nan, ptr %x, align 4
+	store float nan, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -168,7 +168,7 @@ entry:
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store float 0.000000e+00, ptr %x, align 4
-	store float 0x7FF8000000000000, ptr %y, align 4
+	store float nan, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -187,7 +187,7 @@ entry:
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store float 0.000000e+00, ptr %x, align 4
-	store float 0x7FF0000000000000, ptr %y, align 4
+	store float pinf, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -244,7 +244,7 @@ entry:
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store float 3.500000e+00, ptr %x, align 4
-	store float 0x7FF8000000000000, ptr %y, align 4
+	store float nan, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]
@@ -263,7 +263,7 @@ entry:
 	%x = alloca float		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store float 3.500000e+00, ptr %x, align 4
-	store float 0x7FF0000000000000, ptr %y, align 4
+	store float pinf, ptr %y, align 4
 	%0 = load float, ptr %y, align 4		; <float> [#uses=1]
 	%1 = fpext float %0 to double		; <double> [#uses=1]
 	%2 = load float, ptr %x, align 4		; <float> [#uses=1]

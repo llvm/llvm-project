@@ -67,6 +67,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,6 +89,13 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool>
+    ForcePrintHexForSpecialFP("force-print-hex-special-fp",
+                              cl::desc("Force print hex on special floating-"
+                                       "point constants rather than identifiers"
+                                       " like `nan` or `pinf`."),
+                              cl::Hidden, cl::init(false));
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -1441,15 +1449,28 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
 }
 
 static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
-  if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
-      &APF.getSemantics() == &APFloat::IEEEdouble()) {
+  const fltSemantics &Semantics = APF.getSemantics();
+
+  // First, try to see if we can print it as `nan`, `pinf`, or `ninf`.
+  if (!ForcePrintHexForSpecialFP &&
+      APF.bitwiseIsEqual(APFloat::getQNaN(Semantics))) {
+    Out << "nan";
+    return;
+  }
+  if (!ForcePrintHexForSpecialFP && APF.isInfinity()) {
+    Out << (APF.isNegative() ? "ninf" : "pinf");
+    return;
+  }
+
+  if (&Semantics == &APFloat::IEEEsingle() ||
+      &Semantics == &APFloat::IEEEdouble()) {
     // We would like to output the FP constant value in exponential notation,
     // but we cannot do this if doing so will lose precision.  Check here to
     // make sure that we only output it in exponential format if we can parse
     // the value back and get the same value.
     //
     bool ignored;
-    bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
+    bool isDouble = &Semantics == &APFloat::IEEEdouble();
     bool isInf = APF.isInfinity();
     bool isNaN = APF.isNaN();
 
@@ -1503,29 +1524,29 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
   // fixed number of hex digits.
   Out << "0x";
   APInt API = APF.bitcastToAPInt();
-  if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
+  if (&Semantics == &APFloat::x87DoubleExtended()) {
     Out << 'K';
     Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
                                 /*Upper=*/true);
     Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
+  } else if (&Semantics == &APFloat::IEEEquad()) {
     Out << 'L';
     Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                 /*Upper=*/true);
     Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
+  } else if (&Semantics == &APFloat::PPCDoubleDouble()) {
     Out << 'M';
     Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                 /*Upper=*/true);
     Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
+  } else if (&Semantics == &APFloat::IEEEhalf()) {
     Out << 'H';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::BFloat()) {
+  } else if (&Semantics == &APFloat::BFloat()) {
     Out << 'R';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                 /*Upper=*/true);

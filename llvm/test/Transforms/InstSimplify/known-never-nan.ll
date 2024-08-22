@@ -535,12 +535,12 @@ define i1 @isKnownNeverNaN_nofpclass_indirect_callsite(ptr %fptr) {
 define i1 @isKnownNeverNaN_invoke_callsite(ptr %ptr) personality i8 1 {
 ; CHECK-LABEL: @isKnownNeverNaN_invoke_callsite(
 ; CHECK-NEXT:    [[INVOKE:%.*]] = invoke nofpclass(nan) float [[PTR:%.*]]()
-; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       unwind:
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    resume ptr null
 ;
   %invoke = invoke nofpclass(nan) float %ptr() to label %normal unwind label %unwind
@@ -558,7 +558,7 @@ unwind:
 define i1 @issue63316(i64 %arg) {
 ; CHECK-LABEL: @issue63316(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], pinf
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
@@ -571,7 +571,7 @@ define i1 @issue63316(i64 %arg) {
 define i1 @issue63316_commute(i64 %arg) {
 ; CHECK-LABEL: @issue63316_commute(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0x7FF0000000000000, [[SITOFP]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float pinf, [[SITOFP]]
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;

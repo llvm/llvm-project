@@ -45,7 +45,7 @@
 // In regular (2008) mode, the quiet bit is set to indicate QNAN.
 
 // CHECK-NANLEGACY: double 0x7FF4000000000000
-// CHECK-NAN2008: double 0x7FF8000000000000
+// CHECK-NAN2008: double nan
 
 double d =  __builtin_nan("");
 
@@ -54,6 +54,6 @@ double d =  __builtin_nan("");
 // quiet bit on conversion independently of the setting in clang.
 
 // CHECK-NANLEGACY: float 0x7FFC000000000000
-// CHECK-NAN2008: float 0x7FF8000000000000
+// CHECK-NAN2008: float nan
 
 float f =  __builtin_nan("");

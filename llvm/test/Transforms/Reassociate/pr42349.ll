@@ -5,7 +5,7 @@ define  float @wibble(float %tmp6) #0 {
 ; CHECK-LABEL: @wibble(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul float [[TMP6:%.*]], -1.000000e+00
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], 0xFFF0000000000000
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], ninf
 ; CHECK-NEXT:    ret float [[TMP9]]
 ;
 bb:

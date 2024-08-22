@@ -5,3 +5,7 @@
 @H1     = global half 0x4010000000000000
 @F1     = global float 0x4010000000000000
 @D1     = global double 0x4010000000000000
+
+@NAN    = global float nan
+@INF    = global float pinf
+@NINF   = global float ninf

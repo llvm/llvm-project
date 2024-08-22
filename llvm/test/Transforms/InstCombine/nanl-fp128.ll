@@ -7,7 +7,7 @@
 
 define fp128 @nanl_empty() {
 ; CHECK-LABEL: define fp128 @nanl_empty() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+; CHECK-NEXT:    ret fp128 nan
 ;
   %res = call fp128 @nanl(ptr @empty)
   ret fp128 %res

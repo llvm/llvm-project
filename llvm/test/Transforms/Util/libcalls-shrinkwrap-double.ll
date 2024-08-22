@@ -138,8 +138,8 @@ entry:
 ; CHECK: [[END_LABEL]]:
 
   %call_02 = call double @cos(double %value)
-; CHECK: [[COND1:%[0-9]+]] = fcmp oeq double %value, 0xFFF0000000000000
-; CHECK: [[COND2:%[0-9]+]] = fcmp oeq double %value, 0x7FF0000000000000
+; CHECK: [[COND1:%[0-9]+]] = fcmp oeq double %value, ninf
+; CHECK: [[COND2:%[0-9]+]] = fcmp oeq double %value, pinf
 ; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
 ; CHECK: [[CALL_LABEL]]:
@@ -148,8 +148,8 @@ entry:
 ; CHECK: [[END_LABEL]]:
 
   %call_03 = call double @sin(double %value)
-; CHECK: [[COND1:%[0-9]+]] = fcmp oeq double %value, 0xFFF0000000000000
-; CHECK: [[COND2:%[0-9]+]] = fcmp oeq double %value, 0x7FF0000000000000
+; CHECK: [[COND1:%[0-9]+]] = fcmp oeq double %value, ninf
+; CHECK: [[COND2:%[0-9]+]] = fcmp oeq double %value, pinf
 ; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
 ; CHECK: [[CALL_LABEL]]:
@@ -249,8 +249,8 @@ entry:
 ; CHECK: [[END_LABEL]]:
 
   %call_02 = call double @cos(double %value) strictfp
-; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double 0xFFF0000000000000, metadata !"oeq", metadata !"fpexcept.strict")
-; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double 0x7FF0000000000000, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double ninf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double pinf, metadata !"oeq", metadata !"fpexcept.strict")
 ; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
 ; CHECK: [[CALL_LABEL]]:
@@ -259,8 +259,8 @@ entry:
 ; CHECK: [[END_LABEL]]:
 
   %call_03 = call double @sin(double %value) strictfp
-; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double 0xFFF0000000000000, metadata !"oeq", metadata !"fpexcept.strict")
-; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double 0x7FF0000000000000, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double ninf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double pinf, metadata !"oeq", metadata !"fpexcept.strict")
 ; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
 ; CHECK: [[CALL_LABEL]]:

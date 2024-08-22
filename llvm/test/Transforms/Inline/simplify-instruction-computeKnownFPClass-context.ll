@@ -169,7 +169,7 @@ define i1 @simplify_fcmp_ord_ldexp_caller(double nofpclass(zero inf) %i0) {
 ; CHECK-LABEL: define i1 @simplify_fcmp_ord_ldexp_caller
 ; CHECK-SAME: (double nofpclass(inf zero) [[I0:%.*]]) {
 ; CHECK-NEXT:    [[LDEXP_I:%.*]] = call double @llvm.ldexp.f64.i32(double [[I0]], i32 42)
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp one double [[LDEXP_I]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp one double [[LDEXP_I]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP_I]]
 ;
   %call = call i1 @simplify_fcmp_ord_ldexp_callee(double %i0)
@@ -189,7 +189,7 @@ define i1 @simplify_fcmp_ord_frexp_caller(double nofpclass(zero inf) %i0) {
 ; CHECK-SAME: (double nofpclass(inf zero) [[I0:%.*]]) {
 ; CHECK-NEXT:    [[FREXP_I:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[I0]])
 ; CHECK-NEXT:    [[FREXP_0_I:%.*]] = extractvalue { double, i32 } [[FREXP_I]], 0
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp one double [[FREXP_0_I]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp one double [[FREXP_0_I]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP_I]]
 ;
   %call = call i1 @simplify_fcmp_ord_frexp_callee(double %i0)

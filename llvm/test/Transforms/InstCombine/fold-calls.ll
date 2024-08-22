@@ -2,9 +2,9 @@
 
 ; This shouldn't fold, because sin(inf) is invalid.
 ; CHECK-LABEL: @foo(
-; CHECK:   %t = call double @sin(double 0x7FF0000000000000)
+; CHECK:   %t = call double @sin(double pinf)
 define double @foo() {
-  %t = call double @sin(double 0x7FF0000000000000)
+  %t = call double @sin(double pinf)
   ret double %t
 }
 

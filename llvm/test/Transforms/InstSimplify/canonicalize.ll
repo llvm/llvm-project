@@ -243,7 +243,7 @@ define float @canonicalize_neg_denorm_preserve_sign_output_dynamic_input() "deno
 
 define float @canonicalize_inf() {
 ; CHECK-LABEL: @canonicalize_inf(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float pinf
 ;
   %ret = call float @llvm.canonicalize.f32(float 0x7FF0000000000000)
   ret float %ret
@@ -251,7 +251,7 @@ define float @canonicalize_inf() {
 
 define float @canonicalize_neg_inf() {
 ; CHECK-LABEL: @canonicalize_neg_inf(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float ninf
 ;
   %ret = call float @llvm.canonicalize.f32(float 0xFFF0000000000000)
   ret float %ret
@@ -259,7 +259,7 @@ define float @canonicalize_neg_inf() {
 
 define float @canonicalize_qnan() {
 ; CHECK-LABEL: @canonicalize_qnan(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float nan)
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %ret = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
@@ -377,7 +377,7 @@ define double @canonicalize_0x00000000000001_f64() {
 
 define double @canonicalize_inf_f64() {
 ; CHECK-LABEL: @canonicalize_inf_f64(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double pinf
 ;
   %ret = call double @llvm.canonicalize.f64(double 0x7FF0000000000000)
   ret double %ret
@@ -385,7 +385,7 @@ define double @canonicalize_inf_f64() {
 
 define double @canonicalize_ninf_f64() {
 ; CHECK-LABEL: @canonicalize_ninf_f64(
-; CHECK-NEXT:    ret double 0xFFF0000000000000
+; CHECK-NEXT:    ret double ninf
 ;
   %ret = call double @llvm.canonicalize.f64(double 0xFFF0000000000000)
   ret double %ret
@@ -421,7 +421,7 @@ define half @canonicalize_0x0001_f16() {
 
 define half @canonicalize_inf_f16() {
 ; CHECK-LABEL: @canonicalize_inf_f16(
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half pinf
 ;
   %ret = call half @llvm.canonicalize.f16(half 0xH7C00)
   ret half %ret
@@ -429,7 +429,7 @@ define half @canonicalize_inf_f16() {
 
 define half @canonicalize_neg_inf_f16() {
 ; CHECK-LABEL: @canonicalize_neg_inf_f16(
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half ninf
 ;
   %ret = call half @llvm.canonicalize.f16(half 0xHFC00)
   ret half %ret
@@ -465,7 +465,7 @@ define fp128 @canonicalize_0x00000000000000000000000000000001_fp128() {
 
 define fp128 @canonicalize_inf_fp128() {
 ; CHECK-LABEL: @canonicalize_inf_fp128(
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF000000000000
+; CHECK-NEXT:    ret fp128 pinf
 ;
   %ret = call fp128 @llvm.canonicalize.fp128(fp128 0xL00000000000000007FFF000000000000)
   ret fp128 %ret
@@ -473,7 +473,7 @@ define fp128 @canonicalize_inf_fp128() {
 
 define fp128 @canonicalize_neg_inf_fp128() {
 ; CHECK-LABEL: @canonicalize_neg_inf_fp128(
-; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+; CHECK-NEXT:    ret fp128 ninf
 ;
   %ret = call fp128 @llvm.canonicalize.fp128(fp128 0xL0000000000000000FFFF000000000000)
   ret fp128 %ret
@@ -481,7 +481,7 @@ define fp128 @canonicalize_neg_inf_fp128() {
 
 define fp128 @canonicalize_nan_fp128() {
 ; CHECK-LABEL: @canonicalize_nan_fp128(
-; CHECK-NEXT:    [[RET:%.*]] = call fp128 @llvm.canonicalize.f128(fp128 0xL00000000000000007FFF800000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call fp128 @llvm.canonicalize.f128(fp128 nan)
 ; CHECK-NEXT:    ret fp128 [[RET]]
 ;
   %ret = call fp128 @llvm.canonicalize.fp128(fp128 0xL00000000000000007FFF800000000000)
@@ -518,7 +518,7 @@ define bfloat @canonicalize_0x0001_bf16() {
 
 define bfloat @canonicalize_inf_bf16() {
 ; CHECK-LABEL: @canonicalize_inf_bf16(
-; CHECK-NEXT:    ret bfloat 0xR7F80
+; CHECK-NEXT:    ret bfloat pinf
 ;
   %ret = call bfloat @llvm.canonicalize.bf16(bfloat 0xR7F80)
   ret bfloat %ret
@@ -526,7 +526,7 @@ define bfloat @canonicalize_inf_bf16() {
 
 define bfloat @canonicalize_neg_inf_bf16() {
 ; CHECK-LABEL: @canonicalize_neg_inf_bf16(
-; CHECK-NEXT:    ret bfloat 0xRFF80
+; CHECK-NEXT:    ret bfloat ninf
 ;
   %ret = call bfloat @llvm.canonicalize.bf16(bfloat 0xRFF80)
   ret bfloat %ret
@@ -534,7 +534,7 @@ define bfloat @canonicalize_neg_inf_bf16() {
 
 define bfloat @canonicalize_nan_bf16() {
 ; CHECK-LABEL: @canonicalize_nan_bf16(
-; CHECK-NEXT:    [[RET:%.*]] = call bfloat @llvm.canonicalize.bf16(bfloat 0xR7FC0)
+; CHECK-NEXT:    [[RET:%.*]] = call bfloat @llvm.canonicalize.bf16(bfloat nan)
 ; CHECK-NEXT:    ret bfloat [[RET]]
 ;
   %ret = call bfloat @llvm.canonicalize.bf16(bfloat 0xR7FC0)
@@ -587,7 +587,7 @@ define x86_fp80 @canonicalize_negzero_f80() {
 
 define x86_fp80 @canonicalize_inf_f80() {
 ; CHECK-LABEL: @canonicalize_inf_f80(
-; CHECK-NEXT:    [[RET:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 0xK7FFF8000000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 pinf)
 ; CHECK-NEXT:    ret x86_fp80 [[RET]]
 ;
   %ret = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 0xK7FFF8000000000000000)
@@ -596,7 +596,7 @@ define x86_fp80 @canonicalize_inf_f80() {
 
 define x86_fp80 @canonicalize_ninf_f80() {
 ; CHECK-LABEL: @canonicalize_ninf_f80(
-; CHECK-NEXT:    [[RET:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 0xKFFFF8000000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 ninf)
 ; CHECK-NEXT:    ret x86_fp80 [[RET]]
 ;
   %ret = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 0xKFFFF8000000000000000)
@@ -710,7 +710,7 @@ define ppc_fp128 @canonicalize_noncanonical_negzero_0_ppcf128() {
 
 define ppc_fp128 @canonicalize_inf_ppcf128() {
 ; CHECK-LABEL: @canonicalize_inf_ppcf128(
-; CHECK-NEXT:    [[RET:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM7FF00000000000000000000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 pinf)
 ; CHECK-NEXT:    ret ppc_fp128 [[RET]]
 ;
   %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM7FF00000000000000000000000000000)
@@ -719,7 +719,7 @@ define ppc_fp128 @canonicalize_inf_ppcf128() {
 
 define ppc_fp128 @canonicalize_neginf_ppcf128() {
 ; CHECK-LABEL: @canonicalize_neginf_ppcf128(
-; CHECK-NEXT:    [[RET:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xMFFF00000000000000000000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 ninf)
 ; CHECK-NEXT:    ret ppc_fp128 [[RET]]
 ;
   %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xMFFF00000000000000000000000000000)

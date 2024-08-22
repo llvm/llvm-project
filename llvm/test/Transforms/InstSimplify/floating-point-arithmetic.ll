@@ -259,7 +259,7 @@ define float @src_fma_nzero_neg(float nofpclass(inf nan pzero psub pnorm) %f, fl
 define { float, float } @test_fmul_0_assumed_finite(float %x) {
 ; CHECK-LABEL: @test_fmul_0_assumed_finite(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
 ; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float -0.000000e+00 }
 ;
@@ -462,7 +462,7 @@ define <2 x float> @fabs_select_neg0_neg1_vector(i32 %c) {
 define float @fabs_select_nan_nan(i32 %c) {
 ; CHECK-LABEL: @fabs_select_nan_nan(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0x7FF8000000000000, float 0x7FF8000100000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float nan, float 0x7FF8000100000000
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
@@ -474,7 +474,7 @@ define float @fabs_select_nan_nan(i32 %c) {
 define <2 x float> @fabs_select_nan_nan_vector(i32 %c) {
 ; CHECK-LABEL: @fabs_select_nan_nan_vector(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float nan, float nan>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
 ; CHECK-NEXT:    ret <2 x float> [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
@@ -486,7 +486,7 @@ define <2 x float> @fabs_select_nan_nan_vector(i32 %c) {
 define float @fabs_select_negnan_nan(i32 %c) {
 ; CHECK-LABEL: @fabs_select_negnan_nan(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float 0x7FF8000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], float 0xFFF8000000000000, float nan
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
@@ -499,7 +499,7 @@ define float @fabs_select_negnan_nan(i32 %c) {
 define <2 x float> @fabs_select_negnan_nan_vector(i32 %c) {
 ; CHECK-LABEL: @fabs_select_negnan_nan_vector(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float nan, float nan>
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[SELECT]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
@@ -894,7 +894,7 @@ define float @maxnum_with_pos_one_op(float %a) {
 
 define double @fadd_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fadd_nnan_inf_op0(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double pinf
 ;
   %r = fadd nnan double 0x7ff0000000000000, %x
   ret double %r
@@ -902,7 +902,7 @@ define double @fadd_nnan_inf_op0(double %x) {
 
 define double @fadd_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fadd_nnan_inf_op1(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double pinf
 ;
   %r = fadd nnan double %x, 0x7ff0000000000000
   ret double %r
@@ -910,7 +910,7 @@ define double @fadd_nnan_inf_op1(double %x) {
 
 define <2 x double> @fadd_nnan_neginf_op1(<2 x double> %x) {
 ; CHECK-LABEL: @fadd_nnan_neginf_op1(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double poison>
+; CHECK-NEXT:    ret <2 x double> <double ninf, double poison>
 ;
   %r = fadd nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
   ret <2 x double> %r
@@ -918,7 +918,7 @@ define <2 x double> @fadd_nnan_neginf_op1(<2 x double> %x) {
 
 define double @fadd_nnan_neginf_op0(double %x) {
 ; CHECK-LABEL: @fadd_nnan_neginf_op0(
-; CHECK-NEXT:    ret double 0xFFF0000000000000
+; CHECK-NEXT:    ret double ninf
 ;
   %r = fadd nnan double 0xfff0000000000000, %x
   ret double %r
@@ -928,7 +928,7 @@ define double @fadd_nnan_neginf_op0(double %x) {
 
 define double @fadd_inf_op0(double %x) {
 ; CHECK-LABEL: @fadd_inf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fadd double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd double pinf, [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = fadd double 0x7ff0000000000000, %x
@@ -937,7 +937,7 @@ define double @fadd_inf_op0(double %x) {
 
 define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double pinf
 ;
   %r = fsub nnan double 0x7ff0000000000000, %x
   ret double %r
@@ -947,7 +947,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 
 define double @fsub_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op1(
-; CHECK-NEXT:    ret double 0xFFF0000000000000
+; CHECK-NEXT:    ret double ninf
 ;
   %r = fsub nnan double %x, 0x7ff0000000000000
   ret double %r
@@ -955,7 +955,7 @@ define double @fsub_nnan_inf_op1(double %x) {
 
 define <2 x double> @fsub_nnan_inf_op1_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op1_vec(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF0000000000000, double poison>
+; CHECK-NEXT:    ret <2 x double> <double pinf, double poison>
 ;
   %r = fsub nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
   ret <2 x double> %r
@@ -963,7 +963,7 @@ define <2 x double> @fsub_nnan_inf_op1_vec(<2 x double> %x) {
 
 define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double poison>
+; CHECK-NEXT:    ret <2 x double> <double ninf, double poison>
 ;
   %r = fsub nnan <2 x double> <double 0xfff0000000000000, double poison>, %x
   ret <2 x double> %r
@@ -973,7 +973,7 @@ define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
 
 define double @fsub_nnan_neginf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op1(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double pinf
 ;
   %r = fsub nnan double %x, 0xfff0000000000000
   ret double %r
@@ -983,7 +983,7 @@ define double @fsub_nnan_neginf_op1(double %x) {
 
 define double @fsub_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_inf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fsub double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub double pinf, [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = fsub double 0x7ff0000000000000, %x

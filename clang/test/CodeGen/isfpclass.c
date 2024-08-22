@@ -5,7 +5,7 @@
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-// CHECK-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], 0x7FF0000000000000
+// CHECK-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], pinf
 // CHECK-NEXT:    ret i1 [[TMP1]]
 //
 _Bool check_isfpclass_finite(float x) {

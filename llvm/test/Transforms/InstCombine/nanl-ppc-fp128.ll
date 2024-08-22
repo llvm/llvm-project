@@ -7,7 +7,7 @@
 
 define ppc_fp128 @nanl_empty() {
 ; CHECK-LABEL: define ppc_fp128 @nanl_empty() {
-; CHECK-NEXT:    ret ppc_fp128 0xM7FF80000000000000000000000000000
+; CHECK-NEXT:    ret ppc_fp128 nan
 ;
   %res = call ppc_fp128 @nanl(ptr @empty)
   ret ppc_fp128 %res

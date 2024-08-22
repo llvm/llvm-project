@@ -1138,7 +1138,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF4-IC1-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC1-NEXT:    [[MAX_015:%.*]] = phi float [ ninf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC1-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC1-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]
@@ -1163,7 +1163,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ ninf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]
@@ -1188,7 +1188,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ ninf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]

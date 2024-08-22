@@ -355,7 +355,7 @@ define <2 x float> @fold_fadd_vec_nsz_0_x_ebmaytrap(<2 x float> %a) #0 {
 
 define float @fold_fadd_qnan_qnan_ebmaytrap() #0 {
 ; CHECK-LABEL: @fold_fadd_qnan_qnan_ebmaytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff8000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret float %add
@@ -363,8 +363,8 @@ define float @fold_fadd_qnan_qnan_ebmaytrap() #0 {
 
 define float @fold_fadd_qnan_qnan_ebstrict() #0 {
 ; CHECK-LABEL: @fold_fadd_qnan_qnan_ebstrict(
-; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float nan, float nan, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret float nan
 ;
   %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff8000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %add
@@ -449,7 +449,7 @@ define float @fold_fadd_snan_qnan_ebmaytrap() #0 {
 
 define float @fold_fadd_snan_qnan_ebstrict() #0 {
 ; CHECK-LABEL: @fold_fadd_snan_qnan_ebstrict(
-; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF4000000000000, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF4000000000000, float nan, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #0

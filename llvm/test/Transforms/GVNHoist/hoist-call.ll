@@ -8,7 +8,7 @@ define void @fun(float %__b) minsize {
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.fabs.f32(float [[__B:%.*]])
-; CHECK-NEXT:    [[CMPINF7:%.*]] = fcmp oeq float [[TMP0]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMPINF7:%.*]] = fcmp oeq float [[TMP0]], pinf
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN8:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    unreachable
@@ -41,7 +41,7 @@ define i32 @foo(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr { i32, i32 } asm sideeffect "somestuff", "=r,=r,!i"()
-; CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
+; CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
 ; CHECK:       asm.fallthrough:
 ; CHECK-NEXT:    [[ASMRESULT:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -69,7 +69,7 @@ define i32 @foo2() {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = callbr { i32, i32 } asm sideeffect "somestuff", "=r,=r,!i"()
-; CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
+; CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
 ; CHECK:       asm.fallthrough:
 ; CHECK-NEXT:    [[ASMRESULT:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ASMRESULT]], 1
@@ -100,7 +100,7 @@ define i32 @foo3() {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "=*m,!i"(ptr elementtype(i32) @x)
-; CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
+; CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label %err.split]
 ; CHECK:       asm.fallthrough:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
@@ -129,7 +129,7 @@ define i32 @foo4() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @y, align 4
 ; CHECK-NEXT:    callbr void asm "", "=*m,!i"(ptr elementtype(i32) @x) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    to label [[A:%.*]] [label %b]
+; CHECK-NEXT:            to label [[A:%.*]] [label %b]
 ; CHECK:       a:
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ; CHECK:       b:
@@ -154,7 +154,7 @@ define i32 @foo5() {
 ; CHECK-LABEL: @foo5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "=*m,!i"(ptr elementtype(i32) @x) #[[ATTR2]]
-; CHECK-NEXT:    to label [[A:%.*]] [label %b]
+; CHECK-NEXT:            to label [[A:%.*]] [label %b]
 ; CHECK:       a:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
@@ -182,7 +182,7 @@ define i32 @foo6() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    callbr void asm "", "=*m,!i"(ptr elementtype(i32) @x) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    to label [[A:%.*]] [label %b]
+; CHECK-NEXT:            to label [[A:%.*]] [label %b]
 ; CHECK:       a:
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ; CHECK:       b:

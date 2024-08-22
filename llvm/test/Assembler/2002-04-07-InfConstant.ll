@@ -1,6 +1,6 @@
 ; The output formater prints out 1.0e100 as Inf!
 ;
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | grep 0x7FF0000000000000
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis --force-print-hex-special-fp | grep 0x7FF0000000000000
 ; RUN: verify-uselistorder %s
 
 define float @test() {

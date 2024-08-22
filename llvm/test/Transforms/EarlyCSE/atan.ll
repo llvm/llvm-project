@@ -14,20 +14,20 @@ define float @callatan0() {
 ; TODO: constant should be folded
 define float @callatanInf() {
 ; CHECK-LABEL: @callatanInf(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float pinf)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @atanf(float 0x7FF0000000000000)
+  %call = call float @atanf(float pinf)
   ret float %call
 }
 
 ; TODO: constant should be folded
 define float @callatanNaN() {
 ; CHECK-LABEL: @callatanNaN(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float nan)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @atanf(float 0x7FF8000000000000)
+  %call = call float @atanf(float nan)
   ret float %call
 }
 
@@ -136,9 +136,9 @@ define float @callatan2_flush_to_zero() {
 
 define float @callatan2_NaN() {
 ; CHECK-LABEL: @callatan2_NaN(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
-  %call = call float @atan2f(float 0x7FF8000000000000, float 0x7FF8000000000000)
+  %call = call float @atan2f(float nan, float nan)
   ret float %call
 }
 
@@ -146,7 +146,7 @@ define float @callatan2_Inf() {
 ; CHECK-LABEL: @callatan2_Inf(
 ; CHECK-NEXT:    ret float 0x3FE921FB60000000
 ;
-  %call = call float @atan2f(float 0x7FF0000000000000, float 0x7FF0000000000000)
+  %call = call float @atan2f(float pinf, float pinf)
   ret float %call
 }
 

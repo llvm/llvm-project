@@ -25,7 +25,7 @@ define i8 @overflow_fptoui() {
 
 define float @overflow_uitofp() {
 ; CHECK-LABEL: @overflow_uitofp(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float pinf
 ;
   %i = uitofp i130 400000000000000000000000000000000000000 to float
   ret float %i
@@ -33,7 +33,7 @@ define float @overflow_uitofp() {
 
 define float @overflow_sitofp() {
 ; CHECK-LABEL: @overflow_sitofp(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float pinf
 ;
   %i = sitofp i130 400000000000000000000000000000000000000 to float
   ret float %i
@@ -44,7 +44,7 @@ define float @overflow_sitofp() {
 
 define float @nan_f64_trunc() {
 ; CHECK-LABEL: @nan_f64_trunc(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %f = fptrunc double 0x7FF0000000000001 to float
   ret float %f
@@ -57,7 +57,7 @@ define float @nan_f64_trunc() {
 
 define <3 x half> @nan_v3f64_trunc() {
 ; CHECK-LABEL: @nan_v3f64_trunc(
-; CHECK-NEXT:    ret <3 x half> <half 0xH7E00, half 0xH7E00, half 0xH7E00>
+; CHECK-NEXT:    ret <3 x half> <half nan, half nan, half nan>
 ;
   %f = fptrunc <3 x double> <double 0x7FF0020000000000, double 0x7FF003FFFFFFFFFF, double 0x7FF8000000000001> to <3 x half>
   ret <3 x half> %f
@@ -65,7 +65,7 @@ define <3 x half> @nan_v3f64_trunc() {
 
 define bfloat @nan_bf16_trunc() {
 ; CHECK-LABEL: @nan_bf16_trunc(
-; CHECK-NEXT:    ret bfloat 0xR7FC0
+; CHECK-NEXT:    ret bfloat nan
 ;
   %f = fptrunc double 0x7FF0000000000001 to bfloat
   ret bfloat %f

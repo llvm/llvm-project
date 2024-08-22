@@ -44,7 +44,7 @@ define float @constant_fold_minnum_f32_nan1() {
 
 define float @constant_fold_minnum_f32_nan_nan() {
 ; CHECK-LABEL: @constant_fold_minnum_f32_nan_nan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %x = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
   ret float %x
@@ -116,7 +116,7 @@ define double @constant_fold_minnum_f64_nan1() {
 
 define double @constant_fold_minnum_f64_nan_nan() {
 ; CHECK-LABEL: @constant_fold_minnum_f64_nan_nan(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double nan
 ;
   %x = call double @llvm.minnum.f64(double 0x7FF8000000000000, double 0x7FF8000000000000)
   ret double %x

@@ -4,9 +4,9 @@
 define void @b() {
 ; CHECK-LABEL: @b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float 0x7FF8000000000000, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float nan, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float 0x7FF8000000000000, i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float nan, i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP2]], <4 x float> zeroinitializer, <4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP3]], <float undef, float undef, float undef, float 2.000000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <4 x float> [[TMP4]], zeroinitializer
@@ -46,11 +46,11 @@ define void @test(float %a) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> zeroinitializer, [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

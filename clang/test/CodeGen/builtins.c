@@ -169,12 +169,12 @@ void bar(void) {
   // 0xAE98 == 1010111010011000
   // 0x15D3 == 1010111010011
 
-  f = __builtin_huge_valf();     // CHECK: float    0x7FF0000000000000
-  d = __builtin_huge_val();      // CHECK: double   0x7FF0000000000000
-  ld = __builtin_huge_vall();    // CHECK: x86_fp80 0xK7FFF8000000000000000
-  f = __builtin_nanf("");        // CHECK: float    0x7FF8000000000000
-  d = __builtin_nan("");         // CHECK: double   0x7FF8000000000000
-  ld = __builtin_nanl("");       // CHECK: x86_fp80 0xK7FFFC000000000000000
+  f = __builtin_huge_valf();     // CHECK: float    pinf
+  d = __builtin_huge_val();      // CHECK: double   pinf
+  ld = __builtin_huge_vall();    // CHECK: x86_fp80 pinf
+  f = __builtin_nanf("");        // CHECK: float    nan
+  d = __builtin_nan("");         // CHECK: double   nan
+  ld = __builtin_nanl("");       // CHECK: x86_fp80 nan
   f = __builtin_nanf("0xAE98");  // CHECK: float    0x7FF815D300000000
   d = __builtin_nan("0xAE98");   // CHECK: double   0x7FF800000000AE98
   ld = __builtin_nanl("0xAE98"); // CHECK: x86_fp80 0xK7FFFC00000000000AE98
@@ -238,7 +238,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(*H);
   // CHECK:  %[[ABS:.*]] = call half @llvm.fabs.f16(half %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq half %[[ABS]], 0xH7C00
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq half %[[ABS]], pinf
   // CHECK:  %[[BITCAST:.*]] = bitcast half %[[ARG]] to i16
   // CHECK:  %[[ISNEG:.*]] = icmp slt i16 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -246,7 +246,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(F);
   // CHECK:  %[[ABS:.*]] = call float @llvm.fabs.f32(float %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq float %[[ABS]], 0x7FF0000000000000
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq float %[[ABS]], pinf
   // CHECK:  %[[BITCAST:.*]] = bitcast float %[[ARG]] to i32
   // CHECK:  %[[ISNEG:.*]] = icmp slt i32 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -254,7 +254,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(D);
   // CHECK:  %[[ABS:.*]] = call double @llvm.fabs.f64(double %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq double %[[ABS]], 0x7FF0000000000000
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq double %[[ABS]], pinf
   // CHECK:  %[[BITCAST:.*]] = bitcast double %[[ARG]] to i64
   // CHECK:  %[[ISNEG:.*]] = icmp slt i64 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -262,7 +262,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(LD);
   // CHECK:  %[[ABS:.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq x86_fp80 %[[ABS]], 0xK7FFF8000000000000000
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq x86_fp80 %[[ABS]], pinf
   // CHECK:  %[[BITCAST:.*]] = bitcast x86_fp80 %[[ARG]] to i80
   // CHECK:  %[[ISNEG:.*]] = icmp slt i80 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1

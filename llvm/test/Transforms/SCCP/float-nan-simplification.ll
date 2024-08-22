@@ -15,7 +15,7 @@ define float @test1(float %a, i1 %bc) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi float [ [[A:%.*]], [[BB1]] ], [ 0x7FF8000000000000, [[BB2]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi float [ [[A:%.*]], [[BB1]] ], [ nan, [[BB2]] ]
 ; CHECK-NEXT:    [[V_1:%.*]] = fmul float [[P]], 0.000000e+00
 ; CHECK-NEXT:    [[V_2:%.*]] = fadd float [[V_1]], 0xFFF8000000000000
 ; CHECK-NEXT:    ret float [[V_2]]
@@ -46,7 +46,7 @@ define float @test2(float %a, i1 %bc) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi float [ 0x7FF8000000000000, [[BB1]] ], [ [[A:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi float [ nan, [[BB1]] ], [ [[A:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    [[V_1:%.*]] = fmul float [[P]], 0.000000e+00
 ; CHECK-NEXT:    ret float 0xFFF8000000000000
 ;

@@ -6,7 +6,7 @@ target triple = "i386-apple-darwin9"
 
 define <4 x float> @__inff4() nounwind readnone {
 ; CHECK-LABEL: @__inff4(
-; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float pinf, float pinf>
 ;
   %tmp14 = extractelement <1 x double> bitcast (<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000> to <1 x double>), i32 0
   %tmp4 = bitcast double %tmp14 to i64

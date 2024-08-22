@@ -1,6 +1,6 @@
 // RUN: %clang -target mipsel-unknown-linux -mnan=legacy -emit-llvm -S %s -o - | FileCheck %s
-// CHECK: float 0x7FFC000000000000, float 0x7FF8000000000000
-// CHECK: double 0x7FF4000000000000, double 0x7FF8000000000000
+// CHECK: float 0x7FFC000000000000, float nan
+// CHECK: double 0x7FF4000000000000, double nan
 
 // The first line shows an unintended consequence.
 // __builtin_nan() creates a legacy QNAN double with an empty payload

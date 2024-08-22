@@ -1128,7 +1128,7 @@ define i32 @test_builtin_fpclassify(float %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NAN]]
 ; CHECK:       fpclassify_not_nan:
 ; CHECK-NEXT:    [[X_ABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X_ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X_ABS]], pinf
 ; CHECK-NEXT:    br i1 [[ISINF]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF]]
 ; CHECK:       fpclassify_not_inf:
 ; CHECK-NEXT:    [[ISNORMAL:%.*]] = fcmp uge float [[X_ABS]], 0x3810000000000000

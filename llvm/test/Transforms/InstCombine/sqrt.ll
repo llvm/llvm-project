@@ -31,7 +31,7 @@ define float @test2(float %x) nounwind readnone ssp {
 
 define float @test3(ptr %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double nan) #[[ATTR4]]
 ; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]

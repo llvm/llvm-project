@@ -502,7 +502,7 @@ define i1 @i32_cast_cmp_oeq_int_inf_sitofp(i32 %i) {
 define i1 @i128_cast_cmp_oeq_int_inf_uitofp(i128 %i) {
 ; CHECK-LABEL: @i128_cast_cmp_oeq_int_inf_uitofp(
 ; CHECK-NEXT:    [[F:%.*]] = uitofp i128 [[I:%.*]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[F]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[F]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = uitofp i128 %i to float

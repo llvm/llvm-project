@@ -197,7 +197,7 @@ define float @test_intrinsic_pow_f32_overflow() nounwind uwtable ssp {
 entry:
 ; CHECK-LABEL: @test_intrinsic_pow_f32_overflow(
 ; CHECK-NOT: call
-; CHECK: ret float 0x7FF0000000000000
+; CHECK: ret float pinf
   %0 = call float @llvm.pow.f32(float 40.0, float 50.0)
   ret float %0
 }

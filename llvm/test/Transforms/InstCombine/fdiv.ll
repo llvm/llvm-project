@@ -950,7 +950,7 @@ define float @fdiv_zero_f32(float %x) {
 ; https://alive2.llvm.org/ce/z/gLBFKB
 define float @fdiv_nnan_zero_f32(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan float @llvm.copysign.f32(float pinf, float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FDIV]]
 ;
   %fdiv = fdiv nnan float %x, 0.0
@@ -959,7 +959,7 @@ define float @fdiv_nnan_zero_f32(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float pinf, float pinf>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan <2 x float> %x, zeroinitializer
@@ -968,7 +968,7 @@ define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
 
 define float @fdiv_nnan_zero_f32_fmf(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_f32_fmf(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz float @llvm.copysign.f32(float pinf, float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz float %x, 0.0
@@ -977,7 +977,7 @@ define float @fdiv_nnan_zero_f32_fmf(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32_fmf(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32_fmf(
-; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float pinf, float pinf>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz <2 x float> %x, zeroinitializer
@@ -995,7 +995,7 @@ define float @fdiv_nnan_neg_zero_f32(float %x) {
 
 define double @test_positive_zero_nsz(double %X) {
 ; CHECK-LABEL: @test_positive_zero_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.copysign.f64(double 0x7FF0000000000000, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.copysign.f64(double pinf, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %1 = fdiv nnan nsz double %X, 0.0
@@ -1004,7 +1004,7 @@ define double @test_positive_zero_nsz(double %X) {
 
 define double @test_negative_zero_nsz(double %X) {
 ; CHECK-LABEL: @test_negative_zero_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.copysign.f64(double 0x7FF0000000000000, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.copysign.f64(double pinf, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %1 = fdiv nnan nsz double %X, -0.0
@@ -1013,7 +1013,7 @@ define double @test_negative_zero_nsz(double %X) {
 
 define double @test_positive_zero(double %X) {
 ; CHECK-LABEL: @test_positive_zero(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan double @llvm.copysign.f64(double 0x7FF0000000000000, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan double @llvm.copysign.f64(double pinf, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %1 = fdiv nnan double %X, 0.0
@@ -1031,7 +1031,7 @@ define double @test_negative_zero(double %X) {
 
 define <2 x double> @test_positive_zero_vector_nsz(<2 x double> %X) {
 ; CHECK-LABEL: @test_positive_zero_vector_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double pinf, double pinf>, <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan nsz <2 x double> %X, <double 0.0, double 0.0>
@@ -1040,7 +1040,7 @@ define <2 x double> @test_positive_zero_vector_nsz(<2 x double> %X) {
 
 define <2 x double> @test_negative_zero_vector_nsz(<2 x double> %X) {
 ; CHECK-LABEL: @test_negative_zero_vector_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double pinf, double pinf>, <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan nsz <2 x double> %X, <double -0.0, double 0.0>
@@ -1049,7 +1049,7 @@ define <2 x double> @test_negative_zero_vector_nsz(<2 x double> %X) {
 
 define <2 x double> @test_positive_zero_vector(<2 x double> %X) {
 ; CHECK-LABEL: @test_positive_zero_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.copysign.v2f64(<2 x double> <double pinf, double pinf>, <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan <2 x double> %X, <double 0.0, double 0.0>

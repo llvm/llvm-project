@@ -78,7 +78,7 @@ define double @returned_snan() {
 define double @returned_qnan() {
 ; CHECK-LABEL: define noundef nofpclass(snan inf zero sub norm) double @returned_qnan() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double nan
 ;
   call void @unknown()
   ret double 0x7FF8000000000000
@@ -135,7 +135,7 @@ define <3 x double> @returned_poison_constant_vector_elt() {
 define <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-LABEL: define noundef nofpclass(snan inf nzero sub norm) <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0.000000e+00>
+; CHECK-NEXT:    ret <2 x double> <double nan, double 0.000000e+00>
 ;
   call void @unknown()
   ret <2 x double> <double 0x7FF8000000000000, double 0.0>
@@ -533,7 +533,7 @@ define half @fcmp_assume_not_inf_after_call(half %arg) {
 ; CHECK-SAME: (half returned [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @extern.use.f16(half [[ARG]])
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp oeq half [[ARG]], 0xH7C00
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp oeq half [[ARG]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_INF]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
@@ -552,7 +552,7 @@ define half @fcmp_assume2_callsite_arg_return(half %arg) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half [[ARG]]) #[[ATTR20]]
 ; CHECK-NEXT:    [[NOT_SUBNORMAL_OR_ZERO:%.*]] = fcmp oge half [[FABS]], 0xH0400
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_SUBNORMAL_OR_ZERO]]) #[[ATTR18]]
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one half [[ARG]], 0xH7C00
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one half [[ARG]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_INF]]) #[[ATTR18]]
 ; CHECK-NEXT:    call void @extern.use.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[ARG]]
@@ -1525,7 +1525,7 @@ define <4 x float> @insertelement_constant_chain() {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
-; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float pinf, i32 3
 ; CHECK-NEXT:    ret <4 x float> [[INS_3]]
 ;
   %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
@@ -1561,7 +1561,7 @@ define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <vscale x 4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <vscale x 4 x float> [[INS_0]], float 0.000000e+00, i32 1
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <vscale x 4 x float> [[INS_1]], float -9.000000e+00, i32 2
-; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <vscale x 4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <vscale x 4 x float> [[INS_2]], float pinf, i32 3
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[INS_3]]
 ;
   %ins.0 = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
@@ -1625,7 +1625,7 @@ define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <4 x float> @insertelement_index_oob_chain
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float pinf, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
 ;
   %insert = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
@@ -1816,7 +1816,7 @@ define float @shufflevector_constantdatavector_demanded0() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @shufflevector_constantdatavector_demanded0
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float nan, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
@@ -1829,7 +1829,7 @@ define float @shufflevector_constantdatavector_demanded1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @shufflevector_constantdatavector_demanded1
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float nan, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
@@ -2685,6 +2685,20 @@ define <vscale x 4 x float> @scalable_splat_zero() {
 ; See https://github.com/llvm/llvm-project/issues/78507
 
 define double @call_abs(double noundef %__x) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) double @call_abs
+; TUNIT-SAME: (double noundef [[__X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[ABS:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) double @llvm.fabs.f64(double noundef [[__X]]) #[[ATTR22]]
+; TUNIT-NEXT:    ret double [[ABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) double @call_abs
+; CGSCC-SAME: (double noundef [[__X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[ABS:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) double @llvm.fabs.f64(double noundef [[__X]]) #[[ATTR19]]
+; CGSCC-NEXT:    ret double [[ABS]]
+;
 entry:
   %abs = tail call double @llvm.fabs.f64(double %__x)
   ret double %abs

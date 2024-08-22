@@ -28,7 +28,7 @@ define float @constant_fold_minimum_f32_inv() {
 
 define float @constant_fold_minimum_f32_nan0() {
 ; CHECK-LABEL: @constant_fold_minimum_f32_nan0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %x = call float @llvm.minimum.f32(float 0x7FF8000000000000, float 2.0)
   ret float %x
@@ -36,7 +36,7 @@ define float @constant_fold_minimum_f32_nan0() {
 
 define float @constant_fold_minimum_f32_nan1() {
 ; CHECK-LABEL: @constant_fold_minimum_f32_nan1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %x = call float @llvm.minimum.f32(float 2.0, float 0x7FF8000000000000)
   ret float %x
@@ -44,7 +44,7 @@ define float @constant_fold_minimum_f32_nan1() {
 
 define float @constant_fold_minimum_f32_nan_nan() {
 ; CHECK-LABEL: @constant_fold_minimum_f32_nan_nan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %x = call float @llvm.minimum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
   ret float %x
@@ -100,7 +100,7 @@ define double @constant_fold_minimum_f64() {
 
 define double @constant_fold_minimum_f64_nan0() {
 ; CHECK-LABEL: @constant_fold_minimum_f64_nan0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double nan
 ;
   %x = call double @llvm.minimum.f64(double 0x7FF8000000000000, double 2.0)
   ret double %x
@@ -108,7 +108,7 @@ define double @constant_fold_minimum_f64_nan0() {
 
 define double @constant_fold_minimum_f64_nan1() {
 ; CHECK-LABEL: @constant_fold_minimum_f64_nan1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double nan
 ;
   %x = call double @llvm.minimum.f64(double 2.0, double 0x7FF8000000000000)
   ret double %x
@@ -116,7 +116,7 @@ define double @constant_fold_minimum_f64_nan1() {
 
 define double @constant_fold_minimum_f64_nan_nan() {
 ; CHECK-LABEL: @constant_fold_minimum_f64_nan_nan(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double nan
 ;
   %x = call double @llvm.minimum.f64(double 0x7FF8000000000000, double 0x7FF8000000000000)
   ret double %x
@@ -133,7 +133,7 @@ define float @canonicalize_constant_minimum_f32(float %x) {
 
 define float @minimum_f32_nan_val(float %x) {
 ; CHECK-LABEL: @minimum_f32_nan_val(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %y = call float @llvm.minimum.f32(float 0x7FF8000000000000, float %x)
   ret float %y
@@ -141,7 +141,7 @@ define float @minimum_f32_nan_val(float %x) {
 
 define float @minimum_f32_val_nan(float %x) {
 ; CHECK-LABEL: @minimum_f32_val_nan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float nan
 ;
   %y = call float @llvm.minimum.f32(float %x, float 0x7FF8000000000000)
   ret float %y

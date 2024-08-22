@@ -4,7 +4,7 @@
 define i1 @olt_pinf(half %x) {
 ; CHECK-LABEL: define i1 @olt_pinf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp olt half %x, 0xH7c00
@@ -33,7 +33,7 @@ define i1 @ogt_pinf(half %x) {
 define i1 @oge_pinf(half %x) {
 ; CHECK-LABEL: define i1 @oge_pinf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp oge half %x, 0xH7c00
@@ -43,7 +43,7 @@ define i1 @oge_pinf(half %x) {
 define i1 @ult_pinf(half %x) {
 ; CHECK-LABEL: define i1 @ult_pinf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ult half %x, 0xH7c00
@@ -72,7 +72,7 @@ define i1 @ugt_pinf(half %x) {
 define i1 @uge_pinf(half %x) {
 ; CHECK-LABEL: define i1 @uge_pinf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp uge half %x, 0xH7c00
@@ -91,7 +91,7 @@ define i1 @olt_ninf(half %x) {
 define i1 @ole_ninf(half %x) {
 ; CHECK-LABEL: define i1 @ole_ninf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[X]], 0xHFC00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[X]], ninf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ole half %x, 0xHfc00
@@ -101,7 +101,7 @@ define i1 @ole_ninf(half %x) {
 define i1 @ogt_ninf(half %x) {
 ; CHECK-LABEL: define i1 @ogt_ninf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one half [[X]], 0xHFC00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one half [[X]], ninf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ogt half %x, 0xHfc00
@@ -131,7 +131,7 @@ define i1 @ult_ninf(half %x) {
 define i1 @ule_ninf(half %x) {
 ; CHECK-LABEL: define i1 @ule_ninf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq half [[X]], 0xHFC00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq half [[X]], ninf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ule half %x, 0xHfc00
@@ -141,7 +141,7 @@ define i1 @ule_ninf(half %x) {
 define i1 @ugt_ninf(half %x) {
 ; CHECK-LABEL: define i1 @ugt_ninf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une half [[X]], 0xHFC00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une half [[X]], ninf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp ugt half %x, 0xHfc00
@@ -160,7 +160,7 @@ define i1 @uge_ninf(half %x) {
 define i1 @olt_pinf_fmf(half %x) {
 ; CHECK-LABEL: define i1 @olt_pinf_fmf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz one half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz one half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp nsz olt half %x, 0xH7c00
@@ -170,7 +170,7 @@ define i1 @olt_pinf_fmf(half %x) {
 define i1 @oge_pinf_fmf(half %x) {
 ; CHECK-LABEL: define i1 @oge_pinf_fmf(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq half [[X]], 0xH7C00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq half [[X]], pinf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp nnan oge half %x, 0xH7c00
@@ -180,7 +180,7 @@ define i1 @oge_pinf_fmf(half %x) {
 define <2 x i1> @olt_pinf_vec(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x i1> @olt_pinf_vec(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x half> [[X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x half> [[X]], <half pinf, half pinf>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = fcmp olt <2 x half> %x, <half 0xH7c00, half 0xH7c00>

@@ -335,7 +335,7 @@ define i32 @sub_sel_op1_use(i1 %b) {
 
 define float @fadd_sel_op0(i1 %b, float %x) {
 ; CHECK-LABEL: @fadd_sel_op0(
-; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[B:%.*]], float 0xFFF0000000000000, float 0x7FF0000000000000
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[B:%.*]], float ninf, float pinf
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %b, float 0xFFF0000000000000, float 0x7FF0000000000000
@@ -345,7 +345,7 @@ define float @fadd_sel_op0(i1 %b, float %x) {
 
 define float @fadd_sel_op0_use(i1 %b, float %x) {
 ; CHECK-LABEL: @fadd_sel_op0_use(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], float 0xFFF0000000000000, float 0x7FF0000000000000
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], float ninf, float pinf
 ; CHECK-NEXT:    call void @use_f32(float [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = fadd nnan float [[S]], [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]

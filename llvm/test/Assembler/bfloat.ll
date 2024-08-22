@@ -45,18 +45,18 @@ define bfloat @snan_bfloat() {
 
 ; ASSEM-DISASS-LABEL @qnan_bfloat
 define bfloat @qnan_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xR7FC0
+; ASSEM-DISASS: ret bfloat nan
     ret bfloat 0xR7FC0
 }
 
 ; ASSEM-DISASS-LABEL @pos_inf_bfloat
 define bfloat @pos_inf_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xR7F80
+; ASSEM-DISASS: ret bfloat pinf
     ret bfloat 0xR7F80
 }
 
 ; ASSEM-DISASS-LABEL @neg_inf_bfloat
 define bfloat @neg_inf_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xRFF80
+; ASSEM-DISASS: ret bfloat ninf
     ret bfloat 0xRFF80
 }

@@ -1395,7 +1395,7 @@ define i1 @is_infinite(float %x) {
 define i1 @is_infinite_assumed_finite(float %x) {
 ; CHECK-LABEL: @is_infinite_assumed_finite(
 ; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1409,7 +1409,7 @@ define i1 @is_infinite_assumed_finite(float %x) {
 define i1 @une_inf_assumed_not_inf(float %x) {
 ; CHECK-LABEL: @une_inf_assumed_not_inf(
 ; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -1434,7 +1434,7 @@ define <2 x i1> @is_infinite_neg(<2 x float> %x) {
 define i1 @is_infinite_or_nan(float %x) {
 ; CHECK-LABEL: @is_infinite_or_nan(
 ; CHECK-NEXT:    [[X42:%.*]] = fadd ninf float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = fcmp ueq float [[X42]], 0xFFF0000000000000
+; CHECK-NEXT:    [[R:%.*]] = fcmp ueq float [[X42]], ninf
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x42 = fadd ninf float %x, 42.0
@@ -1454,7 +1454,7 @@ define i1 @is_infinite_or_nan2(float %x) {
 define i1 @is_infinite_or_nan2_assume(float %x) {
 ; CHECK-LABEL: @is_infinite_or_nan2_assume(
 ; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one float [[XABS]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF_OR_NAN]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1498,7 +1498,7 @@ define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
 define i1 @is_finite_and_ordered(double %x) {
 ; CHECK-LABEL: @is_finite_and_ordered(
 ; CHECK-NEXT:    [[XX:%.*]] = fmul ninf double [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = fcmp one double [[XX]], 0x7FF0000000000000
+; CHECK-NEXT:    [[R:%.*]] = fcmp one double [[XX]], pinf
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xx = fmul ninf double %x, %x
@@ -1519,7 +1519,7 @@ define i1 @is_finite(i1 %c, double %x) {
 define i1 @is_finite_assume(i1 %c, double %x) {
 ; CHECK-LABEL: @is_finite_assume(
 ; CHECK-NEXT:    [[XABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one double [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one double [[XABS]], pinf
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF_OR_NAN]])
 ; CHECK-NEXT:    ret i1 true
 ;

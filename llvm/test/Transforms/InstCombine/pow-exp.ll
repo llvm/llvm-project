@@ -346,19 +346,19 @@ define double @pow_zero_base2(double %e) {
 
 define double @pow_inf_base(double %e) {
 ; CHECK-LABEL: @pow_inf_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF0000000000000, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double pinf, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
-  %call = tail call afn nnan ninf double @pow(double 0x7FF0000000000000, double %e)
+  %call = tail call afn nnan ninf double @pow(double pinf, double %e)
   ret double %call
 }
 
 define double @pow_nan_base(double %e) {
 ; CHECK-LABEL: @pow_nan_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF8000000000000, double [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double nan, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
-  %call = tail call afn nnan ninf double @pow(double 0x7FF8000000000000, double %e)
+  %call = tail call afn nnan ninf double @pow(double nan, double %e)
   ret double %call
 }
 
@@ -431,19 +431,19 @@ define float @powf_zero_base2(float %e) {
 
 define float @powf_inf_base(float %e) {
 ; CHECK-LABEL: @powf_inf_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF0000000000000, float [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float pinf, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call afn nnan ninf float @powf(float 0x7FF0000000000000, float %e)
+  %call = tail call afn nnan ninf float @powf(float pinf, float %e)
   ret float %call
 }
 
 define float @powf_nan_base(float %e) {
 ; CHECK-LABEL: @powf_nan_base(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF8000000000000, float [[E:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float nan, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call afn nnan ninf float @powf(float 0x7FF8000000000000, float %e)
+  %call = tail call afn nnan ninf float @powf(float nan, float %e)
   ret float %call
 }
 

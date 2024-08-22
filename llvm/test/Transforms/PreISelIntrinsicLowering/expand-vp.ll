@@ -244,10 +244,10 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
 ; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
-; ALL-CONVERT-NEXT:  [[FMIN:%.+]] = select <4 x i1> [[NEWM]], <4 x float> %vf, <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+; ALL-CONVERT-NEXT:  [[FMIN:%.+]] = select <4 x i1> [[NEWM]], <4 x float> %vf, <4 x float> <float nan, float nan, float nan, float nan>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMIN_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMIN_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float pinf, float pinf, float pinf, float pinf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.minnum.f32(float [[RED]], float %f)
 ; ALL-CONVERT:       [[FMIN_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
@@ -256,27 +256,27 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:  [[FMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000, float 0xFFF8000000000000, float 0xFFF8000000000000>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.maxnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAX_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAX_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float ninf, float ninf, float ninf, float ninf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.maxnum.f32(float [[RED]], float %f)
 ; ALL-CONVERT:  [[FMAX_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.maxnum.f32(float [[RED]], float %f)
 
-; ALL-CONVERT:       [[FMINIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMINIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float pinf, float pinf, float pinf, float pinf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minimum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMINIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMINIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float pinf, float pinf, float pinf, float pinf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.minimum.f32(float [[RED]], float %f)
 ; ALL-CONVERT:       [[FMINIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.minimum.f32(float [[RED]], float %f)
 
-; ALL-CONVERT:  [[FMAXIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAXIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float ninf, float ninf, float ninf, float ninf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.maximum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAXIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAXIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float ninf, float ninf, float ninf, float ninf>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.maximum.f32(float [[RED]], float %f)
 ; ALL-CONVERT:  [[FMAXIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>

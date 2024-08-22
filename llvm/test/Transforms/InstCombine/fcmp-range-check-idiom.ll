@@ -137,7 +137,7 @@ define i1 @test_and_olt_infinity(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_infinity(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp one float [[TMP1]], pinf
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x7FF0000000000000
