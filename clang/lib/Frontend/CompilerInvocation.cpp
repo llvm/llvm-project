@@ -3898,8 +3898,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_ffp_contract, "on");
   else if (Opts.DefaultFPContractMode == LangOptions::FPM_Off)
     GenerateArg(Consumer, OPT_ffp_contract, "off");
-  else if (Opts.DefaultFPContractMode == LangOptions::FPM_FastHonorPragmas)
-    GenerateArg(Consumer, OPT_ffp_contract, "fast-honor-pragmas");
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
@@ -4389,8 +4387,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.setDefaultFPContractMode(LangOptions::FPM_On);
     else if (Val == "off")
       Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
-    else if (Val == "fast-honor-pragmas")
-      Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
+    else if (Val == "fast-honor-pragmas") // Deprecated
+      Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }

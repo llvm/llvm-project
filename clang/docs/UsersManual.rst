@@ -1557,7 +1557,7 @@ describes the various floating point semantic modes and the corresponding option
   "ffp-exception-behavior", "{ignore, strict, maytrap}",
   "fenv_access", "{off, on}", "(none)"
   "frounding-math", "{dynamic, tonearest, downward, upward, towardzero}"
-  "ffp-contract", "{on, off, fast, fast-honor-pragmas}"
+  "ffp-contract", "{on, off, fast}"
   "fdenormal-fp-math", "{IEEE, PreserveSign, PositiveZero}"
   "fdenormal-fp-math-fp32", "{IEEE, PreserveSign, PositiveZero}"
   "fmath-errno", "{on, off}"
@@ -1764,13 +1764,12 @@ for more details.
 
    Valid values are:
 
-   * ``fast``: enable fusion across statements disregarding pragmas, breaking
-     compliance with the C and C++ standards (default for CUDA).
+   * ``fast``: enable fusion across statements unless dictated by pragmas,
+     breaking compliance with the C and C++ standards (default for CUDA).
    * ``on``: enable C and C++ standard compliant fusion in the same statement
      unless dictated by pragmas (default for languages other than CUDA/HIP)
    * ``off``: disable fusion
-   * ``fast-honor-pragmas``: fuse across statements unless dictated by pragmas
-     (default for HIP)
+   * ``fast-honor-pragmas``: deprecated, aliases fast
 
 .. option:: -f[no-]honor-infinities
 

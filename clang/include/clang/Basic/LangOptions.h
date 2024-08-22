@@ -217,11 +217,8 @@ public:
     // Enable the floating point pragma
     FPM_On,
 
-    // Aggressively fuse FP ops (E.g. FMA) disregarding pragmas.
-    FPM_Fast,
-
     // Aggressively fuse FP ops and honor pragmas.
-    FPM_FastHonorPragmas
+    FPM_Fast
   };
 
   /// Possible floating point exception behavior.
@@ -816,12 +813,7 @@ public:
   }
   explicit FPOptions(const LangOptions &LO) {
     Value = 0;
-    // The language fp contract option FPM_FastHonorPragmas has the same effect
-    // as FPM_Fast in frontend. For simplicity, use FPM_Fast uniformly in
-    // frontend.
     auto LangOptContractMode = LO.getDefaultFPContractMode();
-    if (LangOptContractMode == LangOptions::FPM_FastHonorPragmas)
-      LangOptContractMode = LangOptions::FPM_Fast;
     setFPContractMode(LangOptContractMode);
     setRoundingMath(LO.RoundingMath);
     setConstRoundingMode(LangOptions::RoundingMode::Dynamic);

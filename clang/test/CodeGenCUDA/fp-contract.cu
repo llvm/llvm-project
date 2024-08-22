@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target, nvptx-registered-target, amdgpu-registered-target
 
-// By default CUDA uses -ffp-contract=fast, HIP uses -ffp-contract=fast-honor-pragmas.
+// By default CUDA and HIP use -ffp-contract=fast.
 // we should fuse multiply/add into fma instruction.
 // In IR, fmul/fadd instructions with contract flag are emitted.
 // In backend
@@ -68,35 +68,12 @@
 // RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
-// Explicit -ffp-contract=fast-honor-pragmas
-// In IR, fmul/fadd instructions with contract flag are emitted.
-// In backend
-//    nvptx/amdgcn - assumes standard fp fuse option, which only
-//                   fuses mult/add insts with contract flag or
-//                   llvm.fmuladd intrinsics.
-
-// RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
-// RUN:   -ffp-contract=fast-honor-pragmas -disable-llvm-passes -o - %s \
-// RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
-// RUN:   -ffp-contract=fast-honor-pragmas \
-// RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
-// RUN:   -O3 -o - %s \
-// RUN:   -ffp-contract=fast-honor-pragmas \
-// RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-FASTSTD %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
-// RUN:   -ffp-contract=fast-honor-pragmas \
-// RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
-
 // Check separate compile/backend steps corresponding to -save-temps.
 // When input is IR, -ffp-contract has no effect. Backend uses default
 // default FP fuse option.
 
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
-// RUN:   -ffp-contract=fast-honor-pragmas \
+// RUN:   -ffp-contract=fast \
 // RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-FAST-IR %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \

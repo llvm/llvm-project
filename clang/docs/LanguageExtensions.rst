@@ -5733,9 +5733,7 @@ statements in C).
 
 The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
-enabled for the translation unit with the ``-ffp-contract=fast-honor-pragmas`` flag.
-Note that ``-ffp-contract=fast`` will override pragmas to fuse multiply and
-addition across statements regardless of any controlling pragmas.
+enabled for the translation unit with the ``-ffp-contract=fast`` flag.
 
 ``#pragma clang fp exceptions`` specifies floating point exception behavior. It
 may take one of the values: ``ignore``, ``maytrap`` or ``strict``. Meaning of

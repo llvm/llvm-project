@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast-honor-pragmas -emit-llvm -o - %s | FileCheck %s
 
 float test_default(float a, float b, float c) {
   float tmp = a;
@@ -50,6 +49,19 @@ float test_contract_on_pragma(float a, float b, float c) {
 }
 
 // CHECK: define{{.*}} float @_Z23test_contract_on_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c)
+// CHECK: fmul fast float {{%.+}}, {{%.+}}
+// CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
+
+float test_contract_off_pragma(float a, float b, float c) {
+  float tmp = a * b;
+  {
+    #pragma clang fp contract(off)
+    tmp += c;
+  }
+  return tmp;
+}
+
+// CHECK: define{{.*}} float @_Z24test_contract_off_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c)
 // CHECK: fmul fast float {{%.+}}, {{%.+}}
 // CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O3 -ffp-contract=fast-honor-pragmas -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O3 -ffp-contract=fast -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 
 float fp_contract_on_1(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_on_1fff(

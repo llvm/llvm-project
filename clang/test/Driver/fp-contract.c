@@ -6,7 +6,6 @@
 // before the drive options that are checked below the run lines.
 // WARN_FM_OFF: warning: overriding '-ffast-math' option with '-ffp-contract=off'
 // WARN_FM_ON: warning: overriding '-ffast-math' option with '-ffp-contract=on'
-// WARN_FM_FHP: warning: overriding '-ffast-math' option with '-ffp-contract=fast-honor-pragmas'
 // WARN_UM_OFF: warning: overriding '-funsafe-math-optimizations' option with '-ffp-contract=off'
 // WARN_UM_ON: warning: overriding '-funsafe-math-optimizations' option with '-ffp-contract=on'
 
@@ -30,8 +29,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s
 
 // RUN: %clang -### -ffast-math -ffp-contract=fast-honor-pragmas -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=CHECK-FPC-FAST-HONOR,WARN_FM_FHP %s
-// CHECK-FPC-FAST-HONOR:     "-ffp-contract=fast-honor-pragmas"
+// RUN:   | FileCheck --check-prefixes=CHECK-FPC-FAST-HONOR,WARN_FHP_DEPRECATED %s
+// WARN_FHP_DEPRECATED: clang: warning: argument '-ffp-contract=fast-honor-pragmas' is deprecated, use '-ffp-contract=fast' instead [-Wdeprecated]
+// CHECK-FPC-FAST-HONOR:     "-ffp-contract=fast"
+// CHECK-FPC-FAST-HONOR-NOT: "-honor-pragmas"
 
 // RUN: %clang -### -Werror -ffp-contract=fast -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s

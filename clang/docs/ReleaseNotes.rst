@@ -341,6 +341,10 @@ Modified Compiler Flags
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 - The `-fconstexpr-steps` compiler flag now accepts value `0` to opt out of this limit. (#GH160440)
 
+- The ``-ffp-contract`` option now honors pragmas by default when the ``fast``
+  argument is used. The ``fast-honor-pragmas`` option is now deprecated and acts
+  as an alias for ``fast``.
+
 Removed Compiler Flags
 -------------------------
 
