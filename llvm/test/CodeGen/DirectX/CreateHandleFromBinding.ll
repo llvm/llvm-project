@@ -52,22 +52,4 @@ define void @test_bindings() {
 ; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 ; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
 
-; Note: We need declarations for each handle.fromBinding in the same order as
-; they appear in source to force a deterministic ordering of record IDs.
-declare target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0t(
-        i32, i32, i32, i32, i1) #0
-declare target("dx.TypedBuffer", i32, 1, 0, 1)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0_1t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_0_0_0t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
-            i32, i32, i32, i32, i1) #0
-declare target("dx.RawBuffer", i8, 0, 0)
-        @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
-            i32, i32, i32, i32, i1) #0
-
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

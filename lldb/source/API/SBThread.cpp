@@ -1208,7 +1208,8 @@ bool SBThread::GetStatus(SBStream &status) const {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (exe_ctx.HasThreadScope()) {
-    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true);
+    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true,
+                                      /*show_hidden=*/true);
   } else
     strm.PutCString("No status");
 
@@ -1336,6 +1337,8 @@ bool SBThread::SafeToCallFunctions() {
     return thread_sp->SafeToCallFunctions();
   return true;
 }
+
+lldb::ThreadSP SBThread::GetSP() const { return m_opaque_sp->GetThreadSP(); }
 
 lldb_private::Thread *SBThread::operator->() {
   return get();

@@ -119,6 +119,8 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 static int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                                  bool DiagnoseErrors);
 
+/// Parse -fsanitize-undefined-ignore-overflow-pattern= flag values, diagnosing
+/// any invalid values. Returns a mask of excluded overflow patterns.
 static int parseOverflowPatternExclusionValues(const Driver &D,
                                                const llvm::opt::Arg *A,
                                                bool DiagnoseErrors);
@@ -792,8 +794,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           << "fsanitize-trap=cfi";
   }
 
-  for (const auto *Arg :
-       Args.filtered(options::OPT_fsanitize_overflow_pattern_exclusion_EQ)) {
+  for (const auto *Arg : Args.filtered(
+           options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
     Arg->claim();
     OverflowPatternExclusions |=
         parseOverflowPatternExclusionValues(D, Arg, DiagnoseErrors);
@@ -1253,8 +1255,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                         "-fsanitize-system-ignorelist=", SystemIgnorelistFiles);
 
   if (OverflowPatternExclusions)
-    Args.AddAllArgs(CmdArgs,
-                    options::OPT_fsanitize_overflow_pattern_exclusion_EQ);
+    Args.AddAllArgs(
+        CmdArgs, options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ);
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +

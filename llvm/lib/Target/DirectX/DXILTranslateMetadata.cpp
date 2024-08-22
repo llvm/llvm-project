@@ -29,22 +29,15 @@ static void emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
   LLVMContext &Context = M.getContext();
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
-  for (auto [_, RI] : DRM) {
-    switch (RI.getResourceClass()) {
-    case dxil::ResourceClass::SRV:
-      SRVs.push_back(RI.getAsMetadata(Context));
-      break;
-    case dxil::ResourceClass::UAV:
-      UAVs.push_back(RI.getAsMetadata(Context));
-      break;
-    case dxil::ResourceClass::CBuffer:
-      CBufs.push_back(RI.getAsMetadata(Context));
-      break;
-    case dxil::ResourceClass::Sampler:
-      Smps.push_back(RI.getAsMetadata(Context));
-      break;
-    }
-  }
+  for (const ResourceInfo &RI : DRM.srvs())
+    SRVs.push_back(RI.getAsMetadata(Context));
+  for (const ResourceInfo &RI : DRM.uavs())
+    UAVs.push_back(RI.getAsMetadata(Context));
+  for (const ResourceInfo &RI : DRM.cbuffers())
+    CBufs.push_back(RI.getAsMetadata(Context));
+  for (const ResourceInfo &RI : DRM.samplers())
+    Smps.push_back(RI.getAsMetadata(Context));
+
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
   Metadata *CBufMD = CBufs.empty() ? nullptr : MDNode::get(Context, CBufs);

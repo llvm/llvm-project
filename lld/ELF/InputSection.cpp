@@ -34,8 +34,6 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::elf;
 
-DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
-
 // Returns a string to construct an error message.
 std::string lld::toString(const InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
