@@ -14,6 +14,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: Currently restricted to default locale.
+// These should be extended using locale information.
 LLVM_LIBC_FUNCTION(int, isgraph, (int c)) {
   return static_cast<int>(internal::isgraph(static_cast<unsigned>(c)));
 }
