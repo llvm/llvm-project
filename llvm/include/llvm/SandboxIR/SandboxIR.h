@@ -124,6 +124,7 @@ class ConstantAggregateZero;
 class ConstantPointerNull;
 class PoisonValue;
 class BlockAddress;
+class ConstantTokenNone;
 class Context;
 class Function;
 class Instruction;
@@ -1139,6 +1140,37 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::BlockAddress;
   }
+};
+
+// TODO: This should inherit from ConstantData.
+class ConstantTokenNone final : public Constant {
+  ConstantTokenNone(llvm::ConstantTokenNone *C, Context &Ctx)
+      : Constant(ClassID::ConstantTokenNone, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return the ConstantTokenNone.
+  static ConstantTokenNone *get(Context &Ctx);
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantTokenNone;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    llvm_unreachable("ConstantTokenNone has no operands!");
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::ConstantTokenNone>(Val) &&
+           "Expected a ConstantTokenNone!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
 };
 
 /// Iterator for `Instruction`s in a `BasicBlock.
