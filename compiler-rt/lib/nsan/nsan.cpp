@@ -460,6 +460,13 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
     Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
     Printf("%s", D.Default());
     stack.Print();
+    if (flags().halt_on_error) {
+      if (common_flags()->abort_on_error)
+        Printf("ABORTING\n");
+      else
+        Printf("Exiting\n");
+      Die();
+    }
     // Performing other tests for NaN values is meaningless when dealing with numbers.
     return kResumeFromValue;
   }
