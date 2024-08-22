@@ -1857,7 +1857,22 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     else
       S.Stk.push<Pointer>(V - O, Ptr.asIntPointer().Desc);
     return true;
+  } else if (Ptr.isFunctionPointer()) {
+    uint64_t O = static_cast<uint64_t>(Offset);
+    uint64_t N;
+    if constexpr (Op == ArithOp::Add)
+      N = Ptr.getByteOffset() + O;
+    else
+      N = Ptr.getByteOffset() - O;
+
+    if (N > 1)
+      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << N << /*non-array*/ true << 0;
+    S.Stk.push<Pointer>(Ptr.asFunctionPointer().getFunction(), N);
+    return true;
   }
+
+  assert(Ptr.isBlockPointer());
 
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
   uint64_t Index;
@@ -2024,10 +2039,15 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  T A = LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
-                               : T::from(LHS.getIndex());
-  T B = RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
-                               : T::from(RHS.getIndex());
+  T A = LHS.isBlockPointer()
+            ? (LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
+                                      : T::from(LHS.getIndex()))
+            : T::from(LHS.getIntegerRepresentation());
+  T B = RHS.isBlockPointer()
+            ? (RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
+                                      : T::from(RHS.getIndex()))
+            : T::from(RHS.getIntegerRepresentation());
+
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
 }
 
@@ -2905,8 +2925,15 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
 
   if constexpr (std::is_same_v<FromT, FunctionPointer> &&
                 std::is_same_v<ToT, Pointer>) {
-    S.Stk.push<Pointer>(OldPtr.getFunction());
+    S.Stk.push<Pointer>(OldPtr.getFunction(), OldPtr.getOffset());
     return true;
+  } else if constexpr (std::is_same_v<FromT, Pointer> &&
+                       std::is_same_v<ToT, FunctionPointer>) {
+    if (OldPtr.isFunctionPointer()) {
+      S.Stk.push<FunctionPointer>(OldPtr.asFunctionPointer().getFunction(),
+                                  OldPtr.getByteOffset());
+      return true;
+    }
   }
 
   S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
