@@ -3,28 +3,6 @@
 // This test validates the diagnostics that are emitted when a variable with a "resource" type
 // is bound to a register using the register annotation
 
-/*
-template<typename T>
-struct [[hlsl::resource_class(SRV)]] MyTemplatedSRV {
-  T x;
-};
-
-struct [[hlsl::resource_class(SRV)]] MySRV {
-  int x;
-};
-
-struct [[hlsl::resource_class(Sampler)]] MySampler {
-  int x;
-};
-
-struct [[hlsl::resource_class(UAV)]] MyUAV {
-  int x;
-};
-
-struct [[hlsl::resource_class(CBuffer)]] MyCBuffer {
-  int x;
-};
-*/ 
 
 template<typename T>
 struct MyTemplatedSRV {

@@ -692,7 +692,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
   return Flags;
 }
 
-enum RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
+enum class RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
 
 static RegisterType getRegisterTypeIndex(StringRef Slot) {
   switch (Slot[0]) {
@@ -724,7 +724,8 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
   // make sure that there are no two register annotations
   // applied to the decl with the same register type
   bool RegisterTypesDetected[5] = {false};
-  RegisterTypesDetected[regType] = true;
+
+  RegisterTypesDetected[static_cast<int>(regType)] = true;
 
   // we need a static map to keep track of previous conflicts
   // so that we don't emit the same error multiple times
@@ -734,16 +735,17 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
 
-      RegisterType regType = getRegisterTypeIndex(attr->getSlot());
-      if (RegisterTypesDetected[regType]) {
-        if (PreviousConflicts[TheDecl].count(regType))
+      RegisterType otherRegType = getRegisterTypeIndex(attr->getSlot());
+      if (RegisterTypesDetected[static_cast<int>(otherRegType)]) {
+        if (PreviousConflicts[TheDecl].count(otherRegType))
           continue;
+        int otherRegTypeNum = static_cast<int>(otherRegType);
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_duplicate_register_annotation)
-            << regType;
-        PreviousConflicts[TheDecl].insert(regType);
+            << otherRegTypeNum;
+        PreviousConflicts[TheDecl].insert(otherRegType);
       } else {
-        RegisterTypesDetected[regType] = true;
+        RegisterTypesDetected[static_cast<int>(otherRegType)] = true;
       }
     }
   }
@@ -781,9 +783,11 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
              1 &&
          "only one resource analysis result should be expected");
 
+  int regTypeNum = static_cast<int>(regType);
+
   // first, if "other" is set, emit an error
   if (Flags.Other) {
-    S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
+    S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
     return;
   }
 
@@ -823,7 +827,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
         ExpectedRegisterTypesForResourceClass[(int)DeclResourceClass];
     if (regType != ExpectedRegisterType) {
       S.Diag(TheDecl->getLocation(), diag::err_hlsl_binding_type_mismatch)
-          << regType;
+          << regTypeNum;
     }
     return;
   }
@@ -834,14 +838,14 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
       if (regType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
       else if (regType != RegisterType::C)
-        S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
+        S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
       return;
     }
 
     if (regType == RegisterType::C)
       S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
     else
-      S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regType;
+      S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << regTypeNum;
 
     return;
   }
@@ -850,13 +854,13 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   if (Flags.UDT) {
     const bool ExpectedRegisterTypesForUDT[] = {
         Flags.SRV, Flags.UAV, Flags.CBV, Flags.Sampler, Flags.ContainsNumeric};
-    assert((int)regType < std::size(ExpectedRegisterTypesForUDT) &&
+    assert(regTypeNum < std::size(ExpectedRegisterTypesForUDT) &&
            "regType has unexpected value");
 
-    if (!ExpectedRegisterTypesForUDT[(int)regType])
+    if (!ExpectedRegisterTypesForUDT[regTypeNum])
       S.Diag(TheDecl->getLocation(),
              diag::warn_hlsl_user_defined_type_missing_member)
-          << regType;
+          << regTypeNum;
 
     return;
   }
