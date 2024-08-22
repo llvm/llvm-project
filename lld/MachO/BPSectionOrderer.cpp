@@ -64,7 +64,7 @@ getRelocHash(const Reloc &reloc,
 // Get a hash of the unwind info (after relocation).
 // This hash is not 100% accurate, but it's good enough for compression.
 //
-// Unwind info will be eliminated if it is the same with its neighboors.
+// Unwind info will be eliminated if it is the same as its neighbors.
 // We want to order functions such that the ones with similar unwind info
 // can stay together.
 // See more here:
