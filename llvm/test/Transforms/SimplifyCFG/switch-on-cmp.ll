@@ -353,5 +353,273 @@ bb2:
   ret void
 }
 
+define void @ucmp_gt_unreachable(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_lt_unreachable(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_lt_unreachable(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb1
+  i8 0, label %bb2
+  i8 1, label %bb2
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_eq_unreachable(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_eq_unreachable(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb2
+  i8 0, label %bb1
+  i8 1, label %bb2
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_gt_unreachable_multi_edge(i8 %x, i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_multi_edge(
+; CHECK-SAME: i8 [[X:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i8 [[X]], label %[[UNREACHABLE:.*]] [
+; CHECK-NEXT:      i8 0, label %[[SW:.*]]
+; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB1]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  switch i8 %x, label %unreachable [
+  i8 0, label %sw
+  i8 1, label %bb1
+  ]
+
+sw:
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  %phi = phi i32 [ 0, %entry ], [ 1, %sw ]
+  unreachable
+}
+
+define void @ucmp_gt_unreachable_wrong_case(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_wrong_case(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    switch i8 [[RES]], label %[[UNREACHABLE:.*]] [
+; CHECK-NEXT:      i8 -2, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 0, label %[[BB2]]
+; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -2, label %bb2
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_gt_unreachable_no_two_equal_cases(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_no_two_equal_cases(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    switch i8 [[RES]], label %[[UNREACHABLE:.*]] [
+; CHECK-NEXT:      i8 -1, label %[[BB3:.*]]
+; CHECK-NEXT:      i8 0, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb3
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb3:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_gt_unreachable_three_equal_cases(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_three_equal_cases(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[BB1:.*:]]
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb1
+  i8 0, label %bb1
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @ucmp_gt_unreachable_default_not_unreachable(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_default_not_unreachable(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    switch i8 [[RES]], label %[[NOT_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i8 -1, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 0, label %[[BB2]]
+; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[NOT_UNREACHABLE]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %not.unreachable [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ]
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+not.unreachable:
+  call void @foo()
+  br label %bb2
+}
+
 declare void @use(i8)
 declare void @foo()

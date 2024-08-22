@@ -7133,33 +7133,70 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
 
 /// Fold switch over ucmp/scmp intrinsic to br if two of the switch arms have
 /// the same destination.
-static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI,
-                                         IRBuilderBase &Builder) {
+static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
+                                         DomTreeUpdater *DTU) {
   auto *Cmp = dyn_cast<CmpIntrinsic>(SI->getCondition());
-  if (!Cmp || !Cmp->hasOneUse() || SI->getNumCases() != 2)
+  if (!Cmp || !Cmp->hasOneUse())
     return false;
 
-  // Find which of 1, 0 or -1 is missing.
-  SmallSet<int64_t, 3> Missing;
-  Missing.insert(1);
-  Missing.insert(0);
-  Missing.insert(-1);
-  BasicBlock *Succ = nullptr;
-  for (auto &Case : SI->cases()) {
-    std::optional<int64_t> Val = Case.getCaseValue()->getValue().trySExtValue();
-    if (!Val)
-      return false;
-    if (!Missing.erase(*Val))
-      return false;
-    if (Succ && Succ != Case.getCaseSuccessor())
-      return false;
-    Succ = Case.getCaseSuccessor();
+  // Normalize to [us]cmp == Res ? Succ : OtherSucc.
+  int64_t Res;
+  BasicBlock *Succ, *OtherSucc;
+  BasicBlock *Unreachable = nullptr;
+
+  if (SI->getNumCases() == 2) {
+    // Find which of 1, 0 or -1 is missing (handled by default dest).
+    SmallSet<int64_t, 3> Missing;
+    Missing.insert(1);
+    Missing.insert(0);
+    Missing.insert(-1);
+
+    Succ = SI->getDefaultDest();
+    OtherSucc = nullptr;
+    for (auto &Case : SI->cases()) {
+      std::optional<int64_t> Val =
+          Case.getCaseValue()->getValue().trySExtValue();
+      if (!Val)
+        return false;
+      if (!Missing.erase(*Val))
+        return false;
+      if (OtherSucc && OtherSucc != Case.getCaseSuccessor())
+        return false;
+      OtherSucc = Case.getCaseSuccessor();
+    }
+
+    assert(Missing.size() == 1 && "Should have one case left");
+    Res = *Missing.begin();
+  } else if (SI->getNumCases() == 3 && SI->defaultDestUndefined()) {
+    // Normalize so that Succ is taken once and OtherSucc twice.
+    Unreachable = SI->getDefaultDest();
+    Succ = OtherSucc = nullptr;
+    for (auto &Case : SI->cases()) {
+      BasicBlock *NewSucc = Case.getCaseSuccessor();
+      if (!OtherSucc || OtherSucc == NewSucc)
+        OtherSucc = NewSucc;
+      else if (!Succ)
+        Succ = NewSucc;
+      else if (Succ == NewSucc)
+        std::swap(Succ, OtherSucc);
+      else
+        return false;
+    }
+    for (auto &Case : SI->cases()) {
+      std::optional<int64_t> Val =
+          Case.getCaseValue()->getValue().trySExtValue();
+      if (!Val || (Val != 1 && Val != 0 && Val != -1))
+        return false;
+      if (Case.getCaseSuccessor() == Succ)
+        Res = *Val;
+    }
+  } else {
+    return false;
   }
 
   // Determine predicate for the missing case.
   ICmpInst::Predicate Pred;
-  assert(Missing.size() == 1 && "Should have one case left");
-  switch (*Missing.begin()) {
+  switch (Res) {
   case 1:
     Pred = ICmpInst::ICMP_UGT;
     break;
@@ -7173,14 +7210,17 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI,
   if (Cmp->isSigned())
     Pred = ICmpInst::getSignedPredicate(Pred);
 
-  // The dominator tree does not change, because it treats multi-edges like
-  // a single edge anyway.
+  BasicBlock *BB = SI->getParent();
   Builder.SetInsertPoint(SI->getIterator());
   Value *ICmp = Builder.CreateICmp(Pred, Cmp->getLHS(), Cmp->getRHS());
-  Builder.CreateCondBr(ICmp, SI->getDefaultDest(), Succ);
-  Succ->removePredecessor(SI->getParent());
+  Builder.CreateCondBr(ICmp, Succ, OtherSucc);
+  OtherSucc->removePredecessor(BB);
+  if (Unreachable)
+    Unreachable->removePredecessor(BB);
   SI->eraseFromParent();
   Cmp->eraseFromParent();
+  if (DTU && Unreachable)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, Unreachable}});
   return true;
 }
 
@@ -7216,7 +7256,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (eliminateDeadSwitchCases(SI, DTU, Options.AC, DL))
     return requestResimplify();
 
-  if (simplifySwitchOfCmpIntrinsic(SI, Builder))
+  if (simplifySwitchOfCmpIntrinsic(SI, Builder, DTU))
     return requestResimplify();
 
   if (trySwitchToSelect(SI, Builder, DTU, DL, TTI))
