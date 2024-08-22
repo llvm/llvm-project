@@ -116,14 +116,9 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
         (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
       Register PhysReg = VA.getLocReg();
 
-      LLT LocTy(VA.getLocVT());
-      unsigned Opc = VA.getValVT() == MVT::f32 ? RISCV::G_FMV_X_ANYEXTW_RV64
-                                               : RISCV::G_FMV_X_ANYEXTH;
-
       auto assignFunc = [=]() {
-        auto Fmv = MIRBuilder.buildInstr(Opc, {LocTy}, {Arg.Regs[0]});
-        Register NewReg = Fmv.getReg(0);
-        MIRBuilder.buildCopy(PhysReg, NewReg);
+        auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
+        MIRBuilder.buildCopy(PhysReg, Trunc);
         MIB.addUse(PhysReg, RegState::Implicit);
       };
 
@@ -271,9 +266,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
       LLT LocTy(VA.getLocVT());
       auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
 
-      unsigned Opc =
-          VA.getValVT() == MVT::f32 ? RISCV::G_FMV_W_X_RV64 : RISCV::G_FMV_H_X;
-      MIRBuilder.buildInstr(Opc, {Arg.Regs[0]}, {Copy.getReg(0)});
+      MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
       return 1;
     }
 

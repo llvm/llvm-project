@@ -17,34 +17,6 @@ class RISCVGenericInstruction : GenericInstruction {
   let Namespace = "RISCV";
 }
 
-def G_FMV_X_ANYEXTW_RV64 : RISCVGenericInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src);
-  let hasSideEffects = false;
-}
-def : GINodeEquiv<G_FMV_X_ANYEXTW_RV64, riscv_fmv_x_anyextw_rv64>;
-
-def G_FMV_X_ANYEXTH : RISCVGenericInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src);
-  let hasSideEffects = false;
-}
-def : GINodeEquiv<G_FMV_X_ANYEXTH, riscv_fmv_x_anyexth>;
-
-def G_FMV_W_X_RV64 : RISCVGenericInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src);
-  let hasSideEffects = false;
-}
-def : GINodeEquiv<G_FMV_W_X_RV64, riscv_fmv_w_x_rv64>;
-
-def G_FMV_H_X : RISCVGenericInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src);
-  let hasSideEffects = false;
-}
-def : GINodeEquiv<G_FMV_H_X, riscv_fmv_h_x>;
-
 // Pseudo equivalent to a RISCVISD::FCLASS.
 def G_FCLASS : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
