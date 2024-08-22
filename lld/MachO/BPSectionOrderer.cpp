@@ -78,10 +78,7 @@ static uint64_t getUnwindInfoEncodingHash(const InputSection *isec) {
       cu.relocateOneCompactUnwindEntry(d);
       if (cu.lsda)
         return xxHash64("HAS LSDA");
-      StringRef name = (cu.personality == nullptr) ? "<none>"
-                       : cu.personality->getName().empty()
-                           ? "<unnamed>"
-                           : cu.personality->getName();
+      StringRef name = (cu.personality) ? cu.personality->getName() : "<null>";
       return xxHash64((name + ";" + Twine::utohexstr(cu.encoding)).str());
     }
   }
