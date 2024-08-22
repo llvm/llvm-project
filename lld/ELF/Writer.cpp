@@ -231,7 +231,7 @@ void elf::addReservedSymbols() {
   addOptionalRegular("__dso_handle", ctx.out.elfHeader, 0, STV_HIDDEN);
 
   // If linker script do layout we do not need to create any standard symbols.
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     return;
 
   auto add = [](StringRef s, int64_t pos) {
@@ -293,7 +293,7 @@ static void demoteSymbolsAndComputeIsPreemptible() {
 }
 
 static OutputSection *findSection(StringRef name, unsigned partition = 1) {
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       if (osd->osec.name == name && osd->osec.partition == partition)
         return &osd->osec;
@@ -314,8 +314,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (OutputSection *sec : ctx.outputSections)
     sec->maybeCompress<ELFT>();
 
-  if (script->hasSectionsCommand)
-    script->allocateHeaders(ctx.mainPart->phdrs);
+  if (ctx.script->hasSectionsCommand)
+    ctx.script->allocateHeaders(ctx.mainPart->phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
@@ -338,7 +338,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Handle --print-memory-usage option.
   if (config->printMemoryUsage)
-    script->printMemoryUsage(lld::outs());
+    ctx.script->printMemoryUsage(lld::outs());
 
   if (config->checkSections)
     checkSections();
@@ -496,7 +496,7 @@ static void demoteAndCopyLocalSymbols() {
 // referring to a section (that happens if the section is a synthetic one), we
 // don't create a section symbol for that section.
 template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
-  for (SectionCommand *cmd : script->sectionCommands) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
     if (!osd)
       continue;
@@ -995,7 +995,8 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   // making a read-only segment writable. If memory regions are defined, an
   // orphan section should continue the same region as the found section to
   // better resemble the behavior of GNU ld.
-  bool mustAfter = script->hasPhdrsCommands() || !script->memoryRegions.empty();
+  bool mustAfter =
+      ctx.script->hasPhdrsCommands() || !ctx.script->memoryRegions.empty();
   if (cast<OutputDesc>(*i)->osec.sortRank <= sec->sortRank || mustAfter) {
     for (auto j = ++i; j != e; ++j) {
       if (!isOutputSecWithInputSections(*j))
@@ -1212,7 +1213,7 @@ static void sortSection(OutputSection &osec,
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
         sortISDBySectionOrder(isd, order, osec.flags & SHF_EXECINSTR);
 
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     return;
 
   if (name == ".init_array" || name == ".fini_array") {
@@ -1241,7 +1242,7 @@ template <class ELFT> void Writer<ELFT>::sortInputSections() {
   // Build the order once since it is expensive.
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder();
   maybeShuffle(order);
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       sortSection(osd->osec, order);
 }
@@ -1252,33 +1253,33 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   // Don't sort if using -r. It is not necessary and we want to preserve the
   // relative order for SHF_LINK_ORDER sections.
   if (config->relocatable) {
-    script->adjustOutputSections();
+    ctx.script->adjustOutputSections();
     return;
   }
 
   sortInputSections();
 
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       osd->osec.sortRank = getSectionRank(osd->osec);
-  if (!script->hasSectionsCommand) {
+  if (!ctx.script->hasSectionsCommand) {
     // OutputDescs are mostly contiguous, but may be interleaved with
     // SymbolAssignments in the presence of INSERT commands.
     auto mid = std::stable_partition(
-        script->sectionCommands.begin(), script->sectionCommands.end(),
+        ctx.script->sectionCommands.begin(), ctx.script->sectionCommands.end(),
         [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); });
-    std::stable_sort(script->sectionCommands.begin(), mid, compareSections);
+    std::stable_sort(ctx.script->sectionCommands.begin(), mid, compareSections);
   }
 
   // Process INSERT commands and update output section attributes. From this
   // point onwards the order of script->sectionCommands is fixed.
-  script->processInsertCommands();
-  script->adjustOutputSections();
+  ctx.script->processInsertCommands();
+  ctx.script->adjustOutputSections();
 
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     sortOrphanSections();
 
-  script->adjustSectionsAfterSorting();
+  ctx.script->adjustSectionsAfterSorting();
 }
 
 template <class ELFT> void Writer<ELFT>::sortOrphanSections() {
@@ -1321,8 +1322,8 @@ template <class ELFT> void Writer<ELFT>::sortOrphanSections() {
   // after another commands. For the details, look at shouldSkip
   // function.
 
-  auto i = script->sectionCommands.begin();
-  auto e = script->sectionCommands.end();
+  auto i = ctx.script->sectionCommands.begin();
+  auto e = ctx.script->sectionCommands.end();
   auto nonScriptI = std::find_if(i, e, [](SectionCommand *cmd) {
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       return osd->osec.sectionIndex == UINT32_MAX;
@@ -1434,7 +1435,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator tc;
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
-  script->assignAddresses();
+  ctx.script->assignAddresses();
 
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
   // do require the relative addresses of OutputSections because linker scripts
@@ -1457,7 +1458,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     bool changed = target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
                        : target->relaxOnce(pass);
-    bool spilled = script->spillSections();
+    bool spilled = ctx.script->spillSections();
     changed |= spilled;
     ++pass;
 
@@ -1471,12 +1472,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
     if (config->fixCortexA53Errata843419) {
       if (changed)
-        script->assignAddresses();
+        ctx.script->assignAddresses();
       changed |= a64p.createFixes();
     }
     if (config->fixCortexA8) {
       if (changed)
-        script->assignAddresses();
+        ctx.script->assignAddresses();
       changed |= a32p.createFixes();
     }
 
@@ -1517,7 +1518,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
-        script->assignAddresses();
+        ctx.script->assignAddresses();
     if (!changed) {
       // Some symbols may be dependent on section addresses. When we break the
       // loop, the symbol values are finalized because a previous
@@ -1548,7 +1549,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   // If addrExpr is set, the address may not be a multiple of the alignment.
   // Warn because this is error-prone.
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
       if (osec->addr % osec->addralign != 0)
@@ -1559,7 +1560,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   // Sizes are no longer allowed to grow, so all allowable spills have been
   // taken. Remove any leftover potential spills.
-  script->erasePotentialSpillSections();
+  ctx.script->erasePotentialSpillSections();
 }
 
 // If Input Sections have been shrunk (basic block sections) then
@@ -1613,7 +1614,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   assert(config->optimizeBBJumps);
   SmallVector<InputSection *, 0> storage;
 
-  script->assignAddresses();
+  ctx.script->assignAddresses();
   // For every output section that has executable input sections, this
   // does the following:
   //   1. Deletes all direct jump instructions in input sections that
@@ -1634,7 +1635,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
       numDeleted += target->deleteFallThruJmpInsn(sec, sec.file, next);
     }
     if (numDeleted > 0) {
-      script->assignAddresses();
+      ctx.script->assignAddresses();
       LLVM_DEBUG(llvm::dbgs()
                  << "Removing " << numDeleted << " fall through jumps\n");
     }
@@ -1697,7 +1698,7 @@ static void removeUnusedSyntheticSections() {
           llvm::erase_if(isd->sections, [&](InputSection *isec) {
             return unused.count(isec);
           });
-  llvm::erase_if(script->orphanSections, [&](const InputSectionBase *sec) {
+  llvm::erase_if(ctx.script->orphanSections, [&](const InputSectionBase *sec) {
     return unused.count(sec);
   });
 }
@@ -1713,7 +1714,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // symbols for sections, so that the runtime can get the start and end
     // addresses of each section by section name. Add such symbols.
     addStartEndSymbols();
-    for (SectionCommand *cmd : script->sectionCommands)
+    for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
         addStartStopSymbols(osd->osec);
 
@@ -1792,7 +1793,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.
-  script->processSymbolAssignments();
+  ctx.script->processSymbolAssignments();
 
   if (!config->relocatable) {
     llvm::TimeTraceScope timeScope("Scan relocations");
@@ -1888,14 +1889,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     in.mipsGot->build();
 
   removeUnusedSyntheticSections();
-  script->diagnoseOrphanHandling();
-  script->diagnoseMissingSGSectionAddress();
+  ctx.script->diagnoseOrphanHandling();
+  ctx.script->diagnoseMissingSGSectionAddress();
 
   sortSections();
 
   // Create a list of OutputSections, assign sectionIndex, and populate
   // in.shStrTab. If -z nosectionheader is specified, drop non-ALLOC sections.
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
       if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
@@ -1935,8 +1936,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // image base and the dynamic section on mips includes the image base.
   if (!config->relocatable && !config->oFormatBinary) {
     for (Partition &part : partitions) {
-      part.phdrs = script->hasPhdrsCommands() ? script->createPhdrs()
-                                              : createPhdrs(part);
+      part.phdrs = ctx.script->hasPhdrsCommands() ? ctx.script->createPhdrs()
+                                                  : createPhdrs(part);
       if (config->emachine == EM_ARM) {
         // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
         addPhdrForSection(part, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
@@ -1967,7 +1968,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
 
-  if (script->noCrossRefs.size()) {
+  if (ctx.script->noCrossRefs.size()) {
     llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
     checkNoCrossRefs<ELFT>();
   }
@@ -2019,7 +2020,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
-  if (!script->hasSectionsCommand && !config->relocatable)
+  if (!ctx.script->hasSectionsCommand && !config->relocatable)
     fixSectionAlignments();
 
   // This is used to:
@@ -2071,7 +2072,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *sec : ctx.outputSections)
     sec->finalize();
 
-  script->checkFinalScriptConditions();
+  ctx.script->checkFinalScriptConditions();
 
   if (config->emachine == EM_ARM && !config->isLE && config->armBe8) {
     addArmInputSectionMappingSymbols();
@@ -2276,7 +2277,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     if (load && sec != relroEnd &&
         sec->memRegion == load->firstSec->memRegion &&
         (sameLMARegion || load->lastSec == ctx.out.programHeaders) &&
-        (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+        (ctx.script->hasSectionsCommand || sec->type == SHT_NOBITS ||
          load->lastSec->type != SHT_NOBITS)) {
       load->p_flags |= newFlags;
     } else {
@@ -2407,7 +2408,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
         cmd->addrExpr = [] {
-          return alignToPowerOf2(script->getDot(), config->maxPageSize);
+          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize);
         };
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
       // it must be the RW. Align to p_align(PT_TLS) to make sure
@@ -2424,14 +2425,14 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // blocks correctly. We need to keep the workaround for a while.
       else if (ctx.tlsPhdr && ctx.tlsPhdr->firstSec == p->firstSec)
         cmd->addrExpr = [] {
-          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
-                 alignToPowerOf2(script->getDot() % config->maxPageSize,
+          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize) +
+                 alignToPowerOf2(ctx.script->getDot() % config->maxPageSize,
                                  ctx.tlsPhdr->p_align);
         };
       else
         cmd->addrExpr = [] {
-          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
-                 script->getDot() % config->maxPageSize;
+          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize) +
+                 ctx.script->getDot() % config->maxPageSize;
         };
     }
   };

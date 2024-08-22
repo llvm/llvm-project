@@ -66,7 +66,7 @@ using namespace lld;
 using namespace lld::elf;
 
 static std::optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
       if (assign->sym == &sym)
         return assign->location;
@@ -2420,7 +2420,7 @@ static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
 // scan relocations from its input sections for prohibited cross references.
 template <class ELFT> void elf::checkNoCrossRefs() {
   for (OutputSection *osec : ctx.outputSections) {
-    for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
+    for (const NoCrossRefCommand &noxref : ctx.script->noCrossRefs) {
       if (!llvm::is_contained(noxref.outputSections, osec->name) ||
           (noxref.toFirst && noxref.outputSections[0] == osec->name))
         continue;

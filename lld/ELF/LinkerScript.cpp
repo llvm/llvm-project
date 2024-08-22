@@ -44,8 +44,6 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-ScriptWrapper elf::script;
-
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
@@ -862,7 +860,7 @@ static OutputSection *findByName(ArrayRef<SectionCommand *> vec,
 }
 
 static OutputDesc *createSection(InputSectionBase *isec, StringRef outsecName) {
-  OutputDesc *osd = script->createOutputSection(outsecName, "<internal>");
+  OutputDesc *osd = ctx.script->createOutputSection(outsecName, "<internal>");
   osd->osec.recordSection(isec);
   return osd;
 }
@@ -1470,7 +1468,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 }
 
 LinkerScript::AddressState::AddressState() {
-  for (auto &mri : script->memoryRegions) {
+  for (auto &mri : ctx.script->memoryRegions) {
     MemoryRegion *mr = mri.second;
     mr->curPos = (mr->origin)().getValue();
   }
