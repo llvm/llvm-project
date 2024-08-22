@@ -186,11 +186,29 @@ LogicalResult ResultsOp::verify() {
 LogicalResult AttributesOp::verify() {
   size_t namesSize = getAttributeValueNames().size();
   size_t valuesSize = getAttributeValues().size();
+  auto variadicities = getVariadicity();
+  size_t numVariadicities = variadicities.size();
+
+  if (numVariadicities != valuesSize)
+    return emitOpError()
+           << "the number of attributes and their variadicities must be "
+              "the same, but got "
+           << valuesSize << " and " << numVariadicities << " respectively";
+
+  for (size_t i = 0; i < numVariadicities; ++i) {
+    if (variadicities[i].getValue() == Variadicity::variadic) {
+      // auto test =
+      return emitOpError() << "requires attributes to have single or optional variadicity, but " << getAttributeValueNames()[i]
+                           << " was specified as variadic.";
+
+
+    }
+  }
 
   if (namesSize != valuesSize)
     return emitOpError()
            << "the number of attribute names and their constraints must be "
-              "the same but got "
+              "the same, but got "
            << namesSize << " and " << valuesSize << " respectively";
 
   return success();
@@ -383,13 +401,18 @@ static void printNamedValueListWithVariadicity(
 static ParseResult
 parseAttributesOp(OpAsmParser &p,
                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
-                  ArrayAttr &attrNamesAttr) {
+                  ArrayAttr &attrNamesAttr,
+                  VariadicityArrayAttr &variadicityAttr) {
   Builder &builder = p.getBuilder();
+  MLIRContext *ctx = builder.getContext();
   SmallVector<Attribute> attrNames;
+  SmallVector<VariadicityAttr> variadicities;
+
   if (succeeded(p.parseOptionalLBrace())) {
     auto parseOperands = [&]() {
       if (p.parseAttribute(attrNames.emplace_back()) || p.parseEqual() ||
-          p.parseOperand(attrOperands.emplace_back()))
+          parseValueWithVariadicity(p, attrOperands.emplace_back(),
+                                    variadicities.emplace_back()))
         return failure();
       return success();
     };
@@ -397,16 +420,23 @@ parseAttributesOp(OpAsmParser &p,
       return failure();
   }
   attrNamesAttr = builder.getArrayAttr(attrNames);
+  variadicityAttr = VariadicityArrayAttr::get(ctx, variadicities);
   return success();
 }
 
 static void printAttributesOp(OpAsmPrinter &p, AttributesOp op,
-                              OperandRange attrArgs, ArrayAttr attrNames) {
+                              OperandRange attrArgs, ArrayAttr attrNames,
+                              VariadicityArrayAttr variadicityAttr) {
   if (attrNames.empty())
     return;
   p << "{";
-  interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
-                  [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
+  interleaveComma(llvm::seq<int>(0, attrNames.size()), p, [&](int i) {
+    Variadicity variadicity = variadicityAttr[i].getValue();
+    p << attrNames[i] << " = ";
+    if (variadicity != Variadicity::single)
+      p << stringifyVariadicity(variadicity) << " ";
+    p << attrArgs[i];
+  });
   p << '}';
 }
 
