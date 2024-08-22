@@ -105,8 +105,6 @@ if(LIBC_TARGET_OS_IS_GPU)
       libc.src.stdio.getc
       libc.src.stdio.ungetc
       libc.src.stdio.ferror
-    COMPILE_OPTIONS
-      -DLIBC_COPT_STDIO_USE_SYSTEM_FILE
   )
 elseif(TARGET libc.src.__support.File.file OR (NOT LLVM_LIBC_FULL_BUILD))
   add_header_library(
