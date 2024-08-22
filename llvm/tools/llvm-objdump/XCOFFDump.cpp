@@ -293,6 +293,7 @@ void XCOFFDumper::printFileHeader() {
   printHex("OptionalHeaderSize:", Obj.getOptionalHeaderSize());
   printHex("Flags:", Obj.getFlags());
 }
+
 } // namespace
 
 std::unique_ptr<objdump::Dumper>
