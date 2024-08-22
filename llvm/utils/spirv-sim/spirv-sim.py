@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+from dataclasses import dataclass
+from instructions import *
+from typing import Any,Iterable,Callable,Optional,Tuple
+import argparse
 import fileinput
 import inspect
-from typing import Any
-from dataclasses import dataclass
-import sys
-from instructions import *
-import argparse
 import re
+import sys
 
 RE_EXPECTS = re.compile(r"^([0-9]+,)*[0-9]+$")
 
@@ -24,6 +25,7 @@ def parseInstruction(i):
             "OpExtension",
             "OpSource",
             "OpTypeInt",
+            "OpTypeStruct",
             "OpTypeFloat",
             "OpTypeBool",
             "OpTypeVoid",
@@ -52,12 +54,10 @@ def parseInstruction(i):
 # - if 2 subsequent delimiters will mean 2 pieces. One with only the first delimiter, and the second
 #   with the delimiter and following instructions.
 # - if the first instruction is a delimiter, the first piece will begin with this delimiter.
-def splitInstructions(
-    splitType: type, instructions: list[Instruction]
-) -> list[list[Instruction]]:
-    blocks = [[]]
+def splitInstructions(splitType: type, instructions: Iterable[Instruction]) -> list[list[Instruction]]:
+    blocks : list[list[Instruction]] = [[]]
     for instruction in instructions:
-        if type(instruction) is splitType and len(blocks[-1]) > 0:
+        if isinstance(instruction, splitType) and len(blocks[-1]) > 0:
             blocks.append([])
         blocks[-1].append(instruction)
     return blocks
@@ -66,8 +66,8 @@ def splitInstructions(
 # Defines a BasicBlock in the simulator.
 # Begins at an OpLabel, and ends with a control-flow instruction.
 class BasicBlock:
-    def __init__(self, instructions):
-        assert type(instructions[0]) is OpLabel
+    def __init__(self, instructions) -> None:
+        assert isinstance(instructions[0], OpLabel)
         # The name of the basic block, which is the register of the leading
         # OpLabel.
         self._name = instructions[0].output_register()
@@ -95,20 +95,19 @@ class BasicBlock:
 
 # Defines a Function in the simulator.
 class Function:
-    def __init__(self, instructions):
-        assert type(instructions[0]) is OpFunction
+    def __init__(self, instructions) -> None:
+        assert isinstance(instructions[0], OpFunction)
         # The name of the function (name of the register returned by OpFunction).
         self._name: str = instructions[0].output_register()
         # The list of basic blocks that belongs to this function.
         self._basic_blocks: list[BasicBlock] = []
         # The variables local to this function.
         self._variables: list[OpVariable] = [
-            x for x in instructions if type(x) is OpVariable
+            x for x in instructions if isinstance(x, OpVariable)
         ]
 
-        assert type(instructions[0]) is OpFunction
-        assert type(instructions[-1]) is OpFunctionEnd
-        body = filter(lambda x: type(x) != OpVariable, instructions[1:-1])
+        assert isinstance(instructions[-1], OpFunctionEnd)
+        body = filter(lambda x: not isinstance(x, OpVariable), instructions[1:-1])
         for block in splitInstructions(OpLabel, body):
             self._basic_blocks.append(BasicBlock(block))
 
@@ -169,26 +168,34 @@ class InstructionPointer:
         bb = self.function[self.basic_block]
         assert len(bb) > self.instruction_index + value
         return InstructionPointer(
-            self.function, self.basic_block, self.instruction_index + 1
+            self.function, self.basic_block, self.instruction_index + value
         )
-
 
 # Defines a Lane in this simulator.
 class Lane:
-    def __init__(self, wave, tid):
-        # The registers known by this lane.
-        self._registers: dict[str, Any] = {}
-        # The current IP of this lane.
-        self._ip: InstructionPointer = None
-        # If this lane running.
-        self._running: bool = True
-        # The wave this lane belongs to.
-        self._wave: Wave = wave
-        # The callstack of this lane. Each tuple represents 1 call.
-        #   The first element is the IP the function will return to.
-        #   The second element is the callback to call to store the return value
-        #   into the correct register.
-        self._callstack: list[tuple(InstructionPointer, Callback)] = []
+    # The registers known by this lane.
+    _registers: dict[str, Any]
+    # The current IP of this lane.
+    _ip: Optional[InstructionPointer]
+    # If this lane running.
+    _running: bool
+    # The wave this lane belongs to.
+    _wave: Wave
+    # The callstack of this lane. Each tuple represents 1 call.
+    #   The first element is the IP the function will return to.
+    #   The second element is the callback to call to store the return value
+    #   into the correct register.
+    _callstack: list[Tuple[InstructionPointer, Callable[[Any], None] ]]
+
+    _previous_bb : Optional[BasicBlock]
+    _current_bb : Optional[BasicBlock]
+
+    def __init__(self, wave : Wave, tid : int) -> None:
+        self._registers = dict()
+        self._ip = None
+        self._running = True
+        self._wave = wave
+        self._callstack = []
 
         # The index of this lane in the wave.
         self._tid = tid
@@ -198,38 +205,39 @@ class Lane:
         self._current_bb = None
 
     # Returns the lane/thread ID of this lane in its wave.
-    def tid(self):
+    def tid(self) -> int:
         return self._tid
 
     # Returns true is this lane if the first by index in the current active tangle.
-    def is_first_active_lane(self):
+    def is_first_active_lane(self) -> bool:
         return self._tid == self._wave.get_first_active_lane_index()
 
     # Broadcast value into the registers of all active lanes.
-    def broadcast_register(self, register, value):
+    def broadcast_register(self, register : str, value : Any) -> None:
         self._wave.broadcast_register(register, value)
 
     # Returns the IP this lane is currently at.
-    def ip(self):
+    def ip(self) -> InstructionPointer:
+        assert self._ip is not None
         return self._ip
 
     # Returns true if this lane is running, false otherwise.
     # Running means not dead. An inactive lane is running.
-    def running(self):
+    def running(self) -> bool:
         return self._running
 
     # Set the register at "name" to "value" in this lane.
-    def set_register(self, name, value):
+    def set_register(self, name : str, value : Any) -> None:
         self._registers[name] = value
 
     # Get the value in register "name" in this lane.
     # if allow_undef is true, fetching an unknown register won't fail.
-    def get_register(self, name, allow_undef=False):
+    def get_register(self, name : str, allow_undef : bool = False) -> Optional[Any]:
         if allow_undef and name not in self._registers:
             return None
         return self._registers[name]
 
-    def set_ip(self, ip):
+    def set_ip(self, ip : InstructionPointer) -> None:
         if ip.bb() != self._current_bb:
             self._previous_bb = self._current_bb
             self._current_bb = ip.bb()
@@ -261,7 +269,13 @@ class Lane:
 
 # Represents the SPIR-V module in the simulator.
 class Module:
-    def __init__(self, instructions):
+    _functions : dict[str, Function]
+    _prolog : list[Instruction]
+    _globals : list[Instruction]
+    _name2reg : dict[str, str]
+    _reg2name : dict[str, str]
+
+    def __init__(self, instructions) -> None:
         chunks = splitInstructions(OpFunction, instructions)
 
         # The instructions located outside of all functions.
@@ -272,14 +286,14 @@ class Module:
         self._globals = [
             x
             for x in instructions
-            if type(x) is OpVariable or issubclass(type(x), OpConstant)
+            if isinstance(x, OpVariable) or issubclass(type(x), OpConstant)
         ]
 
         # Helper dictionaries to get real names of registers, or registers by names.
         self._name2reg = {}
         self._reg2name = {}
         for instruction in instructions:
-            if type(instruction) is OpName:
+            if isinstance(instruction, OpName):
                 name = instruction.name()
                 reg = instruction.decoratedRegister()
                 self._name2reg[name] = reg
@@ -311,7 +325,7 @@ class Module:
 
         # Initialize builtins
         for instruction in self._prolog:
-            if type(instruction) is OpDecorate:
+            if isinstance(instruction, OpDecorate):
                 instruction.static_execution(lane)
 
     def execute_one_instruction(self, lane: Lane, ip: InstructionPointer) -> None:
@@ -340,10 +354,10 @@ class Module:
         return [self.getNameFromRegister(reg) for reg, func in self._functions.items()]
 
     # Returns the global variables defined in this module.
-    def variables(self) -> iter:
+    def variables(self) -> Iterable:
         return [x.output_register() for x in self._globals]
 
-    def dump(self, function_name: str = None):
+    def dump(self, function_name: Optional[str] = None):
         print("Module:")
         print("  globals:")
         for instruction in self._globals:
@@ -371,35 +385,44 @@ class Module:
 @dataclass
 class ConvergenceRequirement:
     mergeTarget: InstructionPointer
-    continueTarget: InstructionPointer
+    continueTarget: Optional[InstructionPointer]
     impactedLanes: set[int]
 
+Task = dict[InstructionPointer, list[Lane]]
 
 # Defines a Lane group/Wave in the simulator.
 class Wave:
-    def __init__(self, module, wave_size: int):
+    # The module this wave will execute.
+    _module : Module
+    # The lanes this wave will be composed of.
+    _lanes : list[Lane]
+    # The instructions scheduled for execution.
+    _tasks : Task
+    # The actual requirements to comply with when executing instructions.
+    # e.g: the set of lanes required to merge before executing the merge block.
+    _convergence_requirements : list[ConvergenceRequirement]
+    # The indices of the active lanes for the current executing instruction.
+    _active_lane_indices : set[int]
+
+    def __init__(self, module, wave_size: int) -> None:
         assert wave_size > 0
-        # The module this wave will execute.
         self._module = module
-        # The lanes this wave will be composed of.
         self._lanes = []
+
         for i in range(wave_size):
             self._lanes.append(Lane(self, i))
 
-        # The instructions scheduled for execution.
-        self._tasks: dict(InstructionPointer, list[Lane]) = {}
-        # The actual requirements to comply with when executing instructions.
-        # e.g: the set of lanes required to merge before executing the merge block.
+        self._tasks = {}
         self._convergence_requirements = []
         # The indices of the active lanes for the current executing instruction.
         self._active_lane_indices = set()
 
     # Returns True if the given IP can be executed for the given list of lanes.
     def _is_task_candidate(self, ip: InstructionPointer, lanes: list[Lane]):
-        merged_lanes = set()
+        merged_lanes : set[int] = set()
         for lane in self._lanes:
             if not lane.running():
-                merged_lanes.add(lane)
+                merged_lanes.add(lane.tid())
 
         for requirement in self._convergence_requirements:
             # This task is not executing a merge or continue target.
@@ -435,7 +458,7 @@ class Wave:
 
     # Returns the next task we can schedule. This must always return a task.
     # Calling this when all lanes are dead is invalid.
-    def _get_next_runnable_task(self):
+    def _get_next_runnable_task(self) -> Tuple[InstructionPointer, list[Lane]]:
         candidate = None
         for ip, lanes in self._tasks.items():
             if len(lanes) == 0:
@@ -451,7 +474,7 @@ class Wave:
         raise RuntimeError("No task to execute. Deadlock?")
 
     # Handle an encountered merge instruction for the given lane.
-    def handle_convergence_header(self, lane: Lane, instruction: Instruction):
+    def handle_convergence_header(self, lane: Lane, instruction: MergeInstruction):
         mergeTarget = self._module.get_bb_entry(instruction.merge_location())
         for requirement in self._convergence_requirements:
             if requirement.mergeTarget == mergeTarget:
@@ -467,7 +490,7 @@ class Wave:
         self._convergence_requirements.append(requirement)
 
     # Returns true if some instructions are scheduled for execution.
-    def _has_tasks(self):
+    def _has_tasks(self) -> bool:
         return len(self._tasks) > 0
 
     # Returns the index of the first active lane right now.
@@ -475,13 +498,13 @@ class Wave:
         return min(self._active_lane_indices)
 
     # Broadcast the given value to all active lane registers'.
-    def broadcast_register(self, register, value) -> int:
+    def broadcast_register(self, register : str, value : Any) -> None:
         for tid in self._active_lane_indices:
             self._lanes[tid].set_register(register, value)
 
-    # Returns the function associated with 'name'.
+    # Returns the entrypoint of the function associated with 'name'.
     # Calling this function with an invalid name is illegal.
-    def _get_function_from_name(self, name: str) -> Function:
+    def _get_function_entry_from_name(self, name: str) -> InstructionPointer:
         register = self._module.getRegisterFromName(name)
         assert register is not None
         return self._module.get_function_entry(register)
@@ -489,14 +512,14 @@ class Wave:
     # Run the wave on the function 'function_name' until all lanes are dead.
     # If verbose is True, execution trace is printed.
     # Returns the value returned by the function for each lane.
-    def run(self, function_name: str, verbose: bool = False) -> list[int]:
+    def run(self, function_name : str, verbose: bool = False) -> list[Any]:
         for t in self._lanes:
             self._module.initialize(t)
 
-        function = self._get_function_from_name(function_name)
-        assert function is not None
+        entry_ip = self._get_function_entry_from_name(function_name)
+        assert entry_ip is not None
         for t in self._lanes:
-            t.do_call(function, "__shader_output__")
+            t.do_call(entry_ip, "__shader_output__")
 
         self._tasks[self._lanes[0].ip()] = self._lanes
         while self._has_tasks():
@@ -528,7 +551,7 @@ class Wave:
             output.append(lane.get_register("__shader_output__"))
         return output
 
-    def dump_register(self, register):
+    def dump_register(self, register : str) -> None:
         for lane in self._lanes:
             print(
                 f" Lane {lane.tid():2} | {register:3} = {lane.get_register(register)}"
@@ -552,11 +575,11 @@ parser.add_argument("-v", "--verbose", help="verbose", action="store_true")
 args = parser.parse_args()
 
 
-def load_instructions(filename):
+def load_instructions(filename : str):
     if filename is None:
         return []
 
-    if filename.lstrip().rstrip() != "-":
+    if filename.strip() != "-":
         try:
             with open(filename, "r") as f:
                 lines = f.read().split("\n")
@@ -566,7 +589,7 @@ def load_instructions(filename):
         lines = sys.stdin.readlines()
 
     # Remove leading/trailing whitespaces.
-    lines = [x.rstrip().lstrip() for x in lines]
+    lines = [x.strip() for x in lines]
     # Strip comments.
     lines = [x for x in filter(lambda x: len(x) != 0 and x[0] != ";", lines)]
 
@@ -591,7 +614,7 @@ def main():
         print("Invalid format for --wave/-w flag.", file=sys.stderr)
         sys.exit(1)
 
-    expected_results = [int(x.rstrip().lstrip()) for x in args.expects.split(",")]
+    expected_results = [int(x.strip()) for x in args.expects.split(",")]
     wave_size = int(args.wave)
     if len(expected_results) != wave_size:
         print("Wave size != expected result array size", file=sys.stderr)
