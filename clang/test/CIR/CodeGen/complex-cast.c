@@ -173,41 +173,16 @@ void complex_to_bool() {
 // CIR-AFTER-NEXT: %[[#IMAG:]] = cir.complex.imag %{{.+}} : !cir.complex<!cir.double> -> !cir.double
 // CIR-AFTER-NEXT: %[[#RB:]] = cir.cast(float_to_bool, %[[#REAL]] : !cir.double), !cir.bool
 // CIR-AFTER-NEXT: %[[#IB:]] = cir.cast(float_to_bool, %[[#IMAG]] : !cir.double), !cir.bool
-// CIR-AFTER-NEXT: %{{.+}} = cir.ternary(%[[#RB]], true {
-// CIR-AFTER-NEXT:   %[[#A:]] = cir.const #true
-// CIR-AFTER-NEXT:   cir.yield %[[#A]] : !cir.bool
-// CIR-AFTER-NEXT: }, false {
-// CIR-AFTER-NEXT:   %[[#B:]] = cir.ternary(%[[#IB]], true {
-// CIR-AFTER-NEXT:     %[[#C:]] = cir.const #true
-// CIR-AFTER-NEXT:     cir.yield %[[#C]] : !cir.bool
-// CIR-AFTER-NEXT:   }, false {
-// CIR-AFTER-NEXT:     %[[#D:]] = cir.const #false
-// CIR-AFTER-NEXT:     cir.yield %[[#D]] : !cir.bool
-// CIR-AFTER-NEXT:   }) : (!cir.bool) -> !cir.bool
-// CIR-AFTER-NEXT:   cir.yield %[[#B]] : !cir.bool
-// CIR-AFTER-NEXT: }) : (!cir.bool) -> !cir.bool
+// CIR-AFTER-NEXT: %[[#A:]] = cir.const #true
+// CIR-AFTER-NEXT: %{{.+}} = cir.select if %[[#RB]] then %[[#A]] else %[[#IB]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 
 //      LLVM:   %[[#REAL:]] = extractvalue { double, double } %{{.+}}, 0
 // LLVM-NEXT:   %[[#IMAG:]] = extractvalue { double, double } %{{.+}}, 1
 // LLVM-NEXT:   %[[#RB:]] = fcmp une double %[[#REAL]], 0.000000e+00
+// LLVM-NEXT:   %[[#RB2:]] = zext i1 %[[#RB]] to i8
 // LLVM-NEXT:   %[[#IB:]] = fcmp une double %[[#IMAG]], 0.000000e+00
-// LLVM-NEXT:   br i1 %[[#RB]], label %[[#LABEL_RB:]], label %[[#LABEL_RB_NOT:]]
-//      LLVM: [[#LABEL_RB]]:
-// LLVM-NEXT:   br label %[[#LABEL_EXIT:]]
-//      LLVM: [[#LABEL_RB_NOT]]:
-// LLVM-NEXT:   br i1 %[[#IB]], label %[[#LABEL_IB:]], label %[[#LABEL_IB_NOT:]]
-//      LLVM: [[#LABEL_IB]]:
-// LLVM-NEXT:   br label %[[#LABEL_A:]]
-//      LLVM: [[#LABEL_IB_NOT]]:
-// LLVM-NEXT:   br label %[[#LABEL_A]]
-//      LLVM: [[#LABEL_A]]:
-// LLVM-NEXT:   %[[#A:]] = phi i8 [ 0, %[[#LABEL_IB_NOT]] ], [ 1, %[[#LABEL_IB]] ]
-// LLVM-NEXT:   br label %[[#LABEL_B:]]
-//      LLVM: [[#LABEL_B]]:
-// LLVM-NEXT:   br label %[[#LABEL_EXIT]]
-//      LLVM: [[#LABEL_EXIT]]:
-// LLVM-NEXT:   %{{.+}} = phi i8 [ %[[#A]], %[[#LABEL_B]] ], [ 1, %[[#LABEL_RB]] ]
-// LLVM-NEXT:   br label %{{.+}}
+// LLVM-NEXT:   %[[#IB2:]] = zext i1 %[[#IB]] to i8
+// LLVM-NEXT:   %{{.+}} = or i8 %[[#RB2]], %[[#IB2]]
 
 // CIR-BEFORE: %{{.+}} = cir.cast(int_complex_to_bool, %{{.+}} : !cir.complex<!s32i>), !cir.bool
 
@@ -215,41 +190,16 @@ void complex_to_bool() {
 // CIR-AFTER-NEXT: %[[#IMAG:]] = cir.complex.imag %{{.+}} : !cir.complex<!s32i> -> !s32i
 // CIR-AFTER-NEXT: %[[#RB:]] = cir.cast(int_to_bool, %[[#REAL]] : !s32i), !cir.bool
 // CIR-AFTER-NEXT: %[[#IB:]] = cir.cast(int_to_bool, %[[#IMAG]] : !s32i), !cir.bool
-// CIR-AFTER-NEXT: %{{.+}} = cir.ternary(%[[#RB]], true {
-// CIR-AFTER-NEXT:   %[[#A:]] = cir.const #true
-// CIR-AFTER-NEXT:   cir.yield %[[#A]] : !cir.bool
-// CIR-AFTER-NEXT: }, false {
-// CIR-AFTER-NEXT:   %[[#B:]] = cir.ternary(%[[#IB]], true {
-// CIR-AFTER-NEXT:     %[[#C:]] = cir.const #true
-// CIR-AFTER-NEXT:     cir.yield %[[#C]] : !cir.bool
-// CIR-AFTER-NEXT:   }, false {
-// CIR-AFTER-NEXT:     %[[#D:]] = cir.const #false
-// CIR-AFTER-NEXT:     cir.yield %[[#D]] : !cir.bool
-// CIR-AFTER-NEXT:   }) : (!cir.bool) -> !cir.bool
-// CIR-AFTER-NEXT:   cir.yield %[[#B]] : !cir.bool
-// CIR-AFTER-NEXT: }) : (!cir.bool) -> !cir.bool
+// CIR-AFTER-NEXT: %[[#A:]] = cir.const #true
+// CIR-AFTER-NEXT: %{{.+}} = cir.select if %[[#RB]] then %[[#A]] else %[[#IB]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 
 //      LLVM:   %[[#REAL:]] = extractvalue { i32, i32 } %{{.+}}, 0
 // LLVM-NEXT:   %[[#IMAG:]] = extractvalue { i32, i32 } %{{.+}}, 1
 // LLVM-NEXT:   %[[#RB:]] = icmp ne i32 %[[#REAL]], 0
+// LLVM-NEXT:   %[[#RB2:]] = zext i1 %[[#RB]] to i8
 // LLVM-NEXT:   %[[#IB:]] = icmp ne i32 %[[#IMAG]], 0
-// LLVM-NEXT:   br i1 %[[#RB]], label %[[#LABEL_RB:]], label %[[#LABEL_RB_NOT:]]
-//      LLVM: [[#LABEL_RB]]:
-// LLVM-NEXT:   br label %[[#LABEL_EXIT:]]
-//      LLVM: [[#LABEL_RB_NOT]]:
-// LLVM-NEXT:   br i1 %[[#IB]], label %[[#LABEL_IB:]], label %[[#LABEL_IB_NOT:]]
-//      LLVM: [[#LABEL_IB]]:
-// LLVM-NEXT:   br label %[[#LABEL_A:]]
-//      LLVM: [[#LABEL_IB_NOT]]:
-// LLVM-NEXT:   br label %[[#LABEL_A]]
-//      LLVM: [[#LABEL_A]]:
-// LLVM-NEXT:   %[[#A:]] = phi i8 [ 0, %[[#LABEL_IB_NOT]] ], [ 1, %[[#LABEL_IB]] ]
-// LLVM-NEXT:   br label %[[#LABEL_B:]]
-//      LLVM: [[#LABEL_B]]:
-// LLVM-NEXT:   br label %[[#LABEL_EXIT]]
-//      LLVM: [[#LABEL_EXIT]]:
-// LLVM-NEXT:   %{{.+}} = phi i8 [ %[[#A]], %[[#LABEL_B]] ], [ 1, %[[#LABEL_RB]] ]
-// LLVM-NEXT:   br label %{{.+}}
+// LLVM-NEXT:   %[[#IB2:]] = zext i1 %[[#IB]] to i8
+// LLVM-NEXT:   %{{.+}} = or i8 %[[#RB2]], %[[#IB2]]
 
 // CHECK: }
 

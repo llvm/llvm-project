@@ -269,15 +269,12 @@ void mul() {
 // CIR-FULL-NEXT: %[[#F:]] = cir.binop(add, %[[#C]], %[[#D]]) : !cir.double
 // CIR-FULL-NEXT: %[[#RES:]] = cir.complex.create %[[#E]], %[[#F]] : !cir.double -> !cir.complex<!cir.double>
 // CIR-FULL-NEXT: %[[#COND:]] = cir.cmp(ne, %[[#E]], %[[#E]]) : !cir.double, !cir.bool
-// CIR-FULL-NEXT: %{{.+}} = cir.ternary(%[[#COND]], true {
-// CIR-FULL-NEXT:   %[[#COND2:]] = cir.cmp(ne, %[[#F]], %[[#F]]) : !cir.double, !cir.bool
-// CIR-FULL-NEXT:   %[[#INNER:]] = cir.ternary(%[[#COND2]], true {
-// CIR-FULL-NEXT:     %[[#RES2:]] = cir.call @__muldc3(%[[#LHSR]], %[[#LHSI]], %[[#RHSR]], %[[#RHSI]]) : (!cir.double, !cir.double, !cir.double, !cir.double) -> !cir.complex<!cir.double>
-// CIR-FULL-NEXT:     cir.yield %[[#RES2]] : !cir.complex<!cir.double>
-// CIR-FULL-NEXT:   }, false {
-// CIR-FULL-NEXT:     cir.yield %[[#RES]] : !cir.complex<!cir.double>
-// CIR-FULL-NEXT:   }) : (!cir.bool) -> !cir.complex<!cir.double>
-// CIR-FULL-NEXT:   cir.yield %[[#INNER]] : !cir.complex<!cir.double>
+// CIR-FULL-NEXT: %[[#COND2:]] = cir.cmp(ne, %[[#F]], %[[#F]]) : !cir.double, !cir.bool
+// CIR-FULL-NEXT: %[[#G:]] = cir.const #false
+// CIR-FULL-NEXT: %[[#H:]] = cir.select if %[[#COND]] then %[[#COND2]] else %[[#G]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+// CIR-FULL-NEXT: %{{.+}} = cir.ternary(%[[#H]], true {
+// CIR-FULL-NEXT:   %[[#RES2:]] = cir.call @__muldc3(%[[#LHSR]], %[[#LHSI]], %[[#RHSR]], %[[#RHSI]]) : (!cir.double, !cir.double, !cir.double, !cir.double) -> !cir.complex<!cir.double>
+// CIR-FULL-NEXT:   cir.yield %[[#RES2]] : !cir.complex<!cir.double>
 // CIR-FULL-NEXT: }, false {
 // CIR-FULL-NEXT:   cir.yield %[[#RES]] : !cir.complex<!cir.double>
 // CIR-FULL-NEXT: }) : (!cir.bool) -> !cir.complex<!cir.double>
@@ -306,30 +303,22 @@ void mul() {
 // LLVM-FULL-NEXT:   %[[#F:]] = fadd double %[[#C]], %[[#D]]
 // LLVM-FULL-NEXT:   %[[#G:]] = insertvalue { double, double } undef, double %[[#E]], 0
 // LLVM-FULL-NEXT:   %[[#RES:]] = insertvalue { double, double } %[[#G]], double %[[#F]], 1
-// LLVM-FULL-NEXT:   %[[#COND:]] = fcmp une double %[[#E]], %[[#E]]
-// LLVM-FULL-NEXT:   br i1 %[[#COND]], label %[[#LA:]], label %[[#LB:]]
-//      LLVM-FULL: [[#LA]]:
-// LLVM-FULL-NEXT:   %[[#H:]] = fcmp une double %[[#F]], %[[#F]]
-// LLVM-FULL-NEXT:   br i1 %[[#H]], label %[[#LC:]], label %[[#LD:]]
-//      LLVM-FULL: [[#LC]]:
-// LLVM-FULL-NEXT:   %[[#RES2:]] = call { double, double } @__muldc3(double %[[#LHSR]], double %[[#LHSI]], double %[[#RHSR]], double %[[#RHSI]])
-// LLVM-FULL-NEXT:   br label %[[#LE:]]
-//      LLVM-FULL: [[#LD]]:
-// LLVM-FULL-NEXT:   br label %[[#LE]]
-//      LLVM-FULL: [[#LE]]:
-// LLVM-FULL-NEXT:   %[[#RES3:]] = phi { double, double } [ %[[#RES]], %[[#LD]] ], [ %[[#RES2]], %[[#LC]] ]
-// LLVM-FULL-NEXT:   br label %[[#LF:]]
-//      LLVM-FULL: [[#LF]]:
-// LLVM-FULL-NEXT:   br label %[[#LG:]]
-//      LLVM-FULL: [[#LB]]:
-// LLVM-FULL-NEXT:   br label %[[#LG]]
-//      LLVM-FULL: [[#LG]]:
-// LLVM-FULL-NEXT:   %26 = phi { double, double } [ %[[#RES]], %[[#LB]] ], [ %[[#RES3]], %[[#LF]] ]
+// LLVM-FULL-NEXT:   %[[#H:]] = fcmp une double %[[#E]], %[[#E]]
+// LLVM-FULL-NEXT:   %[[#COND:]] = zext i1 %[[#H]] to i8
+// LLVM-FULL-NEXT:   %[[#I:]] = fcmp une double %[[#F]], %[[#F]]
+// LLVM-FULL-NEXT:   %[[#COND2:]] = zext i1 %[[#I]] to i8
+// LLVM-FULL-NEXT:   %[[#J:]] = and i8 %[[#COND]], %[[#COND2]]
+// LLVM-FULL-NEXT:   %[[#COND3:]] = trunc i8 %[[#J]] to i1
+//      LLVM-FULL: {{.+}}:
+// LLVM-FULL-NEXT:   %{{.+}} = call { double, double } @__muldc3(double %[[#LHSR]], double %[[#LHSI]], double %[[#RHSR]], double %[[#RHSI]])
+// LLVM-FULL-NEXT:   br label %{{.+}}
+//      LLVM-FULL: {{.+}}:
+// LLVM-FULL-NEXT:   br label %{{.+}}
 
-//      LLVM-FULL: %[[#LHSR:]] = extractvalue { i32, i32 } %28, 0
-// LLVM-FULL-NEXT: %[[#LHSI:]] = extractvalue { i32, i32 } %28, 1
-// LLVM-FULL-NEXT: %[[#RHSR:]] = extractvalue { i32, i32 } %29, 0
-// LLVM-FULL-NEXT: %[[#RHSI:]] = extractvalue { i32, i32 } %29, 1
+//      LLVM-FULL: %[[#LHSR:]] = extractvalue { i32, i32 } %{{.+}}, 0
+// LLVM-FULL-NEXT: %[[#LHSI:]] = extractvalue { i32, i32 } %{{.+}}, 1
+// LLVM-FULL-NEXT: %[[#RHSR:]] = extractvalue { i32, i32 } %{{.+}}, 0
+// LLVM-FULL-NEXT: %[[#RHSI:]] = extractvalue { i32, i32 } %{{.+}}, 1
 // LLVM-FULL-NEXT: %[[#A:]] = mul i32 %[[#LHSR]], %[[#RHSR]]
 // LLVM-FULL-NEXT: %[[#B:]] = mul i32 %[[#LHSI]], %[[#RHSI]]
 // LLVM-FULL-NEXT: %[[#C:]] = mul i32 %[[#LHSR]], %[[#RHSI]]

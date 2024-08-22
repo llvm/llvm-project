@@ -310,17 +310,7 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
         loc, mlir::cir::IntAttr::get(input.getType(), yield));
     auto eqToTest =
         builder.createCompare(loc, mlir::cir::CmpOpKind::eq, input, testValue);
-    return builder
-        .create<mlir::cir::TernaryOp>(
-            loc, eqToTest,
-            [&](OpBuilder &, Location) {
-              builder.create<mlir::cir::YieldOp>(loc,
-                                                 mlir::ValueRange{yieldValue});
-            },
-            [&](OpBuilder &, Location) {
-              builder.create<mlir::cir::YieldOp>(loc, mlir::ValueRange{input});
-            })
-        ->getResult(0);
+    return builder.createSelect(loc, eqToTest, yieldValue, input);
   };
 
   if (cmpInfo.getLt() != -1)
@@ -460,32 +450,7 @@ static mlir::Value lowerComplexToScalarCast(MLIRContext &ctx, CastOp op) {
       builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
 
   // srcRealToBool || srcImagToBool
-  return builder
-      .create<mlir::cir::TernaryOp>(
-          op.getLoc(), srcRealToBool,
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(op.getLoc(),
-                                builder.getTrue(op.getLoc()).getResult());
-          },
-          [&](mlir::OpBuilder &, mlir::Location) {
-            auto inner =
-                builder
-                    .create<mlir::cir::TernaryOp>(
-                        op.getLoc(), srcImagToBool,
-                        [&](mlir::OpBuilder &, mlir::Location) {
-                          builder.createYield(
-                              op.getLoc(),
-                              builder.getTrue(op.getLoc()).getResult());
-                        },
-                        [&](mlir::OpBuilder &, mlir::Location) {
-                          builder.createYield(
-                              op.getLoc(),
-                              builder.getFalse(op.getLoc()).getResult());
-                        })
-                    .getResult();
-            builder.createYield(op.getLoc(), inner);
-          })
-      .getResult();
+  return builder.createLogicalOr(op.getLoc(), srcRealToBool, srcImagToBool);
 }
 
 static mlir::Value lowerComplexToComplexCast(MLIRContext &ctx, CastOp op) {
@@ -652,26 +617,17 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
   // NaN. If so, emit a library call to compute the multiplication instead.
   // We check a value against NaN by comparing the value against itself.
   auto resultRealIsNaN = builder.createIsNaN(loc, resultReal);
+  auto resultImagIsNaN = builder.createIsNaN(loc, resultImag);
+  auto resultRealAndImagAreNaN =
+      builder.createLogicalAnd(loc, resultRealIsNaN, resultImagIsNaN);
   return builder
       .create<mlir::cir::TernaryOp>(
-          loc, resultRealIsNaN,
+          loc, resultRealAndImagAreNaN,
           [&](mlir::OpBuilder &, mlir::Location) {
-            auto resultImagIsNaN = builder.createIsNaN(loc, resultImag);
-            auto inner =
-                builder
-                    .create<mlir::cir::TernaryOp>(
-                        loc, resultImagIsNaN,
-                        [&](mlir::OpBuilder &, mlir::Location) {
-                          auto libCallResult = buildComplexBinOpLibCall(
-                              pass, builder, &getComplexMulLibCallName, loc, ty,
-                              lhsReal, lhsImag, rhsReal, rhsImag);
-                          builder.createYield(loc, libCallResult);
-                        },
-                        [&](mlir::OpBuilder &, mlir::Location) {
-                          builder.createYield(loc, algebraicResult);
-                        })
-                    .getResult();
-            builder.createYield(loc, inner);
+            auto libCallResult = buildComplexBinOpLibCall(
+                pass, builder, &getComplexMulLibCallName, loc, ty, lhsReal,
+                lhsImag, rhsReal, rhsImag);
+            builder.createYield(loc, libCallResult);
           },
           [&](mlir::OpBuilder &, mlir::Location) {
             builder.createYield(loc, algebraicResult);
@@ -877,16 +833,7 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   };
   auto buildSelect = [&](mlir::Value condition, mlir::Value trueResult,
                          mlir::Value falseResult) -> mlir::Value {
-    return builder
-        .create<mlir::cir::TernaryOp>(
-            loc, condition,
-            [&](OpBuilder &, Location) {
-              builder.create<mlir::cir::YieldOp>(loc, trueResult);
-            },
-            [&](OpBuilder &, Location) {
-              builder.create<mlir::cir::YieldOp>(loc, falseResult);
-            })
-        .getResult();
+    return builder.createSelect(loc, condition, trueResult, falseResult);
   };
 
   mlir::Value transformedResult;
