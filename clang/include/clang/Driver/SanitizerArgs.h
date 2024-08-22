@@ -107,7 +107,6 @@ public:
   bool needsNsanRt() const {
     return Sanitizers.has(SanitizerKind::NumericalStability);
   }
-  bool needsRtsanRt() const { return Sanitizers.has(SanitizerKind::Realtime); }
 
   bool hasMemTag() const {
     return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();
