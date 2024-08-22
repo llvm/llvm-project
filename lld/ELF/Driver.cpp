@@ -93,8 +93,10 @@ void elf::errorOrWarn(const Twine &msg) {
 
 void Ctx::reset() {
   driver = LinkerDriver();
+  script = nullptr;
 
   bufferStart = nullptr;
+  mainPart = nullptr;
   tlsPhdr = nullptr;
   out = OutSections{};
   outputSections.clear();
@@ -159,8 +161,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = ScriptWrapper();
 
+  LinkerScript script;
+  elf::ctx.script = &script;
   elf::ctx.symAux.emplace_back();
 
   partitions.clear();
@@ -462,7 +465,7 @@ static void checkOptions() {
     if (config->emachine != EM_AARCH64)
       error("--execute-only is only supported on AArch64 targets");
 
-    if (config->singleRoRx && !script->hasSectionsCommand)
+    if (config->singleRoRx && !ctx.script->hasSectionsCommand)
       error("--execute-only and --no-rosegment cannot be used together");
   }
 
@@ -2455,10 +2458,10 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   // Forbid partitions from being used on incompatible targets, and forbid them
   // from being used together with various linker features that assume a single
   // set of output sections.
-  if (script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand)
     error(toString(s->file) +
           ": partitions cannot be used with the SECTIONS command");
-  if (script->hasPhdrsCommands())
+  if (ctx.script->hasPhdrsCommands())
     error(toString(s->file) +
           ": partitions cannot be used with the PHDRS command");
   if (!config->sectionStartMap.empty())
@@ -2872,7 +2875,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
   // RHS may refer to definitions in just extracted object files).
-  script->addScriptReferencedSymbolsToSymTable();
+  ctx.script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
@@ -2938,7 +2941,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // We want to declare linker script's symbols early,
   // so that we can version them.
   // They also might be exported if referenced by DSOs.
-  script->declareSymbols();
+  ctx.script->declareSymbols();
 
   // Handle --exclude-libs. This is before scanVersionScript() due to a
   // workaround for Android ndk: for a defined versioned symbol in an archive
@@ -3094,7 +3097,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  mainPart = &partitions[0];
+  ctx.mainPart = &partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3157,13 +3160,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Assign sections");
 
     // Create output sections described by SECTIONS commands.
-    script->processSectionCommands();
+    ctx.script->processSectionCommands();
 
     // Linker scripts control how input sections are assigned to output
     // sections. Input sections that were not handled by scripts are called
     // "orphans", and they are assigned to output sections by the default rule.
     // Process that.
-    script->addOrphanSections();
+    ctx.script->addOrphanSections();
   }
 
   {
@@ -3173,9 +3176,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (SectionCommand *cmd : script->sectionCommands)
+    for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(&script.s);
+        osd->osec.finalizeInputSections(ctx.script);
   }
 
   // Two input sections with different output sections should not be folded.

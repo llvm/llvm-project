@@ -200,9 +200,9 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
-    write64le(buf, mainPart->dynamic->getVA());
+    write64le(buf, ctx.mainPart->dynamic->getVA());
   else
-    write32le(buf, mainPart->dynamic->getVA());
+    write32le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
