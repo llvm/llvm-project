@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref,both %s
 
 namespace Throw {
 
@@ -65,4 +65,9 @@ namespace Casts {
                                                // ref-error {{must be initialized by a constant expression}} \
                                                // ref-note {{reinterpret_cast is not allowed}}
 
+  void func() {
+    struct B {};
+    B b;
+    (void)*reinterpret_cast<void*>(&b); // both-error {{indirection not permitted on operand of type 'void *'}}
+  }
 }

@@ -1318,15 +1318,6 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
-
-  QualType QT = E->getType();
-
-  if (const auto *AT = QT->getAs<AtomicType>())
-    QT = AT->getValueType();
-
-  if (QT->isVoidType())
-    return this->emitInvalid(E);
-
   // Handle discarding first.
   if (DiscardResult) {
     for (const Expr *Init : Inits) {
@@ -1335,6 +1326,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     }
     return true;
   }
+
+  QualType QT = E->getType();
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
+  if (QT->isVoidType())
+    return this->emitInvalid(E);
 
   // Primitive values.
   if (std::optional<PrimType> T = classify(QT)) {
@@ -3251,12 +3249,9 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
 
-  if (E->getType()->isVoidType())
-    return this->discard(E);
-
   // Create local variable to hold the return value.
-  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
+  if (!E->getType()->isVoidType() && !E->isGLValue() &&
+      !E->getType()->isAnyComplexType() && !classify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -5150,7 +5145,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult)
+    if (DiscardResult || E->getType()->isVoidType())
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x
