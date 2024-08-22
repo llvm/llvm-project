@@ -7241,7 +7241,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-static bool
+[[maybe_unused]] static bool
 planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
                                       VPCostContext &CostCtx, Loop *TheLoop,
                                       LoopVectorizationCostModel &CM) {
