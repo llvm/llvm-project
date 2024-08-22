@@ -377,7 +377,7 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub x8, x1, x0
 ; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    csel x0, x8, x9, lt
+; CHECK-NEXT:    csel x0, x9, x8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i64 %a, %b
   %ab = sub i64 %a, %b
@@ -389,14 +389,13 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    sbc x8, x1, x3
-; CHECK-NEXT:    subs x9, x2, x0
-; CHECK-NEXT:    sbc x10, x3, x1
-; CHECK-NEXT:    subs x11, x0, x2
-; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csel x0, x9, x11, lt
-; CHECK-NEXT:    csel x1, x10, x8, lt
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbc x11, x3, x1
+; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    csel x0, x8, x10, lt
+; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i128 %a, %b
   %ab = sub i128 %a, %b

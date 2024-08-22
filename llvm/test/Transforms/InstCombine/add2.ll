@@ -452,7 +452,7 @@ define i8 @add_of_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @add_of_mul(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MB1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SUM:%.*]] = mul i8 [[MB1]], [[X:%.*]]
+; CHECK-NEXT:    [[SUM:%.*]] = mul i8 [[X:%.*]], [[MB1]]
 ; CHECK-NEXT:    ret i8 [[SUM]]
 ;
   entry:

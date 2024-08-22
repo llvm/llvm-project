@@ -152,6 +152,9 @@ Resolutions to C++ Defect Reports
 - ``nullptr`` is now promoted to ``void*`` when passed to a C-style variadic function.
   (`CWG722: Can nullptr be passed to an ellipsis? <https://cplusplus.github.io/CWG/issues/722.html>`_)
 
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
+
 C Language Changes
 ------------------
 
@@ -236,6 +239,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
+- Don't emit duplicated dangling diagnostics. (#GH93386).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -287,6 +292,10 @@ Bug Fixes to C++ Support
 - Clang now properly handles the order of attributes in `extern` blocks. (#GH101990).
 - Fixed an assertion failure by preventing null explicit object arguments from being deduced. (#GH102025).
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
+- Fixed an assertion failure about a constraint of a friend function template references to a value with greater
+  template depth than the friend function template. (#GH98258)
+- Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
+  of the current instantiation in all cases.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -304,6 +313,12 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash caused by long chains of ``sizeof`` and other similar operators
   that can be followed by a non-parenthesized expression. (#GH45061)
+
+- Fixed an crash when compiling ``#pragma STDC FP_CONTRACT DEFAULT`` with
+  ``-ffp-contract=fast-honor-pragmas``. (#GH104830)
+
+- Fixed a crash when function has more than 65536 parameters.
+  Now a diagnostic is emitted. (#GH35741)
 
 OpenACC Specific Changes
 ------------------------
@@ -437,6 +452,41 @@ Moved checkers
 
 Sanitizers
 ----------
+- Introduced Realtime Sanitizer, activated by using the -fsanitize=realtime
+  flag. This sanitizer detects unsafe system library calls, such as memory
+  allocations and mutex locks. If any such function is called during invocation
+  of a function marked with the ``[[clang::nonblocking]]`` attribute, an error
+  is printed to the console and the process exits non-zero.
+
+- Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
+  used to disable specific overflow-dependent code patterns. The supported
+  patterns are: ``add-overflow-test``, ``negated-unsigned-const``, and
+  ``post-decr-while``. The sanitizer instrumentation can be toggled off for all
+  available patterns by specifying ``all``. Conversely, you can disable all
+  exclusions with ``none``.
+
+  .. code-block:: c++
+
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=add-overflow-test``
+     int common_overflow_check_pattern(unsigned base, unsigned offset) {
+       if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings, won't be instrumented
+     }
+
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const``
+     void negation_overflow() {
+       unsigned long foo = -1UL; // No longer causes a negation overflow warning
+       unsigned long bar = -2UL; // and so on...
+     }
+
+     /// specified with ``-fsanitize-undefined-ignore-overflow-pattern=post-decr-while``
+     void while_post_decrement() {
+       unsigned char count = 16;
+       while (count--) { /* ... */} // No longer causes unsigned-integer-overflow sanitizer to trip
+     }
+
+  Many existing projects have a large amount of these code patterns present.
+  This new flag should allow those projects to enable integer sanitizers with
+  less noise.
 
 Python Binding Changes
 ----------------------

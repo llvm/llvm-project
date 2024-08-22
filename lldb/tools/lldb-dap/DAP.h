@@ -71,7 +71,11 @@ typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
+
+/// Buffer size for handling output events.
+constexpr uint64_t OutputBufferSize = (1u << 12);
 
 enum DAPBroadcasterBits {
   eBroadcastBitStopEventThread = 1u << 0,
@@ -181,6 +185,7 @@ struct DAP {
   bool is_attach;
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
+  bool enable_display_extended_backtrace;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.

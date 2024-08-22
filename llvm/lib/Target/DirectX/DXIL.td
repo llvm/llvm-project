@@ -333,9 +333,9 @@ def Abs :  DXILOp<6, unary> {
 def Saturate :  DXILOp<7, unary> {
   let Doc = "Clamps a single or double precision floating point value to [0.0f...1.0f].";
   let LLVMIntrinsic = int_dx_saturate;
-  let arguments = [overloadTy];
-  let result = overloadTy;
-  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
@@ -652,7 +652,7 @@ def UMad :  DXILOp<49, tertiary> {
 
 def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 1";
+            "a[n]*b[n] where n is 0 to 1 inclusive";
   let LLVMIntrinsic = int_dx_dot2;
   let arguments = !listsplat(OverloadTy, 4);
   let result = OverloadTy;
@@ -663,7 +663,7 @@ def Dot2 :  DXILOp<54, dot2> {
 
 def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 2";
+            "a[n]*b[n] where n is 0 to 2 inclusive";
   let LLVMIntrinsic = int_dx_dot3;
   let arguments = !listsplat(OverloadTy, 6);
   let result = OverloadTy;
@@ -674,7 +674,7 @@ def Dot3 :  DXILOp<55, dot3> {
 
 def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
-            "a[n]*b[n] where n is between 0 and 3";
+            "a[n]*b[n] where n is 0 to 3 inclusive";
   let LLVMIntrinsic = int_dx_dot4;
   let arguments = !listsplat(OverloadTy, 8);
   let result = OverloadTy;

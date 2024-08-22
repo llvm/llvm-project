@@ -132,4 +132,26 @@ TEST_F(CtxProfAnalysisTest, GetCallsiteIDNegativeTest) {
   EXPECT_EQ(IndIns, nullptr);
 }
 
+TEST_F(CtxProfAnalysisTest, GetBBIDTest) {
+  ModulePassManager MPM;
+  MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
+  EXPECT_FALSE(MPM.run(*M, MAM).areAllPreserved());
+  auto *F = M->getFunction("foo");
+  ASSERT_NE(F, nullptr);
+  std::map<std::string, int> BBNameAndID;
+
+  for (auto &BB : *F) {
+    auto *Ins = CtxProfAnalysis::getBBInstrumentation(BB);
+    if (Ins)
+      BBNameAndID[BB.getName().str()] =
+          static_cast<int>(Ins->getIndex()->getZExtValue());
+    else
+      BBNameAndID[BB.getName().str()] = -1;
+  }
+
+  EXPECT_THAT(BBNameAndID,
+              testing::UnorderedElementsAre(
+                  testing::Pair("", 0), testing::Pair("yes", 1),
+                  testing::Pair("no", -1), testing::Pair("exit", -1)));
+}
 } // namespace

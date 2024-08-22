@@ -2554,8 +2554,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
   bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
+  bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
+  bool Msa = false;
   const char *MipsTargetFeature = nullptr;
   StringRef ImplicitIt;
   for (const Arg *A :
@@ -2641,6 +2643,15 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           // recognize but skip over here.
           continue;
         break;
+      case llvm::Triple::aarch64:
+      case llvm::Triple::aarch64_be:
+      case llvm::Triple::aarch64_32:
+        if (Equal.first == "-mmapsyms") {
+          ImplicitMapSyms = Equal.second == "implicit";
+          checkArg(IsELF, {"default", "implicit"});
+          continue;
+        }
+        break;
       case llvm::Triple::mips:
       case llvm::Triple::mipsel:
       case llvm::Triple::mips64:
@@ -2665,7 +2676,14 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           CmdArgs.push_back("-soft-float");
           continue;
         }
-
+        if (Value == "-mmsa") {
+          Msa = true;
+          continue;
+        }
+        if (Value == "-mno-msa") {
+          Msa = false;
+          continue;
+        }
         MipsTargetFeature = llvm::StringSwitch<const char *>(Value)
                                 .Case("-mips1", "+mips1")
                                 .Case("-mips2", "+mips2")
@@ -2685,6 +2703,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                 .Default(nullptr);
         if (MipsTargetFeature)
           continue;
+        break;
       }
 
       if (Value == "-force_cpusubtype_ALL") {
@@ -2777,6 +2796,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           << "-Wa,--crel" << D.getTargetTriple();
     }
   }
+  if (ImplicitMapSyms)
+    CmdArgs.push_back("-mmapsyms=implicit");
+  if (Msa)
+    CmdArgs.push_back("-mmsa");
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
   if (UseNoExecStack)
@@ -7764,6 +7787,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
 
+  Args.AddAllArgs(CmdArgs,
+                  options::OPT_fsanitize_undefined_ignore_overflow_pattern_EQ);
+
   Args.AddLastArg(CmdArgs, options::OPT_foffload_uniform_block,
                   options::OPT_fno_offload_uniform_block);
 
@@ -9074,7 +9100,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass the CUDA path to the linker wrapper tool.
   for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
     auto TCRange = C.getOffloadToolChains(Kind);
-    for (auto &I : llvm::make_range(TCRange.first, TCRange.second)) {
+    for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;
       if (TC->getTriple().isNVPTX()) {
         CudaInstallationDetector CudaInstallation(D, TheTriple, Args);
