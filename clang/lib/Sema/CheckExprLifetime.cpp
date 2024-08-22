@@ -457,15 +457,15 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
        I != N; ++I) {
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
-    else if (EnableGSLAnalysis && I == 0) {
-      if (shouldTrackFirstArgument(Callee)) { // gsl
+    else if (EnableGSLAnalysis && I == 0) { // GSL
+      if (shouldTrackFirstArgument(Callee)) {
         VisitGSLPointerArg(Callee, Args[0],
                            !Callee->getReturnType()->isReferenceType());
-      } else {
-        if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
-            CCE && CCE->getConstructor()->getParent()->hasAttr<PointerAttr>())
-          VisitGSLPointerArg(CCE->getConstructor()->getParamDecl(0), Args[0],
-                             true);
+      } else if (auto *CCE = dyn_cast<CXXConstructExpr>(Call);
+                 CCE &&
+                 CCE->getConstructor()->getParent()->hasAttr<PointerAttr>()) {
+        VisitGSLPointerArg(CCE->getConstructor()->getParamDecl(0), Args[0],
+                           true);
       }
     }
   }
