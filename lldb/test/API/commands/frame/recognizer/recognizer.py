@@ -36,8 +36,3 @@ class MyFrameRecognizer(object):
 class MyOtherFrameRecognizer(object):
     def get_recognized_arguments(self, frame):
         return []
-
-
-class BazFrameRecognizer(object):
-    def should_hide(self, frame):
-        return "baz" in frame.name

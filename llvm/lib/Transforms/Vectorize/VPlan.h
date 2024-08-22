@@ -2041,12 +2041,12 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
-  /// incoming value does not have a mask associated.
+  /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
+  /// be omitted (implied by passing an odd number of operands) in which case
+  /// all other incoming values are merged into it.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert((Operands.size() + 1) % 2 == 0 &&
-           "Expected an odd number of operands");
+    assert(Operands.size() > 0 && "Expected at least one operand!");
   }
 
   VPBlendRecipe *clone() override {
@@ -2056,19 +2056,25 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that the first
-  /// incoming value has no mask.
-  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
+  /// A normalized blend is one that has an odd number of operands, whereby the
+  /// first operand does not have an associated mask.
+  bool isNormalized() const { return getNumOperands() % 2; }
+
+  /// Return the number of incoming values, taking into account when normalized
+  /// the first incoming value will have no mask.
+  unsigned getNumIncomingValues() const {
+    return (getNumOperands() + isNormalized()) / 2;
+  }
 
   /// Return incoming value number \p Idx.
   VPValue *getIncomingValue(unsigned Idx) const {
-    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - isNormalized());
   }
 
   /// Return mask number \p Idx.
   VPValue *getMask(unsigned Idx) const {
-    assert(Idx > 0 && "First index has no mask associated.");
-    return getOperand(Idx * 2);
+    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
+    return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
   }
 
   /// Generate the phi/select nodes.

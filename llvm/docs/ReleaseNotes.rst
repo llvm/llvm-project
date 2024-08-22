@@ -108,10 +108,13 @@ Changes to the RISC-V Backend
   fill value) rather than NOPs.
 * Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
 * ``-mcpu=sifive-p470`` was added.
+* Added Hazard3 CPU as taped out for RP2350: ``-mcpu=rp2350-hazard3`` (32-bit
+  only).
 * Fixed length vector support using RVV instructions now requires VLEN>=64. This
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
+* Added ``Smctr`` and ``Ssctr`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
