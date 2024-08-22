@@ -125,12 +125,12 @@ static std::optional<llvm::SmallVector<MachineInstr *>>
 moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   MachineInstr *DstInstr = Dst->getInstr();
   MachineInstr *SrcInstr = Src->getInstr();
-  MachineBasicBlock *MBB = SrcInstr->getParent();
-
   if (DstInstr == nullptr || SrcInstr == nullptr)
     return {};
+
+  MachineBasicBlock *MBB = SrcInstr->getParent();
   assert("This function only operates on a basic block level." &&
-         MBB == SrcInstr->getParent());
+         MBB == DstInstr->getParent());
 
   int SectionSize =
       std::distance(SrcInstr->getIterator(), DstInstr->getIterator());
