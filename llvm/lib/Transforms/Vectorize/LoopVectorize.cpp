@@ -7072,13 +7072,10 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
-                                               ElementCount VF) const {
-  InstructionCost Cost = 0;
-  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
-                        LLVMCtx, CM);
-
+InstructionCost
+LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
+                                          VPCostContext &CostCtx) const {
+  InstructionCost Cost;
   // Cost modeling for inductions is inaccurate in the legacy cost model
   // compared to the recipes that are generated. To match here initially during
   // VPlan cost model bring up directly use the induction costs from the legacy
@@ -7224,6 +7221,16 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
+  return Cost;
+}
+
+InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
+                                               ElementCount VF) const {
+  LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
+                        LLVMCtx, CM);
+  InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
+
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
