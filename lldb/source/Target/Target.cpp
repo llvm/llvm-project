@@ -4609,7 +4609,7 @@ uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
 
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
-  return GetPropertyAtIndexAs<int64_t>(
+  return GetPropertyAtIndexAs<uint64_t>(
       idx, g_target_properties[idx].default_uint_value);
 }
 

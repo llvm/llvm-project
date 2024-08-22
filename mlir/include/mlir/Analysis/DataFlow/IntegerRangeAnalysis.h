@@ -55,9 +55,10 @@ public:
 
   /// Visit an operation. Invoke the transfer function on each operation that
   /// implements `InferIntRangeInterface`.
-  void visitOperation(Operation *op,
-                      ArrayRef<const IntegerValueRangeLattice *> operands,
-                      ArrayRef<IntegerValueRangeLattice *> results) override;
+  LogicalResult
+  visitOperation(Operation *op,
+                 ArrayRef<const IntegerValueRangeLattice *> operands,
+                 ArrayRef<IntegerValueRangeLattice *> results) override;
 
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
