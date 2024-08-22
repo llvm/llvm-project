@@ -89,9 +89,6 @@ public:
               "invalid boolean value for option '%c': %s", short_option,
               option_arg.data());
       } break;
-      case 'u':
-        m_filtered_backtrace = false;
-        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -102,7 +99,6 @@ public:
       m_count = UINT32_MAX;
       m_start = 0;
       m_extended_backtrace = false;
-      m_filtered_backtrace = true;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -113,7 +109,6 @@ public:
     uint32_t m_count;
     uint32_t m_start;
     bool m_extended_backtrace;
-    bool m_filtered_backtrace;
   };
 
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
@@ -126,10 +121,7 @@ public:
             "call stacks.\n"
             "Use 'settings set frame-format' to customize the printing of "
             "frames in the backtrace and 'settings set thread-format' to "
-            "customize the thread header.\n"
-            "Customizable frame recognizers may filter out less interesting "
-            "frames, which results in gaps in the numbering. "
-            "Use '-u' to see all frames.",
+            "customize the thread header.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
@@ -207,8 +199,7 @@ protected:
           strm.PutChar('\n');
           if (ext_thread_sp->GetStatus(strm, m_options.m_start,
                                        m_options.m_count,
-                                       num_frames_with_source, stop_format,
-                                       !m_options.m_filtered_backtrace)) {
+                                       num_frames_with_source, stop_format)) {
             DoExtendedBacktrace(ext_thread_sp.get(), result);
           }
         }
@@ -237,8 +228,7 @@ protected:
     const uint32_t num_frames_with_source = 0;
     const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
-                           num_frames_with_source, stop_format,
-                           !m_options.m_filtered_backtrace, only_stacks)) {
+                           num_frames_with_source, stop_format, only_stacks)) {
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
@@ -1402,8 +1392,7 @@ public:
       const uint32_t num_frames_with_source = 0;
       const bool stop_format = false;
       exception_thread_sp->GetStatus(strm, 0, UINT32_MAX,
-                                     num_frames_with_source, stop_format,
-                                     /*filtered*/ false);
+                                     num_frames_with_source, stop_format);
     }
 
     return true;
