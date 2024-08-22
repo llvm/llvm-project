@@ -3750,9 +3750,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Expr *New = ME->getBase();
           for (NamedDecl *ND : PathToFD) {
             ValueDecl *VD = cast<ValueDecl>(ND);
-            New = MemberExpr::CreateImplicit(Ctx, New, isArrow, VD,
-                                             VD->getType(), VK_PRValue,
-                                             OK_Ordinary);
+            New = MemberExpr::CreateImplicit(
+                Ctx, New, isArrow, VD, VD->getType(), VK_PRValue, OK_Ordinary);
             isArrow = false;
           }
 

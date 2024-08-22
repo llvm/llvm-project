@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=X86_64
 // RUN: %clang_cc1 -triple i386-unknown-unknown -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=I386
 
-struct s {
+struct a {
   char x;
   short count;
   int array[] __attribute__((counted_by(count)));
@@ -31,21 +31,74 @@ struct s {
 // I386-NEXT:    store i16 [[CONV]], ptr [[COUNT]], align 2, !tbaa [[TBAA3:![0-9]+]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
-struct s *test1(int size) {
-  struct s *p = __builtin_malloc(sizeof(struct s) + sizeof(int) * size);
+struct a *test1(int size) {
+  struct a *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
 
   *__builtin_get_counted_by(p->array) = size;
   *__builtin_get_counted_by(&p->array[0]) = size;
   return p;
 }
 
-struct z {
+struct b {
+  int _filler;
+  struct {
+    int __filler;
+    struct {
+      int ___filler;
+      struct {
+        char count;
+      };
+    };
+  };
+  struct {
+    int filler_;
+    struct {
+      int filler__;
+      struct {
+        long array[] __attribute__((counted_by(count)));
+      };
+    };
+  };
+};
+
+// X86_64-LABEL: define dso_local noalias noundef ptr @test2(
+// X86_64-SAME: i32 noundef [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// X86_64-NEXT:  [[ENTRY:.*:]]
+// X86_64-NEXT:    [[CONV:%.*]] = sext i32 [[SIZE]] to i64
+// X86_64-NEXT:    [[MUL:%.*]] = shl nsw i64 [[CONV]], 2
+// X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
+// X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
+// X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i8
+// X86_64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 12
+// X86_64-NEXT:    store i8 [[CONV1]], ptr [[TMP0]], align 1, !tbaa [[TBAA6:![0-9]+]]
+// X86_64-NEXT:    ret ptr [[CALL]]
+//
+// I386-LABEL: define dso_local noalias noundef ptr @test2(
+// I386-SAME: i32 noundef [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// I386-NEXT:  [[ENTRY:.*:]]
+// I386-NEXT:    [[MUL:%.*]] = shl i32 [[SIZE]], 2
+// I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
+// I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
+// I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i8
+// I386-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i32 12
+// I386-NEXT:    store i8 [[CONV]], ptr [[TMP0]], align 1, !tbaa [[TBAA7:![0-9]+]]
+// I386-NEXT:    ret ptr [[CALL]]
+//
+struct b *test2(int size) {
+  struct b *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
+
+  *__builtin_get_counted_by(p->array) = size;
+  *__builtin_get_counted_by(&p->array[0]) = size;
+  return p;
+}
+
+struct c {
   char x;
   short count;
   int array[];
 };
 
-// X86_64-LABEL: define dso_local noalias noundef ptr @test2(
+// X86_64-LABEL: define dso_local noalias noundef ptr @test3(
 // X86_64-SAME: i32 noundef [[SIZE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // X86_64-NEXT:  [[ENTRY:.*:]]
 // X86_64-NEXT:    [[CONV:%.*]] = sext i32 [[SIZE]] to i64
@@ -54,7 +107,7 @@ struct z {
 // X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
 // X86_64-NEXT:    ret ptr [[CALL]]
 //
-// I386-LABEL: define dso_local noalias noundef ptr @test2(
+// I386-LABEL: define dso_local noalias noundef ptr @test3(
 // I386-SAME: i32 noundef [[SIZE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // I386-NEXT:  [[ENTRY:.*:]]
 // I386-NEXT:    [[MUL:%.*]] = shl i32 [[SIZE]], 2
@@ -62,8 +115,8 @@ struct z {
 // I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
-struct z *test2(int size) {
-  struct z *p = __builtin_malloc(sizeof(struct z) + sizeof(int) * size);
+struct c *test3(int size) {
+  struct c *p = __builtin_malloc(sizeof(struct c) + sizeof(int) * size);
 
   if (__builtin_get_counted_by(&p->array[0]))
     *__builtin_get_counted_by(&p->array[0]) = size;
@@ -75,9 +128,11 @@ struct z *test2(int size) {
 // X86_64: [[META3]] = !{!"short", [[META4:![0-9]+]], i64 0}
 // X86_64: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // X86_64: [[META5]] = !{!"Simple C/C++ TBAA"}
+// X86_64: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.
 // I386: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
 // I386: [[META4]] = !{!"short", [[META5:![0-9]+]], i64 0}
 // I386: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // I386: [[META6]] = !{!"Simple C/C++ TBAA"}
+// I386: [[TBAA7]] = !{[[META5]], [[META5]], i64 0}
 //.
