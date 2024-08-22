@@ -1929,6 +1929,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::scmp: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    Value *LHS, *RHS;
+    if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
+      return replaceInstUsesWith(
+          CI,
+          Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {LHS, RHS}));
+    break;
+  }
   case Intrinsic::bitreverse: {
     Value *IIOperand = II->getArgOperand(0);
     // bitrev (zext i1 X to ?) --> X ? SignBitC : 0
