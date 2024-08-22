@@ -1225,6 +1225,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp10m1f16_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.exp10m1f16
+)
+
+add_fp_unittest(
   copysign_test
   SUITE
     libc-math-smoke-tests
