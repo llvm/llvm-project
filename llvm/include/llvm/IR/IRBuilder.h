@@ -549,6 +549,12 @@ public:
   // Type creation methods
   //===--------------------------------------------------------------------===//
 
+  /// Fetch the type representing a byte.
+  IntegerType *getByteTy() {
+    const DataLayout &DL = BB->getDataLayout();
+    return Type::getIntNTy(Context, DL.getByteWidth());
+  }
+
   /// Fetch the type representing an 8-bit byte.
   ByteType *getByte8Ty() { return Type::getByte8Ty(Context); }
 
@@ -2090,12 +2096,12 @@ public:
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
                       GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
+    return CreateGEP(getByteTy(), Ptr, Offset, Name, NW);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
+    return CreateGEP(getByteTy(), Ptr, Offset, Name,
                      GEPNoWrapFlags::inBounds());
   }
 
