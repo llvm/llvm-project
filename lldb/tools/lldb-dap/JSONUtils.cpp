@@ -986,7 +986,13 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       body.try_emplace("reason", "exception");
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
-      body.try_emplace("reason", "breakpoint");
+      InstructionBreakpoint *inst_bp =
+          g_dap.GetInstructionBPFromStopReason(thread);
+      if (inst_bp) {
+        body.try_emplace("reason", "instruction breakpoint");
+      } else {
+        body.try_emplace("reason", "breakpoint");
+      }
       lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
       lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       std::string desc_str =

@@ -333,6 +333,10 @@ struct DAP {
 
   void SetThreadFormat(llvm::StringRef format);
 
+  InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
+
+  InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
   // "Content-Length:" field followed by the length, followed by the raw
