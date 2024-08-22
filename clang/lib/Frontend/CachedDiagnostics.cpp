@@ -669,6 +669,8 @@ struct CachingDiagnosticsProcessor::DiagnosticsConsumer
       // de-canonicalized filenames during compilation (the original diagnostic
       // uses canonical paths).
       assert(Serializer.DiagEngine.getClient() == OrigConsumer);
+      // FIXME: This is not sound: giving the original consumer diagnostics with
+      // different SourceManager may break them.
       Serializer.DiagEngine.Report(NewDiag);
     } else {
       OrigConsumer->HandleDiagnostic(Level, Info);
