@@ -2343,7 +2343,7 @@ bool SymtabShndxSection::isNeeded() const {
   // late, and we do not know them here. For simplicity, we just always create
   // a .symtab_shndx section when the amount of output sections is huge.
   size_t size = 0;
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (isa<OutputDesc>(cmd))
       ++size;
   return size >= SHN_LORESERVE;
@@ -4495,7 +4495,7 @@ void InStruct::reset() {
 
 static bool needsInterpSection() {
   return !config->relocatable && !config->shared &&
-         !config->dynamicLinker.empty() && script->needsInterpSection();
+         !config->dynamicLinker.empty() && ctx.script->needsInterpSection();
 }
 
 bool elf::hasMemtag() {
@@ -4630,7 +4630,7 @@ size_t MemtagGlobalDescriptors::getSize() const {
 }
 
 static OutputSection *findSection(StringRef name) {
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       if (osd->osec.name == name)
         return &osd->osec;
@@ -4682,7 +4682,8 @@ template <class ELFT> void elf::createSyntheticSections() {
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
-  bool hasDataRelRo = script->hasSectionsCommand && findSection(".data.rel.ro");
+  bool hasDataRelRo =
+      ctx.script->hasSectionsCommand && findSection(".data.rel.ro");
   in.bssRelRo = std::make_unique<BssSection>(
       hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   add(*in.bssRelRo);
@@ -4851,8 +4852,8 @@ template <class ELFT> void elf::createSyntheticSections() {
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (config->zRelro &&
-      ((script->phdrsCommands.empty() && !script->hasSectionsCommand) ||
-       script->seenRelroEnd)) {
+      ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
+       ctx.script->seenRelroEnd)) {
     in.relroPadding = std::make_unique<RelroPaddingSection>();
     add(*in.relroPadding);
   }

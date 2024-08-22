@@ -446,13 +446,6 @@ public:
   llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
 };
 
-struct ScriptWrapper {
-  LinkerScript s;
-  LinkerScript *operator->() { return &s; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
-
 } // end namespace lld::elf
 
 #endif // LLD_ELF_LINKER_SCRIPT_H
