@@ -50,7 +50,7 @@ consteval int array2() {
 
 struct S{
     int* i;
-    constexpr S() : i(new int(42)) {} // expected-note {{allocation performed here was not deallocated}}
+    constexpr S() : i(new int(42)) {} // #no-deallocation
     constexpr ~S() {delete i;}
 };
 
@@ -80,6 +80,7 @@ int e = array2(); // expected-error {{call to consteval function 'array2' is not
                   // expected-note {{in call to 'array2()'}}
 int alloc1 = (alloc(), 0);
 int alloc2 = (alloc_err(), 0); // expected-error {{call to consteval function 'alloc_err' is not a constant expression}}
+                               // expected-note@#no-deallocation {{allocation performed here was not deallocated}}
 
 constexpr int *intptr() {
   return new int;

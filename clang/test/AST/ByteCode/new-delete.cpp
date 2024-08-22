@@ -245,7 +245,7 @@ namespace std {
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{this placement new expression is not supported in constant expressions}} \
+    new (c) int{12}; // ref-note {{this placement new expression is not supported in constant expressions before C++2c}} \
                      // expected-note {{subexpression not valid in a constant expression}}
     return 0;
   }
@@ -328,7 +328,7 @@ namespace placement_new_delete {
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // ref-note {{this placement new expression is not supported in constant expressions }} \
+      delete new (std::align_val_t{64}) Overaligned; // ref-note {{this placement new expression is not supported in constant expressions}} \
                                                      // expected-note {{subexpression not valid in a constant expression}}
       break;
     }
