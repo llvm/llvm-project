@@ -43,6 +43,15 @@ enum ExceptionBehavior : uint8_t {
 
 }
 
+inline bool isValidExceptionBehavior(unsigned X) {
+  return X <= fp::ExceptionBehavior::ebStrict;
+}
+
+inline fp::ExceptionBehavior castToExceptionBehavior(unsigned X) {
+  assert(isValidExceptionBehavior(X));
+  return static_cast<fp::ExceptionBehavior>(X);
+}
+
 /// Returns a valid RoundingMode enumerator when given a string
 /// that is valid as input in constrained intrinsic rounding mode
 /// metadata.

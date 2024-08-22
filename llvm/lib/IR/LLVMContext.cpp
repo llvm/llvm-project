@@ -97,6 +97,16 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "convergencectrl operand bundle id drifted!");
   (void)ConvergenceCtrlEntry;
 
+  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fpe.round");
+  assert(RoundingEntry->second == LLVMContext::OB_fpe_round &&
+         "fpe.round operand bundle id drifted!");
+  (void)RoundingEntry;
+
+  auto *ExceptionEntry = pImpl->getOrInsertBundleTag("fpe.except");
+  assert(ExceptionEntry->second == LLVMContext::OB_fpe_except &&
+         "fpe.except operand bundle id drifted!");
+  (void)ExceptionEntry;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&
