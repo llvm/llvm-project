@@ -37,6 +37,10 @@ enum class ViolationID : uint8_t {
   // These only apply to callees, where the analysis stops at the Decl.
   DeclDisallowsInference,
 
+  // These both apply to indirect calls. The difference is that sometimes
+  // we have an actual Decl (generally a variable) which is the function
+  // pointer being called, and sometimes, typically due to a cast, we only
+  // have an expression.
   CallsDeclWithoutEffect,
   CallsExprWithoutEffect,
 };
@@ -52,6 +56,10 @@ struct ViolationSite {
 
   Kind VKind = Kind::Default;
   CXXDefaultArgExpr *DefaultArgExpr = nullptr;
+
+  ViolationSite() = default;
+  explicit ViolationSite(CXXDefaultArgExpr *E)
+      : VKind(Kind::DefaultArgExpr), DefaultArgExpr(E) {}
 };
 
 // Represents a violation of the rules, potentially for the entire duration of
@@ -1156,19 +1164,11 @@ private:
 
       ViolationSite PrevVS = VSite;
       if (VSite.VKind == ViolationSite::Kind::Default)
-        VSite = ViolationSite{.VKind = ViolationSite::Kind::DefaultArgExpr,
-                              .DefaultArgExpr = E};
+        VSite = ViolationSite{E};
 
       bool Result = Base::TraverseCXXDefaultArgExpr(E);
       VSite = PrevVS;
       return Result;
-    }
-
-    bool TraverseParmVarDecl(ParmVarDecl *PV) {
-      // By traversing a ParmVarDecl as if it were a simple VarDecl, we avoid
-      // incorrectly attributing default argument expressions to this function;
-      // they are properly attributed to callers, via a CXXDefaultArgExpr.
-      return Base::TraverseVarDecl(PV);
     }
 
     bool TraverseLambdaExpr(LambdaExpr *Lambda) {

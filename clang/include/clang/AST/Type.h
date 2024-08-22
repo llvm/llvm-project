@@ -4998,6 +4998,7 @@ public:
   }
   void insert(FunctionEffectKindSet Set) { KindBits |= Set.KindBits; }
 
+  bool empty() const { return KindBits.none(); }
   bool contains(const FunctionEffect::Kind EK) const {
     return KindBits.test(kindToPos(EK));
   }

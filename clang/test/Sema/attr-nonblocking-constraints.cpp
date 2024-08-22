@@ -258,13 +258,20 @@ struct T {
 };
 
 // Default arguments
-int badForDefaultArg(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+int badForDefaultArg(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} \
+                           expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} \
+						   expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
-void hasDefaultArg(int param = badForDefaultArg()) { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}}
+void hasDefaultArg(int param = badForDefaultArg()) { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}} \
+                                                        expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badForDefaultArg'}}
 }
 
 void nb21() [[clang::nonblocking]] {
-	hasDefaultArg(); // expected-note {{in evaluating default argument here}}
+	hasDefaultArg(); // expected-note {{in evaluating default argument here}} \
+	                    expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'hasDefaultArg'}}
+}
+
+void nb22(int param = badForDefaultArg()) [[clang::nonblocking]] { // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'badForDefaultArg'}}
 }
 
 // Verify traversal of implicit code paths - constructors and destructors.
