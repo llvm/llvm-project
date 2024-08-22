@@ -38,8 +38,8 @@ Eg2 e2 : register(t0) : register(u0);
 struct Eg3 {
   struct Bar {
     MyUAV a;
-    };
-    Bar b;
+  };
+  Bar b;
 };
 Eg3 e3 : register(u0);
 

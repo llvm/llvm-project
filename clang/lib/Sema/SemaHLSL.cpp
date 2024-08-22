@@ -483,16 +483,7 @@ struct RegisterBindingFlags {
 };
 
 static bool isDeclaredWithinCOrTBuffer(const Decl *TheDecl) {
-  if (!TheDecl)
-    return false;
-
-  // Traverse up the parent contexts
-  const DeclContext *context = TheDecl->getDeclContext();
-  if (isa<HLSLBufferDecl>(context)) {
-    return true;
-  }
-
-  return false;
+  return TheDecl && isa<HLSLBufferDecl>(TheDecl->getDeclContext());
 }
 
 // get the record decl from a var decl that we expect
@@ -501,7 +492,7 @@ static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   const Type *Ty = VD->getType()->getPointeeOrArrayElementType();
   assert(Ty && "Resource must have an element type.");
 
-  if (const auto *TheBuiltinTy = dyn_cast<BuiltinType>(Ty))
+  if (Ty->isBuiltinType())
     return nullptr;
 
   CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
@@ -528,19 +519,16 @@ static void setResourceClassFlagsFromDeclResourceClass(
 }
 
 template <typename T>
-static const T *
-getSpecifiedHLSLAttrFromVarDeclOrRecordDecl(VarDecl *VD,
-                                            RecordDecl *TheRecordDecl) {
-  if (VD) {
-    TheRecordDecl = getRecordDeclFromVarDecl(VD);
-    if (!TheRecordDecl)
-      return nullptr;
-  }
+static const T *getSpecifiedHLSLAttrFromRecordDecl(RecordDecl *TheRecordDecl) {
+  if (!TheRecordDecl)
+    return nullptr;
 
   // make a lambda that checks if the decl has the specified attr,
   // and if not, loops over the field members and checks for the
   // specified attribute
   auto f = [](RecordDecl *TheRecordDecl) -> const T * {
+    if (TheRecordDecl->hasAttr<T>())
+      return TheRecordDecl->getAttr<T>();
     for (auto *FD : TheRecordDecl->fields()) {
       const T *Attr = FD->getAttr<T>();
       if (Attr)
@@ -549,22 +537,29 @@ getSpecifiedHLSLAttrFromVarDeclOrRecordDecl(VarDecl *VD,
     return nullptr;
   };
 
-  if (TheRecordDecl) {
-    // if the member's base type is a ClassTemplateSpecializationDecl,
-    // check if it has a member handle with a resource class attr
-    // this is necessary while resources like RWBuffer are defined externally
-    if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl)) {
-      auto TheCXXRecordDecl =
-          TDecl->getSpecializedTemplate()->getTemplatedDecl();
-      TheCXXRecordDecl = TheCXXRecordDecl->getCanonicalDecl();
+  // if the member's base type is a ClassTemplateSpecializationDecl,
+  // check if it has a member handle with a resource class attr
+  // this is necessary while resources like RWBuffer are defined externally
+  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl)) {
+    auto TheCXXRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
+    TheCXXRecordDecl = TheCXXRecordDecl->getCanonicalDecl();
 
-      return f(TheCXXRecordDecl);
-    }
-
-    return f(TheRecordDecl);
+    return f(TheCXXRecordDecl);
   }
-  llvm_unreachable("TheRecordDecl should not be null");
-  return nullptr;
+
+  return f(TheRecordDecl);
+}
+
+template <typename T>
+static const T *getSpecifiedHLSLAttrFromVarDecl(VarDecl *VD) {
+  RecordDecl *TheRecordDecl = nullptr;
+  if (VD) {
+    TheRecordDecl = getRecordDeclFromVarDecl(VD);
+    if (!TheRecordDecl)
+      return nullptr;
+  }
+
+  return getSpecifiedHLSLAttrFromRecordDecl<T>(TheRecordDecl);
 }
 
 static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
@@ -584,24 +579,16 @@ static void setFlagsFromType(QualType TheQualTy, RegisterBindingFlags &Flags) {
     return;
 
   RecordDecl *SubRecordDecl = TheRecordTy->getDecl();
-  bool resClassSet = false;
   const HLSLResourceClassAttr *Attr =
-      getSpecifiedHLSLAttrFromVarDeclOrRecordDecl<HLSLResourceClassAttr>(
-          nullptr, SubRecordDecl);
+      getSpecifiedHLSLAttrFromRecordDecl<HLSLResourceClassAttr>(SubRecordDecl);
   // find the attr if it's on the member (the handle) of the resource
   if (Attr) {
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
     setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
-    resClassSet = true;
   }
-  // otherwise, check if the member of the UDT itself has a resource class attr
-  else if (const auto *Attr = SubRecordDecl->getAttr<HLSLResourceClassAttr>()) {
-    llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
-    setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
-    resClassSet = true;
-  }
+
   // recurse if there are more fields to analyze
-  if (!resClassSet) {
+  else {
     for (auto Field : SubRecordDecl->fields()) {
       setFlagsFromType(Field->getType(), Flags);
     }
@@ -664,11 +651,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
       Flags.SRV = true;
   } else if (TheVarDecl) {
     const HLSLResourceClassAttr *resClassAttr =
-        getSpecifiedHLSLAttrFromVarDeclOrRecordDecl<HLSLResourceClassAttr>(
-            TheVarDecl, nullptr);
-    const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
-    while (TheBaseType->isArrayType())
-      TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
+        getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
 
     if (resClassAttr) {
       llvm::hlsl::ResourceClass DeclResourceClass =
@@ -676,6 +659,9 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
       Flags.Resource = true;
       setResourceClassFlagsFromDeclResourceClass(Flags, DeclResourceClass);
     } else {
+      const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
+      while (TheBaseType->isArrayType())
+        TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
       if (TheBaseType->isArithmeticType())
         Flags.Basic = true;
       else if (TheBaseType->isRecordType()) {
@@ -694,7 +680,7 @@ static RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S,
 
 enum class RegisterType { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
 
-static RegisterType getRegisterTypeIndex(StringRef Slot) {
+static RegisterType getRegisterType(StringRef Slot) {
   switch (Slot[0]) {
   case 't':
   case 'T':
@@ -735,7 +721,7 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
 
-      RegisterType otherRegType = getRegisterTypeIndex(attr->getSlot());
+      RegisterType otherRegType = getRegisterType(attr->getSlot());
       if (RegisterTypesDetected[static_cast<int>(otherRegType)]) {
         if (PreviousConflicts[TheDecl].count(otherRegType))
           continue;
@@ -752,16 +738,13 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 }
 
 static std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
-  VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl);
-  HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl);
-
-  if (TheVarDecl) {
+  if (VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl)) {
     QualType TheQualTy = TheVarDecl->getType();
     PrintingPolicy PP = S.getPrintingPolicy();
     return QualType::getAsString(TheQualTy.split(), PP);
-  } else {
-    return CBufferOrTBuffer->isCBuffer() ? "cbuffer" : "tbuffer";
   }
+  if (HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl))
+    return CBufferOrTBuffer->isCBuffer() ? "cbuffer" : "tbuffer";
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
@@ -802,8 +785,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
       resClassAttr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
     } else if (TheVarDecl) {
       resClassAttr =
-          getSpecifiedHLSLAttrFromVarDeclOrRecordDecl<HLSLResourceClassAttr>(
-              TheVarDecl, nullptr);
+          getSpecifiedHLSLAttrFromVarDecl<HLSLResourceClassAttr>(TheVarDecl);
     }
 
     assert(resClassAttr &&
@@ -906,7 +888,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
 
   // Validate.
   if (!Slot.empty()) {
-    regType = getRegisterTypeIndex(Slot);
+    regType = getRegisterType(Slot);
     if (regType == RegisterType::I) {
       Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
