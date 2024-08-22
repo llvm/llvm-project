@@ -94,6 +94,7 @@
 // CHECK-NEXT: max-inlinable-size = 100
 // CHECK-NEXT: max-nodes = 225000
 // CHECK-NEXT: max-symbol-complexity = 35
+// CHECK-NEXT: max-tainted-symbol-complexity = 9
 // CHECK-NEXT: max-times-inline-large = 32
 // CHECK-NEXT: min-cfg-size-treat-functions-as-large = 14
 // CHECK-NEXT: mode = deep

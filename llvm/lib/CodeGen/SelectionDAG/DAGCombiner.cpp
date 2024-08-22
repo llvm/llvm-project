@@ -15808,13 +15808,16 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
   }
 
-  SmallSetVector<SDValue, 8> MaybePoisonOperands;
-  for (SDValue Op : N0->ops()) {
+  SmallSet<SDValue, 8> MaybePoisonOperands;
+  SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
+  for (auto [OpNo, Op] : enumerate(N0->ops())) {
     if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
                                              /*Depth*/ 1))
       continue;
     bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
-    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op);
+    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
+    if (IsNewMaybePoisonOperand)
+      MaybePoisonOperandNumbers.push_back(OpNo);
     if (!HadMaybePoisonOperands)
       continue;
     if (IsNewMaybePoisonOperand && !AllowMultipleMaybePoisonOperands) {
@@ -15826,7 +15829,18 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // it could create undef or poison due to it's poison-generating flags.
   // So not finding any maybe-poison operands is fine.
 
-  for (SDValue MaybePoisonOperand : MaybePoisonOperands) {
+  for (unsigned OpNo : MaybePoisonOperandNumbers) {
+    // N0 can mutate during iteration, so make sure to refetch the maybe poison
+    // operands via the operand numbers. The typical scenario is that we have
+    // something like this
+    //   t262: i32 = freeze t181
+    //   t150: i32 = ctlz_zero_undef t262
+    //   t184: i32 = ctlz_zero_undef t181
+    //   t268: i32 = select_cc t181, Constant:i32<0>, t184, t186, setne:ch
+    // When freezing the t181 operand we get t262 back, and then the
+    // ReplaceAllUsesOfValueWith call will not only replace t181 by t262, but
+    // also recursively replace t184 by t150.
+    SDValue MaybePoisonOperand = N->getOperand(0).getOperand(OpNo);
     // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
     if (MaybePoisonOperand.getOpcode() == ISD::UNDEF)
       continue;
@@ -27919,6 +27933,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     return S;
   if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N2, N3, CC, DAG))
     return S;
+  if (SDValue ABD = foldSelectToABD(N0, N1, N2, N3, CC, DL))
+    return ABD;
 
   return SDValue();
 }

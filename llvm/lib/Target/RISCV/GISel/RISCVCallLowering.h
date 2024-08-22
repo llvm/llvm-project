@@ -40,9 +40,6 @@ public:
                  CallLoweringInfo &Info) const override;
 
 private:
-  bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
-                      ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
-
   void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
                            CallLowering::IncomingValueHandler &Handler,
                            IncomingValueAssigner &Assigner,
