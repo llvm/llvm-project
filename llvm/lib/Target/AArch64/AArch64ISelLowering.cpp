@@ -6106,6 +6106,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 OpVT == MVT::v8i16 || OpVT == MVT::v4i16)) ||
          (ResVT == MVT::i64 && (OpVT == MVT::v4i32 || OpVT == MVT::v2i32))) &&
         "Unexpected aarch64_neon_u/saddlv type");
+    (void)OpVT;
     // In order to avoid insert_subvector, use v4i32 rather than v2i32.
     SDValue ADDLV = DAG.getNode(
         IntNo == Intrinsic::aarch64_neon_uaddlv ? AArch64ISD::UADDLV
