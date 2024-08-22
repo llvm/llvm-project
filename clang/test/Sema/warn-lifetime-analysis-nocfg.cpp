@@ -479,3 +479,16 @@ void testForBug49342()
 {
   auto it = std::iter<char>{} - 2; // Used to be false positive.
 }
+
+namespace GH93386 {
+// verify no duplicated diagnostics are emitted.
+struct [[gsl::Pointer]] S {
+  S(const std::vector<int>& abc [[clang::lifetimebound]]);
+};
+
+S test(std::vector<int> a) {
+  return S(a);  // expected-warning {{address of stack memory associated with}}
+}
+
+auto s = S(std::vector<int>()); // expected-warning {{temporary whose address is used as value of local variable}}
+}
