@@ -141,11 +141,11 @@ TEST(BasicBlockDbgInfoTest, SplitBasicBlockBefore) {
   Function *F = M->getFunction("func");
 
   BasicBlock &BB = F->getEntryBlock();
-  auto I = std::prev(BB.end(), 2);
+  auto I = std::prev(BB.end(), 2); // store i32 2, ptr %1.
   BB.splitBasicBlockBefore(I, "before");
 
   BasicBlock &BBBefore = F->getEntryBlock();
-  auto I2 = std::prev(BBBefore.end(), 2);
+  auto I2 = std::prev(BBBefore.end()); // br label %1 (new).
   ASSERT_TRUE(I2->hasDbgRecords());
 }
 
