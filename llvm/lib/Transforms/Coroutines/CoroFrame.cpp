@@ -209,6 +209,16 @@ public:
 } // end anonymous namespace
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static std::string getBasicBlockLabel(const BasicBlock *BB) {
+  if (BB->hasName())
+    return BB->getName().str();
+
+  std::string S;
+  raw_string_ostream OS(S);
+  BB->printAsOperand(OS, false);
+  return OS.str().substr(1);
+}
+
 LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(
     StringRef Label, BitVector const &BV,
     const ReversePostOrderTraversal<Function *> &RPOT) const {
@@ -216,7 +226,7 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
     if (BV[BBNo])
-      dbgs() << " " << BB->getName();
+      dbgs() << " " << getBasicBlockLabel(BB);
   }
   dbgs() << "\n";
 }
@@ -231,7 +241,7 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
   ReversePostOrderTraversal<Function *> RPOT(F);
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
-    dbgs() << BB->getName() << ":\n";
+    dbgs() << getBasicBlockLabel(BB) << ":\n";
     dump("   Consumes", Block[BBNo].Consumes, RPOT);
     dump("      Kills", Block[BBNo].Kills, RPOT);
   }
@@ -430,10 +440,7 @@ struct RematGraph {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const {
     dbgs() << "Entry (";
-    if (EntryNode->Node->getParent()->hasName())
-      dbgs() << EntryNode->Node->getParent()->getName();
-    else
-      EntryNode->Node->getParent()->printAsOperand(dbgs(), false);
+    dbgs() << getBasicBlockLabel(EntryNode->Node->getParent());
     dbgs() << ") : " << *EntryNode->Node << "\n";
     for (auto &E : Remats) {
       dbgs() << *(E.first) << "\n";
