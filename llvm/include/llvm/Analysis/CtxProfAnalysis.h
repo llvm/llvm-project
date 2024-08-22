@@ -95,7 +95,12 @@ public:
 
   PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
 
+  /// Get the instruction instrumenting a callsite, or nullptr if that cannot be
+  /// found.
   static InstrProfCallsite *getCallsiteInstrumentation(CallBase &CB);
+
+  /// Get the instruction instrumenting a BB, or nullptr if not present.
+  static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
 };
 
 class CtxProfAnalysisPrinterPass
