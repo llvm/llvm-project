@@ -185,10 +185,14 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
   // We have already propagated a constant for this user.
   if (KnownConstants.contains(User))
     return {0, 0};
-
-  // Cache the iterator before visiting.
-  LastVisited = Use ? KnownConstants.insert({Use, C}).first
-                    : KnownConstants.end();
+  if (Use) {
+    KnownConstants.insert({Use, C});
+    LastVisitedUse = Use;
+    LastVisitedConstant = C;
+  } else {
+    LastVisitedUse = nullptr;
+    LastVisitedConstant = nullptr;
+  }
 
   Cost CodeSize = 0;
   if (auto *I = dyn_cast<SwitchInst>(User)) {
@@ -228,12 +232,12 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
 }
 
 Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  if (I.getCondition() != LastVisited->first)
+  if (I.getCondition() != LastVisitedUse)
     return 0;
 
-  auto *C = dyn_cast<ConstantInt>(LastVisited->second);
+  auto *C = dyn_cast<ConstantInt>(LastVisitedConstant);
   if (!C)
     return 0;
 
@@ -253,12 +257,12 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
 }
 
 Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  if (I.getCondition() != LastVisited->first)
+  if (I.getCondition() != LastVisitedUse)
     return 0;
 
-  BasicBlock *Succ = I.getSuccessor(LastVisited->second->isOneValue());
+  BasicBlock *Succ = I.getSuccessor(LastVisitedConstant->isOneValue());
   // Initialize the worklist with the dead successor as long as
   // it is executable and has a unique predecessor.
   SmallVector<BasicBlock *> WorkList;
@@ -369,10 +373,10 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
 }
 
 Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  if (isGuaranteedNotToBeUndefOrPoison(LastVisited->second))
-    return LastVisited->second;
+  if (isGuaranteedNotToBeUndefOrPoison(LastVisitedConstant))
+    return LastVisitedConstant;
   return nullptr;
 }
 
@@ -397,11 +401,11 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 }
 
 Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  if (isa<ConstantPointerNull>(LastVisited->second))
+  if (isa<ConstantPointerNull>(LastVisitedConstant))
     return nullptr;
-  return ConstantFoldLoadFromConstPtr(LastVisited->second, I.getType(), DL);
+  return ConstantFoldLoadFromConstPtr(LastVisitedConstant, I.getType(), DL);
 }
 
 Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
@@ -421,53 +425,53 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 }
 
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  if (I.getCondition() != LastVisited->first)
+  if (I.getCondition() != LastVisitedUse)
     return nullptr;
 
-  Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
+  Value *V = LastVisitedConstant->isZeroValue() ? I.getFalseValue()
                                                 : I.getTrueValue();
   Constant *C = findConstantFor(V, KnownConstants);
   return C;
 }
 
 Constant *InstCostVisitor::visitCastInst(CastInst &I) {
-  return ConstantFoldCastOperand(I.getOpcode(), LastVisited->second,
+  return ConstantFoldCastOperand(I.getOpcode(), LastVisitedConstant,
                                  I.getType(), DL);
 }
 
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  bool Swap = I.getOperand(1) == LastVisited->first;
+  bool Swap = I.getOperand(1) == LastVisitedUse;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 
-  Constant *Const = LastVisited->second;
+  Constant *Const = LastVisitedConstant;
   return Swap ?
         ConstantFoldCompareInstOperands(I.getPredicate(), Other, Const, DL)
       : ConstantFoldCompareInstOperands(I.getPredicate(), Const, Other, DL);
 }
 
 Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  return ConstantFoldUnaryOpOperand(I.getOpcode(), LastVisited->second, DL);
+  return ConstantFoldUnaryOpOperand(I.getOpcode(), LastVisitedConstant, DL);
 }
 
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+  assert(LastVisitedUse != nullptr && "missing last use!");
 
-  bool Swap = I.getOperand(1) == LastVisited->first;
+  bool Swap = I.getOperand(1) == LastVisitedUse;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 
-  Constant *Const = LastVisited->second;
+  Constant *Const = LastVisitedConstant;
   return dyn_cast_or_null<Constant>(Swap ?
         simplifyBinOp(I.getOpcode(), Other, Const, SimplifyQuery(DL))
       : simplifyBinOp(I.getOpcode(), Const, Other, SimplifyQuery(DL)));

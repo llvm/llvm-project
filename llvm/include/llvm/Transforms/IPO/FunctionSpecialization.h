@@ -189,7 +189,8 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   // (some of their incoming values may have become constant or dead).
   SmallVector<Instruction *> PendingPHIs;
 
-  ConstMap::iterator LastVisited;
+  Value* LastVisitedUse = nullptr;
+  Constant* LastVisitedConstant = nullptr;
 
 public:
   InstCostVisitor(const DataLayout &DL, BlockFrequencyInfo &BFI,
