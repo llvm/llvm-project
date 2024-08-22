@@ -1322,3 +1322,31 @@ define i32 @main15_logical(i32 %argc) {
   %retval.0 = select i1 %or.cond, i32 2, i32 1
   ret i32 %retval.0
 }
+
+define i1 @no_masks_with_logical_or(i32 %a, i32 %b, i32 noundef %c) {
+; CHECK-LABEL: @no_masks_with_logical_or(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[B:%.*]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[TMP2]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR2]]
+;
+  %cmp1 = icmp ne i32 %a, 0
+  %cmp2 = icmp ne i32 %b, 63
+  %or1 = select i1 %cmp1, i1 true, i1 %cmp2
+  %cmp3 = icmp ne i32 %c, 0
+  %or2 = or i1 %or1, %cmp3
+  ret i1 %or2
+}
+
+define i1 @only_one_masked(i64 %a) {
+; CHECK-LABEL: @only_one_masked(
+; CHECK-NEXT:    [[AND:%.*]] = icmp eq i64 [[A:%.*]], -9223372036854775808
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ne i64 %a, 0
+  %a.mask = and i64 %a, 9223372036854775807
+  %cmp2 = icmp eq i64 %a.mask, 0
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
