@@ -95,6 +95,7 @@ void Ctx::reset() {
   driver = LinkerDriver();
 
   bufferStart = nullptr;
+  mainPart = nullptr;
   tlsPhdr = nullptr;
   out = OutSections{};
   outputSections.clear();
@@ -3094,7 +3095,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  mainPart = &partitions[0];
+  ctx.mainPart = &partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
