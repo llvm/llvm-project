@@ -2890,51 +2890,47 @@ CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                          RValue Update, BinaryOperatorKind BO,
                                          bool IsXBinopExpr) {
   CGBuilderTy &Bld = CGF.Builder;
-  unsigned int IID = -1;
-  RValue UpdateFixed = Update;
+  llvm::AtomicRMWInst::BinOp Kind = llvm::AtomicRMWInst::FAdd;
   switch (BO) {
   case BO_Sub:
-    UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
-    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
+    Kind = llvm::AtomicRMWInst::FSub;
     break;
   case BO_Add:
-    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
+    Kind = llvm::AtomicRMWInst::FAdd;
     break;
   case BO_LT:
-    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmax
-                       : llvm::Intrinsic::amdgcn_flat_atomic_fmin;
+    Kind = IsXBinopExpr ? llvm::AtomicRMWInst::FMax : llvm::AtomicRMWInst::FMin;
     break;
   case BO_GT:
-    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmin
-                       : llvm::Intrinsic::amdgcn_flat_atomic_fmax;
+    Kind = IsXBinopExpr ? llvm::AtomicRMWInst::FMin : llvm::AtomicRMWInst::FMax;
     break;
   default:
     // remaining operations are not supported yet
     return std::make_pair(false, RValue::get(nullptr));
   }
 
-  SmallVector<llvm::Value *> FPAtomicArgs;
-  FPAtomicArgs.reserve(2);
-  FPAtomicArgs.push_back(X.getPointer(CGF));
-  FPAtomicArgs.push_back(UpdateFixed.getScalarVal());
+  llvm::Value *UpdateVal = Update.getScalarVal();
 
-  llvm::Value *CallInst = nullptr;
-  if (Update.getScalarVal()->getType()->isFloatTy() &&
-      (getOffloadArch(CGF.CGM) == OffloadArch::GFX90a)) {
-    // Fast FP atomics are not available for single precision address located in
-    // FLAT address space.
-    // We need to check the address space at runtime to determine
-    // which function we can call. This is done in the OpenMP runtime.
-    CallInst =
-        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGM.getModule(), OMPRTL___kmpc_unsafeAtomicAdd),
-                            FPAtomicArgs);
-  } else {
-    llvm::Function *AtomicF = CGM.getIntrinsic(
-        IID, {FPAtomicArgs[1]->getType(), FPAtomicArgs[0]->getType(),
-              FPAtomicArgs[1]->getType()});
-    CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
-  }
+  // The scope of the atomic, currently set to 'agent'. By default, if this
+  // scope is not specified the scope will be 'system' scope.
+  llvm::SyncScope::ID SSID =
+      CGM.getLLVMContext().getOrInsertSyncScopeID("agent");
+  llvm::AtomicRMWInst *CallInst = Bld.CreateAtomicRMW(
+      Kind, X.getAddress(), UpdateVal, llvm::AtomicOrdering::Monotonic, SSID);
+
+  // The following settings are used to get the atomicrmw instruction to
+  // be closer in spirit to the previous use of the intrinsic.
+  // Setting of amdgpu.no.fine.grained.memory property
+  llvm::MDTuple *EmptyMD = llvm::MDNode::get(CGM.getLLVMContext(), {});
+  CallInst->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+
+  // Setting of amdgpu.ignore.denormal.mode
+  if (Kind == llvm::AtomicRMWInst::FAdd && UpdateVal->getType()->isFloatTy())
+    CallInst->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+
+  // Note: breaks fp_atomics test so volatile cannot be used
+  // CallInst->setVolatile(true);
+
   return std::make_pair(true, RValue::get(CallInst));
 }
 

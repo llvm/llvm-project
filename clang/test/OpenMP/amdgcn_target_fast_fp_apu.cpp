@@ -52,7 +52,7 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META11:![0-9]+]], !amdgpu.ignore.denormal.mode [[META11]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -73,7 +73,7 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META11]], !amdgpu.ignore.denormal.mode [[META11]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -94,9 +94,12 @@ int main(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr [[TMP0]], float 1.000000e+00) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META11]], !amdgpu.ignore.denormal.mode [[META11]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
 //
+//.
+// CHECK: [[META11]] = !{}
+//.

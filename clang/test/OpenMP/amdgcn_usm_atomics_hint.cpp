@@ -26,7 +26,7 @@ double test_amdgcn_target_atomic_hints() {
 
   #pragma omp target teams distribute parallel for map(tofrom:a,b)
   for (int i = 0; i < N; i++) {
-    // CHECK-HINTS: call {{.*}} @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64
+    // CHECK-HINTS: = atomicrmw fadd
     #pragma omp atomic hint(amd_fast_fp_atomics)
     a+=(double)i;
 
@@ -49,11 +49,11 @@ double test_amdgcn_target_atomic_unsafe_opt() {
 
   #pragma omp target teams distribute parallel for map(tofrom:a,b,c)
   for (int i = 0; i < N; i++) {
-    // CHECK-FLAG-UNSAFE: call {{.*}} @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64
+    // CHECK-FLAG-UNSAFE: = atomicrmw fadd
     #pragma omp atomic
     a+=(double)i;
 
-    // CHECK-FLAG-UNSAFE: call {{.*}} @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64
+    // CHECK-FLAG-UNSAFE: = atomicrmw fadd
     #pragma omp atomic hint(amd_fast_fp_atomics)
     b+=(double)i;
 
