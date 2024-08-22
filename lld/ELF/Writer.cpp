@@ -315,7 +315,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     sec->maybeCompress<ELFT>();
 
   if (script->hasSectionsCommand)
-    script->allocateHeaders(mainPart->phdrs);
+    script->allocateHeaders(ctx.mainPart->phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
@@ -833,10 +833,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   // .rela_iplt_{start,end} mark the start and the end of .rel[a].dyn.
-  if (ctx.sym.relaIpltStart && mainPart->relaDyn->isNeeded()) {
-    ctx.sym.relaIpltStart->section = mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->section = mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->value = mainPart->relaDyn->getSize();
+  if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded()) {
+    ctx.sym.relaIpltStart->section = ctx.mainPart->relaDyn.get();
+    ctx.sym.relaIpltEnd->section = ctx.mainPart->relaDyn.get();
+    ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize();
   }
 
   PhdrEntry *last = nullptr;
@@ -1681,7 +1681,7 @@ static void removeUnusedSyntheticSections() {
         // we would fail to remove it here.
         if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
           if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
-            if (relSec == mainPart->relaDyn.get())
+            if (relSec == ctx.mainPart->relaDyn.get())
               return false;
         unused.insert(sec);
         return true;
@@ -1721,10 +1721,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // It should be okay as no one seems to care about the type.
     // Even the author of gold doesn't remember why gold behaves that way.
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-    if (mainPart->dynamic->parent) {
+    if (ctx.mainPart->dynamic->parent) {
       Symbol *s = symtab.addSymbol(Defined{
           ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
-          /*value=*/0, /*size=*/0, mainPart->dynamic.get()});
+          /*value=*/0, /*size=*/0, ctx.mainPart->dynamic.get()});
       s->isUsedInRegularObj = true;
     }
 
@@ -1951,13 +1951,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         addPhdrForSection(part, SHT_RISCV_ATTRIBUTES, PT_RISCV_ATTRIBUTES,
                           PF_R);
     }
-    ctx.out.programHeaders->size = sizeof(Elf_Phdr) * mainPart->phdrs.size();
+    ctx.out.programHeaders->size =
+        sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
 
     // Find the TLS segment. This happens before the section layout loop so that
     // Android relocation packing can look up TLS symbol addresses. We only need
     // to care about the main partition here because all TLS symbols were moved
     // to the main partition (see MarkLive.cpp).
-    for (PhdrEntry *p : mainPart->phdrs)
+    for (PhdrEntry *p : ctx.mainPart->phdrs)
       if (p->p_type == PT_TLS)
         ctx.tlsPhdr = p;
   }
@@ -2720,8 +2721,8 @@ static uint16_t getELFType() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
-  writeEhdr<ELFT>(ctx.bufferStart, *mainPart);
-  writePhdrs<ELFT>(ctx.bufferStart + sizeof(Elf_Ehdr), *mainPart);
+  writeEhdr<ELFT>(ctx.bufferStart, *ctx.mainPart);
+  writePhdrs<ELFT>(ctx.bufferStart + sizeof(Elf_Ehdr), *ctx.mainPart);
 
   auto *eHdr = reinterpret_cast<Elf_Ehdr *>(ctx.bufferStart);
   eHdr->e_type = getELFType();
@@ -2884,7 +2885,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!mainPart->buildId || !mainPart->buildId->getParent())
+  if (!ctx.mainPart->buildId || !ctx.mainPart->buildId->getParent())
     return;
 
   if (config->buildId == BuildIdKind::Hexstring) {
@@ -2894,7 +2895,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   }
 
   // Compute a hash of all sections of the output file.
-  size_t hashSize = mainPart->buildId->hashSize;
+  size_t hashSize = ctx.mainPart->buildId->hashSize;
   std::unique_ptr<uint8_t[]> buildId(new uint8_t[hashSize]);
   MutableArrayRef<uint8_t> output(buildId.get(), hashSize);
   llvm::ArrayRef<uint8_t> input{ctx.bufferStart, size_t(fileSize)};
