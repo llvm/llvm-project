@@ -701,6 +701,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1925,6 +1927,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.enable_display_extended_backtrace =
+      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -3111,8 +3115,9 @@ void request_stackTrace(const llvm::json::Object &request) {
     // This will always return an invalid thread when
     // libBacktraceRecording.dylib is not loaded or if there is no extended
     // backtrace.
-    lldb::SBThread queue_backtrace_thread =
-        thread.GetExtendedBacktraceThread("libdispatch");
+    lldb::SBThread queue_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      queue_backtrace_thread = thread.GetExtendedBacktraceThread("libdispatch");
     if (queue_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the enqueued thread.
       totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
@@ -3120,8 +3125,10 @@ void request_stackTrace(const llvm::json::Object &request) {
 
     // This will always return an invalid thread when there is no exception in
     // the current thread.
-    lldb::SBThread exception_backtrace_thread =
-        thread.GetCurrentExceptionBacktrace();
+    lldb::SBThread exception_backtrace_thread;
+    if (g_dap.enable_display_extended_backtrace)
+      exception_backtrace_thread = thread.GetCurrentExceptionBacktrace();
+
     if (exception_backtrace_thread.IsValid()) {
       // One extra frame as a label to mark the exception thread.
       totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
