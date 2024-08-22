@@ -27098,7 +27098,8 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 
 // Return true if the atomic operation expansion will lower to use a library
 // call, and is thus ineligible to use an LLSC expansion.
-static bool rmwOpMayLowerToLibcall(const AtomicRMWInst *RMW) {
+static bool rmwOpMayLowerToLibcall(const AArch64Subtarget &Subtarget,
+                                   const AtomicRMWInst *RMW) {
   if (!RMW->isFloatingPointOperation())
     return false;
   switch (RMW->getType()->getScalarType()->getTypeID()) {
@@ -27106,7 +27107,8 @@ static bool rmwOpMayLowerToLibcall(const AtomicRMWInst *RMW) {
   case Type::DoubleTyID:
   case Type::HalfTyID:
   case Type::BFloatTyID:
-    return false;
+    // Will use soft float
+    return !Subtarget.hasFPARMv8();
   default:
     // fp128 will emit library calls.
     return true;
@@ -27161,7 +27163,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // succeed. So at -O0 lower this operation to a CAS loop. Also worthwhile if
   // we have a single CAS instruction that can replace the loop.
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None ||
-      Subtarget->hasLSE() || rmwOpMayLowerToLibcall(AI))
+      Subtarget->hasLSE() || rmwOpMayLowerToLibcall(*Subtarget, AI))
     return AtomicExpansionKind::CmpXChg;
 
   return AtomicExpansionKind::LLSC;
