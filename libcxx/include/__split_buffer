@@ -430,7 +430,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::swap(__split
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::reserve(size_type __n) {
-  if (__n < capacity()) {
+  if (__n > capacity()) {
     __split_buffer<value_type, __alloc_rr&> __t(__n, 0, __alloc());
     __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
     std::swap(__first_, __t.__first_);
