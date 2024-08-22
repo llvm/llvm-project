@@ -106,7 +106,7 @@ public:
   };
 
 private:
-  std::shared_ptr<LangOptions>            LangOpts;
+  std::unique_ptr<LangOptions> LangOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
@@ -704,7 +704,7 @@ public:
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
                   const HeaderSearchOptions &HSOpts,
-                  std::shared_ptr<LangOptions> LangOpts = nullptr,
+                  const LangOptions *LangOpts = nullptr,
                   bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
