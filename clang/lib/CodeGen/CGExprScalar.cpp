@@ -2785,7 +2785,7 @@ static bool matchesPostDecrInWhile(const UnaryOperator *UO, bool isInc,
   if (isInc || isPre)
     return false;
 
-  // -fsanitize-overflow-pattern-exclusion=post-decr-while
+  // -fsanitize-undefined-ignore-overflow-pattern=post-decr-while
   if (!Ctx.getLangOpts().isOverflowPatternExcluded(
           LangOptions::OverflowPatternExclusionKind::PostDecrInWhile))
     return false;

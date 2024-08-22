@@ -8,7 +8,7 @@ define double @sqrt_div_fast(double %x, double %y, double %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast double [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.sqrt.f64(double [[TMP0]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -38,7 +38,7 @@ define double @sqrt_div_reassoc_arcp(double %x, double %y, double %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc arcp double [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -98,7 +98,7 @@ define double @sqrt_div_arcp_missing(double %x, double %y, double %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc double [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:

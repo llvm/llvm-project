@@ -2293,9 +2293,10 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   if (parser.parseOperandList(spaces, OpAsmParser::Delimiter::Paren))
     return failure();
 
-  if (failed(parseUsedCoordList(parser, state, blockArgs)))
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
     return failure();
-  size_t numCrds = blockArgs.size();
+  size_t numCrds = coords.size();
 
   // Parse "iter_args(%arg = %init, ...)"
   SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
@@ -2303,6 +2304,7 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   if (hasIterArgs)
     if (parser.parseAssignmentList(blockArgs, initArgs))
       return failure();
+  blockArgs.append(coords);
 
   SmallVector<Type> iterSpaceTps;
   // parse ": (sparse_tensor.iter_space, ...) -> ret"
@@ -2326,8 +2328,8 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   state.operands.append(spacesVals);
 
   if (hasIterArgs) {
-    // Strip off leading args that used for coordinates.
-    MutableArrayRef args = MutableArrayRef(blockArgs).drop_front(numCrds);
+    // Strip off trailing args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
     if (args.size() != initArgs.size() || args.size() != state.types.size()) {
       return parser.emitError(
           parser.getNameLoc(),
@@ -2602,6 +2604,24 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,
+                        ValueRange iterSpaces, ValueRange initArgs,
+                        unsigned numCases) {
+  unsigned rank =
+      cast<IterSpaceType>(iterSpaces.front().getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  // Generates all-zero case bits (they only serve as placeholders), which are
+  // supposed to be overriden later. We need to preallocate all the regions as
+  // mlir::Region cannot be dynamically added later after the operation is
+  // created.
+  SmallVector<int64_t> caseBits(numCases, 0);
+  ArrayAttr cases = builder.getI64ArrayAttr(caseBits);
+  return CoIterateOp::build(builder, odsState, initArgs.getTypes(), iterSpaces,
+                            initArgs, set, cases,
+                            /*caseRegionsCount=*/numCases);
+}
+
 ParseResult CoIterateOp::parse(OpAsmParser &parser, OperationState &result) {
 
   SmallVector<Value> spaces;
@@ -2685,7 +2705,7 @@ ValueRange CoIterateOp::getYieldedValues(unsigned regionIdx) {
 
 LogicalResult CoIterateOp::verifyRegions() {
   for (unsigned r = 0, e = getNumRegions(); r < e; r++) {
-    if (getNumRegionIterArgs(r) != getNumResults())
+    if (getNumRegionIterArgs() != getNumResults())
       return emitOpError(
           "mismatch in number of basic block args and defined values");
 
