@@ -1143,10 +1143,27 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true, PluginOptPrefix);
 
+  bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false;
+  bool ImplicitMapSyms = false;
   for (const Arg *A : Args.filtered(options::OPT_Wa_COMMA)) {
     for (StringRef V : A->getValues()) {
-      if (V == "--crel")
+      auto Equal = V.split('=');
+      auto checkArg = [&](bool ValidTarget,
+                          std::initializer_list<const char *> Set) {
+        if (!ValidTarget) {
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << (Twine("-Wa,") + Equal.first + "=").str()
+              << Triple.getTriple();
+        } else if (!llvm::is_contained(Set, Equal.second)) {
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << (Twine("-Wa,") + Equal.first + "=").str() << Equal.second;
+        }
+      };
+      if (Equal.first == "-mmapsyms") {
+        ImplicitMapSyms = Equal.second == "implicit";
+        checkArg(IsELF && Triple.isAArch64(), {"default", "implicit"});
+      } else if (V == "--crel")
         Crel = true;
       else if (V == "--no-crel")
         Crel = false;
@@ -1156,13 +1173,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
   if (Crel) {
-    if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
+    if (IsELF && !Triple.isMIPS()) {
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
     } else {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-Wa,--crel" << D.getTargetTriple();
     }
   }
+  if (ImplicitMapSyms)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-implicit-mapsyms"));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
