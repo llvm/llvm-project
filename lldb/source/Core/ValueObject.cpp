@@ -620,7 +620,7 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
       // Get Shared pointer to the summary statistics container
       SummaryStatisticsSP stats_sp =
           target_sp->GetSummaryStatisticsCache()
-              .GetSummaryStatisticsForProviderName(*summary_ptr);
+              .GetSummaryStatisticsForProvider(*summary_ptr);
 
       // Construct RAII types to time and collect data on summary creation.
       SummaryStatistics::SummaryInvocation invocation(stats_sp);

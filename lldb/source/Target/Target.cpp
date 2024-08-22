@@ -3196,7 +3196,7 @@ void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 
 lldb_private::SummaryStatisticsSP Target::GetSummaryStatisticsSPForProviderName(
     lldb_private::TypeSummaryImpl &summary_provider) {
-  return m_summary_statistics_cache.GetSummaryStatisticsForProviderName(
+  return m_summary_statistics_cache.GetSummaryStatisticsForProvider(
       summary_provider);
 }
 

@@ -233,7 +233,7 @@ public:
   /// Get the SummaryStatistics object for a given provider name, or insert
   /// if statistics for that provider is not in the map.
   SummaryStatisticsSP
-  GetSummaryStatisticsForProviderName(lldb_private::TypeSummaryImpl &provider) {
+  GetSummaryStatisticsForProvider(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
     if (auto iterator = m_summary_stats_map.find(provider.GetName());
          iterator != m_summary_stats_map.end())
