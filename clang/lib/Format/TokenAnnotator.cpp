@@ -4050,7 +4050,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Current->is(TT_CtorInitializerColon))
+    if (Current->isOneOf(TT_CtorInitializerColon, TT_LambdaLSquare))
       InFunctionDecl = false;
 
     // FIXME: Only calculate this if CanBreakBefore is true once static
@@ -4211,7 +4211,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
   if (Right.is(TT_PointerOrReference))
     return 190;
-  if (Right.is(TT_TrailingReturnArrow))
+  if (!InFunctionDecl && Right.is(TT_TrailingReturnArrow))
     return 110;
   if (Left.is(tok::equal) && Right.is(tok::l_brace))
     return 160;

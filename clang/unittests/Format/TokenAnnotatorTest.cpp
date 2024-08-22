@@ -42,6 +42,8 @@ protected:
   EXPECT_EQ((FormatTok)->getPrecedence(), Prec) << *(FormatTok)
 #define EXPECT_BRACE_KIND(FormatTok, Kind)                                     \
   EXPECT_EQ(FormatTok->getBlockKind(), Kind) << *(FormatTok)
+#define EXPECT_SPLIT_PENALTY(FormatTok, Penalty)                               \
+  EXPECT_EQ(FormatTok->SplitPenalty, (unsigned)(Penalty)) << *(FormatTok)
 #define EXPECT_TOKEN(FormatTok, Kind, Type)                                    \
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
@@ -3367,6 +3369,20 @@ TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
   auto Tokens = annotate("return 1 <=> 2;", Style);
   ASSERT_EQ(Tokens.size(), 6u);
   EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, SplitPenalty) {
+  auto Style = getLLVMStyle();
+  Style.ColumnLimit = 20;
+
+  auto Tokens = annotate("class foo {\n"
+                         "  auto bar()\n"
+                         "      -> bool;\n"
+                         "};",
+                         Style);
+  ASSERT_EQ(Tokens.size(), 13u);
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_SPLIT_PENALTY(Tokens[7], 23);
 }
 
 } // namespace
