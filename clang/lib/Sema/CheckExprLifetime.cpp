@@ -424,7 +424,6 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
 
-
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
