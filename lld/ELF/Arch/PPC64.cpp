@@ -1593,7 +1593,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+      if (ctx.ppc64noTocRelax.count({rel.sym, rel.addend}) ||
           !tryRelaxPPC64TocIndirection(rel, loc))
         relocate(loc, rel, val);
       break;

@@ -335,9 +335,9 @@ def Abs :  DXILOp<6, unary> {
 def Saturate :  DXILOp<7, unary> {
   let Doc = "Clamps a single or double precision floating point value to [0.0f...1.0f].";
   let LLVMIntrinsic = int_dx_saturate;
-  let arguments = [overloadTy];
-  let result = overloadTy;
-  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
