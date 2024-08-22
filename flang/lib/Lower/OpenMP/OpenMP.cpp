@@ -1934,12 +1934,14 @@ genTaskyieldOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::WorkshareOp
 genWorkshareOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-           semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-           mlir::Location loc, const ConstructQueue &queue,
-           ConstructQueue::iterator item) {
+               semantics::SemanticsContext &semaCtx,
+               lower::pft::Evaluation &eval, mlir::Location loc,
+               const ConstructQueue &queue,
+               ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
   mlir::omp::WorkshareOperands clauseOps;
-  genWorkshareClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
+  genWorkshareClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                      clauseOps);
 
   return genOpWithBody<mlir::omp::WorkshareOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
