@@ -1576,11 +1576,11 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$cleanupRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
-                       "custom<AllocReductionRegion>($allocRegion) "
+                       "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
-                       "custom<AtomicReductionRegion>($atomicReductionRegion) "
-                       "custom<CleanupReductionRegion>($cleanupRegion)";
+                       "( `atomic` $atomicReductionRegion^ )? "
+                       "( `cleanup` $cleanupRegion^ )? ";
 
   let extraClassDeclaration = [{
     PointerLikeType getAccumulatorType() {
