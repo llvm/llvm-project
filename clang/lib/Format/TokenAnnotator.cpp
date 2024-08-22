@@ -4593,6 +4593,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return false;
       if (!Right.startsSequence(tok::identifier, tok::r_paren))
         return true;
+      assert(Right.Next);
       const auto *Tok = Right.Next->MatchingParen;
       return !Tok || Tok->isNot(TT_FunctionTypeLParen);
     }
