@@ -562,16 +562,21 @@ Status ProcessMachCore::DoLoadCore() {
 
   SetCanJIT(false);
 
-  // The corefile's architecture is our best starting point.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-  if (arch.IsValid())
-    GetTarget().SetArchitecture(arch);
-
   CreateMemoryRegions();
 
   LoadBinariesAndSetDYLD();
 
   CleanupMemoryRegionPermissions();
+
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  } else {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid())
+      GetTarget().SetArchitecture(arch);
+  }
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
   SetAddressableBitMasks(addressable_bits);
