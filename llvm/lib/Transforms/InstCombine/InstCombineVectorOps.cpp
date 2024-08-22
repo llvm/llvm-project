@@ -19,8 +19,8 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1140,11 +1140,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return nullptr;
 
   // Do some sanity check if we need to add insertvalue into predecessors.
-  Loop *OrigLoop, *UseLoop;
-  if (LI) {
-    OrigLoop = LI->getLoopFor(OrigIVI.getParent());
-    UseLoop = LI->getLoopFor(UseBB);
-  }
+  auto OrigBB = OrigIVI.getParent();
   for (auto &It : SourceAggregates) {
     if (Describe(It.second) == AggregateDescription::Found)
       continue;
@@ -1153,17 +1149,19 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     if (EltDefinedInUseBB)
       return nullptr;
 
-    if (LI) {
-      // Don't add insertvalue into inner loops.
-      Loop *PredLoop = LI->getLoopFor(It.first);
-      if (OrigLoop != PredLoop && (!OrigLoop || OrigLoop->contains(PredLoop)))
-        return nullptr;
+    // Do this transformation cross loop boundary may cause dead loop. So we
+    // should avoid this situation. But LoopInfo is not generally available, we
+    // must be conservative here.
+    // If OrigIVI is in UseBB and it's the only successor of PredBB, PredBB
+    // can't be in inner loop.
+    if (UseBB == OrigBB)
+      continue;
 
-      // Don't cross loop header.
-      if (UseLoop && UseLoop->getHeader() == UseBB &&
-          UseLoop->contains(It.first))
-        return nullptr;
-    }
+    // It is always safe to move InsertValue to colder places.
+    if (BFI && BFI->getBlockFreq(OrigBB) > BFI->getBlockFreq(It.first))
+      continue;
+
+    return nullptr;
   }
 
   // For predecessors without appropriate source aggregate, create one in the
