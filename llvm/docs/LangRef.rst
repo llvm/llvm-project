@@ -3103,19 +3103,19 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[<flags>][n]:<size>:<abi>[:<pref>][:<idx>]``
+``p[<flags>][<address space>]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
     ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
     and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
     index that used for address calculation, which must be less than or equal
     to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
-    are in bits. The address space, ``n``, is optional, and if not specified,
-    denotes the default address space 0. The value of ``n`` must be
-    in the range [1,2^24).
+    are in bits. The ``<address space>``, is optional, and if not specified,
+    denotes the default address space 0. The value of ``<address space>`` must
+    be in the range [1,2^24).
     The optional``<flags>`` are used to specify properties of pointers in this
-address space: the character ``u`` marks pointers as having an unstable
-    representation and ```n`` marks pointers as non-integral (i.e. having
+    address space: the character ``u`` marks pointers as having an unstable
+    representation and ``n`` marks pointers as non-integral (i.e. having
     additional metadata). See :ref:`Non-Integral Pointer Types <nointptrtype>`.
 
 ``i<size>:<abi>[:<pref>]``
