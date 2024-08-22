@@ -7139,9 +7139,15 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   if (!Cmp || !Cmp->hasOneUse())
     return false;
 
+  SmallVector<uint32_t, 4> Weights;
+  bool HasWeights = extractBranchWeights(getBranchWeightMDNode(*SI), Weights);
+  if (!HasWeights)
+    Weights.resize(4); // Avoid checking HasWeights everywhere.
+
   // Normalize to [us]cmp == Res ? Succ : OtherSucc.
   int64_t Res;
   BasicBlock *Succ, *OtherSucc;
+  uint32_t SuccWeight = 0, OtherSuccWeight = 0;
   BasicBlock *Unreachable = nullptr;
 
   if (SI->getNumCases() == 2) {
@@ -7152,6 +7158,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
     Missing.insert(-1);
 
     Succ = SI->getDefaultDest();
+    SuccWeight = Weights[0];
     OtherSucc = nullptr;
     for (auto &Case : SI->cases()) {
       std::optional<int64_t> Val =
@@ -7163,6 +7170,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
       if (OtherSucc && OtherSucc != Case.getCaseSuccessor())
         return false;
       OtherSucc = Case.getCaseSuccessor();
+      OtherSuccWeight += Weights[Case.getSuccessorIndex()];
     }
 
     assert(Missing.size() == 1 && "Should have one case left");
@@ -7173,13 +7181,17 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
     Succ = OtherSucc = nullptr;
     for (auto &Case : SI->cases()) {
       BasicBlock *NewSucc = Case.getCaseSuccessor();
-      if (!OtherSucc || OtherSucc == NewSucc)
+      uint32_t Weight = Weights[Case.getSuccessorIndex()];
+      if (!OtherSucc || OtherSucc == NewSucc) {
         OtherSucc = NewSucc;
-      else if (!Succ)
+        OtherSuccWeight += Weight;
+      } else if (!Succ) {
         Succ = NewSucc;
-      else if (Succ == NewSucc)
+        SuccWeight = Weight;
+      } else if (Succ == NewSucc) {
         std::swap(Succ, OtherSucc);
-      else
+        std::swap(SuccWeight, OtherSuccWeight);
+      } else
         return false;
     }
     for (auto &Case : SI->cases()) {
@@ -7210,10 +7222,16 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   if (Cmp->isSigned())
     Pred = ICmpInst::getSignedPredicate(Pred);
 
+  MDNode *NewWeights = nullptr;
+  if (HasWeights)
+    NewWeights = MDBuilder(SI->getContext())
+                     .createBranchWeights(SuccWeight, OtherSuccWeight);
+
   BasicBlock *BB = SI->getParent();
   Builder.SetInsertPoint(SI->getIterator());
   Value *ICmp = Builder.CreateICmp(Pred, Cmp->getLHS(), Cmp->getRHS());
-  Builder.CreateCondBr(ICmp, Succ, OtherSucc);
+  Builder.CreateCondBr(ICmp, Succ, OtherSucc, NewWeights,
+                       SI->getMetadata(LLVMContext::MD_unpredictable));
   OtherSucc->removePredecessor(BB);
   if (Unreachable)
     Unreachable->removePredecessor(BB);

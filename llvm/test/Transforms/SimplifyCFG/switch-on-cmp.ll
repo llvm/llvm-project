@@ -353,6 +353,56 @@ bb2:
   ret void
 }
 
+define void @ucmp_gt_unpredictable(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unpredictable(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]], !unpredictable [[META0:![0-9]+]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %bb1 [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  ], !unpredictable !{}
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+}
+
+define void @ucmp_gt_weights(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %bb1 [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  ], !prof !{!"branch_weights", i32 5, i32 10, i32 20}
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+}
+
 define void @ucmp_gt_unreachable(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_gt_unreachable(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
@@ -621,5 +671,38 @@ not.unreachable:
   br label %bb2
 }
 
+define void @ucmp_gt_unreachable_weights(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @ucmp_gt_unreachable_weights(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]], !prof [[PROF1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    ret void
+;
+  %res = call i8 @llvm.ucmp.i8.i32(i32 %a, i32 %b)
+  switch i8 %res, label %unreachable [
+  i8 -1, label %bb2
+  i8 0, label %bb2
+  i8 1, label %bb1
+  ], !prof !{!"branch_weights", i32 0, i32 10, i32 20, i32 5}
+
+bb1:
+  call void @foo()
+  br label %bb2
+
+bb2:
+  ret void
+
+unreachable:
+  unreachable
+}
+
 declare void @use(i8)
 declare void @foo()
+;.
+; CHECK: [[META0]] = !{}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 5, i32 30}
+;.
