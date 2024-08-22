@@ -434,6 +434,11 @@ public:
       function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
     return false;
   }
+
+  /// True if target has some particular form of dealing with pointer arithmetic
+  /// semantics. False if pointer arithmetic should not be preserved for passes
+  /// such as instruction selection, and can fallback to regular arithmetic.
+  virtual bool shouldPreservePtrArith(const Function &F) const { return false; }
 };
 
 /// This class describes a target machine that is implemented with the LLVM

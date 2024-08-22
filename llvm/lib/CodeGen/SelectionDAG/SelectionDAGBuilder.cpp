@@ -4293,6 +4293,12 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   SDLoc dl = getCurSDLoc();
   auto &TLI = DAG.getTargetLoweringInfo();
   GEPNoWrapFlags NW = cast<GEPOperator>(I).getNoWrapFlags();
+  unsigned int AddOpcode = ISD::PTRADD;
+
+  if (!DAG.getTarget().shouldPreservePtrArith(
+          DAG.getMachineFunction().getFunction())) {
+    AddOpcode = ISD::ADD;
+  }
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -4324,7 +4330,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags.setNoUnsignedWrap(true);
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
+        N = DAG.getNode(AddOpcode, dl, N.getValueType(), N,
                         DAG.getConstant(Offset, dl, N.getValueType()), Flags);
       }
     } else {
@@ -4368,7 +4374,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
+        N = DAG.getNode(AddOpcode, dl, N.getValueType(), N, OffsVal, Flags);
         continue;
       }
 
@@ -4411,8 +4417,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         }
       }
 
-      N = DAG.getNode(ISD::ADD, dl,
-                      N.getValueType(), N, IdxN);
+      N = DAG.getNode(AddOpcode, dl, N.getValueType(), N, IdxN);
     }
   }
 
@@ -4473,8 +4478,15 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // an address inside an alloca.
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(true);
-  AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(StackAlignMask, dl, IntPtr), Flags);
+  if (DAG.getTarget().shouldPreservePtrArith(
+          DAG.getMachineFunction().getFunction())) {
+    AllocSize = DAG.getNode(ISD::PTRADD, dl, AllocSize.getValueType(),
+                            DAG.getConstant(StackAlignMask, dl, IntPtr),
+                            AllocSize, Flags);
+  } else {
+    AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
+                            DAG.getConstant(StackAlignMask, dl, IntPtr), Flags);
+  }
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
@@ -9071,8 +9083,13 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   Size = DAG.getSExtOrTrunc(Size, sdl, Dst.getValueType());
 
   // Adjust return pointer to point just past the last dst byte.
-  SDValue DstPlusSize = DAG.getNode(ISD::ADD, sdl, Dst.getValueType(),
-                                    Dst, Size);
+  unsigned int AddOpcode = ISD::PTRADD;
+  if (!DAG.getTarget().shouldPreservePtrArith(
+          DAG.getMachineFunction().getFunction())) {
+    AddOpcode = ISD::ADD;
+  }
+  SDValue DstPlusSize =
+      DAG.getNode(AddOpcode, sdl, Dst.getValueType(), Dst, Size);
   setValue(&I, DstPlusSize);
   return true;
 }
@@ -11169,9 +11186,14 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add = CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                                    CLI.DAG.getConstant(Offsets[i], CLI.DL,
-                                                        PtrVT), Flags);
+      unsigned int AddOpcode = ISD::PTRADD;
+      if (!CLI.DAG.getTarget().shouldPreservePtrArith(
+              CLI.DAG.getMachineFunction().getFunction())) {
+        AddOpcode = ISD::ADD;
+      }
+      SDValue Add = CLI.DAG.getNode(
+          AddOpcode, CLI.DL, PtrVT, DemoteStackSlot,
+          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT), Flags);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),

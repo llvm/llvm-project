@@ -4069,8 +4069,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     else
       Index = DAG.getNode(ISD::MUL, dl, Index.getValueType(), Index,
                           DAG.getConstant(EntrySize, dl, Index.getValueType()));
-    SDValue Addr = DAG.getNode(ISD::ADD, dl, Index.getValueType(),
-                               Index, Table);
+    SDValue Addr;
+    if (!DAG.getTarget().shouldPreservePtrArith(
+            DAG.getMachineFunction().getFunction())) {
+      Addr = DAG.getNode(ISD::ADD, dl, Index.getValueType(), Index, Table);
+    } else {
+      // PTRADD always takes the pointer first, so the operands are commuted
+      Addr = DAG.getNode(ISD::PTRADD, dl, Index.getValueType(), Table, Index);
+    }
 
     EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * 8);
     SDValue LD = DAG.getExtLoad(
@@ -4081,8 +4087,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // For PIC, the sequence is:
       // BRIND(load(Jumptable + index) + RelocBase)
       // RelocBase can be JumpTable, GOT or some sort of global base.
-      Addr = DAG.getNode(ISD::ADD, dl, PTy, Addr,
-                          TLI.getPICJumpTableRelocBase(Table, DAG));
+      if (!DAG.getTarget().shouldPreservePtrArith(
+              DAG.getMachineFunction().getFunction())) {
+        Addr = DAG.getNode(ISD::ADD, dl, PTy, Addr,
+                           TLI.getPICJumpTableRelocBase(Table, DAG));
+      } else {
+        // PTRADD always takes the pointer first, so the operands are commuted
+        Addr = DAG.getNode(ISD::PTRADD, dl, PTy,
+                           TLI.getPICJumpTableRelocBase(Table, DAG), Addr);
+      }
     }
 
     Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, JTI, DAG);

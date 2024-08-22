@@ -2091,6 +2091,10 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return Changed;
   }
   case TargetOpcode::G_PTR_ADD:
+    // If Checked Pointer Arithmetic (FEAT_CPA) is present, preserve the pointer
+    // arithmetic semantics instead of falling back to regular arithmetic.
+    if (TM.shouldPreservePtrArith(MF.getFunction()))
+      return false;
     return convertPtrAddToAdd(I, MRI);
   case TargetOpcode::G_LOAD: {
     // For scalar loads of pointers, we try to convert the dest type from p0

@@ -920,3 +920,7 @@ bool AArch64TargetMachine::parseMachineFunctionInfo(
   MF.getInfo<AArch64FunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
 }
+
+bool AArch64TargetMachine::shouldPreservePtrArith(const Function &F) const {
+  return getSubtargetImpl(F)->hasCPA();
+}
