@@ -8688,7 +8688,7 @@ std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-    unsigned MinRep) const {
+    unsigned MinRepeates) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
@@ -8802,7 +8802,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     llvm::erase_if(RepeatedSequenceLocs, hasIllegalSPModification);
 
     // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < MinRep)
+    if (RepeatedSequenceLocs.size() < MinRepeates)
       return std::nullopt;
   }
 
@@ -9049,7 +9049,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
 
     // If we dropped all of the candidates, bail out here.
-    if (RepeatedSequenceLocs.size() < MinRep) {
+    if (RepeatedSequenceLocs.size() < MinRepeates) {
       RepeatedSequenceLocs.clear();
       return std::nullopt;
     }

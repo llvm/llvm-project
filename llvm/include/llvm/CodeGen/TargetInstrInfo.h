@@ -2088,12 +2088,12 @@ public:
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
   /// information for a set of outlining candidates. Returns std::nullopt if the
-  /// candidates are not suitable for outlining. \p MinRep is the minimum
+  /// candidates are not suitable for outlining. \p MinRepeates is the minimum
   /// number of times the instruction sequence must be repeated.
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-      unsigned MipRep) const {
+      unsigned MinRepeates) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
   }
@@ -2101,7 +2101,8 @@ public:
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-    return getOutliningCandidateInfo(MMI, RepeatedSequenceLocs, /*MipRep=*/2);
+    return getOutliningCandidateInfo(MMI, RepeatedSequenceLocs,
+                                     /*MinRepeates=*/2);
   }
 
   /// Optional target hook to create the LLVM IR attributes for the outlined

@@ -474,7 +474,7 @@ public:
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs,
-      unsigned MinRep) const override;
+      unsigned MinRepeates) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
   outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,

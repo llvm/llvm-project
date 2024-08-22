@@ -688,7 +688,7 @@ void MachineOutliner::findCandidates(
       continue;
     }
 
-    FunctionList.push_back(std::make_unique<OutlinedFunction>(*OF));
+    FunctionList.emplace_back(std::make_unique<OutlinedFunction>(*OF));
   }
 }
 
