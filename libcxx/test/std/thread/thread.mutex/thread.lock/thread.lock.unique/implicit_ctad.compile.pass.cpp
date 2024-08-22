@@ -16,15 +16,7 @@
 
 #include <mutex>
 
-#include "test_macros.h"
-#include "types.h"
+#include "checking_mutex.h"
 
-int main(int, char**) {
-  MyMutex mutex;
-  {
-    std::unique_lock lock(mutex);
-    ASSERT_SAME_TYPE(decltype(lock), std::unique_lock<MyMutex>);
-  }
-
-  return 0;
-}
+checking_mutex mux;
+static_assert(std::is_same_v<std::unique_lock<checking_mutex>, decltype(std::unique_lock{mux})>);
