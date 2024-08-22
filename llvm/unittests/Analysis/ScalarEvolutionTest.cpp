@@ -1707,4 +1707,56 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ExitCountWithPredicates) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+define void @foo(ptr %dest, ptr %src, i64 noundef %end) {
+entry:
+  %cmp7 = icmp sgt i64 %end, 0
+  br i1 %cmp7, label %for.body, label %exit
+
+for.body:
+  %conv9 = phi i64 [ %conv, %for.body ], [ 0, %entry ]
+  %i.08 = phi i16 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %src, i64 %conv9
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %dest, i64 %conv9
+  %1 = load i32, ptr %arrayidx3, align 4
+  %add = add i32 %1, %0
+  store i32 %add, ptr %arrayidx3, align 4
+  %inc = add i16 %i.08, 1
+  %conv = zext i16 %inc to i64
+  %cmp = icmp ult i64 %conv, %end
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  ret void
+})",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    BasicBlock &EntryBB = F.getEntryBlock();
+    BasicBlock *ForBodyBB = nullptr;
+    Loop *Loop = nullptr;
+    for (BasicBlock *Succ : successors(&EntryBB)) {
+      Loop = LI.getLoopFor(Succ);
+      if (Loop) {
+        ForBodyBB = Loop->getHeader();
+        break;
+      }
+    }
+    ASSERT_TRUE(Loop && "Couldn't find the loop!");
+    ASSERT_TRUE(ForBodyBB && "Couldn't find the loop header!");
+    SmallVector<const SCEVPredicate *, 4> Predicates;
+    const SCEV *ExitCount = SE.getPredicatedExitCount(
+        Loop, ForBodyBB, &Predicates, ScalarEvolution::Exact);
+    ASSERT_FALSE(isa<SCEVCouldNotCompute>(ExitCount));
+    ASSERT_FALSE(Predicates.empty());
+  });
+}
+
 }  // end namespace llvm
