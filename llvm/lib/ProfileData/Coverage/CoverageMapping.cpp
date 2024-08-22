@@ -637,6 +637,8 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
   unsigned MaxCounterID = 0;
   for (const auto &Region : Record.MappingRegions) {
     MaxCounterID = std::max(MaxCounterID, Ctx.getMaxCounterID(Region.Count));
+    MaxCounterID =
+        std::max(MaxCounterID, Ctx.getMaxCounterID(Region.FalseCount));
   }
   return MaxCounterID;
 }
