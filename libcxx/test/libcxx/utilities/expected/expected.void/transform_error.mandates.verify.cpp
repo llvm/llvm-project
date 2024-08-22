@@ -16,10 +16,11 @@
 // which break the tests. But #102851 will turn it into an error, making the test pass.
 // However, upstream libcxx buildbots do not build clang from source while testing, so
 // this tests still expected to fail on these bots.
+//
 // TODO(LLVM 22): Remove '0-1' from 'expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}'
 // and remove 'expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}'
 // and remove 'expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}'
-// once LLVM 22 releases.
+// once LLVM 22 releases. See See https://github.com/llvm/llvm-project/issues/104885.
 
 // Test the mandates
 
