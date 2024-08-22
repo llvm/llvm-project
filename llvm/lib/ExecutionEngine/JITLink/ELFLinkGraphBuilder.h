@@ -505,7 +505,14 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
         TargetFlagsType Flags = makeTargetFlags(Sym);
         orc::ExecutorAddrDiff Offset = getRawOffset(Sym, Flags);
 
-        if (Offset + Sym.st_size > B->getSize()) {
+        // Truncate symbol if it would overflow -- ELF size fields can't be
+        // trusted.
+        // FIXME: this makes the following error check unreachable, but it's
+        // left here to reduce merge conflicts.
+        uint64_t Size =
+          std::min(static_cast<uint64_t>(Sym.st_size), B->getSize() - Offset);
+
+        if (Offset + Size > B->getSize()) {
           std::string ErrMsg;
           raw_string_ostream ErrStream(ErrMsg);
           ErrStream << "In " << G->getName() << ", symbol ";
@@ -520,11 +527,6 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                     << B->getRange() << ")";
           return make_error<JITLinkError>(std::move(ErrMsg));
         }
-
-        // Truncate symbol if it would overflow -- ELF size fields can't be
-        // trusted.
-        uint64_t Size =
-          std::min(static_cast<uint64_t>(Sym.st_size), B->getSize() - Offset);
 
         // In RISCV, temporary symbols (Used to generate dwarf, eh_frame
         // sections...) will appear in object code's symbol table, and LLVM does
