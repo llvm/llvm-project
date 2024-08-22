@@ -2241,8 +2241,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
     if (!DebugCounter::shouldExecute(MemorySSACounter))
       continue;
     if (isMemTerminatorInst(KillingLocWrapper.DefInst)) {
-      if (!(KillingLocWrapper.UnderlyingObject ==
-            DeadLocWrapper.UnderlyingObject))
+      if (KillingLocWrapper.UnderlyingObject != DeadLocWrapper.UnderlyingObject)
         continue;
       LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
                         << *DeadLocWrapper.DefInst << "\n  KILLER: "
