@@ -372,7 +372,9 @@ private:
                                     ArrayRef<PromotionCandidate> Candidates,
                                     uint64_t TotalCount);
 
-  bool addressPointLoweringCostComparable(
+  // Returns true if vtable address points are foldable into the vtable for
+  // each vtable represented by GUIDs (i.e., VTableGUIDCounts keys).
+  bool isAddressPointOffsetFoldable(
       const VTableGUIDCountsMap &VTableGUIDCounts) const;
 
   // Given an indirect callsite and the list of function candidates, compute
@@ -839,7 +841,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   return Changed;
 }
 
-bool IndirectCallPromoter::addressPointLoweringCostComparable(
+bool IndirectCallPromoter::isAddressPointOffsetFoldable(
     const VTableGUIDCountsMap &VTableGUIDAndCounts) const {
   for (auto &[GUID, Count] : VTableGUIDAndCounts) {
     GlobalVariable *VTable = Symtab->getGlobalVariable(GUID);
@@ -889,15 +891,19 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     RemainingVTableCount -= Candidate.Count;
 
     // 'MaxNumVTable' limits the number of vtables to make vtable comparison
-    // profitable. Comparing multiple vtables for one function candidate will
-    // insert additional instructions on the hot path, and allowing more than
-    // one vtable for non last candidates may or may not elongate the dependency
-    // chain for the subsequent candidates. Set its value to 1 for non-last
-    // candidate and allow option to override it for the last candidate.
+    // profitable. Set it to 1 control icache pressure and conditionally allow
+    // an additional vtable for the last function candidate.
     int MaxNumVTable = 1;
     if (I == CandidateSize - 1) {
-      if (addressPointLoweringCostComparable(VTableGUIDAndCounts))
+      // Comparing an additional vtable inserts `icmp vptr, @vtable +
+      // address-point-offset` IR instruction.
+      // `@vtable + address-point-offset` will lower to a standalone instruction
+      // if the constant offset is not foldable, and fold into the cmp
+      // instruction otherwise. Allow an additional vtable by default if address
+      // point offset is foldlable.
+      if (isAddressPointOffsetFoldable(VTableGUIDAndCounts))
         MaxNumVTable = 2;
+      // Allow command line override.
       if (ICPMaxNumVTableLastCandidate.getNumOccurrences())
         MaxNumVTable = ICPMaxNumVTableLastCandidate;
     }
