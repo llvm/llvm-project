@@ -28,11 +28,11 @@ func.func @vector_transfer_ops_0d_tensor(%arg0: tensor<f32>) -> vector<1xf32> {
 
 //  CHECK-NEXT:   %[[S:.*]] = tensor.extract %[[ARG0]][] : tensor<f32>
 //  CHECK-NEXT:   %[[V:.*]] = vector.broadcast %[[S]] : f32 to vector<1xf32>
-    %0 = vector.transfer_read %arg0[], %f0 {in_bounds = [true], permutation_map = affine_map<()->(0)>} :
+    %res = vector.transfer_read %arg0[], %f0 {in_bounds = [true], permutation_map = affine_map<()->(0)>} :
       tensor<f32>, vector<1xf32>
 
 //  CHECK-NEXT:   return %[[V]]
-    return %0: vector<1xf32>
+    return %res: vector<1xf32>
 }
 
 // transfer_read/write are lowered to vector.load/store
