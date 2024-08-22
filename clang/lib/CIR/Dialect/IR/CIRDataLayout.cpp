@@ -185,7 +185,7 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
 
   // Fetch type alignment from MLIR's data layout.
   unsigned align = abiOrPref ? layout.getTypeABIAlignment(Ty)
-                               : layout.getTypePreferredAlignment(Ty);
+                             : layout.getTypePreferredAlignment(Ty);
   return llvm::Align(align);
 }
 
