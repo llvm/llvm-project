@@ -416,8 +416,8 @@ public:
       ArgIdx = I->getValueAsInt("ImmArgIdx");
       TypeArgIdx = I->getValueAsInt("TypeContextArgIdx");
       Kind = I->getValueAsDef("Kind")->getValueAsInt("Value");
-
-      assert((ArgIdx >= 0 && Kind >= 0) && "ImmArgIdx and Kind must be nonnegative");
+      assert((ArgIdx >= 0 && Kind >= 0) &&
+             "ImmArgIdx and Kind must be nonnegative");
 
       if (TypeArgIdx >= 0) {
         EltSizeInBits = getParamType(TypeArgIdx).getElementSizeInBits();

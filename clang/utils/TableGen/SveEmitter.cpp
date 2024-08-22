@@ -1199,7 +1199,8 @@ void SVEEmitter::createIntrinsic(
       int64_t ArgIdx = R->getValueAsInt("ImmArgIdx");
       int64_t EltSizeArgIdx = R->getValueAsInt("TypeContextArgIdx");
       int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
-      assert(ArgIdx >= 0 && Kind >= 0 && "ImmArgIdx and Kind must be nonnegative");
+      assert(ArgIdx >= 0 && Kind >= 0 &&
+             "ImmArgIdx and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
       char Mod;
