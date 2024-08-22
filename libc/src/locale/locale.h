@@ -29,7 +29,7 @@ struct __locale_data {
 extern __locale_t c_locale;
 
 // The global locale instance.
-LIBC_THREAD_LOCAL extern locale_t locale;
+extern locale_t locale;
 
 } // namespace LIBC_NAMESPACE_DECL
 
