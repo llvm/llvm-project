@@ -1,19 +1,17 @@
-.. _using-libcxx:
+.. _user-documentation:
 
-============
-Using libc++
-============
+==================
+User documentation
+==================
 
 .. contents::
   :local:
 
-Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
-(operating system distribution, SDK, toolchain, etc) and users don't need to do
-anything special in order to use the library.
-
 This page contains information about configuration knobs that can be used by
 users when they know libc++ is used by their toolchain, and how to use libc++
-when it is not the default library used by their toolchain.
+when it is not the default library used by their toolchain. It is aimed at
+users of libc++: a separate page contains documentation aimed at vendors who
+build and ship libc++ as part of their toolchain.
 
 
 Using a different version of the C++ Standard
@@ -28,47 +26,18 @@ matches that Standard in the library.
 
   $ clang++ -std=c++17 test.cpp
 
-.. warning::
-  Using ``-std=c++XY`` with a version of the Standard that has not been ratified yet
-  is considered unstable. Libc++ reserves the right to make breaking changes to the
-  library until the standard has been ratified.
-
-
-Enabling experimental C++ Library features
-==========================================
-
-Libc++ provides implementations of some experimental features. Experimental features
-are either Technical Specifications (TSes) or official features that were voted to
-the Standard but whose implementation is not complete or stable yet in libc++. Those
-are disabled by default because they are neither API nor ABI stable. However, the
-``-fexperimental-library`` compiler flag can be defined to turn those features on.
-
-The following features are currently considered experimental and are only provided
-when ``-fexperimental-library`` is passed:
-
-* The parallel algorithms library (``<execution>`` and the associated algorithms)
-* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
-* ``std::jthread``
-* ``std::chrono::tzdb`` and related time zone functionality
-
-.. warning::
-  Experimental libraries are experimental.
-    * The contents of the ``<experimental/...>`` headers and the associated static
-      library will not remain compatible between versions.
-    * No guarantees of API or ABI stability are provided.
-    * When the standardized version of an experimental feature is implemented,
-      the experimental feature is removed two releases after the non-experimental
-      version has shipped. The full policy is explained :ref:`here <experimental features>`.
-
-.. note::
-  On compilers that do not support the ``-fexperimental-library`` flag, users can
-  define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against the
-  appropriate static library (usually shipped as ``libc++experimental.a``) to get
-  access to experimental library features.
+Note that using ``-std=c++XY`` with a version of the Standard that has not been ratified
+yet is considered unstable. While we strive to maintain stability, libc++ may be forced to
+make breaking changes to features shipped in a Standard that hasn't been ratified yet. Use
+these versions of the Standard at your own risk.
 
 
 Using libc++ when it is not the system default
 ==============================================
+
+Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
+(operating system distribution, SDK, toolchain, etc) and users don't need to do
+anything special in order to use the library.
 
 On systems where libc++ is provided but is not the default, Clang provides a flag
 called ``-stdlib=`` that can be used to decide which standard library is used.
@@ -82,76 +51,49 @@ On systems where libc++ is the library in use by default such as macOS and FreeB
 this flag is not required.
 
 
-.. _alternate libcxx:
+Enabling experimental C++ Library features
+==========================================
 
-Using a custom built libc++
-===========================
+Libc++ provides implementations of some experimental features. Experimental features
+are either Technical Specifications (TSes) or official features that were voted to
+the Standard but whose implementation is not complete or stable yet in libc++. Those
+are disabled by default because they are neither API nor ABI stable. However, the
+``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
-Most compilers provide a way to disable the default behavior for finding the
-standard library and to override it with custom paths. With Clang, this can
-be done with:
+On compilers that do not support the ``-fexperimental-library`` flag (such as GCC),
+users can define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against
+the appropriate static library (usually shipped as ``libc++experimental.a``) to get
+access to experimental library features.
 
-.. code-block:: bash
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
 
-  $ clang++ -nostdinc++ -nostdlib++           \
-            -isystem <install>/include/c++/v1 \
-            -L <install>/lib                  \
-            -Wl,-rpath,<install>/lib          \
-            -lc++                             \
-            test.cpp
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
 
-The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path,
-which causes the system's dynamic linker to look for libc++ in ``<install>/lib``
-whenever the program is loaded.
+.. note::
+  Experimental libraries are experimental.
+    * The contents of the ``<experimental/...>`` headers and the associated static
+      library will not remain compatible between versions.
+    * No guarantees of API or ABI stability are provided.
+    * When the standardized version of an experimental feature is implemented,
+      the experimental feature is removed two releases after the non-experimental
+      version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
-GCC does not support the ``-nostdlib++`` flag, so one must use ``-nodefaultlibs``
-instead. Since that removes all the standard system libraries and not just libc++,
-the system libraries must be re-added manually. For example:
-
-.. code-block:: bash
-
-  $ g++ -nostdinc++ -nodefaultlibs           \
-        -isystem <install>/include/c++/v1    \
-        -L <install>/lib                     \
-        -Wl,-rpath,<install>/lib             \
-        -lc++ -lc++abi -lm -lc -lgcc_s -lgcc \
-        test.cpp
-
-
-GDB Pretty printers for libc++
-==============================
-
-GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
-provide pretty-printers itself. Those can be used as:
-
-.. code-block:: bash
-
-  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
-        -ex "python register_libcxx_printer_loader()" \
-        <args>
-
-.. _include-what-you-use:
-
-include-what-you-use (IWYU)
-===========================
-
-libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
-which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
-IWYU, you should run the tool like so:
-
-.. code-block:: bash
-
-  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
-
-If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
-file with the libc++-provided ``libcxx.imp`` file.
 
 Libc++ Configuration Macros
 ===========================
 
-Libc++ provides a number of configuration macros which can be used to enable
-or disable extended libc++ behavior, including enabling hardening or thread
-safety annotations.
+Libc++ provides a number of configuration macros that can be used by developers to
+enable or disable extended libc++ behavior.
+
+.. warning::
+  Configuration macros that are not documented here are not intended to be customized
+  by developers and should not be used. In particular, some configuration macros are
+  only intended to be used by vendors and changing their value from the one provided
+  in your toolchain can lead to unexpected behavior.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
@@ -192,6 +134,12 @@ safety annotations.
   using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
   warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
   no warning will be emitted. By default, this macro is not defined.
+
+**_LIBCPP_ENABLE_EXPERIMENTAL**:
+  This macro enables experimental features. This can be used on compilers that do
+  not support the ``-fexperimental-library`` flag. When used, users also need to
+  ensure that the appropriate experimental library (usually ``libc++experimental.a``)
+  is linked into their program.
 
 C++17 Specific Configuration Macros
 -----------------------------------
@@ -307,7 +255,7 @@ Extensions to the C++23 modules ``std`` and ``std.compat``
 ----------------------------------------------------------
 
 Like other major implementations, libc++ provides C++23 modules ``std`` and
-``std.compat`` in C++20 as an extension"
+``std.compat`` in C++20 as an extension.
 
 Constant-initialized std::string
 --------------------------------
@@ -386,3 +334,38 @@ specific locale is imbued, the IO with the underlying stream happens with
 regular ``char`` elements, which are converted to/from wide characters
 according to the locale. Note that this doesn't behave as expected if the
 stream has been set in Unicode mode.
+
+
+Third-party Integrations
+========================
+
+Libc++ provides integration with a few third-party tools.
+
+GDB Pretty printers for libc++
+------------------------------
+
+GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
+provide pretty-printers itself. Those can be used as:
+
+.. code-block:: bash
+
+  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
+        -ex "python register_libcxx_printer_loader()" \
+        <args>
+
+
+.. _include-what-you-use:
+
+include-what-you-use (IWYU)
+---------------------------
+
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
+which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
+IWYU, you should run the tool like so:
+
+.. code-block:: bash
+
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
+
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
+file with the libc++-provided ``libcxx.imp`` file.
