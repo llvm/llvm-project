@@ -4591,11 +4591,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (BeforeLeft->is(tok::coloncolon)) {
       if (Left.isNot(tok::star))
         return false;
+      assert(Style.PointerAlignment != FormatStyle::PAS_Right);
       if (!Right.startsSequence(tok::identifier, tok::r_paren))
         return true;
       assert(Right.Next);
-      const auto *Tok = Right.Next->MatchingParen;
-      return !Tok || Tok->isNot(TT_FunctionTypeLParen);
+      const auto *LParen = Right.Next->MatchingParen;
+      return !LParen || Tok->isNot(TT_FunctionTypeLParen);
     }
     return !BeforeLeft->isOneOf(tok::l_paren, tok::l_square);
   }
