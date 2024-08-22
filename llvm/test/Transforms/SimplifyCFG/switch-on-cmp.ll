@@ -4,11 +4,8 @@
 define void @ucmp_gt1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_gt1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 -1, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 0, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -32,11 +29,8 @@ bb2:
 define void @ucmp_gt2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_gt2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 -1, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -60,11 +54,8 @@ bb2:
 define void @ucmp_lt1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_lt1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB2:.*]] [
-; CHECK-NEXT:      i8 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i8 0, label %[[BB1]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -88,11 +79,8 @@ bb2:
 define void @ucmp_lt2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_lt2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB2:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BB1:.*]]
-; CHECK-NEXT:      i8 1, label %[[BB1]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -116,11 +104,8 @@ bb2:
 define void @ucmp_eq1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_eq1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 -1, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 1, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -144,11 +129,8 @@ bb2:
 define void @ucmp_eq2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @ucmp_eq2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 1, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 -1, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -172,11 +154,8 @@ bb2:
 define void @scmp_gt1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @scmp_gt1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 -1, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 0, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -200,11 +179,8 @@ bb2:
 define void @scmp_gt2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @scmp_gt2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 -1, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
@@ -259,16 +235,13 @@ define i32 @ucmp_gt_phi(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @ucmp_gt_phi(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    switch i8 [[RES]], label %[[BB1:.*]] [
-; CHECK-NEXT:      i8 -1, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 0, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[BB2]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB1]] ], [ 1, %[[ENTRY]] ], [ 1, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB1]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
