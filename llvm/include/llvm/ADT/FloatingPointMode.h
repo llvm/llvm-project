@@ -47,6 +47,15 @@ enum class RoundingMode : int8_t {
   Invalid = -1    ///< Denotes invalid value.
 };
 
+inline bool isValidRoundingMode(int X) {
+  return X >= 0 && X <= static_cast<int>(RoundingMode::Dynamic);
+}
+
+inline RoundingMode castToRoundingMode(int X) {
+  assert(isValidRoundingMode(X));
+  return static_cast<RoundingMode>(X);
+}
+
 /// Returns text representation of the given rounding mode.
 inline StringRef spell(RoundingMode RM) {
   switch (RM) {

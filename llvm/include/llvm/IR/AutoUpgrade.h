@@ -111,6 +111,8 @@ namespace llvm {
   /// Upgrade operand bundles (without knowing about their user instruction).
   void UpgradeOperandBundles(std::vector<OperandBundleDef> &OperandBundles);
 
+  CallBase *upgradeConstrainedFunctionCall(CallBase *CB);
+
 } // End llvm namespace
 
 #endif

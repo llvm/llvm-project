@@ -723,8 +723,6 @@ public:
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
   unsigned getNonMetadataArgCount() const;
-  std::optional<RoundingMode> getRoundingMode() const;
-  std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
   bool isDefaultFPEnvironment() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:

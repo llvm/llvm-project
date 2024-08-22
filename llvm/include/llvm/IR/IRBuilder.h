@@ -379,6 +379,9 @@ public:
 
   void setConstrainedFPCallAttr(CallBase *I) {
     I->addFnAttr(Attribute::StrictFP);
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    auto A = Attribute::getWithMemoryEffects(getContext(), ME);
+    I->addFnAttr(A);
   }
 
   void setDefaultOperandBundles(ArrayRef<OperandBundleDef> OpBundles) {
@@ -997,6 +1000,16 @@ public:
                             ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
+  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types and
+  /// with operand bundles.
+  /// If \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> OpBundles,
+                            Instruction *FMFSource = nullptr,
+                            const Twine &Name = "");
+
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
   /// the intrinsic.
@@ -1331,6 +1344,15 @@ private:
     return I;
   }
 
+  RoundingMode
+  getEffectiveRounding(std::optional<RoundingMode> Rounding = std::nullopt) {
+    RoundingMode RM = DefaultConstrainedRounding;
+
+    if (Rounding)
+      RM = *Rounding;
+    return RM;
+  }
+
   Value *getConstrainedFPRounding(std::optional<RoundingMode> Rounding) {
     RoundingMode UseRounding = DefaultConstrainedRounding;
 
@@ -1343,6 +1365,14 @@ private:
     auto *RoundingMDS = MDString::get(Context, *RoundingStr);
 
     return MetadataAsValue::get(Context, RoundingMDS);
+  }
+
+  fp::ExceptionBehavior getEffectiveExceptionBehavior(
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt) {
+    fp::ExceptionBehavior EB = DefaultConstrainedExcept;
+    if (Except)
+      EB = *Except;
+    return EB;
   }
 
   Value *getConstrainedFPExcept(std::optional<fp::ExceptionBehavior> Except) {
@@ -2485,6 +2515,10 @@ public:
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+  CallInst *CreateConstrainedFPCall(
+      Intrinsic::ID ID, ArrayRef<Value *> Args, const Twine &Name = "",
+      std::optional<RoundingMode> Rounding = std::nullopt,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   Value *CreateSelect(Value *C, Value *True, Value *False,
                       const Twine &Name = "", Instruction *MDFrom = nullptr);
@@ -2688,6 +2722,20 @@ public:
   /// Create an assume intrinsic call that represents an dereferencable
   /// assumption on the provided pointer.
   CallInst *CreateDereferenceableAssumption(Value *PtrValue, Value *SizeValue);
+
+  void
+  createFPRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                         std::optional<RoundingMode> Rounding = std::nullopt) {
+    int RM = static_cast<int32_t>(getEffectiveRounding(Rounding));
+    Bundles.emplace_back("fpe.round", getInt32(RM));
+  }
+
+  void createFPExceptionBundle(
+      SmallVectorImpl<OperandBundleDef> &Bundles,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt) {
+    int EB = getEffectiveExceptionBehavior(Except);
+    Bundles.emplace_back("fpe.except", getInt32(EB));
+  }
 };
 
 /// This provides a uniform API for creating instructions and inserting
