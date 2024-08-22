@@ -1,9 +1,9 @@
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private.h"
-#include "lldb/Utility/Stream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <thread>
@@ -13,30 +13,23 @@ using Duration = std::chrono::duration<double>;
 
 class DummySummaryImpl : public lldb_private::TypeSummaryImpl {
 public:
-  DummySummaryImpl(Duration sleepTime):
-    TypeSummaryImpl(TypeSummaryImpl::Kind::eSummaryString, TypeSummaryImpl::Flags()),
-     m_sleepTime(sleepTime) {}
+  DummySummaryImpl(Duration sleepTime)
+      : TypeSummaryImpl(TypeSummaryImpl::Kind::eSummaryString,
+                        TypeSummaryImpl::Flags()),
+        m_sleepTime(sleepTime) {}
 
-  std::string GetName() override {
-    return "DummySummary";
-  }
+  std::string GetName() override { return "DummySummary"; }
 
-  std::string GetSummaryKindName() override {
-    return "dummy";
-  }
+  std::string GetSummaryKindName() override { return "dummy"; }
 
-  std::string GetDescription() override {
-    return "";
-  } 
+  std::string GetDescription() override { return ""; }
 
   bool FormatObject(ValueObject *valobj, std::string &dest,
                     const TypeSummaryOptions &options) override {
     return false;
   }
 
-  void FakeFormat() {
-    std::this_thread::sleep_for(m_sleepTime);
-  }
+  void FakeFormat() { std::this_thread::sleep_for(m_sleepTime); }
 
 private:
   Duration m_sleepTime;
@@ -56,7 +49,7 @@ TEST(MultithreadFormatting, Multithread) {
     }));
   }
 
-  for (auto &thread : threads) 
+  for (auto &thread : threads)
     thread.join();
 
   auto sp = statistics_cache.GetSummaryStatisticsForProvider(summary);

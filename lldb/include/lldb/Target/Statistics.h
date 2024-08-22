@@ -182,7 +182,8 @@ private:
 class SummaryStatistics {
 public:
   explicit SummaryStatistics(std::string name, std::string impl_type)
-      : m_total_time(), m_impl_type(std::move(impl_type)), m_name(std::move(name)), m_count(0) {}
+      : m_total_time(), m_impl_type(std::move(impl_type)),
+        m_name(std::move(name)), m_count(0) {}
 
   std::string GetName() const { return m_name; };
   double GetTotalTime() const { return m_total_time.get().count(); }
@@ -236,7 +237,7 @@ public:
   GetSummaryStatisticsForProvider(lldb_private::TypeSummaryImpl &provider) {
     std::lock_guard<std::mutex> guard(m_map_mutex);
     if (auto iterator = m_summary_stats_map.find(provider.GetName());
-         iterator != m_summary_stats_map.end())
+        iterator != m_summary_stats_map.end())
       return iterator->second;
 
     auto it = m_summary_stats_map.try_emplace(
