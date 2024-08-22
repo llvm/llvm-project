@@ -152,8 +152,7 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   // (only if we are not talking about the destination node which is a special
   // case indicated by a flag) and is located between the source of the copy and
   // the destination of the copy.
-  auto ProcessSNodeChildren = [SrcInstr, &SectionSize, &SectionInstr](
-                                  std::queue<const SUnit *> &Queue,
+  auto ProcessSNodeChildren = [&Edges, SrcInstr, &SectionSize, &SectionInstr](
                                   const SUnit *Node, bool IsRoot) -> bool {
     for (llvm::SDep I : Node->Preds) {
       SUnit *SU = I.getSUnit();
@@ -171,7 +170,7 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
         // dependence. We do not need to do anything with it again.
         if (!SectionInstr[DestinationFromSource]) {
           SectionInstr[DestinationFromSource] = true;
-          Queue.push(SU);
+          Edges.push(SU);
         }
       }
     }
@@ -197,11 +196,11 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   // source. To decide if we have it as dependency of another instruction, we
   // must check in the already traversed list if any of the instructions that is
   // depended on the source is contained. This would introduce extra costs.
-  ProcessSNodeChildren(Edges, Dst, true);
+  ProcessSNodeChildren(Dst, true);
   while (!Edges.empty()) {
     const auto *Current = Edges.front();
     Edges.pop();
-    if (!ProcessSNodeChildren(Edges, Current, false))
+    if (!ProcessSNodeChildren(Current, false))
       return {};
   }
 
