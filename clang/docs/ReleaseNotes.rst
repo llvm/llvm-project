@@ -454,11 +454,6 @@ Moved checkers
 
 Sanitizers
 ----------
-- Introduced Realtime Sanitizer, activated by using the -fsanitize=realtime
-  flag. This sanitizer detects unsafe system library calls, such as memory
-  allocations and mutex locks. If any such function is called during invocation
-  of a function marked with the ``[[clang::nonblocking]]`` attribute, an error
-  is printed to the console and the process exits non-zero.
 
 - Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
   used to disable specific overflow-dependent code patterns. The supported
