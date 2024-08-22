@@ -648,20 +648,20 @@ private:
       if (I[1]->Last->is(TT_LineComment))
         return 0;
 
-      unsigned inner_limit = Limit - I[1]->Last->TotalLength - 3;
-      unsigned inner_result = tryMergeNamespace(I + 1, E, inner_limit);
-      if (!inner_result)
+      const unsigned InnerLimit = Limit - I[1]->Last->TotalLength - 3;
+      const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
+      if (!MergedLines)
         return 0;
       // check if there is even a line after the inner result
-      if (I + 2 + inner_result >= E)
+      if (I + 2 + MergedLines >= E)
         return 0;
       // check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line
-      if (I[2 + inner_result]->First->is(tok::r_brace) &&
-          !I[2 + inner_result]->First->MustBreakBefore &&
-          !I[1 + inner_result]->Last->is(TT_LineComment) &&
-          nextNLinesFitInto(I, I + 2 + inner_result + 1, Limit)) {
-        return 2 + inner_result;
+      if (I[2 + MergedLines]->First->is(tok::r_brace) &&
+          !I[2 + MergedLines]->First->MustBreakBefore &&
+          !I[1 + MergedLines]->Last->is(TT_LineComment) &&
+          nextNLinesFitInto(I, I + 2 + MergedLines + 1, Limit)) {
+        return 2 + MergedLines;
       }
       return 0;
     }

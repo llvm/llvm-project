@@ -28315,106 +28315,106 @@ TEST_F(FormatTest, KeepFormFeed) {
 }
 
 TEST_F(FormatTest, ShortNamespacesOption) {
-  FormatStyle style = getLLVMStyle();
-  style.AllowShortNamespacesOnASingleLine = true;
-  style.FixNamespaceComments = false;
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortNamespacesOnASingleLine = true;
+  Style.FixNamespaceComments = false;
 
   // Basic functionality
-  verifyFormat("namespace foo { class bar; }", style);
-  verifyFormat("namespace foo::bar { class baz; }", style);
-  verifyFormat("namespace { class bar; }", style);
+  verifyFormat("namespace foo { class bar; }", Style);
+  verifyFormat("namespace foo::bar { class baz; }", Style);
+  verifyFormat("namespace { class bar; }", Style);
   verifyFormat("namespace foo {\n"
                "class bar;\n"
                "class baz;\n"
                "}",
-               style);
+               Style);
 
   // Trailing comments prevent merging
   verifyFormat("namespace foo {\n"
                "namespace baz { class qux; } // comment\n"
                "}",
-               style);
+               Style);
 
   // Make sure code doesn't walk to far on unbalanced code
-  verifyFormat("namespace foo {", style);
+  verifyFormat("namespace foo {", Style);
   verifyFormat("namespace foo {\n"
                "class baz;",
-               style);
+               Style);
   verifyFormat("namespace foo {\n"
                "namespace bar { class baz; }",
-               style);
+               Style);
 
   // Nested namespaces
-  verifyFormat("namespace foo { namespace bar { class baz; } }", style);
+  verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
   verifyFormat("namespace foo {\n"
                "namespace bar { class baz; }\n"
                "namespace quar { class quaz; }\n"
                "}",
-               style);
+               Style);
 
   // Varying inner content
   verifyFormat("namespace foo {\n"
                "int f() { return 5; }\n"
                "}",
-               style);
-  verifyFormat("namespace foo { template <T> struct bar; }", style);
-  verifyFormat("namespace foo { constexpr int num = 42; }", style);
+               Style);
+  verifyFormat("namespace foo { template <T> struct bar; }", Style);
+  verifyFormat("namespace foo { constexpr int num = 42; }", Style);
 
   // Validate wrapping scenarios around the ColumnLimit
-  style.ColumnLimit = 64;
+  Style.ColumnLimit = 64;
 
   // Validate just under the ColumnLimit
   verifyFormat(
       "namespace foo { namespace bar { namespace baz { class qux; } } }",
-      style);
+      Style);
 
   // Validate just over the ColumnLimit
   verifyFormat("namespace foo {\n"
                "namespace bar { namespace baz { class quux; } }\n"
                "}",
-               style);
+               Style);
 
   verifyFormat("namespace foo {\n"
                "namespace bar {\n"
                "namespace baz { namespace qux { class quux; } }\n"
                "}\n"
                "}",
-               style);
+               Style);
 
   // Validate that the ColumnLimit logic accounts for trailing content as well
   verifyFormat("namespace foo {\n"
                "namespace bar { namespace baz { class qux; } }\n"
                "} // extra",
-               style);
+               Style);
 
   // No ColumnLimit, allows long nested one-liners, but also leaves multi-line
   // instances alone
-  style.ColumnLimit = 0;
+  Style.ColumnLimit = 0;
   verifyFormat("namespace foo { namespace bar { namespace baz { namespace qux "
                "{ class quux; } } } }",
-               style);
+               Style);
 
   verifyNoChange("namespace foo {\n"
                  "namespace bar {\n"
                  "namespace baz { namespace qux { class quux; } }\n"
                  "}\n"
                  "}",
-                 style);
+                 Style);
 
   // This option doesn't really work with FixNamespaceComments and nested
   // namespaces. Code should use the concatenated namespace syntax.  e.g.
   // 'namespace foo::bar'
-  style.FixNamespaceComments = true;
+  Style.FixNamespaceComments = true;
 
   verifyFormat(
       "namespace foo {\n"
       "namespace bar { namespace baz { class qux; } } // namespace bar\n"
       "} // namespace foo",
       "namespace foo { namespace bar { namespace baz { class qux; } } }",
-      style);
+      Style);
 
   // This option doesn't really make any sense with ShortNamespaceLines = 0
-  style.ShortNamespaceLines = 0;
+  Style.ShortNamespaceLines = 0;
 
   verifyFormat(
       "namespace foo {\n"
@@ -28423,7 +28423,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
       "} // namespace bar\n"
       "} // namespace foo",
       "namespace foo { namespace bar { namespace baz { class qux; } } }",
-      style);
+      Style);
 }
 
 } // namespace
