@@ -21,6 +21,7 @@
 
 #include <future>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -34,6 +35,34 @@ struct ELFPerObjectSectionsToRegister {
 using ELFNixJITDylibDepInfo = std::vector<ExecutorAddr>;
 using ELFNixJITDylibDepInfoMap =
     std::vector<std::pair<ExecutorAddr, ELFNixJITDylibDepInfo>>;
+
+struct RuntimeFunction {
+  RuntimeFunction(SymbolStringPtr Name) : Name(std::move(Name)) {}
+  SymbolStringPtr Name;
+  ExecutorAddr Addr;
+};
+
+struct FunctionPairKeyHash {
+  std::size_t
+  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &key) const {
+    return std::hash<void *>()(key.first->Addr.toPtr<void *>()) ^
+           std::hash<void *>()(key.second->Addr.toPtr<void *>());
+  }
+};
+
+struct FunctionPairKeyEqual {
+  std::size_t
+  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &lhs,
+             const std::pair<RuntimeFunction *, RuntimeFunction *> &rhs) const {
+    return lhs.first == rhs.first && lhs.second == rhs.second;
+  }
+};
+
+using DeferredRuntimeFnMap = std::unordered_map<
+    std::pair<RuntimeFunction *, RuntimeFunction *>,
+    SmallVector<std::pair<shared::WrapperFunctionCall::ArgDataBufferType,
+                          shared::WrapperFunctionCall::ArgDataBufferType>>,
+    FunctionPairKeyHash, FunctionPairKeyEqual>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
 class ELFNixPlatform : public Platform {
@@ -110,6 +139,23 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  // Data needed for bootstrap only.
+  struct BootstrapInfo {
+    std::mutex Mutex;
+    std::condition_variable CV;
+    size_t ActiveGraphs = 0;
+    ExecutorAddr ELFNixHeaderAddr;
+    DeferredRuntimeFnMap DeferredRTFnMap;
+
+    void addArgumentsToRTFnMap(
+        RuntimeFunction *func1, RuntimeFunction *func2,
+        const shared::WrapperFunctionCall::ArgDataBufferType &arg1,
+        const shared::WrapperFunctionCall::ArgDataBufferType &arg2) {
+      auto &argList = DeferredRTFnMap[std::make_pair(func1, func2)];
+      argList.emplace_back(arg1, arg2);
+    }
+  };
+
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
@@ -135,15 +181,22 @@ private:
                                      ResourceKey SrcKey) override {}
 
   private:
+    using InitSymbolDepMap =
+        DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
+
+    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
+    Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
+    Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
+
     void addInitializerSupportPasses(MaterializationResponsibility &MR,
                                      jitlink::PassConfiguration &Config);
 
     void addDSOHandleSupportPasses(MaterializationResponsibility &MR,
-                                   jitlink::PassConfiguration &Config,
-                                   bool IsBootstrapping);
+                                   jitlink::PassConfiguration &Config);
 
     void addEHAndTLVSupportPasses(MaterializationResponsibility &MR,
-                                  jitlink::PassConfiguration &Config);
+                                  jitlink::PassConfiguration &Config,
+                                  bool IsBootstrapping);
 
     Error preserveInitSections(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
@@ -181,38 +234,36 @@ private:
   void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
                        StringRef SymbolName);
 
-  // Records the addresses of runtime symbols used by the platform.
-  Error bootstrapELFNixRuntime(JITDylib &PlatformJD);
-
   Error registerPerObjectSections(jitlink::LinkGraph &G,
-                                  const ELFPerObjectSectionsToRegister &POSR);
+                                  const ELFPerObjectSectionsToRegister &POSR,
+                                  bool IsBootstrapping);
 
   Expected<uint64_t> createPThreadKey();
 
-  struct JDBootstrapState {
-    JITDylib *JD = nullptr;
-    std::string JDName;
-    ExecutorAddr HeaderAddr;
-    SmallVector<ExecutorAddrRange> Initializers;
-  };
-
-  std::map<JITDylib *, JDBootstrapState> JDBootstrapStates;
-
   ExecutionSession &ES;
+  JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
 
   SymbolStringPtr DSOHandleSymbol;
-  std::atomic<bool> RuntimeBootstrapped{false};
 
-  ExecutorAddr orc_rt_elfnix_platform_bootstrap;
-  ExecutorAddr orc_rt_elfnix_platform_shutdown;
-  ExecutorAddr orc_rt_elfnix_register_jitdylib;
-  ExecutorAddr orc_rt_elfnix_deregister_jitdylib;
-  ExecutorAddr orc_rt_elfnix_register_init_sections;
-  ExecutorAddr orc_rt_elfnix_deregister_init_sections;
-  ExecutorAddr orc_rt_elfnix_register_object_sections;
-  ExecutorAddr orc_rt_elfnix_deregister_object_sections;
-  ExecutorAddr orc_rt_elfnix_create_pthread_key;
+  RuntimeFunction PlatformBootstrap{
+      ES.intern("__orc_rt_elfnix_platform_bootstrap")};
+  RuntimeFunction PlatformShutdown{
+      ES.intern("__orc_rt_elfnix_platform_shutdown")};
+  RuntimeFunction RegisterJITDylib{
+      ES.intern("__orc_rt_elfnix_register_jitdylib")};
+  RuntimeFunction DeregisterJITDylib{
+      ES.intern("__orc_rt_elfnix_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectSections{
+      ES.intern("__orc_rt_elfnix_register_object_sections")};
+  RuntimeFunction DeregisterObjectSections{
+      ES.intern("__orc_rt_elfnix_deregister_object_sections")};
+  RuntimeFunction RegisterInitSections{
+      ES.intern("__orc_rt_elfnix_register_init_sections")};
+  RuntimeFunction DeregisterInitSections{
+      ES.intern("__orc_rt_elfnix_deregister_init_sections")};
+  RuntimeFunction CreatePThreadKey{
+      ES.intern("__orc_rt_elfnix_create_pthread_key")};
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
@@ -224,6 +275,8 @@ private:
   DenseMap<ExecutorAddr, JITDylib *> HandleAddrToJITDylib;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHandleAddr;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
+
+  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 namespace shared {

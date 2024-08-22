@@ -622,8 +622,13 @@ __orc_rt_elfnix_platform_bootstrap(char *ArgData, size_t ArgSize) {
 
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_elfnix_platform_shutdown(char *ArgData, size_t ArgSize) {
-  ELFNixPlatformRuntimeState::destroy();
-  return WrapperFunctionResult().release();
+  return WrapperFunction<SPSError()>::handle(
+             ArgData, ArgSize,
+             []() {
+               ELFNixPlatformRuntimeState::destroy();
+               return Error::success();
+             })
+      .release();
 }
 
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
