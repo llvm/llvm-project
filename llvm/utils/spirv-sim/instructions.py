@@ -1,16 +1,16 @@
+from typing import Optional
+
 # Base class for an instruction. To implement a basic instruction that doesn't
 # impact the control-flow, create a new class inheriting from this.
 class Instruction:
-    _result: str
+    # Contains the name of the output register, if any.
+    _result: Optional[str]
+    # Contains the instruction opcode.
+    _opcode: str
+    # Contains all the instruction operands, except result and opcode.
+    _operands: list[str]
 
     def __init__(self, line: str):
-        # Contains the name of the output register, if any.
-        self._result: str = None
-        # Contains the instruction opcode.
-        self._opcode: str = None
-        # Contains all the instruction operands, except result and opcode.
-        self._operands: list[str] = []
-
         self.line = line
         tokens = line.split()
         if len(tokens) > 1 and tokens[1] == "=":
@@ -38,7 +38,7 @@ class Instruction:
     # Returns the instruction output register. Calling this function is
     # only allowed if has_output_register() is true.
     def output_register(self) -> str:
-        assert self.has_output_register()
+        assert self._result is not None
         return self._result
 
     # Returns true if this function has an output register. False otherwise.
@@ -132,18 +132,9 @@ class OpConstantFalse(OpConstant):
 class OpConstantComposite(OpConstant):
     def static_execution(self, lane):
         result = []
-        length = self.get_register(self._operands[0])
         for op in self._operands[1:]:
-            result.append(self.get_register(op))
+            result.append(lane.get_register(op))
         lane.set_register(self._result, result)
-
-
-class OpConstantComposite(OpConstant):
-    def static_execution(self, vm, state):
-        output = []
-        for op in self._operands[1:]:
-            output.append(state.get_register(op))
-        state.set_register(self._result, output)
 
 
 # Control flow instructions
@@ -217,7 +208,7 @@ class OpUnreachable(Instruction):
 
 
 # Convergence instructions
-class _MergeInstruction(Instruction):
+class MergeInstruction(Instruction):
     def merge_location(self):
         return self._operands[0]
 
@@ -228,11 +219,11 @@ class _MergeInstruction(Instruction):
         lane.handle_convergence_header(self)
 
 
-class OpLoopMerge(_MergeInstruction):
+class OpLoopMerge(MergeInstruction):
     pass
 
 
-class OpSelectionMerge(_MergeInstruction):
+class OpSelectionMerge(MergeInstruction):
     pass
 
 
@@ -265,6 +256,13 @@ class OpCompositeConstruct(Instruction):
             output.append(lane.get_register(op))
         lane.set_register(self._result, output)
 
+class OpCompositeExtract(Instruction):
+    def _impl(self, module, lane):
+        value = lane.get_register(self._operands[1])
+        output = value
+        for op in self._operands[2:]:
+          output = output[int(op)]
+        lane.set_register(self._result, output)
 
 class OpStore(Instruction):
     def _impl(self, module, lane):
@@ -301,13 +299,6 @@ class OpLogicalNot(Instruction):
     def _impl(self, module, lane):
         LHS = lane.get_register(self._operands[1])
         lane.set_register(self._result, not LHS)
-
-
-class OpSGreaterThan(Instruction):
-    def _impl(self, module, lane):
-        LHS = lane.get_register(self._operands[1])
-        RHS = lane.get_register(self._operands[2])
-        lane.set_register(self._result, LHS > RHS)
 
 
 class _LessThan(Instruction):
