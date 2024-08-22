@@ -665,10 +665,11 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              PeelingPreferences &PP) const;
 
-  /// Return true if folding a constant offset with the given GlobalValue
-  /// (representing a GlobalAddress) is legal.  It is frequently not legal
-  /// in PIC relocation models.
-  /// Caller must guarantee that GlobalValue represents a global address.
+  /// Given a global address represented by a global value and a constant
+  /// offset relative to it, return true if the constant offset is foldable into
+  /// the global value when lowering the global address. The constant is usually
+  /// not foldable PIC relocation models. Caller must guarantee that GlobalValue
+  /// represents a global address.
   bool isOffsetFoldingLegal(const GlobalValue *GV) const;
 
   /// Targets can implement their own combinations for target-specific
