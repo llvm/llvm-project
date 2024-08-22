@@ -42,7 +42,7 @@ public:
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
-  enum ImportFailureReason {
+  enum class ImportFailureReason {
     None,
     // We can encounter a global variable instead of a function in rare
     // situations with SamplePGO. See comments where this failure type is

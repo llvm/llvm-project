@@ -110,6 +110,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::FSIN:
   case ISD::FSINH:
   case ISD::FSQRT:
@@ -752,6 +754,8 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::LRINT:
   case ISD::LLRINT:
     Res = ScalarizeVecOp_UnaryOp(N);
@@ -1215,6 +1219,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FROUND:
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUNDEVEN:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::FSIN:
   case ISD::FSINH:
   case ISD::FSQRT: case ISD::VP_SQRT:
@@ -3270,6 +3276,8 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:
   case ISD::FTRUNC:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::LRINT:
   case ISD::LLRINT:
     Res = SplitVecOp_UnaryOp(N);
@@ -4594,7 +4602,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:
   case ISD::VP_LRINT:
   case ISD::VP_LLRINT:
-    Res = WidenVecRes_XRINT(N);
+  case ISD::LROUND:
+  case ISD::LLROUND:
+    Res = WidenVecRes_XROUND(N);
     break;
 
   case ISD::FABS:
@@ -4843,6 +4853,26 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     SDValue InOp1 = GetWidenedVector(N->getOperand(0));
     SDValue InOp2 = GetWidenedVector(N->getOperand(1));
     return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
+  }
+
+  // Generate a vp.op if it is custom/legal for the target.  This avoids need
+  // to split and tile the subvectors (below), because the inactive lanes can
+  // simply be disabled. To avoid possible recursion, only do this if the
+  // widened mask type is legal.
+  if (auto VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+      VPOpcode && TLI.isOperationLegalOrCustom(*VPOpcode, WidenVT)) {
+    if (EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                          WidenVT.getVectorElementCount());
+        TLI.isTypeLegal(WideMaskVT)) {
+      SDValue InOp1 = GetWidenedVector(N->getOperand(0));
+      SDValue InOp2 = GetWidenedVector(N->getOperand(1));
+      SDValue Mask = DAG.getAllOnesConstant(dl, WideMaskVT);
+      SDValue EVL =
+          DAG.getElementCount(dl, TLI.getVPExplicitVectorLengthTy(),
+                              N->getValueType(0).getVectorElementCount());
+      return DAG.getNode(*VPOpcode, dl, WidenVT, InOp1, InOp2, Mask, EVL,
+                         Flags);
+    }
   }
 
   // FIXME: Improve support for scalable vectors.
@@ -5211,7 +5241,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_FP_TO_XINT_SAT(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, WidenVT, Src, N->getOperand(1));
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_XRINT(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecRes_XROUND(SDNode *N) {
   SDLoc dl(N);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   ElementCount WidenNumElts = WidenVT.getVectorElementCount();
@@ -6460,6 +6490,8 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
   case ISD::FLDEXP:
   case ISD::FCOPYSIGN:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::LRINT:
   case ISD::LLRINT:
     Res = WidenVecOp_UnrollVectorOp(N);
