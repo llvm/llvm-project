@@ -1357,11 +1357,10 @@ define i1 @no_masks_with_logical_or2(i32 %a, i32 %b, i32 noundef %c) {
 
 define <2 x i1> @no_masks_with_logical_or_vec_poison1(<2 x i32> %a, <2 x i32> %b, <2 x i32> noundef %c) {
 ; CHECK-LABEL: @no_masks_with_logical_or_vec_poison1(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[A:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[B:%.*]], <i32 63, i32 poison>
-; CHECK-NEXT:    [[OR1:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne <2 x i32> [[C:%.*]], <i32 0, i32 poison>
-; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i1> [[OR1]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR2]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, <i32 0, i32 poison>
@@ -1374,11 +1373,10 @@ define <2 x i1> @no_masks_with_logical_or_vec_poison1(<2 x i32> %a, <2 x i32> %b
 
 define <2 x i1> @no_masks_with_logical_or_vec_poison2(<2 x i32> %a, <2 x i32> %b, <2 x i32> noundef %c) {
 ; CHECK-LABEL: @no_masks_with_logical_or_vec_poison2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[A:%.*]], <i32 -1, i32 poison>
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[B:%.*]], <i32 63, i32 poison>
-; CHECK-NEXT:    [[OR1:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne <2 x i32> [[C:%.*]], <i32 -1, i32 poison>
-; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i1> [[OR1]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR2]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, <i32 -1, i32 poison>
