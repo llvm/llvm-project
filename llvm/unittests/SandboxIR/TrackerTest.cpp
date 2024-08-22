@@ -13,6 +13,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -644,6 +645,74 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, CatchSwitchInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %cond0, i32 %cond1) {
+  bb0:
+    %cs0 = catchswitch within none [label %handler0, label %handler1] unwind to caller
+  bb1:
+    %cs1 = catchswitch within %cs0 [label %handler0, label %handler1] unwind label %cleanup
+  handler0:
+    ret void
+  handler1:
+    ret void
+  cleanup:
+    ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler0")));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler1")));
+  auto *CS0 = cast<sandboxir::CatchSwitchInst>(&*BB0->begin());
+  auto *CS1 = cast<sandboxir::CatchSwitchInst>(&*BB1->begin());
+
+  // Check setParentPad().
+  auto *OrigPad = CS0->getParentPad();
+  auto *NewPad = CS1;
+  EXPECT_NE(NewPad, OrigPad);
+  Ctx.save();
+  CS0->setParentPad(NewPad);
+  EXPECT_EQ(CS0->getParentPad(), NewPad);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getParentPad(), OrigPad);
+  // Check setUnwindDest().
+  auto *OrigUnwindDest = CS1->getUnwindDest();
+  auto *NewUnwindDest = BB0;
+  EXPECT_NE(NewUnwindDest, OrigUnwindDest);
+  Ctx.save();
+  CS1->setUnwindDest(NewUnwindDest);
+  EXPECT_EQ(CS1->getUnwindDest(), NewUnwindDest);
+  Ctx.revert();
+  EXPECT_EQ(CS1->getUnwindDest(), OrigUnwindDest);
+  // Check setSuccessor().
+  auto *OrigSuccessor = CS0->getSuccessor(0);
+  auto *NewSuccessor = BB0;
+  EXPECT_NE(NewSuccessor, OrigSuccessor);
+  Ctx.save();
+  CS0->setSuccessor(0, NewSuccessor);
+  EXPECT_EQ(CS0->getSuccessor(0), NewSuccessor);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getSuccessor(0), OrigSuccessor);
+  // Check addHandler().
+  Ctx.save();
+  CS0->addHandler(BB0);
+  EXPECT_EQ(CS0->getNumHandlers(), 3u);
+  Ctx.revert();
+  EXPECT_EQ(CS0->getNumHandlers(), 2u);
+  auto HIt = CS0->handler_begin();
+  EXPECT_EQ(*HIt++, Handler0);
+  EXPECT_EQ(*HIt++, Handler1);
+}
+
 TEST_F(TrackerTest, SwitchInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
@@ -722,6 +791,31 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getNumCases(), 2u);
   EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
+}
+
+TEST_F(TrackerTest, ShuffleVectorInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
+  %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 1, i32 2>
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *SVI = cast<sandboxir::ShuffleVectorInst>(&*It++);
+
+  // Check setShuffleMask.
+  SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
+  Ctx.save();
+  SVI->setShuffleMask(ArrayRef<int>({0, 0}));
+  EXPECT_THAT(SVI->getShuffleMask(),
+              testing::Not(testing::ElementsAreArray(OrigMask)));
+  Ctx.revert();
+  EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
 }
 
 TEST_F(TrackerTest, AtomicRMWSetters) {

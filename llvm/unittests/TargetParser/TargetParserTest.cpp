@@ -66,21 +66,6 @@ std::string FormatExtensionFlags(int64_t Flags) {
   return llvm::join(Features, ", ");
 }
 
-std::string FormatExtensionFlags(AArch64::ExtensionBitset Flags) {
-  std::vector<StringRef> Features;
-  AArch64::getExtensionFeatures(Flags, Features);
-
-  // The target parser also includes every extension you don't have.
-  // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
-
-  return llvm::join(Features, ", ");
-}
-
 std::string SerializeExtensionFlags(AArch64::ExtensionBitset Flags) {
   std::string SerializedFlags;
   std::ostringstream ss;
@@ -119,26 +104,6 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
                             FormatExtensionFlags(GotFlags), GotFlags, CPUName,
                             FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
-
-  testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
-                                      AArch64::ExtensionBitset ExpectedFlags,
-                                      AArch64::ExtensionBitset GotFlags) {
-    if (ExpectedFlags == GotFlags)
-      return testing::AssertionSuccess();
-
-    return testing::AssertionFailure()
-           << llvm::formatv("CPU: {4}\n"
-                            "Expected extension flags: {0} ({1})\n"
-                            "     Got extension flags: {2} ({3})\n"
-                            "                    Diff: {5} ({6})\n",
-                            FormatExtensionFlags(ExpectedFlags),
-                            SerializeExtensionFlags(ExpectedFlags),
-                            FormatExtensionFlags(GotFlags),
-                            SerializeExtensionFlags(GotFlags), CPUName,
-                            FormatExtensionFlags(ExpectedFlags ^ GotFlags),
-                            SerializeExtensionFlags(ExpectedFlags ^ GotFlags));
-  }
-
 private:
   StringRef CPUName;
 };
