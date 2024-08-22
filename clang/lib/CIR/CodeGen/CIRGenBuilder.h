@@ -40,6 +40,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace cir {
 
@@ -869,16 +870,21 @@ public:
 
     mlir::Type SubType;
 
+    auto getIndexAndNewOffset =
+        [](int64_t Offset, int64_t EltSize) -> std::pair<int64_t, int64_t> {
+      int64_t DivRet = Offset / EltSize;
+      if (DivRet < 0)
+        DivRet -= 1; // make sure offset is positive
+      int64_t ModRet = Offset - (DivRet * EltSize);
+      return {DivRet, ModRet};
+    };
+
     if (auto ArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(Ty)) {
-      auto EltSize = Layout.getTypeAllocSize(ArrayTy.getEltType());
-      Indices.push_back(Offset / EltSize);
+      int64_t EltSize = Layout.getTypeAllocSize(ArrayTy.getEltType());
       SubType = ArrayTy.getEltType();
-      Offset %= EltSize;
-    } else if (auto PtrTy = mlir::dyn_cast<mlir::cir::PointerType>(Ty)) {
-      auto EltSize = Layout.getTypeAllocSize(PtrTy.getPointee());
-      Indices.push_back(Offset / EltSize);
-      SubType = PtrTy.getPointee();
-      Offset %= EltSize;
+      auto const [Index, NewOffset] = getIndexAndNewOffset(Offset, EltSize);
+      Indices.push_back(Index);
+      Offset = NewOffset;
     } else if (auto StructTy = mlir::dyn_cast<mlir::cir::StructType>(Ty)) {
       auto Elts = StructTy.getMembers();
       int64_t Pos = 0;
@@ -887,7 +893,8 @@ public:
             (int64_t)Layout.getTypeAllocSize(Elts[I]).getFixedValue();
         unsigned AlignMask = Layout.getABITypeAlign(Elts[I]).value() - 1;
         Pos = (Pos + AlignMask) & ~AlignMask;
-        if (Offset < Pos + EltSize) {
+        assert(Offset >= 0);
+        if (static_cast<uint64_t>(Offset) < Pos + EltSize) {
           Indices.push_back(I);
           SubType = Elts[I];
           Offset -= Pos;
