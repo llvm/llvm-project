@@ -319,6 +319,12 @@ TEST(DataLayout, ParsePointerSpec) {
         FailedWithMessage("malformed specification, must be of the form "
                           "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>]]\""));
 
+  // Only 'u' and 'n' flags are valid.
+  for (StringRef Str : {"pa:32:32", "px:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
+
   // address space
   for (StringRef Str : {"p0x0:32:32", "px:32:32:32", "p16777216:32:32:32:32"})
     EXPECT_THAT_EXPECTED(
@@ -401,6 +407,12 @@ TEST(DataLayout, ParsePointerSpec) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
+
+  for (StringRef Str : {"pn:64:64", "pu:64:64", "pun:64:64", "pnu:64:64",
+                        "pn0:64:64", "pu0:64:64", "pun0:64:64", "pnu0:64:64"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space 0 cannot be non-integral"));
 }
 
 TEST(DataLayoutTest, ParseNativeIntegersSpec) {
@@ -553,6 +565,40 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
   EXPECT_FALSE(Custom.isNonIntegralAddressSpace(1));
   EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
   EXPECT_TRUE(Custom.isNonIntegralAddressSpace(16777215));
+
+  // Pointers can be marked as non-integral using 'pn'
+  DataLayout NonIntegral = cantFail(DataLayout::parse("pn2:64:64:64:32"));
+  EXPECT_TRUE(NonIntegral.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(NonIntegral.hasNonIntegralRepresentation(2));
+  EXPECT_FALSE(NonIntegral.hasUnstableRepresentation(2));
+  EXPECT_TRUE(NonIntegral.shouldAvoidIntToPtr(2));
+  EXPECT_FALSE(NonIntegral.shouldAvoidPtrToInt(2));
+
+  // Pointers can be marked as unstable using 'pu'
+  DataLayout Unstable = cantFail(DataLayout::parse("pu2:64:64:64:32"));
+  EXPECT_TRUE(Unstable.isNonIntegralAddressSpace(2));
+  EXPECT_TRUE(Unstable.hasUnstableRepresentation(2));
+  EXPECT_FALSE(Unstable.hasNonIntegralRepresentation(2));
+  EXPECT_TRUE(Unstable.shouldAvoidPtrToInt(2));
+  EXPECT_TRUE(Unstable.shouldAvoidIntToPtr(2));
+
+  // Both properties can also be set using 'pnu'/'pun'
+  for (auto Layout : {"pnu2:64:64:64:32", "pun2:64:64:64:32"}) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
+    EXPECT_TRUE(DL.hasNonIntegralRepresentation(2));
+    EXPECT_TRUE(DL.hasUnstableRepresentation(2));
+  }
+
+  // For backwards compatibility, the ni DataLayout part overrides any p[n][u].
+  for (auto Layout : {"ni:2-pn2:64:64:64:32", "ni:2-pnu2:64:64:64:32",
+                      "ni:2-pu2:64:64:64:32", "pn2:64:64:64:32-ni:2",
+                      "pnu2:64:64:64:32-ni:2", "pu2:64:64:64:32-ni:2"}) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
+    EXPECT_TRUE(DL.hasNonIntegralRepresentation(2));
+    EXPECT_TRUE(DL.hasUnstableRepresentation(2));
+  }
 }
 
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
