@@ -499,7 +499,8 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
     const AMDGPUMachineFunction *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
-  OutStreamer->emitRawComment(" NumSgprs: " + getMCExprStr(NumSGPR), false);
+  OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
+                              false);
   OutStreamer->emitRawComment(" NumVgprs: " + getMCExprStr(NumVGPR), false);
   if (NumAGPR && TotalNumVGPR) {
     OutStreamer->emitRawComment(" NumAgprs: " + getMCExprStr(NumAGPR), false);
@@ -1658,7 +1659,7 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   // printing multiple diagnostic location and diag opts.
   EmitResourceUsageRemark("FunctionName", "Function Name",
                           MF.getFunction().getName());
-  EmitResourceUsageRemark("NumSGPR", "SGPRs",
+  EmitResourceUsageRemark("NumSGPR", "TotalSGPRs",
                           getMCExprStr(CurrentProgramInfo.NumSGPR));
   EmitResourceUsageRemark("NumVGPR", "VGPRs",
                           getMCExprStr(CurrentProgramInfo.NumArchVGPR));

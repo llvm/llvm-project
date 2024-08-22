@@ -32,7 +32,7 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
   case RIK_NumAGPR:
     return GOCS(".num_agpr");
   case RIK_NumSGPR:
-    return GOCS(".num_sgpr");
+    return GOCS(".numbered_sgpr");
   case RIK_PrivateSegSize:
     return GOCS(".private_seg_size");
   case RIK_UsesVCC:
