@@ -4,6 +4,7 @@ def StdC : StandardSpec<"stdc"> {
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;
   NamedType ClockT = NamedType<"clock_t">;
+  NamedType LocaleT = NamedType<"locale_t">;
 
   NamedType DivTType = NamedType<"div_t">;
   NamedType LDivTType = NamedType<"ldiv_t">;
@@ -1591,6 +1592,61 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  
+  NamedType StructLconv : NamedType<"struct lconv">;
+  PtrType StructLconvPtr : PtrType<StructLconv>;
+
+  HeaderSpec Locale = HeaderSpec<
+     "locale.h",
+      [], // Macros
+      [LocaleT, StructLconv], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "duplocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "freelocale",
+          RetValSpec<VoidType>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "localeconv",
+          RetValSpec<StructLconvPtr>,
+          []
+        >,
+        FunctionSpec<
+          "newlocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>,
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "setlocale",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>
+          ]
+        >,
+        FunctionSpec<
+          "uselocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >
+      ]  // Functions
+  >;
 
   let Headers = [
     Assert,
@@ -1613,5 +1669,6 @@ def StdC : StandardSpec<"stdc"> {
     Time,
     UChar,
     WChar,
+    Locale,
   ];
 }
