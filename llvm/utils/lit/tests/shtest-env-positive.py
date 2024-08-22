@@ -1,11 +1,11 @@
-# Check the env command (passing tests)
+## Test the env command (passing tests).
 
 # RUN: %{lit} -a -v %{inputs}/shtest-env-positive \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.
 
-# Check the env command's successful executions.
+## Test the env command's successful executions.
 
 # CHECK: -- Testing: 9 tests{{.*}}
 
@@ -42,25 +42,26 @@
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-calls-env.txt ({{[^)]*}})
-# CHECK: env env [[PYTHON:.+]] print_environment.py | {{.*}}
-# CHECK: # executed command: env env [[PYTHON_BARE:.+]] print_environment.py
+# CHECK: env env | {{.*}}
+# CHECK: # executed command: env env
 # CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-u.txt ({{[^)]*}})
-# CHECK: env -u FOO [[PYTHON]] print_environment.py | {{.*}}
+# CHECK: env -u FOO | {{.*}}
+# CHECK: # executed command: env -u FOO
 # CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env.txt ({{[^)]*}})
-# CHECK: env A_FOO=999 [[PYTHON]] print_environment.py | {{.*}}
-# CHECK: # executed command: env A_FOO=999 [[PYTHON_BARE:.+]] print_environment.py
+# CHECK: env A_FOO=999 | {{.*}}
+# CHECK: # executed command: env A_FOO=999
 # CHECK-NOT: # error:
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: mixed.txt ({{[^)]*}})
-# CHECK: env A_FOO=999 -u FOO [[PYTHON]] print_environment.py | {{.*}}
-# CHECK: # executed command: env A_FOO=999 -u FOO [[PYTHON_BARE:.+]] print_environment.py
+# CHECK: env A_FOO=999 -u FOO | {{.*}}
+# CHECK: # executed command: env A_FOO=999 -u FOO
 # CHECK-NOT: # error:
 # CHECK: --
 

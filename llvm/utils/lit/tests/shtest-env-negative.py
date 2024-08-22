@@ -1,11 +1,11 @@
-# Check the env command (failing tests)
+## Test the env command (failing tests).
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-env-negative \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.
 
-# Check the env command's expected failures.
+## Test the env command's expected failures.
 
 # CHECK: -- Testing: 7 tests{{.*}}
 
