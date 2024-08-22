@@ -4806,6 +4806,34 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
   return {};
 }
 
+/// Compute and set the OverflowPatternExclusion bit based on whether the
+/// BinaryOperator expression matches an overflow pattern being ignored by
+/// -fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test or
+/// -fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test
+static void computeOverflowPatternExclusion(const ASTContext &Ctx,
+                                            const BinaryOperator *E) {
+  bool AddSignedOverflowTest = Ctx.getLangOpts().isOverflowPatternExcluded(
+      LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest);
+  bool AddUnsignedOverflowTest = Ctx.getLangOpts().isOverflowPatternExcluded(
+      LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest);
+
+  if (!AddSignedOverflowTest && !AddUnsignedOverflowTest)
+    return;
+
+  std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(E);
+
+  if (!Result.has_value())
+    return;
+
+  QualType AdditionResultType = Result.value()->getType();
+
+  if (AddSignedOverflowTest && AdditionResultType->isSignedIntegerType())
+    Result.value()->setExcludedOverflowPattern(true);
+  else if (AddUnsignedOverflowTest &&
+           AdditionResultType->isUnsignedIntegerType())
+    Result.value()->setExcludedOverflowPattern(true);
+}
+
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation opLoc,
@@ -4818,12 +4846,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.ExcludedOverflowPattern = false;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
-  if (Ctx.getLangOpts().isOverflowPatternExcluded(
-          LangOptions::OverflowPatternExclusionKind::AddOverflowTest)) {
-    std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(this);
-    if (Result.has_value())
-      Result.value()->BinaryOperatorBits.ExcludedOverflowPattern = true;
-  }
+  computeOverflowPatternExclusion(Ctx, this);
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);

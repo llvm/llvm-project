@@ -375,11 +375,13 @@ public:
     /// Exclude all overflow patterns (below)
     All = 1 << 1,
     /// if (a + b < a)
-    AddOverflowTest = 1 << 2,
+    AddSignedOverflowTest = 1 << 2,
+    /// if (a + b < a)
+    AddUnsignedOverflowTest = 1 << 3,
     /// -1UL
-    NegUnsignedConst = 1 << 3,
+    NegUnsignedConst = 1 << 4,
     /// while (count--)
-    PostDecrInWhile = 1 << 4,
+    PostDecrInWhile = 1 << 5,
   };
 
   enum class DefaultVisiblityExportMapping {
