@@ -912,7 +912,7 @@ void FunctionInstrumenter::instrument() {
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
   auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      Name, PointerType::get(M->getContext(), 0));
+      Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
@@ -1035,7 +1035,7 @@ void FunctionInstrumenter::instrument() {
       assert(ToProfile && "value profiling Value is of unexpected type");
 
       auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-          Name, PointerType::get(M->getContext(), 0));
+          Name, PointerType::get(M.getContext(), 0));
 
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
