@@ -4596,7 +4596,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return true;
       assert(Right.Next);
       const auto *LParen = Right.Next->MatchingParen;
-      return !LParen || Tok->isNot(TT_FunctionTypeLParen);
+      return !LParen || LParen->isNot(TT_FunctionTypeLParen);
     }
     return !BeforeLeft->isOneOf(tok::l_paren, tok::l_square);
   }
