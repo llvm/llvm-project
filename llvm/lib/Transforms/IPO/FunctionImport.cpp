@@ -600,8 +600,8 @@ class WorkloadImportsManager : public ModuleImportsManager {
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
                         << ExportingModule << " : "
                         << Function::getGUID(VI.name()) << "\n");
-      ImportList[ExportingModule][VI.getGUID()] =
-          GlobalValueSummary::Definition;
+      FunctionImporter::addDefinition(ImportList, ExportingModule,
+                                      VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
         (*ExportLists)[ExportingModule].insert(VI);
