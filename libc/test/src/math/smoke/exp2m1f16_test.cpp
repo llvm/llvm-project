@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2m1f16.h"

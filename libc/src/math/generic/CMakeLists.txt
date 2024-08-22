@@ -1549,6 +1549,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
   COMPILE_OPTIONS
     -O3
 )

@@ -1182,6 +1182,7 @@ add_fp_unittest(
   SRCS
     exp2m1f16_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f16
 )
