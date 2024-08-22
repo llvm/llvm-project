@@ -436,12 +436,13 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
   RVVArgDispatcher Dispatcher{&MF, &TLI,
                               ArrayRef(MF.getFunction().getReturnType())};
 
+  RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
+
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);
-    RISCVABI::ABI ABI = MF.getSubtarget<RISCVSubtarget>().getTargetABI();
     if (RISCV::CC_RISCV(MF.getDataLayout(), ABI, I, VT, VT, CCValAssign::Full,
-                        Outs[I].Flags[0], CCInfo, /*IsFixed*/ true,
-                        /*isRet*/ true, nullptr, TLI, Dispatcher))
+                        Outs[I].Flags[0], CCInfo, /*IsFixed=*/true,
+                        /*isRet=*/true, nullptr, TLI, Dispatcher))
       return false;
   }
   return true;
