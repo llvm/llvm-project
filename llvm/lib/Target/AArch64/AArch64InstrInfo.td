@@ -3518,6 +3518,33 @@ def : Pat <(v2i64 (vec_ins_or_scal_vec (i64
            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
                           (LDRDui GPR64sp:$Rn, uimm12s8:$offset), dsub)>;
 
+def : Pat<(v2i32 (vector_insert (v2i32 undef), (i32 GPR32:$Rn), (i64 0))),
+          (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v4i32 (vector_insert (v4i32 undef), (i32 GPR32:$Rn), (i64 0))),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), GPR32:$Rn, ssub)>;
+def : Pat<(v1i64 (vector_insert (v1i64 undef), (i64 GPR64:$Rn), (i64 0))),
+          (INSERT_SUBREG (v1i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
+def : Pat<(v2i64 (vector_insert (v2i64 undef), (i64 GPR64:$Rn), (i64 0))),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GPR64:$Rn, dsub)>;
+
+def : Pat<(v8i8 (vec_ins_or_scal_vec (i8 (vector_extract (v8i8 V64:$Rm), (i64 0))))),
+          (v8i8 V64:$Rm)>;
+def : Pat<(v4i16 (vec_ins_or_scal_vec (i16 (vector_extract (v4i16 V64:$Rm), (i64 0))))),
+          (v4i16 V64:$Rm)>;
+def : Pat<(v2i32 (vec_ins_or_scal_vec (i32 (vector_extract (v2i32 V64:$Rm), (i64 0))))),
+          (v2i32 V64:$Rm)>;
+def : Pat<(v1i64 (vec_ins_or_scal_vec (i32 (vector_extract (v1i64 V64:$Rm), (i64 0))))),
+          (v1i64 V64:$Rm)>;
+
+def : Pat<(v16i8 (vec_ins_or_scal_vec (i8 (vector_extract (v16i8 V128:$Rm), (i64 0))))),
+          (v16i8 V128:$Rm)>;
+def : Pat<(v8i16 (vec_ins_or_scal_vec (i16 (vector_extract (v8i16 V128:$Rm), (i64 0))))),
+          (v8i16 V128:$Rm)>;
+def : Pat<(v4i32 (vec_ins_or_scal_vec (i32 (vector_extract (v4i32 V128:$Rm), (i64 0))))),
+          (v4i32 V128:$Rm)>;
+def : Pat<(v2i64 (vec_ins_or_scal_vec (i64 (vector_extract (v2i64 V128:$Rm), (i64 0))))),
+          (v2i64 V128:$Rm)>;
+
 // Match all load 64 bits width whose type is compatible with FPR64
 let Predicates = [IsLE] in {
   // We must use LD1 to perform vector loads in big-endian.

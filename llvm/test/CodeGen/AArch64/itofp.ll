@@ -3313,24 +3313,24 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    mov h2, v1.h[1]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    smov x8, v0.s[0]
 ; CHECK-GI-NEXT:    smov x9, v0.s[1]
-; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    smov x8, v1.s[0]
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    smov x9, v1.s[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    sshll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    smov x8, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    scvtf v2.2d, v1.2d
+; CHECK-GI-NEXT:    smov x9, v0.s[1]
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    scvtf v0.2d, v1.2d
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
@@ -3365,24 +3365,24 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    mov h2, v1.h[1]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    mov w8, v0.s[0]
 ; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov w8, v1.s[0]
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    mov w8, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    ucvtf v2.2d, v1.2d
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    ucvtf v0.2d, v1.2d
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
