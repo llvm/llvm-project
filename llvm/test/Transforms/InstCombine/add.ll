@@ -1315,8 +1315,8 @@ define <2 x i8> @ashr_add_commute(<2 x i1> %x, <2 x i1> %y) {
 
 define i32 @cmp_math(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cmp_math(
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[LT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %gt = icmp ugt i32 %x, %y
