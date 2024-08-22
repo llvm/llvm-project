@@ -66,6 +66,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -586,11 +587,11 @@ private:
   void ReadRegister(MCRegister Reg, MachineInstr &Reader, DebugType DT);
   void readSuccessorLiveIns(const MachineBasicBlock &MBB);
   void ForwardCopyPropagateBlock(MachineBasicBlock &MBB);
-  void BackwardCopyPropagateBlock(MachineBasicBlock &MBB, bool ResolveAntiDeps = false);
+  void BackwardCopyPropagateBlock(MachineBasicBlock &MBB, ScheduleDAGMCP *DG = nullptr);
   void EliminateSpillageCopies(MachineBasicBlock &MBB);
   bool eraseIfRedundant(MachineInstr &Copy, MCRegister Src, MCRegister Def);
   void forwardUses(MachineInstr &MI);
-  void propagateDefs(MachineInstr &MI, ScheduleDAGMCP &DG, bool ResolveAntiDeps = false);
+  void propagateDefs(MachineInstr &MI, ScheduleDAGMCP *DG = nullptr);
   bool isForwardableRegClassCopy(const MachineInstr &Copy,
                                  const MachineInstr &UseI, unsigned UseIdx);
   bool isBackwardPropagatableRegClassCopy(const MachineInstr &Copy,
@@ -1158,9 +1159,8 @@ static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
   return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
-void MachineCopyPropagation::propagateDefs(
-    MachineInstr &MI, ScheduleDAGMCP &DG,
-    bool MoveDependenciesForBetterCopyPropagation) {
+void MachineCopyPropagation::propagateDefs(MachineInstr &MI,
+                                           ScheduleDAGMCP *DG) {
   if (!Tracker.hasAnyCopies() && !Tracker.hasAnyInvalidCopies())
     return;
 
@@ -1186,7 +1186,7 @@ void MachineCopyPropagation::propagateDefs(
     MachineInstr *Copy = Tracker.findAvailBackwardCopy(
         MI, MODef.getReg().asMCReg(), *TRI, *TII, UseCopyInstr);
     if (!Copy) {
-      if (!MoveDependenciesForBetterCopyPropagation)
+      if (!DG)
         continue;
 
       LLVM_DEBUG(
@@ -1203,8 +1203,8 @@ void MachineCopyPropagation::propagateDefs(
       LLVM_DEBUG(
           dbgs()
           << "MCP: Found potential backward copy that has dependency.\n");
-      SUnit *DstSUnit = DG.getSUnit(Copy);
-      SUnit *SrcSUnit = DG.getSUnit(&MI);
+      SUnit *DstSUnit = DG->getSUnit(Copy);
+      SUnit *SrcSUnit = DG->getSUnit(&MI);
 
       InstructionsToMove =
           moveInstructionsOutOfTheWayIfWeCan(DstSUnit, SrcSUnit);
@@ -1232,7 +1232,7 @@ void MachineCopyPropagation::propagateDefs(
     LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MODef.getReg(), TRI)
                       << "\n     with " << printReg(Def, TRI) << "\n     in "
                       << MI << "     from " << *Copy);
-    if (!MoveDependenciesForBetterCopyPropagation) {
+    if (!DG) {
       MODef.setReg(Def);
       MODef.setIsRenamable(CopyOperands->Destination->isRenamable());
 
@@ -1249,12 +1249,11 @@ void MachineCopyPropagation::propagateDefs(
 }
 
 void MachineCopyPropagation::BackwardCopyPropagateBlock(
-    MachineBasicBlock &MBB, bool MoveDependenciesForBetterCopyPropagation) {
-  ScheduleDAGMCP DG{*(MBB.getParent()), nullptr, false};
-  if (MoveDependenciesForBetterCopyPropagation) {
-    DG.startBlock(&MBB);
-    DG.enterRegion(&MBB, MBB.begin(), MBB.end(), MBB.size());
-    DG.buildSchedGraph(nullptr);
+    MachineBasicBlock &MBB, ScheduleDAGMCP *DG) {
+  if (DG) {
+    DG->startBlock(&MBB);
+    DG->enterRegion(&MBB, MBB.begin(), MBB.end(), MBB.size());
+    DG->buildSchedGraph(nullptr);
     // DG.viewGraph();
   }
  
@@ -1277,7 +1276,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         // just let forward cp do COPY-to-COPY propagation.
         if (isBackwardPropagatableCopy(*CopyOperands, *MRI)) {
           Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII, UseCopyInstr,
-                                     MoveDependenciesForBetterCopyPropagation);
+                                     DG);
           Tracker.invalidateRegister(DefReg.asMCReg(), *TRI, *TII,
                                      UseCopyInstr);
           Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
@@ -1295,7 +1294,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         Tracker.invalidateRegister(Reg, *TRI, *TII, UseCopyInstr, false);
       }
 
-    propagateDefs(MI, DG, MoveDependenciesForBetterCopyPropagation);
+    propagateDefs(MI, DG);
     for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
@@ -1320,7 +1319,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         } else {
           Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI, *TII,
                                      UseCopyInstr,
-                                     MoveDependenciesForBetterCopyPropagation);
+                                     DG);
         }
       }
     }
@@ -1338,13 +1337,13 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     Copy->eraseFromParent();
     ++NumDeletes;
   }
-  if (MoveDependenciesForBetterCopyPropagation) {
-    DG.exitRegion();
-    DG.finishBlock();
+  if (DG) {
+    DG->exitRegion();
+    DG->finishBlock();
     // QUESTION: Does it makes sense to keep the kill flags here?
     //           On the other parts of this pass we juts throw out
     //           the kill flags.
-    DG.fixupKills(MBB);
+    DG->fixupKills(MBB);
   }
 
 
@@ -1699,7 +1698,7 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-
+  ScheduleDAGMCP DG{MF, nullptr, false};
   for (MachineBasicBlock &MBB : MF) {
     if (isSpillageCopyElimEnabled)
       EliminateSpillageCopies(MBB);
@@ -1716,7 +1715,7 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
     // The renaming wouldn't happen instantly. There would be a data structure
     // that contained what register should be renamed to what. Then after the
     // backward propagation has concluded the renaming would happen.
-    BackwardCopyPropagateBlock(MBB, true);
+    BackwardCopyPropagateBlock(MBB, &DG);
     // Then we do the actual copy propagation.
     BackwardCopyPropagateBlock(MBB);
 
