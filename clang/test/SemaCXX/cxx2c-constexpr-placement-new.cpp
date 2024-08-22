@@ -72,9 +72,9 @@ consteval void alloc_err() {
 
 int a = ok();
 int b = conversion(); // expected-error {{call to consteval function 'conversion' is not a constant expression}} \
-             // expected-note {{in call to 'conversion()'}}
+                      // expected-note {{in call to 'conversion()'}}
 int c = indeterminate(); // expected-error {{call to consteval function 'indeterminate' is not a constant expression}} \
-             // expected-note {{in call to 'indeterminate()'}}
+                         // expected-note {{in call to 'indeterminate()'}}
 int d = array1();
 int e = array2(); // expected-error {{call to consteval function 'array2' is not a constant expression}} \
                   // expected-note {{in call to 'array2()'}}
