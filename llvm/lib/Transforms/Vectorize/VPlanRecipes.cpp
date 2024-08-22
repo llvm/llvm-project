@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
+#include <queue>
 
 using namespace llvm;
 
@@ -2779,10 +2780,39 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
-                                   Vals,
-                                   /*FMFSource=*/nullptr, Name);
+    unsigned InterleaveFactor = Vals.size();
+    SmallVector<Value *> InterleavingValues;
+    unsigned InterleavingValuesCount =
+        InterleaveFactor + (InterleaveFactor - 2);
+    InterleavingValues.resize(InterleaveFactor);
+    // Place the values to be interleaved in the correct order for the
+    // interleaving
+    for (unsigned I = 0, J = InterleaveFactor / 2, K = 0; K < InterleaveFactor;
+         K++) {
+      if (K % 2 == 0) {
+        InterleavingValues[K] = Vals[I];
+        I++;
+      } else {
+        InterleavingValues[K] = Vals[J];
+        J++;
+      }
+    }
+#ifndef NDEBUG
+    for (Value *Val : InterleavingValues)
+      assert(Val && "NULL Interleaving Value");
+#endif
+    for (unsigned I = 1; I < InterleavingValuesCount; I += 2) {
+      VectorType *InterleaveTy =
+          cast<VectorType>(InterleavingValues[I]->getType());
+      VectorType *WideVecTy =
+          VectorType::getDoubleElementsVectorType(InterleaveTy);
+      auto *InterleaveRes = Builder.CreateIntrinsic(
+          WideVecTy, Intrinsic::vector_interleave2,
+          {InterleavingValues[I - 1], InterleavingValues[I]},
+          /*FMFSource=*/nullptr, Name);
+      InterleavingValues.push_back(InterleaveRes);
+    }
+    return InterleavingValues[InterleavingValuesCount];
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -2868,15 +2898,12 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
     if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *, 2> Ops = {ResBlockInMask, ResBlockInMask};
-      auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(),
-                                     State.VF.getKnownMinValue() * 2, true);
-      return State.Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      SmallVector<Value *> Ops;
+      Ops.resize(InterleaveFactor, ResBlockInMask);
+      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -2916,35 +2943,76 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ArrayRef<VPValue *> VPDefs = definedValues();
     const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
 
         // Scalable vectors cannot use arbitrary shufflevectors (only splats),
         // so must use intrinsics to deinterleave.
-      Value *DI = State.Builder.CreateIntrinsic(
-          Intrinsic::vector_deinterleave2, VecTy, NewLoad,
-          /*FMFSource=*/nullptr, "strided.vec");
-      unsigned J = 0;
-      for (unsigned I = 0; I < InterleaveFactor; ++I) {
-        Instruction *Member = Group->getMember(I);
 
-        if (!Member)
-          continue;
-
-        Value *StridedVec = State.Builder.CreateExtractValue(DI, I);
-        // If this member has different type, cast the result type.
-        if (Member->getType() != ScalarTy) {
-          VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
-          StridedVec =
-              createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+        SmallVector<Value *> DeinterleavedValues;
+        // If the InterleaveFactor is > 2, so we will have to do recursive
+        // deinterleaving, because the current available deinterleave intrinsice
+        // supports only Factor of 2. DeinterleaveCount represent how many times
+        // we will do deinterleaving, we will do deinterleave on all nonleaf
+        // nodes in the deinterleave tree.
+        unsigned DeinterleaveCount = InterleaveFactor - 1;
+        std::queue<Value *> TempDeinterleavedValues;
+        TempDeinterleavedValues.push(NewLoad);
+        for (unsigned I = 0; I < DeinterleaveCount; ++I) {
+          Value *ValueToDeinterleave = TempDeinterleavedValues.front();
+          auto *DiTy = ValueToDeinterleave->getType();
+          TempDeinterleavedValues.pop();
+          Value *DI = State.Builder.CreateIntrinsic(
+              Intrinsic::vector_deinterleave2, DiTy, ValueToDeinterleave,
+              /*FMFSource=*/nullptr, "strided.vec");
+          Value *StridedVec = State.Builder.CreateExtractValue(DI, 0);
+          TempDeinterleavedValues.push(StridedVec);
+          StridedVec = State.Builder.CreateExtractValue(DI, 1);
+          TempDeinterleavedValues.push(StridedVec);
         }
 
-        if (Group->isReverse())
-          StridedVec = State.Builder.CreateVectorReverse(StridedVec, "reverse");
+        assert(TempDeinterleavedValues.size() == InterleaveFactor &&
+               "Num of deinterleaved values must equals to InterleaveFactor");
+        // Sort deinterleaved values
+        DeinterleavedValues.resize(InterleaveFactor);
+        for (unsigned I = 0, J = InterleaveFactor / 2, K = 0;
+             K < InterleaveFactor; K++) {
+          auto *DeinterleavedValue = TempDeinterleavedValues.front();
+          TempDeinterleavedValues.pop();
+          if (K % 2 == 0) {
+            DeinterleavedValues[I] = DeinterleavedValue;
+            I++;
+          } else {
+            DeinterleavedValues[J] = DeinterleavedValue;
+            J++;
+          }
+        }
+#ifndef NDEBUG
+        for (Value *Val : DeinterleavedValues)
+          assert(Val && "NULL Deinterleaved Value");
+#endif
+        for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
+          Instruction *Member = Group->getMember(I);
+          Value *StridedVec = DeinterleavedValues[I];
+          if (!Member) {
+            // This value is not needed as it's not used
+            static_cast<Instruction *>(StridedVec)->eraseFromParent();
+            continue;
+          }
+          // If this member has different type, cast the result type.
+          if (Member->getType() != ScalarTy) {
+            VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+            StridedVec =
+                createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+          }
 
-        State.set(VPDefs[J], StridedVec);
-        ++J;
-      }
+          if (Group->isReverse())
+            StridedVec =
+                State.Builder.CreateVectorReverse(StridedVec, "reverse");
+
+          State.set(VPDefs[J], StridedVec);
+          ++J;
+        }
 
       return;
     }
