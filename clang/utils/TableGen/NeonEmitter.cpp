@@ -48,6 +48,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -416,16 +417,23 @@ public:
       ArgIdx = I->getValueAsInt("ImmArgIdx");
       TypeArgIdx = I->getValueAsInt("TypeContextArgIdx");
       Kind = I->getValueAsDef("Kind")->getValueAsInt("Value");
+
       assert((ArgIdx >= 0 && Kind >= 0) &&
              "ImmArgIdx and Kind must be nonnegative");
 
       if (TypeArgIdx >= 0) {
-        EltSizeInBits = getParamType(TypeArgIdx).getElementSizeInBits();
-        VecSizeInBits = getParamType(TypeArgIdx).getSizeInBits();
+        Type ContextType = getParamType(TypeArgIdx);
+
+        // Element size cannot be set for intrinscs that map to polymorphic
+        // builtins.
+        if (CK != ClassB)
+          EltSizeInBits = ContextType.getElementSizeInBits();
+
+        VecSizeInBits = ContextType.getSizeInBits();
       }
 
       ImmChecks.emplace_back(
-          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits, TypeArgIdx));
+          ImmCheck(ArgIdx, Kind, EltSizeInBits, VecSizeInBits));
     }
     llvm::sort(ImmChecks.begin(), ImmChecks.end(),
                [](const ImmCheck &a, const ImmCheck &b) {
@@ -581,6 +589,8 @@ class NeonEmitter {
                                      SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
+  bool areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
+                                const ArrayRef<ImmCheck> ChecksB);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
                                   SmallVectorImpl<Intrinsic *> &Defs);
 
@@ -1497,7 +1507,7 @@ Intrinsic::DagEmitter::emitDagCall(DagInit *DI, bool MatchMangledName) {
     N = emitDagArg(DI->getArg(0), "").second;
   std::optional<std::string> MangledName;
   if (MatchMangledName) {
-    if(Intr.getRecord()->getValueAsString("Name").ends_with("laneq"))
+    if (Intr.getRecord()->getValueAsString("Name").ends_with("laneq"))
       N += "q";
     MangledName = Intr.mangleName(N, ClassS);
   }
@@ -2170,9 +2180,30 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
+bool NeonEmitter::areCompatableRangeChecks(const ArrayRef<ImmCheck> ChecksA,
+                                           const ArrayRef<ImmCheck> ChecksB) {
+  // If multiple intrinsics map to the same builtin, we must ensure that the
+  // intended range checks performed in SemaArm.cpp do not contradict eachother,
+  // as these are emitted once per-buitlin.
+  //
+  // The arguments to be checked and type of each check to be performed must be
+  // the same. The element types may differ as they will be resolved
+  // per-intrinsic as overloaded types by SemaArm.cpp, though the vector sizes
+  // are not and so must be the same.
+  bool compat =
+      std::equal(ChecksA.begin(), ChecksA.end(), ChecksB.begin(), ChecksB.end(),
+                 [](const auto A, const auto B) {
+                   return A.getImmArgIdx() == B.getImmArgIdx() &&
+                          A.getKind() == B.getKind() &&
+                          A.getVecSizeInBits() == B.getVecSizeInBits();
+                 });
+
+  return compat;
+}
+
 void NeonEmitter::genIntrinsicRangeCheckCode(
     raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
-  std::map<std::string, ArrayRef<ImmCheck>> Emitted;
+  std::unordered_map<std::string, ArrayRef<ImmCheck>> Emitted;
 
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
   for (auto &Def : Defs) {
@@ -2185,8 +2216,9 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
 
     const auto it = Emitted.find(Def->getMangledName());
     if (it != Emitted.end()) {
-      assert(it->second.equals(Checks) &&
-             "Neon builtin's immediate range checks cannot be redefined.");
+      assert(areCompatableRangeChecks(Checks, it->second) &&
+             "Neon intrinsics with incompatable immediate range checks cannot "
+             "share a builtin.");
       continue; // Ensure this is emitted only once
     }
 
