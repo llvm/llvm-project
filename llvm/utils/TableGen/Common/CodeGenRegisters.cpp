@@ -1198,7 +1198,8 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   // Read in the register and register tuple definitions.
   std::vector<Record *> Regs = Records.getAllDerivedDefinitions("Register");
-  if (!Regs.empty() && Regs[0]->isSubClassOf("X86Reg")) {
+  if (!Regs.empty() && (Regs[0]->isSubClassOf("X86Reg") ||
+                        Regs[0]->getValueAsString("Namespace") == "AMDGPU")) {
     // For X86, we need to sort Registers and RegisterTuples together to list
     // new registers and register tuples at a later position. So that we can
     // reduce unnecessary iterations on unsupported registers in LiveVariables.

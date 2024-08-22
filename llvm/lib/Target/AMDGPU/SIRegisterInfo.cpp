@@ -3365,6 +3365,24 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   return nullptr;
 }
 
+unsigned SIRegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
+#ifndef NDEBUG
+  for (unsigned K = AMDGPU::AGPR0; K < AMDGPU::NUM_TARGET_REGS; ++K) {
+    // Skip lo16 registers, they're "fake" and don't have a regclass assigned.
+    if (K >= AMDGPU::AGPR0_HI16 && K <= AMDGPU::AGPR255_HI16)
+      continue;
+    if (!isAGPR(MF.getRegInfo(), K))
+      report_fatal_error("register at index " + Twine(K) + " is not an AGPR!");
+  }
+#endif
+
+  // Don't include AGPRs on targets that don't have them.
+  // This cuts about 4000 register (almost half of all registers) off.
+  return MF.getInfo<SIMachineFunctionInfo>()->mayUseAGPRs(MF.getFunction())
+             ? AMDGPU::NUM_TARGET_REGS
+             : AMDGPU::AGPR0;
+}
+
 MCRegister SIRegisterInfo::getVCC() const {
   return isWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
 }
@@ -3456,9 +3474,7 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
                                          AMDGPU::AGPR_32RegClass } ) {
     if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, &RC))
       return Super;
-  }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
+    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16, &RC))
       return Super;
   }
 
