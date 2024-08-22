@@ -843,6 +843,30 @@ bb2:
   EXPECT_EQ(LookupBB2Addr, nullptr);
 }
 
+TEST_F(SandboxIRTest, DSOLocalEquivalent) {
+  parseIR(C, R"IR(
+declare void @bar()
+define void @foo() {
+  call void dso_local_equivalent @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *CI = cast<sandboxir::CallInst>(&*It++);
+  // Check classof().
+  auto *DSOLE = cast<sandboxir::DSOLocalEquivalent>(CI->getCalledOperand());
+  // Check getGlobalValue().
+  auto *GV = DSOLE->getGlobalValue();
+  // Check get().
+  auto *NewDSOLE = sandboxir::DSOLocalEquivalent::get(GV);
+  EXPECT_EQ(NewDSOLE, DSOLE);
+}
+
 TEST_F(SandboxIRTest, ConstantTokenNone) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
