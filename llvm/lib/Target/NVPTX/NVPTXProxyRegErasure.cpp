@@ -98,11 +98,11 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
   for (auto &BB : MF) {
     for (auto &MI : BB) {
       for (auto &Op : MI.uses()) {
-        if (Op.isReg()) {
-          auto it = RAUWBatch.find(Op.getReg());
-          if (it != RAUWBatch.end())
-            Op.setReg(it->second);
-        }
+        if (!Op.isReg())
+          continue;
+        auto it = RAUWBatch.find(Op.getReg());
+        if (it != RAUWBatch.end())
+          Op.setReg(it->second);
       }
     }
   }
