@@ -1221,6 +1221,9 @@ Arm and AArch64 Support
    ``-mabi=pauthtest`` option or via specifying ``pauthtest`` environment part of
    target triple.
 
+ - The C23 ``_BitInt`` implementation has been brought into compliance
+   with AAPCS32 and AAPCS64.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
