@@ -1,19 +1,17 @@
-.. _BuildingLibcxx:
+.. _VendorDocumentation:
 
-===============
-Building libc++
-===============
+====================
+Vendor Documentation
+====================
 
 .. contents::
   :local:
 
-.. _build instructions:
-
 The instructions on this page are aimed at vendors who ship libc++ as part of an
 operating system distribution, a toolchain or similar shipping vehicles. If you
 are a user merely trying to use libc++ in your program, you most likely want to
-refer to your vendor's documentation, or to the general documentation for using
-libc++ :ref:`here <using-libcxx>`.
+refer to your vendor's documentation, or to the general user documentation
+:ref:`here <user-documentation>`.
 
 .. warning::
   If your operating system already provides libc++, it is important to be careful
@@ -42,21 +40,37 @@ with the following CMake invocation:
   $ ninja -C build install-cxx install-cxxabi install-unwind                                # Install
 
 .. note::
-  See :ref:`CMake Options` below for more configuration options.
+  See :ref:`Vendor Configuration Options` below for more configuration options.
 
 After building the various ``install-XXX`` targets, shared libraries for libc++, libc++abi and
 libunwind should now be present in ``<CMAKE_INSTALL_PREFIX>/lib``, and headers in
-``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See :ref:`using an alternate libc++ installation
-<alternate libcxx>` for information on how to use this libc++ over the default one.
+``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See the instructions below for information on how
+to use this libc++ over the default one.
 
 In the default configuration, the runtimes will be built using the compiler available by default
 on your system. Of course, you can change what compiler is being used with the usual CMake
 variables. If you wish to build the runtimes from a just-built Clang, the bootstrapping build
 explained below makes this task easy.
 
+Using the just-built libc++
+---------------------------
 
-Bootstrapping build
-===================
+Most compilers provide a way to disable the default behavior for finding the standard library and
+to override it with custom paths. With Clang, this can be done with:
+
+.. code-block:: bash
+
+  $ clang++ -nostdinc++ -isystem <install>/include/c++/v1 \
+            -nostdlib++ -L <install>/lib -lc++            \
+            -Wl,-rpath,<install>/lib                      \
+            test.cpp
+
+The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path, which causes the system's
+dynamic linker to look for libc++ in ``<install>/lib`` whenever the program is loaded.
+
+
+The Bootstrapping build
+=======================
 
 It is possible to build Clang and then build the runtimes using that just-built compiler in a
 single CMake invocation. This is usually the correct way to build the runtimes when putting together
@@ -75,123 +89,29 @@ CMake invocation at ``<monorepo>/llvm``:
   $ ninja -C build install-runtimes                                                        # Install
 
 .. note::
-  This type of build is also commonly called a "Runtimes build", but we would like to move
-  away from that terminology, which is too confusing.
+  - This type of build is also commonly called a "Runtimes build", but we would like to move
+    away from that terminology, which is too confusing.
+
+  - Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
+    freshen the cmake cache of any of the enabled runtimes.
+
+
+.. _Vendor Configuration Options:
+
+Vendor Configuration Options
+============================
+
+This section documents configuration options that can be used by vendors when building the library.
+These options provide a great deal of flexibility to customize libc++, such as selecting the ABI in
+use, whether some features are provided, etc.
 
 .. warning::
-  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
-  freshen the cmake cache of any of the enabled runtimes.
+  Many of these CMake options are tied to configuration macros with a corresponding name in the source
+  code. However, these configuration macros are not intended to be customized by users directly, since
+  many of them require the library to be built with a matching configuration. If you don't build libc++
+  yourself, you should not use the options documented here.
 
-Support for Windows
-===================
-
-libcxx supports being built with clang-cl, but not with MSVC's cl.exe, as
-cl doesn't support the ``#include_next`` extension. Furthermore, VS 2017 or
-newer (19.14) is required.
-
-libcxx also supports being built with clang targeting MinGW environments.
-
-CMake + Visual Studio
----------------------
-
-Building with Visual Studio currently does not permit running tests. However,
-it is the simplest way to build.
-
-.. code-block:: batch
-
-  > cmake -G "Visual Studio 16 2019" -S runtimes -B build ^
-          -T "ClangCL"                                    ^
-          -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
-          -DLIBCXX_ENABLE_SHARED=YES                      ^
-          -DLIBCXX_ENABLE_STATIC=NO
-  > cmake --build build
-
-CMake + ninja (MSVC)
---------------------
-
-Building with ninja is required for development to enable tests.
-A couple of tests require Bash to be available, and a couple dozens
-of tests require other posix tools (cp, grep and similar - LLVM's tests
-require the same). Without those tools the vast majority of tests
-can still be ran successfully.
-
-If Git for Windows is available, that can be used to provide the bash
-shell by adding the right bin directory to the path, e.g.
-``set PATH=%PATH%;C:\Program Files\Git\usr\bin``.
-
-Alternatively, one can also choose to run the whole build in a MSYS2
-shell. That can be set up e.g. by starting a Visual Studio Tools Command
-Prompt (for getting the environment variables pointing to the headers and
-import libraries), and making sure that clang-cl is available in the
-path. From there, launch an MSYS2 shell via e.g.
-``C:\msys64\msys2_shell.cmd -full-path -mingw64`` (preserving the earlier
-environment, allowing the MSVC headers/libraries and clang-cl to be found).
-
-In either case, then run:
-
-.. code-block:: batch
-
-  > cmake -G Ninja -S runtimes -B build                                               ^
-          -DCMAKE_C_COMPILER=clang-cl                                                 ^
-          -DCMAKE_CXX_COMPILER=clang-cl                                               ^
-          -DLLVM_ENABLE_RUNTIMES=libcxx
-  > ninja -C build cxx
-  > ninja -C build check-cxx
-
-If you are running in an MSYS2 shell and you have installed the
-MSYS2-provided clang package (which defaults to a non-MSVC target), you
-should add e.g. ``-DCMAKE_CXX_COMPILER_TARGET=x86_64-windows-msvc`` (replacing
-``x86_64`` with the architecture you're targeting) to the ``cmake`` command
-line above. This will instruct ``check-cxx`` to use the right target triple
-when invoking ``clang++``.
-
-CMake + ninja (MinGW)
----------------------
-
-libcxx can also be built in MinGW environments, e.g. with the MinGW
-compilers in MSYS2. This requires clang to be available (installed with
-e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
-
-.. code-block:: bash
-
-  > cmake -G Ninja -S runtimes -B build                                               \
-          -DCMAKE_C_COMPILER=clang                                                    \
-          -DCMAKE_CXX_COMPILER=clang++                                                \
-          -DLLVM_ENABLE_LLD=ON                                                        \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
-          -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
-          -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
-  > ninja -C build cxx
-  > ninja -C build check-cxx
-
-.. _`libc++abi`: http://libcxxabi.llvm.org/
-
-
-.. _CMake Options:
-
-CMake Options
-=============
-
-Here are some of the CMake variables that are used often, along with a
-brief explanation and LLVM-specific notes. For full documentation, check the
-CMake docs or execute ``cmake --help-variable VARIABLE_NAME``.
-
-**CMAKE_BUILD_TYPE**:STRING
-  Sets the build type for ``make`` based generators. Possible values are
-  Release, Debug, RelWithDebInfo and MinSizeRel. On systems like Visual Studio
-  the user sets the build type with the IDE settings.
-
-**CMAKE_INSTALL_PREFIX**:PATH
-  Path where LLVM will be installed if "make install" is invoked or the
-  "INSTALL" target is built.
-
-**CMAKE_CXX_COMPILER**:STRING
-  The C++ compiler to use when building and testing libc++.
-
-
-.. _libcxx-specific options:
-
-libc++ specific options
+General purpose options
 -----------------------
 
 .. option:: LIBCXX_INSTALL_LIBRARY:BOOL
@@ -305,11 +225,89 @@ libc++ specific options
 
   Additional libraries libc++ is linked to which can be provided in cache.
 
+.. option:: LIBCXX_ENABLE_EXCEPTIONS:BOOL
 
-.. _ABI Library Specific Options:
+  **Default**: ``ON``
 
-ABI Library Specific Options
-----------------------------
+  Build libc++ with exception support.
+
+.. option:: LIBCXX_ENABLE_RTTI:BOOL
+
+  **Default**: ``ON``
+
+  Build libc++ with run time type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF.
+
+.. option:: LIBCXX_INCLUDE_TESTS:BOOL
+
+  **Default**: ``ON`` (or value of ``LLVM_INCLUDE_TESTS``)
+
+  Build the libc++ tests.
+
+.. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
+
+  **Default**: ``ON``
+
+  Build the libc++ benchmark tests and the Google Benchmark library needed
+  to support them.
+
+.. option:: LIBCXX_BENCHMARK_TEST_ARGS:STRING
+
+  **Default**: ``--benchmark_min_time=0.01``
+
+  A semicolon list of arguments to pass when running the libc++ benchmarks using the
+  ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
+  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
+  get accurate measurements.
+
+.. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
+
+  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
+
+  Specify the path to a header that contains a custom implementation of the
+  assertion handler that gets invoked when a hardening assertion fails. If
+  provided, this header will be included by the library, replacing the
+  default assertion handler. If this is specified as a relative path, it
+  is assumed to be relative to ``<monorepo>/libcxx``.
+
+ABI Specific Options
+--------------------
+
+The following options allow building libc++ for a different ABI version.
+
+.. option:: LIBCXX_ABI_VERSION:STRING
+
+  **Default**: ``1``
+
+  Defines the target ABI version of libc++.
+
+.. option:: LIBCXX_ABI_UNSTABLE:BOOL
+
+  **Default**: ``OFF``
+
+  Build the "unstable" ABI version of libc++. Includes all ABI changing features
+  on top of the current stable version.
+
+.. option:: LIBCXX_ABI_NAMESPACE:STRING
+
+  **Default**: ``__n`` where ``n`` is the current ABI version.
+
+  This option defines the name of the inline ABI versioning namespace. It can be used for building
+  custom versions of libc++ with unique symbol names in order to prevent conflicts or ODR issues
+  with other libc++ versions.
+
+  .. warning::
+    When providing a custom namespace, it's the vendor's responsibility to ensure the name won't cause
+    conflicts with other names defined by libc++, both now and in the future. In particular, inline
+    namespaces of the form ``__[0-9]+`` could cause conflicts with future versions of the library,
+    and so should be avoided.
+
+.. option:: LIBCXX_ABI_DEFINES:STRING
+
+  **Default**: ``""``
+
+  A semicolon-separated list of ABI macros to persist in the site config header.
+  See ``include/__config`` for the list of ABI macros.
 
 .. option:: LIBCXX_CXX_ABI:STRING
 
@@ -360,98 +358,6 @@ ABI Library Specific Options
 
   Additional libraries libc++abi is linked to which can be provided in cache.
 
-
-libc++ Feature Options
-----------------------
-
-.. option:: LIBCXX_ENABLE_EXCEPTIONS:BOOL
-
-  **Default**: ``ON``
-
-  Build libc++ with exception support.
-
-.. option:: LIBCXX_ENABLE_RTTI:BOOL
-
-  **Default**: ``ON``
-
-  Build libc++ with run time type information.
-  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF.
-
-.. option:: LIBCXX_INCLUDE_TESTS:BOOL
-
-  **Default**: ``ON`` (or value of ``LLVM_INCLUDE_TESTS``)
-
-  Build the libc++ tests.
-
-.. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
-
-  **Default**: ``ON``
-
-  Build the libc++ benchmark tests and the Google Benchmark library needed
-  to support them.
-
-.. option:: LIBCXX_BENCHMARK_TEST_ARGS:STRING
-
-  **Default**: ``--benchmark_min_time=0.01``
-
-  A semicolon list of arguments to pass when running the libc++ benchmarks using the
-  ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
-  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
-  get accurate measurements.
-
-.. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
-
-  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
-
-  Specify the path to a header that contains a custom implementation of the
-  assertion handler that gets invoked when a hardening assertion fails. If
-  provided, this header will be included by the library, replacing the
-  default assertion handler. If this is specified as a relative path, it
-  is assumed to be relative to ``<monorepo>/libcxx``.
-
-
-libc++ ABI Feature Options
---------------------------
-
-The following options allow building libc++ for a different ABI version.
-
-.. option:: LIBCXX_ABI_VERSION:STRING
-
-  **Default**: ``1``
-
-  Defines the target ABI version of libc++.
-
-.. option:: LIBCXX_ABI_UNSTABLE:BOOL
-
-  **Default**: ``OFF``
-
-  Build the "unstable" ABI version of libc++. Includes all ABI changing features
-  on top of the current stable version.
-
-.. option:: LIBCXX_ABI_NAMESPACE:STRING
-
-  **Default**: ``__n`` where ``n`` is the current ABI version.
-
-  This option defines the name of the inline ABI versioning namespace. It can be used for building
-  custom versions of libc++ with unique symbol names in order to prevent conflicts or ODR issues
-  with other libc++ versions.
-
-  .. warning::
-    When providing a custom namespace, it's the user's responsibility to ensure the name won't cause
-    conflicts with other names defined by libc++, both now and in the future. In particular, inline
-    namespaces of the form ``__[0-9]+`` could cause conflicts with future versions of the library,
-    and so should be avoided.
-
-.. option:: LIBCXX_ABI_DEFINES:STRING
-
-  **Default**: ``""``
-
-  A semicolon-separated list of ABI macros to persist in the site config header.
-  See ``include/__config`` for the list of ABI macros.
-
-
-.. _LLVM-specific variables:
-
 LLVM-specific options
 ---------------------
 
@@ -471,6 +377,91 @@ LLVM-specific options
   Arguments given to lit.  ``make check`` and ``make clang-test`` are affected.
   By default, ``'-sv --no-progress-bar'`` on Visual C++ and Xcode, ``'-sv'`` on
   others.
+
+
+Support for Windows
+===================
+
+Libc++ supports being built with clang-cl, but not with MSVC's cl.exe, as
+cl doesn't support the ``#include_next`` extension. Furthermore, VS 2017 or
+newer (19.14) is required.
+
+Libc++ also supports being built with clang targeting MinGW environments.
+
+CMake + Visual Studio
+---------------------
+
+Building with Visual Studio currently does not permit running tests. However,
+it is the simplest way to build.
+
+.. code-block:: batch
+
+  > cmake -G "Visual Studio 16 2019" -S runtimes -B build ^
+          -T "ClangCL"                                    ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
+          -DLIBCXX_ENABLE_SHARED=YES                      ^
+          -DLIBCXX_ENABLE_STATIC=NO
+  > cmake --build build
+
+CMake + ninja (MSVC)
+--------------------
+
+Building with ninja is required for development to enable tests.
+A couple of tests require Bash to be available, and a couple dozens
+of tests require other posix tools (cp, grep and similar - LLVM's tests
+require the same). Without those tools the vast majority of tests
+can still be ran successfully.
+
+If Git for Windows is available, that can be used to provide the bash
+shell by adding the right bin directory to the path, e.g.
+``set PATH=%PATH%;C:\Program Files\Git\usr\bin``.
+
+Alternatively, one can also choose to run the whole build in a MSYS2
+shell. That can be set up e.g. by starting a Visual Studio Tools Command
+Prompt (for getting the environment variables pointing to the headers and
+import libraries), and making sure that clang-cl is available in the
+path. From there, launch an MSYS2 shell via e.g.
+``C:\msys64\msys2_shell.cmd -full-path -mingw64`` (preserving the earlier
+environment, allowing the MSVC headers/libraries and clang-cl to be found).
+
+In either case, then run:
+
+.. code-block:: batch
+
+  > cmake -G Ninja -S runtimes -B build                                               ^
+          -DCMAKE_C_COMPILER=clang-cl                                                 ^
+          -DCMAKE_CXX_COMPILER=clang-cl                                               ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx
+  > ninja -C build cxx
+  > ninja -C build check-cxx
+
+If you are running in an MSYS2 shell and you have installed the
+MSYS2-provided clang package (which defaults to a non-MSVC target), you
+should add e.g. ``-DCMAKE_CXX_COMPILER_TARGET=x86_64-windows-msvc`` (replacing
+``x86_64`` with the architecture you're targeting) to the ``cmake`` command
+line above. This will instruct ``check-cxx`` to use the right target triple
+when invoking ``clang++``.
+
+CMake + ninja (MinGW)
+---------------------
+
+libcxx can also be built in MinGW environments, e.g. with the MinGW
+compilers in MSYS2. This requires clang to be available (installed with
+e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
+
+.. code-block:: bash
+
+  > cmake -G Ninja -S runtimes -B build                                               \
+          -DCMAKE_C_COMPILER=clang                                                    \
+          -DCMAKE_CXX_COMPILER=clang++                                                \
+          -DLLVM_ENABLE_LLD=ON                                                        \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
+          -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
+  > ninja -C build cxx
+  > ninja -C build check-cxx
+
+.. _`libc++abi`: http://libcxxabi.llvm.org/
 
 
 .. _assertion-handler:
