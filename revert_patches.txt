@@ -95,35 +95,19 @@ Revert: more Sema:
 9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
 RonL
 ---
-problematic cmake in npsdb:
-[LLVM] Silence compiler-rt warning in runtimes build (#99525)  
----
 breaks rocALUTION build
 72ff0499bba7 [ValueTracking] Consistently propagate `DemandedElts` is `isKnownNonZero`  
 --
-breaks openmp tests:
-3c8efd79283b [OpenMP] Ensure the actual kernel is annotated with launch bounds (#99927)  
-Ron
----
 Revert: breaks devIO for openmp
 dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 b7e4fba6e5dc Cleanup x86_mmx after removing IR type  (#100646) (Reason: dependent on dfeb3991fb48)
-Ron
+Ron: still broken 9-6-24
 ---
 Revert: causing issues with IRVerifiery heterodebug
 [IR] Don't verify module flags on every access (#102153)
 Ron
 ---
 revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo for AMDAttributor
----
-revert: breadks rocSPARSE build
-1aa8a6f6 [VPlan] Compute cost for most opcodes in VPWidenRecipe
----
-revert: breaks clang LIT tests
-0ca77f6656a7 [RISCV] Add CSRs and an instruction for Smctr and Ssctr extensions. (#105148)
----
-revert : inf compile on rocTHRUST
-c46b41aaa6ea LSV: forbid load-cycles when vectorizing; fix bug (#104815)     
 ---
 revert : breaks build of amdgpu flat intrinsics
 ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051) 
