@@ -1,4 +1,4 @@
-//===-- Implementation of isspace------------------------------------------===//
+//===-- Implementation of isxdigit ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/ctype/isspace.h"
+#include "src/ctype/isxdigit_l.h"
 #include "src/__support/ctype_utils.h"
 
 #include "src/__support/common.h"
@@ -14,8 +14,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, isspace, (int c)) {
-  return static_cast<int>(internal::isspace(static_cast<unsigned>(c)));
+LLVM_LIBC_FUNCTION(int, isxdigit_l, (int c, locale_t)) {
+  const unsigned ch = static_cast<unsigned>(c);
+  return static_cast<int>(internal::isdigit(ch) || (ch | 32) - 'a' < 6);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
