@@ -296,6 +296,7 @@ Bug Fixes to C++ Support
   template depth than the friend function template. (#GH98258)
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
   of the current instantiation in all cases.
+- Fixed an assertion failure when converting vectors to int/float with invalid expressions. (#GH105486)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
