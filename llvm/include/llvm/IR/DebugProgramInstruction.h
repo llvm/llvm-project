@@ -398,8 +398,8 @@ public:
     }
   };
 
-  bool isDbgDeclare() { return Type == LocationType::Declare; }
-  bool isDbgValue() { return Type == LocationType::Value; }
+  bool isDbgDeclare() const { return Type == LocationType::Declare; }
+  bool isDbgValue() const { return Type == LocationType::Value; }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
