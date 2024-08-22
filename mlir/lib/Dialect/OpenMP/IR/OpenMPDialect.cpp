@@ -1883,45 +1883,83 @@ LogicalResult DistributeOp::verify() {
 // DeclareReductionOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
-                                              Region &region) {
-  if (parser.parseOptionalKeyword("atomic"))
+static ParseResult parseOptionalReductionRegion(OpAsmParser &parser,
+                                                Region &region,
+                                                StringRef keyword) {
+  if (parser.parseOptionalKeyword(keyword))
     return success();
   return parser.parseRegion(region);
+}
+
+static void printOptionalReductionRegion(OpAsmPrinter &printer, Region &region,
+                                         StringRef keyword) {
+  if (region.empty())
+    return;
+  printer << keyword << " ";
+  printer.printRegion(region);
+}
+
+static ParseResult parseAllocReductionRegion(OpAsmParser &parser,
+                                             Region &region) {
+  return parseOptionalReductionRegion(parser, region, "alloc");
+}
+
+static void printAllocReductionRegion(OpAsmPrinter &printer,
+                                      DeclareReductionOp op, Region &region) {
+  printOptionalReductionRegion(printer, region, "alloc");
+}
+
+static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
+                                              Region &region) {
+  return parseOptionalReductionRegion(parser, region, "atomic");
 }
 
 static void printAtomicReductionRegion(OpAsmPrinter &printer,
                                        DeclareReductionOp op, Region &region) {
-  if (region.empty())
-    return;
-  printer << "atomic ";
-  printer.printRegion(region);
+  printOptionalReductionRegion(printer, region, "atomic");
 }
 
 static ParseResult parseCleanupReductionRegion(OpAsmParser &parser,
                                                Region &region) {
-  if (parser.parseOptionalKeyword("cleanup"))
-    return success();
-  return parser.parseRegion(region);
+  return parseOptionalReductionRegion(parser, region, "cleanup");
 }
 
 static void printCleanupReductionRegion(OpAsmPrinter &printer,
                                         DeclareReductionOp op, Region &region) {
-  if (region.empty())
-    return;
-  printer << "cleanup ";
-  printer.printRegion(region);
+  printOptionalReductionRegion(printer, region, "cleanup");
 }
 
 LogicalResult DeclareReductionOp::verifyRegions() {
+  if (!getAllocRegion().empty()) {
+    for (YieldOp yieldOp : getAllocRegion().getOps<YieldOp>()) {
+      if (yieldOp.getResults().size() != 1 ||
+          yieldOp.getResults().getTypes()[0] != getType())
+        return emitOpError() << "expects alloc region to yield a value "
+                                "of the reduction type";
+    }
+  }
+
   if (getInitializerRegion().empty())
     return emitOpError() << "expects non-empty initializer region";
   Block &initializerEntryBlock = getInitializerRegion().front();
-  if (initializerEntryBlock.getNumArguments() != 1 ||
-      initializerEntryBlock.getArgument(0).getType() != getType()) {
-    return emitOpError() << "expects initializer region with one argument "
-                            "of the reduction type";
+
+  if (initializerEntryBlock.getNumArguments() == 1) {
+    if (!getAllocRegion().empty())
+      return emitOpError() << "expects two arguments to the initializer region "
+                              "when an allocation region is used";
+  } else if (initializerEntryBlock.getNumArguments() == 2) {
+    if (getAllocRegion().empty())
+      return emitOpError() << "expects one argument to the initializer region "
+                              "when no allocation region is used";
+  } else {
+    return emitOpError()
+           << "expects one or two arguments to the initializer region";
   }
+
+  for (mlir::Value arg : initializerEntryBlock.getArguments())
+    if (arg.getType() != getType())
+      return emitOpError() << "expects initializer region argument to match "
+                              "the reduction type";
 
   for (YieldOp yieldOp : getInitializerRegion().getOps<YieldOp>()) {
     if (yieldOp.getResults().size() != 1 ||
