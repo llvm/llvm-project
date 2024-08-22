@@ -179,9 +179,9 @@ void scanRelocations(InputChunk *chunk) {
       case R_WASM_TABLE_INDEX_REL_SLEB64:
       case R_WASM_MEMORY_ADDR_REL_SLEB:
       case R_WASM_MEMORY_ADDR_REL_SLEB64:
-        // These relocation types are only present in the code section and
-        // are not supported for undefined symbols. It would require replacing
-        // the constant by using a GOT global.
+        // These relocation types are for symbols that exists relative to
+        // `__memory_base` or `__table_base` and as such only make sense for
+        // defined symbols.
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
               " is not supported against an undefined symbol `" +
               toString(*sym) + "`");
