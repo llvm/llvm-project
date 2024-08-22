@@ -836,7 +836,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     Result.clear();
     sandboxir::ShuffleVectorInst::getShuffleMask(
         SVI->getShuffleMaskForBitcode(), Result);
-    EXPECT_THAT(Result, testing::ElementsAre(0,2));
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
   }
 
   // convertShuffleMaskForBitcode
