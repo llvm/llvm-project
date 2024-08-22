@@ -369,9 +369,21 @@ static bool lowerExpectIntrinsic(Function &F) {
     if (BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
       if (handleBranchExpect(*BI))
         ExpectIntrinsicsHandled++;
+      else {
+        SmallVector<uint32_t> Weights;
+        if (extractBranchWeights(*BI, Weights))
+          misexpect::checkMissingAnnotations(*BI, Weights,
+                                             /*IsFrontendInstr=*/true);
+      }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
       if (handleSwitchExpect(*SI))
         ExpectIntrinsicsHandled++;
+      else {
+        SmallVector<uint32_t> Weights;
+        if (extractBranchWeights(*SI, Weights))
+          misexpect::checkMissingAnnotations(*SI, Weights,
+                                             /*isFrontend=*/true);
+      }
     }
 
     // Remove llvm.expect intrinsics. Iterate backwards in order
@@ -383,6 +395,12 @@ static bool lowerExpectIntrinsic(Function &F) {
         if (SelectInst *SI = dyn_cast<SelectInst>(&Inst)) {
           if (handleBrSelExpect(*SI))
             ExpectIntrinsicsHandled++;
+          else {
+            SmallVector<uint32_t> Weights;
+            if (extractBranchWeights(*SI, Weights))
+              misexpect::checkMissingAnnotations(*SI, Weights,
+                                                 /*isFrontend=*/true);
+          }
         }
         continue;
       }
