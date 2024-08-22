@@ -68,7 +68,11 @@ namespace lldb_dap {
 
 typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
+
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
+
+/// Buffer size for handling output events.
+constexpr uint64_t OutputBufferSize = (1u << 12);
 
 enum DAPBroadcasterBits {
   eBroadcastBitStopEventThread = 1u << 0,
@@ -192,8 +196,6 @@ struct DAP {
   std::mutex call_mutex;
   std::map<int /* request_seq */, ResponseCallback /* reply handler */>
       inflight_reverse_requests;
-  StartDebuggingRequestHandler start_debugging_request_handler;
-  ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;

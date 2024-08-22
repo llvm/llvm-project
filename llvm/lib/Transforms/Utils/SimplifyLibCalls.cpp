@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
@@ -1745,7 +1746,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   // if cold or hot, and leave as-is for default handling if "notcold" aka warm.
   // Note that in cases where we decide it is "notcold", it might be slightly
   // better to replace the hinted call with a non hinted call, to avoid the
-  // extra paramter and the if condition check of the hint value in the
+  // extra parameter and the if condition check of the hint value in the
   // allocator. This can be considered in the future.
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
@@ -1843,6 +1844,30 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
           HotCold);
+    break;
+  case LibFunc_size_returning_new:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
     return nullptr;
@@ -2733,14 +2758,17 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
     // Note: We don't bother looking any deeper than this first level or for
     // variations of this pattern because instcombine's visitFMUL and/or the
     // reassociation pass should give us this form.
-    Value *OtherMul0, *OtherMul1;
-    if (match(Op0, m_FMul(m_Value(OtherMul0), m_Value(OtherMul1)))) {
-      // Pattern: sqrt((x * y) * z)
-      if (OtherMul0 == OtherMul1 && cast<Instruction>(Op0)->isFast()) {
-        // Matched: sqrt((x * x) * z)
-        RepeatOp = OtherMul0;
-        OtherOp = Op1;
-      }
+    Value *MulOp;
+    if (match(Op0, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+        cast<Instruction>(Op0)->isFast()) {
+      // Pattern: sqrt((x * x) * z)
+      RepeatOp = MulOp;
+      OtherOp = Op1;
+    } else if (match(Op1, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+               cast<Instruction>(Op1)->isFast()) {
+      // Pattern: sqrt(z * (x * x))
+      RepeatOp = MulOp;
+      OtherOp = Op0;
     }
   }
   if (!RepeatOp)
@@ -3759,6 +3787,7 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   Module *M = CI->getModule();
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+
   // Check for string/memory library functions.
   if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
@@ -3851,6 +3880,10 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
     case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_size_returning_new:
+    case LibFunc_size_returning_new_hot_cold:
+    case LibFunc_size_returning_new_aligned:
+    case LibFunc_size_returning_new_aligned_hot_cold:
       return optimizeNew(CI, Builder, Func);
     default:
       break;

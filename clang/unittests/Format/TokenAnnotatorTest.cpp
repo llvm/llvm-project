@@ -3216,6 +3216,17 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[17], BK_Block);
   EXPECT_BRACE_KIND(Tokens[22], BK_Block);
   EXPECT_BRACE_KIND(Tokens[26], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "#define M(x) \\\n"
+                    "  return {#x};\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -3347,6 +3358,15 @@ TEST_F(TokenAnnotatorTest, TypenameMacro) {
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
+  auto Style = getGNUStyle();
+  EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
+
+  auto Tokens = annotate("return 1 <=> 2;", Style);
+  ASSERT_EQ(Tokens.size(), 6u);
+  EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
 }
 
 } // namespace

@@ -34,7 +34,6 @@
 
 namespace llvm {
 class DataLayout;
-class Use;
 
 namespace detail {
 

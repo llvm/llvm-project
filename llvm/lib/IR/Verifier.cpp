@@ -1006,9 +1006,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
         "IFunc resolver must return a pointer", &GI);
 
-  const Type *ResolverFuncTy =
-      GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
+  Check(ResolverTy == PointerType::get(Context, GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 
@@ -2778,6 +2776,10 @@ void Verifier::visitFunction(const Function &F) {
 
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
+
+  if (Attrs.hasFnAttr(Attribute::Naked))
+    for (const Argument &Arg : F.args())
+      Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
 
   // Check that this function meets the restrictions on this calling convention.
   // Sometimes varargs is used for perfectly forwarding thunks, so some of these
@@ -5973,8 +5975,22 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &Call);
+    auto *VTy = dyn_cast<VectorType>(ValTy);
+    auto *RTy = dyn_cast<VectorType>(ResultTy);
+    Check(
+        ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
+        "llvm.lround, llvm.llround: argument must be floating-point or vector "
+        "of floating-points, and result must be integer or vector of integers",
+        &Call);
+    Check(
+        ValTy->isVectorTy() == ResultTy->isVectorTy(),
+        "llvm.lround, llvm.llround: argument and result disagree on vector use",
+        &Call);
+    if (VTy) {
+      Check(VTy->getElementCount() == RTy->getElementCount(),
+            "llvm.lround, llvm.llround: argument must be same length as result",
+            &Call);
+    }
     break;
   }
   case Intrinsic::bswap: {

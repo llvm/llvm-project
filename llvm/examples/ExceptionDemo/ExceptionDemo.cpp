@@ -1244,8 +1244,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Value *unwindExceptionClass =
       builder.CreateLoad(builder.CreateStructGEP(
           ourUnwindExceptionType,
-          builder.CreatePointerCast(unwindException,
-                                    ourUnwindExceptionType->getPointerTo()),
+          unwindException,
           0));
 
   // Branch to the externalExceptionBlock if the exception is foreign or
@@ -1277,10 +1276,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // (OurException instance).
   //
   // Note: ourBaseFromUnwindOffset is usually negative
-  llvm::Value *typeInfoThrown = builder.CreatePointerCast(
-                                  builder.CreateConstGEP1_64(unwindException,
-                                                       ourBaseFromUnwindOffset),
-                                  ourExceptionType->getPointerTo());
+  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(unwindException,
+                                                      ourBaseFromUnwindOffset));
 
   // Retrieve thrown exception type info type
   //

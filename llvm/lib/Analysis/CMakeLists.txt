@@ -61,6 +61,7 @@ add_llvm_component_library(LLVMAnalysis
   DomTreeUpdater.cpp
   DominanceFrontier.cpp
   DXILResource.cpp
+  DXILMetadataAnalysis.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
@@ -161,9 +162,3 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
-
-include(CheckCXXSymbolExists)
-check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
-if(HAS_LOGF128)
- target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
-endif()
