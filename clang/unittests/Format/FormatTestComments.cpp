@@ -427,8 +427,6 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                "         /* parameter 3 */ aaaaaa,\n"
                "         /* parameter 4 */ aaaaaa);",
                Style);
-
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("int a(/* 1st */ int b, /* 2nd */ int c);", Style);
   verifyFormat("int aaaaaaaaaaaaa(/* 1st */ int bbbbbbbbbb,\n"
                "                  /* 2nd */ int ccccccccccc,\n"
