@@ -46,6 +46,7 @@ class Defined;
 class Symbol;
 class BitcodeCompiler;
 class OutputSection;
+struct Partition;
 struct PhdrEntry;
 
 enum ELFKind : uint8_t {
@@ -486,6 +487,7 @@ struct Ctx {
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart;
+  Partition *mainPart;
   PhdrEntry *tlsPhdr;
   struct OutSections {
     OutputSection *elfHeader;
