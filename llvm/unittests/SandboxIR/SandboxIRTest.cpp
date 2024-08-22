@@ -815,8 +815,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     I->commute();
     EXPECT_EQ(I->getOperand(0), ArgV2);
     EXPECT_EQ(I->getOperand(1), ArgV1);
-    EXPECT_THAT(I->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({2, 0})));
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 0));
   }
 
   // getType
@@ -828,17 +827,16 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
 
   // getShuffleMask / getShuffleMaskForBitcode
   {
-    EXPECT_THAT(SVI->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAre(0, 2));
 
     SmallVector<int, 2> Result;
     SVI->getShuffleMask(Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
 
     Result.clear();
     sandboxir::ShuffleVectorInst::getShuffleMask(
         SVI->getShuffleMaskForBitcode(), Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({0, 2})));
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
   }
 
   // convertShuffleMaskForBitcode
@@ -847,15 +845,14 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         ArrayRef<int>({2, 3}), ArgV1->getType(), Ctx);
     SmallVector<int, 2> Result;
     sandboxir::ShuffleVectorInst::getShuffleMask(C, Result);
-    EXPECT_THAT(Result, testing::ContainerEq(ArrayRef<int>({2, 3})));
+    EXPECT_THAT(Result, testing::ElementsAre(2, 3));
   }
 
   // setShuffleMask
   {
     auto *I = CreateShuffleWithMask(0, 1);
     I->setShuffleMask(ArrayRef<int>({2, 3}));
-    EXPECT_THAT(I->getShuffleMask(),
-                testing::ContainerEq(ArrayRef<int>({2, 3})));
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 3));
   }
 
   // The following functions check different mask properties. Note that most
@@ -1107,7 +1104,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   {
     SmallVector<int, 4> M = {0, 2, 1, 3};
     ShuffleVectorInst::commuteShuffleMask(M, 2);
-    EXPECT_THAT(M, testing::ContainerEq(ArrayRef<int>({2, 0, 3, 1})));
+    EXPECT_THAT(M, testing::ElementsAre(2, 0, 3, 1));
   }
 
   // isInterleave / isInterleaveMask
@@ -1119,7 +1116,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
     SmallVector<unsigned, 4> StartIndexes;
     EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInterleaveMask(
         I->getShuffleMask(), 2, 4, StartIndexes));
-    EXPECT_THAT(StartIndexes, testing::ContainerEq(ArrayRef<unsigned>({0, 2})));
+    EXPECT_THAT(StartIndexes, testing::ElementsAre(0, 2));
   }
   {
     auto *I = CreateShuffleWithMask(0, 3, 1, 2);
