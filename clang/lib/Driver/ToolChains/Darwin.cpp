@@ -1519,8 +1519,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
-    } else if (Sanitize.needsRtsanRt()) {
-      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1542,11 +1540,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
                "Static sanitizer runtimes not supported");
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
-    }
-    if (Sanitize.needsRtsanRt()) {
-      assert(Sanitize.needsSharedRt() &&
-             "Static sanitizer runtimes not supported");
-      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -3546,7 +3539,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
-  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
