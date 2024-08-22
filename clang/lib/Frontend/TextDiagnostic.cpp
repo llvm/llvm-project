@@ -1138,7 +1138,7 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
       std::make_unique<SmallVector<TextDiagnostic::StyleRange>[]>(
           EndLineNumber - StartLineNumber + 1);
 
-  if (!PP || !ShowColors)
+  if (!PP || &PP->getSourceManager() != &SM || !ShowColors)
     return SnippetRanges;
 
   // Might cause emission of another diagnostic.
