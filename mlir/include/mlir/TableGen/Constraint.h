@@ -69,6 +69,10 @@ public:
   /// context on the def).
   std::string getUniqueDefName() const;
 
+  /// Returns the name of the C++ function that should be generated for this
+  /// constraint, or std::nullopt if no C++ function should be generated.
+  std::optional<StringRef> getCppFunctionName() const;
+
   Kind getKind() const { return kind; }
 
   /// Return the underlying def.

@@ -247,6 +247,9 @@ private:
   bool selectNormalize(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I) const;
 
+  bool selectSaturate(Register ResVReg, const SPIRVType *ResType,
+                      MachineInstr &I) const;
+
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
@@ -259,6 +262,7 @@ private:
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
+  Register buildOnesValF(const SPIRVType *ResType, MachineInstr &I) const;
 
   bool wrapIntoSpecConstantOp(MachineInstr &I,
                               SmallVector<Register> &CompositeArgs) const;
@@ -1285,6 +1289,34 @@ static unsigned getBoolCmpOpcode(unsigned PredNum) {
   }
 }
 
+static APFloat getZeroFP(const Type *LLVMFloatTy) {
+  if (!LLVMFloatTy)
+    return APFloat::getZero(APFloat::IEEEsingle());
+  switch (LLVMFloatTy->getScalarType()->getTypeID()) {
+  case Type::HalfTyID:
+    return APFloat::getZero(APFloat::IEEEhalf());
+  default:
+  case Type::FloatTyID:
+    return APFloat::getZero(APFloat::IEEEsingle());
+  case Type::DoubleTyID:
+    return APFloat::getZero(APFloat::IEEEdouble());
+  }
+}
+
+static APFloat getOneFP(const Type *LLVMFloatTy) {
+  if (!LLVMFloatTy)
+    return APFloat::getOne(APFloat::IEEEsingle());
+  switch (LLVMFloatTy->getScalarType()->getTypeID()) {
+  case Type::HalfTyID:
+    return APFloat::getOne(APFloat::IEEEhalf());
+  default:
+  case Type::FloatTyID:
+    return APFloat::getOne(APFloat::IEEEsingle());
+  case Type::DoubleTyID:
+    return APFloat::getOne(APFloat::IEEEdouble());
+  }
+}
+
 bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
                                               const SPIRVType *ResType,
                                               MachineInstr &I,
@@ -1443,6 +1475,28 @@ bool SPIRVInstructionSelector::selectRsqrt(Register ResVReg,
       .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
       .addImm(GL::InverseSqrt)
       .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+/// Transform saturate(x) to clamp(x, 0.0f, 1.0f) as SPIRV
+/// does not have a saturate builtin.
+bool SPIRVInstructionSelector::selectSaturate(Register ResVReg,
+                                              const SPIRVType *ResType,
+                                              MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register VZero = buildZerosValF(ResType, I);
+  Register VOne = buildOnesValF(ResType, I);
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::FClamp)
+      .addUse(I.getOperand(2).getReg())
+      .addUse(VZero)
+      .addUse(VOne)
       .constrainAllUses(TII, TRI, RBI);
 }
 
@@ -1724,20 +1778,6 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
-static APFloat getZeroFP(const Type *LLVMFloatTy) {
-  if (!LLVMFloatTy)
-    return APFloat::getZero(APFloat::IEEEsingle());
-  switch (LLVMFloatTy->getScalarType()->getTypeID()) {
-  case Type::HalfTyID:
-    return APFloat::getZero(APFloat::IEEEhalf());
-  default:
-  case Type::FloatTyID:
-    return APFloat::getZero(APFloat::IEEEsingle());
-  case Type::DoubleTyID:
-    return APFloat::getZero(APFloat::IEEEdouble());
-  }
-}
-
 Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
                                                   MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
@@ -1746,6 +1786,16 @@ Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
     return GR.getOrCreateConstVector(VZero, I, ResType, TII, ZeroAsNull);
   return GR.getOrCreateConstFP(VZero, I, ResType, TII, ZeroAsNull);
+}
+
+Register SPIRVInstructionSelector::buildOnesValF(const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
+  bool ZeroAsNull = STI.isOpenCLEnv();
+  APFloat VOne = getOneFP(GR.getTypeForSPIRVType(ResType));
+  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+    return GR.getOrCreateConstVector(VOne, I, ResType, TII, ZeroAsNull);
+  return GR.getOrCreateConstFP(VOne, I, ResType, TII, ZeroAsNull);
 }
 
 Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
@@ -2181,6 +2231,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       Size = 0;
     BuildMI(BB, I, I.getDebugLoc(), TII.get(Op)).addUse(PtrReg).addImm(Size);
   } break;
+  case Intrinsic::spv_saturate:
+    return selectSaturate(ResVReg, ResType, I);
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

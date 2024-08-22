@@ -17,10 +17,14 @@ using namespace lldb;
 using namespace lldb_private;
 
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
+  bool m_hidden;
+
 public:
-  ScriptedRecognizedStackFrame(ValueObjectListSP args) {
-    m_arguments = args;
+  ScriptedRecognizedStackFrame(ValueObjectListSP args, bool hidden)
+      : m_hidden(hidden) {
+    m_arguments = std::move(args);
   }
+  bool ShouldHide() override { return m_hidden; }
 };
 
 ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
@@ -38,13 +42,22 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
   ValueObjectListSP args =
       m_interpreter->GetRecognizedArguments(m_python_object_sp, frame);
   auto args_synthesized = ValueObjectListSP(new ValueObjectList());
-  for (const auto &o : args->GetObjects()) {
-    args_synthesized->Append(ValueObjectRecognizerSynthesizedValue::Create(
-        *o, eValueTypeVariableArgument));
+  if (args) {
+    for (const auto &o : args->GetObjects())
+      args_synthesized->Append(ValueObjectRecognizerSynthesizedValue::Create(
+          *o, eValueTypeVariableArgument));
   }
 
+  bool hidden = m_interpreter->ShouldHide(m_python_object_sp, frame);
+
   return RecognizedStackFrameSP(
-      new ScriptedRecognizedStackFrame(args_synthesized));
+      new ScriptedRecognizedStackFrame(args_synthesized, hidden));
+}
+
+void StackFrameRecognizerManager::BumpGeneration() {
+  uint32_t n = m_generation;
+  n = (n + 1) & ((1 << 16) - 1);
+  m_generation = n;
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
@@ -53,6 +66,7 @@ void StackFrameRecognizerManager::AddRecognizer(
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
                             module, RegularExpressionSP(), symbols,
                             RegularExpressionSP(), first_instruction_only});
+  BumpGeneration();
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
@@ -61,6 +75,7 @@ void StackFrameRecognizerManager::AddRecognizer(
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
                             ConstString(), module, std::vector<ConstString>(),
                             symbol, first_instruction_only});
+  BumpGeneration();
 }
 
 void StackFrameRecognizerManager::ForEach(
@@ -97,10 +112,12 @@ bool StackFrameRecognizerManager::RemoveRecognizerWithID(
   if (found == m_recognizers.end())
     return false;
   m_recognizers.erase(found);
+  BumpGeneration();
   return true;
 }
 
 void StackFrameRecognizerManager::RemoveAllRecognizers() {
+  BumpGeneration();
   m_recognizers.clear();
 }
 
