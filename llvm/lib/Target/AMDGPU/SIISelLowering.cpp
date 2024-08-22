@@ -1570,9 +1570,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
+  case Intrinsic::amdgcn_atomic_cond_sub_u32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1791,7 +1789,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
   case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
   case Intrinsic::amdgcn_flat_atomic_fadd:
-  case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
@@ -1801,7 +1798,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_global_atomic_csub:
   case Intrinsic::amdgcn_global_atomic_fadd:
-  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fmin:

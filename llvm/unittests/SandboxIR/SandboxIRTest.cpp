@@ -15,6 +15,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -739,6 +740,419 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
       llvm::InsertElementInst::isValidOperands(LLVMArg0, LLVMArgVec, LLVMZero));
 }
 
+TEST_F(SandboxIRTest, ShuffleVectorInst) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
+  %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 0, i32 2>
+  %extr = extractelement <2 x i8> <i8 0, i8 1>, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgV1 = F.getArg(0);
+  auto *ArgV2 = F.getArg(1);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *SVI = cast<sandboxir::ShuffleVectorInst>(&*It++);
+  auto *EEI = cast<sandboxir::ExtractElementInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(SVI->getOpcode(), sandboxir::Instruction::Opcode::ShuffleVector);
+  EXPECT_EQ(SVI->getOperand(0), ArgV1);
+  EXPECT_EQ(SVI->getOperand(1), ArgV2);
+
+  // In order to test all the methods we need masks of different lengths, so we
+  // can't simply reuse one of the instructions created above. This helper
+  // creates a new `shufflevector %v1, %2, <mask>` with the given mask indices.
+  auto CreateShuffleWithMask = [&](auto &&...Indices) {
+    SmallVector<int, 4> Mask = {Indices...};
+    return cast<sandboxir::ShuffleVectorInst>(
+        sandboxir::ShuffleVectorInst::create(ArgV1, ArgV2, Mask, Ret, Ctx));
+  };
+
+  // create (InsertBefore)
+  auto *NewI1 =
+      cast<sandboxir::ShuffleVectorInst>(sandboxir::ShuffleVectorInst::create(
+          ArgV1, ArgV2, ArrayRef<int>({0, 2, 1, 3}), Ret, Ctx,
+          "NewShuffleBeforeRet"));
+  EXPECT_EQ(NewI1->getOperand(0), ArgV1);
+  EXPECT_EQ(NewI1->getOperand(1), ArgV2);
+  EXPECT_EQ(NewI1->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewI1->getName(), "NewShuffleBeforeRet");
+#endif
+
+  // create (InsertAtEnd)
+  auto *NewI2 =
+      cast<sandboxir::ShuffleVectorInst>(sandboxir::ShuffleVectorInst::create(
+          ArgV1, ArgV2, ArrayRef<int>({0, 1}), BB, Ctx, "NewShuffleAtEndOfBB"));
+  EXPECT_EQ(NewI2->getPrevNode(), Ret);
+
+  // Test the path that creates a folded constant. We're currently using an
+  // extractelement instruction with a constant operand in the textual IR above
+  // to obtain a constant vector to work with.
+  // TODO: Refactor this once sandboxir::ConstantVector lands.
+  auto *ShouldBeConstant = sandboxir::ShuffleVectorInst::create(
+      EEI->getOperand(0), EEI->getOperand(0), ArrayRef<int>({0, 3}), BB, Ctx);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+
+  // isValidOperands
+  auto *LLVMArgV1 = LLVMF.getArg(0);
+  auto *LLVMArgV2 = LLVMF.getArg(1);
+  SmallVector<int, 2> Mask({1, 2});
+  EXPECT_EQ(
+      sandboxir::ShuffleVectorInst::isValidOperands(ArgV1, ArgV2, Mask),
+      llvm::ShuffleVectorInst::isValidOperands(LLVMArgV1, LLVMArgV2, Mask));
+  EXPECT_EQ(sandboxir::ShuffleVectorInst::isValidOperands(ArgV1, ArgV1, ArgV1),
+            llvm::ShuffleVectorInst::isValidOperands(LLVMArgV1, LLVMArgV1,
+                                                     LLVMArgV1));
+
+  // commute
+  {
+    auto *I = CreateShuffleWithMask(0, 2);
+    I->commute();
+    EXPECT_EQ(I->getOperand(0), ArgV2);
+    EXPECT_EQ(I->getOperand(1), ArgV1);
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 0));
+  }
+
+  // getType
+  EXPECT_EQ(SVI->getType(), ArgV1->getType());
+
+  // getMaskValue
+  EXPECT_EQ(SVI->getMaskValue(0), 0);
+  EXPECT_EQ(SVI->getMaskValue(1), 2);
+
+  // getShuffleMask / getShuffleMaskForBitcode
+  {
+    EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAre(0, 2));
+
+    SmallVector<int, 2> Result;
+    SVI->getShuffleMask(Result);
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
+
+    Result.clear();
+    sandboxir::ShuffleVectorInst::getShuffleMask(
+        SVI->getShuffleMaskForBitcode(), Result);
+    EXPECT_THAT(Result, testing::ElementsAre(0, 2));
+  }
+
+  // convertShuffleMaskForBitcode
+  {
+    auto *C = sandboxir::ShuffleVectorInst::convertShuffleMaskForBitcode(
+        ArrayRef<int>({2, 3}), ArgV1->getType(), Ctx);
+    SmallVector<int, 2> Result;
+    sandboxir::ShuffleVectorInst::getShuffleMask(C, Result);
+    EXPECT_THAT(Result, testing::ElementsAre(2, 3));
+  }
+
+  // setShuffleMask
+  {
+    auto *I = CreateShuffleWithMask(0, 1);
+    I->setShuffleMask(ArrayRef<int>({2, 3}));
+    EXPECT_THAT(I->getShuffleMask(), testing::ElementsAre(2, 3));
+  }
+
+  // The following functions check different mask properties. Note that most
+  // of these come in three different flavors: a method that checks the mask
+  // in the current instructions and two static member functions that check
+  // a mask given as an ArrayRef<int> or Constant*, so there's quite a bit of
+  // repetition in order to check all of them.
+
+  // changesLength / increasesLength
+  {
+    auto *I = CreateShuffleWithMask(1);
+    EXPECT_TRUE(I->changesLength());
+    EXPECT_FALSE(I->increasesLength());
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 1);
+    EXPECT_FALSE(I->changesLength());
+    EXPECT_FALSE(I->increasesLength());
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 1, 1);
+    EXPECT_TRUE(I->changesLength());
+    EXPECT_TRUE(I->increasesLength());
+  }
+
+  // isSingleSource / isSingleSourceMask
+  {
+    auto *I = CreateShuffleWithMask(0, 1);
+    EXPECT_TRUE(I->isSingleSource());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isSingleSourceMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isSingleSourceMask(
+        I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(0, 2);
+    EXPECT_FALSE(I->isSingleSource());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isSingleSourceMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isSingleSourceMask(
+        I->getShuffleMask(), 2));
+  }
+
+  // isIdentity / isIdentityMask
+  {
+    auto *I = CreateShuffleWithMask(0, 1);
+    EXPECT_TRUE(I->isIdentity());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isIdentityMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(
+        sandboxir::ShuffleVectorInst::isIdentityMask(I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 0);
+    EXPECT_FALSE(I->isIdentity());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isIdentityMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(
+        sandboxir::ShuffleVectorInst::isIdentityMask(I->getShuffleMask(), 2));
+  }
+
+  // isIdentityWithPadding
+  EXPECT_TRUE(CreateShuffleWithMask(0, 1, -1, -1)->isIdentityWithPadding());
+  EXPECT_FALSE(CreateShuffleWithMask(0, 1)->isIdentityWithPadding());
+
+  // isIdentityWithExtract
+  EXPECT_TRUE(CreateShuffleWithMask(0)->isIdentityWithExtract());
+  EXPECT_FALSE(CreateShuffleWithMask(0, 1)->isIdentityWithExtract());
+  EXPECT_FALSE(CreateShuffleWithMask(0, 1, 2)->isIdentityWithExtract());
+  EXPECT_FALSE(CreateShuffleWithMask(1)->isIdentityWithExtract());
+
+  // isConcat
+  EXPECT_TRUE(CreateShuffleWithMask(0, 1, 2, 3)->isConcat());
+  EXPECT_FALSE(CreateShuffleWithMask(0, 3)->isConcat());
+
+  // isSelect / isSelectMask
+  {
+    auto *I = CreateShuffleWithMask(0, 3);
+    EXPECT_TRUE(I->isSelect());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isSelectMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(
+        sandboxir::ShuffleVectorInst::isSelectMask(I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(0, 2);
+    EXPECT_FALSE(I->isSelect());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isSelectMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(
+        sandboxir::ShuffleVectorInst::isSelectMask(I->getShuffleMask(), 2));
+  }
+
+  // isReverse / isReverseMask
+  {
+    auto *I = CreateShuffleWithMask(1, 0);
+    EXPECT_TRUE(I->isReverse());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isReverseMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(
+        sandboxir::ShuffleVectorInst::isReverseMask(I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 2);
+    EXPECT_FALSE(I->isReverse());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isReverseMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(
+        sandboxir::ShuffleVectorInst::isReverseMask(I->getShuffleMask(), 2));
+  }
+
+  // isZeroEltSplat / isZeroEltSplatMask
+  {
+    auto *I = CreateShuffleWithMask(0, 0);
+    EXPECT_TRUE(I->isZeroEltSplat());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isZeroEltSplatMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isZeroEltSplatMask(
+        I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 1);
+    EXPECT_FALSE(I->isZeroEltSplat());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isZeroEltSplatMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isZeroEltSplatMask(
+        I->getShuffleMask(), 2));
+  }
+
+  // isTranspose / isTransposeMask
+  {
+    auto *I = CreateShuffleWithMask(0, 2);
+    EXPECT_TRUE(I->isTranspose());
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isTransposeMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_TRUE(
+        sandboxir::ShuffleVectorInst::isTransposeMask(I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 1);
+    EXPECT_FALSE(I->isTranspose());
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isTransposeMask(
+        I->getShuffleMaskForBitcode(), 2));
+    EXPECT_FALSE(
+        sandboxir::ShuffleVectorInst::isTransposeMask(I->getShuffleMask(), 2));
+  }
+
+  // isSplice / isSpliceMask
+  {
+    auto *I = CreateShuffleWithMask(1, 2);
+    int Index;
+    EXPECT_TRUE(I->isSplice(Index));
+    EXPECT_EQ(Index, 1);
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isSpliceMask(
+        I->getShuffleMaskForBitcode(), 2, Index));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isSpliceMask(I->getShuffleMask(),
+                                                           2, Index));
+  }
+  {
+    auto *I = CreateShuffleWithMask(2, 1);
+    int Index;
+    EXPECT_FALSE(I->isSplice(Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isSpliceMask(
+        I->getShuffleMaskForBitcode(), 2, Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isSpliceMask(I->getShuffleMask(),
+                                                            2, Index));
+  }
+
+  // isExtractSubvectorMask
+  {
+    auto *I = CreateShuffleWithMask(1);
+    int Index;
+    EXPECT_TRUE(I->isExtractSubvectorMask(Index));
+    EXPECT_EQ(Index, 1);
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isExtractSubvectorMask(
+        I->getShuffleMaskForBitcode(), 2, Index));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isExtractSubvectorMask(
+        I->getShuffleMask(), 2, Index));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 2);
+    int Index;
+    EXPECT_FALSE(I->isExtractSubvectorMask(Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isExtractSubvectorMask(
+        I->getShuffleMaskForBitcode(), 2, Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isExtractSubvectorMask(
+        I->getShuffleMask(), 2, Index));
+  }
+
+  // isInsertSubvectorMask
+  {
+    auto *I = CreateShuffleWithMask(0, 2);
+    int NumSubElts, Index;
+    EXPECT_TRUE(I->isInsertSubvectorMask(NumSubElts, Index));
+    EXPECT_EQ(Index, 1);
+    EXPECT_EQ(NumSubElts, 1);
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInsertSubvectorMask(
+        I->getShuffleMaskForBitcode(), 2, NumSubElts, Index));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInsertSubvectorMask(
+        I->getShuffleMask(), 2, NumSubElts, Index));
+  }
+  {
+    auto *I = CreateShuffleWithMask(0, 1);
+    int NumSubElts, Index;
+    EXPECT_FALSE(I->isInsertSubvectorMask(NumSubElts, Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isInsertSubvectorMask(
+        I->getShuffleMaskForBitcode(), 2, NumSubElts, Index));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isInsertSubvectorMask(
+        I->getShuffleMask(), 2, NumSubElts, Index));
+  }
+
+  // isReplicationMask
+  {
+    auto *I = CreateShuffleWithMask(0, 0, 0, 1, 1, 1);
+    int ReplicationFactor, VF;
+    EXPECT_TRUE(I->isReplicationMask(ReplicationFactor, VF));
+    EXPECT_EQ(ReplicationFactor, 3);
+    EXPECT_EQ(VF, 2);
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isReplicationMask(
+        I->getShuffleMaskForBitcode(), ReplicationFactor, VF));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isReplicationMask(
+        I->getShuffleMask(), ReplicationFactor, VF));
+  }
+  {
+    auto *I = CreateShuffleWithMask(1, 2);
+    int ReplicationFactor, VF;
+    EXPECT_FALSE(I->isReplicationMask(ReplicationFactor, VF));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isReplicationMask(
+        I->getShuffleMaskForBitcode(), ReplicationFactor, VF));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isReplicationMask(
+        I->getShuffleMask(), ReplicationFactor, VF));
+  }
+
+  // isOneUseSingleSourceMask
+  {
+    auto *I = CreateShuffleWithMask(0, 1, 1, 0);
+    EXPECT_TRUE(I->isOneUseSingleSourceMask(2));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isOneUseSingleSourceMask(
+        I->getShuffleMask(), 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(0, 1, 0, 0);
+    EXPECT_FALSE(I->isOneUseSingleSourceMask(2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isOneUseSingleSourceMask(
+        I->getShuffleMask(), 2));
+  }
+
+  // commuteShuffleMask
+  {
+    SmallVector<int, 4> M = {0, 2, 1, 3};
+    ShuffleVectorInst::commuteShuffleMask(M, 2);
+    EXPECT_THAT(M, testing::ElementsAre(2, 0, 3, 1));
+  }
+
+  // isInterleave / isInterleaveMask
+  {
+    auto *I = CreateShuffleWithMask(0, 2, 1, 3);
+    EXPECT_TRUE(I->isInterleave(2));
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInterleaveMask(
+        I->getShuffleMask(), 2, 4));
+    SmallVector<unsigned, 4> StartIndexes;
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isInterleaveMask(
+        I->getShuffleMask(), 2, 4, StartIndexes));
+    EXPECT_THAT(StartIndexes, testing::ElementsAre(0, 2));
+  }
+  {
+    auto *I = CreateShuffleWithMask(0, 3, 1, 2);
+    EXPECT_FALSE(I->isInterleave(2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isInterleaveMask(
+        I->getShuffleMask(), 2, 4));
+  }
+
+  // isDeInterleaveMaskOfFactor
+  {
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({0, 2}), 2));
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({0, 1}), 2));
+
+    unsigned Index;
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+        ArrayRef<int>({1, 3}), 2, Index));
+    EXPECT_EQ(Index, 1u);
+  }
+
+  // isBitRotateMask
+  {
+    unsigned NumSubElts, RotateAmt;
+    EXPECT_TRUE(sandboxir::ShuffleVectorInst::isBitRotateMask(
+        ArrayRef<int>({1, 0, 3, 2, 5, 4, 7, 6}), 8, 2, 2, NumSubElts,
+        RotateAmt));
+    EXPECT_EQ(NumSubElts, 2u);
+    EXPECT_EQ(RotateAmt, 8u);
+
+    EXPECT_FALSE(sandboxir::ShuffleVectorInst::isBitRotateMask(
+        ArrayRef<int>({0, 7, 1, 6, 2, 5, 3, 4}), 8, 2, 2, NumSubElts,
+        RotateAmt));
+  }
+}
+
 TEST_F(SandboxIRTest, BranchInst) {
   parseIR(C, R"IR(
 define void @foo(i1 %cond0, i1 %cond2) {
@@ -1451,6 +1865,96 @@ define void @foo(i8 %arg) {
     EXPECT_EQ(NewCallBr->getNextNode(), nullptr);
     EXPECT_EQ(NewCallBr->getParent(), BB0);
   }
+}
+
+TEST_F(SandboxIRTest, FuncletPadInst_CatchPadInst_CleanupPadInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %handler0] unwind to caller
+handler0:
+  %catchpad = catchpad within %cs [ptr @foo]
+  ret void
+handler1:
+  %cleanuppad = cleanuppad within %cs [ptr @foo]
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMDispatch = getBasicBlockByName(LLVMF, "dispatch");
+  BasicBlock *LLVMHandler0 = getBasicBlockByName(LLVMF, "handler0");
+  BasicBlock *LLVMHandler1 = getBasicBlockByName(LLVMF, "handler1");
+  auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMHandler0->begin());
+  auto *LLVMCLP = cast<llvm::CleanupPadInst>(&*LLVMHandler1->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Dispatch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMDispatch));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler0));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMHandler1));
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb")));
+  auto *BBRet = cast<sandboxir::ReturnInst>(&*BB->begin());
+  auto *CS = cast<sandboxir::CatchSwitchInst>(&*Dispatch->begin());
+  [[maybe_unused]] auto *CP =
+      cast<sandboxir::CatchPadInst>(&*Handler0->begin());
+  [[maybe_unused]] auto *CLP =
+      cast<sandboxir::CleanupPadInst>(&*Handler1->begin());
+
+  // Check getCatchSwitch().
+  EXPECT_EQ(CP->getCatchSwitch(), CS);
+  EXPECT_EQ(CP->getCatchSwitch(), Ctx.getValue(LLVMCP->getCatchSwitch()));
+
+  for (llvm::FuncletPadInst *LLVMFPI :
+       {static_cast<llvm::FuncletPadInst *>(LLVMCP),
+        static_cast<llvm::FuncletPadInst *>(LLVMCLP)}) {
+    auto *FPI = cast<sandboxir::FuncletPadInst>(Ctx.getValue(LLVMFPI));
+    // Check arg_size().
+    EXPECT_EQ(FPI->arg_size(), LLVMFPI->arg_size());
+    // Check getParentPad().
+    EXPECT_EQ(FPI->getParentPad(), Ctx.getValue(LLVMFPI->getParentPad()));
+    // Check setParentPad().
+    auto *OrigParentPad = FPI->getParentPad();
+    auto *NewParentPad = Dispatch;
+    EXPECT_NE(NewParentPad, OrigParentPad);
+    FPI->setParentPad(NewParentPad);
+    EXPECT_EQ(FPI->getParentPad(), NewParentPad);
+    FPI->setParentPad(OrigParentPad);
+    EXPECT_EQ(FPI->getParentPad(), OrigParentPad);
+    // Check getArgOperand().
+    for (auto Idx : seq<unsigned>(0, FPI->arg_size()))
+      EXPECT_EQ(FPI->getArgOperand(Idx),
+                Ctx.getValue(LLVMFPI->getArgOperand(Idx)));
+    // Check setArgOperand().
+    auto *OrigArgOperand = FPI->getArgOperand(0);
+    auto *NewArgOperand = Dispatch;
+    EXPECT_NE(NewArgOperand, OrigArgOperand);
+    FPI->setArgOperand(0, NewArgOperand);
+    EXPECT_EQ(FPI->getArgOperand(0), NewArgOperand);
+    FPI->setArgOperand(0, OrigArgOperand);
+    EXPECT_EQ(FPI->getArgOperand(0), OrigArgOperand);
+  }
+  // Check CatchPadInst::create().
+  auto *NewCPI = cast<sandboxir::CatchPadInst>(sandboxir::CatchPadInst::create(
+      CS, {}, BBRet->getIterator(), BB, Ctx, "NewCPI"));
+  EXPECT_EQ(NewCPI->getCatchSwitch(), CS);
+  EXPECT_EQ(NewCPI->arg_size(), 0u);
+  EXPECT_EQ(NewCPI->getNextNode(), BBRet);
+#ifndef NDEBUG
+  EXPECT_EQ(NewCPI->getName(), "NewCPI");
+#endif // NDEBUG
+  // Check CleanupPadInst::create().
+  auto *NewCLPI =
+      cast<sandboxir::CleanupPadInst>(sandboxir::CleanupPadInst::create(
+          CS, {}, BBRet->getIterator(), BB, Ctx, "NewCLPI"));
+  EXPECT_EQ(NewCLPI->getParentPad(), CS);
+  EXPECT_EQ(NewCLPI->arg_size(), 0u);
+  EXPECT_EQ(NewCLPI->getNextNode(), BBRet);
+#ifndef NDEBUG
+  EXPECT_EQ(NewCLPI->getName(), "NewCLPI");
+#endif // NDEBUG
 }
 
 TEST_F(SandboxIRTest, GetElementPtrInstruction) {

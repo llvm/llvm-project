@@ -46,6 +46,7 @@ static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expres
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
 const int x = *(volatile int*)0x1234;
+static_assert((void{}, true), "");
 
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();

@@ -947,6 +947,8 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       if (!isCompatibleType(wrappedType))
         return emitError(bb.front().getLoc(),
                          "block argument does not have an LLVM type");
+      builder.SetCurrentDebugLocation(
+          debugTranslation->translateLoc(arg.getLoc(), subprogram));
       llvm::Type *type = convertType(wrappedType);
       llvm::PHINode *phi = builder.CreatePHI(type, numPredecessors);
       mapValue(arg, phi);

@@ -68,8 +68,8 @@ std::string computeLTOCacheKey(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const std::set<GlobalValue::GUID> &CfiFunctionDefs = {},
-    const std::set<GlobalValue::GUID> &CfiFunctionDecls = {});
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
 
 namespace lto {
 
