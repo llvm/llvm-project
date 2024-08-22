@@ -510,12 +510,11 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
           assert(0 && "OMPDeclareTargetDeclAttr NYI");
         }
       }
-      // If this declaration may have caused an inline variable definition
-      // to change linkage, make sure that it's emitted.
-      // TODO(cir): probably use GetAddrOfGlobalVar(VD) below?
-      assert((astCtx.getInlineVariableDefinitionKind(VD) !=
-              ASTContext::InlineVariableDefinitionKind::Strong) &&
-             "not implemented");
+      // If this declaration may have caused an inline variable definition to
+      // change linkage, make sure that it's emitted.
+      if (astCtx.getInlineVariableDefinitionKind(VD) ==
+          ASTContext::InlineVariableDefinitionKind::Strong)
+        getAddrOfGlobalVar(VD);
       return;
     }
   }
