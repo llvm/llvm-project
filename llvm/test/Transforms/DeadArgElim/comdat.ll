@@ -11,4 +11,4 @@ define internal void @g(i32 %dead) comdat($f) {
   ret void
 }
 
-; CHECK: define internal void @g() comdat($f) {
+; CHECK: define internal void @g.argelim() comdat($f) {

@@ -5,7 +5,7 @@
 @G = constant %T { i32 0, i32 0, i32 17, i32 25 }
 
 define internal i32 @test(ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@test
+; CHECK-LABEL: define {{[^@]+}}@test.argprom
 ; CHECK-SAME: (i32 [[P_12_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[P_12_VAL]], 10
@@ -24,7 +24,7 @@ define i32 @caller() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @G, i64 12
 ; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[V:%.*]] = call i32 @test(i32 [[G_VAL]])
+; CHECK-NEXT:    [[V:%.*]] = call i32 @test.argprom(i32 [[G_VAL]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:

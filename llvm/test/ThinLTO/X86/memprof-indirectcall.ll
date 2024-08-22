@@ -404,21 +404,20 @@ attributes #0 = { noinline optnone }
 
 
 ; IR: define {{.*}} @main(
-; IR:   call {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Z3foov{{.*}}()
 ;; Only the second call to foo, which allocates cold memory via direct calls,
 ;; is replaced with a call to a clone that calls a cold allocation.
-; IR:   call {{.*}} @_Z3foov.memprof.1()
-; IR:   call {{.*}} @_Z3barP1A(
-; IR:   call {{.*}} @_Z3barP1A(
-; IR:   call {{.*}} @_Z3barP1A(
-; IR:   call {{.*}} @_Z3barP1A(
-; IR: define internal {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Z3foov.memprof.1{{.*}}()
+; IR:   call {{.*}} @_Z3barP1A{{.*}}(
+; IR:   call {{.*}} @_Z3barP1A{{.*}}(
+; IR:   call {{.*}} @_Z3barP1A{{.*}}(
+; IR:   call {{.*}} @_Z3barP1A{{.*}}(
+; IR: define internal {{.*}} @_Z3foov{{.*}}()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
-; IR: define internal {{.*}} @_Z3foov.memprof.1()
+; IR: define internal {{.*}} @_Z3foov.memprof.1{{.*}}()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
-
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend

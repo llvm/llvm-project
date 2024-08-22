@@ -42,7 +42,7 @@ bb:
 }
 
 define internal fastcc void @promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
-; CHECK-LABEL: define {{[^@]+}}@promote_avx2
+; CHECK-LABEL: define {{[^@]+}}@promote_avx2.argprom
 ; CHECK-SAME: (ptr [[ARG:%.*]], <4 x i64> [[ARG1_VAL:%.*]])
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    store <4 x i64> [[ARG1_VAL]], ptr [[ARG]]
@@ -62,7 +62,7 @@ define void @promote(ptr %arg) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 [[TMP]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP_VAL:%.*]] = load <4 x i64>, ptr [[TMP]]
-; CHECK-NEXT:    call fastcc void @promote_avx2(ptr [[TMP2]], <4 x i64> [[TMP_VAL]])
+; CHECK-NEXT:    call fastcc void @promote_avx2.argprom(ptr [[TMP2]], <4 x i64> [[TMP_VAL]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CHECK-NEXT:    ret void

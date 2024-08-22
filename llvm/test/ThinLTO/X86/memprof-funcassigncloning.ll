@@ -261,23 +261,23 @@ attributes #0 = { noinline optnone }
 
 
 ;; Original version of E is used for the non-cold allocations, both from B.
-; IR: define internal {{.*}} @_Z1EPPcS0_(
+; IR: define internal {{.*}} @_Z1EPPcS0_{{.*}}(
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
 ; IR: define internal {{.*}} @_Z1BPPcS0_(
-; IR:   call {{.*}} @_Z1EPPcS0_(
+; IR:   call {{.*}} @_Z1EPPcS0_{{.*}}(
 ;; C calls a clone of E with the first new allocating cold memory and the
 ;; second allocating non-cold memory.
 ; IR: define internal {{.*}} @_Z1CPPcS0_(
-; IR:   call {{.*}} @_Z1EPPcS0_.memprof.3(
+; IR:   call {{.*}} @_Z1EPPcS0_.memprof.3{{.*}}(
 ;; D calls a clone of E with the first new allocating non-cold memory and the
 ;; second allocating cold memory.
 ; IR: define internal {{.*}} @_Z1DPPcS0_(
-; IR:   call {{.*}} @_Z1EPPcS0_.memprof.2(
-; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.2(
+; IR:   call {{.*}} @_Z1EPPcS0_.memprof.2{{.*}}(
+; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.2{{.*}}(
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
-; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.3(
+; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.3{{.*}}(
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }

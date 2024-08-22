@@ -14,7 +14,8 @@ define void @do_trap(ptr %ptr) {
 }
 
 define internal void @capture_and_trap(ptr %ptr) noinline {
-; CHECK-LABEL: @capture_and_trap(
+; DEFAULT-LABEL: @capture_and_trap.argelim(
+; LTO-LABEL: @capture_and_trap.argprom(
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
@@ -34,7 +35,8 @@ define internal void @dead_fn2() {
 
 define void @test(i1 %c) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    tail call fastcc void @capture_and_trap()
+; DEFAULT-NEXT:    tail call fastcc void @capture_and_trap.argelim()
+; LTO-NEXT:    tail call fastcc void @capture_and_trap.argprom()
 ; CHECK-NEXT:    unreachable
 ;
   br i1 %c, label %if, label %else

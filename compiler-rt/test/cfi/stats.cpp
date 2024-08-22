@@ -26,12 +26,12 @@ extern "C" __attribute__((noinline)) void nvcall(A *a) {
 }
 
 extern "C" __attribute__((noinline)) A *dcast(A *a) {
-  // CHECK: stats.cpp:[[@LINE+1]] {{_?}}dcast cfi-derived-cast 24
+  // CHECK: stats.cpp:[[@LINE+1]] {{_?}}dcast.retelim cfi-derived-cast 24
   return (A *)(ABase *)a;
 }
 
 extern "C" __attribute__((noinline)) A *ucast(A *a) {
-  // CHECK: stats.cpp:[[@LINE+1]] {{_?}}ucast cfi-unrelated-cast 81
+  // CHECK: stats.cpp:[[@LINE+1]] {{_?}}ucast.retelim cfi-unrelated-cast 81
   return (A *)(char *)a;
 }
 
