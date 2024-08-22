@@ -54,13 +54,13 @@ Eg4 e4 : register(s5);
 struct Eg5 {
   float f;
 }; 
-// expected-warning@+1{{binding type 't' only applies to types containing srv resources}}
+// expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg5 e5 : register(t0);
 
 struct Eg6 {
   float f;
 }; 
-// expected-warning@+1{{binding type 'u' only applies to types containing uav resources}}
+// expected-warning@+1{{binding type 'u' only applies to types containing UAV resources}}
 Eg6 e6 : register(u0);
 
 struct Eg7 {
@@ -92,7 +92,7 @@ template<typename R>
 struct Eg11 {
     R b;
 };
-// expected-warning@+1{{binding type 'u' only applies to types containing uav resources}}
+// expected-warning@+1{{binding type 'u' only applies to types containing UAV resources}}
 Eg11<MySRV> e11 : register(u0);
 // invalid because after template expansion, there are no valid resources inside Eg11 to bind as a UAV, only an SRV
 
@@ -101,8 +101,8 @@ struct Eg12{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+3{{binding type 'u' only applies to types containing uav resources}}
-// expected-warning@+2{{binding type 'u' only applies to types containing uav resources}}
+// expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
+// expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg12 e12 : register(u9) : register(u10);
 
@@ -110,14 +110,14 @@ struct Eg13{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+4{{binding type 'u' only applies to types containing uav resources}}
-// expected-warning@+3{{binding type 'u' only applies to types containing uav resources}}
-// expected-warning@+2{{binding type 'u' only applies to types containing uav resources}}
+// expected-warning@+4{{binding type 'u' only applies to types containing UAV resources}}
+// expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
+// expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg13 e13 : register(u9) : register(u10) : register(u11);
 
 struct Eg14{
  RWBuffer<int> r1;  
 };
-// expected-warning@+1{{binding type 't' only applies to types containing srv resources}}
+// expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg14 e14 : register(t9);

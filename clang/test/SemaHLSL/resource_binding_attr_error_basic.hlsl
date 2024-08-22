@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
-// expected-error@+1{{binding type 't' only applies to srv resources}}
+// expected-error@+1{{binding type 't' only applies to SRV resources}}
 float f1 : register(t0);
 
 

@@ -56,7 +56,7 @@ void foo2() {
   extern RWBuffer<float> U2 : register(u5);
 }
 
-// expected-error@+1 {{binding type 'u' only applies to uav resources}}
+// expected-error@+1 {{binding type 'u' only applies to UAV resources}}
 float b : register(u0, space1);
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}

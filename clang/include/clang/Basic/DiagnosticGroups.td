@@ -1548,7 +1548,7 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
 // Warnings for legacy binding behavior
-def DisallowLegacyBindingRules : DiagGroup<"disallow-legacy-binding-rules">;
+def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
 
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;

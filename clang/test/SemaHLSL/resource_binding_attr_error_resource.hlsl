@@ -29,10 +29,10 @@ struct MyCBuffer {
 // expected-error@+1  {{binding type 'i' ignored. The 'integer constant' binding type is no longer supported}}
 MySRV invalid : register(i2);
 
-// expected-error@+1  {{binding type 't' only applies to srv resources}}
+// expected-error@+1  {{binding type 't' only applies to SRV resources}}
 MyUAV a : register(t2, space1);
 
-// expected-error@+1  {{binding type 'u' only applies to uav resources}}
+// expected-error@+1  {{binding type 'u' only applies to UAV resources}}
 MySampler b : register(u2, space1);
 
 // expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
