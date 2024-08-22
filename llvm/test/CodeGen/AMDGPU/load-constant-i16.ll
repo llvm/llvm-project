@@ -745,7 +745,7 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_clause 0xf
+; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    global_load_u16 v3, v8, s[0:1] offset:28
 ; GFX12-NEXT:    global_load_u16 v2, v8, s[0:1] offset:24
 ; GFX12-NEXT:    global_load_u16 v1, v8, s[0:1] offset:20
@@ -754,13 +754,21 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX12-NEXT:    global_load_u16 v6, v8, s[0:1] offset:8
 ; GFX12-NEXT:    global_load_u16 v5, v8, s[0:1] offset:4
 ; GFX12-NEXT:    global_load_u16 v4, v8, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:30
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:26
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:22
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:18
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:14
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:10
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:6
+; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:2
 ; GFX12-NEXT:    s_wait_loadcnt 0x4
 ; GFX12-NEXT:    global_store_b128 v[0:1], v[0:3], off

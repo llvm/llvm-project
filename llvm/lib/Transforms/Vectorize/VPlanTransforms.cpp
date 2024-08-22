@@ -914,7 +914,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (Blend->isNormalized())
       return;
 
-    // Normalize the blend so its first incomming value is used as the initial
+    // Normalize the blend so its first incoming value is used as the initial
     // value with the others blended into it.
 
     unsigned StartIndex = 0;
