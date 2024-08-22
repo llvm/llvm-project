@@ -7246,7 +7246,7 @@ planContainsAdditionalSimplifications(VPlan &Plan, ElementCount VF,
                                       VPCostContext &CostCtx, Loop *TheLoop,
                                       LoopVectorizationCostModel &CM) {
   // First collect all instructions for the recipes in Plan.
-  auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction q {
+  auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
       return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
     if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
