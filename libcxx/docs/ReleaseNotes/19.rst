@@ -40,8 +40,7 @@ and C++26 features.
 
 Experimental support for the time zone database has progressed.
 
-Work on the ranges support has progressed. See
-:ref:`ranges-status` for the current status.
+Work on the ranges support has progressed.
 
 Work on the experimental C++17 Parallel STL has progressed. See
 :ref:`pstl-status` for the current status.

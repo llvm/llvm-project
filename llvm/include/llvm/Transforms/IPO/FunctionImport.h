@@ -42,7 +42,7 @@ public:
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
-  enum ImportFailureReason {
+  enum class ImportFailureReason {
     None,
     // We can encounter a global variable instead of a function in rare
     // situations with SamplePGO. See comments where this failure type is
@@ -121,6 +121,33 @@ public:
 
   /// Import functions in Module \p M based on the supplied import list.
   Expected<bool> importFunctions(Module &M, const ImportMapTy &ImportList);
+
+  enum class AddDefinitionStatus {
+    NoChange,
+    Inserted,
+    ChangedToDefinition,
+  };
+
+  // Add the given GUID to ImportList as a definition.  If the same GUID has
+  // been added as a declaration previously, that entry is overridden.
+  static AddDefinitionStatus addDefinition(ImportMapTy &ImportList,
+                                           StringRef FromModule,
+                                           GlobalValue::GUID GUID);
+
+  // Add the given GUID to ImportList as a declaration.  If the same GUID has
+  // been added as a definition previously, that entry takes precedence, and no
+  // change is made.
+  static void maybeAddDeclaration(ImportMapTy &ImportList, StringRef FromModule,
+                                  GlobalValue::GUID GUID);
+
+  static void addGUID(ImportMapTy &ImportList, StringRef FromModule,
+                      GlobalValue::GUID GUID,
+                      GlobalValueSummary::ImportKind ImportKind) {
+    if (ImportKind == GlobalValueSummary::Definition)
+      addDefinition(ImportList, FromModule, GUID);
+    else
+      maybeAddDeclaration(ImportList, FromModule, GUID);
+  }
 
 private:
   /// The summaries index used to trigger importing.
