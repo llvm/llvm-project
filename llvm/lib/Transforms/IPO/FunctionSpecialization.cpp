@@ -430,8 +430,8 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   if (I.getCondition() != LastVisitedUse)
     return nullptr;
 
-  Value *V = LastVisitedConstant->isZeroValue() ? I.getFalseValue()
-                                                : I.getTrueValue();
+  Value *V =
+      LastVisitedConstant->isZeroValue() ? I.getFalseValue() : I.getTrueValue();
   Constant *C = findConstantFor(V, KnownConstants);
   return C;
 }
