@@ -195,6 +195,14 @@ mlir::Value ConvertFIRToLLVMPattern::getRankFromBox(
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kRankPosInBox);
 }
 
+/// Read the extra field from a fir.box.
+mlir::Value ConvertFIRToLLVMPattern::getExtraFromBox(
+    mlir::Location loc, TypePair boxTy, mlir::Value box,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kExtraPosInBox});
+  return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kExtraPosInBox);
+}
+
 // Get the element type given an LLVM type that is of the form
 // (array|struct|vector)+ and the provided indexes.
 mlir::Type ConvertFIRToLLVMPattern::getBoxEleTy(

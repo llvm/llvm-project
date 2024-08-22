@@ -34,8 +34,6 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::elf;
 
-DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
-
 // Returns a string to construct an error message.
 std::string lld::toString(const InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
@@ -682,6 +680,8 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
   PhdrEntry *tls = ctx.tlsPhdr;
+  if (!tls) // Reported an error in getSymVA
+    return 0;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:

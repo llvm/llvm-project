@@ -32,10 +32,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ByteCode/Context.h"
+#include "ByteCode/Frame.h"
+#include "ByteCode/State.h"
 #include "ExprConstShared.h"
-#include "Interp/Context.h"
-#include "Interp/Frame.h"
-#include "Interp/State.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -12833,6 +12833,54 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isZero() ? 1 : 0, E);
   }
 
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl: {
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success(Val.isNegative() ? 1 : 0, E);
+  }
+
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered: {
+    APFloat LHS(0.0);
+    APFloat RHS(0.0);
+    if (!EvaluateFloat(E->getArg(0), LHS, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+
+    return Success(
+        [&] {
+          switch (BuiltinOp) {
+          case Builtin::BI__builtin_isgreater:
+            return LHS > RHS;
+          case Builtin::BI__builtin_isgreaterequal:
+            return LHS >= RHS;
+          case Builtin::BI__builtin_isless:
+            return LHS < RHS;
+          case Builtin::BI__builtin_islessequal:
+            return LHS <= RHS;
+          case Builtin::BI__builtin_islessgreater: {
+            APFloat::cmpResult cmp = LHS.compare(RHS);
+            return cmp == APFloat::cmpResult::cmpLessThan ||
+                   cmp == APFloat::cmpResult::cmpGreaterThan;
+          }
+          case Builtin::BI__builtin_isunordered:
+            return LHS.compare(RHS) == APFloat::cmpResult::cmpUnordered;
+          default:
+            llvm_unreachable("Unexpected builtin ID: Should be a floating "
+                             "point comparison function");
+          }
+        }()
+            ? 1
+            : 0,
+        E);
+  }
+
   case Builtin::BI__builtin_issignaling: {
     APFloat Val(0.0);
     return EvaluateFloat(E->getArg(0), Val, Info) &&
@@ -14508,14 +14556,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
         if (ED->getNumNegativeBits() && ConstexprVar &&
             (Max.slt(Result.getInt().getSExtValue()) ||
              Min.sgt(Result.getInt().getSExtValue())))
-          Info.Ctx.getDiagnostics().Report(
-              E->getExprLoc(), diag::warn_constexpr_unscoped_enum_out_of_range)
+          Info.CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << llvm::toString(Result.getInt(), 10) << Min.getSExtValue()
               << Max.getSExtValue() << ED;
         else if (!ED->getNumNegativeBits() && ConstexprVar &&
                  Max.ult(Result.getInt().getZExtValue()))
-          Info.Ctx.getDiagnostics().Report(
-              E->getExprLoc(), diag::warn_constexpr_unscoped_enum_out_of_range)
+          Info.CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << llvm::toString(Result.getInt(), 10) << Min.getZExtValue()
               << Max.getZExtValue() << ED;
       }
@@ -15569,12 +15615,12 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
       }
     } else {
-      if (RHS.getComplexIntReal() == 0 && RHS.getComplexIntImag() == 0)
-        return Error(E, diag::note_expr_divide_by_zero);
-
       ComplexValue LHS = Result;
       APSInt Den = RHS.getComplexIntReal() * RHS.getComplexIntReal() +
         RHS.getComplexIntImag() * RHS.getComplexIntImag();
+      if (Den.isZero())
+        return Error(E, diag::note_expr_divide_by_zero);
+
       Result.getComplexIntReal() =
         (LHS.getComplexIntReal() * RHS.getComplexIntReal() +
          LHS.getComplexIntImag() * RHS.getComplexIntImag()) / Den;

@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -33,7 +33,7 @@ class AMDGPUAnnotateUniformValues
   MemorySSA *MSSA;
   AliasAnalysis *AA;
   bool isEntryFunc;
-  bool Changed;
+  bool Changed = false;
 
   void setUniformMetadata(Instruction *I) {
     I->setMetadata("amdgpu.uniform", MDNode::get(I->getContext(), {}));
