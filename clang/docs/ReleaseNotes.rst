@@ -241,6 +241,8 @@ Improvements to Clang's diagnostics
 
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
+- Improved diagnostic when trying to befriend a concept. (#GH45182).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
