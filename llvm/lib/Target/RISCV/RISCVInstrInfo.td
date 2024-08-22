@@ -839,6 +839,14 @@ def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
 def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
 }
 
+let Predicates = [HasStdExtSmctrOrSsctr] in {
+def SCTRCLR : Priv<"sctrclr", 0b0001000>, Sched<[]> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0b00100;
+}
+}
+
 //===----------------------------------------------------------------------===//
 // Debug instructions
 //===----------------------------------------------------------------------===//
