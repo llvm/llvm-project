@@ -7199,8 +7199,10 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
           Case.getCaseValue()->getValue().trySExtValue();
       if (!Val || (Val != 1 && Val != 0 && Val != -1))
         return false;
-      if (Case.getCaseSuccessor() == Succ)
+      if (Case.getCaseSuccessor() == Succ) {
         Res = *Val;
+        break;
+      }
     }
   } else {
     return false;
