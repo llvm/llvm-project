@@ -62,19 +62,24 @@ void StackFrameRecognizerManager::BumpGeneration() {
 
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, ConstString module,
-    llvm::ArrayRef<ConstString> symbols, bool first_instruction_only) {
+    llvm::ArrayRef<ConstString> symbols, bool first_instruction_only,
+    Mangled::NamePreference mangling_preference) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
                             module, RegularExpressionSP(), symbols,
                             RegularExpressionSP(), first_instruction_only});
+  m_used_manglings.insert(mangling_preference);
   BumpGeneration();
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, RegularExpressionSP module,
-    RegularExpressionSP symbol, bool first_instruction_only) {
+    RegularExpressionSP symbol, bool first_instruction_only,
+    Mangled::NamePreference mangling_preference) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
                             ConstString(), module, std::vector<ConstString>(),
-                            symbol, first_instruction_only});
+                            symbol, first_instruction_only,
+                            mangling_preference});
+  m_used_manglings.insert(mangling_preference);
   BumpGeneration();
 }
 
@@ -119,13 +124,30 @@ bool StackFrameRecognizerManager::RemoveRecognizerWithID(
 void StackFrameRecognizerManager::RemoveAllRecognizers() {
   BumpGeneration();
   m_recognizers.clear();
+  m_used_manglings.clear();
 }
 
 StackFrameRecognizerSP
 StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   const SymbolContext &symctx = frame->GetSymbolContext(
       eSymbolContextModule | eSymbolContextFunction | eSymbolContextSymbol);
-  ConstString function_name = symctx.GetFunctionName();
+  ConstString function_name_mangled;
+  ConstString function_name_demangled;
+  ConstString function_name_noargs;
+  for (Mangled::NamePreference m : m_used_manglings) {
+    switch (m) {
+    case Mangled::ePreferMangled:
+      function_name_mangled = symctx.GetFunctionName(m);
+      break;
+    case Mangled::ePreferDemangled:
+      function_name_demangled = symctx.GetFunctionName(m);
+      break;
+    case Mangled::ePreferDemangledWithoutArguments:
+      function_name_noargs = symctx.GetFunctionName(m);
+      break;
+    }
+  }
+
   ModuleSP module_sp = symctx.module_sp;
   if (!module_sp)
     return StackFrameRecognizerSP();
@@ -144,6 +166,17 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     if (entry.module_regexp)
       if (!entry.module_regexp->Execute(module_name.GetStringRef()))
         continue;
+
+    ConstString function_name = [&]() {
+      switch (entry.mangling_preference) {
+      case Mangled::ePreferMangled:
+        return function_name_mangled;
+      case Mangled::ePreferDemangled:
+        return function_name_demangled;
+      case Mangled::ePreferDemangledWithoutArguments:
+        return function_name_noargs;
+      }
+    }();
 
     if (!entry.symbols.empty())
       if (!llvm::is_contained(entry.symbols, function_name))

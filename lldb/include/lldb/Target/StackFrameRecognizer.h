@@ -107,12 +107,14 @@ class StackFrameRecognizerManager {
 public:
   void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
                      ConstString module, llvm::ArrayRef<ConstString> symbols,
-                     bool first_instruction_only = true);
+                     bool first_instruction_only = true,
+                     Mangled::NamePreference mangling_preference = Mangled::ePreferDemangled);
 
   void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
                      lldb::RegularExpressionSP module,
                      lldb::RegularExpressionSP symbol,
-                     bool first_instruction_only = true);
+                     bool first_instruction_only = true,
+                     Mangled::NamePreference mangling_preference = Mangled::ePreferDemangled);
 
   void ForEach(std::function<
                void(uint32_t recognizer_id, std::string recognizer_name,
@@ -143,10 +145,12 @@ private:
     std::vector<ConstString> symbols;
     lldb::RegularExpressionSP symbol_regexp;
     bool first_instruction_only;
+    Mangled::NamePreference mangling_preference;
   };
 
   std::deque<RegisteredEntry> m_recognizers;
   uint16_t m_generation = 0;
+  std::unordered_set<Mangled::NamePreference> m_used_manglings;
 };
 
 /// \class ValueObjectRecognizerSynthesizedValue
