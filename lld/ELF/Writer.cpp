@@ -826,7 +826,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention usually
     // to the start of the .got or .got.plt section.
     InputSection *sec = in.gotPlt.get();
-    if (!target->gotBaseSymInGotPlt)
+    if (!ctx.target->gotBaseSymInGotPlt)
       sec = in.mipsGot ? cast<InputSection>(in.mipsGot.get())
                        : cast<InputSection>(in.got.get());
     ctx.sym.globalOffsetTable->section = sec;
@@ -1177,8 +1177,8 @@ sortISDBySectionOrder(InputSectionDescription *isd,
   // cover most cases).
   size_t insPt = 0;
   if (executableOutputSection && !orderedSections.empty() &&
-      target->getThunkSectionSpacing() &&
-      totalSize >= target->getThunkSectionSpacing()) {
+      ctx.target->getThunkSectionSpacing() &&
+      totalSize >= ctx.target->getThunkSectionSpacing()) {
     uint64_t unorderedPos = 0;
     for (; insPt != unorderedSections.size(); ++insPt) {
       unorderedPos += unorderedSections[insPt]->getSize();
@@ -1455,9 +1455,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
-    bool changed = target->needsThunks
+    bool changed = ctx.target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
-                       : target->relaxOnce(pass);
+                       : ctx.target->relaxOnce(pass);
     bool spilled = ctx.script->spillSections();
     changed |= spilled;
     ++pass;
@@ -1465,8 +1465,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     // With Thunk Size much smaller than branch range we expect to
     // converge quickly; if we get to 30 something has gone wrong.
     if (changed && pass >= 30) {
-      error(target->needsThunks ? "thunk creation not converged"
-                                : "relaxation not converged");
+      error(ctx.target->needsThunks ? "thunk creation not converged"
+                                    : "relaxation not converged");
       break;
     }
 
@@ -1541,7 +1541,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     }
   }
   if (!config->relocatable)
-    target->finalizeRelax(pass);
+    ctx.target->finalizeRelax(pass);
 
   if (config->relocatable)
     for (OutputSection *sec : ctx.outputSections)
@@ -1632,7 +1632,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      numDeleted += target->deleteFallThruJmpInsn(sec, sec.file, next);
+      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, sec.file, next);
     }
     if (numDeleted > 0) {
       ctx.script->assignAddresses();
@@ -2803,7 +2803,7 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
 
 static void fillTrap(uint8_t *i, uint8_t *end) {
   for (; i + 4 <= end; i += 4)
-    memcpy(i, &target->trapInstr, 4);
+    memcpy(i, &ctx.target->trapInstr, 4);
 }
 
 // Fill the last page of executable segments with trap instructions

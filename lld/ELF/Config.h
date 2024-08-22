@@ -47,6 +47,7 @@ class Symbol;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
+class TargetInfo;
 struct Partition;
 struct PhdrEntry;
 
@@ -485,6 +486,7 @@ struct DuplicateSymbol {
 struct Ctx {
   LinkerDriver driver;
   LinkerScript *script;
+  TargetInfo *target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
