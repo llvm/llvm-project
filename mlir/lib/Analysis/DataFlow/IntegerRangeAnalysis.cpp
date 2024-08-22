@@ -58,12 +58,14 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
                                  dialect)));
 }
 
-void IntegerRangeAnalysis::visitOperation(
+LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
-  if (!inferrable)
-    return setAllToEntryStates(results);
+  if (!inferrable) {
+    setAllToEntryStates(results);
+    return success();
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
   auto argRanges = llvm::map_to_vector(
@@ -99,6 +101,7 @@ void IntegerRangeAnalysis::visitOperation(
   };
 
   inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+  return success();
 }
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
