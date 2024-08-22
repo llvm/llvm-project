@@ -84,6 +84,7 @@
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion on
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
+; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
@@ -106,7 +107,6 @@
 ; CHECK-O-NEXT: Running pass: SROAPass
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: MemorySSAAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager

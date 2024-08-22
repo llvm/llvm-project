@@ -20,6 +20,7 @@
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -303,6 +304,8 @@ private:
   Function &F;
   Module &M;
 
+  const TargetTransformInfo &TTI;
+
   ProfileSummaryInfo *PSI = nullptr;
 
   // Symtab that maps indirect call profile values to function names and
@@ -369,6 +372,9 @@ private:
                                     ArrayRef<PromotionCandidate> Candidates,
                                     uint64_t TotalCount);
 
+  bool addressPointLoweringCostComparable(
+      const VTableGUIDCountsMap &VTableGUIDCounts) const;
+
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and return vtable
   // pointer if type profiles exist.
@@ -391,12 +397,12 @@ private:
 
 public:
   IndirectCallPromoter(
-      Function &Func, Module &M, ProfileSummaryInfo *PSI,
-      InstrProfSymtab *Symtab, bool SamplePGO,
+      Function &Func, Module &M, const TargetTransformInfo &TTI,
+      ProfileSummaryInfo *PSI, InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
       OptimizationRemarkEmitter &ORE)
-      : F(Func), M(M), PSI(PSI), Symtab(Symtab), SamplePGO(SamplePGO),
+      : F(Func), M(M), TTI(TTI), PSI(PSI), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
         VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE) {}
   IndirectCallPromoter(const IndirectCallPromoter &) = delete;
@@ -833,6 +839,18 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   return Changed;
 }
 
+bool IndirectCallPromoter::addressPointLoweringCostComparable(
+    const VTableGUIDCountsMap &VTableGUIDAndCounts) const {
+  for (auto &[GUID, Count] : VTableGUIDAndCounts) {
+    GlobalVariable *VTable = Symtab->getGlobalVariable(GUID);
+    assert(VTable != nullptr &&
+           "guaranteed by IndirectCallPromoter::computeVTableInfos");
+    if (!TTI.isOffsetFoldingLegal(VTable))
+      return false;
+  }
+  return true;
+}
+
 // TODO: Return false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
@@ -877,8 +895,12 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     // chain for the subsequent candidates. Set its value to 1 for non-last
     // candidate and allow option to override it for the last candidate.
     int MaxNumVTable = 1;
-    if (I == CandidateSize - 1)
-      MaxNumVTable = ICPMaxNumVTableLastCandidate;
+    if (I == CandidateSize - 1) {
+      if (addressPointLoweringCostComparable(VTableGUIDAndCounts))
+        MaxNumVTable = 2;
+      if (ICPMaxNumVTableLastCandidate.getNumOccurrences())
+        MaxNumVTable = ICPMaxNumVTableLastCandidate;
+    }
 
     if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
       LLVM_DEBUG(dbgs() << "    allow at most " << MaxNumVTable << " and got "
@@ -991,8 +1013,9 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
     auto &FAM =
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
 
-    IndirectCallPromoter CallPromoter(F, M, PSI, &Symtab, SamplePGO,
+    IndirectCallPromoter CallPromoter(F, M, TTI, PSI, &Symtab, SamplePGO,
                                       VirtualCSInfo,
                                       VTableAddressPointOffsetVal, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
