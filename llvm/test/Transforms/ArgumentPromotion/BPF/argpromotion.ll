@@ -85,4 +85,4 @@ entry:
 ; Without number-of-argument constraint, argpromotion will create a function signature with 5 arguments, which equals
 ; the maximum number of argument permitted by bpf backend, so argpromotion result code does work.
 ;
-; CHECK:  i32 @foo2(i32 %p1.0.val, i32 %p1.4.val, i32 %p2.8.val, i32 %p2.16.val, i32 %p3.20.val)
+; CHECK:  i32 @foo2.argprom(i32 %p1.0.val, i32 %p1.4.val, i32 %p2.8.val, i32 %p2.16.val, i32 %p3.20.val)

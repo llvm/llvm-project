@@ -23,7 +23,7 @@ define internal x86_thiscallcc void @internalfun(ptr %this, ptr inalloca(<{ %str
 ; ARGPROMOTION-NEXT:    call void @ext(ptr inalloca(<{ [[STRUCT_A]] }>) [[ARGMEM]])
 ; ARGPROMOTION-NEXT:    ret void
 ;
-; GLOBALOPT_ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun
+; GLOBALOPT_ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun.argprom
 ; GLOBALOPT_ARGPROMOTION-SAME: (ptr [[TMP0:%.*]]) unnamed_addr {
 ; GLOBALOPT_ARGPROMOTION-NEXT:  entry:
 ; GLOBALOPT_ARGPROMOTION-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A:%.*]] }>, ptr [[TMP0]], i32 0, i32 0
@@ -56,7 +56,7 @@ define void @exportedfun(ptr %a) {
 ; GLOBALOPT_ARGPROMOTION-SAME: (ptr [[A:%.*]]) local_unnamed_addr {
 ; GLOBALOPT_ARGPROMOTION-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0()
 ; GLOBALOPT_ARGPROMOTION-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; GLOBALOPT_ARGPROMOTION-NEXT:    call fastcc void @internalfun(ptr [[ARGMEM]])
+; GLOBALOPT_ARGPROMOTION-NEXT:    call fastcc void @internalfun.argprom(ptr [[ARGMEM]])
 ; GLOBALOPT_ARGPROMOTION-NEXT:    call void @llvm.stackrestore.p0(ptr [[INALLOCA_SAVE]])
 ; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
 ;
