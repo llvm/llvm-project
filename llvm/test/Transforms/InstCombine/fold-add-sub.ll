@@ -8,7 +8,7 @@ define i8 @test_add_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = add nsw i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = add nsw i8 %x, %y
@@ -25,7 +25,7 @@ define i8 @test_add_nsw_no_prop(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = add nuw i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = add nsw i8 %x, %y
@@ -42,7 +42,7 @@ define i8 @test_add(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = add i8 %x, %y
@@ -76,7 +76,7 @@ define i8 @test_add_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = or disjoint i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = add i8 %x, %y
@@ -93,7 +93,7 @@ define i8 @test_add_nuw_no_prop(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = or disjoint i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = add i8 %x, %y
@@ -110,7 +110,7 @@ define i8 @test_sub_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nuw i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = sub nuw i8 %x, %y
@@ -127,7 +127,7 @@ define i8 @test_sub_nuw_no_prop(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = sub i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = sub nuw i8 %x, %y
@@ -144,7 +144,7 @@ define i8 @test_sub_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nsw i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[X]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = sub nsw i8 %x, %y
@@ -161,7 +161,7 @@ define i8 @test_sub_nsw_no_prop(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nsw i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = sub i8 %x, %y
@@ -178,7 +178,7 @@ define i8 @test_sub_none(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RHS:%.*]] = sub i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LHS]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lhs = sub i8 %x, %y
