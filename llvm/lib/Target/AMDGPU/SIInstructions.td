@@ -1123,11 +1123,6 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
-  def : GCNPat <
-    (f64 (any_fpextend f16:$src)),
-    (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
-  >;
-
   // fp_to_fp16 patterns
   def : GCNPat <
     (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
