@@ -909,6 +909,10 @@ void FunctionInstrumenter::instrument() {
   auto Name = FuncInfo.FuncNameVar;
   auto CFGHash =
       ConstantInt::get(Type::getInt64Ty(M.getContext()), FuncInfo.FunctionHash);
+  // Make sure that pointer to global is passed in with zero addrspace
+  // This is relevant during GPU profiling
+  auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
@@ -916,7 +920,7 @@ void FunctionInstrumenter::instrument() {
     //                      i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(&M, Intrinsic::instrprof_cover),
-        {Name, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
+        {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
 
@@ -971,7 +975,8 @@ void FunctionInstrumenter::instrument() {
     //                          i32 <index>)
     Builder.CreateCall(
         Intrinsic::getDeclaration(&M, Intrinsic::instrprof_timestamp),
-        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I)});
+        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
+         Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
   }
 
@@ -985,7 +990,8 @@ void FunctionInstrumenter::instrument() {
         Intrinsic::getDeclaration(&M, PGOBlockCoverage
                                           ? Intrinsic::instrprof_cover
                                           : Intrinsic::instrprof_increment),
-        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I++)});
+        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
+         Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:
@@ -1028,11 +1034,14 @@ void FunctionInstrumenter::instrument() {
         ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
       assert(ToProfile && "value profiling Value is of unexpected type");
 
+      auto *NormalizedNamePtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          Name, PointerType::get(M.getContext(), 0));
+
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(&M, Intrinsic::instrprof_value_profile),
-          {FuncInfo.FuncNameVar, Builder.getInt64(FuncInfo.FunctionHash),
+          {NormalizedNamePtr, Builder.getInt64(FuncInfo.FunctionHash),
            ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
     }
@@ -1709,10 +1718,13 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+  auto *NormalizedFuncNameVarPtr =
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          FuncNameVar, PointerType::get(M->getContext(), 0));
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {FuncNameVar, Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
-       Builder.getInt32(*CurCtrIdx), Step});
+      {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
+       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 
