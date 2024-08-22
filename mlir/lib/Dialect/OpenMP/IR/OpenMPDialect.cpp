@@ -1883,52 +1883,6 @@ LogicalResult DistributeOp::verify() {
 // DeclareReductionOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseOptionalReductionRegion(OpAsmParser &parser,
-                                                Region &region,
-                                                StringRef keyword) {
-  if (parser.parseOptionalKeyword(keyword))
-    return success();
-  return parser.parseRegion(region);
-}
-
-static void printOptionalReductionRegion(OpAsmPrinter &printer, Region &region,
-                                         StringRef keyword) {
-  if (region.empty())
-    return;
-  printer << keyword << " ";
-  printer.printRegion(region);
-}
-
-static ParseResult parseAllocReductionRegion(OpAsmParser &parser,
-                                             Region &region) {
-  return parseOptionalReductionRegion(parser, region, "alloc");
-}
-
-static void printAllocReductionRegion(OpAsmPrinter &printer,
-                                      DeclareReductionOp op, Region &region) {
-  printOptionalReductionRegion(printer, region, "alloc");
-}
-
-static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
-                                              Region &region) {
-  return parseOptionalReductionRegion(parser, region, "atomic");
-}
-
-static void printAtomicReductionRegion(OpAsmPrinter &printer,
-                                       DeclareReductionOp op, Region &region) {
-  printOptionalReductionRegion(printer, region, "atomic");
-}
-
-static ParseResult parseCleanupReductionRegion(OpAsmParser &parser,
-                                               Region &region) {
-  return parseOptionalReductionRegion(parser, region, "cleanup");
-}
-
-static void printCleanupReductionRegion(OpAsmPrinter &printer,
-                                        DeclareReductionOp op, Region &region) {
-  printOptionalReductionRegion(printer, region, "cleanup");
-}
-
 LogicalResult DeclareReductionOp::verifyRegions() {
   if (!getAllocRegion().empty()) {
     for (YieldOp yieldOp : getAllocRegion().getOps<YieldOp>()) {
