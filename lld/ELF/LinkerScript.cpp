@@ -1487,7 +1487,7 @@ LinkerScript::assignAddresses() {
     dot = config->imageBase.value_or(0);
   } else {
     // Assign addresses to headers right now.
-    dot = target->getImageBase();
+    dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
     dot += getHeaderSize();
