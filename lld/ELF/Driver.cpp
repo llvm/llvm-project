@@ -94,6 +94,7 @@ void elf::errorOrWarn(const Twine &msg) {
 void Ctx::reset() {
   driver = LinkerDriver();
   script = nullptr;
+  target = nullptr;
 
   bufferStart = nullptr;
   mainPart = nullptr;
@@ -2065,13 +2066,13 @@ void LinkerDriver::inferMachineType() {
 // each target.
 static uint64_t getMaxPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "max-page-size",
-                                       target->defaultMaxPageSize);
+                                       ctx.target->defaultMaxPageSize);
   if (!isPowerOf2_64(val)) {
     error("max-page-size: value isn't a power of 2");
-    return target->defaultMaxPageSize;
+    return ctx.target->defaultMaxPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultMaxPageSize)
+    if (val != ctx.target->defaultMaxPageSize)
       warn("-z max-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -2082,13 +2083,13 @@ static uint64_t getMaxPageSize(opt::InputArgList &args) {
 // each target.
 static uint64_t getCommonPageSize(opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "common-page-size",
-                                       target->defaultCommonPageSize);
+                                       ctx.target->defaultCommonPageSize);
   if (!isPowerOf2_64(val)) {
     error("common-page-size: value isn't a power of 2");
-    return target->defaultCommonPageSize;
+    return ctx.target->defaultCommonPageSize;
   }
   if (config->nmagic || config->omagic) {
-    if (val != target->defaultCommonPageSize)
+    if (val != ctx.target->defaultCommonPageSize)
       warn("-z common-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
@@ -3106,9 +3107,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  target = getTarget();
+  ctx.target = getTarget();
 
-  config->eflags = target->calcEFlags();
+  config->eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
   // the output can be run on. For example if the OS can use 4k or 64k page
   // sizes then maxPageSize must be 64k for the output to be useable on both.
