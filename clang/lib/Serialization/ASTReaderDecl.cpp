@@ -1155,6 +1155,15 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   for (unsigned I = 0; I != NumParams; ++I)
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
+
+  // For the first decl read all lambdas inside, otherwise skip them.
+  unsigned NumLambdas = Record.readInt();
+  if (FD->isFirstDecl()) {
+    for (unsigned I = 0; I != NumLambdas; ++I)
+      readDecl();
+  } else {
+    (void)Record.readIntArray(NumLambdas);
+  }
 }
 
 void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {

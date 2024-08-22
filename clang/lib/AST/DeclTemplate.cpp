@@ -349,12 +349,8 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
     GlobalDeclID *Specs = CommonBasePtr->LazySpecializations;
     CommonBasePtr->LazySpecializations = nullptr;
     unsigned SpecSize = (*Specs++).getRawValue();
-    // Load the specializations in reverse order so that the most recent
-    // specialization are visited first so they become canonical declarations.
-    // This order matches the order in which namelookup discovers declarations
-    // coming from modules.
-    for (unsigned I = SpecSize; I != 0; --I)
-      (void)Context.getExternalSource()->GetExternalDecl(Specs[I - 1]);
+    for (unsigned I = 0; I != SpecSize; ++I)
+      (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }
 }
 
