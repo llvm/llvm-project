@@ -268,9 +268,9 @@ foo:
   floor.w.s  $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   ldc1       $f2, 16($7)
-  # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  # 32: :[[#@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   lwc1       $f2, 16($7)
-  # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  # 32: :[[#@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   madd.s     $f2, $f2, $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   mfc1       $7, $f2
@@ -310,7 +310,7 @@ foo:
   round.w.s  $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   sdc1       $f2, 16($7)
-  # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  # 32: :[[#@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   sqrt.d     $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   sqrt.s     $f2, $f2
@@ -320,7 +320,7 @@ foo:
   sub.s      $f2, $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   swc1       $f2, 16($7)
-  # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  # 32: :[[#@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   trunc.w.d  $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   trunc.w.s  $f2, $f2

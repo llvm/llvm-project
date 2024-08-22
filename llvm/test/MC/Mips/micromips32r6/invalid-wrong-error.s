@@ -29,7 +29,7 @@
   sc $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, 512($5)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
-  lwr $4, 1($5)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-  lwl $4, 1($5)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-  swr $4, 1($5)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-  swl $4, 1($5)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+  lwr $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  lwl $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  swr $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+  swl $4, 1($5)            # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
