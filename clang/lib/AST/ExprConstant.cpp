@@ -14806,7 +14806,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     clang::LangStandard::Kind ConstExprSinceVersion =
         FDecl->getConstexprBuiltinSinceVersion();
     if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
-        return false;
+      return false;
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
