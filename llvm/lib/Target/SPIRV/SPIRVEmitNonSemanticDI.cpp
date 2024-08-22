@@ -117,6 +117,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
     // To correct placement of a OpLabel instruction during SPIRVAsmPrinter
     // emission all new instructions needs to be placed after OpFunction
+    // and before first terminator
     MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
 
     // Emit OpString with FilePath which is required by DebugSource
