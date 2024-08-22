@@ -2527,6 +2527,7 @@ LogicalResult OperationConverter::legalizeConvertedOpResultTypes(
           opReplacement->getConverter());
       rewriterImpl.mapping.map(result, castValue);
       inverseMapping[castValue].push_back(result);
+      llvm::erase(inverseMapping[newValue], result);
     }
   }
 
@@ -2680,7 +2681,7 @@ static void computeNecessaryMaterializations(
       if (!castOp)
         continue;
       if (castOp->getResultTypes() == inputOperands.getTypes()) {
-        replaceMaterialization(rewriterImpl, opResult, inputOperands,
+        replaceMaterialization(rewriterImpl, user->getResults(), inputOperands,
                                inverseMapping);
         necessaryMaterializations.remove(materializationOps.lookup(user));
       }

@@ -174,7 +174,9 @@ public:
     replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      dxil::ResourceInfo &RI = DRM[CI];
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
       const auto &Binding = RI.getBinding();
 
       std::array<Value *, 4> Args{
@@ -200,7 +202,10 @@ public:
     replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      dxil::ResourceInfo &RI = DRM[CI];
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+
       const auto &Binding = RI.getBinding();
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 

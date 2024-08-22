@@ -43,7 +43,6 @@ Getting Started with libc++
    Modules
    Hardening
    ReleaseProcedure
-   Status/Cxx14
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
@@ -173,7 +172,7 @@ C++ Dialect Support
 ===================
 
 * C++11 - Complete
-* :ref:`C++14 - Complete <cxx14-status>`
+* C++14 - Complete
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`

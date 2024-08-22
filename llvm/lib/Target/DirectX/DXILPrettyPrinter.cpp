@@ -221,7 +221,7 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
       "", "", "", "", "", "");
 
   // TODO: Do we want to sort these by binding or something like that?
-  for (auto [_, RI] : DRM) {
+  for (const dxil::ResourceInfo &RI : DRM) {
     dxil::ResourceClass RC = RI.getResourceClass();
     assert((RC != dxil::ResourceClass::CBuffer || !MDResources.hasCBuffers()) &&
            "Old and new cbuffer representations can't coexist");
