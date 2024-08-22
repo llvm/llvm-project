@@ -16,6 +16,8 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 
 namespace llvm {
+class GISelObserverWrapper;
+
 class InstructionSelector : public GIMatchTableExecutor {
 public:
   virtual ~InstructionSelector();
@@ -36,6 +38,8 @@ public:
   const TargetPassConfig *TPC = nullptr;
 
   MachineOptimizationRemarkEmitter *MORE = nullptr;
+
+  GISelObserverWrapper *AllObservers = nullptr;
 };
 } // namespace llvm
 
