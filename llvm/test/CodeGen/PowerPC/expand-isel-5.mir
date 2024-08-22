@@ -45,10 +45,9 @@ body:             |
     $r5 = ADDI $r3, 1
     $cr0 = CMPWI $r3, 0
     $r0 = ISEL $r5, $r0, $cr0gt
-    ; CHECK: BC $cr0gt, %[[TRUE:bb.[0-9]+]]
-    ; CHECK: B %[[SUCCESSOR:bb.[0-9]+]]
-    ; CHECK: [[TRUE]]
+    ; CHECK: BCn $cr0gt, %[[SUCCESSOR:bb.[0-9]+]]
     ; CHECK: $r0 = ADDI $r5, 0
+    ; CHECK: [[SUCCESSOR]]
     $x3 = EXTSW_32_64 $r0
 
 ...

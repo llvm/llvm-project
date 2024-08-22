@@ -19,8 +19,8 @@ entry:
 ; CHECK: isellt 3, [[REG2]], [[REG1]]
 ; CHECK: blr
 
-; CHECK-NO-ISEL: bc 12, 0,
-; CHECK-NO-ISEL: blr
+; CHECK-NO-ISEL: bclr 4, 0, 0
+; CHECK-NO-ISEL: # %bb.1: # %entry
 ; CHECK-NO-ISEL: addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }
@@ -42,9 +42,9 @@ entry:
 ; CHECK: isellt 3, [[REG2]], [[REG1]]
 ; CHECK: blr
 
-; CHECK-NO-ISEL: bc 12, 0,
-; CHECK-NO-ISEL: blr
-; CHECK-NO-ISEL: addi 3, 4, 0
+; CHECK-NO-ISEL: bclr 4, 0, 0
+; CHECK-NO-ISEL-NEXT: # %bb.1: # %entry
+; CHECK-NO-ISEL-NEXT: addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }
 
@@ -63,9 +63,8 @@ entry:
 ; CHECK: iselgt 3, 0, [[REG1]]
 ; CHECK: blr
 
-; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL-NEXT: blr
-; CHECK-NO-ISEL-NEXT: [[TRUE]]
+; CHECK-NO-ISEL: bclr 4, 1, 0 
+; CHECK-NO-ISEL-NEXT: # %bb.1: # %entry 
 ; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }

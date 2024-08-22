@@ -406,16 +406,25 @@ void PPCExpandISEL::reorganizeBlockLayout(BlockISELList &BIL,
     FalseBlock->addSuccessor(Successor);
   }
 
-  // Conditional branch to the TrueBlock or Successor
-  BuildMI(*MBB, BIL.back(), dl, TII->get(PPC::BC))
-      .add(BIL.back()->getOperand(3))
-      .addMBB(IsTrueBlockRequired ? TrueBlock : Successor);
+  if (IsTrueBlockRequired && !IsFalseBlockRequired) {
+    // Jump over the true block to the new successor if the condition is false.
+    BuildMI(*MBB, BIL.back(), dl, TII->get(PPC::BCn))
+        .add(BIL.back()->getOperand(3))
+        .addMBB(Successor);
+  } else if (!IsTrueBlockRequired && IsFalseBlockRequired) {
+    // Jump over the false block to the new successor if the condition is true.
+    BuildMI(*MBB, BIL.back(), dl, TII->get(PPC::BC))
+        .add(BIL.back()->getOperand(3))
+        .addMBB(Successor);
+  } else {
+    // Conditional branch to the TrueBlock
+    BuildMI(*MBB, BIL.back(), dl, TII->get(PPC::BC))
+        .add(BIL.back()->getOperand(3))
+        .addMBB(TrueBlock);
 
-  // Jump over the true block to the new successor if the condition is false.
-  BuildMI(*(IsFalseBlockRequired ? FalseBlock : MBB),
-          (IsFalseBlockRequired ? FalseBlockI : BIL.back()), dl,
-          TII->get(PPC::B))
-      .addMBB(Successor);
+    // Jump over the true block to the new successor if the condition is false.
+    BuildMI(*FalseBlock, FalseBlockI, dl, TII->get(PPC::B)).addMBB(Successor);
+  }
 
   if (IsFalseBlockRequired)
     FalseBlockI = FalseBlock->begin(); // get the position of PPC::B
