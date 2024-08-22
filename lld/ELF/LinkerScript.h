@@ -332,7 +332,7 @@ class LinkerScript final {
 
   OutputSection *aether;
 
-  uint64_t dot;
+  uint64_t dot = 0;
 
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
