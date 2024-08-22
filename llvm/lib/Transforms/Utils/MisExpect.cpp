@@ -108,6 +108,8 @@ uint64_t getScaledThreshold(const ProfDataSummary &PDS) {
 bool isAnnotationDiagEnabled(LLVMContext &Ctx) {
   LLVM_DEBUG(dbgs() << "PGOMissingAnnotations = " << PGOMissingAnnotations
                     << "\n");
+  LLVM_DEBUG(dbgs() << "getAnnotationDiagsRequested = " << Ctx.getAnnotationDiagsRequested()
+                    << "\n");
   return PGOMissingAnnotations || Ctx.getAnnotationDiagsRequested();
 }
 
@@ -304,10 +306,8 @@ void checkMissingAnnotations(Instruction &I,
   if (IsFrontendInstr) {
     verifyMissingAnnotations(I, ExistingWeights);
   } else {
-    SmallVector<uint32_t> ExpectedWeights;
-    if (extractBranchWeights(I, ExpectedWeights))
-      return;
-    verifyMissingAnnotations(I, ExistingWeights);
+    if (!hasBranchWeightOrigin(I))
+      verifyMissingAnnotations(I, ExistingWeights);
   }
 }
 

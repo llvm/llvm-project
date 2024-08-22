@@ -183,6 +183,7 @@ CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
 CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
 CODEGENOPT(NoTypeCheck       , 1, 0) ///< Set when -Wa,--no-type-check is enabled.
 CODEGENOPT(MisExpect         , 1, 0) ///< Set when -Wmisexpect is enabled
+CODEGENOPT(MissingAnnotations, 1, 0) ///< Set when suggesting missing perf annotations
 CODEGENOPT(EnableSegmentedStacks , 1, 0) ///< Set when -fsplit-stack is enabled.
 CODEGENOPT(StackClashProtector, 1, 0) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.

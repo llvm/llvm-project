@@ -4805,6 +4805,9 @@ bool CompilerInvocation::CreateFromArgsImpl(
     }
   }
 
+  if(Args.hasArg(OPT_fdiagnostics_missing_annotations))
+    Res.getCodeGenOpts().MissingAnnotations = true;
+
   if (LangOpts.CUDA) {
     // During CUDA device-side compilation, the aux triple is the
     // triple used for host compilation.

@@ -488,6 +488,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
   Options.MisExpect = CodeGenOpts.MisExpect;
+  Options.MissingAnnotations = CodeGenOpts.MissingAnnotations;
 
   return true;
 }

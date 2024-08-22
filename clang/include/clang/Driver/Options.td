@@ -2090,6 +2090,10 @@ def fdiagnostics_misexpect_tolerance_EQ : Joined<["-"], "fdiagnostics-misexpect-
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
     MetaVarName<"<value>">,
     HelpText<"Prevent misexpect diagnostics from being output if the profile counts are within N% of the expected. ">;
+defm diagnostics_missing_annotations : BoolFOption<"diagnostics-missing-annotations",
+    CodeGenOpts<"MissingAnnotations">, DefaultFalse,
+    PosFlag<SetTrue,[], [ClangOption, CC1Option], "Enable diagnostics for missing annotations based on profile counts">,
+    NegFlag<SetFalse>>;
 defm diagnostics_show_option : BoolFOption<"diagnostics-show-option",
     DiagnosticOpts<"ShowOptionNames">, DefaultTrue,
     NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
