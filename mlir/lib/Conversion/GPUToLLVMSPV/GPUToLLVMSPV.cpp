@@ -306,9 +306,9 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
-class MemorySpaceToOpenCLMemorySpaceConverter : public TypeConverter {
+class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
 public:
-  explicit MemorySpaceToOpenCLMemorySpaceConverter() {
+  MemorySpaceToOpenCLMemorySpaceConverter() {
     addConversion([](Type t) { return t; });
     addConversion(
         [this](BaseMemRefType memRefType) -> std::optional<Type> {
