@@ -688,9 +688,12 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
       // If "B op D" simplifies then it can be formed with no cost.
       V = simplifyBinOp(TopLevelOpcode, B, D, SQ.getWithInstruction(&I));
 
-      // If "B op D" doesn't simplify then only go on if one of the existing
+      // If "B op D" doesn't simplify then only go on if both of the existing
       // operations "A op' B" and "C op' D" will be zapped as no longer used.
-      if (!V && (LHS->hasOneUse() || RHS->hasOneUse()))
+      // Note that when an operation is equal to one of its operands, that
+      // operation is "zapped" by having never existed in the first place.
+      if (!V && (LHS->hasOneUse() || LHS == A || LHS == B) &&
+          (RHS->hasOneUse() || RHS == C || RHS == D))
         V = Builder.CreateBinOp(TopLevelOpcode, B, D, RHS->getName());
       if (V)
         RetVal = Builder.CreateBinOp(InnerOpcode, A, V);
@@ -708,9 +711,12 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
       // If "A op C" simplifies then it can be formed with no cost.
       V = simplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I));
 
-      // If "A op C" doesn't simplify then only go on if one of the existing
+      // If "A op C" doesn't simplify then only go on if both of the existing
       // operations "A op' B" and "C op' D" will be zapped as no longer used.
-      if (!V && (LHS->hasOneUse() || RHS->hasOneUse()))
+      // Note that when an operation is equal to one of its operands, that
+      // operation is "zapped" by having never existed in the first place.
+      if (!V && (LHS->hasOneUse() || LHS == A || LHS == B) &&
+          (RHS->hasOneUse() || RHS == C || RHS == D))
         V = Builder.CreateBinOp(TopLevelOpcode, A, C, LHS->getName());
       if (V)
         RetVal = Builder.CreateBinOp(InnerOpcode, V, B);

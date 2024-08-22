@@ -37,10 +37,10 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP10]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[SMAX]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], [[UMIN]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[TMP0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP13]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 4
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP27]], 4
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]

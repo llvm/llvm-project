@@ -2051,9 +2051,9 @@ define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
 define i8 @mul_add_common_factor_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @mul_add_common_factor_use2(
 ; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[N:%.*]] = mul i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[N1:%.*]] = add i8 [[Y]], [[Z:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[N1]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[N]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul i8 %x, %y
@@ -2069,16 +2069,16 @@ define void @mul_add_chain_common_factor_uses(i64 %a, i64 %b, i32 %c) {
 ; CHECK-LABEL: @mul_add_chain_common_factor_uses(
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SXT1:%.*]] = sext i32 [[C:%.*]] to i64
-; CHECK-NEXT:    [[MUL11:%.*]] = add i64 [[A]], [[SXT1]]
-; CHECK-NEXT:    [[ADD1:%.*]] = mul i64 [[MUL11]], [[B]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i64 [[B]], [[SXT1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[MUL1]], [[MUL2]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD1]])
 ; CHECK-NEXT:    [[SXT2:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[ADD12:%.*]] = add i64 [[MUL11]], [[SXT2]]
-; CHECK-NEXT:    [[ADD2:%.*]] = mul i64 [[ADD12]], [[B]]
+; CHECK-NEXT:    [[MUL3:%.*]] = mul i64 [[B]], [[SXT2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[MUL3]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD2]])
 ; CHECK-NEXT:    [[SXT3:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[ADD23:%.*]] = add i64 [[ADD12]], [[SXT3]]
-; CHECK-NEXT:    [[ADD3:%.*]] = mul i64 [[ADD23]], [[B]]
+; CHECK-NEXT:    [[MUL4:%.*]] = mul i64 [[B]], [[SXT3]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i64 [[ADD2]], [[MUL4]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD3]])
 ; CHECK-NEXT:    call void @use(i64 [[MUL1]])
 ; CHECK-NEXT:    ret void

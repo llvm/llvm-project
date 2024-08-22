@@ -43,8 +43,8 @@ define i8 @add_shl_same_amount_nsw_extra_use1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @add_shl_same_amount_nsw_extra_use1(
 ; CHECK-NEXT:    [[XS:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[XS]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIFF:%.*]] = shl nsw i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[DIFF:%.*]] = add nsw i8 [[XS]], [[YS]]
 ; CHECK-NEXT:    ret i8 [[DIFF]]
 ;
   %xs = shl nsw nuw i8 %x, %z
@@ -56,10 +56,10 @@ define i8 @add_shl_same_amount_nsw_extra_use1(i8 %x, i8 %y, i8 %z) {
 
 define i8 @add_shl_same_amount_nuw_extra_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @add_shl_same_amount_nuw_extra_use2(
-; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[XS:%.*]] = shl nuw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    call void @use8(i8 [[YS]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[DIFF:%.*]] = shl nuw i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[DIFF:%.*]] = add nuw nsw i8 [[XS]], [[YS]]
 ; CHECK-NEXT:    ret i8 [[DIFF]]
 ;
   %xs = shl nuw i8 %x, %z
@@ -174,8 +174,8 @@ define i8 @sub_shl_same_amount_nsw_extra_use1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_shl_same_amount_nsw_extra_use1(
 ; CHECK-NEXT:    [[XS:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[XS]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIFF:%.*]] = shl nsw i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub nsw i8 [[XS]], [[YS]]
 ; CHECK-NEXT:    ret i8 [[DIFF]]
 ;
   %xs = shl nsw nuw i8 %x, %z
@@ -187,10 +187,10 @@ define i8 @sub_shl_same_amount_nsw_extra_use1(i8 %x, i8 %y, i8 %z) {
 
 define i8 @sub_shl_same_amount_nuw_extra_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_shl_same_amount_nuw_extra_use2(
-; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[XS:%.*]] = shl nuw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[YS:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    call void @use8(i8 [[YS]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[DIFF:%.*]] = shl nuw i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub nuw nsw i8 [[XS]], [[YS]]
 ; CHECK-NEXT:    ret i8 [[DIFF]]
 ;
   %xs = shl nuw i8 %x, %z

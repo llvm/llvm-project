@@ -1409,7 +1409,8 @@ Instruction *InstCombinerImpl::
 /// foldUsingDistributiveLaws. If that code can be made to work optimally
 /// for multi-use cases or propagating nsw/nuw, then we would not need this.
 static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
-                                            InstCombiner::BuilderTy &Builder) {
+                                            InstCombiner::BuilderTy &Builder,
+                                            const SimplifyQuery SQ) {
   // TODO: Also handle mul by doubling the shift amount?
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Sub) &&
@@ -1422,6 +1423,12 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
   Value *X, *Y, *ShAmt;
   if (!match(Op0, m_Shl(m_Value(X), m_Value(ShAmt))) ||
       !match(Op1, m_Shl(m_Value(Y), m_Specific(ShAmt))))
+    return nullptr;
+
+  // This transform is only profitiable if both operations or one operation and
+  // the resulting add/sub can be eliminated/folded.
+  if (!(Op0->hasOneUse() && Op1->hasOneUse()) &&
+      !simplifyBinOp(I.getOpcode(), X, Y, SQ))
     return nullptr;
 
   // No-wrap propagates only when all ops have no-wrap.
@@ -1505,7 +1512,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *R = foldBoxMultiply(I))
     return R;
 
-  if (Instruction *R = factorizeMathWithShlOps(I, Builder))
+  if (Instruction *R = factorizeMathWithShlOps(I, Builder, SQ))
     return R;
 
   if (Instruction *X = foldAddWithConstant(I))
@@ -2166,7 +2173,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   // Try this before Negator to preserve NSW flag.
-  if (Instruction *R = factorizeMathWithShlOps(I, Builder))
+  if (Instruction *R = factorizeMathWithShlOps(I, Builder, SQ))
     return R;
 
   Constant *C;
