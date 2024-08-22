@@ -1521,6 +1521,43 @@ define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
   checkCmpInst(Ctx, ICmp);
 }
 
+TEST_F(TrackerTest, GlobalValueSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto *Call = cast<sandboxir::CallInst>(&*BB->begin());
+
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  Ctx.save();
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  Ctx.revert();
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  Ctx.save();
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  Ctx.revert();
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {
