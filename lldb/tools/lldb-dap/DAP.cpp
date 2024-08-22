@@ -1006,7 +1006,7 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
     // see if this is an instruction breakpoint that is getting hit.
     lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
     inst_bp = GetInstructionBreakpoint(bp_id);
-    // If any breakpoint is not an exception breakpoint, then stop and
+    // If any breakpoint is not an instruction breakpoint, then stop and
     // report this as a normal breakpoint
     if (inst_bp == nullptr)
       return nullptr;
