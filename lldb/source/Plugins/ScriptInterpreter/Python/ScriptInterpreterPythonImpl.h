@@ -107,9 +107,6 @@ public:
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
-  bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                  lldb::StackFrameSP frame_sp) override;
-
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
