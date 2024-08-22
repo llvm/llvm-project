@@ -1076,8 +1076,8 @@ static bool isAllActivePredicate(Value *Pred) {
 // Simplify unary operation where predicate has all inactive lanes by replacing
 // instruction with its operand
 static std::optional<Instruction *>
-instCombineSVENoActiveUnaryReplace(InstCombiner &IC, IntrinsicInst &II,
-                                   bool hasInactiveVector) {
+instCombineSVENoActiveReplace(InstCombiner &IC, IntrinsicInst &II,
+                              bool hasInactiveVector) {
   int PredOperand = hasInactiveVector ? 1 : 0;
   int ReplaceOperand = hasInactiveVector ? 0 : 1;
   if (match(II.getOperand(PredOperand), m_ZeroInt())) {
@@ -1096,7 +1096,7 @@ instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
     Value *Undef = llvm::UndefValue::get(II.getType());
     return IC.replaceOperand(II, 0, Undef);
   }
-  return instCombineSVENoActiveUnaryReplace(IC, II, true);
+  return instCombineSVENoActiveReplace(IC, II, true);
 }
 
 // Erase unary operation where predicate has all inactive lanes

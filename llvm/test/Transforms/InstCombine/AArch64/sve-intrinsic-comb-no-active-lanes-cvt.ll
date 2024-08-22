@@ -133,7 +133,7 @@ define <vscale x 8 x i16> @test_fcvtzs(<vscale x 8 x i16> %a, <vscale x 8 x half
 ; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) {
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
 ;
-  %out = call <vscale x 8 x i16>  @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  %out = call <vscale x 8 x i16>  @llvm.aarch64.sve.fcvtzs.nxv8i16.nxv8f16(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
   ret <vscale x 8 x i16> %out
 }
 
@@ -178,7 +178,7 @@ define <vscale x 8 x i16> @test_fcvtzu(<vscale x 8 x i16> %a, <vscale x 8 x half
 ; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) {
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
 ;
-  %out = call <vscale x 8 x i16>  @llvm.aarch64.sve.fcvtzu.nxv4i32.nxv4f32(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  %out = call <vscale x 8 x i16>  @llvm.aarch64.sve.fcvtzu.nxv8i16.nxv8f16(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
   ret <vscale x 8 x i16> %out
 }
 
