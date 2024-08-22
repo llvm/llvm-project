@@ -10768,15 +10768,19 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
   for (ExternalUser &EU : ExternalUses) {
+    // Uses by ephemeral values are free (because the ephemeral value will be
+    // removed prior to code generation, and so the extraction will be
+    // removed as well) as well as uses in unreachable blocks or in landing pads
+    // (rarely executed).
+    if (EphValues.count(EU.User) ||
+        (EU.User &&
+         (!DT->isReachableFromEntry(cast<Instruction>(EU.User)->getParent()) ||
+          cast<Instruction>(EU.User)->getParent()->isLandingPad())))
+      continue;
+
     // We only add extract cost once for the same scalar.
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
         !ExtractCostCalculated.insert(EU.Scalar).second)
-      continue;
-
-    // Uses by ephemeral values are free (because the ephemeral value will be
-    // removed prior to code generation, and so the extraction will be
-    // removed as well).
-    if (EphValues.count(EU.User))
       continue;
 
     // No extract cost for vector "scalar"
