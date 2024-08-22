@@ -1,5 +1,6 @@
 from typing import Optional
 
+
 # Base class for an instruction. To implement a basic instruction that doesn't
 # impact the control-flow, create a new class inheriting from this.
 class Instruction:
@@ -256,13 +257,15 @@ class OpCompositeConstruct(Instruction):
             output.append(lane.get_register(op))
         lane.set_register(self._result, output)
 
+
 class OpCompositeExtract(Instruction):
     def _impl(self, module, lane):
         value = lane.get_register(self._operands[1])
         output = value
         for op in self._operands[2:]:
-          output = output[int(op)]
+            output = output[int(op)]
         lane.set_register(self._result, output)
+
 
 class OpStore(Instruction):
     def _impl(self, module, lane):
