@@ -1528,7 +1528,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
-    Declares an OpenMP reduction kind. This requires two mandatory and two
+    Declares an OpenMP reduction kind. This requires two mandatory and three
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local
