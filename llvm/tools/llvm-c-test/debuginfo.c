@@ -11,8 +11,10 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c-test.h"
 #include "llvm-c/DebugInfo.h"
+#include "llvm-c-test.h"
+#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -172,11 +174,20 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
                                     43, Int64Ty, true, 0, 0);
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
-  LLVMMetadataRef FooVarValueExpr =
-    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMMetadataRef FooVarValueExpr1 =
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
 
-  LLVMDIBuilderInsertDbgValueRecordAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
-                                         FooVarsLocation, FooVarBlock);
+  LLVMDIBuilderInsertDbgValueRecordAtEnd(
+      DIB, FooVal1, FooVar1, FooVarValueExpr1, FooVarsLocation, FooVarBlock);
+
+  LLVMMetadataRef FooVar2 = LLVMDIBuilderCreateAutoVariable(
+      DIB, FooLexicalBlock, "e", 1, File, 44, Int64Ty, true, 0, 0);
+  LLVMValueRef FooVal2 = LLVMConstInt(LLVMInt64Type(), 1, false);
+  LLVMMetadataRef FooVarValueExpr2 =
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 1);
+
+  LLVMDIBuilderInsertDbgValueRecordAtEnd(
+      DIB, FooVal2, FooVar2, FooVarValueExpr2, FooVarsLocation, FooVarBlock);
 
   LLVMMetadataRef MacroFile =
       LLVMDIBuilderCreateTempMacroFile(DIB, NULL, 0, File);
@@ -224,14 +235,35 @@ int llvm_test_dibuilder(void) {
   LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder, InsertPos);
   LLVMValueRef Phi1 = LLVMBuildPhi(Builder, I64, "p1");
   LLVMAddIncoming(Phi1, &Zero, &FooEntryBlock, 1);
+
   // Do the same again using the other position-setting function.
   LLVMPositionBuilderBeforeDbgRecords(Builder, FooVarBlock, InsertPos);
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
+
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
   LLVMPositionBuilder(Builder, FooVarBlock, Ret);
-  LLVMBuildAdd(Builder, Phi1, Phi2, "a");
+  LLVMValueRef Add = LLVMBuildAdd(Builder, Phi1, Phi2, "a");
+
+  // Iterate over debug records in the add instruction. There should be two.
+  LLVMDbgRecordRef AddDbgRecordFirst = LLVMGetFirstDbgRecord(Add);
+  assert(AddDbgRecordFirst != NULL);
+  LLVMDbgRecordRef AddDbgRecordSecond = LLVMGetNextDbgRecord(AddDbgRecordFirst);
+  assert(AddDbgRecordSecond != NULL);
+  LLVMDbgRecordRef AddDbgRecordLast = LLVMGetLastDbgRecord(Add);
+  assert(AddDbgRecordLast != NULL);
+  assert(AddDbgRecordSecond == AddDbgRecordLast);
+  LLVMDbgRecordRef AddDbgRecordOverTheRange =
+      LLVMGetNextDbgRecord(AddDbgRecordSecond);
+  assert(AddDbgRecordOverTheRange == NULL);
+  LLVMDbgRecordRef AddDbgRecordFirstPrev =
+      LLVMGetPreviousDbgRecord(AddDbgRecordSecond);
+  assert(AddDbgRecordFirstPrev != NULL);
+  assert(AddDbgRecordFirst == AddDbgRecordFirstPrev);
+  LLVMDbgRecordRef AddDbgRecordUnderTheRange =
+      LLVMGetPreviousDbgRecord(AddDbgRecordFirstPrev);
+  assert(AddDbgRecordUnderTheRange == NULL);
 
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);

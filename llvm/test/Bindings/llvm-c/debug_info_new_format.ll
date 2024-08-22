@@ -6,14 +6,15 @@
 
 ; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !31 {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:     #dbg_declare(i64 0, !38, !DIExpression(), !43)
-; CHECK-NEXT:     #dbg_declare(i64 0, !39, !DIExpression(), !43)
-; CHECK-NEXT:     #dbg_declare(i64 0, !40, !DIExpression(), !43)
+; CHECK-NEXT:     #dbg_declare(i64 0, !38, !DIExpression(), !44)
+; CHECK-NEXT:     #dbg_declare(i64 0, !39, !DIExpression(), !44)
+; CHECK-NEXT:     #dbg_declare(i64 0, !40, !DIExpression(), !44)
 ; CHECK-NEXT:   br label %vars
 ; CHECK:      vars:
 ; CHECK-NEXT:   %p1 = phi i64 [ 0, %entry ]
 ; CHECK-NEXT:   %p2 = phi i64 [ 0, %entry ]
-; CHECK-NEXT:     #dbg_value(i64 0, !41, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !44)
+; CHECK-NEXT:     #dbg_value(i64 0, !41, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !45)
+; CHECK-NEXT:     #dbg_value(i64 1, !43, !DIExpression(DW_OP_constu, 1, DW_OP_stack_value), !45)
 ; CHECK-NEXT:   %a = add i64 %p1, %p2
 ; CHECK-NEXT:   ret i64 0
 ; CHECK-NEXT: }
@@ -59,11 +60,12 @@
 ; CHECK-NEXT: !34 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 640, flags: DIFlagVector, elements: !35)
 ; CHECK-NEXT: !35 = !{!36}
 ; CHECK-NEXT: !36 = !DISubrange(count: 10, lowerBound: 0)
-; CHECK-NEXT: !37 = !{!38, !39, !40, !41}
+; CHECK-NEXT: !37 = !{!38, !39, !40, !41, !43}
 ; CHECK-NEXT: !38 = !DILocalVariable(name: "a", arg: 1, scope: !31, file: !1, line: 42, type: !6)
 ; CHECK-NEXT: !39 = !DILocalVariable(name: "b", arg: 2, scope: !31, file: !1, line: 42, type: !6)
 ; CHECK-NEXT: !40 = !DILocalVariable(name: "c", arg: 3, scope: !31, file: !1, line: 42, type: !34)
 ; CHECK-NEXT: !41 = !DILocalVariable(name: "d", scope: !42, file: !1, line: 43, type: !6)
 ; CHECK-NEXT: !42 = distinct !DILexicalBlock(scope: !31, file: !1, line: 42)
-; CHECK-NEXT: !43 = !DILocation(line: 42, scope: !31)
-; CHECK-NEXT: !44 = !DILocation(line: 43, scope: !31)
+; CHECK-NEXT: !43 = !DILocalVariable(name: "e", scope: !42, file: !1, line: 44, type: !6)
+; CHECK-NEXT: !44 = !DILocation(line: 42, scope: !31)
+; CHECK-NEXT: !45 = !DILocation(line: 43, scope: !31)
