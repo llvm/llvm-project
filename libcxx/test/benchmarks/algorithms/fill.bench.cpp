@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <vector>
+#include <deque>
 
 static void bm_fill_n(benchmark::State& state) {
   std::vector<bool> vec1(state.range());
@@ -30,6 +31,15 @@ BENCHMARK(bm_ranges_fill_n)->DenseRange(1, 8)->Range(16, 1 << 20);
 
 static void bm_fill(benchmark::State& state) {
   std::vector<bool> vec1(state.range());
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(vec1);
+    std::fill(vec1.begin(), vec1.end(), false);
+  }
+}
+BENCHMARK(bm_fill)->DenseRange(1, 8)->Range(16, 1 << 20);
+
+static void bm_deque_fill(benchmark::State& state) {
+  std::deque<bool> vec1(state.range());
   for (auto _ : state) {
     benchmark::DoNotOptimize(vec1);
     std::fill(vec1.begin(), vec1.end(), false);

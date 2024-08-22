@@ -47,28 +47,6 @@ template <class _SegmentedIterator,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
-  // using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
-
-  // auto __sfirst = _Traits::__segment(__first);
-  // auto __slast  = _Traits::__segment(__last);
-
-  // // We are in a single segment, so we might not be at the beginning or end
-  // if (__sfirst == __slast) {
-  //   __fill(_Traits::__local(__first), _Traits::__local(__last), __value);
-  //   return;
-  // }
-
-  // // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
-  // __fill(_Traits::__local(__first), _Traits::__end(__sfirst), __value);
-  // ++__sfirst;
-  // // iterate over the segments which are guaranteed to be completely in the range
-  // while (__sfirst != __slast) {
-  //   __fill(_Traits::__begin(__sfirst), _Traits::__end(__sfirst), __value);
-  //   ++__sfirst;
-  // }
-  // // iterate over the last segment
-  // __fill(_Traits::__begin(__sfirst), _Traits::__local(__last), __value);
-
   std::for_each(__first, __last, [__value](_Tp& __val) { __val = __value; });
 }
 
