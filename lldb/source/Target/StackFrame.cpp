@@ -1198,6 +1198,12 @@ bool StackFrame::IsArtificial() const {
   return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
+bool StackFrame::IsHidden() {
+  if (auto recognized_frame_sp = GetRecognizedFrame())
+    return recognized_frame_sp->ShouldHide();
+  return false;
+}
+
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
@@ -1971,12 +1977,16 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 }
 
 RecognizedStackFrameSP StackFrame::GetRecognizedFrame() {
-  if (!m_recognized_frame_sp) {
-    m_recognized_frame_sp = GetThread()
-                                ->GetProcess()
-                                ->GetTarget()
-                                .GetFrameRecognizerManager()
-                                .RecognizeFrame(CalculateStackFrame());
-  }
-  return m_recognized_frame_sp;
+  auto process = GetThread()->GetProcess();
+  if (!process)
+    return {};
+  // If recognizer list has been modified, discard cache.
+  auto &manager = process->GetTarget().GetFrameRecognizerManager();
+  auto new_generation = manager.GetGeneration();
+  if (m_frame_recognizer_generation != new_generation)
+    m_recognized_frame_sp.reset();
+  m_frame_recognizer_generation = new_generation;
+  if (!m_recognized_frame_sp.has_value())
+    m_recognized_frame_sp = manager.RecognizeFrame(CalculateStackFrame());
+  return m_recognized_frame_sp.value();
 }
