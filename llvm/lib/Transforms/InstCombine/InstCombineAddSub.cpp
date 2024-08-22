@@ -1520,6 +1520,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *R = combineAddSubWithShlAddSub(Builder, I))
     return R;
 
+  if (Instruction *R = foldAddLike(I))
+    return R;
+
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1))
@@ -2283,6 +2286,33 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       Value *OpsSub = Builder.CreateSub(X, Y);
       Constant *ConstsSub = ConstantExpr::getSub(CX, CY);
       return BinaryOperator::CreateAdd(OpsSub, ConstsSub);
+    }
+  }
+
+  {
+    Value *W, *Z;
+    if (match(Op0, m_AddLike(m_Value(W), m_Value(X))) &&
+        match(Op1, m_AddLike(m_Value(Y), m_Value(Z)))) {
+      Instruction *R = nullptr;
+      if (W == Y)
+        R = BinaryOperator::CreateSub(X, Z);
+      if (W == Z)
+        R = BinaryOperator::CreateSub(X, Y);
+      if (X == Y)
+        R = BinaryOperator::CreateSub(W, Z);
+      if (X == Z)
+        R = BinaryOperator::CreateSub(W, Y);
+      if (R) {
+        bool NSW = I.hasNoSignedWrap() &&
+                   match(Op0, m_NSWAddLike(m_Value(), m_Value())) &&
+                   match(Op1, m_NSWAddLike(m_Value(), m_Value()));
+
+        bool NUW = I.hasNoUnsignedWrap() &&
+                   match(Op1, m_NUWAddLike(m_Value(), m_Value()));
+        R->setHasNoSignedWrap(NSW);
+        R->setHasNoUnsignedWrap(NUW);
+        return R;
+      }
     }
   }
 

@@ -585,6 +585,9 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  /// Common transforms for add / disjoint or
+  Instruction *foldAddLike(BinaryOperator &I);
+
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);

@@ -3580,6 +3580,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
     return R;
 
+  if (Instruction *R = foldAddLike(I))
+    return R;
+
   Value *X, *Y;
   const APInt *CV;
   if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
