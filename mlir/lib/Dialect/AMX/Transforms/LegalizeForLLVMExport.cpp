@@ -74,61 +74,46 @@ Value getStride(ConversionPatternRewriter &rewriter,
 }
 
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
-private:
-  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      enablingAnalysis;
-
 public:
   using ConvertOpToLLVMPattern<TileZeroOp>::ConvertOpToLLVMPattern;
-  TileZeroConversion(
-      const LLVMTypeConverter &typeConverter,
-      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
-      : ConvertOpToLLVMPattern<TileZeroOp>(typeConverter),
-        enablingAnalysis(analysis) {}
+  TileZeroConversion(const LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<TileZeroOp>(typeConverter) {}
 
   LogicalResult
   matchAndRewrite(TileZeroOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
-      rewriter.setInsertionPoint(op);
-      // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
-      assert(dstRegIndex && "Incomplete operation attribute for tile binding");
+      if (dstRegIndex) {
+        // Routine for lowering tile Ops with binding info.
+        rewriter.setInsertionPoint(op);
 
-      Location loc = op.getLoc();
-      Value dstIndex = rewriter.create<LLVM::ConstantOp>(
-          loc, IntegerType::get(rewriter.getContext(), 8), *dstRegIndex);
+        Location loc = op.getLoc();
+        Value dstIndex = rewriter.create<LLVM::ConstantOp>(
+            loc, IntegerType::get(rewriter.getContext(), 8), *dstRegIndex);
 
-      rewriter.create<amx::x86_amx_tilezero_plain>(loc, *dstRegIndex);
-      rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
-          op, op.getRes().getType(), dstIndex);
+        rewriter.create<amx::x86_amx_tilezero_plain>(loc, *dstRegIndex);
+        rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+            op, op.getRes().getType(), dstIndex);
+        return success();
+      }
+
+      VectorType vType = op.getVectorType();
+      // Determine m x n tile sizes.
+      std::pair<Value, Value> tsz =
+          getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+      // Replace operation with intrinsic.
+      Type resType = typeConverter->convertType(vType);
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tilezero>(op, resType, tsz.first,
+                                                         tsz.second);
       return success();
-    }
-
-    VectorType vType = op.getVectorType();
-    // Determine m x n tile sizes.
-    std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
-    // Replace operation with intrinsic.
-    Type resType = typeConverter->convertType(vType);
-    rewriter.replaceOpWithNewOp<amx::x86_amx_tilezero>(op, resType, tsz.first,
-                                                       tsz.second);
-    return success();
   }
 };
 
 struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
-private:
-  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      enablingAnalysis;
-
 public:
   using ConvertOpToLLVMPattern<TileLoadOp>::ConvertOpToLLVMPattern;
-  TileLoadConversion(
-      const LLVMTypeConverter &typeConverter,
-      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
-      : ConvertOpToLLVMPattern<TileLoadOp>(typeConverter),
-        enablingAnalysis(analysis) {}
+  TileLoadConversion(const LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<TileLoadOp>(typeConverter) {}
 
   LogicalResult
   matchAndRewrite(TileLoadOp op, OpAdaptor adaptor,
@@ -142,11 +127,10 @@ public:
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
 
-    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
-      rewriter.setInsertionPoint(op);
+    auto dstRegIndex = op.getDstRegIndex();
+    if (dstRegIndex) {
       // Routine for lowering tile Ops with binding info.
-      auto dstRegIndex = op.getDstRegIndex();
-      assert(dstRegIndex && "Incomplete operation attribute for tile binding");
+      rewriter.setInsertionPoint(op);
 
       Location loc = op.getLoc();
       Value dstIndex = rewriter.create<LLVM::ConstantOp>(
@@ -172,17 +156,10 @@ public:
 };
 
 struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
-private:
-  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      enablingAnalysis;
-
 public:
   using ConvertOpToLLVMPattern<TileStoreOp>::ConvertOpToLLVMPattern;
-  TileStoreConversion(
-      const LLVMTypeConverter &typeConverter,
-      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
-      : ConvertOpToLLVMPattern<TileStoreOp>(typeConverter),
-        enablingAnalysis(analysis) {}
+  TileStoreConversion(const LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<TileStoreOp>(typeConverter) {}
 
   LogicalResult
   matchAndRewrite(TileStoreOp op, OpAdaptor adaptor,
@@ -196,11 +173,10 @@ public:
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
 
-    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
-      rewriter.setInsertionPoint(op);
+    auto srcRegIndex = op.getSrcRegIndex();
+    if (srcRegIndex) {
       // Routine for lowering tile Ops with binding info.
-      auto srcRegIndex = op.getSrcRegIndex();
-      assert(srcRegIndex && "Incomplete operation attribute for tile binding");
+      rewriter.setInsertionPoint(op);
       rewriter.create<amx::x86_amx_tilestored64_plain>(
           op.getLoc(), *srcRegIndex, ptr, stride);
       rewriter.eraseOp(op);
@@ -219,29 +195,22 @@ public:
 };
 
 struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
-private:
-  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      enablingAnalysis;
-
 public:
   using ConvertOpToLLVMPattern<TileMulFOp>::ConvertOpToLLVMPattern;
-  TileMulFConversion(
-      const LLVMTypeConverter &typeConverter,
-      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
-      : ConvertOpToLLVMPattern<TileMulFOp>(typeConverter),
-        enablingAnalysis(analysis) {}
+  TileMulFConversion(const LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<TileMulFOp>(typeConverter) {}
 
   LogicalResult
   matchAndRewrite(TileMulFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
-      rewriter.setInsertionPoint(op);
+    auto accRegIndex = op.getAccRegIndex();
+    if (accRegIndex) {
       // Routine for lowering tile Ops with binding info.
+      rewriter.setInsertionPoint(op);
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
-      auto accRegIndex = op.getAccRegIndex();
 
-      assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
+      assert(lhsRegIndex && rhsRegIndex &&
              "Incomplete operation attribute for tile binding");
       Location loc = op.getLoc();
       Value accIndex = rewriter.create<LLVM::ConstantOp>(
@@ -272,17 +241,10 @@ public:
 };
 
 struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
-private:
-  const std::optional<std::reference_wrapper<TileScopeAnalysis>>
-      &enablingAnalysis;
-
 public:
   using ConvertOpToLLVMPattern<TileMulIOp>::ConvertOpToLLVMPattern;
-  TileMulIConversion(
-      const LLVMTypeConverter &typeConverter,
-      const std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis)
-      : ConvertOpToLLVMPattern<TileMulIOp>(typeConverter),
-        enablingAnalysis(analysis) {}
+  TileMulIConversion(const LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<TileMulIOp>(typeConverter) {}
 
   LogicalResult
   matchAndRewrite(TileMulIOp op, OpAdaptor adaptor,
@@ -290,14 +252,14 @@ public:
     bool zexta = op.getIsZextLhs();
     bool zextb = op.getIsZextRhs();
 
-    if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+    auto accRegIndex = op.getAccRegIndex();
+    if (accRegIndex) {
       rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
-      auto accRegIndex = op.getAccRegIndex();
 
-      assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
+      assert(lhsRegIndex && rhsRegIndex &&
              "Incomplete operation attribute for tile binding");
       Location loc = op.getLoc();
       Value accIndex = rewriter.create<LLVM::ConstantOp>(
@@ -354,10 +316,9 @@ public:
 
 void mlir::populateAMXLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter,
-    std::optional<std::reference_wrapper<TileScopeAnalysis>> &analysis,
     RewritePatternSet &patterns) {
   patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
-               TileMulFConversion, TileMulIConversion>(converter, analysis);
+               TileMulFConversion, TileMulIConversion>(converter);
 }
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {

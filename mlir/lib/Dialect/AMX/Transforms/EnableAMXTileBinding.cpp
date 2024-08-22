@@ -260,7 +260,6 @@ public:
       builder.setInsertionPointAfter(end);
       builder.create<amx::x86_amx_tilerelease_plain>(loc);
     }
-    markAnalysesPreserved<TileScopeAnalysis>();
   }
 };
 

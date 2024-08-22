@@ -21,10 +21,8 @@ class RewritePatternSet;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.
-void populateAMXLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter,
-    std::optional<std::reference_wrapper<amx::TileScopeAnalysis>> &analysis,
-    RewritePatternSet &patterns);
+void populateAMXLegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Configure the target to support lowering AMX ops to ops that map to LLVM
 /// intrinsics.
