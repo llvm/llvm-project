@@ -132,7 +132,9 @@ moveInstructionsOutOfTheWayIfWeCan(SUnit *Dst, SUnit *Src) {
   assert("This function only operates on a basic block level." &&
          MBB == DstInstr->getParent());
 
-  int SectionSize =
+  assert(std::distance(SrcInstr->getIterator(), DstInstr->getIterator()) > 0 &&
+         "The copy source must precede the copy destination.");
+  unsigned SectionSize =
       std::distance(SrcInstr->getIterator(), DstInstr->getIterator());
 
   // The bit vector representing the instructions in the section.
