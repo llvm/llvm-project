@@ -99,6 +99,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
@@ -2771,28 +2772,56 @@ void AsmPrinter::emitJumpTableInfo() {
       emitJumpTableEntry(MJTI, MBB, JTI);
   }
 
-  if (EmitJumpTableSizesSection && TM.getTargetTriple().isOSBinFormatELF() &&
-      !JT.empty()) {
-    MCSymbolELF *LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
-    int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
-    StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
-
-    MCSection *JumpTableSizesSection = OutContext.getELFSection(
-        ".llvm_jump_table_sizes", ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName,
-        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
-
-    OutStreamer->switchSection(JumpTableSizesSection);
-
-    for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
-      const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
-      OutStreamer->emitSymbolValue(GetJTISymbol(JTI),
-                                   TM.getProgramPointerSize());
-      OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
-    }
-  }
+  if (EmitJumpTableSizesSection)
+    emitJumpTableSizesSection(MJTI, F);
 
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
+}
+
+void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+                                           const Function &F) const {
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+
+  if (JT.empty())
+    return;
+
+  StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
+  MCSection *JumpTableSizesSection = nullptr;
+  StringRef sectionName = ".llvm_jump_table_sizes";
+
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
+
+    JumpTableSizesSection = OutContext.getELFSection(
+        sectionName, ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName, F.hasComdat(),
+        MCSection::NonUniqueID, LinkedToSym);
+  } else if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    if (F.hasComdat()) {
+      MCSymbolCOFF *LinkedToSym = dyn_cast<MCSymbolCOFF>(CurrentFnSym);
+
+      JumpTableSizesSection = OutContext.getCOFFSection(
+          sectionName,
+          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+              COFF::IMAGE_SCN_LNK_COMDAT | COFF::IMAGE_SCN_MEM_DISCARDABLE,
+          F.getComdat()->getName(), COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+    } else
+      JumpTableSizesSection = OutContext.getCOFFSection(
+          sectionName, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                           COFF::IMAGE_SCN_MEM_READ |
+                           COFF::IMAGE_SCN_MEM_DISCARDABLE);
+  } else {
+    return;
+  }
+
+  OutStreamer->switchSection(JumpTableSizesSection);
+
+  for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
+    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), TM.getProgramPointerSize());
+    OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+  }
 }
 
 /// EmitJumpTableEntry - Emit a jump table entry for the specified MBB to the
