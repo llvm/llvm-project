@@ -1708,6 +1708,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
                            HSOpts_ModuleCachePath);
 
+  Record.push_back(static_cast<unsigned>(HSOpts.Mode));
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
   AddString(HSOpts_ModuleCachePath, Record);

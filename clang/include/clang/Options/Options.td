@@ -5088,6 +5088,19 @@ def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clan
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
+def iexternal : Separate<["-"], "iexternal">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
+def iexternal_system : Separate<["-"], "iexternal-system">, Group<clang_i_Group>,
+  Visibility<[CC1Option]>,
+  HelpText<"Add directory to include search path with warnings suppressed">, MetaVarName<"<dir>">;
+def iexternal_env_EQ : Joined<["-"], "iexternal-env=">, Group<clang_i_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">, MetaVarName<"<var>">;
+def iexternal_anglebrackets : Flag<["-"], "iexternal-anglebrackets">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Treat all #include paths enclosed in angle brackets as including a system header">,
+  MarshallingInfoFlag<HeaderSearchOpts<"AngleBracketsImpliesSystemHeader">>;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to SYSTEM framework search path">;
@@ -5130,6 +5143,10 @@ def isysroot : JoinedOrSeparate<["-"], "isysroot">, Group<clang_i_Group>,
 def isystem : JoinedOrSeparate<["-"], "isystem">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to SYSTEM include search path">, MetaVarName<"<directory>">;
+def isystem_env_EQ : Joined<["-"], "isystem-env=">, Group<clang_i_Group>,
+  MetaVarName<"<var>">,
+  Visibility<[ClangOption]>,
+  HelpText<"Add directoires in env var <var> to SYSTEM include search path">;
 def isystem_after : JoinedOrSeparate<["-"], "isystem-after">,
   Group<clang_i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
   HelpText<"Add directory to end of the SYSTEM include search path">;
@@ -6486,6 +6503,17 @@ def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
 //===----------------------------------------------------------------------===//
 // Print CPU info options (clang, clang-cl, flang)
 //===----------------------------------------------------------------------===//
+
+let Visibility = [ClangOption, CC1Option, CLOption] in {
+
+def fheader_search : Joined<["-"], "fheader-search=">, Group<clang_i_Group>,
+  HelpText<"Specify the method used to resolve included header files">,
+  Values<"gcc,microsoft">,
+  NormalizedValuesScope<"clang::HeaderSearchMode">,
+  NormalizedValues<["GCC", "Microsoft"]>,
+  MarshallingInfoEnum<HeaderSearchOpts<"Mode">, "GCC">;
+
+} // let Visibility = [ClangOption, CC1Option, CLOption]
 
 let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option] in {
 
@@ -8992,6 +9020,12 @@ def internal_isystem : Separate<["-"], "internal-isystem">,
   HelpText<"Add directory to the internal system include search path; these "
            "are assumed to not be user-provided and are used to model system "
            "and standard headers' paths.">;
+def internal_iexternal_system : Separate<["-"], "internal-iexternal-system">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system include search path with "
+           "external directory prefix semantics; these are assumed to not be "
+           "user-provided and are used to model system and standard headers' "
+           "paths.">;
 def internal_externc_isystem : Separate<["-"], "internal-externc-isystem">,
   MetaVarName<"<directory>">,
   HelpText<"Add directory to the internal system include search path with "
@@ -9249,9 +9283,14 @@ def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
 def _SLASH_D : CLJoinedOrSeparate<"D", [CLOption, DXCOption]>,
   HelpText<"Define macro">, MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
-def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<isystem>,
+def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<iexternal>,
   HelpText<"Add directory to include search path with warnings suppressed">,
   MetaVarName<"<dir>">;
+def _SLASH_external_env : CLJoined<"external:env:">, Alias<iexternal_env_EQ>,
+  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">,
+  MetaVarName<"<var>">;
+def _SLASH_external_anglebrackets : CLFlag<"external:anglebrackets">, Alias<iexternal_anglebrackets>,
+  HelpText<"Treat all #include paths enclosed in angle brackets as including a system header">;
 def _SLASH_fp_contract : CLFlag<"fp:contract">, HelpText<"">, Alias<ffp_contract>, AliasArgs<["on"]>;
 def _SLASH_fp_except : CLFlag<"fp:except">, HelpText<"">, Alias<ffp_exception_behavior_EQ>, AliasArgs<["strict"]>;
 def _SLASH_fp_except_ : CLFlag<"fp:except-">, HelpText<"">, Alias<ffp_exception_behavior_EQ>, AliasArgs<["ignore"]>;
@@ -9497,9 +9536,6 @@ def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
-def _SLASH_external_env : CLJoined<"external:env:">,
-  HelpText<"Add dirs in env var <var> to include search path with warnings suppressed">,
-  MetaVarName<"<var>">;
 def _SLASH_FA : CLJoined<"FA">,
   HelpText<"Output assembly code file during compilation">;
 def _SLASH_Fa : CLJoined<"Fa">,
