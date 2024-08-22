@@ -1,83 +1,85 @@
 ## Test that `the llvm-objdump --private-headers` print out the auxiliary header of XCOFF object file.
 
 # RUN: yaml2obj %s -o %t1
-# RUN: llvm-objdump --private-headers %t1 | FileCheck %s --check-prefix=CHECK32
+# RUN: llvm-objdump --private-headers %t1 | \
+# RUN:   FileCheck %s --check-prefix=CHECK32 --match-full-lines --strict-whitespace
 # RUN: cp %t1 %t1_err1
 # RUN: python -c "with open(r'%t1_err1', 'r+b') as input: input.seek(17); input.write(b'\x45')"
 # RUN: python -c "with open(r'%t1_err1', 'r+b') as input: input.seek(4); input.write(b'\x00')"
-# RUN: llvm-objdump --private-headers %t1_err1 2>&1 | FileCheck %s --check-prefix=WARN1
+# RUN: llvm-objdump --private-headers %t1_err1 2>&1 | FileCheck %s --check-prefix=WARN1 --match-full-lines
 # RUN: cp %t1 %t1_extra
 # RUN: python -c "with open(r'%t1_extra', 'r+b') as input: input.seek(4); input.write(b'\x00')"
 # RUN: python -c "with open(r'%t1_extra', 'r+b') as input: input.seek(17); input.write(b'\x4f')"
-# RUN: llvm-objdump --private-headers %t1_extra 2>&1 | FileCheck %s --check-prefix=EXTRA
+# RUN: llvm-objdump --private-headers %t1_extra 2>&1 | FileCheck %s --check-prefix=EXTRA --match-full-lines
 # RUN: yaml2obj %s -DMAGIC=0x1F7 -DFLAG64=0x2 -o %t2
-# RUN: llvm-objdump --private-headers %t2 | FileCheck %s --check-prefix=CHECK64
+# RUN: llvm-objdump --private-headers %t2 | \
+# RUN:   FileCheck %s --check-prefix=CHECK64 --match-full-lines --strict-whitespace
 
 
-# CHECK32:      ---Auxiliary Header:
-# CHECK32-NEXT: Magic:                              0x10b
-# CHECK32-NEXT: Version:                            0x1
-# CHECK32-NEXT: Size of .text section:              0x8
-# CHECK32-NEXT: Size of .data section:              0x9
-# CHECK32-NEXT: Size of .bss section:               0x10
-# CHECK32-NEXT: Entry point address:                0x1111
-# CHECK32-NEXT: .text section start address:        0x2222
-# CHECK32-NEXT: .data section start address;        0x3333
-# CHECK32-NEXT: TOC anchor address:                 0x4444
-# CHECK32-NEXT: Section number of entryPoint:       1
-# CHECK32-NEXT: Section number of .text:            2
-# CHECK32-NEXT: Section number of .data:            3
-# CHECK32-NEXT: Section number of TOC:              4
-# CHECK32-NEXT: Section number of loader data:      5
-# CHECK32-NEXT: Section number of .bss:             6
-# CHECK32-NEXT: Maxium alignment of .text:          0x7
-# CHECK32-NEXT: Maxium alignment of .data:          0x3
-# CHECK32-NEXT: Module type;                        0x0
-# CHECK32-NEXT: CPU type of objects:                0x1
-# CHECK32-NEXT: (Reserved):                         0x0
-# CHECK32-NEXT: Maximum stack size:                 0x0
-# CHECK32-NEXT: Maximum data size:                  0x0
-# CHECK32-NEXT: Reserved for debugger:              0x0
-# CHECK32-NEXT: Text page size:                     0x1
-# CHECK32-NEXT: Data page size:                     0x1
-# CHECK32-NEXT: Stack page size:                    0x1
-# CHECK32-NEXT: Flag:                               0x0
-# CHECK32-NEXT: Alignment of thread-local storage:  0x1
-# CHECK32-NEXT: Section number for .tdata:          7
-# CHECK32-NEXT: Section number for .tbss:           8
+#      CHECK32:---Auxiliary Header:
+# CHECK32-NEXT:Magic:                              0x10b
+# CHECK32-NEXT:Version:                            0x1
+# CHECK32-NEXT:Size of .text section:              0x8
+# CHECK32-NEXT:Size of .data section:              0x9
+# CHECK32-NEXT:Size of .bss section:               0x10
+# CHECK32-NEXT:Entry point address:                0x1111
+# CHECK32-NEXT:.text section start address:        0x2222
+# CHECK32-NEXT:.data section start address;        0x3333
+# CHECK32-NEXT:TOC anchor address:                 0x4444
+# CHECK32-NEXT:Section number of entryPoint:       1
+# CHECK32-NEXT:Section number of .text:            2
+# CHECK32-NEXT:Section number of .data:            3
+# CHECK32-NEXT:Section number of TOC:              4
+# CHECK32-NEXT:Section number of loader data:      5
+# CHECK32-NEXT:Section number of .bss:             6
+# CHECK32-NEXT:Maxium alignment of .text:          0x7
+# CHECK32-NEXT:Maxium alignment of .data:          0x3
+# CHECK32-NEXT:Module type;                        0x0
+# CHECK32-NEXT:CPU type of objects:                0x1
+# CHECK32-NEXT:(Reserved):                         0x0
+# CHECK32-NEXT:Maximum stack size:                 0x0
+# CHECK32-NEXT:Maximum data size:                  0x0
+# CHECK32-NEXT:Reserved for debugger:              0x0
+# CHECK32-NEXT:Text page size:                     0x1
+# CHECK32-NEXT:Data page size:                     0x1
+# CHECK32-NEXT:Stack page size:                    0x1
+# CHECK32-NEXT:Flag:                               0x0
+# CHECK32-NEXT:Alignment of thread-local storage:  0x1
+# CHECK32-NEXT:Section number for .tdata:          7
+# CHECK32-NEXT:Section number for .tbss:           8
 
-# CHECK64:      ---Auxiliary Header:
-# CHECK64-NEXT: Magic:                              0x10b
-# CHECK64-NEXT: Version:                            0x1
-# CHECK64-NEXT: Reserved for debugger:              0x0
-# CHECK64-NEXT: .text section start address:        0x2222
-# CHECK64-NEXT: .data section start address:        0x3333
-# CHECK64-NEXT: TOC anchor address:                 0x4444
-# CHECK64-NEXT: Section number of entryPoint:       1
-# CHECK64-NEXT: Section number of .text:            2
-# CHECK64-NEXT: Section number of .data:            3
-# CHECK64-NEXT: Section number of TOC:              4
-# CHECK64-NEXT: Section number of loader data:      5
-# CHECK64-NEXT: Section number of .bss:             6
-# CHECK64-NEXT: Maxium alignment of .text:          0x7
-# CHECK64-NEXT: Maxium alignment of .data:          0x3
-# CHECK64-NEXT: Module type:                        0x0
-# CHECK64-NEXT: CPU type of objects:                0x1
-# CHECK64-NEXT: (Reserved):                         0x0
-# CHECK64-NEXT: Text page size:                     0x1
-# CHECK64-NEXT: Data page size:                     0x1
-# CHECK64-NEXT: Stack page size:                    0x1
-# CHECK64-NEXT: Flag:                               0x0
-# CHECK64-NEXT: Alignment of thread-local storage:  0x1
-# CHECK64-NEXT: Size of .text section:              0x8
-# CHECK64-NEXT: Size of .data section:              0x9
-# CHECK64-NEXT: Size of .bss section:               0x10
-# CHECK64-NEXT: Entry point address:                0x1111
-# CHECK64-NEXT: Maximum stack size:                 0x0
-# CHECK64-NEXT: Maximum data size:                  0x0
-# CHECK64-NEXT: Section number for .tdata:          7
-# CHECK64-NEXT: Section number for .tbss:           8
-# CHECK64-NEXT: Additional flags 64-bit XCOFF:      0x2
+#      CHECK64:---Auxiliary Header:
+# CHECK64-NEXT:Magic:                              0x10b
+# CHECK64-NEXT:Version:                            0x1
+# CHECK64-NEXT:Reserved for debugger:              0x0
+# CHECK64-NEXT:.text section start address:        0x2222
+# CHECK64-NEXT:.data section start address:        0x3333
+# CHECK64-NEXT:TOC anchor address:                 0x4444
+# CHECK64-NEXT:Section number of entryPoint:       1
+# CHECK64-NEXT:Section number of .text:            2
+# CHECK64-NEXT:Section number of .data:            3
+# CHECK64-NEXT:Section number of TOC:              4
+# CHECK64-NEXT:Section number of loader data:      5
+# CHECK64-NEXT:Section number of .bss:             6
+# CHECK64-NEXT:Maxium alignment of .text:          0x7
+# CHECK64-NEXT:Maxium alignment of .data:          0x3
+# CHECK64-NEXT:Module type:                        0x0
+# CHECK64-NEXT:CPU type of objects:                0x1
+# CHECK64-NEXT:(Reserved):                         0x0
+# CHECK64-NEXT:Text page size:                     0x1
+# CHECK64-NEXT:Data page size:                     0x1
+# CHECK64-NEXT:Stack page size:                    0x1
+# CHECK64-NEXT:Flag:                               0x0
+# CHECK64-NEXT:Alignment of thread-local storage:  0x1
+# CHECK64-NEXT:Size of .text section:              0x8
+# CHECK64-NEXT:Size of .data section:              0x9
+# CHECK64-NEXT:Size of .bss section:               0x10
+# CHECK64-NEXT:Entry point address:                0x1111
+# CHECK64-NEXT:Maximum stack size:                 0x0
+# CHECK64-NEXT:Maximum data size:                  0x0
+# CHECK64-NEXT:Section number for .tdata:          7
+# CHECK64-NEXT:Section number for .tbss:           8
+# CHECK64-NEXT:Additional flags 64-bit XCOFF:      0x2
 
 # WARN1:       {{.*}}: only partial field for Section number for .tdata: at offset (68)
 # WARN1-NEXT:  Raw data (00)
