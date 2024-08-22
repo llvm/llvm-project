@@ -8249,7 +8249,7 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
 
 const SCEV *ScalarEvolution::getPredicatedExitCount(
     const Loop *L, const BasicBlock *ExitingBlock,
-    SmallVector<const SCEVPredicate *, 4> *Predicates, ExitCountKind Kind) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates, ExitCountKind Kind) {
   switch (Kind) {
   case Exact:
     return getPredicatedBackedgeTakenInfo(L).getExact(ExitingBlock, this,
@@ -8594,7 +8594,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
 /// Get the exact not taken count for this loop exit.
 const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
     const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-    SmallVector<const SCEVPredicate *, 4> *Predicates) const {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
   for (const auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock) {
       if (ENT.hasAlwaysTruePredicate())
@@ -8611,7 +8611,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
 
 const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
     const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-    SmallVector<const SCEVPredicate *, 4> *Predicates) const {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
   for (const auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock) {
       if (ENT.hasAlwaysTruePredicate())
@@ -8628,7 +8628,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
 
 const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
     const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-    SmallVector<const SCEVPredicate *, 4> *Predicates) const {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
   for (const auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock) {
       if (ENT.hasAlwaysTruePredicate())

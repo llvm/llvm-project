@@ -875,7 +875,7 @@ public:
   /// may require predicates.
   const SCEV *
   getPredicatedExitCount(const Loop *L, const BasicBlock *ExitingBlock,
-                         SmallVector<const SCEVPredicate *, 4> *Predicates,
+                         SmallVectorImpl<const SCEVPredicate *> *Predicates,
                          ExitCountKind Kind = Exact);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
@@ -1572,9 +1572,9 @@ private:
     /// this block before this number of iterations, but may exit via another
     /// block. If \p Predicates is null the function returns CouldNotCompute if
     /// predicates are required, otherwise it fills in the required predicates.
-    const SCEV *
-    getExact(const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-             SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
+    const SCEV *getExact(
+        const BasicBlock *ExitingBlock, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Get the constant max backedge taken count for the loop.
     const SCEV *getConstantMax(ScalarEvolution *SE) const;
@@ -1582,7 +1582,7 @@ private:
     /// Get the constant max backedge taken count for the particular loop exit.
     const SCEV *getConstantMax(
         const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-        SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Get the symbolic max backedge taken count for the loop.
     const SCEV *getSymbolicMax(
@@ -1592,7 +1592,7 @@ private:
     /// Get the symbolic max backedge taken count for the particular loop exit.
     const SCEV *getSymbolicMax(
         const BasicBlock *ExitingBlock, ScalarEvolution *SE,
-        SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
