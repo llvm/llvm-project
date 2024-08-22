@@ -9,14 +9,18 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
 
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
 #include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
+#include "clang/Tooling/Transformer/RewriteRule.h"
 #include "llvm/Support/Error.h"
-#include <type_traits>
 
 namespace clang {
 namespace tooling {
@@ -87,6 +91,90 @@ public:
       return Context.getLocation();
     return Context.createDiagnosticError(diag::err_refactor_no_location);
   }
+};
+
+AST_POLYMORPHIC_MATCHER_P(hasPointWithin,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(Stmt, Decl),
+                          FullSourceLoc, L) {
+  if (!L.hasManager()) {
+    return false;
+  }
+  const SourceRange &SR = Node.getSourceRange();
+  return L.getManager().isPointWithin(L, SR.getBegin(), SR.getEnd());
+}
+
+/// An AST location match is satisfied when there is match around given
+/// location. In case of several matches inner one is taken.
+///
+/// The requirement will be evaluated only once during the initiation and
+/// search of matching refactoring action rules.
+template <typename MatcherType>
+class ASTLocMatchRequirement : public SourceLocationRequirement {
+public:
+  static_assert(
+      std::is_same<ast_matchers::StatementMatcher, MatcherType>::value ||
+          std::is_same<ast_matchers::DeclarationMatcher, MatcherType>::value,
+      "Expected a Statement or Declaration matcher");
+
+  class LocMatchCallback : public ast_matchers::MatchFinder::MatchCallback {
+  public:
+    void run(const clang::ast_matchers::MatchFinder::MatchResult &R) override {
+      Result = std::make_unique<ast_matchers::MatchFinder::MatchResult>(R);
+    }
+    std::unique_ptr<ast_matchers::MatchFinder::MatchResult> Result;
+  };
+
+  Expected<ast_matchers::MatchFinder::MatchResult>
+  evaluate(RefactoringRuleContext &Context) const {
+    Expected<SourceLocation> Location =
+        SourceLocationRequirement::evaluate(Context);
+    if (!Location)
+      return Location.takeError();
+    MatcherType M = createWrapperMatcher(
+        FullSourceLoc(*Location, Context.getASTContext().getSourceManager()),
+        Matcher);
+
+    ast_matchers::MatchFinder MF;
+    LocMatchCallback Callback;
+    MF.addMatcher(M, &Callback);
+    MF.matchAST(Context.getASTContext());
+    if (!Callback.Result)
+      return Context.createDiagnosticError(
+          diag::err_refactor_no_location_match);
+    return *Callback.Result;
+  }
+
+  ASTLocMatchRequirement(MatcherType M) : Matcher(M) {}
+
+private:
+  ast_matchers::StatementMatcher
+  createWrapperMatcher(FullSourceLoc L,
+                       ast_matchers::StatementMatcher M) const {
+    return ast_matchers::stmt(M, hasPointWithin(L)).bind(transformer::RootID);
+  }
+
+  ast_matchers::DeclarationMatcher
+  createWrapperMatcher(FullSourceLoc L,
+                       ast_matchers::DeclarationMatcher M) const {
+    return ast_matchers::decl(M, hasPointWithin(L)).bind(transformer::RootID);
+  }
+
+  MatcherType Matcher;
+};
+
+/// Requirement that evaluates to the EditGenerator value given at its creation.
+class EditGeneratorRequirement : public RefactoringActionRuleRequirement {
+public:
+  Expected<transformer::EditGenerator>
+  evaluate(RefactoringRuleContext &Context) const {
+    return EditGenerator;
+  }
+
+  EditGeneratorRequirement(transformer::EditGenerator EG)
+      : EditGenerator(std::move(EG)) {}
+
+private:
+  transformer::EditGenerator EditGenerator;
 };
 
 /// A base class for any requirement that requires some refactoring options.

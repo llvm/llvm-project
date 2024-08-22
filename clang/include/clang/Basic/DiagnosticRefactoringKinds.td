@@ -30,6 +30,10 @@ def err_refactor_extract_prohibited_expression : Error<"the selected "
 
 def err_refactor_no_location : Error<"refactoring action can't be initiated "
   "without a location">;
+def err_refactor_no_location_match : Error<"refactoring action can't be initiated "
+  "without a matching location">;
+def err_refactor_invalid_edit_generator : Error<"refactoring action can't be initiated "
+  "without a correct edit generator">;
 }
 
 } // end of Refactoring diagnostics
