@@ -47,7 +47,7 @@ using namespace llvm::dwarf;
 
 TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
-  // DenseMap lookup.
+  // DenseMap lookup. This check is a bitfield datamember lookup.
   if (!V->isUsedByMetadata())
     return {};
   auto *L = LocalAsMetadata::getIfExists(V);
@@ -66,7 +66,7 @@ TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
 }
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
-  // DenseMap lookup.
+  // DenseMap lookup. This check is a bitfield datamember lookup.
   if (!V->isUsedByMetadata())
     return {};
   auto *L = LocalAsMetadata::getIfExists(V);
@@ -79,6 +79,23 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
       Declares.push_back(DVR);
 
   return Declares;
+}
+
+TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DbgVariableRecord *> Values;
+  for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers())
+    if (DVR->isValueOfVariable())
+      Values.push_back(DVR);
+
+  return Values;
 }
 
 template <typename IntrinsicT, bool DbgAssignAndValuesOnly>

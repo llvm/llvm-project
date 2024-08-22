@@ -12344,7 +12344,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     bool CBIsVoid = CB->getType()->isVoidTy();
     BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
-    SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
+    SmallVector<Value *> CSArgs(CB->args());
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).
