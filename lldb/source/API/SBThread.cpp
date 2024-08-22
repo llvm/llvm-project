@@ -1235,8 +1235,7 @@ bool SBThread::GetStatus(SBStream &status) const {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (exe_ctx.HasThreadScope()) {
-    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true,
-                                      /*show_hidden=*/true);
+    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true);
   } else
     strm.PutCString("No status");
 
