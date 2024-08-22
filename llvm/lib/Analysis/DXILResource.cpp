@@ -732,7 +732,7 @@ DXILResourceMap::DXILResourceMap(
     } else if (RI.isCBuffer() && FirstCBuffer == Size) {
       FirstCBuffer = I;
       NextID = 0;
-    } if (RI.isSampler() && FirstSampler == Size) {
+    } else if (RI.isSampler() && FirstSampler == Size) {
       FirstSampler = I;
       NextID = 0;
     }
