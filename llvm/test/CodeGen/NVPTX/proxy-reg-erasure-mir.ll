@@ -7,7 +7,6 @@
 ; Check ProxyRegErasure pass MIR manipulation.
 
 declare <4 x i32> @callee_vec_i32()
-declare void @use_vec_i32(<4 x i32>)
 
 ; MIR: check_vec_i32
 define  <4 x i32> @check_vec_i32() {
