@@ -3580,8 +3580,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
     return R;
 
-  if (Instruction *R = foldAddLike(I))
-    return R;
+  if (cast<PossiblyDisjointInst>(I).isDisjoint())
+    if (Instruction *R = foldAddLike(I))
+      return R;
 
   Value *X, *Y;
   const APInt *CV;
