@@ -127,19 +127,12 @@ entry:
 }
 
 define <2 x i8> @xtn_v2i128_v2i8(<2 x i128> %a) {
-; CHECK-SD-LABEL: xtn_v2i128_v2i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov v0.s[1], w2
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: xtn_v2i128_v2i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov v0.d[1], x2
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: xtn_v2i128_v2i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i8>
   ret <2 x i8> %arg1
@@ -174,9 +167,11 @@ define <2 x i16> @xtn_v2i128_v2i16(<2 x i128> %a) {
 ;
 ; CHECK-GI-LABEL: xtn_v2i128_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov v0.d[1], x2
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i16>
@@ -194,19 +189,12 @@ entry:
 }
 
 define <2 x i32> @xtn_v2i128_v2i32(<2 x i128> %a) {
-; CHECK-SD-LABEL: xtn_v2i128_v2i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov v0.s[1], w2
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: xtn_v2i128_v2i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov v0.d[1], x2
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: xtn_v2i128_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i32>
   ret <2 x i32> %arg1

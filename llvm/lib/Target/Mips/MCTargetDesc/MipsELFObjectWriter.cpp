@@ -143,7 +143,7 @@ static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
 }
 
 // Determine whether a relocation X is a low-part and matches the high-part R
-// perfectly ( same symbol/addend).
+// perfectly by symbol and addend.
 static bool isMatchingReloc(unsigned MatchingType, const ELFRelocationEntry &R,
                             const ELFRelocationEntry &X) {
   return X.Type == MatchingType && X.Symbol == R.Symbol && X.Addend == R.Addend;

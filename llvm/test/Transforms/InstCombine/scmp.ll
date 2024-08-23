@@ -208,3 +208,110 @@ define i8 @scmp_negated_multiuse(i32 %x, i32 %y) {
   %2 = sub i8 0, %1
   ret i8 %2
 }
+
+; Fold ((x s< y) ? -1 : (x != y)) into scmp(x, y)
+define i8 @scmp_from_select_lt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_lt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
+
+; Vector version
+define <4 x i8> @scmp_from_select_vec_lt(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @scmp_from_select_vec_lt(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %ne_bool = icmp ne <4 x i32> %x, %y
+  %ne = zext <4 x i1> %ne_bool to <4 x i8>
+  %lt = icmp slt <4 x i32> %x, %y
+  %r = select <4 x i1> %lt, <4 x i8> splat(i8 -1), <4 x i8> %ne
+  ret <4 x i8> %r
+}
+
+; Fold (x s<= y) ? sext(x != y) : 1 into scmp(x, y)
+define i8 @scmp_from_select_le(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_le(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = sext i1 %ne_bool to i8
+  %le = icmp sle i32 %x, %y
+  %r = select i1 %le, i8 %ne, i8 1
+  ret i8 %r
+}
+
+; Fold (x s>= y) ? zext(x != y) : -1 into scmp(x, y)
+define i8 @scmp_from_select_ge(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_ge(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %ge = icmp sge i32 %x, %y
+  %r = select i1 %ge, i8 %ne, i8 -1
+  ret i8 %r
+}
+
+; Fold scmp(x nsw- y, 0) to scmp(x, y)
+define i8 @scmp_of_sub_and_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_of_sub_and_zero(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %diff = sub nsw i32 %x, %y
+  %r = call i8 @llvm.scmp(i32 %diff, i32 0)
+  ret i8 %r
+}
+
+; Negative test: no nsw
+define i8 @scmp_of_sub_and_zero_neg_1(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_of_sub_and_zero_neg_1(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[DIFF]], i32 0)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %diff = sub i32 %x, %y
+  %r = call i8 @llvm.scmp(i32 %diff, i32 0)
+  ret i8 %r
+}
+
+; Negative test: second argument of scmp is not 0
+define i8 @scmp_of_sub_and_zero_neg2(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_of_sub_and_zero_neg2(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[DIFF:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[DIFF]], i32 15)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %diff = sub nsw i32 %x, %y
+  %r = call i8 @llvm.scmp(i32 %diff, i32 15)
+  ret i8 %r
+}
+
+; Negative test: calling ucmp instead of scmp
+define i8 @scmp_of_sub_and_zero_neg3(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_of_sub_and_zero_neg3(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[DIFF:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[DIFF]], i32 0)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %diff = sub nsw i32 %x, %y
+  %r = call i8 @llvm.ucmp(i32 %diff, i32 0)
+  ret i8 %r
+}
