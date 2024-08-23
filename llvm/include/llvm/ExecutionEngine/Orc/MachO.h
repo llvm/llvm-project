@@ -38,14 +38,16 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
 /// Load a relocatable object compatible with TT from Path.
 /// If Path is a universal binary, this function will return a buffer for the
 /// slice compatible with Triple (if one is present).
-Expected<std::unique_ptr<MemoryBuffer>>
-loadMachORelocatableObject(StringRef Path, const Triple &TT);
+Expected<std::unique_ptr<MemoryBuffer>> loadMachORelocatableObject(
+    StringRef Path, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride = std::nullopt);
 
 /// Load a compatible relocatable object (if available) from a MachO universal
 /// binary.
 Expected<std::unique_ptr<MemoryBuffer>>
 loadMachORelocatableObjectFromUniversalBinary(
-    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT);
+    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride = std::nullopt);
 
 /// Utility for identifying the file-slice compatible with TT in a universal
 /// binary.
