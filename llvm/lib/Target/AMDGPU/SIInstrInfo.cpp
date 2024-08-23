@@ -9439,12 +9439,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  // TODO-GFX13: Remove this.
-  // Hack to allow some GFX13 codegen tests to run before all the encodings are
-  // implemented.
-  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX13)
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
-
   if (MCOp == (uint16_t)-1 && ST.hasGFX1210Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX1210);
 
