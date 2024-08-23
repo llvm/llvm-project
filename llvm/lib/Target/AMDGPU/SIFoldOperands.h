@@ -12,7 +12,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SIFoldOperandsPass : public PassInfoMixin<SIFoldOperandsPass> {
+class SIFoldOperandsPass : public MachinePassInfoMixin<SIFoldOperandsPass> {
 public:
   SIFoldOperandsPass() = default;
   PreservedAnalyses run(MachineFunction &MF,

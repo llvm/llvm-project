@@ -2262,7 +2262,7 @@ PreservedAnalyses SIFoldOperandsPass::run(MachineFunction &MF,
   if (!Changed) {
     return PreservedAnalyses::all();
   }
-  PreservedAnalyses PA;
+  auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
