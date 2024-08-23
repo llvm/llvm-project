@@ -9975,7 +9975,7 @@ void ASTReader::finishPendingActions() {
       return false;
     };
 
-    auto hasDefinition = [this, &hasDefinitionImpl](Decl *D) {
+    auto hasDefinition = [&hasDefinitionImpl](Decl *D) {
       return hasDefinitionImpl(D, hasDefinitionImpl);
     };
 
