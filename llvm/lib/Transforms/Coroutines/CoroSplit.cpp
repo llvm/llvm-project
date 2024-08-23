@@ -2030,7 +2030,8 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   lowerAwaitSuspends(F, Shape);
 
   simplifySuspendPoints(Shape);
-  buildCoroutineFrame(F, Shape, TTI, MaterializableCallback);
+  normalizeCoroutine(F, Shape, TTI);
+  buildCoroutineFrame(F, Shape, MaterializableCallback);
   replaceFrameSizeAndAlignment(Shape);
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
 
