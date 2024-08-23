@@ -154,7 +154,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     fir::RecordType Ty, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
   mlir::MLIRContext *context = module.getContext();
   auto result = fir::NameUniquer::deconstruct(Ty.getName());
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
@@ -166,15 +166,17 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
-    auto result =
-        fir::getTypeSizeAndAlignment(loc, fieldTy, *dataLayout, kindMapping);
+    auto result = fir::getTypeSizeAndAlignment(module.getLoc(), fieldTy,
+                                               *dataLayout, kindMapping);
     // If we get a type whose size we can't determine, we will break the loop
     // and generate the derived type with whatever components we have
     // assembled thus far.
     if (!result)
       break;
     auto [byteSize, byteAlign] = *result;
-    mlir::LLVM::DITypeAttr elemTy = convertType(fieldTy, fileAttr, scope, loc);
+    // FIXME: Handle non defaults array bound in derived types
+    mlir::LLVM::DITypeAttr elemTy =
+        convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_member,
@@ -352,7 +354,7 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
   } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
-    return convertRecordType(recTy, fileAttr, scope, loc);
+    return convertRecordType(recTy, fileAttr, scope, declOp);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))

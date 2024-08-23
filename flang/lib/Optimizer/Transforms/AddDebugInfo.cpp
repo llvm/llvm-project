@@ -160,7 +160,6 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       fir::cg::XDeclareOp declOp) {
   if (debugInfoIsAlreadySet(globalOp.getLoc()))
     return;
-  mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
 
@@ -223,7 +222,6 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (debugInfoIsAlreadySet(l))
     return;
 
-  mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
   llvm::StringRef fileName(fileAttr.getName());
@@ -369,7 +367,7 @@ void AddDebugInfoPass::runOnOperation() {
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     // Process 'GlobalOp' only if full debug info is requested.
     for (auto globalOp : module.getOps<fir::GlobalOp>())
-      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable, typeGen,
+      handleGlobalOp(globalOp, fileAttr, cuAttr, typeGen, &symbolTable,
                      /*declOp=*/nullptr);
   }
 }

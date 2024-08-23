@@ -37,7 +37,7 @@ private:
   mlir::LLVM::DITypeAttr convertRecordType(fir::RecordType Ty,
                                            mlir::LLVM::DIFileAttr fileAttr,
                                            mlir::LLVM::DIScopeAttr scope,
-                                           mlir::Location loc);
+                                           fir::cg::XDeclareOp declOp);
   mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
