@@ -112,6 +112,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
       std::make_shared<AssertFrameRecognizer>(),
       std::make_shared<RegularExpression>(std::move(module_re)),
       std::make_shared<RegularExpression>(std::move(symbol_re)),
+      Mangled::ePreferMangled,
       /*first_instruction_only*/ false);
 }
 
