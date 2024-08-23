@@ -157,7 +157,7 @@ func.func @_QQmain() {
 // CHECK-LABEL: define void @_QQmain(){{.*}}{
 // CHECK: %[[CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
-// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr @_QMmod1Ea, i64 ptrtoint (ptr getelementptr (%_QMmod1TtK2, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 1, i8 1, ptr @_QMmod1E.dt.t.2, [1 x i64] zeroinitializer }, ptr %[[CLASS_NONE]], align 8
+// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr @_QMmod1Ea, i64 ptrtoint (ptr getelementptr (%_QMmod1TtK2, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 1, i8 1, ptr @_QMmod1EXdtXtX2, [1 x i64] zeroinitializer }, ptr %[[CLASS_NONE]], align 8
 // CHECK: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS_NONE]]
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[DESC]]
 // CHECK: call void @_QMmod1Psub1(ptr %[[DESC]])
@@ -197,4 +197,4 @@ func.func @_QQembox_input_type(%arg0 : !fir.ref<!fir.type<_QMmod1Tp2{v:!fir.arra
 }
 
 // CHECK-LABEL: define void @_QQembox_input_type
-// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMmod1Tp2, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 0, i8 1, ptr @_QMmod1E.dt.p2, [1 x i64] zeroinitializer }, ptr %{{.*}}, 0
+// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMmod1Tp2, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 0, i8 1, ptr @_QMmod1EXdtXp2, [1 x i64] zeroinitializer }, ptr %{{.*}}, 0
