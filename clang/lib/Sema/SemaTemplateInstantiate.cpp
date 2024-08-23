@@ -490,11 +490,6 @@ struct TemplateInstantiationArgumentCollecter
         !isa<ClassTemplatePartialSpecializationDecl>(CTSD))
       return Done();
 
-    // If this class template specialization was instantiated from a
-    // specialized member that is a class template, we're done.
-    assert(CTSD->getSpecializedTemplate() && "No class template?");
-    llvm::PointerUnion<ClassTemplateDecl *, ClassTemplatePartialSpecializationDecl *>
-        Specialized = CTSD->getSpecializedTemplateOrPartial();
     #if 0
     if (auto *CTPSD = Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
       Result.addOuterTemplateArguments(
@@ -511,12 +506,25 @@ struct TemplateInstantiationArgumentCollecter
         return Done();
     }
     #else
+
     if (Innermost)
         AddInnermostTemplateArguments(CTSD);
     else
       AddOuterTemplateArguments(
           CTSD, CTSD->getTemplateInstantiationArgs().asArray(),
           /*Final=*/false);
+
+    if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(CTSD)) {
+      if (CTPSD->isMemberSpecialization())
+        return Done();
+    }
+
+    // If this class template specialization was instantiated from a
+    // specialized member that is a class template, we're done.
+    assert(CTSD->getSpecializedTemplate() && "No class template?");
+    llvm::PointerUnion<ClassTemplateDecl *, ClassTemplatePartialSpecializationDecl *>
+        Specialized = CTSD->getSpecializedTemplateOrPartial();
+
     if (auto *CTPSD = Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
       if (CTPSD->isMemberSpecialization())
         return Done();
@@ -526,7 +534,6 @@ struct TemplateInstantiationArgumentCollecter
         return Done();
     }
     #endif
-
     return DontClearRelativeToPrimaryNextDecl(CTSD);
     #endif
   }
@@ -543,28 +550,28 @@ struct TemplateInstantiationArgumentCollecter
         !isa<VarTemplatePartialSpecializationDecl>(VTSD))
       return Done();
 
+    if (Innermost)
+        AddInnermostTemplateArguments(VTSD);
+    else
+      AddOuterTemplateArguments(
+          VTSD, VTSD->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
+
+    if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(VTSD)) {
+      if (VTPSD->isMemberSpecialization())
+        return Done();
+    }
+
     // If this variable template specialization was instantiated from a
     // specialized member that is a variable template, we're done.
     assert(VTSD->getSpecializedTemplate() && "No variable template?");
     llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD = Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (Innermost)
-        AddInnermostTemplateArguments(VTPSD);
-      else
-        AddOuterTemplateArguments(
-            VTPSD, VTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
       if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (Innermost)
-        AddInnermostTemplateArguments(VTD);
-      else
-        AddOuterTemplateArguments(
-            VTD, VTSD->getTemplateInstantiationArgs().asArray(),
-            /*Final=*/false);
       if (VTD->isMemberSpecialization())
         return Done();
     }
