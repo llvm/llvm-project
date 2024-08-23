@@ -118,12 +118,15 @@ C++2c Feature Support
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
+- Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
