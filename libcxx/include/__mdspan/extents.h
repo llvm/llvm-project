@@ -19,6 +19,8 @@
 
 #include <__assert>
 #include <__config>
+
+#include <__concepts/arithmetic.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -282,8 +284,7 @@ public:
   using size_type  = make_unsigned_t<index_type>;
   using rank_type  = size_t;
 
-  static_assert(is_integral<index_type>::value && !is_same<index_type, bool>::value,
-                "extents::index_type must be a signed or unsigned integer type");
+  static_assert(__libcpp_integer<index_type>, "extents::index_type must be a signed or unsigned integer type");
   static_assert(((__mdspan_detail::__is_representable_as<index_type>(_Extents) || (_Extents == dynamic_extent)) && ...),
                 "extents ctor: arguments must be representable as index_type and nonnegative");
 
