@@ -42,6 +42,8 @@ def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
 def ResRetTy : DXILOpParamType;
 def HandleTy : DXILOpParamType;
+def ResBindTy : DXILOpParamType;
+def ResPropsTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -683,6 +685,14 @@ def Dot4 :  DXILOp<56, dot4> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def CreateHandle : DXILOp<57, createHandle> {
+  let Doc = "creates the handle to a resource";
+  // ResourceClass, RangeID, Index, NonUniform
+  let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;
@@ -721,4 +731,18 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def AnnotateHandle : DXILOp<217, annotateHandle> {
+  let Doc = "annotate handle with resource properties";
+  let arguments = [HandleTy, ResPropsTy];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
+  let Doc = "create resource handle from binding";
+  let arguments = [ResBindTy, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
 }
