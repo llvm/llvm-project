@@ -88,15 +88,18 @@ protected:
 public:
   ExprKind getKind() const { return kind_; }
   std::function<ExprValue()> getExpr() const;
+  ExprValue getExprValue() const;
+  uint64_t getExprValueAlignValue() const;
 };
 
 class ConstantExpr : public ScriptExpr {
 public:
   // ConstantExpr(ExprValue val) : ScriptExpr(ExprKind::Constant), val_(val) {}
   ConstantExpr(uint64_t val) : ScriptExpr(ExprKind::Constant), val_(val) {}
-  std::function<ExprValue()> getVal() const {
+  std::function<ExprValue()> getExpr() const {
     return [=] { return val_; };
   }
+  ExprValue getExprValue() const { return val_; }
 
 private:
   ExprValue val_;
@@ -152,7 +155,8 @@ struct SectionCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : SectionCommand {
-  SymbolAssignment(StringRef name, Expr e, unsigned symOrder, std::string loc)
+  SymbolAssignment(StringRef name, ScriptExpr *e, unsigned symOrder,
+                   std::string loc)
       : SectionCommand(AssignmentKind), name(name), expression(e),
         symOrder(symOrder), location(loc) {}
 
@@ -165,7 +169,7 @@ struct SymbolAssignment : SectionCommand {
   Defined *sym = nullptr;
 
   // The RHS of an expression.
-  Expr expression;
+  ScriptExpr *expression;
 
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool provide = false;
@@ -200,14 +204,15 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, Expr origin, Expr length, uint32_t flags,
-               uint32_t invFlags, uint32_t negFlags, uint32_t negInvFlags)
+  MemoryRegion(StringRef name, ScriptExpr *origin, ScriptExpr *length,
+               uint32_t flags, uint32_t invFlags, uint32_t negFlags,
+               uint32_t negInvFlags)
       : name(std::string(name)), origin(origin), length(length), flags(flags),
         invFlags(invFlags), negFlags(negFlags), negInvFlags(negInvFlags) {}
 
   std::string name;
-  Expr origin;
-  Expr length;
+  ScriptExpr *origin = nullptr;
+  ScriptExpr *length = nullptr;
   // A section can be assigned to the region if any of these ELF section flags
   // are set...
   uint32_t flags;
@@ -222,8 +227,12 @@ struct MemoryRegion {
   uint32_t negInvFlags;
   uint64_t curPos = 0;
 
-  uint64_t getOrigin() const { return origin().getValue(); }
-  uint64_t getLength() const { return length().getValue(); }
+  uint64_t getOrigin() const {
+    return origin ? origin->getExprValueAlignValue() : 0;
+  }
+  uint64_t getLength() const {
+    return length ? length->getExprValueAlignValue() : 0;
+  }
 
   bool compatibleWith(uint32_t secFlags) const {
     if ((secFlags & negFlags) || (~secFlags & negInvFlags))
@@ -303,7 +312,7 @@ public:
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct ByteCommand : SectionCommand {
-  ByteCommand(Expr e, unsigned size, std::string commandString)
+  ByteCommand(ScriptExpr *e, unsigned size, std::string commandString)
       : SectionCommand(ByteKind), commandString(commandString), expression(e),
         size(size) {}
 
@@ -312,7 +321,7 @@ struct ByteCommand : SectionCommand {
   // Keeps string representing the command. Used for -Map" is perhaps better.
   std::string commandString;
 
-  Expr expression;
+  ScriptExpr *expression;
 
   // This is just an offset of this assignment command in the output section.
   unsigned offset;
@@ -343,7 +352,7 @@ struct PhdrsCommand {
   bool hasFilehdr = false;
   bool hasPhdrs = false;
   std::optional<unsigned> flags;
-  Expr lmaExpr = nullptr;
+  ScriptExpr *lmaExpr = nullptr;
 };
 
 class LinkerScript final {
@@ -363,7 +372,7 @@ class LinkerScript final {
 
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
-  void setDot(Expr e, const Twine &loc, bool inSec);
+  void setDot(ScriptExpr *e, const Twine &loc, bool inSec);
   void expandOutputSection(uint64_t size);
   void expandMemoryRegions(uint64_t size);
 

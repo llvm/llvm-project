@@ -80,10 +80,10 @@ public:
   // The following members are normally only used in linker scripts.
   MemoryRegion *memRegion = nullptr;
   MemoryRegion *lmaRegion = nullptr;
-  Expr addrExpr;
-  Expr alignExpr;
-  Expr lmaExpr;
-  Expr subalignExpr;
+  ScriptExpr *addrExpr;
+  ScriptExpr *alignExpr;
+  ScriptExpr *lmaExpr;
+  ScriptExpr *subalignExpr;
 
   // Used by non-alloc SHT_CREL to hold the header and content byte stream.
   uint64_t crelHeader = 0;

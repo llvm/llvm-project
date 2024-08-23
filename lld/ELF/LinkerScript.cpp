@@ -136,7 +136,7 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
   // reinterpret_cast<uintptr_t>(this) << "\n";
   switch (kind_) {
   case ExprKind::Constant:
-    return static_cast<const ConstantExpr *>(this)->getVal();
+    return static_cast<const ConstantExpr *>(this)->getExpr();
   case ExprKind::Dynamic: {
     auto expr = static_cast<const DynamicExpr *>(this);
     // llvm::errs() << "expr = " <<
@@ -145,6 +145,22 @@ std::function<ExprValue()> ScriptExpr::getExpr() const {
   default:
     return [] { return ExprValue(0); };
   };
+}
+
+ExprValue ScriptExpr::getExprValue() const {
+  switch (kind_) {
+  case ExprKind::Constant:
+    return static_cast<const ConstantExpr *>(this)->getExprValue();
+  case ExprKind::Dynamic:
+    return static_cast<const DynamicExpr *>(this)->getImpl()();
+  default:
+    return ExprValue(0);
+  }
+}
+
+uint64_t ScriptExpr::getExprValueAlignValue() const {
+  auto e = getExprValue();
+  return e.getValue();
 }
 
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
@@ -189,8 +205,8 @@ void LinkerScript::expandOutputSection(uint64_t size) {
   expandMemoryRegions(size);
 }
 
-void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
-  uint64_t val = e().getValue();
+void LinkerScript::setDot(ScriptExpr *e, const Twine &loc, bool inSec) {
+  uint64_t val = e->getExprValueAlignValue();
   // If val is smaller and we are in an output section, record the error and
   // report it if this is the last assignAddresses iteration. dot may be smaller
   // if there is another assignAddresses iteration.
@@ -225,7 +241,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
     return;
 
   // Define a symbol.
-  ExprValue value = cmd->expression();
+  ExprValue value = cmd->expression->getExprValue();
   SectionBase *sec = value.isAbsolute() ? nullptr : value.sec;
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
 
@@ -394,7 +410,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   if (!cmd->sym)
     return;
 
-  ExprValue v = cmd->expression();
+  ExprValue v = cmd->expression->getExprValue();
   if (v.isAbsolute()) {
     cmd->sym->section = nullptr;
     cmd->sym->value = v.getValue();
@@ -735,7 +751,7 @@ void LinkerScript::processSectionCommands() {
     // is given, input sections are aligned to that value, whether the
     // given value is larger or smaller than the original section alignment.
     if (osec->subalignExpr) {
-      uint32_t subalign = osec->subalignExpr().getValue();
+      uint32_t subalign = osec->subalignExpr->getExprValueAlignValue();
       for (InputSectionBase *s : v)
         s->addralign = subalign;
     }
@@ -1190,7 +1206,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // heuristics described in
   // https://sourceware.org/binutils/docs/ld/Output-Section-LMA.html
   if (sec->lmaExpr) {
-    state->lmaOffset = sec->lmaExpr().getValue() - dot;
+    state->lmaOffset = sec->lmaExpr->getExprValueAlignValue() - dot;
   } else if (MemoryRegion *mr = sec->lmaRegion) {
     uint64_t lmaStart = alignToPowerOf2(mr->curPos, sec->addralign);
     if (mr->curPos < lmaStart)
@@ -1342,8 +1358,8 @@ void LinkerScript::adjustOutputSections() {
 
     // Handle align (e.g. ".foo : ALIGN(16) { ... }").
     if (sec->alignExpr)
-      sec->addralign =
-          std::max<uint32_t>(sec->addralign, sec->alignExpr().getValue());
+      sec->addralign = std::max<uint32_t>(
+          sec->addralign, sec->alignExpr->getExprValueAlignValue());
 
     bool isEmpty = (getFirstInputSection(sec) == nullptr);
     bool discardable = isEmpty && isDiscardable(*sec);
@@ -1489,7 +1505,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 LinkerScript::AddressState::AddressState() {
   for (auto &mri : script->memoryRegions) {
     MemoryRegion *mr = mri.second;
-    mr->curPos = (mr->origin)().getValue();
+    mr->curPos = (mr->origin)->getExprValueAlignValue();
   }
 }
 
@@ -1660,7 +1676,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
       phdr->add(ctx.out.programHeaders);
 
     if (cmd.lmaExpr) {
-      phdr->p_paddr = cmd.lmaExpr().getValue();
+      phdr->p_paddr = cmd.lmaExpr->getExprValueAlignValue();
       phdr->hasLMA = true;
     }
     ret.push_back(phdr);

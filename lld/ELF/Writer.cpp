@@ -1911,7 +1911,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *sec : ctx.outputSections) {
     auto i = config->sectionStartMap.find(sec->name);
     if (i != config->sectionStartMap.end())
-      sec->addrExpr = [=] { return i->second; };
+      sec->addrExpr = make<DynamicExpr>([=] { return i->second; });
   }
 
   // With the ctx.outputSections available check for GDPLT relocations
@@ -2387,7 +2387,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     OutputSection *cmd = p->firstSec;
     if (!cmd)
       return;
-    cmd->alignExpr = [align = cmd->addralign]() { return align; };
+    cmd->alignExpr =
+        make<DynamicExpr>([align = cmd->addralign]() { return align; });
     if (!cmd->addrExpr) {
       // Prefer advancing to align(dot, maxPageSize) + dot%maxPageSize to avoid
       // padding in the file contents.
@@ -2406,9 +2407,9 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
           (config->zSeparate == SeparateSegmentKind::Code && prev &&
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
-        cmd->addrExpr = [] {
+        cmd->addrExpr = make<DynamicExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize);
-        };
+        });
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
       // it must be the RW. Align to p_align(PT_TLS) to make sure
       // p_vaddr(PT_LOAD)%p_align(PT_LOAD) = 0. Otherwise, if
@@ -2423,16 +2424,16 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // bug, musl (TLS Variant 1 architectures) before 1.1.23 handled TLS
       // blocks correctly. We need to keep the workaround for a while.
       else if (ctx.tlsPhdr && ctx.tlsPhdr->firstSec == p->firstSec)
-        cmd->addrExpr = [] {
+        cmd->addrExpr = make<DynamicExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  alignToPowerOf2(script->getDot() % config->maxPageSize,
                                  ctx.tlsPhdr->p_align);
-        };
+        });
       else
-        cmd->addrExpr = [] {
+        cmd->addrExpr = make<DynamicExpr>([] {
           return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  script->getDot() % config->maxPageSize;
-        };
+        });
     }
   };
 
