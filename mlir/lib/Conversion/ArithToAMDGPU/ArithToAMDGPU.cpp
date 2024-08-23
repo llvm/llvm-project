@@ -295,9 +295,6 @@ LogicalResult TruncfToFloat16RewritePattern::match(arith::TruncFOp op) const {
   if (auto outVecType = dyn_cast<VectorType>(outType)) {
     if (outVecType.isScalable())
       return failure();
-    if (outVecType.getShape().size() > 1)
-      // Multi-dimensional vectors are currently unsupported.
-      return failure();
     outType = outVecType.getElementType();
   }
   return success(outType.isF16() && inputType.isF32());
@@ -309,9 +306,10 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
   Value in = op.getIn();
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
   VectorType truncResType = VectorType::get(2, outElemType);
+  auto inVectorTy = dyn_cast<VectorType>(in.getType());
 
   // Handle the case where input type is not a vector type
-  if (!isa<VectorType>(in.getType())) {
+  if (!inVectorTy) {
     auto sourceB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
     Value asF16s =
         rewriter.create<ROCDL::CvtPkRtz>(loc, truncResType, in, sourceB);
@@ -324,6 +322,12 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
   Value zero = rewriter.createOrFold<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, outType, zero);
+
+  if (inVectorTy.getRank() > 1) {
+    inVectorTy = VectorType::get(SmallVector<int64_t>{numElements},
+                                 inVectorTy.getElementType());
+    in = rewriter.create<vector::ShapeCastOp>(loc, inVectorTy, in);
+  }
 
   // Handle the vector case. We also handle the (uncommon) case where the vector
   // length is odd
@@ -348,6 +352,11 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
     result = rewriter.create<vector::InsertStridedSliceOp>(loc, thisResult,
                                                            result, i, 1);
   }
+
+  if (inVectorTy.getRank() != outType.getRank()) {
+    result = rewriter.create<vector::ShapeCastOp>(loc, outType, result);
+  }
+
   rewriter.replaceOp(op, result);
 }
 
