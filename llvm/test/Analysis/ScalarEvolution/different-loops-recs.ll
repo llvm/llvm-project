@@ -457,7 +457,7 @@ define void @test_05(i32 %N) {
 ; CHECK-NEXT:    %"alloca point" = bitcast i32 0 to i32
 ; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i32 %i.0
-; CHECK-NEXT:    --> {(8 + @A)<nuw><nsw>,+,4}<nw><%bb3> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (408 + @A) LoopDispositions: { %bb3: Computable }
+; CHECK-NEXT:    --> {(8 + @A)<nuw><nsw>,+,4}<nw><%bb3> U: [40,-3623) S: [-9223372036854775808,9223372036854775805) Exits: (408 + @A)<nuw> LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %tmp2 = add i32 %i.0, 1
 ; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%bb3> U: [3,104) S: [3,104) Exits: 103 LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %i.0 = phi i32 [ 2, %entry ], [ %tmp2, %bb ]

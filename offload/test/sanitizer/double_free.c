@@ -36,7 +36,7 @@ int main(void) {
 // NDEBG:  main
 // DEBUG:  main {{.*}}double_free.c:24
 //
-// CHECK: Last allocation of size 8:
+// CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main
@@ -49,7 +49,7 @@ int main(void) {
 // NDEBG:  main
 // DEBUG:  main {{.*}}double_free.c:22
 //
-// CHECK: #0 Prior allocation:
+// CHECK: #0 Prior allocation -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main
@@ -61,7 +61,7 @@ int main(void) {
 // NDEBG:  main
 // DEBUG:  main {{.*}}double_free.c:20
 //
-// CHECK: #1 Prior allocation:
+// CHECK: #1 Prior allocation -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main

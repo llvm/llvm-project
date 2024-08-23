@@ -76,8 +76,8 @@ public:
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
         assumeFuncWrites(assumeFuncWrites) {}
 
-  void visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
-                      ArrayRef<const WrittenTo *> results) override;
+  LogicalResult visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
+                               ArrayRef<const WrittenTo *> results) override;
 
   void visitBranchOperand(OpOperand &operand) override;
 
@@ -94,15 +94,15 @@ private:
   bool assumeFuncWrites;
 };
 
-void WrittenToAnalysis::visitOperation(Operation *op,
-                                       ArrayRef<WrittenTo *> operands,
-                                       ArrayRef<const WrittenTo *> results) {
+LogicalResult
+WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
+                                  ArrayRef<const WrittenTo *> results) {
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
     newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
-    return;
+    return success();
   } // By default, every result of an op depends on every operand.
   for (const WrittenTo *r : results) {
     for (WrittenTo *operand : operands) {
@@ -110,6 +110,7 @@ void WrittenToAnalysis::visitOperation(Operation *op,
     }
     addDependency(const_cast<WrittenTo *>(r), op);
   }
+  return success();
 }
 
 void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
