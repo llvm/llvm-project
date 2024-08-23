@@ -96,19 +96,28 @@ public:
                std::tuple<unsigned, const GlobalValueSummary *,
                           std::unique_ptr<ImportFailureInfo>>>;
 
-  /// The map contains an entry for every module to import from, the key being
-  /// the module identifier to pass to the ModuleLoader. The value is the set of
-  /// functions to import. The module identifier strings must be owned
-  /// elsewhere, typically by the in-memory ModuleSummaryIndex the importing
-  /// decisions are made from (the module path for each summary is owned by the
-  /// index's module path string table).
+  /// The map maintains the list of imports.  Conceptually, it is a collection
+  /// of tuples of the form:
+  ///
+  ///   (The name of the source module, GUID, Definition/Declaration)
+  ///
+  /// The name of the source module is the module identifier to pass to the
+  /// ModuleLoader.  The module identifier strings must be owned elsewhere,
+  /// typically by the in-memory ModuleSummaryIndex the importing decisions are
+  /// made from (the module path for each summary is owned by the index's module
+  /// path string table).
   class ImportMapTy {
   public:
     using ImportMapTyImpl = DenseMap<StringRef, FunctionsToImportTy>;
 
     enum class AddDefinitionStatus {
+      // No change was made to the list of imports or whether each import should
+      // be imported as a declaration or definition.
       NoChange,
+      // Successfully added the given GUID to be imported as a definition. There
+      // was no existing entry with the same GUID as a declaration.
       Inserted,
+      // An existing with the given GUID was changed to a definition.
       ChangedToDefinition,
     };
 
