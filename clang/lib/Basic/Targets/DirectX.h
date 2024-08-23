@@ -94,6 +94,13 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
   }
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+    // The static values this addresses do not apply outside of the same thread
+    // This protection is neither available nor needed
+    Opts.ThreadsafeStatics = false;
+  }
 };
 
 } // namespace targets
