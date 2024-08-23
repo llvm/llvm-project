@@ -13,7 +13,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.const 255
@@ -34,7 +34,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.const 255
@@ -59,7 +59,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.const 65535
@@ -80,7 +80,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.const 65535
@@ -105,7 +105,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.ge_u
@@ -124,7 +124,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.ge_u
@@ -147,7 +147,7 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i64.sub
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i64.ge_u
@@ -166,7 +166,7 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i64.sub
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i64.ge_u
@@ -184,17 +184,18 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; WASM32-NEXT:    .local i32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32.load8_u 0
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    i32.const 0
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.const 255
 ; WASM32-NEXT:    i32.and
-; WASM32-NEXT:    i32.ge_u
+; WASM32-NEXT:    i32.sub
+; WASM32-NEXT:    local.tee 1
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i32.gt_u
 ; WASM32-NEXT:    i32.select
 ; WASM32-NEXT:    i32.store8 0
 ; WASM32-NEXT:    local.get 2
@@ -205,17 +206,18 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; WASM64-NEXT:    .local i32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32.load8_u 0
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    i32.const 0
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.const 255
 ; WASM64-NEXT:    i32.and
-; WASM64-NEXT:    i32.ge_u
+; WASM64-NEXT:    i32.sub
+; WASM64-NEXT:    local.tee 1
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i32.gt_u
 ; WASM64-NEXT:    i32.select
 ; WASM64-NEXT:    i32.store8 0
 ; WASM64-NEXT:    local.get 2
@@ -230,17 +232,18 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; WASM32-NEXT:    .local i32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32.load16_u 0
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    i32.const 0
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.const 65535
 ; WASM32-NEXT:    i32.and
-; WASM32-NEXT:    i32.ge_u
+; WASM32-NEXT:    i32.sub
+; WASM32-NEXT:    local.tee 1
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i32.gt_u
 ; WASM32-NEXT:    i32.select
 ; WASM32-NEXT:    i32.store16 0
 ; WASM32-NEXT:    local.get 2
@@ -251,17 +254,18 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; WASM64-NEXT:    .local i32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32.load16_u 0
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    i32.const 0
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.const 65535
 ; WASM64-NEXT:    i32.and
-; WASM64-NEXT:    i32.ge_u
+; WASM64-NEXT:    i32.sub
+; WASM64-NEXT:    local.tee 1
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i32.gt_u
 ; WASM64-NEXT:    i32.select
 ; WASM64-NEXT:    i32.store16 0
 ; WASM64-NEXT:    local.get 2
@@ -276,15 +280,16 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; WASM32-NEXT:    .local i32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32.load 0
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32.sub
-; WASM32-NEXT:    i32.const 0
-; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    local.tee 1
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    i32.ge_u
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i32.gt_u
 ; WASM32-NEXT:    i32.select
 ; WASM32-NEXT:    i32.store 0
 ; WASM32-NEXT:    local.get 2
@@ -295,15 +300,16 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; WASM64-NEXT:    .local i32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32.load 0
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32.sub
-; WASM64-NEXT:    i32.const 0
-; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    local.tee 1
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    i32.ge_u
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i32.gt_u
 ; WASM64-NEXT:    i32.select
 ; WASM64-NEXT:    i32.store 0
 ; WASM64-NEXT:    local.get 2
@@ -318,15 +324,16 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; WASM32-NEXT:    .local i64
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i64.const 0
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i64.load 0
 ; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i64.sub
-; WASM32-NEXT:    i64.const 0
-; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    local.tee 1
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    i64.ge_u
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i64.gt_u
 ; WASM32-NEXT:    i64.select
 ; WASM32-NEXT:    i64.store 0
 ; WASM32-NEXT:    local.get 2
@@ -337,15 +344,16 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; WASM64-NEXT:    .local i64
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i64.const 0
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i64.load 0
 ; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i64.sub
-; WASM64-NEXT:    i64.const 0
-; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    local.tee 1
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    i64.ge_u
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i64.gt_u
 ; WASM64-NEXT:    i64.select
 ; WASM64-NEXT:    i64.store 0
 ; WASM64-NEXT:    local.get 2

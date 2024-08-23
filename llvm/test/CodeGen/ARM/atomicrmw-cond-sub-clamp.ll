@@ -10,8 +10,8 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    ldrexb r12, [r0]
 ; CHECK-NEXT:    uxtb r3, r1
 ; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    subhs r3, r12, r3
+; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    subhs r3, r3, r1
 ; CHECK-NEXT:    strexb r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB0_1
@@ -32,8 +32,8 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    ldrexh r12, [r0]
 ; CHECK-NEXT:    uxth r3, r1
 ; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    subhs r3, r12, r3
+; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    subhs r3, r3, r1
 ; CHECK-NEXT:    strexh r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB1_1
@@ -53,7 +53,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrex r12, [r0]
 ; CHECK-NEXT:    subs r3, r12, r1
-; CHECK-NEXT:    movlo r3, r1
+; CHECK-NEXT:    movlo r3, r12
 ; CHECK-NEXT:    strex r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB2_1
@@ -79,8 +79,8 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    sbcs r7, r5, r3
 ; CHECK-NEXT:    movwhs r1, #1
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    moveq r7, r3
-; CHECK-NEXT:    moveq r6, r2
+; CHECK-NEXT:    moveq r7, r5
+; CHECK-NEXT:    moveq r6, r4
 ; CHECK-NEXT:    strexd r1, r6, r7, [r0]
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    bne .LBB3_1
@@ -100,10 +100,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:  .LBB4_1: @ %atomicrmw.start
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrexb r12, [r0]
-; CHECK-NEXT:    uxtb r3, r1
-; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    mov r3, #0
-; CHECK-NEXT:    subhs r3, r12, r1
+; CHECK-NEXT:    uqsub8 r3, r12, r1
 ; CHECK-NEXT:    strexb r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB4_1
@@ -122,10 +119,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:  .LBB5_1: @ %atomicrmw.start
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrexh r12, [r0]
-; CHECK-NEXT:    uxth r3, r1
-; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    mov r3, #0
-; CHECK-NEXT:    subhs r3, r12, r1
+; CHECK-NEXT:    uqsub16 r3, r12, r1
 ; CHECK-NEXT:    strexh r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB5_1
@@ -162,17 +156,17 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
+; CHECK-NEXT:    mov r12, #0
 ; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:  .LBB7_1: @ %atomicrmw.start
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrexd r4, r5, [r0]
-; CHECK-NEXT:    subs r1, r4, r2
+; CHECK-NEXT:    subs r6, r4, r2
 ; CHECK-NEXT:    sbcs r7, r5, r3
-; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    movwhs r6, #1
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    moveq r7, r6
-; CHECK-NEXT:    movne r6, r1
+; CHECK-NEXT:    adc r1, r12, #0
+; CHECK-NEXT:    eors r1, r1, #1
+; CHECK-NEXT:    movwne r7, #0
+; CHECK-NEXT:    movwne r6, #0
 ; CHECK-NEXT:    strexd r1, r6, r7, [r0]
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    bne .LBB7_1
