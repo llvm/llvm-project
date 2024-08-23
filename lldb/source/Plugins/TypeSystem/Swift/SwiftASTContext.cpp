@@ -3721,29 +3721,6 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
   m_swift_module_cache.insert({ID, module});
 }
 
-void SwiftASTContext::RegisterModuleABINameToRealName(
-    swift::ModuleDecl *module) {
-  if (module->getABIName() == module->getName())
-    return;
-
-  // Ignore _Concurrency, which is hardcoded in the compiler and should be
-  // looked up using its ABI name "Swift"
-  if (module->getName().str() == swift::SWIFT_CONCURRENCY_NAME)
-    return;
-
-  // Also ignore modules with the special "Compiler" prefix.
-  if (module->getABIName().str().starts_with(
-          swift::SWIFT_MODULE_ABI_NAME_PREFIX))
-    return;
-
-  LOG_PRINTF(GetLog(LLDBLog::Types),
-             "Mapping module ABI name \"%s\" to its regular name \"%s\"",
-             module->getABIName().str().str().c_str(),
-             module->getName().str().str().c_str());
-  m_module_abi_to_regular_name.insert({module->getABIName().str(),
-                                      module->getName().str()});
-}
-
 swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
                                               Status &error, bool *cached) {
   if (cached)
@@ -3853,7 +3830,6 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
              module.path.front().GetCString(),
              module_decl->getName().str().str().c_str());
 
-  RegisterModuleABINameToRealName(module_decl);
   m_swift_module_cache[module.path.front().GetStringRef()] = module_decl;
   return module_decl;
 }
@@ -3908,7 +3884,6 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
                    module_spec.GetPath().c_str(),
                    module->getName().str().str().c_str());
 
-        RegisterModuleABINameToRealName(module);
         m_swift_module_cache[module_basename.GetCString()] = module;
         return module;
       } else {
@@ -4578,7 +4553,7 @@ SwiftASTContext::ReconstructTypeOrWarn(ConstString mangled_typename) {
 }
 
 llvm::Expected<swift::TypeBase *>
-SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
+SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   VALID_OR_RETURN(nullptr);
 
   const char *mangled_cstr = mangled_typename.AsCString();
@@ -4676,43 +4651,6 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
   return llvm::createStringError("type for typename \"" +
                                  mangled_typename.GetString() +
                                  "\" was not found");
-}
-
-llvm::Expected<swift::TypeBase *>
-SwiftASTContext::ReconstructType(ConstString mangled_typename) {
-  VALID_OR_RETURN(nullptr);
-
-  // Mangled names are encoded with the ABI module name in debug info, but with
-  // the regular module name in the swift module. When reconstructing these
-  // types, SwiftASTContext must first substitute the ABI module name with the
-  // regular one on the type's mangled name before attempting to reconstruct
-  // them.
-  auto mangling = TypeSystemSwiftTypeRef::TransformModuleName(
-      mangled_typename, m_module_abi_to_regular_name);
-  ConstString module_adjusted_mangled_typename;
-  if (mangling.isSuccess())
-    module_adjusted_mangled_typename = ConstString(mangling.result());
-
-  if (mangled_typename == module_adjusted_mangled_typename)
-    return ReconstructTypeImpl(mangled_typename);
-
-  // If the mangles names don't match, try the one with the module's regular
-  // name first.
-  auto result = ReconstructTypeImpl(module_adjusted_mangled_typename);
-
-  if (result)
-    return result;
-
-  auto error = llvm::toString(result.takeError());
-  LOG_PRINTF(
-      GetLog(LLDBLog::Types),
-      "Reconstruct type failed for adjusted type: \"%s\" with error: \"%s\"",
-      module_adjusted_mangled_typename.GetCString(), error.c_str());
-
-  // If the mangled name with the regular name fails, try the one with the ABI
-  // name. This could happen if a module's ABI name is the same as another
-  // module's regular name.
-  return ReconstructTypeImpl(mangled_typename);
 }
 
 CompilerType SwiftASTContext::GetAnyObjectType() {

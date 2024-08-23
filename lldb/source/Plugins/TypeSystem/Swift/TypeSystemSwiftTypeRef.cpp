@@ -147,31 +147,6 @@ TypeSystemSwiftTypeRef::CanonicalizeSugar(swift::Demangle::Demangler &dem,
   });
 }
 
-swift::Demangle::ManglingErrorOr<std::string>
-TypeSystemSwiftTypeRef::TransformModuleName(
-    llvm::StringRef mangled_name,
-    const llvm::StringMap<llvm::StringRef> &module_name_map) {
-  swift::Demangle::Demangler dem;
-  auto *node = dem.demangleSymbol(mangled_name);
-  auto *adjusted_node = TypeSystemSwiftTypeRef::Transform(
-      dem, node, [&](swift::Demangle::NodePointer node) {
-        if (node->getKind() == Node::Kind::Module) {
-          auto module_name = node->getText();
-          if (module_name_map.contains(module_name)) {
-            auto real_name = module_name_map.lookup(module_name);
-            auto *adjusted_module_node =
-                dem.createNodeWithAllocatedText(Node::Kind::Module, real_name);
-            return adjusted_module_node;
-          }
-        }
-
-        return node;
-      });
-
-  auto mangling = mangleNode(adjusted_node);
-  return mangling;
-}
-
 llvm::StringRef
 TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   if (!node)

@@ -430,10 +430,6 @@ public:
   /// Import compiler_type into this context and return the swift::CanType.
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
 private:
-  /// Reconstruct a Swift AST type from a mangled name by looking its
-  /// components up in Swift modules.
-  llvm::Expected<swift::TypeBase *>
-  ReconstructTypeImpl(ConstString mangled_typename);
 
 protected:
   swift::Type GetSwiftType(lldb::opaque_compiler_type_t opaque_type);
@@ -905,10 +901,6 @@ protected:
 
   CompilerType GetAsClangType(ConstString mangled_name);
 
-  /// Inserts the mapping from the module's ABI name to it's regular name into
-  /// m_module_abi_to_regular_name if they're different.
-  void RegisterModuleABINameToRealName(swift::ModuleDecl *module);
-
   /// Data members.
   /// @{
   // Always non-null outside of unit tests.
@@ -972,9 +964,6 @@ protected:
   mutable bool m_reported_fatal_error = false;
   mutable bool m_logged_fatal_error = false;
 
-  /// Holds the source module name (value) for all modules with a custom ABI
-  /// name (key).
-  llvm::StringMap<llvm::StringRef> m_module_abi_to_regular_name;
   /// Whether this is a scratch or a module AST context.
   bool m_is_scratch_context = false;
 
