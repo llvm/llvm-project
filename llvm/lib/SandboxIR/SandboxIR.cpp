@@ -1043,6 +1043,112 @@ BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
       Ctx.getValue(cast<llvm::CallBrInst>(Val)->getSuccessor(Idx)));
 }
 
+Value *FuncletPadInst::getParentPad() const {
+  return Ctx.getValue(cast<llvm::FuncletPadInst>(Val)->getParentPad());
+}
+
+void FuncletPadInst::setParentPad(Value *ParentPad) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&FuncletPadInst::getParentPad,
+                                       &FuncletPadInst::setParentPad>>(this);
+  cast<llvm::FuncletPadInst>(Val)->setParentPad(ParentPad->Val);
+}
+
+Value *FuncletPadInst::getArgOperand(unsigned Idx) const {
+  return Ctx.getValue(cast<llvm::FuncletPadInst>(Val)->getArgOperand(Idx));
+}
+
+void FuncletPadInst::setArgOperand(unsigned Idx, Value *V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetterWithIdx<&FuncletPadInst::getArgOperand,
+                                              &FuncletPadInst::setArgOperand>>(
+          this, Idx);
+  cast<llvm::FuncletPadInst>(Val)->setArgOperand(Idx, V->Val);
+}
+
+CatchSwitchInst *CatchPadInst::getCatchSwitch() const {
+  return cast<CatchSwitchInst>(
+      Ctx.getValue(cast<llvm::CatchPadInst>(Val)->getCatchSwitch()));
+}
+
+CatchPadInst *CatchPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
+                                   BBIterator WhereIt, BasicBlock *WhereBB,
+                                   Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  SmallVector<llvm::Value *> LLVMArgs;
+  LLVMArgs.reserve(Args.size());
+  for (auto *Arg : Args)
+    LLVMArgs.push_back(Arg->Val);
+  llvm::CatchPadInst *LLVMI =
+      Builder.CreateCatchPad(ParentPad->Val, LLVMArgs, Name);
+  return Ctx.createCatchPadInst(LLVMI);
+}
+
+CleanupPadInst *CleanupPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
+                                       BBIterator WhereIt, BasicBlock *WhereBB,
+                                       Context &Ctx, const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  SmallVector<llvm::Value *> LLVMArgs;
+  LLVMArgs.reserve(Args.size());
+  for (auto *Arg : Args)
+    LLVMArgs.push_back(Arg->Val);
+  llvm::CleanupPadInst *LLVMI =
+      Builder.CreateCleanupPad(ParentPad->Val, LLVMArgs, Name);
+  return Ctx.createCleanupPadInst(LLVMI);
+}
+
+CatchReturnInst *CatchReturnInst::create(CatchPadInst *CatchPad, BasicBlock *BB,
+                                         BBIterator WhereIt,
+                                         BasicBlock *WhereBB, Context &Ctx) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::CatchReturnInst *LLVMI = Builder.CreateCatchRet(
+      cast<llvm::CatchPadInst>(CatchPad->Val), cast<llvm::BasicBlock>(BB->Val));
+  return Ctx.createCatchReturnInst(LLVMI);
+}
+
+CatchPadInst *CatchReturnInst::getCatchPad() const {
+  return cast<CatchPadInst>(
+      Ctx.getValue(cast<llvm::CatchReturnInst>(Val)->getCatchPad()));
+}
+
+void CatchReturnInst::setCatchPad(CatchPadInst *CatchPad) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&CatchReturnInst::getCatchPad,
+                                       &CatchReturnInst::setCatchPad>>(this);
+  cast<llvm::CatchReturnInst>(Val)->setCatchPad(
+      cast<llvm::CatchPadInst>(CatchPad->Val));
+}
+
+BasicBlock *CatchReturnInst::getSuccessor() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::CatchReturnInst>(Val)->getSuccessor()));
+}
+
+void CatchReturnInst::setSuccessor(BasicBlock *NewSucc) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&CatchReturnInst::getSuccessor,
+                                       &CatchReturnInst::setSuccessor>>(this);
+  cast<llvm::CatchReturnInst>(Val)->setSuccessor(
+      cast<llvm::BasicBlock>(NewSucc->Val));
+}
+
+Value *CatchReturnInst::getCatchSwitchParentPad() const {
+  return Ctx.getValue(
+      cast<llvm::CatchReturnInst>(Val)->getCatchSwitchParentPad());
+}
+
 Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
                                  ArrayRef<Value *> IdxList,
                                  BasicBlock::iterator WhereIt,
@@ -1818,6 +1924,72 @@ Value *ExtractElementInst::create(Value *Vec, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
+Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
+                                 Instruction *InsertBefore, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  llvm::Value *NewV =
+      Builder.CreateShuffleVector(V1->Val, V2->Val, Mask->Val, Name);
+  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
+    return Ctx.createShuffleVectorInst(NewShuffle);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
+                                 BasicBlock *InsertAtEnd, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::Value *NewV =
+      Builder.CreateShuffleVector(V1->Val, V2->Val, Mask->Val, Name);
+  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
+    return Ctx.createShuffleVectorInst(NewShuffle);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                                 Instruction *InsertBefore, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  llvm::Value *NewV = Builder.CreateShuffleVector(V1->Val, V2->Val, Mask, Name);
+  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
+    return Ctx.createShuffleVectorInst(NewShuffle);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                                 BasicBlock *InsertAtEnd, Context &Ctx,
+                                 const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  llvm::Value *NewV = Builder.CreateShuffleVector(V1->Val, V2->Val, Mask, Name);
+  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
+    return Ctx.createShuffleVectorInst(NewShuffle);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
+  Ctx.getTracker().emplaceIfTracking<ShuffleVectorSetMask>(this);
+  cast<llvm::ShuffleVectorInst>(Val)->setShuffleMask(Mask);
+}
+
+Constant *ShuffleVectorInst::getShuffleMaskForBitcode() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ShuffleVectorInst>(Val)->getShuffleMaskForBitcode());
+}
+
+Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(
+    llvm::ArrayRef<int> Mask, llvm::Type *ResultTy, Context &Ctx) {
+  return Ctx.getOrCreateConstant(
+      llvm::ShuffleVectorInst::convertShuffleMaskForBitcode(Mask, ResultTy));
+}
+
 #ifndef NDEBUG
 void Constant::dumpOS(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -1957,6 +2129,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
         new InsertElementInst(LLVMIns, *this));
     return It->second.get();
   }
+  case llvm::Instruction::ShuffleVector: {
+    auto *LLVMIns = cast<llvm::ShuffleVectorInst>(LLVMV);
+    It->second = std::unique_ptr<ShuffleVectorInst>(
+        new ShuffleVectorInst(LLVMIns, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Br: {
     auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
     It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
@@ -1990,6 +2168,24 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   case llvm::Instruction::CallBr: {
     auto *LLVMCallBr = cast<llvm::CallBrInst>(LLVMV);
     It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::CatchPad: {
+    auto *LLVMCPI = cast<llvm::CatchPadInst>(LLVMV);
+    It->second =
+        std::unique_ptr<CatchPadInst>(new CatchPadInst(LLVMCPI, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::CleanupPad: {
+    auto *LLVMCPI = cast<llvm::CleanupPadInst>(LLVMV);
+    It->second =
+        std::unique_ptr<CleanupPadInst>(new CleanupPadInst(LLVMCPI, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::CatchRet: {
+    auto *LLVMCRI = cast<llvm::CatchReturnInst>(LLVMV);
+    It->second =
+        std::unique_ptr<CatchReturnInst>(new CatchReturnInst(LLVMCRI, *this));
     return It->second.get();
   }
   case llvm::Instruction::GetElementPtr: {
@@ -2121,6 +2317,13 @@ Context::createInsertElementInst(llvm::InsertElementInst *IEI) {
   return cast<InsertElementInst>(registerValue(std::move(NewPtr)));
 }
 
+ShuffleVectorInst *
+Context::createShuffleVectorInst(llvm::ShuffleVectorInst *SVI) {
+  auto NewPtr =
+      std::unique_ptr<ShuffleVectorInst>(new ShuffleVectorInst(SVI, *this));
+  return cast<ShuffleVectorInst>(registerValue(std::move(NewPtr)));
+}
+
 BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
   auto NewPtr = std::unique_ptr<BranchInst>(new BranchInst(BI, *this));
   return cast<BranchInst>(registerValue(std::move(NewPtr)));
@@ -2161,7 +2364,18 @@ UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
       std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
   return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
 }
-
+CatchPadInst *Context::createCatchPadInst(llvm::CatchPadInst *I) {
+  auto NewPtr = std::unique_ptr<CatchPadInst>(new CatchPadInst(I, *this));
+  return cast<CatchPadInst>(registerValue(std::move(NewPtr)));
+}
+CleanupPadInst *Context::createCleanupPadInst(llvm::CleanupPadInst *I) {
+  auto NewPtr = std::unique_ptr<CleanupPadInst>(new CleanupPadInst(I, *this));
+  return cast<CleanupPadInst>(registerValue(std::move(NewPtr)));
+}
+CatchReturnInst *Context::createCatchReturnInst(llvm::CatchReturnInst *I) {
+  auto NewPtr = std::unique_ptr<CatchReturnInst>(new CatchReturnInst(I, *this));
+  return cast<CatchReturnInst>(registerValue(std::move(NewPtr)));
+}
 GetElementPtrInst *
 Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   auto NewPtr =
