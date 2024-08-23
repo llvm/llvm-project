@@ -619,8 +619,8 @@ static void checkFoldResultTypes(Operation *op,
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
         op->emitOpError() << "folder produced a value of incorrect type: "
-                          << opResult.getType()
-                          << ", expected: " << value.getType();
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
         assert(false && "incorrect fold result type");
       }
     }

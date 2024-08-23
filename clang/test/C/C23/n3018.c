@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion %s
+// RUN: %clang_cc1 -std=c23 -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -fexperimental-new-constant-interpreter %s
 
 /* WG14 N3018: Full
  * The constexpr specifier for object definitions

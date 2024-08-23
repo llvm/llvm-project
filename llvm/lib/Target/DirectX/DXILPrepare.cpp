@@ -246,7 +246,7 @@ public:
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
-    AU.addPreserved<DXILResourceWrapper>();
+    AU.addPreserved<DXILResourceMDWrapper>();
   }
   static char ID; // Pass identification.
 };

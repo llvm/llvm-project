@@ -29,16 +29,16 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   std::vector<Record *> IntrProperties =
       RC.getAllDerivedDefinitions("IntrinsicProperty");
 
-  std::vector<Record *> DefaultProperties;
-  for (Record *Rec : IntrProperties)
+  std::vector<const Record *> DefaultProperties;
+  for (const Record *Rec : IntrProperties)
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
 
   std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
-  for (unsigned I = 0, e = Defs.size(); I != e; ++I)
-    Intrinsics.push_back(CodeGenIntrinsic(Defs[I], DefaultProperties));
+  for (const Record *Def : Defs)
+    Intrinsics.push_back(CodeGenIntrinsic(Def, DefaultProperties));
 
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
@@ -54,52 +54,34 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 }
 
-CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
-                                   ArrayRef<Record *> DefaultProperties) {
-  TheDef = R;
-  std::string DefName = std::string(R->getName());
+CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
+                                   ArrayRef<const Record *> DefaultProperties)
+    : TheDef(R) {
+  StringRef DefName = TheDef->getName();
   ArrayRef<SMLoc> DefLoc = R->getLoc();
-  Properties = 0;
-  isOverloaded = false;
-  isCommutative = false;
-  canThrow = false;
-  isNoReturn = false;
-  isNoCallback = false;
-  isNoSync = false;
-  isNoFree = false;
-  isWillReturn = false;
-  isCold = false;
-  isNoDuplicate = false;
-  isNoMerge = false;
-  isConvergent = false;
-  isSpeculatable = false;
-  hasSideEffects = false;
-  isStrictFP = false;
 
-  if (DefName.size() <= 4 || DefName.substr(0, 4) != "int_")
+  if (!DefName.starts_with("int_"))
     PrintFatalError(DefLoc,
                     "Intrinsic '" + DefName + "' does not start with 'int_'!");
 
   EnumName = DefName.substr(4);
 
-  if (R->getValue(
-          "ClangBuiltinName")) // Ignore a missing ClangBuiltinName field.
-    ClangBuiltinName = std::string(R->getValueAsString("ClangBuiltinName"));
-  if (R->getValue("MSBuiltinName")) // Ignore a missing MSBuiltinName field.
-    MSBuiltinName = std::string(R->getValueAsString("MSBuiltinName"));
+  // Ignore a missing ClangBuiltinName field.
+  ClangBuiltinName =
+      R->getValueAsOptionalString("ClangBuiltinName").value_or("");
+  // Ignore a missing MSBuiltinName field.
+  MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
 
-  TargetPrefix = std::string(R->getValueAsString("TargetPrefix"));
-  Name = std::string(R->getValueAsString("LLVMName"));
+  TargetPrefix = R->getValueAsString("TargetPrefix");
+  Name = R->getValueAsString("LLVMName").str();
 
   if (Name == "") {
     // If an explicit name isn't specified, derive one from the DefName.
-    Name = "llvm.";
-
-    for (unsigned i = 0, e = EnumName.size(); i != e; ++i)
-      Name += (EnumName[i] == '_') ? '.' : EnumName[i];
+    Name = "llvm." + EnumName.str();
+    llvm::replace(Name, '_', '.');
   } else {
     // Verify it starts with "llvm.".
-    if (Name.size() <= 5 || Name.substr(0, 5) != "llvm.")
+    if (!StringRef(Name).starts_with("llvm."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
   }
@@ -107,8 +89,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   // If TargetPrefix is specified, make sure that Name starts with
   // "llvm.<targetprefix>.".
   if (!TargetPrefix.empty()) {
-    if (Name.size() < 6 + TargetPrefix.size() ||
-        Name.substr(5, 1 + TargetPrefix.size()) != (TargetPrefix + "."))
+    StringRef Prefix = StringRef(Name).drop_front(5); // Drop llvm.
+    if (!Prefix.consume_front(TargetPrefix) || !Prefix.starts_with('.'))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "' does not start with 'llvm." +
                                   TargetPrefix + ".'!");
@@ -129,7 +111,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   // Parse the intrinsic properties.
   ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
-    Record *Property = PropList->getElementAsRecord(i);
+    const Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&
            "Expected a property!");
 
@@ -137,7 +119,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   }
 
   // Set default properties to true.
-  setDefaultProperties(R, DefaultProperties);
+  setDefaultProperties(DefaultProperties);
 
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);
@@ -148,16 +130,16 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
-    Record *R, ArrayRef<Record *> DefaultProperties) {
+    ArrayRef<const Record *> DefaultProperties) {
   // opt-out of using default attributes.
-  if (R->getValueAsBit("DisableDefaultAttributes"))
+  if (TheDef->getValueAsBit("DisableDefaultAttributes"))
     return;
 
-  for (Record *Rec : DefaultProperties)
+  for (const Record *Rec : DefaultProperties)
     setProperty(Rec);
 }
 
-void CodeGenIntrinsic::setProperty(Record *R) {
+void CodeGenIntrinsic::setProperty(const Record *R) {
   if (R->getName() == "IntrNoMem")
     ME = MemoryEffects::none();
   else if (R->getName() == "IntrReadMem") {

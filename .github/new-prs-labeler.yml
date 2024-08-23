@@ -990,6 +990,13 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:as-a-library:
+  - clang/tools/libclang/**
+  - clang/bindings/**
+  - clang/include/clang-c/**
+  - clang/test/LibClang/**
+  - clang/unittest/libclang/**
+
 openmp:libomp:
   - any: ['openmp/**', '!openmp/libomptarget/**']
 

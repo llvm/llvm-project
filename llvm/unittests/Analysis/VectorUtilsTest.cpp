@@ -607,8 +607,7 @@ protected:
   }
 
   bool validParams(ArrayRef<VFParameter> Parameters) {
-    Shape.Parameters =
-        SmallVector<VFParameter, 8>(Parameters.begin(), Parameters.end());
+    Shape.Parameters = SmallVector<VFParameter, 8>(Parameters);
     return Shape.hasValidParameterList();
   }
 };
