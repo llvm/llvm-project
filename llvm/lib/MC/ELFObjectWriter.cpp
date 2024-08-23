@@ -1453,7 +1453,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
       SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA);
+    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend);
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
@@ -1468,7 +1468,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     else
       RenamedSymA->setUsedInReloc();
   }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA);
+  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend);
   Relocations[&FixupSection].push_back(Rec);
 }
 

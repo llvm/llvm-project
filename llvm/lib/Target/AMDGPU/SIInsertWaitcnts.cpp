@@ -140,7 +140,9 @@ enum WaitEventType {
   VGPR_TRANS_WRITE,         // write VGPR destinations in TRANS VALU
                             // instructions
   VGPR_XDL_WRITE,           // write VGPR destinations in XDL VALU instructions
-  VGPR_SOURCES_VMEM_READ,   // read VGPR sources in VMEM instructions
+  VGPR_LDS_READ,            // read VGPR sources in LDS instructions
+  VGPR_FLAT_READ,           // read VGPR sources in FLAT instructions
+  VGPR_VMEM_READ,           // read VGPR sources in other VMEM instructions
   NUM_WAIT_EVENTS,
 };
 
@@ -607,7 +609,7 @@ public:
         eventMask({SMEM_ACCESS, SQ_MESSAGE}),
         eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
                    VGPR_XDL_WRITE}),
-        eventMask({VGPR_SOURCES_VMEM_READ})};
+        eventMask({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
 
     return WaitEventMaskForInstGFX12Plus;
   }
@@ -751,7 +753,8 @@ public:
     return VmemReadMapping[getVmemType(Inst)];
   }
 
-  WaitEventType getVALUHazardEventType(const MachineInstr &Inst) const;
+  std::optional<WaitEventType>
+  getSoftwareHazardEventType(const MachineInstr &Inst) const;
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
@@ -2090,24 +2093,42 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   return Modified;
 }
 
-WaitEventType
-SIInsertWaitcnts::getVALUHazardEventType(const MachineInstr &Inst) const {
-  // Core/Side-, DP-, XDL- and TRANS-MACC instructions complete out-of-order
-  // with respect to each other, so each of these classes has its own event,
-  // allowing the existing counter-out-of-order logic to trigger when
-  // necessary.
+std::optional<WaitEventType>
+SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
+  if (TII->isVALU(Inst)) {
+    // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
+    // out-of-order with respect to each other, so each of these classes
+    // has its own event.
 
-  if (SIInstrInfo::isWMMA(Inst) || SIInstrInfo::isSWMMAC(Inst) ||
-      SIInstrInfo::isDOT(Inst))
-    return VGPR_XDL_WRITE;
+    if (SIInstrInfo::isWMMA(Inst) || SIInstrInfo::isSWMMAC(Inst) ||
+        SIInstrInfo::isDOT(Inst))
+      return VGPR_XDL_WRITE;
 
-  if (TII->isTRANS(Inst))
-    return VGPR_TRANS_WRITE;
+    if (TII->isTRANS(Inst))
+      return VGPR_TRANS_WRITE;
 
-  if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-    return VGPR_DPMACC_WRITE;
+    if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
+      return VGPR_DPMACC_WRITE;
 
-  return VGPR_CSMACC_WRITE;
+    return VGPR_CSMACC_WRITE;
+  }
+
+  // FLAT and LDS instructions may read their VGPR sources out-of-order
+  // with respect to each other and all other VMEM instructions, so
+  // each of these also has a separate event.
+
+  if (TII->isFLAT(Inst))
+    return VGPR_FLAT_READ;
+
+  if (TII->isDS(Inst))
+    return VGPR_LDS_READ;
+
+  if (TII->isVMEM(Inst) || TII->isVIMAGE(Inst) || TII->isVSAMPLE(Inst))
+    return VGPR_VMEM_READ;
+
+  // Otherwise, no hazard.
+
+  return {};
 }
 
 // This is a flat memory operation. Check to see if it has memory tokens other
@@ -2207,12 +2228,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
   if (isExpertMode(MaxCounter)) {
-    if (TII->isVMEM(Inst) || TII->isDS(Inst) || TII->isVIMAGE(Inst) ||
-        TII->isVSAMPLE(Inst) || TII->isFLAT(Inst))
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VGPR_SOURCES_VMEM_READ, Inst);
-    else if (TII->isVALU(Inst))
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVALUHazardEventType(Inst),
-                                   Inst);
+    if (const auto ET = getSoftwareHazardEventType(Inst))
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, *ET, Inst);
   }
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
@@ -2631,7 +2648,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   }
   if (!ST->hasVscnt() && HasVMemStore && !HasVMemLoad && UsesVgprLoadedOutside)
     return true;
-  return HasVMemLoad && UsesVgprLoadedOutside;
+  return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
 }
 
 bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
