@@ -240,7 +240,10 @@ makeBinaryAtomicValue(CIRGenFunction &cgf, mlir::cir::AtomicFetchKind kind,
 
   Address destAddr = checkAtomicAlignment(cgf, expr);
   auto &builder = cgf.getBuilder();
-  auto intType = builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
+  auto intType =
+      expr->getArg(0)->getType()->getPointeeType()->isUnsignedIntegerType()
+          ? builder.getUIntNTy(cgf.getContext().getTypeSize(typ))
+          : builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
   mlir::Value val = cgf.buildScalarExpr(expr->getArg(1));
   mlir::Type valueType = val.getType();
   val = buildToInt(cgf, val, typ, intType);

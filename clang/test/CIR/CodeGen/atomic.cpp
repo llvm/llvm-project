@@ -471,3 +471,30 @@ void cmp_val_short(short* p, short x, short u) {
 void cmp_val_byte(char* p, char x, char u) {
   char r = __sync_val_compare_and_swap(p, x, u);
 }
+
+// CHECK-LABEL: @_Z8inc_uint
+// CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, seq_cst) fetch_first : !u32i
+
+// LLVM-LABEL: @_Z8inc_uint
+// LLVM: atomicrmw add ptr {{.*}}, i32 {{.*}} seq_cst, align 4
+void inc_uint(unsigned int* a, int b) {
+  unsigned int c = __sync_fetch_and_add(a, b);
+}
+
+// CHECK-LABEL: @_Z9inc_ulong
+// CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!u64i>, {{.*}} : !u64i, seq_cst) fetch_first : !u64i
+
+// LLVM-LABEL: @_Z9inc_ulong
+// LLVM: atomicrmw add ptr {{.*}}, i64 {{.*}} seq_cst, align 8
+void inc_ulong(unsigned long* a, long b) {
+  unsigned long c = __sync_fetch_and_add(a, b);
+}
+
+// CHECK-LABEL: @_Z9inc_uchar
+// CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!u8i>, {{.*}} : !u8i, seq_cst) fetch_first : !u8i
+
+// LLVM-LABEL: @_Z9inc_uchar
+// LLVM: atomicrmw add ptr {{.*}}, i8 {{.*}} seq_cst, align 1
+void inc_uchar(unsigned char* a, char b) {
+  unsigned char c = __sync_fetch_and_add(a, b);
+}
