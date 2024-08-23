@@ -3014,7 +3014,8 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
 
 // Return the numeric ID 0-63 of an 64b SGPR pair for a given SGPR.
 // i.e. SGPR0 = SGPR0_SGPR1 = 0, SGPR3 = SGPR2_SGPR3 = 1, etc
-static std::optional<unsigned> sgprPairNumber(Register Reg, const SIRegisterInfo &TRI) {
+static std::optional<unsigned> sgprPairNumber(Register Reg,
+                                              const SIRegisterInfo &TRI) {
   switch (Reg) {
   case AMDGPU::M0:
   case AMDGPU::EXEC:
