@@ -3301,9 +3301,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
 
-  if (E->containsErrors())
-    return this->emitError(E);
-
   if (!this->checkLiteralType(E))
     return false;
 
