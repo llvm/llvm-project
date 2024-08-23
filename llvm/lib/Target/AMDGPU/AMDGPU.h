@@ -58,7 +58,6 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
-FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -94,9 +93,6 @@ public:
 };
 
 void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
-
-void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
-extern char &AMDGPUMachineCFGStructurizerID;
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 

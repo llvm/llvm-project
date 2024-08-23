@@ -2812,9 +2812,6 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
 
-def EnableLateCFGStructurize : Predicate<
-  "EnableLateStructurizeCFG">;
-
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
