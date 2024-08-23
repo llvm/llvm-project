@@ -2808,8 +2808,12 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // Fold negation into constant operand.
   // -(X * C) --> X * (-C)
   if (match(FNegOp, m_FMul(m_Value(X), m_Constant(C))))
-    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
-      return BinaryOperator::CreateFMulFMF(X, NegC, FNegOp);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
+      FastMathFlags Flag = I.getFastMathFlags() | FNegOp->getFastMathFlags();
+      Flag.setNoInfs(I.getFastMathFlags().noInfs() &&
+                     FNegOp->getFastMathFlags().noInfs());
+      return BinaryOperator::CreateFMulFMF(X, NegC, Flag);
+    }
   // -(X / C) --> X / (-C)
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
