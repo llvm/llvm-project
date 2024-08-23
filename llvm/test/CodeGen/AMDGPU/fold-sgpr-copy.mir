@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-fold-operands,dead-mi-elimination -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-fold-operands,dead-mi-elimination -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 
