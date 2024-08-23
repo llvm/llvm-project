@@ -749,6 +749,41 @@ struct __can_be_converted_to_string_view
 struct __uninitialized_size_tag {};
 struct __init_with_sentinel_tag {};
 
+#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
+struct __short_impl {
+  _CharT __data_[__min_cap];
+  unsigned char __padding_[_Padding];
+  unsigned char __size_    : 7;
+  unsigned char __is_long_ : 1;
+};
+
+template <class _CharT, size_t __min_cap>
+struct __short_impl<_CharT, __min_cap, 0> {
+  value_type __data_[__min_cap];
+  unsigned char __size_    : 7;
+  unsigned char __is_long_ : 1;
+};
+#else
+template <class _CharT, size_t __min_cap, size_t _Padding = sizeof(_CharT) - 1>
+struct __short_impl {
+  struct _LIBCPP_PACKED {
+    unsigned char __is_long_ : 1;
+    unsigned char __size_    : 7;
+  };
+  char __padding_[_Padding];
+  _CharT __data_[__min_cap];
+};
+template <class _CharT, size_t __min_cap>
+struct __short_impl<_CharT, __min_cap, 0> {
+  struct _LIBCPP_PACKED {
+    unsigned char __is_long_ : 1;
+    unsigned char __size_    : 7;
+  };
+  _CharT __data_[__min_cap];
+};
+#endif
+
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
@@ -851,13 +886,6 @@ private:
 
   enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
 
-  struct __short {
-    value_type __data_[__min_cap];
-    unsigned char __padding_[sizeof(value_type) - 1];
-    unsigned char __size_    : 7;
-    unsigned char __is_long_ : 1;
-  };
-
   // The __endian_factor is required because the field we use to store the size
   // has one fewer bit than it would if it were not a bitfield.
   //
@@ -900,17 +928,9 @@ private:
 
   enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
 
-  struct __short {
-    struct _LIBCPP_PACKED {
-      unsigned char __is_long_ : 1;
-      unsigned char __size_    : 7;
-    };
-    char __padding_[sizeof(value_type) - 1];
-    value_type __data_[__min_cap];
-  };
-
 #endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
+  using __short = __short_impl<value_type, __min_cap>;
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
   union __rep {
