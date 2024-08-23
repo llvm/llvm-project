@@ -1106,6 +1106,18 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
       !IsDefinitionAvailableExternally &&
       D->needsDestruction(astCtx) == QualType::DK_cxx_destructor;
 
+  // It is helpless to emit the definition for an available_externally variable
+  // which can't be marked as const.
+  // We don't need to check if it needs global ctor or dtor. See the above
+  // comment for ideas.
+  if (IsDefinitionAvailableExternally &&
+      (!D->hasConstantInitialization() ||
+       // TODO: Update this when we have interface to check constexpr
+       // destructor.
+       D->needsDestruction(getASTContext()) ||
+       !D->getType().isConstantStorage(getASTContext(), true, true)))
+    return;
+
   const VarDecl *InitDecl;
   const Expr *InitExpr = D->getAnyInitializer(InitDecl);
 
@@ -1199,9 +1211,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   auto Entry = buildGlobal(D, InitType, ForDefinition_t(!IsTentative));
   // TODO(cir): Strip off pointer casts from Entry if we get them?
 
-  // TODO(cir): LLVM codegen used GlobalValue to handle both Function or
-  // GlobalVariable here. We currently only support GlobalOp, should this be
-  // used for FuncOp?
+  // TODO(cir): use GlobalValue interface
   assert(dyn_cast<GlobalOp>(&Entry) && "FuncOp not supported here");
   auto GV = Entry;
 
@@ -1314,10 +1324,12 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   // TODO(cir):
   // Emit the initializer function if necessary.
   if (NeedsGlobalCtor || NeedsGlobalDtor)
-    buildGlobalVarDeclInit(D, GV, NeedsGlobalCtor);
+    buildCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
   // TODO(cir): sanitizers (reportGlobalToASan) and global variable debug
   // information.
+  assert(!MissingFeatures::sanitizeOther());
+  assert(!MissingFeatures::generateDebugInfo());
 }
 
 void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
