@@ -30,7 +30,7 @@
 #  define TEST_ATOMIC_LONG_LOCK_FREE __GCC_ATOMIC_LONG_LOCK_FREE
 #  define TEST_ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
 #  define TEST_ATOMIC_POINTER_LOCK_FREE __GCC_ATOMIC_POINTER_LOCK_FREE
-#elif TEST_COMPILER_MSVC
+#elif defined(TEST_COMPILER_MSVC)
 // This is lifted from STL/stl/inc/atomic on github for the purposes of
 // keeping the tests compiling for MSVC's STL. It's not a perfect solution
 // but at least the tests will keep running.
