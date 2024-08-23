@@ -795,6 +795,70 @@ define void @foo() {
   EXPECT_EQ(GV->getVisibility(), OrigVisibility);
 }
 
+TEST_F(SandboxIRTest, GlobalObject) {
+  parseIR(C, R"IR(
+declare external void @bar()
+define void @foo() {
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMGO = cast<llvm::GlobalObject>(LLVMCall->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *GO = cast<sandboxir::GlobalObject>(Call->getCalledOperand());
+  // Check getAlignment().
+  EXPECT_EQ(GO->getAlignment(), LLVMGO->getAlignment());
+  // Check getAlign().
+  EXPECT_EQ(GO->getAlign(), LLVMGO->getAlign());
+  // Check setAlignment().
+  auto OrigMaybeAlign = GO->getAlign();
+  auto NewMaybeAlign = MaybeAlign(128);
+  EXPECT_NE(NewMaybeAlign, OrigMaybeAlign);
+  GO->setAlignment(NewMaybeAlign);
+  EXPECT_EQ(GO->getAlign(), NewMaybeAlign);
+  GO->setAlignment(OrigMaybeAlign);
+  EXPECT_EQ(GO->getAlign(), OrigMaybeAlign);
+  // Check getGlobalObjectSubClassData().
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(),
+            LLVMGO->getGlobalObjectSubClassData());
+  // Check setGlobalObjectSubClassData().
+  auto OrigGOSCD = GO->getGlobalObjectSubClassData();
+  auto NewGOSCD = 1u;
+  EXPECT_NE(NewGOSCD, OrigGOSCD);
+  GO->setGlobalObjectSubClassData(NewGOSCD);
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(), NewGOSCD);
+  GO->setGlobalObjectSubClassData(OrigGOSCD);
+  EXPECT_EQ(GO->getGlobalObjectSubClassData(), OrigGOSCD);
+  // Check hasSection().
+  EXPECT_EQ(GO->hasSection(), LLVMGO->hasSection());
+  // Check getSection().
+  EXPECT_EQ(GO->getSection(), LLVMGO->getSection());
+  // Check setSection().
+  auto OrigSection = GO->getSection();
+  auto NewSection = ".some_section";
+  EXPECT_NE(NewSection, OrigSection);
+  GO->setSection(NewSection);
+  EXPECT_EQ(GO->getSection(), NewSection);
+  GO->setSection(OrigSection);
+  EXPECT_EQ(GO->getSection(), OrigSection);
+  // Check hasComdat().
+  EXPECT_EQ(GO->hasComdat(), LLVMGO->hasComdat());
+  // Check getVCallVisibility().
+  EXPECT_EQ(GO->getVCallVisibility(), LLVMGO->getVCallVisibility());
+  // Check canIncreaseAlignment().
+  EXPECT_EQ(GO->canIncreaseAlignment(), LLVMGO->canIncreaseAlignment());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
