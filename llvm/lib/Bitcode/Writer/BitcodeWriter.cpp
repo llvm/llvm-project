@@ -4807,9 +4807,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // corresponding type id records.
   for (auto &T : ReferencedTypeIds) {
     auto TidIter = Index.typeIds().equal_range(T);
-    for (auto It = TidIter.first; It != TidIter.second; ++It) {
-      writeTypeIdSummaryRecord(NameVals, StrtabBuilder, It->second.first,
-                               It->second.second);
+    for (const auto &KV : make_range(TidIter)) {
+      writeTypeIdSummaryRecord(NameVals, StrtabBuilder, KV.second.first,
+                               KV.second.second);
       Stream.EmitRecord(bitc::FS_TYPE_ID, NameVals);
       NameVals.clear();
     }
