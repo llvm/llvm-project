@@ -2548,7 +2548,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
           return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
         }
 
-        return Builder.CreateIntrinsic(Intrinsic::riscv_vector_extract,
+        return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_extract,
                                        {ResultType, Ops[0]->getType()},
                                        {Ops[0], Builder.CreateZExt(Ops[1],
                                         Builder.getInt32Ty())});
@@ -2585,7 +2585,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
           return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
         }
 
-        return Builder.CreateIntrinsic(Intrinsic::riscv_vector_insert,
+        return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
                                        {ResultType, Ops[2]->getType()},
                                        {Ops[0], Ops[2],
                                         Builder.CreateZExt(Ops[1],Builder.getInt32Ty())});
@@ -2623,7 +2623,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
           } else {
             llvm::Value *Idx = ConstantInt::get(Builder.getInt32Ty(), I);
             ReturnVector =
-              Builder.CreateIntrinsic(Intrinsic::riscv_vector_insert,
+              Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
                                       {ResultType, Ops[I]->getType()},
                                       {ReturnVector, Ops[I], Idx});
           }

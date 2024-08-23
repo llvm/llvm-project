@@ -670,7 +670,7 @@ vuint64m4_t test_vget_v_u64m8_u64m4(vuint64m8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x2_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x2_f16mf4(vfloat16mf4x2_t src, size_t index) {
@@ -680,7 +680,7 @@ vfloat16mf4_t test_vget_v_f16mf4x2_f16mf4(vfloat16mf4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x3_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x3_f16mf4(vfloat16mf4x3_t src, size_t index) {
@@ -690,7 +690,7 @@ vfloat16mf4_t test_vget_v_f16mf4x3_f16mf4(vfloat16mf4x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x4_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x4_f16mf4(vfloat16mf4x4_t src, size_t index) {
@@ -700,7 +700,7 @@ vfloat16mf4_t test_vget_v_f16mf4x4_f16mf4(vfloat16mf4x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x5_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x5_f16mf4(vfloat16mf4x5_t src, size_t index) {
@@ -710,7 +710,7 @@ vfloat16mf4_t test_vget_v_f16mf4x5_f16mf4(vfloat16mf4x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x6_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x6_f16mf4(vfloat16mf4x6_t src, size_t index) {
@@ -720,7 +720,7 @@ vfloat16mf4_t test_vget_v_f16mf4x6_f16mf4(vfloat16mf4x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x7_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x7_f16mf4(vfloat16mf4x7_t src, size_t index) {
@@ -730,7 +730,7 @@ vfloat16mf4_t test_vget_v_f16mf4x7_f16mf4(vfloat16mf4x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x half> @test_vget_v_f16mf4x8_f16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vector.extract.nxv1f16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.tuple.extract.nxv1f16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vget_v_f16mf4x8_f16mf4(vfloat16mf4x8_t src, size_t index) {
@@ -740,7 +740,7 @@ vfloat16mf4_t test_vget_v_f16mf4x8_f16mf4(vfloat16mf4x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x2_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x2_f16mf2(vfloat16mf2x2_t src, size_t index) {
@@ -750,7 +750,7 @@ vfloat16mf2_t test_vget_v_f16mf2x2_f16mf2(vfloat16mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x3_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x3_f16mf2(vfloat16mf2x3_t src, size_t index) {
@@ -760,7 +760,7 @@ vfloat16mf2_t test_vget_v_f16mf2x3_f16mf2(vfloat16mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x4_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x4_f16mf2(vfloat16mf2x4_t src, size_t index) {
@@ -770,7 +770,7 @@ vfloat16mf2_t test_vget_v_f16mf2x4_f16mf2(vfloat16mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x5_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x5_f16mf2(vfloat16mf2x5_t src, size_t index) {
@@ -780,7 +780,7 @@ vfloat16mf2_t test_vget_v_f16mf2x5_f16mf2(vfloat16mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x6_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x6_f16mf2(vfloat16mf2x6_t src, size_t index) {
@@ -790,7 +790,7 @@ vfloat16mf2_t test_vget_v_f16mf2x6_f16mf2(vfloat16mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x7_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x7_f16mf2(vfloat16mf2x7_t src, size_t index) {
@@ -800,7 +800,7 @@ vfloat16mf2_t test_vget_v_f16mf2x7_f16mf2(vfloat16mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x half> @test_vget_v_f16mf2x8_f16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vector.extract.nxv2f16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.tuple.extract.nxv2f16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vget_v_f16mf2x8_f16mf2(vfloat16mf2x8_t src, size_t index) {
@@ -810,7 +810,7 @@ vfloat16mf2_t test_vget_v_f16mf2x8_f16mf2(vfloat16mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x2_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x2_f16m1(vfloat16m1x2_t src, size_t index) {
@@ -820,7 +820,7 @@ vfloat16m1_t test_vget_v_f16m1x2_f16m1(vfloat16m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x3_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x3_f16m1(vfloat16m1x3_t src, size_t index) {
@@ -830,7 +830,7 @@ vfloat16m1_t test_vget_v_f16m1x3_f16m1(vfloat16m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x4_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x4_f16m1(vfloat16m1x4_t src, size_t index) {
@@ -840,7 +840,7 @@ vfloat16m1_t test_vget_v_f16m1x4_f16m1(vfloat16m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x5_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x5_f16m1(vfloat16m1x5_t src, size_t index) {
@@ -850,7 +850,7 @@ vfloat16m1_t test_vget_v_f16m1x5_f16m1(vfloat16m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x6_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x6_f16m1(vfloat16m1x6_t src, size_t index) {
@@ -860,7 +860,7 @@ vfloat16m1_t test_vget_v_f16m1x6_f16m1(vfloat16m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x7_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x7_f16m1(vfloat16m1x7_t src, size_t index) {
@@ -870,7 +870,7 @@ vfloat16m1_t test_vget_v_f16m1x7_f16m1(vfloat16m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x half> @test_vget_v_f16m1x8_f16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vector.extract.nxv4f16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.tuple.extract.nxv4f16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vget_v_f16m1x8_f16m1(vfloat16m1x8_t src, size_t index) {
@@ -880,7 +880,7 @@ vfloat16m1_t test_vget_v_f16m1x8_f16m1(vfloat16m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x2_f16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vector.extract.nxv8f16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.tuple.extract.nxv8f16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x2_f16m2(vfloat16m2x2_t src, size_t index) {
@@ -890,7 +890,7 @@ vfloat16m2_t test_vget_v_f16m2x2_f16m2(vfloat16m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x3_f16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vector.extract.nxv8f16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.tuple.extract.nxv8f16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x3_f16m2(vfloat16m2x3_t src, size_t index) {
@@ -900,7 +900,7 @@ vfloat16m2_t test_vget_v_f16m2x3_f16m2(vfloat16m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x half> @test_vget_v_f16m2x4_f16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vector.extract.nxv8f16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.tuple.extract.nxv8f16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vget_v_f16m2x4_f16m2(vfloat16m2x4_t src, size_t index) {
@@ -910,7 +910,7 @@ vfloat16m2_t test_vget_v_f16m2x4_f16m2(vfloat16m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x half> @test_vget_v_f16m4x2_f16m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vector.extract.nxv16f16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.tuple.extract.nxv16f16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vget_v_f16m4x2_f16m4(vfloat16m4x2_t src, size_t index) {
@@ -920,7 +920,7 @@ vfloat16m4_t test_vget_v_f16m4x2_f16m4(vfloat16m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x2_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x2_f32mf2(vfloat32mf2x2_t src, size_t index) {
@@ -930,7 +930,7 @@ vfloat32mf2_t test_vget_v_f32mf2x2_f32mf2(vfloat32mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x3_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x3_f32mf2(vfloat32mf2x3_t src, size_t index) {
@@ -940,7 +940,7 @@ vfloat32mf2_t test_vget_v_f32mf2x3_f32mf2(vfloat32mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x4_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x4_f32mf2(vfloat32mf2x4_t src, size_t index) {
@@ -950,7 +950,7 @@ vfloat32mf2_t test_vget_v_f32mf2x4_f32mf2(vfloat32mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x5_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x5_f32mf2(vfloat32mf2x5_t src, size_t index) {
@@ -960,7 +960,7 @@ vfloat32mf2_t test_vget_v_f32mf2x5_f32mf2(vfloat32mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x6_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x6_f32mf2(vfloat32mf2x6_t src, size_t index) {
@@ -970,7 +970,7 @@ vfloat32mf2_t test_vget_v_f32mf2x6_f32mf2(vfloat32mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x7_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x7_f32mf2(vfloat32mf2x7_t src, size_t index) {
@@ -980,7 +980,7 @@ vfloat32mf2_t test_vget_v_f32mf2x7_f32mf2(vfloat32mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x float> @test_vget_v_f32mf2x8_f32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vector.extract.nxv1f32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.tuple.extract.nxv1f32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vget_v_f32mf2x8_f32mf2(vfloat32mf2x8_t src, size_t index) {
@@ -990,7 +990,7 @@ vfloat32mf2_t test_vget_v_f32mf2x8_f32mf2(vfloat32mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x2_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x2_f32m1(vfloat32m1x2_t src, size_t index) {
@@ -1000,7 +1000,7 @@ vfloat32m1_t test_vget_v_f32m1x2_f32m1(vfloat32m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x3_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x3_f32m1(vfloat32m1x3_t src, size_t index) {
@@ -1010,7 +1010,7 @@ vfloat32m1_t test_vget_v_f32m1x3_f32m1(vfloat32m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x4_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x4_f32m1(vfloat32m1x4_t src, size_t index) {
@@ -1020,7 +1020,7 @@ vfloat32m1_t test_vget_v_f32m1x4_f32m1(vfloat32m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x5_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x5_f32m1(vfloat32m1x5_t src, size_t index) {
@@ -1030,7 +1030,7 @@ vfloat32m1_t test_vget_v_f32m1x5_f32m1(vfloat32m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x6_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x6_f32m1(vfloat32m1x6_t src, size_t index) {
@@ -1040,7 +1040,7 @@ vfloat32m1_t test_vget_v_f32m1x6_f32m1(vfloat32m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x7_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x7_f32m1(vfloat32m1x7_t src, size_t index) {
@@ -1050,7 +1050,7 @@ vfloat32m1_t test_vget_v_f32m1x7_f32m1(vfloat32m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x float> @test_vget_v_f32m1x8_f32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vector.extract.nxv2f32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.tuple.extract.nxv2f32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vget_v_f32m1x8_f32m1(vfloat32m1x8_t src, size_t index) {
@@ -1060,7 +1060,7 @@ vfloat32m1_t test_vget_v_f32m1x8_f32m1(vfloat32m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x2_f32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vector.extract.nxv4f32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.tuple.extract.nxv4f32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x2_f32m2(vfloat32m2x2_t src, size_t index) {
@@ -1070,7 +1070,7 @@ vfloat32m2_t test_vget_v_f32m2x2_f32m2(vfloat32m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x3_f32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vector.extract.nxv4f32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.tuple.extract.nxv4f32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x3_f32m2(vfloat32m2x3_t src, size_t index) {
@@ -1080,7 +1080,7 @@ vfloat32m2_t test_vget_v_f32m2x3_f32m2(vfloat32m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x float> @test_vget_v_f32m2x4_f32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vector.extract.nxv4f32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.tuple.extract.nxv4f32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vget_v_f32m2x4_f32m2(vfloat32m2x4_t src, size_t index) {
@@ -1090,7 +1090,7 @@ vfloat32m2_t test_vget_v_f32m2x4_f32m2(vfloat32m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x float> @test_vget_v_f32m4x2_f32m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vector.extract.nxv8f32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.tuple.extract.nxv8f32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vget_v_f32m4x2_f32m4(vfloat32m4x2_t src, size_t index) {
@@ -1100,7 +1100,7 @@ vfloat32m4_t test_vget_v_f32m4x2_f32m4(vfloat32m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x2_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x2_f64m1(vfloat64m1x2_t src, size_t index) {
@@ -1110,7 +1110,7 @@ vfloat64m1_t test_vget_v_f64m1x2_f64m1(vfloat64m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x3_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x3_f64m1(vfloat64m1x3_t src, size_t index) {
@@ -1120,7 +1120,7 @@ vfloat64m1_t test_vget_v_f64m1x3_f64m1(vfloat64m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x4_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x4_f64m1(vfloat64m1x4_t src, size_t index) {
@@ -1130,7 +1130,7 @@ vfloat64m1_t test_vget_v_f64m1x4_f64m1(vfloat64m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x5_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x5_f64m1(vfloat64m1x5_t src, size_t index) {
@@ -1140,7 +1140,7 @@ vfloat64m1_t test_vget_v_f64m1x5_f64m1(vfloat64m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x6_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x6_f64m1(vfloat64m1x6_t src, size_t index) {
@@ -1150,7 +1150,7 @@ vfloat64m1_t test_vget_v_f64m1x6_f64m1(vfloat64m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x7_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x7_f64m1(vfloat64m1x7_t src, size_t index) {
@@ -1160,7 +1160,7 @@ vfloat64m1_t test_vget_v_f64m1x7_f64m1(vfloat64m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x double> @test_vget_v_f64m1x8_f64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vector.extract.nxv1f64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.tuple.extract.nxv1f64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vget_v_f64m1x8_f64m1(vfloat64m1x8_t src, size_t index) {
@@ -1170,7 +1170,7 @@ vfloat64m1_t test_vget_v_f64m1x8_f64m1(vfloat64m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x2_f64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vector.extract.nxv2f64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.tuple.extract.nxv2f64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x2_f64m2(vfloat64m2x2_t src, size_t index) {
@@ -1180,7 +1180,7 @@ vfloat64m2_t test_vget_v_f64m2x2_f64m2(vfloat64m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x3_f64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vector.extract.nxv2f64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.tuple.extract.nxv2f64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x3_f64m2(vfloat64m2x3_t src, size_t index) {
@@ -1190,7 +1190,7 @@ vfloat64m2_t test_vget_v_f64m2x3_f64m2(vfloat64m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x double> @test_vget_v_f64m2x4_f64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vector.extract.nxv2f64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.tuple.extract.nxv2f64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vget_v_f64m2x4_f64m2(vfloat64m2x4_t src, size_t index) {
@@ -1200,7 +1200,7 @@ vfloat64m2_t test_vget_v_f64m2x4_f64m2(vfloat64m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x double> @test_vget_v_f64m4x2_f64m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vector.extract.nxv4f64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.tuple.extract.nxv4f64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vget_v_f64m4x2_f64m4(vfloat64m4x2_t src, size_t index) {
@@ -1210,7 +1210,7 @@ vfloat64m4_t test_vget_v_f64m4x2_f64m4(vfloat64m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x2_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_2t(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_2t(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x2_i8mf8(vint8mf8x2_t src, size_t index) {
@@ -1220,7 +1220,7 @@ vint8mf8_t test_vget_v_i8mf8x2_i8mf8(vint8mf8x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x3_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_3t(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_3t(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x3_i8mf8(vint8mf8x3_t src, size_t index) {
@@ -1230,7 +1230,7 @@ vint8mf8_t test_vget_v_i8mf8x3_i8mf8(vint8mf8x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x4_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_4t(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_4t(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x4_i8mf8(vint8mf8x4_t src, size_t index) {
@@ -1240,7 +1240,7 @@ vint8mf8_t test_vget_v_i8mf8x4_i8mf8(vint8mf8x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x5_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_5t(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_5t(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x5_i8mf8(vint8mf8x5_t src, size_t index) {
@@ -1250,7 +1250,7 @@ vint8mf8_t test_vget_v_i8mf8x5_i8mf8(vint8mf8x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x6_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_6t(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_6t(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x6_i8mf8(vint8mf8x6_t src, size_t index) {
@@ -1260,7 +1260,7 @@ vint8mf8_t test_vget_v_i8mf8x6_i8mf8(vint8mf8x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x7_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_7t(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_7t(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x7_i8mf8(vint8mf8x7_t src, size_t index) {
@@ -1270,7 +1270,7 @@ vint8mf8_t test_vget_v_i8mf8x7_i8mf8(vint8mf8x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_i8mf8x8_i8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_8t(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_8t(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vint8mf8_t test_vget_v_i8mf8x8_i8mf8(vint8mf8x8_t src, size_t index) {
@@ -1280,7 +1280,7 @@ vint8mf8_t test_vget_v_i8mf8x8_i8mf8(vint8mf8x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x2_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x2_i8mf4(vint8mf4x2_t src, size_t index) {
@@ -1290,7 +1290,7 @@ vint8mf4_t test_vget_v_i8mf4x2_i8mf4(vint8mf4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x3_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x3_i8mf4(vint8mf4x3_t src, size_t index) {
@@ -1300,7 +1300,7 @@ vint8mf4_t test_vget_v_i8mf4x3_i8mf4(vint8mf4x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x4_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x4_i8mf4(vint8mf4x4_t src, size_t index) {
@@ -1310,7 +1310,7 @@ vint8mf4_t test_vget_v_i8mf4x4_i8mf4(vint8mf4x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x5_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x5_i8mf4(vint8mf4x5_t src, size_t index) {
@@ -1320,7 +1320,7 @@ vint8mf4_t test_vget_v_i8mf4x5_i8mf4(vint8mf4x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x6_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x6_i8mf4(vint8mf4x6_t src, size_t index) {
@@ -1330,7 +1330,7 @@ vint8mf4_t test_vget_v_i8mf4x6_i8mf4(vint8mf4x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x7_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x7_i8mf4(vint8mf4x7_t src, size_t index) {
@@ -1340,7 +1340,7 @@ vint8mf4_t test_vget_v_i8mf4x7_i8mf4(vint8mf4x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_i8mf4x8_i8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vint8mf4_t test_vget_v_i8mf4x8_i8mf4(vint8mf4x8_t src, size_t index) {
@@ -1350,7 +1350,7 @@ vint8mf4_t test_vget_v_i8mf4x8_i8mf4(vint8mf4x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x2_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x2_i8mf2(vint8mf2x2_t src, size_t index) {
@@ -1360,7 +1360,7 @@ vint8mf2_t test_vget_v_i8mf2x2_i8mf2(vint8mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x3_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x3_i8mf2(vint8mf2x3_t src, size_t index) {
@@ -1370,7 +1370,7 @@ vint8mf2_t test_vget_v_i8mf2x3_i8mf2(vint8mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x4_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x4_i8mf2(vint8mf2x4_t src, size_t index) {
@@ -1380,7 +1380,7 @@ vint8mf2_t test_vget_v_i8mf2x4_i8mf2(vint8mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x5_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x5_i8mf2(vint8mf2x5_t src, size_t index) {
@@ -1390,7 +1390,7 @@ vint8mf2_t test_vget_v_i8mf2x5_i8mf2(vint8mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x6_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x6_i8mf2(vint8mf2x6_t src, size_t index) {
@@ -1400,7 +1400,7 @@ vint8mf2_t test_vget_v_i8mf2x6_i8mf2(vint8mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x7_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x7_i8mf2(vint8mf2x7_t src, size_t index) {
@@ -1410,7 +1410,7 @@ vint8mf2_t test_vget_v_i8mf2x7_i8mf2(vint8mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_i8mf2x8_i8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vint8mf2_t test_vget_v_i8mf2x8_i8mf2(vint8mf2x8_t src, size_t index) {
@@ -1420,7 +1420,7 @@ vint8mf2_t test_vget_v_i8mf2x8_i8mf2(vint8mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x2_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x2_i8m1(vint8m1x2_t src, size_t index) {
@@ -1430,7 +1430,7 @@ vint8m1_t test_vget_v_i8m1x2_i8m1(vint8m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x3_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x3_i8m1(vint8m1x3_t src, size_t index) {
@@ -1440,7 +1440,7 @@ vint8m1_t test_vget_v_i8m1x3_i8m1(vint8m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x4_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x4_i8m1(vint8m1x4_t src, size_t index) {
@@ -1450,7 +1450,7 @@ vint8m1_t test_vget_v_i8m1x4_i8m1(vint8m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x5_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x5_i8m1(vint8m1x5_t src, size_t index) {
@@ -1460,7 +1460,7 @@ vint8m1_t test_vget_v_i8m1x5_i8m1(vint8m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x6_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x6_i8m1(vint8m1x6_t src, size_t index) {
@@ -1470,7 +1470,7 @@ vint8m1_t test_vget_v_i8m1x6_i8m1(vint8m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x7_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x7_i8m1(vint8m1x7_t src, size_t index) {
@@ -1480,7 +1480,7 @@ vint8m1_t test_vget_v_i8m1x7_i8m1(vint8m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_i8m1x8_i8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m1x8_i8m1(vint8m1x8_t src, size_t index) {
@@ -1490,7 +1490,7 @@ vint8m1_t test_vget_v_i8m1x8_i8m1(vint8m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x2_i8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x2_i8m2(vint8m2x2_t src, size_t index) {
@@ -1500,7 +1500,7 @@ vint8m2_t test_vget_v_i8m2x2_i8m2(vint8m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x3_i8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x3_i8m2(vint8m2x3_t src, size_t index) {
@@ -1510,7 +1510,7 @@ vint8m2_t test_vget_v_i8m2x3_i8m2(vint8m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_i8m2x4_i8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vget_v_i8m2x4_i8m2(vint8m2x4_t src, size_t index) {
@@ -1520,7 +1520,7 @@ vint8m2_t test_vget_v_i8m2x4_i8m2(vint8m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vget_v_i8m4x2_i8m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vector.extract.nxv32i8.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.tuple.extract.nxv32i8.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vint8m4_t test_vget_v_i8m4x2_i8m4(vint8m4x2_t src, size_t index) {
@@ -1530,7 +1530,7 @@ vint8m4_t test_vget_v_i8m4x2_i8m4(vint8m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x2_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x2_i16mf4(vint16mf4x2_t src, size_t index) {
@@ -1540,7 +1540,7 @@ vint16mf4_t test_vget_v_i16mf4x2_i16mf4(vint16mf4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x3_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x3_i16mf4(vint16mf4x3_t src, size_t index) {
@@ -1550,7 +1550,7 @@ vint16mf4_t test_vget_v_i16mf4x3_i16mf4(vint16mf4x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x4_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x4_i16mf4(vint16mf4x4_t src, size_t index) {
@@ -1560,7 +1560,7 @@ vint16mf4_t test_vget_v_i16mf4x4_i16mf4(vint16mf4x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x5_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x5_i16mf4(vint16mf4x5_t src, size_t index) {
@@ -1570,7 +1570,7 @@ vint16mf4_t test_vget_v_i16mf4x5_i16mf4(vint16mf4x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x6_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x6_i16mf4(vint16mf4x6_t src, size_t index) {
@@ -1580,7 +1580,7 @@ vint16mf4_t test_vget_v_i16mf4x6_i16mf4(vint16mf4x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x7_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x7_i16mf4(vint16mf4x7_t src, size_t index) {
@@ -1590,7 +1590,7 @@ vint16mf4_t test_vget_v_i16mf4x7_i16mf4(vint16mf4x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_i16mf4x8_i16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vint16mf4_t test_vget_v_i16mf4x8_i16mf4(vint16mf4x8_t src, size_t index) {
@@ -1600,7 +1600,7 @@ vint16mf4_t test_vget_v_i16mf4x8_i16mf4(vint16mf4x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x2_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x2_i16mf2(vint16mf2x2_t src, size_t index) {
@@ -1610,7 +1610,7 @@ vint16mf2_t test_vget_v_i16mf2x2_i16mf2(vint16mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x3_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x3_i16mf2(vint16mf2x3_t src, size_t index) {
@@ -1620,7 +1620,7 @@ vint16mf2_t test_vget_v_i16mf2x3_i16mf2(vint16mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x4_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x4_i16mf2(vint16mf2x4_t src, size_t index) {
@@ -1630,7 +1630,7 @@ vint16mf2_t test_vget_v_i16mf2x4_i16mf2(vint16mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x5_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x5_i16mf2(vint16mf2x5_t src, size_t index) {
@@ -1640,7 +1640,7 @@ vint16mf2_t test_vget_v_i16mf2x5_i16mf2(vint16mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x6_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x6_i16mf2(vint16mf2x6_t src, size_t index) {
@@ -1650,7 +1650,7 @@ vint16mf2_t test_vget_v_i16mf2x6_i16mf2(vint16mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x7_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x7_i16mf2(vint16mf2x7_t src, size_t index) {
@@ -1660,7 +1660,7 @@ vint16mf2_t test_vget_v_i16mf2x7_i16mf2(vint16mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_i16mf2x8_i16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vint16mf2_t test_vget_v_i16mf2x8_i16mf2(vint16mf2x8_t src, size_t index) {
@@ -1670,7 +1670,7 @@ vint16mf2_t test_vget_v_i16mf2x8_i16mf2(vint16mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x2_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x2_i16m1(vint16m1x2_t src, size_t index) {
@@ -1680,7 +1680,7 @@ vint16m1_t test_vget_v_i16m1x2_i16m1(vint16m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x3_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x3_i16m1(vint16m1x3_t src, size_t index) {
@@ -1690,7 +1690,7 @@ vint16m1_t test_vget_v_i16m1x3_i16m1(vint16m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x4_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x4_i16m1(vint16m1x4_t src, size_t index) {
@@ -1700,7 +1700,7 @@ vint16m1_t test_vget_v_i16m1x4_i16m1(vint16m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x5_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x5_i16m1(vint16m1x5_t src, size_t index) {
@@ -1710,7 +1710,7 @@ vint16m1_t test_vget_v_i16m1x5_i16m1(vint16m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x6_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x6_i16m1(vint16m1x6_t src, size_t index) {
@@ -1720,7 +1720,7 @@ vint16m1_t test_vget_v_i16m1x6_i16m1(vint16m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x7_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x7_i16m1(vint16m1x7_t src, size_t index) {
@@ -1730,7 +1730,7 @@ vint16m1_t test_vget_v_i16m1x7_i16m1(vint16m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_i16m1x8_i16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vint16m1_t test_vget_v_i16m1x8_i16m1(vint16m1x8_t src, size_t index) {
@@ -1740,7 +1740,7 @@ vint16m1_t test_vget_v_i16m1x8_i16m1(vint16m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x2_i16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x2_i16m2(vint16m2x2_t src, size_t index) {
@@ -1750,7 +1750,7 @@ vint16m2_t test_vget_v_i16m2x2_i16m2(vint16m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x3_i16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x3_i16m2(vint16m2x3_t src, size_t index) {
@@ -1760,7 +1760,7 @@ vint16m2_t test_vget_v_i16m2x3_i16m2(vint16m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_i16m2x4_i16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vint16m2_t test_vget_v_i16m2x4_i16m2(vint16m2x4_t src, size_t index) {
@@ -1770,7 +1770,7 @@ vint16m2_t test_vget_v_i16m2x4_i16m2(vint16m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_vget_v_i16m4x2_i16m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vector.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vint16m4_t test_vget_v_i16m4x2_i16m4(vint16m4x2_t src, size_t index) {
@@ -1780,7 +1780,7 @@ vint16m4_t test_vget_v_i16m4x2_i16m4(vint16m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x2_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x2_i32mf2(vint32mf2x2_t src, size_t index) {
@@ -1790,7 +1790,7 @@ vint32mf2_t test_vget_v_i32mf2x2_i32mf2(vint32mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x3_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x3_i32mf2(vint32mf2x3_t src, size_t index) {
@@ -1800,7 +1800,7 @@ vint32mf2_t test_vget_v_i32mf2x3_i32mf2(vint32mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x4_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x4_i32mf2(vint32mf2x4_t src, size_t index) {
@@ -1810,7 +1810,7 @@ vint32mf2_t test_vget_v_i32mf2x4_i32mf2(vint32mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x5_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x5_i32mf2(vint32mf2x5_t src, size_t index) {
@@ -1820,7 +1820,7 @@ vint32mf2_t test_vget_v_i32mf2x5_i32mf2(vint32mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x6_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x6_i32mf2(vint32mf2x6_t src, size_t index) {
@@ -1830,7 +1830,7 @@ vint32mf2_t test_vget_v_i32mf2x6_i32mf2(vint32mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x7_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x7_i32mf2(vint32mf2x7_t src, size_t index) {
@@ -1840,7 +1840,7 @@ vint32mf2_t test_vget_v_i32mf2x7_i32mf2(vint32mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_i32mf2x8_i32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vget_v_i32mf2x8_i32mf2(vint32mf2x8_t src, size_t index) {
@@ -1850,7 +1850,7 @@ vint32mf2_t test_vget_v_i32mf2x8_i32mf2(vint32mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x2_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x2_i32m1(vint32m1x2_t src, size_t index) {
@@ -1860,7 +1860,7 @@ vint32m1_t test_vget_v_i32m1x2_i32m1(vint32m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x3_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x3_i32m1(vint32m1x3_t src, size_t index) {
@@ -1870,7 +1870,7 @@ vint32m1_t test_vget_v_i32m1x3_i32m1(vint32m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x4_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x4_i32m1(vint32m1x4_t src, size_t index) {
@@ -1880,7 +1880,7 @@ vint32m1_t test_vget_v_i32m1x4_i32m1(vint32m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x5_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x5_i32m1(vint32m1x5_t src, size_t index) {
@@ -1890,7 +1890,7 @@ vint32m1_t test_vget_v_i32m1x5_i32m1(vint32m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x6_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x6_i32m1(vint32m1x6_t src, size_t index) {
@@ -1900,7 +1900,7 @@ vint32m1_t test_vget_v_i32m1x6_i32m1(vint32m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x7_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x7_i32m1(vint32m1x7_t src, size_t index) {
@@ -1910,7 +1910,7 @@ vint32m1_t test_vget_v_i32m1x7_i32m1(vint32m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_i32m1x8_i32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vint32m1_t test_vget_v_i32m1x8_i32m1(vint32m1x8_t src, size_t index) {
@@ -1920,7 +1920,7 @@ vint32m1_t test_vget_v_i32m1x8_i32m1(vint32m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x2_i32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x2_i32m2(vint32m2x2_t src, size_t index) {
@@ -1930,7 +1930,7 @@ vint32m2_t test_vget_v_i32m2x2_i32m2(vint32m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x3_i32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x3_i32m2(vint32m2x3_t src, size_t index) {
@@ -1940,7 +1940,7 @@ vint32m2_t test_vget_v_i32m2x3_i32m2(vint32m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_i32m2x4_i32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vint32m2_t test_vget_v_i32m2x4_i32m2(vint32m2x4_t src, size_t index) {
@@ -1950,7 +1950,7 @@ vint32m2_t test_vget_v_i32m2x4_i32m2(vint32m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i32> @test_vget_v_i32m4x2_i32m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vector.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vint32m4_t test_vget_v_i32m4x2_i32m4(vint32m4x2_t src, size_t index) {
@@ -1960,7 +1960,7 @@ vint32m4_t test_vget_v_i32m4x2_i32m4(vint32m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x2_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x2_i64m1(vint64m1x2_t src, size_t index) {
@@ -1970,7 +1970,7 @@ vint64m1_t test_vget_v_i64m1x2_i64m1(vint64m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x3_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x3_i64m1(vint64m1x3_t src, size_t index) {
@@ -1980,7 +1980,7 @@ vint64m1_t test_vget_v_i64m1x3_i64m1(vint64m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x4_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x4_i64m1(vint64m1x4_t src, size_t index) {
@@ -1990,7 +1990,7 @@ vint64m1_t test_vget_v_i64m1x4_i64m1(vint64m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x5_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x5_i64m1(vint64m1x5_t src, size_t index) {
@@ -2000,7 +2000,7 @@ vint64m1_t test_vget_v_i64m1x5_i64m1(vint64m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x6_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x6_i64m1(vint64m1x6_t src, size_t index) {
@@ -2010,7 +2010,7 @@ vint64m1_t test_vget_v_i64m1x6_i64m1(vint64m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x7_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x7_i64m1(vint64m1x7_t src, size_t index) {
@@ -2020,7 +2020,7 @@ vint64m1_t test_vget_v_i64m1x7_i64m1(vint64m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_i64m1x8_i64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vget_v_i64m1x8_i64m1(vint64m1x8_t src, size_t index) {
@@ -2030,7 +2030,7 @@ vint64m1_t test_vget_v_i64m1x8_i64m1(vint64m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x2_i64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x2_i64m2(vint64m2x2_t src, size_t index) {
@@ -2040,7 +2040,7 @@ vint64m2_t test_vget_v_i64m2x2_i64m2(vint64m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x3_i64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x3_i64m2(vint64m2x3_t src, size_t index) {
@@ -2050,7 +2050,7 @@ vint64m2_t test_vget_v_i64m2x3_i64m2(vint64m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_i64m2x4_i64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vget_v_i64m2x4_i64m2(vint64m2x4_t src, size_t index) {
@@ -2060,7 +2060,7 @@ vint64m2_t test_vget_v_i64m2x4_i64m2(vint64m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i64> @test_vget_v_i64m4x2_i64m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vector.extract.nxv4i64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.tuple.extract.nxv4i64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vint64m4_t test_vget_v_i64m4x2_i64m4(vint64m4x2_t src, size_t index) {
@@ -2070,7 +2070,7 @@ vint64m4_t test_vget_v_i64m4x2_i64m4(vint64m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x2_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_2t(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_2t(target("riscv.vector.tuple", <vscale x 1 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x2_u8mf8(vuint8mf8x2_t src, size_t index) {
@@ -2080,7 +2080,7 @@ vuint8mf8_t test_vget_v_u8mf8x2_u8mf8(vuint8mf8x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x3_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_3t(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_3t(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x3_u8mf8(vuint8mf8x3_t src, size_t index) {
@@ -2090,7 +2090,7 @@ vuint8mf8_t test_vget_v_u8mf8x3_u8mf8(vuint8mf8x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x4_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_4t(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_4t(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x4_u8mf8(vuint8mf8x4_t src, size_t index) {
@@ -2100,7 +2100,7 @@ vuint8mf8_t test_vget_v_u8mf8x4_u8mf8(vuint8mf8x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x5_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_5t(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_5t(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x5_u8mf8(vuint8mf8x5_t src, size_t index) {
@@ -2110,7 +2110,7 @@ vuint8mf8_t test_vget_v_u8mf8x5_u8mf8(vuint8mf8x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x6_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_6t(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_6t(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x6_u8mf8(vuint8mf8x6_t src, size_t index) {
@@ -2120,7 +2120,7 @@ vuint8mf8_t test_vget_v_u8mf8x6_u8mf8(vuint8mf8x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x7_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_7t(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_7t(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x7_u8mf8(vuint8mf8x7_t src, size_t index) {
@@ -2130,7 +2130,7 @@ vuint8mf8_t test_vget_v_u8mf8x7_u8mf8(vuint8mf8x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vget_v_u8mf8x8_u8mf8
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vector.extract.nxv1i8.triscv.vector.tuple_nxv1i8_8t(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.tuple.extract.nxv1i8.triscv.vector.tuple_nxv1i8_8t(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
 //
 vuint8mf8_t test_vget_v_u8mf8x8_u8mf8(vuint8mf8x8_t src, size_t index) {
@@ -2140,7 +2140,7 @@ vuint8mf8_t test_vget_v_u8mf8x8_u8mf8(vuint8mf8x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x2_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x2_u8mf4(vuint8mf4x2_t src, size_t index) {
@@ -2150,7 +2150,7 @@ vuint8mf4_t test_vget_v_u8mf4x2_u8mf4(vuint8mf4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x3_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x3_u8mf4(vuint8mf4x3_t src, size_t index) {
@@ -2160,7 +2160,7 @@ vuint8mf4_t test_vget_v_u8mf4x3_u8mf4(vuint8mf4x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x4_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x4_u8mf4(vuint8mf4x4_t src, size_t index) {
@@ -2170,7 +2170,7 @@ vuint8mf4_t test_vget_v_u8mf4x4_u8mf4(vuint8mf4x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x5_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x5_u8mf4(vuint8mf4x5_t src, size_t index) {
@@ -2180,7 +2180,7 @@ vuint8mf4_t test_vget_v_u8mf4x5_u8mf4(vuint8mf4x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x6_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x6_u8mf4(vuint8mf4x6_t src, size_t index) {
@@ -2190,7 +2190,7 @@ vuint8mf4_t test_vget_v_u8mf4x6_u8mf4(vuint8mf4x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x7_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x7_u8mf4(vuint8mf4x7_t src, size_t index) {
@@ -2200,7 +2200,7 @@ vuint8mf4_t test_vget_v_u8mf4x7_u8mf4(vuint8mf4x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vget_v_u8mf4x8_u8mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.vector.extract.nxv2i8.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.tuple.extract.nxv2i8.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
 //
 vuint8mf4_t test_vget_v_u8mf4x8_u8mf4(vuint8mf4x8_t src, size_t index) {
@@ -2210,7 +2210,7 @@ vuint8mf4_t test_vget_v_u8mf4x8_u8mf4(vuint8mf4x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x2_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x2_u8mf2(vuint8mf2x2_t src, size_t index) {
@@ -2220,7 +2220,7 @@ vuint8mf2_t test_vget_v_u8mf2x2_u8mf2(vuint8mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x3_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x3_u8mf2(vuint8mf2x3_t src, size_t index) {
@@ -2230,7 +2230,7 @@ vuint8mf2_t test_vget_v_u8mf2x3_u8mf2(vuint8mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x4_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x4_u8mf2(vuint8mf2x4_t src, size_t index) {
@@ -2240,7 +2240,7 @@ vuint8mf2_t test_vget_v_u8mf2x4_u8mf2(vuint8mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x5_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x5_u8mf2(vuint8mf2x5_t src, size_t index) {
@@ -2250,7 +2250,7 @@ vuint8mf2_t test_vget_v_u8mf2x5_u8mf2(vuint8mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x6_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x6_u8mf2(vuint8mf2x6_t src, size_t index) {
@@ -2260,7 +2260,7 @@ vuint8mf2_t test_vget_v_u8mf2x6_u8mf2(vuint8mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x7_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x7_u8mf2(vuint8mf2x7_t src, size_t index) {
@@ -2270,7 +2270,7 @@ vuint8mf2_t test_vget_v_u8mf2x7_u8mf2(vuint8mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vget_v_u8mf2x8_u8mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vector.extract.nxv4i8.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.tuple.extract.nxv4i8.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 //
 vuint8mf2_t test_vget_v_u8mf2x8_u8mf2(vuint8mf2x8_t src, size_t index) {
@@ -2280,7 +2280,7 @@ vuint8mf2_t test_vget_v_u8mf2x8_u8mf2(vuint8mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x2_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x2_u8m1(vuint8m1x2_t src, size_t index) {
@@ -2290,7 +2290,7 @@ vuint8m1_t test_vget_v_u8m1x2_u8m1(vuint8m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x3_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x3_u8m1(vuint8m1x3_t src, size_t index) {
@@ -2300,7 +2300,7 @@ vuint8m1_t test_vget_v_u8m1x3_u8m1(vuint8m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x4_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x4_u8m1(vuint8m1x4_t src, size_t index) {
@@ -2310,7 +2310,7 @@ vuint8m1_t test_vget_v_u8m1x4_u8m1(vuint8m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x5_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x5_u8m1(vuint8m1x5_t src, size_t index) {
@@ -2320,7 +2320,7 @@ vuint8m1_t test_vget_v_u8m1x5_u8m1(vuint8m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x6_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x6_u8m1(vuint8m1x6_t src, size_t index) {
@@ -2330,7 +2330,7 @@ vuint8m1_t test_vget_v_u8m1x6_u8m1(vuint8m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x7_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x7_u8m1(vuint8m1x7_t src, size_t index) {
@@ -2340,7 +2340,7 @@ vuint8m1_t test_vget_v_u8m1x7_u8m1(vuint8m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vget_v_u8m1x8_u8m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vector.extract.nxv8i8.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vuint8m1_t test_vget_v_u8m1x8_u8m1(vuint8m1x8_t src, size_t index) {
@@ -2350,7 +2350,7 @@ vuint8m1_t test_vget_v_u8m1x8_u8m1(vuint8m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x2_u8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x2_u8m2(vuint8m2x2_t src, size_t index) {
@@ -2360,7 +2360,7 @@ vuint8m2_t test_vget_v_u8m2x2_u8m2(vuint8m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x3_u8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x3_u8m2(vuint8m2x3_t src, size_t index) {
@@ -2370,7 +2370,7 @@ vuint8m2_t test_vget_v_u8m2x3_u8m2(vuint8m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vget_v_u8m2x4_u8m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.vector.extract.nxv16i8.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.tuple.extract.nxv16i8.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vuint8m2_t test_vget_v_u8m2x4_u8m2(vuint8m2x4_t src, size_t index) {
@@ -2380,7 +2380,7 @@ vuint8m2_t test_vget_v_u8m2x4_u8m2(vuint8m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vget_v_u8m4x2_u8m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.vector.extract.nxv32i8.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.tuple.extract.nxv32i8.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
 //
 vuint8m4_t test_vget_v_u8m4x2_u8m4(vuint8m4x2_t src, size_t index) {
@@ -2390,7 +2390,7 @@ vuint8m4_t test_vget_v_u8m4x2_u8m4(vuint8m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x2_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_2t(target("riscv.vector.tuple", <vscale x 2 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x2_u16mf4(vuint16mf4x2_t src, size_t index) {
@@ -2400,7 +2400,7 @@ vuint16mf4_t test_vget_v_u16mf4x2_u16mf4(vuint16mf4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x3_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_3t(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x3_u16mf4(vuint16mf4x3_t src, size_t index) {
@@ -2410,7 +2410,7 @@ vuint16mf4_t test_vget_v_u16mf4x3_u16mf4(vuint16mf4x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x4_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_4t(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x4_u16mf4(vuint16mf4x4_t src, size_t index) {
@@ -2420,7 +2420,7 @@ vuint16mf4_t test_vget_v_u16mf4x4_u16mf4(vuint16mf4x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x5_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_5t(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x5_u16mf4(vuint16mf4x5_t src, size_t index) {
@@ -2430,7 +2430,7 @@ vuint16mf4_t test_vget_v_u16mf4x5_u16mf4(vuint16mf4x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x6_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_6t(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x6_u16mf4(vuint16mf4x6_t src, size_t index) {
@@ -2440,7 +2440,7 @@ vuint16mf4_t test_vget_v_u16mf4x6_u16mf4(vuint16mf4x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x7_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_7t(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x7_u16mf4(vuint16mf4x7_t src, size_t index) {
@@ -2450,7 +2450,7 @@ vuint16mf4_t test_vget_v_u16mf4x7_u16mf4(vuint16mf4x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_vget_v_u16mf4x8_u16mf4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.vector.extract.nxv1i16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.tuple.extract.nxv1i16.triscv.vector.tuple_nxv2i8_8t(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
 //
 vuint16mf4_t test_vget_v_u16mf4x8_u16mf4(vuint16mf4x8_t src, size_t index) {
@@ -2460,7 +2460,7 @@ vuint16mf4_t test_vget_v_u16mf4x8_u16mf4(vuint16mf4x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x2_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x2_u16mf2(vuint16mf2x2_t src, size_t index) {
@@ -2470,7 +2470,7 @@ vuint16mf2_t test_vget_v_u16mf2x2_u16mf2(vuint16mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x3_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x3_u16mf2(vuint16mf2x3_t src, size_t index) {
@@ -2480,7 +2480,7 @@ vuint16mf2_t test_vget_v_u16mf2x3_u16mf2(vuint16mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x4_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x4_u16mf2(vuint16mf2x4_t src, size_t index) {
@@ -2490,7 +2490,7 @@ vuint16mf2_t test_vget_v_u16mf2x4_u16mf2(vuint16mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x5_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x5_u16mf2(vuint16mf2x5_t src, size_t index) {
@@ -2500,7 +2500,7 @@ vuint16mf2_t test_vget_v_u16mf2x5_u16mf2(vuint16mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x6_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x6_u16mf2(vuint16mf2x6_t src, size_t index) {
@@ -2510,7 +2510,7 @@ vuint16mf2_t test_vget_v_u16mf2x6_u16mf2(vuint16mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x7_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x7_u16mf2(vuint16mf2x7_t src, size_t index) {
@@ -2520,7 +2520,7 @@ vuint16mf2_t test_vget_v_u16mf2x7_u16mf2(vuint16mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_vget_v_u16mf2x8_u16mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.vector.extract.nxv2i16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.tuple.extract.nxv2i16.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
 //
 vuint16mf2_t test_vget_v_u16mf2x8_u16mf2(vuint16mf2x8_t src, size_t index) {
@@ -2530,7 +2530,7 @@ vuint16mf2_t test_vget_v_u16mf2x8_u16mf2(vuint16mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x2_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x2_u16m1(vuint16m1x2_t src, size_t index) {
@@ -2540,7 +2540,7 @@ vuint16m1_t test_vget_v_u16m1x2_u16m1(vuint16m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x3_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x3_u16m1(vuint16m1x3_t src, size_t index) {
@@ -2550,7 +2550,7 @@ vuint16m1_t test_vget_v_u16m1x3_u16m1(vuint16m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x4_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x4_u16m1(vuint16m1x4_t src, size_t index) {
@@ -2560,7 +2560,7 @@ vuint16m1_t test_vget_v_u16m1x4_u16m1(vuint16m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x5_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x5_u16m1(vuint16m1x5_t src, size_t index) {
@@ -2570,7 +2570,7 @@ vuint16m1_t test_vget_v_u16m1x5_u16m1(vuint16m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x6_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x6_u16m1(vuint16m1x6_t src, size_t index) {
@@ -2580,7 +2580,7 @@ vuint16m1_t test_vget_v_u16m1x6_u16m1(vuint16m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x7_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x7_u16m1(vuint16m1x7_t src, size_t index) {
@@ -2590,7 +2590,7 @@ vuint16m1_t test_vget_v_u16m1x7_u16m1(vuint16m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vget_v_u16m1x8_u16m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vector.extract.nxv4i16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.tuple.extract.nxv4i16.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
 //
 vuint16m1_t test_vget_v_u16m1x8_u16m1(vuint16m1x8_t src, size_t index) {
@@ -2600,7 +2600,7 @@ vuint16m1_t test_vget_v_u16m1x8_u16m1(vuint16m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x2_u16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x2_u16m2(vuint16m2x2_t src, size_t index) {
@@ -2610,7 +2610,7 @@ vuint16m2_t test_vget_v_u16m2x2_u16m2(vuint16m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x3_u16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x3_u16m2(vuint16m2x3_t src, size_t index) {
@@ -2620,7 +2620,7 @@ vuint16m2_t test_vget_v_u16m2x3_u16m2(vuint16m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_vget_v_u16m2x4_u16m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.vector.extract.nxv8i16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.tuple.extract.nxv8i16.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 vuint16m2_t test_vget_v_u16m2x4_u16m2(vuint16m2x4_t src, size_t index) {
@@ -2630,7 +2630,7 @@ vuint16m2_t test_vget_v_u16m2x4_u16m2(vuint16m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_vget_v_u16m4x2_u16m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.vector.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
 //
 vuint16m4_t test_vget_v_u16m4x2_u16m4(vuint16m4x2_t src, size_t index) {
@@ -2640,7 +2640,7 @@ vuint16m4_t test_vget_v_u16m4x2_u16m4(vuint16m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x2_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x2_u32mf2(vuint32mf2x2_t src, size_t index) {
@@ -2650,7 +2650,7 @@ vuint32mf2_t test_vget_v_u32mf2x2_u32mf2(vuint32mf2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x3_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x3_u32mf2(vuint32mf2x3_t src, size_t index) {
@@ -2660,7 +2660,7 @@ vuint32mf2_t test_vget_v_u32mf2x3_u32mf2(vuint32mf2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x4_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x4_u32mf2(vuint32mf2x4_t src, size_t index) {
@@ -2670,7 +2670,7 @@ vuint32mf2_t test_vget_v_u32mf2x4_u32mf2(vuint32mf2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x5_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x5_u32mf2(vuint32mf2x5_t src, size_t index) {
@@ -2680,7 +2680,7 @@ vuint32mf2_t test_vget_v_u32mf2x5_u32mf2(vuint32mf2x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x6_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x6_u32mf2(vuint32mf2x6_t src, size_t index) {
@@ -2690,7 +2690,7 @@ vuint32mf2_t test_vget_v_u32mf2x6_u32mf2(vuint32mf2x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x7_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x7_u32mf2(vuint32mf2x7_t src, size_t index) {
@@ -2700,7 +2700,7 @@ vuint32mf2_t test_vget_v_u32mf2x7_u32mf2(vuint32mf2x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_vget_v_u32mf2x8_u32mf2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vector.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vget_v_u32mf2x8_u32mf2(vuint32mf2x8_t src, size_t index) {
@@ -2710,7 +2710,7 @@ vuint32mf2_t test_vget_v_u32mf2x8_u32mf2(vuint32mf2x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x2_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x2_u32m1(vuint32m1x2_t src, size_t index) {
@@ -2720,7 +2720,7 @@ vuint32m1_t test_vget_v_u32m1x2_u32m1(vuint32m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x3_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x3_u32m1(vuint32m1x3_t src, size_t index) {
@@ -2730,7 +2730,7 @@ vuint32m1_t test_vget_v_u32m1x3_u32m1(vuint32m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x4_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x4_u32m1(vuint32m1x4_t src, size_t index) {
@@ -2740,7 +2740,7 @@ vuint32m1_t test_vget_v_u32m1x4_u32m1(vuint32m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x5_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x5_u32m1(vuint32m1x5_t src, size_t index) {
@@ -2750,7 +2750,7 @@ vuint32m1_t test_vget_v_u32m1x5_u32m1(vuint32m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x6_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x6_u32m1(vuint32m1x6_t src, size_t index) {
@@ -2760,7 +2760,7 @@ vuint32m1_t test_vget_v_u32m1x6_u32m1(vuint32m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x7_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x7_u32m1(vuint32m1x7_t src, size_t index) {
@@ -2770,7 +2770,7 @@ vuint32m1_t test_vget_v_u32m1x7_u32m1(vuint32m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vget_v_u32m1x8_u32m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vector.extract.nxv2i32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
 vuint32m1_t test_vget_v_u32m1x8_u32m1(vuint32m1x8_t src, size_t index) {
@@ -2780,7 +2780,7 @@ vuint32m1_t test_vget_v_u32m1x8_u32m1(vuint32m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x2_u32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x2_u32m2(vuint32m2x2_t src, size_t index) {
@@ -2790,7 +2790,7 @@ vuint32m2_t test_vget_v_u32m2x2_u32m2(vuint32m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x3_u32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x3_u32m2(vuint32m2x3_t src, size_t index) {
@@ -2800,7 +2800,7 @@ vuint32m2_t test_vget_v_u32m2x3_u32m2(vuint32m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_vget_v_u32m2x4_u32m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vector.extract.nxv4i32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 vuint32m2_t test_vget_v_u32m2x4_u32m2(vuint32m2x4_t src, size_t index) {
@@ -2810,7 +2810,7 @@ vuint32m2_t test_vget_v_u32m2x4_u32m2(vuint32m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i32> @test_vget_v_u32m4x2_u32m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vector.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
 vuint32m4_t test_vget_v_u32m4x2_u32m4(vuint32m4x2_t src, size_t index) {
@@ -2820,7 +2820,7 @@ vuint32m4_t test_vget_v_u32m4x2_u32m4(vuint32m4x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x2_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x2_u64m1(vuint64m1x2_t src, size_t index) {
@@ -2830,7 +2830,7 @@ vuint64m1_t test_vget_v_u64m1x2_u64m1(vuint64m1x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x3_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_3t(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x3_u64m1(vuint64m1x3_t src, size_t index) {
@@ -2840,7 +2840,7 @@ vuint64m1_t test_vget_v_u64m1x3_u64m1(vuint64m1x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x4_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_4t(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x4_u64m1(vuint64m1x4_t src, size_t index) {
@@ -2850,7 +2850,7 @@ vuint64m1_t test_vget_v_u64m1x4_u64m1(vuint64m1x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x5_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_5t(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x5_u64m1(vuint64m1x5_t src, size_t index) {
@@ -2860,7 +2860,7 @@ vuint64m1_t test_vget_v_u64m1x5_u64m1(vuint64m1x5_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x6_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_6t(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x6_u64m1(vuint64m1x6_t src, size_t index) {
@@ -2870,7 +2870,7 @@ vuint64m1_t test_vget_v_u64m1x6_u64m1(vuint64m1x6_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x7_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_7t(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x7_u64m1(vuint64m1x7_t src, size_t index) {
@@ -2880,7 +2880,7 @@ vuint64m1_t test_vget_v_u64m1x7_u64m1(vuint64m1x7_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vget_v_u64m1x8_u64m1
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vector.extract.nxv1i64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.tuple.extract.nxv1i64.triscv.vector.tuple_nxv8i8_8t(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vget_v_u64m1x8_u64m1(vuint64m1x8_t src, size_t index) {
@@ -2890,7 +2890,7 @@ vuint64m1_t test_vget_v_u64m1x8_u64m1(vuint64m1x8_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x2_u64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x2_u64m2(vuint64m2x2_t src, size_t index) {
@@ -2900,7 +2900,7 @@ vuint64m2_t test_vget_v_u64m2x2_u64m2(vuint64m2x2_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x3_u64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x3_u64m2(vuint64m2x3_t src, size_t index) {
@@ -2910,7 +2910,7 @@ vuint64m2_t test_vget_v_u64m2x3_u64m2(vuint64m2x3_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_vget_v_u64m2x4_u64m2
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vector.extract.nxv2i64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.tuple.extract.nxv2i64.triscv.vector.tuple_nxv16i8_4t(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vget_v_u64m2x4_u64m2(vuint64m2x4_t src, size_t index) {
@@ -2920,7 +2920,7 @@ vuint64m2_t test_vget_v_u64m2x4_u64m2(vuint64m2x4_t src, size_t index) {
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i64> @test_vget_v_u64m4x2_u64m4
 // CHECK-RV64-SAME: (target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vector.extract.nxv4i64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.tuple.extract.nxv4i64.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[SRC]], i32 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vget_v_u64m4x2_u64m4(vuint64m4x2_t src, size_t index) {
