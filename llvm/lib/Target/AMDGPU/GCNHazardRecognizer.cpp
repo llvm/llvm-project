@@ -2888,7 +2888,6 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   return false;
 }
 
-#if LLPC_BUILD_GFX12
 // Adjust global offsets for instructions bundled with S_GETPC_B64 after
 // insertion of a new instruction.
 static void updateGetPCBundle(MachineInstr *NewMI) {
@@ -2907,7 +2906,9 @@ static void updateGetPCBundle(MachineInstr *NewMI) {
     return;
 
   // Update offsets of any references in the bundle.
-  const unsigned NewBytes = NewMI->getDesc().getSize();
+  const unsigned NewBytes = 4;
+  assert(NewMI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         "Unexpected instruction insertion in bundle");
   auto NextMI = std::next(NewMI->getIterator());
   auto End = NewMI->getParent()->end();
   while (NextMI != End && NextMI->isBundledWithPred()) {
@@ -2919,7 +2920,6 @@ static void updateGetPCBundle(MachineInstr *NewMI) {
   }
 }
 
-#endif /* LLPC_BUILD_GFX12 */
 bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   if (!ST.hasVALUMaskWriteHazard())
     return false;
@@ -3037,15 +3037,9 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   auto NextMI = std::next(MI->getIterator());
 
   // Add s_waitcnt_depctr sa_sdst(0) after SALU write.
-#if LLPC_BUILD_GFX12
   auto NewMI = BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
                        TII.get(AMDGPU::S_WAITCNT_DEPCTR))
                    .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
-#else /* LLPC_BUILD_GFX12 */
-  BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
-          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
-#endif /* LLPC_BUILD_GFX12 */
 
   // SALU write may be s_getpc in a bundle.
 #if LLPC_BUILD_GFX12
@@ -3118,23 +3112,9 @@ void GCNHazardRecognizer::computeVALUHazardSGPRs(MachineFunction *MMF) {
           else
             ReadSGPRs.set(RegN);
         }
-#else /* LLPC_BUILD_GFX12 */
-  if (MI->getOpcode() == AMDGPU::S_GETPC_B64) {
-    // Update offsets of any references in the bundle.
-    while (NextMI != MI->getParent()->end() &&
-           NextMI->isBundledWithPred()) {
-      for (auto &Operand : NextMI->operands()) {
-        if (Operand.isGlobal())
-          Operand.setOffset(Operand.getOffset() + 4);
-#endif /* LLPC_BUILD_GFX12 */
       }
-#if LLPC_BUILD_GFX12
-#else /* LLPC_BUILD_GFX12 */
-      NextMI++;
-#endif /* LLPC_BUILD_GFX12 */
     }
   }
-#if LLPC_BUILD_GFX12
 }
 
 bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
@@ -3283,8 +3263,8 @@ bool GCNHazardRecognizer::fixVALUReadSGPRHazard(MachineInstr *MI) {
                    .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
 
   // SALU read may be after s_getpc in a bundle.
-  updateGetPCBundle(NewMI);
 #endif /* LLPC_BUILD_GFX12 */
+  updateGetPCBundle(NewMI);
 
   return true;
 }
