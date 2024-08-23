@@ -9297,7 +9297,7 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
-      for (const auto &[E, Idx] : SubVectors) {
+      for (const auto [E, Idx] : SubVectors) {
         Cost += ::getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
             FixedVectorType::get(ScalarTy, CommonMask.size()), std::nullopt,
@@ -12455,7 +12455,7 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
-      for (const auto &[E, Idx] : SubVectors) {
+      for (const auto [E, Idx] : SubVectors) {
         Vec = Builder.CreateInsertVector(
             Vec->getType(), Vec, E->VectorizedValue, Builder.getInt64(Idx));
         if (!CommonMask.empty()) {
@@ -12636,7 +12636,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                        E->ReuseShuffleIndices.end());
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
   // Clear values, to be replaced by insertvector instructions.
-  for (const auto &[EIdx, Idx] : E->CombinedEntriesWithIndices)
+  for (const auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
     for_each(MutableArrayRef(GatheredScalars)
                  .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
              [&](Value *&V) { V = PoisonValue::get(V->getType()); });
@@ -13073,7 +13073,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 }
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
-  for (const auto &[EIdx, _] : E->CombinedEntriesWithIndices)
+  for (const auto [EIdx, _] : E->CombinedEntriesWithIndices)
     (void)vectorizeTree(VectorizableTree[EIdx].get(), /*PostponedPHIs=*/false);
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
