@@ -767,6 +767,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # echo-appending to a file.
         # FIXME: Standardize on the builtin echo implementation. We can use a
         # temporary file to sidestep blocking pipe write issues.
+
+        # Ensure args[0] is hashable.
+        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
             # env calling an in-process builtin is useless, so we take the safe
@@ -1587,7 +1591,6 @@ class SubstDirective(ExpandableScriptDirective):
         assert (
             not self.needs_continuation()
         ), "expected directive continuations to be parsed before applying"
-        value_repl = self.value.replace("\\", "\\\\")
         existing = [i for i, subst in enumerate(substitutions) if self.name in subst[0]]
         existing_res = "".join(
             "\nExisting pattern: " + substitutions[i][0] for i in existing
@@ -1600,7 +1603,7 @@ class SubstDirective(ExpandableScriptDirective):
                     f"{self.get_location()}"
                     f"{existing_res}"
                 )
-            substitutions.insert(0, (self.name, value_repl))
+            substitutions.insert(0, (self.name, self.value))
             return
         if len(existing) > 1:
             raise ValueError(
@@ -1622,7 +1625,7 @@ class SubstDirective(ExpandableScriptDirective):
                 f"Expected pattern: {self.name}"
                 f"{existing_res}"
             )
-        substitutions[existing[0]] = (self.name, value_repl)
+        substitutions[existing[0]] = (self.name, self.value)
 
 
 def applySubstitutions(script, substitutions, conditions={}, recursion_limit=None):
@@ -1738,8 +1741,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
         # Apply substitutions
         ln = substituteIfElse(escapePercents(ln))
         for a, b in substitutions:
-            if kIsWindows:
-                b = b.replace("\\", "\\\\")
+            b = b.replace("\\", "\\\\")
             # re.compile() has a built-in LRU cache with 512 entries. In some
             # test suites lit ends up thrashing that cache, which made e.g.
             # check-llvm run 50% slower.  Use an explicit, unbounded cache

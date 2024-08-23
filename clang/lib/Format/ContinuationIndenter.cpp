@@ -128,25 +128,6 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
   return Tok.isMemberAccess() && Tok.Previous && Tok.Previous->closesScope();
 }
 
-// Returns \c true if \c Current starts a new parameter.
-static bool startsNextParameter(const FormatToken &Current,
-                                const FormatStyle &Style) {
-  assert(Current.Previous);
-  const auto &Previous = *Current.Previous;
-  if (Current.is(TT_CtorInitializerComma) &&
-      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
-    return true;
-  }
-  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
-    return true;
-  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
-         ((Previous.isNot(TT_CtorInitializerComma) ||
-           Style.BreakConstructorInitializers !=
-               FormatStyle::BCIS_BeforeComma) &&
-          (Previous.isNot(TT_InheritanceComma) ||
-           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
-}
-
 // Returns \c true if \c Token in an alignable binary operator
 static bool isAlignableBinaryOperator(const FormatToken &Token) {
   // No need to align binary operators that only have two operands.
@@ -437,7 +418,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
-        (Previous.NestingLevel == 1 || Style.BinPackParameters)) ||
+        (Previous.NestingLevel == 1 ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack)) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -1427,6 +1409,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
     case FormatStyle::RCPS_WithFollowing:
+    case FormatStyle::RCPS_OwnLineWithBrace:
       return CurrentState.Indent;
     default:
       break;
@@ -1950,11 +1933,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters) ||
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
-        (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
+        (State.Line->Type != LT_ObjCDecl &&
+         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =

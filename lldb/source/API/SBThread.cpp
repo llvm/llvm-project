@@ -1337,6 +1337,8 @@ bool SBThread::SafeToCallFunctions() {
   return true;
 }
 
+lldb::ThreadSP SBThread::GetSP() const { return m_opaque_sp->GetThreadSP(); }
+
 lldb_private::Thread *SBThread::operator->() {
   return get();
 }

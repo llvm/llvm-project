@@ -1073,4 +1073,9 @@ void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
   }
 }
 
+void ECExportThunkChunk::writeTo(uint8_t *buf) const {
+  memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));
+  write32le(buf + 10, target->getRVA() - rva - 14);
+}
+
 } // namespace lld::coff

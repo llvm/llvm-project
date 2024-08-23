@@ -20,9 +20,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class Function;
-class Module;
-class Triple;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
