@@ -3150,6 +3150,8 @@ bool Sema::checkTargetClonesAttrString(
       llvm::SmallVector<StringRef, 8> AttrStrs;
       Str.split(AttrStrs, ";");
 
+      bool IsPriority = false;
+      bool IsDefault = false;
       for (auto &AttrStr : AttrStrs) {
         // Only support arch=+ext,... syntax.
         if (AttrStr.starts_with("arch=+")) {
@@ -3163,9 +3165,11 @@ bool Sema::checkTargetClonesAttrString(
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                   << Unsupported << None << Str << TargetClones;
         } else if (AttrStr.starts_with("default")) {
+          IsDefault = true;
           DefaultIsDupe = HasDefault;
           HasDefault = true;
         } else if (AttrStr.consume_front("priority=")) {
+          IsPriority = true;
           int Digit;
           if (AttrStr.getAsInteger(0, Digit))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
@@ -3175,6 +3179,10 @@ bool Sema::checkTargetClonesAttrString(
                 << Unsupported << None << Str << TargetClones;
         }
       }
+
+      if (IsPriority && IsDefault)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Str << TargetClones;
 
       if (llvm::is_contained(StringsBuffer, Str) || DefaultIsDupe)
         Diag(CurLoc, diag::warn_target_clone_duplicate_options);
