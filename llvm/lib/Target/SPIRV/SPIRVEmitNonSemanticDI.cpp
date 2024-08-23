@@ -1,3 +1,4 @@
+#include "SPIRV.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVGlobalRegistry.h"
@@ -33,12 +34,6 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-
-void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
-
-FunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
-  return new SPIRVEmitNonSemanticDI(TM);
-}
 } // namespace llvm
 
 using namespace llvm;
@@ -47,6 +42,11 @@ INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
 
 char SPIRVEmitNonSemanticDI::ID = 0;
+
+MachineFunctionPass *
+llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
+  return new SPIRVEmitNonSemanticDI(TM);
+}
 
 SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
     : MachineFunctionPass(ID), TM(TM) {
