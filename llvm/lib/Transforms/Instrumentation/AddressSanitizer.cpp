@@ -454,7 +454,7 @@ static cl::opt<int> ClDebugMin("asan-debug-min", cl::desc("Debug min inst"),
 static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
 
-static cl::opt<bool> CLAsanDormant("asan-dormant",
+static cl::opt<bool> ClAsanDormant("asan-dormant",
                                    cl::desc("Makes asan dormant"), cl::Hidden,
                                    cl::init(false));
 
@@ -1592,7 +1592,7 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
   IRBuilder<> IRB(I);
 
-  if (CLAsanDormant)
+  if (ClAsanDormant)
     IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)), I,
         false, MDBuilder(*C).createUnlikelyBranchWeights()));
@@ -1744,7 +1744,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     NumInstrumentedReads++;
   
   Instruction* InsertPoint = O.getInsn();
-  if(CLAsanDormant){
+  if(ClAsanDormant){
     InstrumentationIRBuilder IRB(InsertPoint);
     InsertPoint = SplitBlockAndInsertIfThen(
         IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),

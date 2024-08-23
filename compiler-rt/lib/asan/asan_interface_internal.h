@@ -206,7 +206,7 @@ extern "C" {
   extern uptr *__asan_test_only_reported_buggy_pointer;
 
   SANITIZER_INTERFACE_ATTRIBUTE
-  extern bool __asan_is_dormant;
+  extern int __asan_is_dormant;
 
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_load1(uptr p);
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_load2(uptr p);
