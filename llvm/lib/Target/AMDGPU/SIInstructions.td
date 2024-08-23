@@ -421,15 +421,6 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 
 let isTerminator = 1, isNotDuplicable = 1 in {
 
-let OtherPredicates = [EnableLateCFGStructurize] in {
- def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
-  (outs),
-  (ins SReg_1:$vcc, brtarget:$target),
-  [(brcond i1:$vcc, bb:$target)]> {
-    let Size = 12;
-}
-}
-
 def SI_IF: CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, brtarget:$target),
   [(set i1:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
