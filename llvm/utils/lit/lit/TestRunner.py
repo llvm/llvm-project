@@ -1226,11 +1226,11 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                     commands[i] += f" && {{ {command}; }}"
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
-        f.write(b"set -x;" if mode == "wb" else "set -x;")
 
         env_str = "\n".join("export {}={};".format(k, shlex.quote(v))
                             for k, v in test.config.environment.items())
         f.write(bytes(env_str, "utf-8") if mode == "wb" else env_str)
+        f.write(b"set -x;" if mode == "wb" else "set -x;")
 
         if sys.version_info > (3, 0) and mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
