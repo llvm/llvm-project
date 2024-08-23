@@ -1291,6 +1291,9 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
+/// Map of a module name to its summary.
+using ModuleToSummariesForIndexTy = std::map<std::string, GVSummaryMapTy>;
+
 /// A set of global value summary pointers.
 using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 

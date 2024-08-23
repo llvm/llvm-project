@@ -1485,7 +1485,7 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
     GVSummaryPtrSet &DecSummaries) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
@@ -1511,7 +1511,7 @@ void llvm::gatherImportedSummariesForModule(
 /// Emit the files \p ModulePath will import from into \p OutputFilename.
 std::error_code llvm::EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
-    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex) {
   std::error_code EC;
   raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
