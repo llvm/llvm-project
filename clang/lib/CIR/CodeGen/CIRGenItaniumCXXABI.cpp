@@ -2150,8 +2150,7 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(CIRGenFunction &CGF,
     llvm_unreachable("NYI");
 
   // The default behavior is to use atexit. This is handled in lowering
-  // prepare. For now just emit the body for the dtor.
-  // ....
+  // prepare. Nothing to be done for CIR here.
 }
 
 mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(

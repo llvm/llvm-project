@@ -291,6 +291,21 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   return Fn;
 }
 
+/// Emit code to cause the variable at the given address to be considered as
+/// constant from this point onwards.
+static void buildDeclInvariant(CIRGenFunction &CGF, const VarDecl *D) {
+  return CGF.buildInvariantStart(
+      CGF.getContext().getTypeSizeInChars(D->getType()));
+}
+
+void CIRGenFunction::buildInvariantStart([[maybe_unused]] CharUnits Size) {
+  // Do not emit the intrinsic if we're not optimizing.
+  if (!CGM.getCodeGenOpts().OptimizationLevel)
+    return;
+
+  assert(!MissingFeatures::createInvariantIntrinsic());
+}
+
 void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
                                                 mlir::cir::GlobalOp Addr,
                                                 bool NeedsCtor, bool NeedsDtor,
@@ -312,8 +327,7 @@ void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
   }
 
   if (isCstStorage) {
-    // buildDeclInvariant(CGF, D, DeclPtr);
-    llvm_unreachable("NYI");
+    buildDeclInvariant(CGF, D);
   } else {
     // If not constant storage we'll emit this regardless of NeedsDtor value.
     mlir::OpBuilder::InsertionGuard guard(builder);

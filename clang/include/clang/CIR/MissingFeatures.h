@@ -162,6 +162,7 @@ struct MissingFeatures {
   static bool armComputeVolatileBitfields() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool createInvariantGroup() { return false; }
+  static bool createInvariantIntrinsic() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool loopInfoStack() { return false; }
