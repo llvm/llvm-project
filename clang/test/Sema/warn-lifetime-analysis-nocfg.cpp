@@ -498,4 +498,15 @@ std::string_view test2(int i, std::optional<std::string_view> a) {
     return std::move(*a);
   return std::move(a.value());
 }
+
+struct Foo;
+struct FooView {
+  FooView(const Foo& foo [[clang::lifetimebound]]);
+};
+FooView test3(int i, std::optional<Foo> a) {
+  if (i)
+    return *a; // expected-warning {{address of stack memory}}
+  return a.value(); // expected-warning {{address of stack memory}}
+}
+
 }
