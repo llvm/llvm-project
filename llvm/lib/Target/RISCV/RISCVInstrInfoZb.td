@@ -45,30 +45,6 @@ def riscv_clmul   : SDNode<"RISCVISD::CLMUL",   SDTIntBinOp>;
 def riscv_clmulh  : SDNode<"RISCVISD::CLMULH",  SDTIntBinOp>;
 def riscv_clmulr  : SDNode<"RISCVISD::CLMULR",  SDTIntBinOp>;
 
-def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
-  let Name = "UImmLog2XLenHalf";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidUImmLog2XLenHalf";
-}
-
-def shfl_uimm : RISCVOp, ImmLeaf<XLenVT, [{
-  if (Subtarget->is64Bit())
-    return isUInt<5>(Imm);
-  return isUInt<4>(Imm);
-}]> {
-  let ParserMatchClass = UImmLog2XLenHalfAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_UIMM_SHFL";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    if (STI.getTargetTriple().isArch64Bit())
-      return  isUInt<5>(Imm);
-    return isUInt<4>(Imm);
-  }];
-}
-
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
   return CurDAG->getTargetConstant(llvm::countr_one(N->getZExtValue()),
@@ -148,9 +124,9 @@ def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
 }]>;
 
 def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
-  uint64_t I = N->getSExtValue();
+  uint64_t I = N->getZExtValue();
   if (!Subtarget->is64Bit())
-    I |= 0xffffffffull << 32;
+    I |= maskLeadingOnes<uint64_t>(32);
   return CurDAG->getTargetConstant(llvm::Log2_64(~I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
@@ -169,8 +145,8 @@ def BCLRIANDIMask : PatLeaf<(imm), [{
 }]>;
 
 def BCLRIANDIMaskLow : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() & 0x7ff) | ~0x7ffull,
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedConstant((N->getZExtValue() & 0x7ff) | ~0x7ffull,
+                                   SDLoc(N), N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 def CSImm12MulBy4 : PatLeaf<(imm), [{
@@ -191,13 +167,13 @@ def CSImm12MulBy8 : PatLeaf<(imm), [{
 }]>;
 
 def SimmShiftRightBy2XForm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 2, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() >> 2, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 3, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() >> 3, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 // Pattern to exclude simm12 immediates from matching, namely `non_imm12`.

@@ -49,56 +49,10 @@ class StructLayout;
 class Triple;
 class Value;
 
-/// Enum used to categorize the alignment types stored by LayoutAlignElem
-enum AlignTypeEnum {
-  INTEGER_ALIGN = 'i',
-  VECTOR_ALIGN = 'v',
-  FLOAT_ALIGN = 'f',
-  AGGREGATE_ALIGN = 'a'
-};
-
 // FIXME: Currently the DataLayout string carries a "preferred alignment"
 // for types. As the DataLayout is module/global, this should likely be
 // sunk down to an FTTI element that is queried rather than a global
 // preference.
-
-/// Layout alignment element.
-///
-/// Stores the alignment data associated with a given type bit width.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
-struct LayoutAlignElem {
-  uint32_t TypeBitWidth;
-  Align ABIAlign;
-  Align PrefAlign;
-
-  static LayoutAlignElem get(Align ABIAlign, Align PrefAlign,
-                             uint32_t BitWidth);
-
-  bool operator==(const LayoutAlignElem &rhs) const;
-};
-
-/// Layout pointer alignment element.
-///
-/// Stores the alignment data associated with a given pointer and address space.
-///
-/// \note The unusual order of elements in the structure attempts to reduce
-/// padding and make the structure slightly more cache friendly.
-struct PointerAlignElem {
-  Align ABIAlign;
-  Align PrefAlign;
-  uint32_t TypeBitWidth;
-  uint32_t AddressSpace;
-  uint32_t IndexBitWidth;
-
-  /// Initializer
-  static PointerAlignElem getInBits(uint32_t AddressSpace, Align ABIAlign,
-                                    Align PrefAlign, uint32_t TypeBitWidth,
-                                    uint32_t IndexBitWidth);
-
-  bool operator==(const PointerAlignElem &rhs) const;
-};
 
 /// A parsed version of the target data layout string in and methods for
 /// querying it.
@@ -108,6 +62,26 @@ struct PointerAlignElem {
 /// target being codegen'd to.
 class DataLayout {
 public:
+  /// Primitive type specification.
+  struct PrimitiveSpec {
+    uint32_t BitWidth;
+    Align ABIAlign;
+    Align PrefAlign;
+
+    bool operator==(const PrimitiveSpec &Other) const;
+  };
+
+  /// Pointer type specification.
+  struct PointerSpec {
+    uint32_t AddrSpace;
+    uint32_t BitWidth;
+    Align ABIAlign;
+    Align PrefAlign;
+    uint32_t IndexBitWidth;
+
+    bool operator==(const PointerSpec &Other) const;
+  };
+
   enum class FunctionPtrAlignType {
     /// The function pointer alignment is independent of the function alignment.
     Independent,
@@ -115,16 +89,16 @@ public:
     MultipleOfFunctionAlign,
   };
 private:
-  /// Defaults to false.
-  bool BigEndian;
+  bool BigEndian = false;
 
-  unsigned AllocaAddrSpace;
-  unsigned ProgramAddrSpace;
-  unsigned DefaultGlobalsAddrSpace;
+  unsigned AllocaAddrSpace = 0;
+  unsigned ProgramAddrSpace = 0;
+  unsigned DefaultGlobalsAddrSpace = 0;
 
   MaybeAlign StackNaturalAlign;
   MaybeAlign FunctionPtrAlign;
-  FunctionPtrAlignType TheFunctionPtrAlignType;
+  FunctionPtrAlignType TheFunctionPtrAlignType =
+      FunctionPtrAlignType::Independent;
 
   enum ManglingModeT {
     MM_None,
@@ -136,26 +110,25 @@ private:
     MM_Mips,
     MM_XCOFF
   };
-  ManglingModeT ManglingMode;
+  ManglingModeT ManglingMode = MM_None;
 
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// Primitive type alignment data. This is sorted by type and bit
-  /// width during construction.
-  using AlignmentsTy = SmallVector<LayoutAlignElem, 4>;
-  AlignmentsTy IntAlignments;
-  AlignmentsTy FloatAlignments;
-  AlignmentsTy VectorAlignments;
-  LayoutAlignElem StructAlignment;
+  /// Primitive type specifications. Sorted and uniqued by type bit width.
+  SmallVector<PrimitiveSpec, 6> IntSpecs;
+  SmallVector<PrimitiveSpec, 4> FloatSpecs;
+  SmallVector<PrimitiveSpec, 10> VectorSpecs;
+
+  /// Pointer type specifications. Sorted and uniqued by address space number.
+  SmallVector<PointerSpec, 8> PointerSpecs;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
 
-  using PointersTy = SmallVector<PointerAlignElem, 8>;
-  PointersTy Pointers;
-
-  const PointerAlignElem &getPointerAlignElem(uint32_t AddressSpace) const;
+  /// Struct type ABI and preferred alignments. The default spec is "a:8:64".
+  Align StructABIAlignment = Align::Constant<1>();
+  Align StructPrefAlignment = Align::Constant<8>();
 
   // The StructType -> StructLayout map.
   mutable void *LayoutMap = nullptr;
@@ -164,16 +137,17 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  /// Attempts to set the alignment of the given type. Returns an error
-  /// description on failure.
-  Error setAlignment(AlignTypeEnum AlignType, Align ABIAlign, Align PrefAlign,
-                     uint32_t BitWidth);
+  /// Sets or updates the specification for the given primitive type.
+  void setPrimitiveSpec(char Specifier, uint32_t BitWidth, Align ABIAlign,
+                        Align PrefAlign);
 
-  /// Attempts to set the alignment of a pointer in the given address space.
-  /// Returns an error description on failure.
-  Error setPointerAlignmentInBits(uint32_t AddrSpace, Align ABIAlign,
-                                  Align PrefAlign, uint32_t TypeBitWidth,
-                                  uint32_t IndexBitWidth);
+  /// Searches for a pointer specification that matches the given address space.
+  /// Returns the default address space specification if not found.
+  const PointerSpec &getPointerSpec(uint32_t AddrSpace) const;
+
+  /// Sets or updates the specification for pointer in the given address space.
+  void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
+                      Align PrefAlign, uint32_t IndexBitWidth);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -181,11 +155,25 @@ private:
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
-  /// Attempts to parse a target data specification string and reports an error
-  /// if the string is malformed.
-  Error parseSpecifier(StringRef Desc);
+  /// Attempts to parse primitive specification ('i', 'f', or 'v').
+  Error parsePrimitiveSpec(StringRef Spec);
+
+  /// Attempts to parse aggregate specification ('a').
+  Error parseAggregateSpec(StringRef Spec);
+
+  /// Attempts to parse pointer specification ('p').
+  Error parsePointerSpec(StringRef Spec);
+
+  /// Attempts to parse a single specification.
+  Error parseSpecification(StringRef Spec);
+
+  /// Attempts to parse a data layout string.
+  Error parseLayoutString(StringRef LayoutString);
 
 public:
+  /// Constructs a DataLayout with default values.
+  DataLayout();
+
   /// Constructs a DataLayout from a specification string.
   /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
   explicit DataLayout(StringRef LayoutString);
@@ -201,7 +189,7 @@ public:
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.
-  static Expected<DataLayout> parse(StringRef LayoutDescription);
+  static Expected<DataLayout> parse(StringRef LayoutString);
 
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
@@ -377,7 +365,7 @@ public:
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
-    return getPointerAlignElem(AS).TypeBitWidth;
+    return getPointerSpec(AS).BitWidth;
   }
 
   /// Returns the maximum index size over all address spaces.
@@ -387,7 +375,7 @@ public:
 
   /// Size in bits of index used for address calculation in getelementptr.
   unsigned getIndexSizeInBits(unsigned AS) const {
-    return getPointerAlignElem(AS).IndexBitWidth;
+    return getPointerSpec(AS).IndexBitWidth;
   }
 
   /// Layout pointer size, in bits, based on the type.  If this function is
