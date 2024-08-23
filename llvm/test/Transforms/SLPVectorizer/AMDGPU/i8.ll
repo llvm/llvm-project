@@ -264,26 +264,71 @@ exit:
 define protected amdgpu_kernel void @arith(<16 x i8> %invec, ptr %out, i32 %flag) {
 ; GFX7-LABEL: @arith(
 ; GFX7-NEXT:  entry:
-; GFX7-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[INVEC:%.*]], <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; GFX7-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[TMP0]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[TMP1]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; GFX7-NEXT:    [[TMP4:%.*]] = mul <4 x i8> [[TMP3]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP5:%.*]] = add <4 x i8> [[TMP4]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; GFX7-NEXT:    [[TMP7:%.*]] = mul <4 x i8> [[TMP6]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[TMP7]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; GFX7-NEXT:    [[TMP10:%.*]] = mul <4 x i8> [[TMP9]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP11:%.*]] = add <4 x i8> [[TMP10]], <i8 1, i8 1, i8 1, i8 1>
-; GFX7-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX7-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i8> [[TMP5]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX7-NEXT:    [[VECINS71:%.*]] = shufflevector <16 x i8> [[TMP12]], <16 x i8> [[TMP13]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; GFX7-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i8> [[TMP8]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX7-NEXT:    [[VECINS112:%.*]] = shufflevector <16 x i8> [[VECINS71]], <16 x i8> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
-; GFX7-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i8> [[TMP11]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX7-NEXT:    [[VECINS153:%.*]] = shufflevector <16 x i8> [[VECINS112]], <16 x i8> [[TMP15]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
-; GFX7-NEXT:    store <16 x i8> [[VECINS153]], ptr [[OUT:%.*]], align 16
+; GFX7-NEXT:    [[EL0:%.*]] = extractelement <16 x i8> [[INVEC:%.*]], i64 0
+; GFX7-NEXT:    [[EL1:%.*]] = extractelement <16 x i8> [[INVEC]], i64 1
+; GFX7-NEXT:    [[EL2:%.*]] = extractelement <16 x i8> [[INVEC]], i64 2
+; GFX7-NEXT:    [[EL3:%.*]] = extractelement <16 x i8> [[INVEC]], i64 3
+; GFX7-NEXT:    [[EL4:%.*]] = extractelement <16 x i8> [[INVEC]], i64 4
+; GFX7-NEXT:    [[EL5:%.*]] = extractelement <16 x i8> [[INVEC]], i64 5
+; GFX7-NEXT:    [[EL6:%.*]] = extractelement <16 x i8> [[INVEC]], i64 6
+; GFX7-NEXT:    [[EL7:%.*]] = extractelement <16 x i8> [[INVEC]], i64 7
+; GFX7-NEXT:    [[EL8:%.*]] = extractelement <16 x i8> [[INVEC]], i64 8
+; GFX7-NEXT:    [[EL9:%.*]] = extractelement <16 x i8> [[INVEC]], i64 9
+; GFX7-NEXT:    [[EL10:%.*]] = extractelement <16 x i8> [[INVEC]], i64 10
+; GFX7-NEXT:    [[EL11:%.*]] = extractelement <16 x i8> [[INVEC]], i64 11
+; GFX7-NEXT:    [[EL12:%.*]] = extractelement <16 x i8> [[INVEC]], i64 12
+; GFX7-NEXT:    [[EL13:%.*]] = extractelement <16 x i8> [[INVEC]], i64 13
+; GFX7-NEXT:    [[EL14:%.*]] = extractelement <16 x i8> [[INVEC]], i64 14
+; GFX7-NEXT:    [[EL15:%.*]] = extractelement <16 x i8> [[INVEC]], i64 15
+; GFX7-NEXT:    [[MUL0:%.*]] = mul i8 [[EL0]], 1
+; GFX7-NEXT:    [[MUL1:%.*]] = mul i8 [[EL1]], 1
+; GFX7-NEXT:    [[MUL2:%.*]] = mul i8 [[EL2]], 1
+; GFX7-NEXT:    [[MUL3:%.*]] = mul i8 [[EL3]], 1
+; GFX7-NEXT:    [[MUL4:%.*]] = mul i8 [[EL4]], 1
+; GFX7-NEXT:    [[MUL5:%.*]] = mul i8 [[EL5]], 1
+; GFX7-NEXT:    [[MUL6:%.*]] = mul i8 [[EL6]], 1
+; GFX7-NEXT:    [[MUL7:%.*]] = mul i8 [[EL7]], 1
+; GFX7-NEXT:    [[MUL8:%.*]] = mul i8 [[EL8]], 1
+; GFX7-NEXT:    [[MUL9:%.*]] = mul i8 [[EL9]], 1
+; GFX7-NEXT:    [[MUL10:%.*]] = mul i8 [[EL10]], 1
+; GFX7-NEXT:    [[MUL11:%.*]] = mul i8 [[EL11]], 1
+; GFX7-NEXT:    [[MUL12:%.*]] = mul i8 [[EL12]], 1
+; GFX7-NEXT:    [[MUL13:%.*]] = mul i8 [[EL13]], 1
+; GFX7-NEXT:    [[MUL14:%.*]] = mul i8 [[EL14]], 1
+; GFX7-NEXT:    [[MUL15:%.*]] = mul i8 [[EL15]], 1
+; GFX7-NEXT:    [[ADD0:%.*]] = add i8 [[MUL0]], 1
+; GFX7-NEXT:    [[ADD1:%.*]] = add i8 [[MUL1]], 1
+; GFX7-NEXT:    [[ADD2:%.*]] = add i8 [[MUL2]], 1
+; GFX7-NEXT:    [[ADD3:%.*]] = add i8 [[MUL3]], 1
+; GFX7-NEXT:    [[ADD4:%.*]] = add i8 [[MUL4]], 1
+; GFX7-NEXT:    [[ADD5:%.*]] = add i8 [[MUL5]], 1
+; GFX7-NEXT:    [[ADD6:%.*]] = add i8 [[MUL6]], 1
+; GFX7-NEXT:    [[ADD7:%.*]] = add i8 [[MUL7]], 1
+; GFX7-NEXT:    [[ADD8:%.*]] = add i8 [[MUL8]], 1
+; GFX7-NEXT:    [[ADD9:%.*]] = add i8 [[MUL9]], 1
+; GFX7-NEXT:    [[ADD10:%.*]] = add i8 [[MUL10]], 1
+; GFX7-NEXT:    [[ADD11:%.*]] = add i8 [[MUL11]], 1
+; GFX7-NEXT:    [[ADD12:%.*]] = add i8 [[MUL12]], 1
+; GFX7-NEXT:    [[ADD13:%.*]] = add i8 [[MUL13]], 1
+; GFX7-NEXT:    [[ADD14:%.*]] = add i8 [[MUL14]], 1
+; GFX7-NEXT:    [[ADD15:%.*]] = add i8 [[MUL15]], 1
+; GFX7-NEXT:    [[VECINS0:%.*]] = insertelement <16 x i8> poison, i8 [[ADD0]], i64 0
+; GFX7-NEXT:    [[VECINS1:%.*]] = insertelement <16 x i8> [[VECINS0]], i8 [[ADD1]], i64 1
+; GFX7-NEXT:    [[VECINS2:%.*]] = insertelement <16 x i8> [[VECINS1]], i8 [[ADD2]], i64 2
+; GFX7-NEXT:    [[VECINS3:%.*]] = insertelement <16 x i8> [[VECINS2]], i8 [[ADD3]], i64 3
+; GFX7-NEXT:    [[VECINS4:%.*]] = insertelement <16 x i8> [[VECINS3]], i8 [[ADD4]], i64 4
+; GFX7-NEXT:    [[VECINS5:%.*]] = insertelement <16 x i8> [[VECINS4]], i8 [[ADD5]], i64 5
+; GFX7-NEXT:    [[VECINS6:%.*]] = insertelement <16 x i8> [[VECINS5]], i8 [[ADD6]], i64 6
+; GFX7-NEXT:    [[VECINS7:%.*]] = insertelement <16 x i8> [[VECINS6]], i8 [[ADD7]], i64 7
+; GFX7-NEXT:    [[VECINS8:%.*]] = insertelement <16 x i8> [[VECINS7]], i8 [[ADD8]], i64 8
+; GFX7-NEXT:    [[VECINS9:%.*]] = insertelement <16 x i8> [[VECINS8]], i8 [[ADD9]], i64 9
+; GFX7-NEXT:    [[VECINS10:%.*]] = insertelement <16 x i8> [[VECINS9]], i8 [[ADD10]], i64 10
+; GFX7-NEXT:    [[VECINS11:%.*]] = insertelement <16 x i8> [[VECINS10]], i8 [[ADD11]], i64 11
+; GFX7-NEXT:    [[VECINS12:%.*]] = insertelement <16 x i8> [[VECINS11]], i8 [[ADD12]], i64 12
+; GFX7-NEXT:    [[VECINS13:%.*]] = insertelement <16 x i8> [[VECINS12]], i8 [[ADD13]], i64 13
+; GFX7-NEXT:    [[VECINS14:%.*]] = insertelement <16 x i8> [[VECINS13]], i8 [[ADD14]], i64 14
+; GFX7-NEXT:    [[VECINS15:%.*]] = insertelement <16 x i8> [[VECINS14]], i8 [[ADD15]], i64 15
+; GFX7-NEXT:    store <16 x i8> [[VECINS15]], ptr [[OUT:%.*]], align 16
 ; GFX7-NEXT:    ret void
 ;
 ; GFX8PLUS-LABEL: @arith(
