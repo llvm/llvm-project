@@ -8,7 +8,9 @@
 //
 // This file provides types and functions for computing and combining stable
 // hashes. Stable hashes can be useful for hashing across different modules,
-// processes, or compiler runs.
+// processes, or compiler runs for a specific version. It currently employs
+// the xxh3_64bits hashing algorithm. Be aware that this implementation may be
+// adjusted or updated as improvements to the system are made.
 //
 //===----------------------------------------------------------------------===//
 
