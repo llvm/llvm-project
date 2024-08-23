@@ -45,9 +45,8 @@ LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
-    processOperation(op);
-  }
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
+    return processOperation(op);
   visitBlock(point.get<Block *>());
   return success();
 }
@@ -275,9 +274,8 @@ AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
-    processOperation(op);
-  }
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
+    return processOperation(op);
   visitBlock(point.get<Block *>());
   return success();
 }

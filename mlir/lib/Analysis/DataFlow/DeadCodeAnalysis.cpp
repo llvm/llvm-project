@@ -238,7 +238,7 @@ void DeadCodeAnalysis::markEntryBlocksLive(Operation *op) {
 LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (point.is<Block *>())
     return success();
-  auto *op = llvm::dyn_cast_if_present<Operation *>(point);
+  auto *op = point.get<Operation *>();
 
   // If the parent block is not executable, there is nothing to do.
   if (!getOrCreate<Executable>(op->getBlock())->isLive())

@@ -84,9 +84,8 @@ AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
 }
 
 LogicalResult AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point)) {
-    visitOperation(op);
-  }
+  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
+    return visitOperation(op);
   visitBlock(point.get<Block *>());
   return success();
 }
@@ -352,7 +351,7 @@ AbstractSparseBackwardDataFlowAnalysis::initializeRecursively(Operation *op) {
 LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
-    visitOperation(op);
+    return visitOperation(op);
   // For backward dataflow, we don't have to do any work for the blocks
   // themselves. CFG edges between blocks are processed by the BranchOp
   // logic in `visitOperation`, and entry blocks for functions are tied
