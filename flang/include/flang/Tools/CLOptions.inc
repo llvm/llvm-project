@@ -367,7 +367,7 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
-  pm.addPass(flangomp::createOMPMapInfoFinalizationPass());
+  pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFiltering());
