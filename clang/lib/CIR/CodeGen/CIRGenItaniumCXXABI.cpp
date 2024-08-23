@@ -172,6 +172,9 @@ public:
                            CXXDtorType Type, bool ForVirtualBase,
                            bool Delegating, Address This,
                            QualType ThisTy) override;
+  void registerGlobalDtor(CIRGenFunction &CGF, const VarDecl *D,
+                          mlir::cir::FuncOp dtor,
+                          mlir::Attribute Addr) override;
   virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) override;
   virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) override;
   CatchTypeInfo
@@ -2130,6 +2133,25 @@ void CIRGenItaniumCXXABI::buildDestructorCall(
 
   CGF.buildCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy, VTT, VTTTy,
                              nullptr);
+}
+
+void CIRGenItaniumCXXABI::registerGlobalDtor(CIRGenFunction &CGF,
+                                             const VarDecl *D,
+                                             mlir::cir::FuncOp dtor,
+                                             mlir::Attribute Addr) {
+  if (D->isNoDestroy(CGM.getASTContext()))
+    return;
+
+  if (D->getTLSKind())
+    llvm_unreachable("NYI");
+
+  // HLSL doesn't support atexit.
+  if (CGM.getLangOpts().HLSL)
+    llvm_unreachable("NYI");
+
+  // The default behavior is to use atexit. This is handled in lowering
+  // prepare. For now just emit the body for the dtor.
+  // ....
 }
 
 mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(

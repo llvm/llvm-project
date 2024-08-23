@@ -206,37 +206,70 @@ static void buildDeclInit(CIRGenFunction &CGF, const VarDecl *D,
   }
 }
 
-static void buildDeclDestory(CIRGenFunction &CGF, const VarDecl *D,
-                             Address DeclPtr) {
+static void buildDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
   // Honor __attribute__((no_destroy)) and bail instead of attempting
   // to emit a reference to a possibly nonexistent destructor, which
   // in turn can cause a crash. This will result in a global constructor
   // that isn't balanced out by a destructor call as intended by the
   // attribute. This also checks for -fno-c++-static-destructors and
   // bails even if the attribute is not present.
-  assert(D->needsDestruction(CGF.getContext()) == QualType::DK_cxx_destructor);
+  QualType::DestructionKind DtorKind = D->needsDestruction(CGF.getContext());
+
+  // FIXME:  __attribute__((cleanup)) ?
+
+  switch (DtorKind) {
+  case QualType::DK_none:
+    return;
+
+  case QualType::DK_cxx_destructor:
+    break;
+
+  case QualType::DK_objc_strong_lifetime:
+  case QualType::DK_objc_weak_lifetime:
+  case QualType::DK_nontrivial_c_struct:
+    // We don't care about releasing objects during process teardown.
+    assert(!D->getTLSKind() && "should have rejected this");
+    return;
+  }
 
   auto &CGM = CGF.CGM;
-
-  // If __cxa_atexit is disabled via a flag, a different helper function is
-  // generated elsewhere which uses atexit instead, and it takes the destructor
-  // directly.
-  auto UsingExternalHelper = CGM.getCodeGenOpts().CXAAtExit;
   QualType type = D->getType();
+
+  // Special-case non-array C++ destructors, if they have the right signature.
+  // Under some ABIs, destructors return this instead of void, and cannot be
+  // passed directly to __cxa_atexit if the target does not allow this
+  // mismatch.
   const CXXRecordDecl *Record = type->getAsCXXRecordDecl();
   bool CanRegisterDestructor =
       Record && (!CGM.getCXXABI().HasThisReturn(
                      GlobalDecl(Record->getDestructor(), Dtor_Complete)) ||
                  CGM.getCXXABI().canCallMismatchedFunctionType());
+
+  // If __cxa_atexit is disabled via a flag, a different helper function is
+  // generated elsewhere which uses atexit instead, and it takes the destructor
+  // directly.
+  auto UsingExternalHelper = CGM.getCodeGenOpts().CXAAtExit;
+  mlir::cir::FuncOp fnOp;
   if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
     assert(!D->getTLSKind() && "TLS NYI");
+    assert(!Record->hasTrivialDestructor());
+    assert(!MissingFeatures::openCL());
     CXXDestructorDecl *Dtor = Record->getDestructor();
-    CGM.getCXXABI().buildDestructorCall(CGF, Dtor, Dtor_Complete,
-                                        /*ForVirtualBase=*/false,
-                                        /*Delegating=*/false, DeclPtr, type);
+    // In LLVM OG codegen this is done in registerGlobalDtor, but CIRGen
+    // relies on LoweringPrepare for further decoupling, so build the
+    // call right here.
+    auto GD = GlobalDecl(Dtor, Dtor_Complete);
+    auto structorInfo = CGM.getAddrAndTypeOfCXXStructor(GD);
+    fnOp = structorInfo.second;
+    CGF.getBuilder().createCallOp(
+        CGF.getLoc(D->getSourceRange()),
+        mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+        mlir::ValueRange{CGF.CGM.getAddrOfGlobalVar(D)});
   } else {
     llvm_unreachable("array destructors not yet supported!");
   }
+  assert(fnOp && "expected cir.func");
+  CGM.getCXXABI().registerGlobalDtor(CGF, D, fnOp, nullptr);
 }
 
 mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
@@ -260,8 +293,8 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
 
 void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
                                                 mlir::cir::GlobalOp Addr,
-                                                bool NeedsCtor,
-                                                bool NeedsDtor) {
+                                                bool NeedsCtor, bool NeedsDtor,
+                                                bool isCstStorage) {
   assert(D && " Expected a global declaration!");
   CIRGenFunction CGF{*this, builder, true};
   CurCGF = &CGF;
@@ -278,14 +311,20 @@ void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
     builder.create<mlir::cir::YieldOp>(Addr->getLoc());
   }
 
-  if (NeedsDtor) {
+  if (isCstStorage) {
+    // buildDeclInvariant(CGF, D, DeclPtr);
+    llvm_unreachable("NYI");
+  } else {
+    // If not constant storage we'll emit this regardless of NeedsDtor value.
     mlir::OpBuilder::InsertionGuard guard(builder);
     auto block = builder.createBlock(&Addr.getDtorRegion());
     builder.setInsertionPointToStart(block);
-    Address DeclAddr(getAddrOfGlobalVar(D), getASTContext().getDeclAlign(D));
-    buildDeclDestory(CGF, D, DeclAddr);
+    buildDeclDestroy(CGF, D);
     builder.setInsertionPointToEnd(block);
-    builder.create<mlir::cir::YieldOp>(Addr->getLoc());
+    if (block->empty())
+      block->erase();
+    else
+      builder.create<mlir::cir::YieldOp>(Addr->getLoc());
   }
 
   CurCGF = nullptr;

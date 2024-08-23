@@ -577,8 +577,11 @@ public:
                                 bool IsTentative = false);
 
   /// Emit the function that initializes the specified global
-  void buildGlobalVarDeclInit(const VarDecl *D, mlir::cir::GlobalOp Addr,
-                              bool PerformInit);
+  void buildCXXGlobalVarDeclInit(const VarDecl *D, mlir::cir::GlobalOp Addr,
+                                 bool PerformInit);
+
+  void buildCXXGlobalVarDeclInitFunc(const VarDecl *D, mlir::cir::GlobalOp Addr,
+                                     bool PerformInit);
 
   void addDeferredVTable(const CXXRecordDecl *RD) {
     DeferredVTables.push_back(RD);
@@ -614,7 +617,7 @@ public:
   // Produce code for this constructor/destructor for global initialzation.
   void codegenGlobalInitCxxStructor(const clang::VarDecl *D,
                                     mlir::cir::GlobalOp Addr, bool NeedsCtor,
-                                    bool NeedsDtor);
+                                    bool NeedsDtor, bool isCstStorage);
 
   bool lookupRepresentativeDecl(llvm::StringRef MangledName,
                                 clang::GlobalDecl &Result) const;
