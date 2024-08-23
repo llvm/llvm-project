@@ -320,6 +320,9 @@ public:
   static void attachPreviousDecl(ASTReader &Reader, Decl *D, Decl *Previous,
                                  Decl *Canon);
 
+  static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
+                                                    Decl *Previous);
+
   template <typename DeclT>
   static void attachLatestDeclImpl(Redeclarable<DeclT> *D, Decl *Latest);
   static void attachLatestDeclImpl(...);
@@ -3692,8 +3695,9 @@ static void inheritDefaultTemplateArguments(ASTContext &Context,
 // [basic.link]/p10:
 //    If two declarations of an entity are attached to different modules,
 //    the program is ill-formed;
-static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
-                                                  Decl *Previous) {
+void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
+                                                          Decl *D,
+                                                          Decl *Previous) {
   // If it is previous implcitly introduced, it is not meaningful to
   // diagnose it.
   if (Previous->isImplicit())
@@ -3723,8 +3727,19 @@ static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
     return;
 
   // We only forbids merging decls within named modules.
-  if (!M->isNamedModule())
+  if (!M->isNamedModule()) {
+    // Try to warn the case that we merged decls from global module.
+    if (!M->isGlobalModule())
+      return;
+
+    if (D->getOwningModule() &&
+        M->getTopLevelModule() == D->getOwningModule()->getTopLevelModule())
+      return;
+
+    Reader.PendingWarningForDuplicatedDefsInModuleUnits.push_back(
+        {D, Previous});
     return;
+  }
 
   // It is fine if they are in the same module.
   if (Reader.getContext().isInSameModule(M, D->getOwningModule()))
