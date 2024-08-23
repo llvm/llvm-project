@@ -8770,9 +8770,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
   LLT Ty = MRI.getType(DstReg);
 
   // Reset sign bit
-  MIRBuilder.buildAnd(DstReg, SrcReg,
-                      MIRBuilder.buildConstant(
-                          Ty, APInt::getSignedMaxValue(Ty.getSizeInBits())));
+  MIRBuilder.buildAnd(
+      DstReg, SrcReg,
+      MIRBuilder.buildConstant(
+          Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
 
   MI.eraseFromParent();
   return Legalized;
