@@ -30,14 +30,19 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -45,7 +50,9 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <optional>
@@ -314,6 +321,27 @@ public:
   /// This routine is meant to be overridden by the template instantiator.
   void RememberPartiallySubstitutedPack(TemplateArgument Arg) { }
 
+  /// "Forget" the template substitution to allow transforming the AST without
+  /// any template instantiations. This is used to expand template packs when
+  /// their size is not known in advance (e.g. for builtins that produce type
+  /// packs).
+  MultiLevelTemplateArgumentList ForgetSubstitution() { return {}; }
+  void RememberSubstitution(MultiLevelTemplateArgumentList) {}
+
+private:
+  struct ForgetSubstitutionRAII {
+    Derived &Self;
+    MultiLevelTemplateArgumentList Old;
+
+  public:
+    ForgetSubstitutionRAII(Derived &Self) : Self(Self) {
+      Old = Self.ForgetSubstitution();
+    }
+
+    ~ForgetSubstitutionRAII() { Self.RememberSubstitution(std::move(Old)); }
+  };
+
+public:
   /// Note to the derived class when a function parameter pack is
   /// being expanded.
   void ExpandingFunctionParameterPack(ParmVarDecl *Pack) { }
@@ -655,6 +683,13 @@ public:
                                   InputIterator Last,
                                   TemplateArgumentListInfo &Outputs,
                                   bool Uneval = false);
+
+  /// Expands \p In into a list of arguments and writes them into \p Outputs.
+  /// \p In must be a pack expansion.
+  /// Returns true iff an error occurred.
+  bool ExpandTemplateArgument(TemplateArgumentLoc In,
+                              TemplateArgumentListInfo &Outputs, bool Uneval,
+                              bool TryExpandingSubstPacks = false);
 
   /// Fakes up a TemplateArgumentLoc for a given TemplateArgument.
   void InventTemplateArgumentLoc(const TemplateArgument &Arg,
@@ -5054,83 +5089,8 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     }
 
     if (In.getArgument().isPackExpansion()) {
-      // We have a pack expansion, for which we will be substituting into
-      // the pattern.
-      SourceLocation Ellipsis;
-      UnsignedOrNone OrigNumExpansions = std::nullopt;
-      TemplateArgumentLoc Pattern
-        = getSema().getTemplateArgumentPackExpansionPattern(
-              In, Ellipsis, OrigNumExpansions);
-
-      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-      getSema().collectUnexpandedParameterPacks(Pattern, Unexpanded);
-      assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
-
-      // Determine whether the set of unexpanded parameter packs can and should
-      // be expanded.
-      bool Expand = true;
-      bool RetainExpansion = false;
-      UnsignedOrNone NumExpansions = OrigNumExpansions;
-      if (getDerived().TryExpandParameterPacks(Ellipsis,
-                                               Pattern.getSourceRange(),
-                                               Unexpanded,
-                                               Expand,
-                                               RetainExpansion,
-                                               NumExpansions))
+      if (ExpandTemplateArgument(In, Outputs, Uneval, true))
         return true;
-
-      if (!Expand) {
-        // The transform has determined that we should perform a simple
-        // transformation on the pack expansion, producing another pack
-        // expansion.
-        TemplateArgumentLoc OutPattern;
-        Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
-        if (getDerived().TransformTemplateArgument(Pattern, OutPattern, Uneval))
-          return true;
-
-        Out = getDerived().RebuildPackExpansion(OutPattern, Ellipsis,
-                                                NumExpansions);
-        if (Out.getArgument().isNull())
-          return true;
-
-        Outputs.addArgument(Out);
-        continue;
-      }
-
-      // The transform has determined that we should perform an elementwise
-      // expansion of the pattern. Do so.
-      for (unsigned I = 0; I != *NumExpansions; ++I) {
-        Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
-
-        if (getDerived().TransformTemplateArgument(Pattern, Out, Uneval))
-          return true;
-
-        if (Out.getArgument().containsUnexpandedParameterPack()) {
-          Out = getDerived().RebuildPackExpansion(Out, Ellipsis,
-                                                  OrigNumExpansions);
-          if (Out.getArgument().isNull())
-            return true;
-        }
-
-        Outputs.addArgument(Out);
-      }
-
-      // If we're supposed to retain a pack expansion, do so by temporarily
-      // forgetting the partially-substituted parameter pack.
-      if (RetainExpansion) {
-        ForgetPartiallySubstitutedPackRAII Forget(getDerived());
-
-        if (getDerived().TransformTemplateArgument(Pattern, Out, Uneval))
-          return true;
-
-        Out = getDerived().RebuildPackExpansion(Out, Ellipsis,
-                                                OrigNumExpansions);
-        if (Out.getArgument().isNull())
-          return true;
-
-        Outputs.addArgument(Out);
-      }
-
       continue;
     }
 
@@ -5142,7 +5102,115 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
   }
 
   return false;
+}
 
+template <typename Derived>
+bool TreeTransform<Derived>::ExpandTemplateArgument(
+    TemplateArgumentLoc In, TemplateArgumentListInfo &Outputs, bool Uneval,
+    bool TryExpandingSubstPacks) {
+  assert(In.getArgument().isPackExpansion());
+  // We have a pack expansion, for which we will be substituting into the
+  // pattern.
+  SourceLocation Ellipsis;
+  UnsignedOrNone OrigNumExpansions = std::nullopt;
+  TemplateArgumentLoc Pattern =
+      getSema().getTemplateArgumentPackExpansionPattern(In, Ellipsis,
+                                                        OrigNumExpansions);
+
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+  getSema().collectUnexpandedParameterPacks(Pattern, Unexpanded);
+  if (!TryExpandingSubstPacks) {
+    // Only do something if there is an opportunity for late expansion.
+    bool SawPackTypes = llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
+      return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+    });
+    if (!SawPackTypes) {
+      Outputs.addArgument(In);
+      return false;
+    }
+  }
+  assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
+
+  // Determine whether the set of unexpanded parameter packs can and should
+  // be expanded.
+  bool Expand = true;
+  bool RetainExpansion = false;
+  UnsignedOrNone NumExpansions = OrigNumExpansions;
+  if (getDerived().TryExpandParameterPacks(Ellipsis, Pattern.getSourceRange(),
+                                           Unexpanded, Expand, RetainExpansion,
+                                           NumExpansions))
+    return true;
+
+  TemplateArgumentLoc Out;
+  if (!Expand) {
+    // No opportunity for late expansion, return as is.
+    if (!TryExpandingSubstPacks) {
+      Outputs.addArgument(In);
+      return false;
+    }
+    // The transform has determined that we should perform a simple
+    // transformation on the pack expansion, producing another pack
+    // expansion.
+    TemplateArgumentLoc OutPattern;
+    std::optional<Sema::ArgPackSubstIndexRAII> SubstIndex(
+        std::in_place, getSema(), std::nullopt);
+    if (getDerived().TransformTemplateArgument(Pattern, OutPattern, Uneval))
+      return true;
+
+    Out =
+        getDerived().RebuildPackExpansion(OutPattern, Ellipsis, NumExpansions);
+    if (Out.getArgument().isNull())
+      return true;
+    SubstIndex.reset();
+
+    // Some packs only know their lengths after substitution. We might be able
+    // to expand those here.
+    if (TryExpandingSubstPacks &&
+        OutPattern.getArgument().containsUnexpandedParameterPack()) {
+      // FIXME: assert that containsUnexpandedParameterPack is always true?
+      // FIMXE: no need to call RebuildPackExpansion?
+      ForgetSubstitutionRAII FS(getDerived());
+      return ExpandTemplateArgument(Out, Outputs, Uneval,
+                                    /*TryExpandingSubstPacks=*/false);
+    }
+
+    Outputs.addArgument(Out);
+    return false;
+  }
+
+  // The transform has determined that we should perform an elementwise
+  // expansion of the pattern. Do so.
+  for (unsigned I = 0; I != *NumExpansions; ++I) {
+    Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
+
+    if (getDerived().TransformTemplateArgument(Pattern, Out, Uneval))
+      return true;
+
+    if (Out.getArgument().containsUnexpandedParameterPack()) {
+      Out = getDerived().RebuildPackExpansion(Out, Ellipsis, OrigNumExpansions);
+      if (Out.getArgument().isNull())
+        return true;
+    }
+
+    Outputs.addArgument(Out);
+  }
+
+  // If we're supposed to retain a pack expansion, do so by temporarily
+  // forgetting the partially-substituted parameter pack.
+  if (RetainExpansion) {
+    ForgetPartiallySubstitutedPackRAII Forget(getDerived());
+
+    if (getDerived().TransformTemplateArgument(Pattern, Out, Uneval))
+      return true;
+
+    Out = getDerived().RebuildPackExpansion(Out, Ellipsis, OrigNumExpansions);
+    if (Out.getArgument().isNull())
+      return true;
+
+    Outputs.addArgument(Out);
+  }
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7114,6 +7182,11 @@ QualType TreeTransform<Derived>::TransformSubstTemplateTypeParmType(
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 
+}
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformSubstBuiltinTemplatePackType(
+    TypeLocBuilder &TLB, SubstBuiltinTemplatePackTypeLoc TL) {
+  return TransformTypeSpecType(TLB, TL);
 }
 
 template<typename Derived>

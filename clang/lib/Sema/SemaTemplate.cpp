@@ -17,7 +17,12 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -36,9 +41,16 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 using namespace clang;
@@ -3331,6 +3343,65 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
   }
+  case BTK__builtin_dedup_pack: {
+    assert(Converted.size() == 1 && "__builtin_dedup_pack should be given "
+                                    "a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    // Delay the computation until we can compute the final result. We choose
+    // not to remove the duplicates upfront before substitution to keep the code
+    // simple.
+    if (Ts.isDependent())
+      return QualType();
+    assert(Ts.getKind() == clang::TemplateArgument::Pack);
+    llvm::SmallVector<TemplateArgument> OutArgs;
+    llvm::SmallDenseSet<QualType> Seen;
+    // Synthesize a new template argument list, removing duplicates.
+    for (auto T : Ts.getPackAsArray()) {
+      assert(T.getKind() == clang::TemplateArgument::Type);
+      if (!Seen.insert(T.getAsType().getCanonicalType()).second)
+        continue;
+      OutArgs.push_back(T);
+    }
+    return Context.getSubstBuiltinTemplatePack(
+        TemplateArgument::CreatePackCopy(Context, OutArgs));
+  }
+  case BTK__builtin_sort_pack: {
+    assert(Converted.size() == 1);
+    assert(Converted[0].getKind() == TemplateArgument::Pack);
+    // Delay if we have any dependencies, the mangled names may change after
+    // subsistution or may not be well-defined for dependent types.
+    if (Converted[0].isDependent())
+      return QualType();
+
+    auto InputArgs = Converted[0].getPackAsArray();
+    std::unique_ptr<MangleContext> Mangler(
+        SemaRef.getASTContext().createMangleContext());
+
+    // Prepare our sort keys, i.e. the mangled names.
+    llvm::SmallVector<std::string> MangledNames(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      llvm::raw_string_ostream OS(MangledNames[I]);
+      Mangler->mangleCanonicalTypeName(
+          InputArgs[I].getAsType().getCanonicalType(), OS);
+    }
+
+    // Sort array of indices into the InputArgs/MangledNames.
+    llvm::SmallVector<unsigned> Indexes(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      Indexes[I] = I;
+    }
+    llvm::stable_sort(Indexes, [&](unsigned L, unsigned R) {
+      return MangledNames[L] < MangledNames[R];
+    });
+
+    llvm::SmallVector<TemplateArgument> SortedArguments;
+    SortedArguments.reserve(InputArgs.size());
+    for (unsigned I : Indexes)
+      SortedArguments.push_back(InputArgs[I]);
+
+    return Context.getSubstBuiltinTemplatePack(
+        TemplateArgument::CreatePackCopy(Context, SortedArguments));
+  }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -6092,6 +6163,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
 
 bool UnnamedLocalNoLinkageFinder::VisitSubstTemplateTypeParmPackType(
                                         const SubstTemplateTypeParmPackType *) {
+  return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitSubstBuiltinTemplatePackType(
+    const SubstBuiltinTemplatePackType *) {
   return false;
 }
 

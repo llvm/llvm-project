@@ -228,7 +228,9 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
+                                     const TemplateSpecializationType *,
+                                     const SubstBuiltinTemplatePackType *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
@@ -13490,8 +13492,6 @@ public:
 
     ~ArgPackSubstIndexRAII() { Self.ArgPackSubstIndex = OldSubstIndex; }
   };
-
-  friend class ArgumentPackSubstitutionRAII;
 
   void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();

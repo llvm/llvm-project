@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===/
 
 #include "TreeTransform.h"
+#include "TypeLocBuilder.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -21,9 +22,11 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
+#include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -37,6 +40,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1476,6 +1480,21 @@ namespace {
       }
     }
 
+    MultiLevelTemplateArgumentList ForgetSubstitution() {
+      MultiLevelTemplateArgumentList New;
+      New.addOuterRetainedLevels(this->TemplateArgs.getNumLevels());
+
+      MultiLevelTemplateArgumentList Old =
+          const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(New);
+      return Old;
+    }
+    void RememberSubstitution(MultiLevelTemplateArgumentList Old) {
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(Old);
+    }
+
     TemplateArgument
     getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
@@ -1666,6 +1685,21 @@ namespace {
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
     }
 
+    using TreeTransform::TransformTemplateSpecializationType;
+    QualType
+    TransformTemplateSpecializationType(TypeLocBuilder &TLB,
+                                        TemplateSpecializationTypeLoc TL) {
+      auto *T = TL.getTypePtr();
+      if (!getSema().ArgPackSubstIndex || !T->isSugared() ||
+          !isPackProducingBuiltinTemplateName(T->getTemplateName()))
+        return TreeTransform::TransformTemplateSpecializationType(TLB, TL);
+      // Look through sugar to get to the SubstBuiltinTemplatePackType that we
+      // need to substitute into.
+      QualType R = TransformType(T->desugar());
+      TLB.pushTrivial(getSema().getASTContext(), R, TL.getBeginLoc());
+      return R;
+    }
+
     UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
         ArrayRef<TemplateArgument> PackArgs) {
       // Don't do this when rewriting template parameters for CTAD:
@@ -1715,6 +1749,9 @@ namespace {
     TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
                                            SubstTemplateTypeParmPackTypeLoc TL,
                                            bool SuppressObjCLifetime);
+    QualType
+    TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
+                                          SubstBuiltinTemplatePackTypeLoc TL);
 
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
@@ -2664,6 +2701,17 @@ QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
   return BuildSubstTemplateTypeParmType(
       TLB, SuppressObjCLifetime, T->getFinal(), NewReplaced, T->getIndex(),
       getPackIndex(Pack), Arg, TL.getNameLoc());
+}
+
+QualType TemplateInstantiator::TransformSubstBuiltinTemplatePackType(
+    TypeLocBuilder &TLB, SubstBuiltinTemplatePackTypeLoc TL) {
+  if (!getSema().ArgPackSubstIndex)
+    return TreeTransform::TransformSubstBuiltinTemplatePackType(TLB, TL);
+  auto &Sema = getSema();
+  TemplateArgument Result = getPackSubstitutedTemplateArgument(
+      Sema, TL.getTypePtr()->getArgumentPack());
+  TLB.pushTrivial(Sema.getASTContext(), Result.getAsType(), TL.getBeginLoc());
+  return Result.getAsType();
 }
 
 static concepts::Requirement::SubstitutionDiagnostic *

@@ -3145,6 +3145,12 @@ def err_integer_sequence_integral_element_type : Error<
 def err_type_pack_element_out_of_bounds : Error<
   "a parameter pack may not be accessed at an out of bounds index">;
 
+// Multivalued builtin templates, e.g. __builtin_dedup_pack and
+// __builtin_sort_pack
+def err_multivalued_builtin_template_outside_template_args
+    : Error<"%0 can only be used directly inside a template argument list and "
+            "cannot have type qualifiers">;
+
 // Objective-C++
 def err_objc_decls_may_only_appear_in_global_scope : Error<
   "Objective-C declarations may only appear in global scope">;
