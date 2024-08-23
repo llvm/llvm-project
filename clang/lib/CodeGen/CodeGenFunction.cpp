@@ -2892,19 +2892,19 @@ static int getPrioiryFromAttrString(StringRef AttrStr) {
 
   AttrStr.split(Attrs, ";");
 
-  // Default Pri is zero.
-  int Pri = 0;
+  // Default Priority is zero.
+  int Priority = 0;
   for (auto Attr : Attrs) {
     if (Attr.starts_with("priority=")) {
       Attr.consume_front("priority=");
       int Result;
       if (!Attr.getAsInteger(0, Result)) {
-        Pri = Result;
+        Priority = Result;
       }
     }
   }
 
-  return Pri;
+  return Priority;
 }
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
