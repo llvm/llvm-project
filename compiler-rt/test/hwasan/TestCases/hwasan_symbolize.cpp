@@ -1,9 +1,9 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_hwasan -Wl,--build-id -g %s -o %t/symbolize.exe
-// RUN: echo '[{"prefix": "'"%S"'/", "link": "http://test.invalid/{file}:{line}"}]' > %t/symbolize.exe.linkify
-// RUN: %env_hwasan_opts=symbolize=0 not %run %t/symbolize.exe 2>&1 | hwasan_symbolize --html --symbols %t --index | FileCheck %s
-// RUN: %env_hwasan_opts=symbolize=0 not %run %t/symbolize.exe 2>&1 | hwasan_symbolize --html --linkify %t/symbolize.exe.linkify --symbols %t --index | FileCheck --check-prefixes=CHECK,LINKIFY %s
-// RUN: %env_hwasan_opts=symbolize=0 not %run %t/symbolize.exe 2>&1 | hwasan_symbolize --symbols %t --index | FileCheck %s
+// RUN: %clang_hwasan -Wl,--build-id -g %s -o %t/hwasan_symbolize_test
+// RUN: echo '[{"prefix": "'"%S"'/", "link": "http://test.invalid/{file}:{line}"}]' > %t/hwasan_symbolize_test.linkify
+// RUN: %env_hwasan_opts=symbolize=0 not %run %t/hwasan_symbolize_test 2>&1 | hwasan_symbolize --html --symbols %t --index | FileCheck %s
+// RUN: %env_hwasan_opts=symbolize=0 not %run %t/hwasan_symbolize_test 2>&1 | hwasan_symbolize --html --linkify %t/hwasan_symbolize_test.linkify --symbols %t --index | FileCheck --check-prefixes=CHECK,LINKIFY %s
+// RUN: %env_hwasan_opts=symbolize=0 not %run %t/hwasan_symbolize_test 2>&1 | hwasan_symbolize --symbols %t --index | FileCheck %s
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
