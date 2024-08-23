@@ -107,6 +107,7 @@ MlirSparseTensorLevelType mlirSparseTensorEncodingAttrBuildLvlType(
     unsigned size, unsigned n, unsigned m) {
 
   std::vector<LevelPropNonDefault> props;
+  props.reserve(size);
   for (unsigned i = 0; i < size; i++)
     props.push_back(static_cast<LevelPropNonDefault>(properties[i]));
 

@@ -99,6 +99,9 @@ private:
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
   static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
+
+  NVPTX::Ordering insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
+                                               MemSDNode *N);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

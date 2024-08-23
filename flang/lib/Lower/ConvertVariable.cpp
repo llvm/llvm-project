@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/CommandLine.h"
@@ -1697,7 +1698,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       mlir::Type ptrBoxType =
           Fortran::lower::getCrayPointeeBoxType(base.getType());
-      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+      mlir::Value boxAlloc = builder.createTemporary(
+          loc, ptrBoxType,
+          /*name=*/{}, /*shape=*/{}, /*lenParams=*/{}, /*attrs=*/{},
+          Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate()));
 
       // Declare a local pointer variable.
       auto newBase = builder.create<hlfir::DeclareOp>(
@@ -1851,6 +1855,22 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                       replace);
 }
 
+static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
+  if (cudaAttr) {
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
+      return kPinnedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
+      return kDeviceAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
+      return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
 /// Lower specification expressions and attributes of variable \p var and
 /// add it to the symbol map. For a global or an alias, the address must be
 /// pre-computed and provided in \p preAlloc. A dummy argument for the current
@@ -1940,7 +1960,8 @@ void Fortran::lower::mapSymbolAttributes(
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
-        converter.getLoweringOptions().getLowerToHighLevelFIR());
+        converter.getLoweringOptions().getLowerToHighLevelFIR(),
+        getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;

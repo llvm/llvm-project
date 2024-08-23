@@ -4,7 +4,7 @@
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd -march=aarch64 -mattr=+sve \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_arm_runner_utils
+// DEFINE:  -shared-libs=%native_mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s
 

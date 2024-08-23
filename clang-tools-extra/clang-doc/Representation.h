@@ -104,6 +104,7 @@ struct Reference {
 
   bool mergeable(const Reference &Other);
   void merge(Reference &&I);
+  bool operator<(const Reference &Other) const { return Name < Other.Name; }
 
   /// Returns the path for this Reference relative to CurrentPath.
   llvm::SmallString<64> getRelativeFilePath(const StringRef &CurrentPath) const;
@@ -145,6 +146,8 @@ struct ScopeChildren {
   std::vector<FunctionInfo> Functions;
   std::vector<EnumInfo> Enums;
   std::vector<TypedefInfo> Typedefs;
+
+  void sort();
 };
 
 // A base struct for TypeInfos
@@ -245,6 +248,11 @@ struct Location {
            std::tie(Other.LineNumber, Other.Filename);
   }
 
+  bool operator!=(const Location &Other) const {
+    return std::tie(LineNumber, Filename) !=
+           std::tie(Other.LineNumber, Other.Filename);
+  }
+
   // This operator is used to sort a vector of Locations.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
@@ -270,10 +278,12 @@ struct Info {
 
   virtual ~Info() = default;
 
+  Info &operator=(Info &&Other) = default;
+
   SymbolID USR =
       SymbolID(); // Unique identifier for the decl described by this Info.
-  const InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
-  SmallString<16> Name;                     // Unqualified name of the decl.
+  InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
+  SmallString<16> Name;               // Unqualified name of the decl.
   llvm::SmallVector<Reference, 4>
       Namespace; // List of parent namespaces for this decl.
   std::vector<CommentInfo> Description; // Comment description of this decl.
@@ -312,6 +322,20 @@ struct SymbolInfo : public Info {
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+
+  bool operator<(const SymbolInfo &Other) const {
+    // Sort by declaration location since we want the doc to be
+    // generated in the order of the source code.
+    // If the declaration location is the same, or not present
+    // we sort by defined location otherwise fallback to the extracted name
+    if (Loc.size() > 0 && Other.Loc.size() > 0 && Loc[0] != Other.Loc[0])
+      return Loc[0] < Other.Loc[0];
+
+    if (DefLoc && Other.DefLoc && *DefLoc != *Other.DefLoc)
+      return *DefLoc < *Other.DefLoc;
+
+    return extractName() < Other.extractName();
+  }
 };
 
 // TODO: Expand to allow for documenting templating and default args.

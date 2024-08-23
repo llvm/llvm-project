@@ -42,6 +42,46 @@ module m
       !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
       a(j) = impure(j) ! C1139
     end do
+    do concurrent (k=impure(1):1); end do ! ok
+    do concurrent (k=1:impure(1)); end do ! ok
+    do concurrent (k=1:1:impure(1)); end do ! ok
+    forall (k=impure(1):1); end forall ! ok
+    forall (k=1:impure(1)); end forall ! ok
+    forall (k=1:1:impure(1)); end forall ! ok
+    do concurrent (j=1:1)
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      do concurrent (k=impure(1):1); end do
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      do concurrent (k=1:impure(1)); end do
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      do concurrent (k=1:1:impure(1)); end do
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=impure(1):1); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=1:impure(1)); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=1:1:impure(1)); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=impure(1):1) a(k) = 0.
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=1:impure(1)) a(k) = 0.
+      !ERROR: Impure procedure 'impure' may not be referenced in DO CONCURRENT
+      forall (k=1:1:impure(1)) a(k) = 0.
+    end do
+    forall (j=1:1)
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=impure(1):1); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=1:impure(1)); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=1:1:impure(1)); end forall
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=impure(1):1) a(j*k) = 0.
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=1:impure(1)) a(j*k) = 0.
+      !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
+      forall (k=1:1:impure(1)) a(j*k) = 0.
+    end forall
   end subroutine
 
   subroutine test2
