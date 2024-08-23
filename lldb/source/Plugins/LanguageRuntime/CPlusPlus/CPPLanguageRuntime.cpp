@@ -82,6 +82,7 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
         std::make_shared<RegularExpression>("^std::__1::"),
+        Mangled::NamePreference::ePreferDemangledWithoutArguments,
         /*first_instruction_only*/ false);
 }
 

@@ -63,25 +63,28 @@ void StackFrameRecognizerManager::BumpGeneration() {
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, ConstString module,
     llvm::ArrayRef<ConstString> symbols, bool first_instruction_only) {
-  m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
-                            module, RegularExpressionSP(), symbols,
-                            RegularExpressionSP(), first_instruction_only});
+  m_recognizers.push_front(
+      {(uint32_t)m_recognizers.size(), recognizer, false, module,
+       RegularExpressionSP(), symbols, RegularExpressionSP(),
+       Mangled::NamePreference::ePreferMangled, first_instruction_only});
   BumpGeneration();
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, RegularExpressionSP module,
-    RegularExpressionSP symbol, bool first_instruction_only) {
+    RegularExpressionSP symbol, Mangled::NamePreference symbol_mangling,
+    bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
                             ConstString(), module, std::vector<ConstString>(),
-                            symbol, first_instruction_only});
+                            symbol, symbol_mangling, first_instruction_only});
   BumpGeneration();
 }
 
 void StackFrameRecognizerManager::ForEach(
     const std::function<void(uint32_t, std::string, std::string,
-                             llvm::ArrayRef<ConstString>, bool)> &callback) {
-  for (auto entry : m_recognizers) {
+                             llvm::ArrayRef<ConstString>,
+                             Mangled::NamePreference, bool)> &callback) {
+  for (const auto &entry : m_recognizers) {
     if (entry.is_regexp) {
       std::string module_name;
       std::string symbol_name;
@@ -92,11 +95,13 @@ void StackFrameRecognizerManager::ForEach(
         symbol_name = entry.symbol_regexp->GetText().str();
 
       callback(entry.recognizer_id, entry.recognizer->GetName(), module_name,
-               llvm::ArrayRef(ConstString(symbol_name)), true);
+               llvm::ArrayRef(ConstString(symbol_name)), entry.symbol_mangling,
+               true);
 
     } else {
       callback(entry.recognizer_id, entry.recognizer->GetName(),
-               entry.module.GetCString(), entry.symbols, false);
+               entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
+               false);
     }
   }
 }
@@ -150,7 +155,8 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
         continue;
 
     if (entry.symbol_regexp)
-      if (!entry.symbol_regexp->Execute(function_name.GetStringRef()))
+      if (!entry.symbol_regexp->Execute(
+              symctx.GetFunctionName(entry.symbol_mangling)))
         continue;
 
     if (entry.first_instruction_only)
