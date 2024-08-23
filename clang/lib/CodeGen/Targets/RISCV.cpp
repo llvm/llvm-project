@@ -102,9 +102,7 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
   ArchStr.consume_front("arch=");
   ArchStr.split(Features, ",");
 
-  llvm::stable_sort(Features, [](const StringRef LHS, const StringRef RHS) {
-    return LHS.compare(RHS) < 0;
-  });
+  llvm::stable_sort(Features);
 
   for (auto Feat : Features) {
     Feat.consume_front("+");
