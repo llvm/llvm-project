@@ -184,9 +184,15 @@ static void handler_SERVICE_FREE(uint32_t device_id, uint64_t *payload) {
 
 static bool trace_init = false;
 static bool host_exec_trace;
-static char* TrcStrs[HOSTEXEC_SID_VOID+1] = {"unsed", "terminate", "device_malloc",
-        "host_malloc", "free", "printf", "fprintf", "ftnassign", "sanatizer",
-        "uint", "uint64", "double", "int", "long", "float" , "void"};
+#define _CCHAR (const char *)
+static const char *TrcStrs[HOSTEXEC_SID_VOID + 1] = {
+    _CCHAR "unsed",       _CCHAR "terminate", _CCHAR "device_malloc",
+    _CCHAR "host_malloc", _CCHAR "free",      _CCHAR "printf",
+    _CCHAR "fprintf",     _CCHAR "ftnassign", _CCHAR "sanatizer",
+    _CCHAR "uint",        _CCHAR "uint64",    _CCHAR "double",
+    _CCHAR "int",         _CCHAR "long",      _CCHAR "float",
+    _CCHAR "void"};
+#undef _CCAR
 // The consumer thread will serialize each active lane and call execute_service
 // for the service request. These services are intended to be architecturally
 // independent.
@@ -926,6 +932,43 @@ static service_rc hostrpc_call_fnptr(uint32_t NumArgs, void *fnptr,
   return _RC_SUCCESS;
 }
 
+extern "C" {
+
+extern void *V_FortranAioBeginExternalListOutput(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  uint32_t v0 = va_arg(args, uint32_t);
+  char *v1 = va_arg(args, char *);
+  uint32_t v2 = va_arg(args, uint32_t);
+  va_end(args);
+  return _FortranAioBeginExternalListOutput(v0, v1, v2);
+}
+extern bool V_FortranAioOutputAscii(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  void *v0 = va_arg(args, void *);
+  char *v1 = va_arg(args, char *);
+  uint64_t v2 = va_arg(args, uint64_t);
+  va_end(args);
+  return _FortranAioOutputAscii(v0, v1, v2);
+}
+extern bool V_FortranAioOutputInteger32(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  void *v0 = va_arg(args, void *);
+  uint32_t v1 = va_arg(args, uint32_t);
+  va_end(args);
+  return _FortranAioOutputInteger32(v0, v1);
+}
+extern uint32_t V_FortranAioEndIoStatement(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  void *v0 = va_arg(args, void *);
+  va_end(args);
+  return _FortranAioEndIoStatement(v0);
+}
+}
+
 template <typename T, typename FT>
 static service_rc hostexec_service(char *buf, size_t bufsz, T *return_value) {
   if (bufsz == 0)
@@ -959,6 +1002,24 @@ static service_rc hostexec_service(char *buf, size_t bufsz, T *return_value) {
                                 &data_not_used, a) != _RC_SUCCESS)
     return _RC_ERROR_INVALID_REQUEST;
 
+  uint64_t DeviceRuntime_idx = (uint64_t)fnptr;
+  switch (DeviceRuntime_idx) {
+  case _FortranAioBeginExternalListOutput_idx:
+    fnptr = (void *)V_FortranAioBeginExternalListOutput;
+    break;
+  case _FortranAioOutputAscii_idx:
+    fnptr = (void *)V_FortranAioOutputAscii;
+    break;
+  case _FortranAioOutputInteger32_idx:
+    fnptr = (void *)V_FortranAioOutputInteger32;
+    break;
+  case _FortranAioEndIoStatement_idx:
+    fnptr = (void *)V_FortranAioEndIoStatement;
+    break;
+  case _FortranAio_INVALID:
+  default:
+    break;
+  }
   if (hostrpc_call_fnptr<T, FT>(NumArgs, fnptr, a, return_value) != _RC_SUCCESS)
     return _RC_ERROR_INVALID_REQUEST;
 

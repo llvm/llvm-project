@@ -66,6 +66,7 @@ endif()
 
    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
    set_property(TARGET amdgcn_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
+   target_link_libraries(amdgcn_hostexec_services FortranRuntime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
 
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
@@ -125,6 +126,7 @@ set(invoke_cpp_file_name ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_invoke.cpp)
 set(hostexec_stubs_filename ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_stubs.cpp)
 set(h_file           ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec.h)
 set(internal_h_file  ${CMAKE_CURRENT_SOURCE_DIR}/src/hostexec_internal.h)
+
 
 foreach(archname ${HOSTRPC_ARCHS})
    if (${archname} STREQUAL "amdgcn")

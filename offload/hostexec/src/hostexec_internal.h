@@ -109,4 +109,20 @@ enum hostexec_sid {
   HOSTEXEC_SID_VOID,
 };
 
+enum KnownDeviceRuntime_idx {
+  _FortranAio_INVALID,
+  _FortranAioBeginExternalListOutput_idx,
+  _FortranAioOutputAscii_idx,
+  _FortranAioOutputInteger32_idx,
+  _FortranAioEndIoStatement_idx
+};
+
+extern "C" {
+extern void *_FortranAioBeginExternalListOutput(uint32_t a1, char *a2,
+                                                uint32_t a3);
+extern bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3);
+extern bool _FortranAioOutputInteger32(void *a1, uint32_t a2);
+extern uint32_t _FortranAioEndIoStatement(void *a1);
+} // end of extern "C"
+
 #endif // __HOSTEXEC_INTERNAL_H__

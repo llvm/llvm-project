@@ -233,6 +233,51 @@ uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
   return maxstrlen;
 }
 
-} // end extern "C"
+#if defined(__NVPTX__) || defined(__AMDGCN__)
+// These are the function definitions of known device runtime functions
+// that will be executed on the host using hostexec. The host functions
+// that implement the service are defined in services/execute_service.cpp.
+// These functions begin with V_ because they are variadic functions.
+// Variadic functions make it easy to reconstruct the exact arguments for
+// the call to the actual host runtime function.
 
+// Since these variadic functions are static functions in execute_service.cpp,
+// we only send the index from the enum set of known functions as a fake
+// function pointer in the first arg. See the switch(DeviceRuntime_idx) in
+// execute_service.cpp which determins the correct function pointer to
+// the V_ function based on this index.
+//
+// If you get an unresolved reference at device link time, then you have an
+// unimplemented device runtime function. To implement a new function, take
+// these steps.
+// 1.  Find or build the c++ interface to this function and put the declare in
+//     hostexec_internal.h. Add an new value to the enum KnownDeviceRuntime_idx.
+// 2.  Add the definition of the device function below with the same interface.
+//     The definition should call the hostexec_<RT> with the proper return type
+//     Use c-style typecasting if the return type you need does not have a
+//     corresponding hostexec function.
+// 3.  Add a new V_ function in execute_service.cpp and the new case in the
+//     switch(DeviceRuntime_idx).
+
+void *_FortranAioBeginExternalListOutput(uint32_t a1, char *a2, uint32_t a3) {
+  void *enum2ptr = (void *)_FortranAioBeginExternalListOutput_idx;
+  return (void *)hostexec_uint64(enum2ptr, a1, a2, a3);
+}
+bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3) {
+  // Must terminate the print string because it gets sent to host.
+  a2[a3 - 1] = (char)0;
+  void *enum2ptr = (void *)_FortranAioOutputAscii_idx;
+  return (bool)hostexec_uint(enum2ptr, a1, a2, a3);
+}
+bool _FortranAioOutputInteger32(void *a1, uint32_t a2) {
+  void *enum2ptr = (void *)_FortranAioOutputInteger32_idx;
+  return (bool)hostexec_uint(enum2ptr, a1, a2);
+}
+uint32_t _FortranAioEndIoStatement(void *a1) {
+  void *enum2ptr = (void *)_FortranAioEndIoStatement_idx;
+  return (uint32_t)hostexec_uint(enum2ptr, a1);
+}
+#endif
+
+} // end extern "C"
 #pragma omp end declare target
