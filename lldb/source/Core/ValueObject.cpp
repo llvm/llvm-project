@@ -617,7 +617,6 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
                                                 // up-to-date (e.g. ${svar%#})
 
     if (TargetSP target_sp = GetExecutionContextRef().GetTargetSP()) {
-      // Get Shared pointer to the summary statistics container
       SummaryStatisticsSP stats_sp =
           target_sp->GetSummaryStatisticsCache()
               .GetSummaryStatisticsForProvider(*summary_ptr);
