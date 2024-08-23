@@ -86,6 +86,11 @@ Current Profile:
     "Guid": 12074870348631550642
   }
 ]
+
+Flat Profile:
+728453322856651412 : 6 7 
+12074870348631550642 : 5 
+11872291593386833696 : 1 
 ;--- example.ll
 declare void @bar()
 

@@ -722,6 +722,7 @@ DXILResourceMap::DXILResourceMap(
   }
 
   unsigned Size = Resources.size();
+  // In DXC, Record ID is unique per resource type. Match that.
   FirstUAV = FirstCBuffer = FirstSampler = Size;
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
