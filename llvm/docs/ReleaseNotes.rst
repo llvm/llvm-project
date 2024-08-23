@@ -75,6 +75,11 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
+
 * `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
   for raw instruction access.
 
