@@ -66,7 +66,7 @@ __chpe_metadata:
         .word 1
         .rva __hybrid_code_map
         .word __hybrid_code_map_count
-        .word 0 // __x64_code_ranges_to_entry_points
+        .rva __x64_code_ranges_to_entry_points
         .rva __arm64x_redirection_metadata
         .rva __os_arm64x_dispatch_call_no_redirect
         .rva __os_arm64x_dispatch_ret
@@ -75,7 +75,7 @@ __chpe_metadata:
         .rva __os_arm64x_check_icall_cfg
         .word 0 // __arm64x_native_entrypoint
         .word 0 // __hybrid_auxiliary_iat
-        .word 0 // __x64_code_ranges_to_entry_points_count
+        .word __x64_code_ranges_to_entry_points_count
         .word __arm64x_redirection_metadata_count
         .rva __os_arm64x_get_x64_information
         .rva __os_arm64x_set_x64_information

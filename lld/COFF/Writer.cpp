@@ -2071,6 +2071,12 @@ void Writer::createECChunks() {
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
 
+  CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
+  rdataSec->addChunk(ranges);
+  Symbol *rangesSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
+  replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
+
   CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
   a64xrmSec->addChunk(entryPoints);
   Symbol *entryPointsSym =
@@ -2185,6 +2191,10 @@ void Writer::setECSymbols() {
         ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
                 pdata.first->getRVA());
   }
+
+  Symbol *rangesCountSym =
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
+  cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
 
   Symbol *entryPointCountSym =
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
