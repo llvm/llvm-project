@@ -50,3 +50,17 @@ def __builtin_common_type : BuiltinTemplate<
    Template<[Class<"TypeMember">], "HasTypeMember">,
    Class<"HasNoTypeMember">,
    Class<"Ts", /*is_variadic=*/1>]>;
+
+
+// template <class ...Args>
+def __builtin_expand_types : BuiltinTemplate<
+  [Class<"Args", /*is_variadic=*/1>]>;
+
+// template <class ...Args>
+def __builtin_dedup_types : BuiltinTemplate<
+  [Class<"Args", /*is_variadic=*/1>]>;
+
+// template <class ...Args>
+def __builtin_sort_types : BuiltinTemplate<
+  [Class<"Args", /*is_variadic=*/1>]>;
+
