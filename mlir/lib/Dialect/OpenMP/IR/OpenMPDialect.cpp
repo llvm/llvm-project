@@ -1541,26 +1541,25 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
-  // Check that it is a valid loop wrapper if it's taking that role.
-  if (isa<DistributeOp>((*this)->getParentOp())) {
-    if (!isWrapper())
-      return emitOpError() << "must take a loop wrapper role if nested inside "
-                              "of 'omp.distribute'";
+  auto distributeChildOps = getOps<DistributeOp>();
+  if (!distributeChildOps.empty()) {
     if (!isComposite())
       return emitError()
-             << "'omp.composite' attribute missing from composite wrapper";
+             << "'omp.composite' attribute missing from composite operation";
 
-    if (LoopWrapperInterface nested = getNestedWrapper()) {
-      // Check for the allowed leaf constructs that may appear in a composite
-      // construct directly after PARALLEL.
-      if (!isa<WsloopOp>(nested))
-        return emitError() << "only supported nested wrapper is 'omp.wsloop'";
-    } else {
-      return emitOpError() << "must not wrap an 'omp.loop_nest' directly";
+    auto *ompDialect = getContext()->getLoadedDialect<OpenMPDialect>();
+    Operation &distributeOp = **distributeChildOps.begin();
+    for (Operation &childOp : getOps()) {
+      if (&childOp == &distributeOp || ompDialect != childOp.getDialect())
+        continue;
+
+      if (!childOp.hasTrait<OpTrait::IsTerminator>())
+        return emitError() << "unexpected OpenMP operation inside of composite "
+                              "'omp.parallel'";
     }
   } else if (isComposite()) {
     return emitError()
-           << "'omp.composite' attribute present in non-composite wrapper";
+           << "'omp.composite' attribute present in non-composite operation";
   }
 
   if (getAllocateVars().size() != getAllocatorVars().size())
@@ -1751,15 +1750,12 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult WsloopOp::verify() {
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (!isValidWrapper())
+    return emitOpError() << "must be a valid loop wrapper";
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
   bool isCompositeChildLeaf =
-      wrapper && wrapper.isWrapper() &&
-      (!llvm::isa<ParallelOp>(wrapper) ||
-       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
+
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -1813,18 +1809,14 @@ LogicalResult SimdOp::verify() {
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (!isValidWrapper())
+    return emitOpError() << "must be a valid loop wrapper";
 
   if (getNestedWrapper())
     return emitOpError() << "must wrap an 'omp.loop_nest' directly";
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
   bool isCompositeChildLeaf =
-      wrapper && wrapper.isWrapper() &&
-      (!llvm::isa<ParallelOp>(wrapper) ||
-       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
   if (!isComposite() && isCompositeChildLeaf)
     return emitError()
@@ -1859,8 +1851,8 @@ LogicalResult DistributeOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (!isValidWrapper())
+    return emitOpError() << "must be a valid loop wrapper";
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
@@ -1868,9 +1860,13 @@ LogicalResult DistributeOp::verify() {
              << "'omp.composite' attribute missing from composite wrapper";
     // Check for the allowed leaf constructs that may appear in a composite
     // construct directly after DISTRIBUTE.
-    if (!isa<ParallelOp, SimdOp>(nested))
-      return emitError() << "only supported nested wrappers are 'omp.parallel' "
-                            "and 'omp.simd'";
+    if (isa<WsloopOp>(nested)) {
+      if (!llvm::dyn_cast_if_present<ParallelOp>((*this)->getParentOp()))
+        return emitError() << "an 'omp.wsloop' nested wrapper is only allowed "
+                              "when 'omp.parallel' is the direct parent";
+    } else if (!isa<SimdOp>(nested))
+      return emitError() << "only supported nested wrappers are 'omp.simd' and "
+                            "'omp.wsloop'";
   } else if (isComposite()) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
@@ -2063,8 +2059,8 @@ LogicalResult TaskloopOp::verify() {
         "may not appear on the same taskloop directive");
   }
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (!isValidWrapper())
+    return emitOpError() << "must be a valid loop wrapper";
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
@@ -2161,11 +2157,8 @@ LogicalResult LoopNestOp::verify() {
              << "range argument type does not match corresponding IV type";
   }
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
-
-  if (!wrapper || !wrapper.isWrapper())
-    return emitOpError() << "expects parent op to be a valid loop wrapper";
+  if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
+    return emitOpError() << "expects parent op to be a loop wrapper";
 
   return success();
 }
@@ -2175,8 +2168,6 @@ void LoopNestOp::gatherWrappers(
   Operation *parent = (*this)->getParentOp();
   while (auto wrapper =
              llvm::dyn_cast_if_present<LoopWrapperInterface>(parent)) {
-    if (!wrapper.isWrapper())
-      break;
     wrappers.push_back(wrapper);
     parent = parent->getParentOp();
   }
