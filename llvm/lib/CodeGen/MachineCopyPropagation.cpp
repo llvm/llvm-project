@@ -201,7 +201,7 @@ moveInstructionsOutOfTheWayIfWeCan(MachineInstr *DstInstr, MachineInstr *SrcInst
   // this scenario this must be ignored. Let's say that we can not control what
   // nodes to process and we come across the copy source. How do I know what
   // node has that copy source as their dependency? We can check of which node
-  // is the copy source the dependency of. This list will alway contain the
+  // is the copy source the dependency of. This list will always contain the
   // source. To decide if we have it as dependency of another instruction, we
   // must check in the already traversed list if any of the instructions that is
   // depended on the source is contained. This would introduce extra costs.
