@@ -2887,7 +2887,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static int getPrioiryFromAttrString(StringRef AttrStr) {
+static int getPriorityFromAttrString(StringRef AttrStr) {
   SmallVector<StringRef, 8> Attrs;
 
   AttrStr.split(Attrs, ";");
@@ -2930,8 +2930,8 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   llvm::stable_sort(
       CurrOptions, [](const CodeGenFunction::MultiVersionResolverOption &LHS,
                       const CodeGenFunction::MultiVersionResolverOption &RHS) {
-        return getPrioiryFromAttrString(LHS.Conditions.Features[0]) >
-               getPrioiryFromAttrString(RHS.Conditions.Features[0]);
+        return getPriorityFromAttrString(LHS.Conditions.Features[0]) >
+               getPriorityFromAttrString(RHS.Conditions.Features[0]);
       });
 
   // Check the each candidate function.
