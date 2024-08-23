@@ -128,6 +128,8 @@ public:
   static bool classof(const TargetSubtargetInfo *ST) {
     return ST->getTargetTriple().isSPIRV();
   }
+
+  static constexpr unsigned MaxLegalAddressSpace = 6;
 };
 } // namespace llvm
 
