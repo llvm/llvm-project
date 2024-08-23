@@ -107,19 +107,6 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++20 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++23 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Removed the restriction to literal types in constexpr functions in C++23 mode.
-
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -130,6 +117,13 @@ C++2c Feature Support
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
+
+C++23 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
+
+C++20 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
