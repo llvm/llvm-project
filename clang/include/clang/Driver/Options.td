@@ -7976,7 +7976,7 @@ def fapply_global_visibility_to_externs : Flag<["-"], "fapply-global-visibility-
   MarshallingInfoFlag<LangOpts<"SetVisibilityForExternDecls">>;
 def fbracket_depth : Separate<["-"], "fbracket-depth">,
   HelpText<"Maximum nesting level for parentheses, brackets, and braces">,
-  MarshallingInfoInt<LangOpts<"BracketDepth">, "2048">;
+  MarshallingInfoInt<LangOpts<"BracketDepth">, "256">;
 defm const_strings : BoolOption<"f", "const-strings",
   LangOpts<"ConstStrings">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
