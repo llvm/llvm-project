@@ -174,20 +174,7 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
-static cl::opt<bool> ImportAssumeUniqueLocal(
-    "import-assume-unique-local", cl::init(false),
-    cl::desc(
-        "By default, a local-linkage global variable won't be imported in the "
-        "edge mod1:func -> mod2:local-var (from value profiles) since compiler "
-        "cannot assume mod2 is compiled with full path which gives local-var a "
-        "program-wide unique GUID. Set this option to true will help cross "
-        "module import of such variables. This is only safe if the compiler "
-        "user specify the full module path."),
-    cl::Hidden);
-
-static cl::opt<std::string>
-    ContextualProfile("thinlto-pgo-ctx-prof",
-                      cl::desc("Path to a contextual profile."), cl::Hidden);
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -214,9 +201,8 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
-  // We can import a local from another module if all inputs are compiled
-  // with full paths or when there is one definition.
-  if (ImportAssumeUniqueLocal || NumDefs == 1)
+  // We can import a local when there is one definition.
+  if (NumDefs == 1)
     return false;
   // In other cases, make sure we import the copy in the caller's module if the
   // referenced value has local linkage. The only time a local variable can
@@ -348,6 +334,25 @@ using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
 
 } // anonymous namespace
 
+FunctionImporter::AddDefinitionStatus
+FunctionImporter::addDefinition(ImportMapTy &ImportList, StringRef FromModule,
+                                GlobalValue::GUID GUID) {
+  auto [It, Inserted] =
+      ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Definition);
+  if (Inserted)
+    return AddDefinitionStatus::Inserted;
+  if (It->second == GlobalValueSummary::Definition)
+    return AddDefinitionStatus::NoChange;
+  It->second = GlobalValueSummary::Definition;
+  return AddDefinitionStatus::ChangedToDefinition;
+}
+
+void FunctionImporter::maybeAddDeclaration(ImportMapTy &ImportList,
+                                           StringRef FromModule,
+                                           GlobalValue::GUID GUID) {
+  ImportList[FromModule].try_emplace(GUID, GlobalValueSummary::Declaration);
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -406,17 +411,13 @@ class GlobalsImporter final {
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
         // Otherwise, definition should take precedence over declaration.
-        auto [Iter, Inserted] =
-            ImportList[RefSummary->modulePath()].try_emplace(
-                VI.getGUID(), GlobalValueSummary::Definition);
+        if (FunctionImporter::addDefinition(
+                ImportList, RefSummary->modulePath(), VI.getGUID()) !=
+            FunctionImporter::AddDefinitionStatus::Inserted)
+          break;
+
         // Only update stat and exports if we haven't already imported this
         // variable.
-        if (!Inserted) {
-          // Set the value to 'std::min(existing-value, new-value)' to make
-          // sure a definition takes precedence over a declaration.
-          Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
-          break;
-        }
         NumImportedGlobalVarsThinLink++;
         // Any references made by this variable will be marked exported
         // later, in ComputeCrossModuleImport, after import decisions are
@@ -599,8 +600,8 @@ class WorkloadImportsManager : public ModuleImportsManager {
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
                         << ExportingModule << " : "
                         << Function::getGUID(VI.name()) << "\n");
-      ImportList[ExportingModule][VI.getGUID()] =
-          GlobalValueSummary::Definition;
+      FunctionImporter::addDefinition(ImportList, ExportingModule,
+                                      VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
         (*ExportLists)[ExportingModule].insert(VI);
@@ -683,7 +684,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
 
   void loadFromCtxProf() {
     std::error_code EC;
-    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ContextualProfile);
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(UseCtxProfile);
     if (std::error_code EC = BufferOrErr.getError()) {
       report_fatal_error("Failed to open contextual profile file");
       return;
@@ -734,12 +735,12 @@ public:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
       : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
-    if (ContextualProfile.empty() == WorkloadDefinitions.empty()) {
+    if (UseCtxProfile.empty() == WorkloadDefinitions.empty()) {
       report_fatal_error(
           "Pass only one of: -thinlto-pgo-ctx-prof or -thinlto-workload-def");
       return;
     }
-    if (!ContextualProfile.empty())
+    if (!UseCtxProfile.empty())
       loadFromCtxProf();
     else
       loadFromJson();
@@ -761,7 +762,7 @@ std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
         IsPrevailing,
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
-  if (WorkloadDefinitions.empty() && ContextualProfile.empty()) {
+  if (WorkloadDefinitions.empty() && UseCtxProfile.empty()) {
     LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
     return std::unique_ptr<ModuleImportsManager>(
         new ModuleImportsManager(IsPrevailing, Index, ExportLists));
@@ -896,13 +897,10 @@ static void computeImportForFunction(
         if (ImportDeclaration && SummaryForDeclImport) {
           StringRef DeclSourceModule = SummaryForDeclImport->modulePath();
 
-          // Since definition takes precedence over declaration for the same VI,
-          // try emplace <VI, declaration> pair without checking insert result.
-          // If insert doesn't happen, there must be an existing entry keyed by
-          // VI. Note `ExportLists` only keeps track of exports due to imported
+          // Note `ExportLists` only keeps track of exports due to imported
           // definitions.
-          ImportList[DeclSourceModule].try_emplace(
-              VI.getGUID(), GlobalValueSummary::Declaration);
+          FunctionImporter::maybeAddDeclaration(ImportList, DeclSourceModule,
+                                                VI.getGUID());
         }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
@@ -951,21 +949,15 @@ static void computeImportForFunction(
 
       // Try emplace the definition entry, and update stats based on insertion
       // status.
-      auto [Iter, Inserted] = ImportList[ExportModulePath].try_emplace(
-          VI.getGUID(), GlobalValueSummary::Definition);
-
-      // We previously decided to import this GUID definition if it was already
-      // inserted in the set of imports from the exporting module.
-      if (Inserted || Iter->second == GlobalValueSummary::Declaration) {
+      if (FunctionImporter::addDefinition(ImportList, ExportModulePath,
+                                          VI.getGUID()) !=
+          FunctionImporter::AddDefinitionStatus::NoChange) {
         NumImportedFunctionsThinLink++;
         if (IsHotCallsite)
           NumImportedHotFunctionsThinLink++;
         if (IsCriticalCallsite)
           NumImportedCriticalFunctionsThinLink++;
       }
-
-      if (Iter->second == GlobalValueSummary::Declaration)
-        Iter->second = GlobalValueSummary::Definition;
 
       // Any calls/references made by this function will be marked exported
       // later, in ComputeCrossModuleImport, after import decisions are
@@ -1314,13 +1306,8 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     if (Summary->modulePath() == ModulePath)
       continue;
     // Add an entry to provoke importing by thinBackend.
-    auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
-        GUID, Summary->importType());
-    if (!Inserted) {
-      // Use 'std::min' to make sure definition (with enum value 0) takes
-      // precedence over declaration (with enum value 1).
-      Iter->second = std::min(Iter->second, Summary->importType());
-    }
+    FunctionImporter::addGUID(ImportList, Summary->modulePath(), GUID,
+                              Summary->importType());
   }
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -1828,10 +1815,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = F.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing function"
@@ -1867,10 +1851,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing global"
@@ -1890,10 +1871,7 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = GA.getGUID();
       auto MaybeImportType = getImportType(ImportGUIDs, GUID);
-
-      bool ImportDefinition =
-          (MaybeImportType &&
-           (*MaybeImportType == GlobalValueSummary::Definition));
+      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
                         << " importing alias"

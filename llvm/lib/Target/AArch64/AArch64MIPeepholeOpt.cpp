@@ -61,6 +61,9 @@
 //   %6:fpr128 = IMPLICIT_DEF
 //   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
 //
+// 8. Remove redundant CSELs that select between identical registers, by
+//    replacing them with unconditional moves.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -124,6 +127,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   template <typename T>
   bool visitAND(unsigned Opc, MachineInstr &MI);
   bool visitORR(MachineInstr &MI);
+  bool visitCSEL(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
@@ -280,6 +284,26 @@ bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
   MI.eraseFromParent();
 
+  return true;
+}
+
+bool AArch64MIPeepholeOpt::visitCSEL(MachineInstr &MI) {
+  // Replace CSEL with MOV when both inputs are the same register.
+  if (MI.getOperand(1).getReg() != MI.getOperand(2).getReg())
+    return false;
+
+  auto ZeroReg =
+      MI.getOpcode() == AArch64::CSELXr ? AArch64::XZR : AArch64::WZR;
+  auto OrOpcode =
+      MI.getOpcode() == AArch64::CSELXr ? AArch64::ORRXrs : AArch64::ORRWrs;
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(OrOpcode))
+      .addReg(MI.getOperand(0).getReg(), RegState::Define)
+      .addReg(ZeroReg)
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(0);
+
+  MI.eraseFromParent();
   return true;
 }
 
@@ -709,11 +733,42 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
     DeadInstrs.insert(SrcMI);
   }
 
-  if (!SrcMI || SrcMI->getOpcode() != AArch64::SBFMXri ||
-      SrcMI->getOperand(2).getImm() != 0 || SrcMI->getOperand(3).getImm() != 31)
+  if (!SrcMI)
     return false;
 
-  Register SrcReg = SrcMI->getOperand(1).getReg();
+  // Look for SXTW(X) and return Reg.
+  auto getSXTWSrcReg = [](MachineInstr *SrcMI) -> Register {
+    if (SrcMI->getOpcode() != AArch64::SBFMXri ||
+        SrcMI->getOperand(2).getImm() != 0 ||
+        SrcMI->getOperand(3).getImm() != 31)
+      return AArch64::NoRegister;
+    return SrcMI->getOperand(1).getReg();
+  };
+  // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
+  auto getUXTWSrcReg = [&](MachineInstr *SrcMI) -> Register {
+    if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
+        SrcMI->getOperand(3).getImm() != AArch64::sub_32 ||
+        !MRI->hasOneNonDBGUse(SrcMI->getOperand(2).getReg()))
+      return AArch64::NoRegister;
+    MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(2).getReg());
+    if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
+        Orr->getOperand(1).getReg() != AArch64::WZR ||
+        !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
+      return AArch64::NoRegister;
+    MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
+    if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
+        Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
+      return AArch64::NoRegister;
+    DeadInstrs.insert(Orr);
+    return Cpy->getOperand(1).getReg();
+  };
+
+  Register SrcReg = getSXTWSrcReg(SrcMI);
+  if (!SrcReg)
+    SrcReg = getUXTWSrcReg(SrcMI);
+  if (!SrcReg)
+    return false;
+
   MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
   LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
   MI.getOperand(1).setReg(SrcReg);
@@ -787,6 +842,10 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         Changed |=
             visitADDSSUBS<uint64_t>({AArch64::SUBXri, AArch64::SUBSXri},
                                     {AArch64::ADDXri, AArch64::ADDSXri}, MI);
+        break;
+      case AArch64::CSELWr:
+      case AArch64::CSELXr:
+        Changed |= visitCSEL(MI);
         break;
       case AArch64::INSvi64gpr:
         Changed |= visitINSviGPR(MI, AArch64::INSvi64lane);

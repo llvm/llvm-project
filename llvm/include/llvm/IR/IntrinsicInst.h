@@ -76,6 +76,8 @@ public:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum:
     case Intrinsic::smax:
     case Intrinsic::smin:
     case Intrinsic::umax:
@@ -340,6 +342,14 @@ public:
   /// describes a combination of the variable's value and address.
   bool isAddressOfVariable() const {
     return getIntrinsicID() == Intrinsic::dbg_declare;
+  }
+
+  /// Determine if this describes the value of a local variable. It is true for
+  /// dbg.value, but false for dbg.declare, which describes its address, and
+  /// false for dbg.assign, which describes a combination of the variable's
+  /// value and address.
+  bool isValueOfVariable() const {
+    return getIntrinsicID() == Intrinsic::dbg_value;
   }
 
   void setKillLocation() {

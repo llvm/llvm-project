@@ -146,53 +146,9 @@ entry:
 define i64 @red_strided_ld_16xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_strided_ld_16xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[LD0]], [[LD1]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i64, ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[ADD_1]], [[LD2]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 6
-; CHECK-NEXT:    [[LD3:%.*]] = load i64, ptr [[GEP_2]], align 8
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[ADD_2]], [[LD3]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[LD4:%.*]] = load i64, ptr [[GEP_3]], align 8
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nuw nsw i64 [[ADD_3]], [[LD4]]
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 10
-; CHECK-NEXT:    [[LD5:%.*]] = load i64, ptr [[GEP_4]], align 8
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nuw nsw i64 [[ADD_4]], [[LD5]]
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 12
-; CHECK-NEXT:    [[LD6:%.*]] = load i64, ptr [[GEP_5]], align 8
-; CHECK-NEXT:    [[ADD_6:%.*]] = add nuw nsw i64 [[ADD_5]], [[LD6]]
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 14
-; CHECK-NEXT:    [[LD7:%.*]] = load i64, ptr [[GEP_6]], align 8
-; CHECK-NEXT:    [[ADD_7:%.*]] = add nuw nsw i64 [[ADD_6]], [[LD7]]
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 16
-; CHECK-NEXT:    [[LD8:%.*]] = load i64, ptr [[GEP_7]], align 8
-; CHECK-NEXT:    [[ADD_8:%.*]] = add nuw nsw i64 [[ADD_7]], [[LD8]]
-; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 18
-; CHECK-NEXT:    [[LD9:%.*]] = load i64, ptr [[GEP_8]], align 8
-; CHECK-NEXT:    [[ADD_9:%.*]] = add nuw nsw i64 [[ADD_8]], [[LD9]]
-; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 20
-; CHECK-NEXT:    [[LD10:%.*]] = load i64, ptr [[GEP_9]], align 8
-; CHECK-NEXT:    [[ADD_10:%.*]] = add nuw nsw i64 [[ADD_9]], [[LD10]]
-; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 22
-; CHECK-NEXT:    [[LD11:%.*]] = load i64, ptr [[GEP_10]], align 8
-; CHECK-NEXT:    [[ADD_11:%.*]] = add nuw nsw i64 [[ADD_10]], [[LD11]]
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 24
-; CHECK-NEXT:    [[LD12:%.*]] = load i64, ptr [[GEP_11]], align 8
-; CHECK-NEXT:    [[ADD_12:%.*]] = add nuw nsw i64 [[ADD_11]], [[LD12]]
-; CHECK-NEXT:    [[GEP_12:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 26
-; CHECK-NEXT:    [[LD13:%.*]] = load i64, ptr [[GEP_12]], align 8
-; CHECK-NEXT:    [[ADD_13:%.*]] = add nuw nsw i64 [[ADD_12]], [[LD13]]
-; CHECK-NEXT:    [[GEP_13:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 28
-; CHECK-NEXT:    [[LD14:%.*]] = load i64, ptr [[GEP_13]], align 8
-; CHECK-NEXT:    [[ADD_14:%.*]] = add nuw nsw i64 [[ADD_13]], [[LD14]]
-; CHECK-NEXT:    [[GEP_14:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 30
-; CHECK-NEXT:    [[LD15:%.*]] = load i64, ptr [[GEP_14]], align 8
-; CHECK-NEXT:    [[ADD_15:%.*]] = add nuw nsw i64 [[ADD_14]], [[LD15]]
-; CHECK-NEXT:    ret i64 [[ADD_15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
   %ld0 = load i64, ptr %ptr
@@ -1057,22 +1013,20 @@ declare i32 @llvm.abs.i32(i32, i1)
 
 define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 ; CHECK-LABEL: @stride_sum_abs_diff(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[STRIDE:%.*]]
-; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[STRIDE:%.*]]
+; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P_2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[Q_2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i32> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP11]], i1 true)
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
-; CHECK-NEXT:    ret i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP5]], <2 x i32> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP7]], <2 x i32> [[TMP4]], i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP9]], i1 true)
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])
+; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
   %x.0 = load i32, ptr %p
   %y.0 = load i32, ptr %q
@@ -1112,12 +1066,11 @@ define i32 @reduce_sum_2arrays_a(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Q:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> [[TMP2]], <4 x i8> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %x.0 = load i8, ptr %p, align 1
@@ -1161,12 +1114,11 @@ define i32 @reduce_sum_2arrays_b(ptr noalias noundef %x, ptr noalias %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Y:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> [[TMP2]], <4 x i8> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   entry:
   %0 = load i8, ptr %x, align 1

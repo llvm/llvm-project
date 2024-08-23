@@ -28,6 +28,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "operator_hijacker.h"
 
 namespace fs = std::filesystem;
 
@@ -75,6 +76,12 @@ int main(int, char**) {
     fs >> x;
     assert(x == 3.25);
   }
+  {
+    std::basic_ifstream<char, operator_hijacker_char_traits<char>> fs(fs::path("test.dat"));
+    std::basic_string<char, operator_hijacker_char_traits<char> > x;
+    fs >> x;
+    assert(x == "3.25");
+  }
   // std::ifstream(const fs::path&, std::ios_base::openmode) is tested in
   // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
   // which creates writable files.
@@ -85,6 +92,12 @@ int main(int, char**) {
     double x = 0;
     fs >> x;
     assert(x == 3.25);
+  }
+  {
+    std::basic_ifstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs(fs::path("test.dat"));
+    std::basic_string<wchar_t, operator_hijacker_char_traits<wchar_t> > x;
+    fs >> x;
+    assert(x == L"3.25");
   }
   // std::wifstream(const fs::path&, std::ios_base::openmode) is tested in
   // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp

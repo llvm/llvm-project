@@ -46,6 +46,9 @@ class Defined;
 class Symbol;
 class BitcodeCompiler;
 class OutputSection;
+class LinkerScript;
+class TargetInfo;
+struct Partition;
 struct PhdrEntry;
 
 enum ELFKind : uint8_t {
@@ -221,7 +224,8 @@ struct Config {
   bool allowMultipleDefinition;
   bool fatLTOObjects;
   bool androidPackDynRelocs = false;
-  bool armThumbPLTs = false;
+  bool armHasArmISA = false;
+  bool armHasThumb2ISA = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
@@ -481,10 +485,13 @@ struct DuplicateSymbol {
 
 struct Ctx {
   LinkerDriver driver;
+  LinkerScript *script;
+  TargetInfo *target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart;
+  Partition *mainPart;
   PhdrEntry *tlsPhdr;
   struct OutSections {
     OutputSection *elfHeader;
@@ -580,6 +587,11 @@ struct Ctx {
   // before a possible `sym = expr;`.
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
+  // The set of TOC entries (.toc + addend) for which we should not apply
+  // toc-indirect to toc-relative relaxation. const Symbol * refers to the
+  // STT_SECTION symbol associated to the .toc input section.
+  llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
   void reset();
 

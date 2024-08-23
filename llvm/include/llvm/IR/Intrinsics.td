@@ -1085,6 +1085,14 @@ def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
+def int_minimumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+>;
+def int_maximumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+>;
 
 // Internal interface for object size checking
 def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],

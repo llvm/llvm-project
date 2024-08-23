@@ -2231,6 +2231,41 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
+  /// Different ways to break binary operations.
+  enum BreakBinaryOperationsStyle : int8_t {
+    /// Don't break binary operations
+    /// \code
+    ///    aaa + bbbb * ccccc - ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_Never,
+
+    /// Binary operations will either be all on the same line, or each operation
+    /// will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb *
+    ///    ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_OnePerLine,
+
+    /// Binary operations of a particular precedence that exceed the column
+    /// limit will have one line each.
+    /// \code
+    ///    aaa +
+    ///    bbbb * ccccc -
+    ///    ddddd +
+    ///    eeeeeeeeeeeeeeee;
+    /// \endcode
+    BBO_RespectPrecedence
+  };
+
+  /// The break constructor initializers style to use.
+  /// \version 20
+  BreakBinaryOperationsStyle BreakBinaryOperations;
+
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
     /// Break constructor initializers before the colon and after the commas.
@@ -2823,7 +2858,8 @@ struct FormatStyle {
   PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
-  /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
+  /// ``RequiresClausePosition`` is ``OwnLine``, ``OwnLineWithBrace``,
+  /// or ``WithFollowing``.
   ///
   /// In clang-format 12, 13 and 14 it was named ``IndentRequires``.
   /// \code
@@ -3909,22 +3945,45 @@ struct FormatStyle {
   /// ``IndentRequires`` option is only used if the ``requires`` is put on the
   /// start of a line.
   enum RequiresClausePositionStyle : int8_t {
-    /// Always put the ``requires`` clause on its own line.
+    /// Always put the ``requires`` clause on its own line (possibly followed by
+    /// a semicolon).
     /// \code
     ///   template <typename T>
-    ///   requires C<T>
+    ///     requires C<T>
     ///   struct Foo {...
     ///
     ///   template <typename T>
-    ///   requires C<T>
+    ///   void bar(T t)
+    ///     requires C<T>;
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
     ///   void bar(T t) {...
     ///
     ///   template <typename T>
     ///   void baz(T t)
-    ///   requires C<T>
+    ///     requires C<T>
     ///   {...
     /// \endcode
     RCPS_OwnLine,
+    /// As with ``OwnLine``, except, unless otherwise prohibited, place a
+    /// following open brace (of a function definition) to follow on the same
+    /// line.
+    /// \code
+    ///   void bar(T t)
+    ///     requires C<T> {
+    ///     return;
+    ///   }
+    ///
+    ///   void bar(T t)
+    ///     requires C<T> {}
+    ///
+    ///   template <typename T>
+    ///     requires C<T>
+    ///   void baz(T t) {
+    ///     ...
+    /// \endcode
+    RCPS_OwnLineWithBrace,
     /// Try to put the clause together with the preceding part of a declaration.
     /// For class templates: stick to the template declaration.
     /// For function templates: stick to the template declaration.
@@ -5037,6 +5096,7 @@ struct FormatStyle {
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
+           BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
