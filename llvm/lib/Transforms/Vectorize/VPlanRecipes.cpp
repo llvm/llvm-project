@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "VPUtils.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "llvm/ADT/STLExtras.h"

@@ -13,6 +13,7 @@
 
 #include "VPlanTransforms.h"
 #include "VPRecipeBuilder.h"
+#include "VPUtils.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
