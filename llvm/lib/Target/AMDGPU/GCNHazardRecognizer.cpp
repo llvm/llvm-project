@@ -3013,7 +3013,9 @@ static void updateGetPCBundle(MachineInstr *NewMI) {
     return;
 
   // Update offsets of any references in the bundle.
-  const unsigned NewBytes = NewMI->getDesc().getSize();
+  const unsigned NewBytes = 4;
+  assert(NewMI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         "Unexpected instruction insertion in bundle");
   auto NextMI = std::next(NewMI->getIterator());
   auto End = NewMI->getParent()->end();
   while (NextMI != End && NextMI->isBundledWithPred()) {

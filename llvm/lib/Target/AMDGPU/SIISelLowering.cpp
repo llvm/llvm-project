@@ -13909,12 +13909,15 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
 
   // On some architectures (GFX9) movrel is not available and it's better
   // to expand.
-  if (!Subtarget->hasMovrel())
+  if (Subtarget->useVGPRIndexMode())
     return NumInsts <= 16;
 
   // If movrel is available, use it instead of expanding for vector of 8
   // elements.
-  return NumInsts <= 15;
+  if (Subtarget->hasMovrel())
+    return NumInsts <= 15;
+
+  return true;
 }
 
 bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {

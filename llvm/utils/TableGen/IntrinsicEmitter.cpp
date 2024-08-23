@@ -669,9 +669,7 @@ Intrinsic::getIntrinsicFor{1}Builtin(StringRef TargetPrefix,
   }
 
   if (!Table.empty()) {
-    OS << "  static constexpr char BuiltinNames[] = {\n";
-    Table.EmitCharArray(OS);
-    OS << "  };\n\n";
+    Table.EmitStringLiteralDef(OS, "static constexpr char BuiltinNames[]");
 
     OS << R"(
   struct BuiltinEntry {
