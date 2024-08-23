@@ -118,12 +118,15 @@ C++2c Feature Support
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
+- Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -230,6 +233,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
+
+- Don't emit duplicated dangling diagnostics. (#GH93386).
 
 - Improved diagnostic when trying to befriend a concept. (#GH45182).
 
@@ -444,6 +449,11 @@ Moved checkers
 
 Sanitizers
 ----------
+- Introduced Realtime Sanitizer, activated by using the -fsanitize=realtime
+  flag. This sanitizer detects unsafe system library calls, such as memory
+  allocations and mutex locks. If any such function is called during invocation
+  of a function marked with the ``[[clang::nonblocking]]`` attribute, an error
+  is printed to the console and the process exits non-zero.
 
 - Added the ``-fsanitize-undefined-ignore-overflow-pattern`` flag which can be
   used to disable specific overflow-dependent code patterns. The supported
