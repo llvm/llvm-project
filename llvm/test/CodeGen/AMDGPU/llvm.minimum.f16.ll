@@ -864,6 +864,7 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s1, s1
+; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v0
 ; GFX950-NEXT:    ;;#ASMEND

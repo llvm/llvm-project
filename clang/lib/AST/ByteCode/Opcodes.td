@@ -780,3 +780,5 @@ def AllocCN : Opcode {
 def Free : Opcode {
   let Args = [ArgBool];
 }
+
+def IsConstantContext: Opcode;
