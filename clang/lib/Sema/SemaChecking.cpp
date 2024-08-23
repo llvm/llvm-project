@@ -5578,6 +5578,9 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
 }
 
 bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
+  // For simplicity, we support only a limited expressions for the argument.
+  // Specifically 'ptr->array' and '&ptr->array[0]'. This allows us to reject
+  // arguments with complex casting, which really shouldn't be a huge problem.
   if (checkArgCount(TheCall, 1))
     return true;
 
@@ -5604,9 +5607,9 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
       Arg = ASE->getBase()->IgnoreParenImpCasts();
   }
 
-  // Use 'size_t *' as the default return type. If the argument doesn't have
-  // the 'counted_by' attribute, it'll return a "nullptr."
-  TheCall->setType(Context.getPointerType(Context.getSizeType()));
+  // Use 'void *' as the default return type. If the argument doesn't have the
+  // 'counted_by' attribute, it'll return a 'nullptr'.
+  TheCall->setType(Context.getPointerType(Context.VoidTy));
 
   if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
     if (!ME->isFlexibleArrayMemberLike(
