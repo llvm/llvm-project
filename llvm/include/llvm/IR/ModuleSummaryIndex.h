@@ -1808,9 +1808,9 @@ public:
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (auto &KV : make_range(TidIter))
-      if (KV.second.first == TypeId)
-        return KV.second.second;
+    for (auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return TypeIdPair.second;
     auto It = TypeIdMap.insert(
         {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
     return It->second.second;
@@ -1820,9 +1820,9 @@ public:
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
     auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
-    for (const auto &KV : make_range(TidIter))
-      if (KV.second.first == TypeId)
-        return &KV.second.second;
+    for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
+      if (TypeIdPair.first == TypeId)
+        return &TypeIdPair.second;
     return nullptr;
   }
 

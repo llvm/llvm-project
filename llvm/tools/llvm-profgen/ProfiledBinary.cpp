@@ -423,8 +423,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       GuidFilter.insert(Function::getGUID(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
-        for (const auto &[K, V] : make_range(GUIDs))
-          FuncStartAddresses[V] = K;
+        for (const auto &[StartAddr, Func] : make_range(GUIDs))
+          FuncStartAddresses[Func] = StartAddr;
       }
     }
   }
