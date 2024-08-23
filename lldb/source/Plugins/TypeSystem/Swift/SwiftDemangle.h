@@ -25,8 +25,8 @@ namespace swift_demangle {
 /// Note: The Node::Kind path is relative to the given root node. The root
 /// node's Node::Kind must not be included in the path.
 inline swift::Demangle::NodePointer
-nodeAtPath(swift::Demangle::NodePointer root,
-           llvm::ArrayRef<swift::Demangle::Node::Kind> kind_path) {
+ChildAtPath(swift::Demangle::NodePointer root,
+            llvm::ArrayRef<swift::Demangle::Node::Kind> kind_path) {
   if (!root)
     return nullptr;
 
@@ -50,6 +50,15 @@ nodeAtPath(swift::Demangle::NodePointer root,
   return node;
 }
 
+/// Like \ref childAtPath, but starts the comparison at \c root.
+inline swift::Demangle::NodePointer
+NodeAtPath(swift::Demangle::NodePointer root,
+           llvm::ArrayRef<swift::Demangle::Node::Kind> kind_path) {
+  if (!root || !kind_path.size() || root->getKind() != kind_path.front())
+    return nullptr;
+  return ChildAtPath(root, kind_path.drop_front());
+}
+
 /// \return the child of the \p Type node.
 static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
   using namespace swift::Demangle;
@@ -66,11 +75,11 @@ static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
 }
 
 /// Demangle a mangled type name and return the child of the \p Type node.
-static swift::Demangle::NodePointer
+inline swift::Demangle::NodePointer
 GetDemangledType(swift::Demangle::Demangler &dem, llvm::StringRef name) {
   return GetType(dem.demangleSymbol(name));
 }
-  
+
 } // namespace swift_demangle
 } // namespace lldb_private
 

@@ -13,7 +13,7 @@ add_lldb_library(lldbPluginSwiftLanguage PLUGIN
   SwiftMetatype.cpp
   SwiftOptionSet.cpp
   SwiftOptional.cpp
-  SwiftRuntimeFailureRecognizer.cpp
+  SwiftFrameRecognizers.cpp
   SwiftSet.cpp
   SwiftUnsafeTypes.cpp
 
@@ -36,4 +36,3 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT SWIFT_COMPILER_MSVC_LIKE)
   target_compile_options(lldbPluginSwiftLanguage PRIVATE
     -Wno-dollar-in-identifier-extension)
 endif()
-

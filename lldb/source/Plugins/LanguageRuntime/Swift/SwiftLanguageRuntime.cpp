@@ -61,7 +61,7 @@
 
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftFormatters.h"
-#include "Plugins/Language/Swift/SwiftRuntimeFailureRecognizer.h"
+#include "Plugins/Language/Swift/SwiftFrameRecognizers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -611,7 +611,7 @@ SwiftLanguageRuntimeImpl::SwiftLanguageRuntimeImpl(Process &process)
   SetupSwiftError();
   Target &target = m_process.GetTarget();
   m_modules_to_add.Append(target.GetImages());
-  RegisterSwiftRuntimeFailureRecognizer(m_process);
+  RegisterSwiftFrameRecognizers(m_process);
 }
 
 LanguageRuntime *
