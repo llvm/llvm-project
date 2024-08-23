@@ -43,9 +43,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 }
 
 // Get length including padding and null terminator.
-static size_t getPaddedLen(const StringRef &Str) {
-  return Str.size() + 4 & ~3;
-}
+static size_t getPaddedLen(const StringRef &Str) { return Str.size() + 4 & ~3; }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
   const size_t PaddedLen = getPaddedLen(Str);
