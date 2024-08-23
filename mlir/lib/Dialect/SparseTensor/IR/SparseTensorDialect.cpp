@@ -2745,6 +2745,16 @@ LogicalResult CoIterateOp::verifyRegions() {
   return success();
 }
 
+SmallVector<Region *> CoIterateOp::getSubCasesOf(unsigned regionIdx) {
+  SmallVector<Region *> ret;
+  I64BitSet caseBit = getRegionDefinedSpace(regionIdx);
+  for (Region &r : getCaseRegions())
+    if (getRegionDefinedSpace(r.getRegionNumber()).isSubSetOf(caseBit))
+      ret.push_back(&r);
+
+  return ret;
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Dialect Setups.
 //===----------------------------------------------------------------------===//
