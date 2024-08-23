@@ -91,13 +91,9 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return std::make_pair(0u, RC);
 
   if (VT.isFloatingPoint())
-    RC = VT.isVector() ? &SPIRV::vfIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::fID64RegClass
-                                                        : &SPIRV::fIDRegClass);
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass
-                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::iID64RegClass
-                                                        : &SPIRV::iIDRegClass);
+    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -115,7 +111,7 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVGlobalRegistry &GR, MachineInstr &I,
                             Register OpReg, unsigned OpIdx,
                             SPIRVType *NewPtrType) {
-  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MachineIRBuilder MIB(I);
   bool Res = MIB.buildInstr(SPIRV::OpBitcast)
                  .addDef(NewReg)

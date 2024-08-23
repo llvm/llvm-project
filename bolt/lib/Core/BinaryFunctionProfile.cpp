@@ -336,7 +336,8 @@ void BinaryFunction::inferFallThroughCounts() {
       if (SuccBI.Count == 0) {
         SuccBI.Count = Inferred;
         SuccBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
-        Succ->ExecutionCount += Inferred;
+        Succ->ExecutionCount =
+            std::max(Succ->getKnownExecutionCount(), Inferred);
       }
     }
   }
