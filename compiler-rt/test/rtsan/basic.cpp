@@ -5,9 +5,13 @@
 // Intent: Ensure that an intercepted call in a [[clang::nonblocking]] function
 //         is flagged as an error. Basic smoke test.
 
+#include <stdio.h>
 #include <stdlib.h>
 
-void violation() [[clang::nonblocking]] { void *Ptr = malloc(2); }
+void violation() [[clang::nonblocking]] {
+  void *ptr = malloc(2);
+  printf("ptr: %p\n", ptr); // ensure we don't optimize out the malloc
+}
 
 int main() {
   violation();

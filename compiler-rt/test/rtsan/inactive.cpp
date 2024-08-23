@@ -9,7 +9,10 @@
 
 // In this test, we don't use the -fsanitize=realtime flag, so nothing
 // should happen here
-void violation() [[clang::nonblocking]] { void *Ptr = malloc(2); }
+void violation() [[clang::nonblocking]] {
+  void *ptr = malloc(2);
+  printf("ptr: %p\n", ptr); // ensure we don't optimize out the malloc
+}
 
 int main() {
   printf("Starting run\n");
