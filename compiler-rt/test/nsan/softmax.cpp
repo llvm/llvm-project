@@ -31,7 +31,7 @@ __attribute__((noinline)) void softmax(std::vector<T> &values) {
 // use max value to avoid overflow
 // \sigma_i exp(x_i) / \sum_j exp(x_j) = \sigma_i exp(x_i - max(x)) / \sum_j exp(x_j - max(x))
 template <typename T>
-__attribute__((noinline)) void stable_softmax(std::vector<T> values) {
+__attribute__((noinline)) void stable_softmax(std::vector<T> &values) {
   T sum_exp = 0.0;
   T max_values = *std::max_element(values.begin(), values.end());
   for (auto &i: values) {
