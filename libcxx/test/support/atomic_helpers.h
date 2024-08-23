@@ -37,8 +37,8 @@
 //
 // Note MSVC's STL never produces a type that is sometimes lock free, but not always lock free.
 template <class T, size_t Size = sizeof(T)>
-constexpr bool msvc_is_lock_free_macro_value() {
-  return (Size <= 8 && (Size & Size - 1) == 0) ? 2 : 0;
+constexpr int msvc_is_lock_free_macro_value() {
+  return (Size <= 8 && (Size & (Size - 1)) == 0) ? 2 : 0;
 }
 #  define TEST_ATOMIC_CHAR_LOCK_FREE ::msvc_is_lock_free_macro_value<char>()
 #  define TEST_ATOMIC_SHORT_LOCK_FREE ::msvc_is_lock_free_macro_value<short>()
