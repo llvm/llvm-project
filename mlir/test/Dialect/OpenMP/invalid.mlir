@@ -565,7 +565,63 @@ func.func @omp_simd_pretty_simdlen_safelen(%lb : index, %ub : index, %step : ind
 
 // -----
 
-// expected-error @below {{op expects initializer region with one argument of the reduction type}}
+// expected-error @below {{op expects alloc region to yield a value of the reduction type}}
+omp.declare_reduction @add_f32 : f32
+alloc {
+^bb0(%arg: f32):
+// nonsense test code
+  %0 = arith.constant 0.0 : f64
+  omp.yield (%0 : f64)
+}
+init {
+^bb0(%arg0: f32, %arg1: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+// -----
+
+// expected-error @below {{op expects two arguments to the initializer region when an allocation region is used}}
+omp.declare_reduction @add_f32 : f32
+alloc {
+^bb0(%arg: f32):
+// nonsense test code
+  omp.yield (%arg : f32)
+}
+init {
+^bb0(%arg0: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+// -----
+
+// expected-error @below {{op expects one argument to the initializer region when no allocation region is used}}
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32, %arg2: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+// -----
+
+// expected-error @below {{op expects initializer region argument to match the reduction type}}
 omp.declare_reduction @add_f32 : f64
 init {
 ^bb0(%arg: f32):
@@ -679,6 +735,33 @@ combiner {
 cleanup {
 ^bb0(%arg: f64):
   omp.yield
+}
+
+// -----
+
+// expected-error @below {{op region #0 ('allocRegion') failed to verify constraint: region with at most 1 blocks}}
+omp.declare_reduction @alloc_reduction : !llvm.ptr
+alloc {
+^bb0(%arg: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
+  cf.br ^bb1(%0: !llvm.ptr)
+^bb1(%ret: !llvm.ptr):
+  omp.yield (%ret : !llvm.ptr)
+}
+init {
+^bb0(%arg: !llvm.ptr):
+  %cst = arith.constant 1.0 : f32
+  llvm.store %cst, %arg : f32, !llvm.ptr
+  omp.yield (%arg : !llvm.ptr)
+}
+combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  %1 = llvm.load %arg1 : !llvm.ptr -> f32
+  %2 = arith.addf %0, %1 : f32
+  llvm.store %2, %arg0 : f32, !llvm.ptr
+  omp.yield (%arg0 : !llvm.ptr)
 }
 
 // -----
