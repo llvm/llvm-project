@@ -134,6 +134,7 @@ class GlobalIFunc;
 class GlobalVariable;
 class GlobalAlias;
 class NoCFIValue;
+class ConstantPtrAuth;
 class Context;
 class Function;
 class Instruction;
@@ -342,6 +343,7 @@ protected:
   friend class GlobalVariable;        // For `Val`.
   friend class GlobalAlias;           // For `Val`.
   friend class NoCFIValue;            // For `Val`.
+  friend class ConstantPtrAuth;       // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1601,6 +1603,62 @@ public:
     dumpCommonSuffix(OS);
   }
 #endif
+};
+
+class ConstantPtrAuth final : public Constant {
+  ConstantPtrAuth(llvm::ConstantPtrAuth *C, Context &Ctx)
+      : Constant(ClassID::ConstantPtrAuth, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const;
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const;
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const;
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const;
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasAddressDiscriminator();
+  }
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasSpecialAddressDiscriminator(
+        Value);
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->isKnownCompatibleWith(
+        Key->Val, Discriminator->Val, DL);
+  }
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPtrAuth;
+  }
 };
 
 class BlockAddress final : public Constant {

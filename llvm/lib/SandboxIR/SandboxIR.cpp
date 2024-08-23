@@ -2640,6 +2640,40 @@ PointerType *NoCFIValue::getType() const {
   return cast<PointerType>(Ctx.getType(cast<llvm::NoCFIValue>(Val)->getType()));
 }
 
+ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
+                                      ConstantInt *Disc, Constant *AddrDisc) {
+  auto *LLVMC = llvm::ConstantPtrAuth::get(
+      cast<llvm::Constant>(Ptr->Val), cast<llvm::ConstantInt>(Key->Val),
+      cast<llvm::ConstantInt>(Disc->Val), cast<llvm::Constant>(AddrDisc->Val));
+  return cast<ConstantPtrAuth>(Ptr->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantPtrAuth::getPointer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getPointer());
+}
+
+ConstantInt *ConstantPtrAuth::getKey() const {
+  return cast<ConstantInt>(
+      Ctx.getOrCreateConstant(cast<llvm::ConstantPtrAuth>(Val)->getKey()));
+}
+
+ConstantInt *ConstantPtrAuth::getDiscriminator() const {
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getDiscriminator()));
+}
+
+Constant *ConstantPtrAuth::getAddrDiscriminator() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getAddrDiscriminator());
+}
+
+ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
+  auto *LLVMC = cast<llvm::ConstantPtrAuth>(Val)->getWithSameSchema(
+      cast<llvm::Constant>(Pointer->Val));
+  return cast<ConstantPtrAuth>(Ctx.getOrCreateConstant(LLVMC));
+}
+
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
                                         cast<llvm::BasicBlock>(BB->Val));
@@ -2849,6 +2883,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::NoCFIValueVal:
       It->second = std::unique_ptr<NoCFIValue>(
           new NoCFIValue(cast<llvm::NoCFIValue>(C), *this));
+      break;
+    case llvm::Value::ConstantPtrAuthVal:
+      It->second = std::unique_ptr<ConstantPtrAuth>(
+          new ConstantPtrAuth(cast<llvm::ConstantPtrAuth>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
