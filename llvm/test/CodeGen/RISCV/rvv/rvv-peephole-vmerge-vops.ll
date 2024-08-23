@@ -1072,9 +1072,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_same_passthru(<vscale x 2 x i32> %pa
 define <vscale x 2 x i32> @vmerge_smaller_vl_different_passthru(<vscale x 2 x i32> %pt1, <vscale x 2 x i32> %pt2, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_different_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
