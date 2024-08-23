@@ -2767,7 +2767,9 @@ def fgnu_runtime : Flag<["-"], "fgnu-runtime">, Group<f_Group>,
 // -Wno-error=invalid-gnu-asm-cast, which is the only thing the flag used to
 // control.
 def fheinous_gnu_extensions : Flag<["-"], "fheinous-gnu-extensions">,
-  Alias<W_Joined>, AliasArgs<["no-error=invalid-gnu-asm-cast"]>;
+  Alias<W_Joined>, AliasArgs<["no-error=invalid-gnu-asm-cast"]>,
+  HelpText<"(Deprecated) Controls whether '-Winvalid-gnu-asm-cast' defaults to "
+           "an error or a warning">;
 def filelist : Separate<["-"], "filelist">, Flags<[LinkerInput]>,
                Group<Link_Group>;
 def : Flag<["-"], "findirect-virtual-calls">, Alias<fapple_kext>;
