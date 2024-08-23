@@ -673,7 +673,7 @@ static RegisterType getRegisterType(StringRef Slot) {
   case 'U':
     return RegisterType::UAV;
   case 'b':
-  case 'B ':
+  case 'B':
     return RegisterType::CBuffer;
   case 's':
   case 'S':
@@ -719,16 +719,6 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
       }
     }
   }
-}
-
-static std::string getHLSLResourceTypeStr(Sema &S, Decl *TheDecl) {
-  if (VarDecl *TheVarDecl = dyn_cast<VarDecl>(TheDecl)) {
-    QualType TheQualTy = TheVarDecl->getType();
-    PrintingPolicy PP = S.getPrintingPolicy();
-    return QualType::getAsString(TheQualTy.split(), PP);
-  }
-  if (HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(TheDecl))
-    return CBufferOrTBuffer->isCBuffer() ? "cbuffer" : "tbuffer";
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
@@ -785,7 +775,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
         RegisterType::CBuffer,
         RegisterType::Sampler,
     };
-    assert((int)DeclResourceClass <
+    assert((size_t)DeclResourceClass <
                std::size(ExpectedRegisterTypesForResourceClass) &&
            "DeclResourceClass has unexpected value");
 
@@ -820,7 +810,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   if (Flags.UDT) {
     const bool ExpectedRegisterTypesForUDT[] = {
         Flags.SRV, Flags.UAV, Flags.CBV, Flags.Sampler, Flags.ContainsNumeric};
-    assert(regTypeNum < std::size(ExpectedRegisterTypesForUDT) &&
+    assert((size_t)regTypeNum < std::size(ExpectedRegisterTypesForUDT) &&
            "regType has unexpected value");
 
     if (!ExpectedRegisterTypesForUDT[regTypeNum])
