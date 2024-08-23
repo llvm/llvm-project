@@ -1055,13 +1055,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
-                (int)Log2_32(Src->getScalarSizeInBits());
+  int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
+                (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    const unsigned SrcEltSize = Src->getScalarSizeInBits();
-    if (SrcEltSize == 1) {
+    if (Src->getScalarSizeInBits() == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
@@ -1091,8 +1090,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
-    unsigned SrcEltSize = Src->getScalarSizeInBits();
-    unsigned DstEltSize = Dst->getScalarSizeInBits();
+    unsigned SrcEltSize = SrcLT.second.getScalarSizeInBits();
+    unsigned DstEltSize = DstLT.second.getScalarSizeInBits();
 
     unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
                   : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V

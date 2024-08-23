@@ -18,8 +18,6 @@ In September 2020, the C++ standard committee approved this draft, and sent it t
 
 This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx20>`__.
 
-.. attention:: Features in unreleased drafts of the standard are subject to change.
-
 The groups that have contributed papers:
 
 -  CWG - Core Language Working group
