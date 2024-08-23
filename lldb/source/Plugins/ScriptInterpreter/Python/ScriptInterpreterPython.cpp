@@ -352,7 +352,6 @@ void ScriptInterpreterPython::Initialize() {
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguagePython,
                                   ScriptInterpreterPythonImpl::CreateInstance);
-    ScriptInterpreterPythonImpl::Initialize();
   });
 }
 
@@ -429,6 +428,10 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    ScriptInterpreterPythonImpl::Initialize();
+  });
 
   m_dictionary_name.append("_dict");
   StreamString run_string;
