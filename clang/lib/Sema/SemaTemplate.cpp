@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #include <iterator>
 #include <optional>
@@ -8045,33 +8046,30 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
 }
 
 QualType Sema::BuiltinDedupTemplateArgs(QualType BaseType, SourceLocation Loc) {
+  llvm::TimeTraceScope TimeTrace("BuiltinDedupTemplateArgs");
   if (RequireCompleteType(Loc, BaseType,
                           diag::err_incomplete_type_used_in_type_trait_expr))
     return QualType();
   const ElaboratedType *ET = cast<ElaboratedType>(BaseType);
   auto *TST = ET->getNamedType()->castAs<TemplateSpecializationType>();
   if (!TST) {
-    Diag(Loc, diag::err_underlying_type_of_incomplete_enum) << BaseType;
+    Diag(Loc, diag::err_incomplete_type_used_in_type_trait_expr) << BaseType;
     return QualType();
   }
   TemplateArgumentListInfo Args(Loc, Loc);
-  auto AddArg = [&](TemplateArgument T) {
-    Args.addArgument(TemplateArgumentLoc(
-        T, Context.getTrivialTypeSourceInfo(T.getAsType(), Loc)));
-  };
-  llvm::DenseSet<QualType> SeenArgTypes;
-  for (const auto &T : TST->template_arguments()) {
-    if (SeenArgTypes.contains(T.getAsType()))
+  llvm::DenseSet<const Type *> SeenArgTypes;
+  for (const auto &Arg : TST->template_arguments()) {
+    if (!SeenArgTypes.insert(Arg.getAsType().getTypePtr()).second)
       continue;
-    AddArg(T);
-    SeenArgTypes.insert(T.getAsType());
+    Args.addArgument(TemplateArgumentLoc(
+        Arg, Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc)));
   }
-  QualType DedupType = CheckTemplateIdType(TST->getTemplateName(), Loc, Args);
-
-  if (RequireCompleteType(Loc, DedupType,
-                          diag::err_coroutine_type_missing_specialization))
+  QualType DedupedTypes =
+      CheckTemplateIdType(TST->getTemplateName(), Loc, Args);
+  if (RequireCompleteType(Loc, DedupedTypes,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
     return QualType();
-  return DedupType;
+  return DedupedTypes;
 }
 
 bool Sema::CheckTemplatePartialSpecializationArgs(
