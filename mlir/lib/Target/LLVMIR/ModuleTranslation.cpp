@@ -557,20 +557,21 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return llvm::UndefValue::get(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      emitError(loc, "expected struct type to be a complex number");
+    if (!arrayAttr) {
+      emitError(loc, "expected an array attribute for a struct constant");
       return nullptr;
     }
-    llvm::Type *elementType = structType->getElementType(0);
-    llvm::Constant *real =
-        getLLVMConstant(elementType, arrayAttr[0], loc, moduleTranslation);
-    if (!real)
-      return nullptr;
-    llvm::Constant *imag =
-        getLLVMConstant(elementType, arrayAttr[1], loc, moduleTranslation);
-    if (!imag)
-      return nullptr;
-    return llvm::ConstantStruct::get(structType, {real, imag});
+    SmallVector<llvm::Constant *> structElements;
+    structElements.reserve(structType->getNumElements());
+    for (auto [elemType, elemAttr] :
+         zip_equal(structType->elements(), arrayAttr)) {
+      llvm::Constant *element =
+          getLLVMConstant(elemType, elemAttr, loc, moduleTranslation);
+      if (!element)
+        return nullptr;
+      structElements.push_back(element);
+    }
+    return llvm::ConstantStruct::get(structType, structElements);
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
@@ -947,6 +948,8 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       if (!isCompatibleType(wrappedType))
         return emitError(bb.front().getLoc(),
                          "block argument does not have an LLVM type");
+      builder.SetCurrentDebugLocation(
+          debugTranslation->translateLoc(arg.getLoc(), subprogram));
       llvm::Type *type = convertType(wrappedType);
       llvm::PHINode *phi = builder.CreatePHI(type, numPredecessors);
       mapValue(arg, phi);
@@ -1247,6 +1250,41 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
   return success();
 }
 
+/// Return a representation of `value` as metadata.
+static llvm::Metadata *convertIntegerToMetadata(llvm::LLVMContext &context,
+                                                const llvm::APInt &value) {
+  llvm::Constant *constant = llvm::ConstantInt::get(context, value);
+  return llvm::ConstantAsMetadata::get(constant);
+}
+
+/// Return a representation of `value` as an MDNode.
+static llvm::MDNode *convertIntegerToMDNode(llvm::LLVMContext &context,
+                                            const llvm::APInt &value) {
+  return llvm::MDNode::get(context, convertIntegerToMetadata(context, value));
+}
+
+/// Return an MDNode encoding `vec_type_hint` metadata.
+static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
+                                                llvm::Type *type,
+                                                bool isSigned) {
+  llvm::Metadata *typeMD =
+      llvm::ConstantAsMetadata::get(llvm::UndefValue::get(type));
+  llvm::Metadata *isSignedMD =
+      convertIntegerToMetadata(context, llvm::APInt(32, isSigned ? 1 : 0));
+  return llvm::MDNode::get(context, {typeMD, isSignedMD});
+}
+
+/// Return an MDNode with a tuple given by the values in `values`.
+static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
+                                                 ArrayRef<int32_t> values) {
+  SmallVector<llvm::Metadata *> mdValues;
+  llvm::transform(
+      values, std::back_inserter(mdValues), [&context](int32_t value) {
+        return convertIntegerToMetadata(context, llvm::APInt(32, value));
+      });
+  return llvm::MDNode::get(context, mdValues);
+}
+
 /// Attaches the attributes listed in the given array attribute to `llvmFunc`.
 /// Reports error to `loc` if any and returns immediately. Expects `attributes`
 /// to be an array attribute containing either string attributes, treated as
@@ -1448,6 +1486,44 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
+/// Converts function attributes from `func` and attaches them to `llvmFunc`.
+static void convertFunctionKernelAttributes(LLVMFuncOp func,
+                                            llvm::Function *llvmFunc,
+                                            ModuleTranslation &translation) {
+  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
+
+  if (VecTypeHintAttr vecTypeHint = func.getVecTypeHintAttr()) {
+    Type type = vecTypeHint.getHint().getValue();
+    llvm::Type *llvmType = translation.convertType(type);
+    bool isSigned = vecTypeHint.getIsSigned();
+    llvmFunc->setMetadata(
+        func.getVecTypeHintAttrName(),
+        convertVecTypeHintToMDNode(llvmContext, llvmType, isSigned));
+  }
+
+  if (std::optional<ArrayRef<int32_t>> workGroupSizeHint =
+          func.getWorkGroupSizeHint()) {
+    llvmFunc->setMetadata(
+        func.getWorkGroupSizeHintAttrName(),
+        convertIntegerArrayToMDNode(llvmContext, *workGroupSizeHint));
+  }
+
+  if (std::optional<ArrayRef<int32_t>> reqdWorkGroupSize =
+          func.getReqdWorkGroupSize()) {
+    llvmFunc->setMetadata(
+        func.getReqdWorkGroupSizeAttrName(),
+        convertIntegerArrayToMDNode(llvmContext, *reqdWorkGroupSize));
+  }
+
+  if (std::optional<uint32_t> intelReqdSubGroupSize =
+          func.getIntelReqdSubGroupSize()) {
+    llvmFunc->setMetadata(
+        func.getIntelReqdSubGroupSizeAttrName(),
+        convertIntegerToMDNode(llvmContext,
+                               llvm::APInt(32, *intelReqdSubGroupSize)));
+  }
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
                                          DictionaryAttr paramAttrs) {
@@ -1491,6 +1567,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     // Convert function attributes.
     convertFunctionAttributes(function, llvmFunc);
+
+    // Convert function kernel attributes to metadata.
+    convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
     if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
@@ -1738,6 +1817,20 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createIdentMetadata() {
+  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+          LLVMDialect::getIdentAttrName())) {
+    StringRef ident = attr;
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::NamedMDNode *namedMd =
+        llvmModule->getOrInsertNamedMetadata(LLVMDialect::getIdentAttrName());
+    llvm::MDNode *md = llvm::MDNode::get(ctx, llvm::MDString::get(ctx, ident));
+    namedMd->addOperand(md);
+  }
+
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -1888,6 +1981,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertGlobals()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
+    return nullptr;
+  if (failed(translator.createIdentMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.

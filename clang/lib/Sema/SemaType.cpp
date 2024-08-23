@@ -20,6 +20,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
@@ -1356,6 +1358,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }                                                                          \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
+
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case DeclSpec::TST_error:
     Result = Context.IntTy;
@@ -7059,7 +7067,7 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
     else if (Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
   } else if (PtrWidth == 64 && Attrs[attr::Ptr32]) {
-    if (Attrs[attr::UPtr])
+    if (S.Context.getTargetInfo().getTriple().isOSzOS() || Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
     else
       ASIdx = LangAS::ptr32_sptr;
@@ -8349,14 +8357,28 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
     NumElts = VecSize / S.Context.getCharWidth();
-    VecKind = VectorKind::RVVFixedLengthMask;
+    if (!NumElts) {
+      NumElts = 1;
+      switch (VecSize) {
+      case 1:
+        VecKind = VectorKind::RVVFixedLengthMask_1;
+        break;
+      case 2:
+        VecKind = VectorKind::RVVFixedLengthMask_2;
+        break;
+      case 4:
+        VecKind = VectorKind::RVVFixedLengthMask_4;
+        break;
+      }
+    } else
+      VecKind = VectorKind::RVVFixedLengthMask;
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
-  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
+  if (VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();

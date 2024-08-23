@@ -702,7 +702,7 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::SaveCoreOptions &options) {
+                               lldb_private::SaveCoreOptions &options) {
   Status error;
   if (!options.GetOutputFile()) {
     error.SetErrorString("No output file specified");
@@ -713,6 +713,10 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     error.SetErrorString("Invalid process");
     return error;
   }
+
+  error = options.EnsureValidConfiguration(process_sp);
+  if (error.Fail())
+    return error;
 
   if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
@@ -1505,6 +1509,70 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
   return all;
 }
 
+#pragma mark ScriptedInterfaces
+
+struct ScriptedInterfaceInstance
+    : public PluginInstance<ScriptedInterfaceCreateInstance> {
+  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
+                            ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptLanguage language,
+                            ScriptedInterfaceUsages usages)
+      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
+                                                        create_callback),
+        language(language), usages(usages) {}
+
+  lldb::ScriptLanguage language;
+  ScriptedInterfaceUsages usages;
+};
+
+typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
+
+static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
+  static ScriptedInterfaceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    ScriptedInterfaceCreateInstance create_callback,
+    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+  return GetScriptedInterfaceInstances().RegisterPlugin(
+      name, description, create_callback, language, usages);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ScriptedInterfaceCreateInstance create_callback) {
+  return GetScriptedInterfaceInstances().UnregisterPlugin(create_callback);
+}
+
+uint32_t PluginManager::GetNumScriptedInterfaces() {
+  return GetScriptedInterfaceInstances().GetInstances().size();
+}
+
+llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetNameAtIndex(index);
+}
+
+llvm::StringRef
+PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
+}
+
+lldb::ScriptLanguage
+PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  return idx < instances.size() ? instances[idx].language
+                                : ScriptLanguage::eScriptLanguageNone;
+}
+
+ScriptedInterfaceUsages
+PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  if (idx >= instances.size())
+    return {};
+  return instances[idx].usages;
+}
+
 #pragma mark REPL
 
 struct REPLInstance : public PluginInstance<REPLCreateInstance> {
@@ -1565,6 +1633,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
+  GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.

@@ -134,6 +134,19 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BinPackParametersStyle> {
+  static void enumeration(IO &IO, FormatStyle::BinPackParametersStyle &Value) {
+    IO.enumCase(Value, "BinPack", FormatStyle::BPPS_BinPack);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BPPS_OnePerLine);
+    IO.enumCase(Value, "AlwaysOnePerLine", FormatStyle::BPPS_AlwaysOnePerLine);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "true", FormatStyle::BPPS_BinPack);
+    IO.enumCase(Value, "false", FormatStyle::BPPS_OnePerLine);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::BinPackStyle> {
   static void enumeration(IO &IO, FormatStyle::BinPackStyle &Value) {
     IO.enumCase(Value, "Auto", FormatStyle::BPS_Auto);
@@ -241,6 +254,16 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
     IO.enumCase(Value, "Never", FormatStyle::BBIAS_Never);
     IO.enumCase(Value, "OnlyMultiline", FormatStyle::BBIAS_OnlyMultiline);
     IO.enumCase(Value, "Always", FormatStyle::BBIAS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBinaryOperationsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::BBO_Never);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BBO_OnePerLine);
+    IO.enumCase(Value, "RespectPrecedence", FormatStyle::BBO_RespectPrecedence);
   }
 };
 
@@ -530,6 +553,7 @@ struct ScalarEnumerationTraits<FormatStyle::RequiresClausePositionStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::RequiresClausePositionStyle &Value) {
     IO.enumCase(Value, "OwnLine", FormatStyle::RCPS_OwnLine);
+    IO.enumCase(Value, "OwnLineWithBrace", FormatStyle::RCPS_OwnLineWithBrace);
     IO.enumCase(Value, "WithPreceding", FormatStyle::RCPS_WithPreceding);
     IO.enumCase(Value, "WithFollowing", FormatStyle::RCPS_WithFollowing);
     IO.enumCase(Value, "SingleLine", FormatStyle::RCPS_SingleLine);
@@ -968,6 +992,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeInlineASMColon);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
+    IO.mapOptional("BreakBinaryOperations", Style.BreakBinaryOperations);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakFunctionDefinitionParameters",
@@ -1449,7 +1474,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BinPackArguments = true;
-  LLVMStyle.BinPackParameters = true;
+  LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
@@ -1480,6 +1505,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
+  LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -1823,7 +1849,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-    ChromiumStyle.BinPackParameters = false;
+    ChromiumStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
     ChromiumStyle.DerivePointerAlignment = false;
     if (Language == FormatStyle::LK_ObjC)
       ChromiumStyle.ColumnLimit = 80;
@@ -1838,7 +1864,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BinPackArguments = false;
-  MozillaStyle.BinPackParameters = false;
+  MozillaStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
@@ -1892,7 +1918,6 @@ FormatStyle getGNUStyle() {
   Style.Cpp11BracedListStyle = false;
   Style.FixNamespaceComments = false;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
-  Style.Standard = FormatStyle::LS_Cpp03;
   return Style;
 }
 

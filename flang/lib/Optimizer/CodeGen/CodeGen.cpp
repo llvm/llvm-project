@@ -23,6 +23,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -1199,7 +1201,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                 mlir::Location loc,
                                 fir::RecordType recType) const {
     std::string name =
-        fir::NameUniquer::getTypeDescriptorName(recType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recType.getName());
     mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
     if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
@@ -1224,8 +1228,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
-                                 mlir::Value cfiTy,
-                                 mlir::Value typeDesc) const {
+                                 mlir::Value cfiTy, mlir::Value typeDesc,
+                                 int allocatorIdx = kDefaultAllocator,
+                                 mlir::Value extraField = {}) const {
     auto llvmBoxTy = this->lowerTy().convertBoxTypeAsStruct(boxTy, rank);
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
     bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
@@ -1241,10 +1246,43 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     descriptor =
         insertField(rewriter, loc, descriptor, {kAttributePosInBox},
                     this->genI32Constant(loc, rewriter, getCFIAttr(boxTy)));
+
     const bool hasAddendum = fir::boxHasAddendum(boxTy);
-    descriptor =
-        insertField(rewriter, loc, descriptor, {kF18AddendumPosInBox},
-                    this->genI32Constant(loc, rewriter, hasAddendum ? 1 : 0));
+
+    if (extraField) {
+      // Make sure to set the addendum presence flag according to the
+      // destination box.
+      if (hasAddendum) {
+        auto maskAttr = mlir::IntegerAttr::get(
+            rewriter.getIntegerType(8, /*isSigned=*/false),
+            llvm::APInt(8, (uint64_t)_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
+        mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, rewriter.getI8Type(), maskAttr);
+        extraField = rewriter.create<mlir::LLVM::OrOp>(loc, extraField, mask);
+      } else {
+        auto maskAttr = mlir::IntegerAttr::get(
+            rewriter.getIntegerType(8, /*isSigned=*/false),
+            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
+        mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, rewriter.getI8Type(), maskAttr);
+        extraField = rewriter.create<mlir::LLVM::AndOp>(loc, extraField, mask);
+      }
+      // Extra field value is provided so just use it.
+      descriptor =
+          insertField(rewriter, loc, descriptor, {kExtraPosInBox}, extraField);
+    } else {
+      // Compute the value of the extra field based on allocator_idx and
+      // addendum present using a Descriptor object.
+      Fortran::runtime::StaticDescriptor<0> staticDescriptor;
+      Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
+      desc.raw().extra = 0;
+      desc.SetAllocIdx(allocatorIdx);
+      if (hasAddendum)
+        desc.SetHasAddendum();
+      descriptor =
+          insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                      this->genI32Constant(loc, rewriter, desc.raw().extra));
+    }
 
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
@@ -1299,6 +1337,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         typeparams.push_back(substrParams[1]);
     }
 
+    int allocatorIdx = 0;
+    if constexpr (std::is_same_v<BOX, fir::EmboxOp> ||
+                  std::is_same_v<BOX, fir::cg::XEmboxOp>) {
+      if (box.getAllocatorIdx())
+        allocatorIdx = *box.getAllocatorIdx();
+    }
+
     // Write each of the fields with the appropriate values.
     // When emboxing an element to a polymorphic descriptor, use the
     // input type since the destination descriptor type has not the exact
@@ -1307,6 +1352,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
 
     mlir::Value typeDesc;
+    mlir::Value extraField;
     // When emboxing to a polymorphic box, get the type descriptor, type code
     // and element size from the source box if any.
     if (fir::isPolymorphicType(boxTy) && sourceBox) {
@@ -1318,10 +1364,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                             sourceBox, rewriter);
       cfiTy = this->getValueFromBox(loc, sourceBoxTyPair, sourceBox,
                                     cfiTy.getType(), rewriter, kTypePosInBox);
+      extraField =
+          this->getExtraFromBox(loc, sourceBoxTyPair, sourceBox, rewriter);
     }
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor = populateDescriptor(
-        loc, mod, boxTy, inputType, rewriter, rank, eleSize, cfiTy, typeDesc);
+    mlir::Value descriptor =
+        populateDescriptor(loc, mod, boxTy, inputType, rewriter, rank, eleSize,
+                           cfiTy, typeDesc, allocatorIdx, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -1361,10 +1410,14 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                              rewriter);
     }
 
+    mlir::Value extraField =
+        this->getExtraFromBox(loc, inputBoxTyPair, loweredBox, rewriter);
+
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor =
         populateDescriptor(loc, mod, boxTy, box.getBox().getType(), rewriter,
-                           rank, eleSize, cfiTy, typeDesc);
+                           rank, eleSize, cfiTy, typeDesc,
+                           /*allocatorIdx=*/kDefaultAllocator, extraField);
 
     return {boxTy, descriptor, eleSize};
   }
@@ -2653,7 +2706,10 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
     std::string typeDescName =
-        fir::NameUniquer::getTypeDescriptorName(recordType.getName());
+        this->options.typeDescriptorsRenamedForAssembly
+            ? fir::NameUniquer::getTypeDescriptorAssemblyName(
+                  recordType.getName())
+            : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
     auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
     if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
@@ -3601,6 +3657,10 @@ public:
 
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
+
+    if (typeDescriptorsRenamedForAssembly)
+      options.typeDescriptorsRenamedForAssembly =
+          typeDescriptorsRenamedForAssembly;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).

@@ -30,7 +30,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -51,9 +50,7 @@ class Constant;
 class ConstantInt;
 class DataLayout;
 class DominatorTree;
-class Function;
 class GEPOperator;
-class Instruction;
 class LLVMContext;
 class Loop;
 class LoopInfo;
@@ -64,7 +61,6 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
-class Value;
 enum SCEVTypes : unsigned short;
 
 extern bool VerifySCEV;
@@ -427,9 +423,7 @@ private:
 public:
   SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
-  const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
-    return Preds;
-  }
+  ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
@@ -1027,6 +1021,11 @@ public:
 
   /// Test if the given expression is known to be non-zero.
   bool isKnownNonZero(const SCEV *S);
+
+  /// Test if the given expression is known to be a power of 2.  OrNegative
+  /// allows matching negative power of 2s, and OrZero allows matching 0.
+  bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
+                              bool OrNegative = false);
 
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L

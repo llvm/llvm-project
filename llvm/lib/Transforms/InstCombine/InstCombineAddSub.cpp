@@ -1548,8 +1548,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // A + -B  -->  A - B
-  if (match(RHS, m_Neg(m_Value(B))))
-    return BinaryOperator::CreateSub(LHS, B);
+  if (match(RHS, m_Neg(m_Value(B)))) {
+    auto *Sub = BinaryOperator::CreateSub(LHS, B);
+    auto *OBO = cast<OverflowingBinaryOperator>(RHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO->hasNoSignedWrap());
+    return Sub;
+  }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -1621,6 +1625,26 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (match(&I, m_c_BinOp(m_ZExt(m_Value(A)), m_SExt(m_Deferred(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
+
+  // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
+  ICmpInst::Predicate LTPred, GTPred;
+  if (match(&I,
+            m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
+                    m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B))))) &&
+      A->getType()->isIntOrIntVectorTy()) {
+    if (ICmpInst::isGT(LTPred)) {
+      std::swap(LTPred, GTPred);
+      std::swap(A, B);
+    }
+
+    if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred) &&
+        ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(
+                 Ty,
+                 ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp,
+                 {A, B}));
+  }
 
   // A+B --> A|B iff A and B have no bits set in common.
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
@@ -1694,12 +1718,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // Canonicalize signum variant that ends in add:
   // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
-  ICmpInst::Predicate Pred;
   uint64_t BitWidth = Ty->getScalarSizeInBits();
   if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowPoison(BitWidth - 1))) &&
-      match(RHS, m_OneUse(m_ZExt(
-                     m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
-      Pred == CmpInst::ICMP_SGT) {
+      match(RHS, m_OneUse(m_ZExt(m_OneUse(m_SpecificICmp(
+                     CmpInst::ICMP_SGT, m_Specific(A), m_ZeroInt())))))) {
     Value *NotZero = Builder.CreateIsNotNull(A, "isnotnull");
     Value *Zext = Builder.CreateZExt(NotZero, Ty, "isnotnull.zext");
     return BinaryOperator::CreateOr(LHS, Zext);
@@ -1711,12 +1733,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     // (add X, (sext/zext (icmp eq X, C)))
     //    -> (select (icmp eq X, C), (add C, (sext/zext 1)), X)
     auto CondMatcher = m_CombineAnd(
-        m_Value(Cond), m_ICmp(Pred, m_Deferred(A), m_ImmConstant(C)));
+        m_Value(Cond),
+        m_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A), m_ImmConstant(C)));
 
     if (match(&I,
               m_c_Add(m_Value(A),
                       m_CombineAnd(m_Value(Ext), m_ZExtOrSExt(CondMatcher)))) &&
-        Pred == ICmpInst::ICMP_EQ && Ext->hasOneUse()) {
+        Ext->hasOneUse()) {
       Value *Add = isa<ZExtInst>(Ext) ? InstCombiner::AddOne(C)
                                       : InstCombiner::SubOne(C);
       return replaceInstUsesWith(I, Builder.CreateSelect(Cond, Add, A));
@@ -1791,6 +1814,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // -->
   // BW - ctlz(A - 1, false)
   const APInt *XorC;
+  ICmpInst::Predicate Pred;
   if (match(&I,
             m_c_Add(
                 m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
@@ -2715,8 +2739,10 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
                                                       Instruction &FMFSource) {
   Value *X, *Y;
   if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y)))) {
+    // Push into RHS which is more likely to simplify (const or another fneg).
+    // FIXME: It would be better to invert the transform.
     return cast<Instruction>(Builder.CreateFMulFMF(
-        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+        X, Builder.CreateFNegFMF(Y, &FMFSource), &FMFSource));
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {

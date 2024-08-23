@@ -15,6 +15,7 @@
 
 ; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v40, 4
 ; GCN: s_xor_saveexec_b64
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: buffer_load_dword v0, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, -1
 ; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload

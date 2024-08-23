@@ -12,8 +12,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <optional>
 
 namespace llvm {
 
@@ -26,7 +28,8 @@ class StringToOffsetTable {
   std::string AggregateString;
 
 public:
-  bool Empty() const { return StringOffset.empty(); }
+  bool empty() const { return StringOffset.empty(); }
+  size_t size() const { return AggregateString.size(); }
 
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
     auto IterBool =
@@ -41,6 +44,40 @@ public:
     return IterBool.first->second;
   }
 
+  // Returns the offset of `Str` in the table if its preset, else return
+  // std::nullopt.
+  std::optional<unsigned> GetStringOffset(StringRef Str) const {
+    auto II = StringOffset.find(Str);
+    if (II == StringOffset.end())
+      return std::nullopt;
+    return II->second;
+  }
+
+  // Emit the string using string literal concatenation, for better readability
+  // and searchability.
+  void EmitStringLiteralDef(raw_ostream &OS, const Twine &Decl,
+                            const Twine &Indent = "  ") const {
+    OS << formatv(R"(
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
+{0}{1} = )",
+                  Indent, Decl);
+
+    for (StringRef Str : split(AggregateString, '\0')) {
+      OS << "\n" << Indent << "  \"";
+      OS.write_escaped(Str);
+      OS << "\\0\"";
+    }
+    OS << R"(;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+)";
+  }
+
+  // Emit the string as one single string.
   void EmitString(raw_ostream &O) {
     // Escape the string.
     SmallString<256> Str;

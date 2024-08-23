@@ -829,10 +829,6 @@ public:
 
   Constant *getConstantOrNull(Value *V) const;
 
-  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
-    return TrackingIncomingArguments;
-  }
-
   void setLatticeValueForSpecializationArguments(Function *F,
                                        const SmallVectorImpl<ArgInfo> &Args);
 
@@ -1503,7 +1499,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *V2 = SCCPSolver::isConstant(V2State)
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
-    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
+    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may
@@ -2155,10 +2151,6 @@ Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV,
 
 Constant *SCCPSolver::getConstantOrNull(Value *V) const {
   return Visitor->getConstantOrNull(V);
-}
-
-SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
-  return Visitor->getArgumentTrackedFunctions();
 }
 
 void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,

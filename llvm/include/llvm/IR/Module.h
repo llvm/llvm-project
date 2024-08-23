@@ -158,11 +158,6 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
-  /// Check if the given module flag metadata represents a valid module flag,
-  /// and store the flag behavior, the key string and the value metadata.
-  static bool isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
-                                MDString *&Key, Metadata *&Val);
-
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
@@ -206,6 +201,9 @@ private:
                              ///< based on unnamed types. The combination of
                              ///< ID and FunctionType maps to the extension that
                              ///< is used to make the intrinsic name unique.
+
+  /// llvm.module.flags metadata
+  NamedMDNode *ModuleFlags = nullptr;
 
   friend class Constant;
 
@@ -502,7 +500,7 @@ public:
 
   /// Return the first NamedMDNode in the module with the specified name. This
   /// method returns null if a NamedMDNode with the specified name is not found.
-  NamedMDNode *getNamedMetadata(const Twine &Name) const;
+  NamedMDNode *getNamedMetadata(StringRef Name) const;
 
   /// Return the named MDNode in the module with the specified name. This method
   /// returns a new NamedMDNode if a NamedMDNode with the specified name is not
@@ -533,7 +531,7 @@ public:
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// This method returns null if there are no module-level flags.
-  NamedMDNode *getModuleFlagsMetadata() const;
+  NamedMDNode *getModuleFlagsMetadata() const { return ModuleFlags; }
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// If module-level flags aren't found, it creates the named metadata that

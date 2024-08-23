@@ -327,8 +327,8 @@ function(add_link_opts target_name)
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
-        include(LLVMCheckLinkerFlag)
-        llvm_check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+        include(CheckLinkerFlag)
+        check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
@@ -1010,7 +1010,7 @@ endmacro()
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;EXPORT_SYMBOLS"
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
@@ -1070,7 +1070,8 @@ macro(add_llvm_executable name)
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
   if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
-      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
+      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
+      NOT ARG_EXPORT_SYMBOLS)
     if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
         LINK_FLAGS " -Wl,-no_exported_symbols")
@@ -1111,6 +1112,10 @@ macro(add_llvm_executable name)
   endif()
 
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
+
+  if (ARG_EXPORT_SYMBOLS)
+    export_executable_symbols(${name})
+  endif()
 endmacro(add_llvm_executable name)
 
 # add_llvm_pass_plugin(name [NO_MODULE] ...)
@@ -1452,6 +1457,7 @@ macro(llvm_add_tool project name)
   endif()
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Tools")
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(llvm_add_tool project name)
 
 macro(add_llvm_tool name)
@@ -1463,7 +1469,7 @@ macro(add_llvm_example name)
   if( NOT LLVM_BUILD_EXAMPLES )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-  add_llvm_executable(${name} ${ARGN})
+  add_llvm_executable(${name} EXPORT_SYMBOLS ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   endif()
@@ -2043,6 +2049,7 @@ function(add_lit_target target comment)
 
   # Tests should be excluded from "Build Solution".
   set_target_properties(${target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+  set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # Convert a target name like check-clang to a variable name like CLANG.

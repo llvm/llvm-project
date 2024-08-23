@@ -56,17 +56,6 @@ enum {
   NEEDS_TLSIE = 1 << 8,
 };
 
-// Some index properties of a symbol are stored separately in this auxiliary
-// struct to decrease sizeof(SymbolUnion) in the majority of cases.
-struct SymbolAux {
-  uint32_t gotIdx = -1;
-  uint32_t pltIdx = -1;
-  uint32_t tlsDescIdx = -1;
-  uint32_t tlsGdIdx = -1;
-};
-
-LLVM_LIBRARY_VISIBILITY extern SmallVector<SymbolAux, 0> symAux;
-
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -211,10 +200,10 @@ public:
   // truncated by Symbol::parseSymbolVersion().
   const char *getVersionSuffix() const { return nameData + nameSize; }
 
-  uint32_t getGotIdx() const { return symAux[auxIdx].gotIdx; }
-  uint32_t getPltIdx() const { return symAux[auxIdx].pltIdx; }
-  uint32_t getTlsDescIdx() const { return symAux[auxIdx].tlsDescIdx; }
-  uint32_t getTlsGdIdx() const { return symAux[auxIdx].tlsGdIdx; }
+  uint32_t getGotIdx() const { return ctx.symAux[auxIdx].gotIdx; }
+  uint32_t getPltIdx() const { return ctx.symAux[auxIdx].pltIdx; }
+  uint32_t getTlsDescIdx() const { return ctx.symAux[auxIdx].tlsDescIdx; }
+  uint32_t getTlsGdIdx() const { return ctx.symAux[auxIdx].tlsGdIdx; }
 
   bool isInGot() const { return getGotIdx() != uint32_t(-1); }
   bool isInPlt() const { return getPltIdx() != uint32_t(-1); }
@@ -325,8 +314,8 @@ public:
   // entries during postScanRelocations();
   std::atomic<uint16_t> flags;
 
-  // A symAux index used to access GOT/PLT entry indexes. This is allocated in
-  // postScanRelocations().
+  // A ctx.symAux index used to access GOT/PLT entry indexes. This is allocated
+  // in postScanRelocations().
   uint32_t auxIdx;
   uint32_t dynsymIndex;
 
@@ -357,8 +346,8 @@ public:
   }
   void allocateAux() {
     assert(auxIdx == 0);
-    auxIdx = symAux.size();
-    symAux.emplace_back();
+    auxIdx = ctx.symAux.size();
+    ctx.symAux.emplace_back();
   }
 
   bool isSection() const { return type == llvm::ELF::STT_SECTION; }
@@ -510,45 +499,6 @@ public:
   void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyKind); }
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-};
-
-// Some linker-generated symbols need to be created as
-// Defined symbols.
-struct ElfSym {
-  // __bss_start
-  static Defined *bss;
-
-  // etext and _etext
-  static Defined *etext1;
-  static Defined *etext2;
-
-  // edata and _edata
-  static Defined *edata1;
-  static Defined *edata2;
-
-  // end and _end
-  static Defined *end1;
-  static Defined *end2;
-
-  // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
-  // be at some offset from the base of the .got section, usually 0 or
-  // the end of the .got.
-  static Defined *globalOffsetTable;
-
-  // _gp, _gp_disp and __gnu_local_gp symbols. Only for MIPS.
-  static Defined *mipsGp;
-  static Defined *mipsGpDisp;
-  static Defined *mipsLocalGp;
-
-  // __global_pointer$ for RISC-V.
-  static Defined *riscvGlobalPointer;
-
-  // __rel{,a}_iplt_{start,end} symbols.
-  static Defined *relaIpltStart;
-  static Defined *relaIpltEnd;
-
-  // _TLS_MODULE_BASE_ on targets that support TLSDESC.
-  static Defined *tlsModuleBase;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
