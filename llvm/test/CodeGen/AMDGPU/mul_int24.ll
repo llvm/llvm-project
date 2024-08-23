@@ -833,17 +833,17 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ;
 ; VI-LABEL: test_umul_i24:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s1, s[2:3], 0x2c
+; VI-NEXT:    s_load_dword s0, s[2:3], 0x2c
 ; VI-NEXT:    v_mov_b32_e32 v0, 0xff803fe1
-; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s1, s1, 9
-; VI-NEXT:    v_mul_hi_i32_i24_e32 v1, s1, v0
-; VI-NEXT:    v_mul_i32_i24_e32 v0, s1, v0
-; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 1
+; VI-NEXT:    s_lshr_b32 s0, s0, 9
+; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], s0, v0, 0
+; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 1
+; VI-NEXT:    s_nop 1
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
