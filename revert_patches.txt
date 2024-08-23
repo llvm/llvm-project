@@ -151,3 +151,7 @@ revert: breadks rocSPARSE build
 ---
 revert: breaks clang LIT tests
 0ca77f6656a7 [RISCV] Add CSRs and an instruction for Smctr and Ssctr extensions. (#105148)
+---
+revert : inf compile on rocTHRUST
+c46b41aaa6ea LSV: forbid load-cycles when vectorizing; fix bug (#104815)     
+---
