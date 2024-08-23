@@ -1108,7 +1108,6 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
   if (procAttrs &&
       procAttrs.getValue() != fir::FortranProcedureFlagsEnum::none) {
     p << ' ' << fir::FortranProcedureFlagsEnumAttr::getMnemonic();
-    mlir::arith::FastMathFlagsAttr::getMnemonic();
     p.printStrippedAttrOrType(procAttrs);
   }
 
