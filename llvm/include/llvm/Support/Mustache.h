@@ -83,6 +83,7 @@ using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
 class ASTNode;
+using AstPtr = std::unique_ptr<ASTNode>;
 
 // A Template represents the container for the AST and the partials
 // and Lambdas that are registered with it.
@@ -95,6 +96,10 @@ public:
   Template &operator=(const Template &) = delete;
 
   Template(Template &&Other) noexcept;
+
+  // Define this in the cpp file to  work around ASTNode being an incomplete
+  // type.
+  ~Template();
 
   Template &operator=(Template &&Other) noexcept;
 
@@ -112,15 +117,11 @@ public:
   void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
 
 private:
-  StringMap<ASTNode *> Partials;
+  StringMap<AstPtr> Partials;
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;
   DenseMap<char, std::string> Escapes;
-  // The allocator for the ASTNode Tree
-  llvm::BumpPtrAllocator AstAllocator;
-  // Allocator for each render call resets after each render
-  llvm::BumpPtrAllocator RenderAllocator;
-  ASTNode *Tree;
+  AstPtr Tree;
 };
 } // namespace llvm::mustache
 
