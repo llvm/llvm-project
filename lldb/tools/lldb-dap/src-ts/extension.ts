@@ -66,16 +66,21 @@ export class LLDBDapExtension extends DisposableContext {
     );
 
     this.pushSubscription(
-      vscode.workspace.onDidChangeConfiguration((event) => {
+      vscode.workspace.onDidChangeConfiguration(async (event) => {
         if (event.affectsConfiguration("lldb-dap.executable-path")) {
           const dapPath = vscode.workspace
             .getConfiguration("lldb-dap")
             .get<string>("executable-path");
+
           if (dapPath) {
-            LLDBDapDescriptorFactory.validateDebugAdapterPath(
-              vscode.Uri.file(dapPath),
-            );
+            const fileUri = vscode.Uri.file(dapPath);
+            if (
+              await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri)
+            ) {
+              return;
+            }
           }
+          LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
         }
       }),
     );
