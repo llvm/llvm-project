@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -passes si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 
