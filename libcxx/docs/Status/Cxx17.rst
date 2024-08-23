@@ -39,7 +39,7 @@ Paper Status
 .. note::
 
    .. [#note-P0067R5] P0067R5: ``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``.
-   .. [#note-P0226] P0226: Progress is tracked `here <https://libcxx.llvm.org/Status/SpecialMath.html>`_.
+   .. [#note-P0226] P0226: Progress is tracked `here <https://github.com/llvm/llvm-project/issues/99939>`_.
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
    .. [#note-P0154] P0154: The required macros are only implemented as of clang 19.
    .. [#note-P0452] P0452: The changes to ``std::transform_inclusive_scan`` and ``std::transform_exclusive_scan`` have not yet been implemented.
