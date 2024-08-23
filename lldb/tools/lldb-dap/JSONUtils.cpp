@@ -1330,6 +1330,46 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   return llvm::json::Value(std::move(object));
 }
 
+// "ExceptionDetails": {
+//   "type": "object",
+//   "description": "Detailed information about an exception that has
+//   occurred.", "properties": {
+//     "message": {
+//       "type": "string",
+//       "description": "Message contained in the exception."
+//     },
+//     "typeName": {
+//       "type": "string",
+//       "description": "Short type name of the exception object."
+//     },
+//     "fullTypeName": {
+//       "type": "string",
+//       "description": "Fully-qualified type name of the exception object."
+//     },
+//     "evaluateName": {
+//       "type": "string",
+//       "description": "An expression that can be evaluated in the current
+//       scope to obtain the exception object."
+//     },
+//     "stackTrace": {
+//       "type": "string",
+//       "description": "Stack trace at the time the exception was thrown."
+//     },
+//     "innerException": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/ExceptionDetails"
+//       },
+//       "description": "Details of the exception contained by this exception,
+//       if any."
+//     }
+//   }
+// },
+llvm::json::Value CreateExceptionDetails() {
+  llvm::json::Object object;
+  return llvm::json::Value(std::move(object));
+}
+
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
   llvm::json::Object object;
   char unit_path_arr[PATH_MAX];

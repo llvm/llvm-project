@@ -478,6 +478,9 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  bool is_name_duplicated = false,
                                  std::optional<std::string> custom_name = {});
 
+/// Create a "ExceptionDetail" object for a LLDB
+llvm::json::Value CreateExceptionDetails();
+
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 
 /// Create a runInTerminal reverse request object
