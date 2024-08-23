@@ -19649,15 +19649,18 @@ Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
 
 -  If ``%cnt`` equals to 0, returns 0.
 -  The returned value is always less than or equal to ``%max_lanes``.
--  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
--  The returned values decrease monotonically in each loop iteration. That is,
-   the returned value of a iteration is at least as large as that of any later
-   iterations.
+-  The returned value is always greater than or equal to ``ceil(%cnt / ceil(%cnt / %max_lanes))``,
+   if ``%cnt`` is non-zero.
+-  The returned values are monotonically non-increasing in each loop iteration. That is,
+   the returned value of an iteration is at least as large as that of any later
+   iteration.
 
 Note that it has the following implications:
 
--  If ``%cnt`` is non-zero, the result should be non-zero as well.
--  If ``%cnt`` is less than ``%max_lanes``, it has to return ``%cnt``.
+-  For a loop that uses this intrinsic, the number of iterations is equal to
+   ``ceil(%C / %max_lanes)`` where ``%C`` is the initial ``%cnt`` value.
+-  If ``%cnt`` is non-zero, the return value is non-zero as well.
+-  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
