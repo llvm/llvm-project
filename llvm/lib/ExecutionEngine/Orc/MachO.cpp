@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -85,14 +86,27 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-loadMachORelocatableObject(StringRef Path, const Triple &TT) {
+loadMachORelocatableObject(StringRef Path, const Triple &TT,
+                           std::optional<StringRef> IdentifierOverride) {
   assert((TT.getObjectFormat() == Triple::UnknownObjectFormat ||
           TT.getObjectFormat() == Triple::MachO) &&
          "TT must specify MachO or Unknown object format");
 
-  auto Buf = MemoryBuffer::getFile(Path);
+  if (!IdentifierOverride)
+    IdentifierOverride = Path;
+
+  Expected<sys::fs::file_t> FDOrErr =
+      sys::fs::openNativeFileForRead(Path, sys::fs::OF_None);
+  if (!FDOrErr)
+    return createFileError(Path, FDOrErr.takeError());
+  sys::fs::file_t FD = *FDOrErr;
+  auto Buf =
+      MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);
+  sys::fs::closeFile(FD);
   if (!Buf)
-    return createFileError(Path, Buf.getError());
+    return make_error<StringError>(
+        StringRef("Could not load MachO object at path ") + Path,
+        Buf.getError());
 
   switch (identify_magic((*Buf)->getBuffer())) {
   case file_magic::macho_object:
@@ -110,7 +124,8 @@ loadMachORelocatableObject(StringRef Path, const Triple &TT) {
 
 Expected<std::unique_ptr<MemoryBuffer>>
 loadMachORelocatableObjectFromUniversalBinary(
-    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT) {
+    StringRef UBPath, std::unique_ptr<MemoryBuffer> UBBuf, const Triple &TT,
+    std::optional<StringRef> IdentifierOverride) {
 
   auto UniversalBin =
       object::MachOUniversalBinary::create(UBBuf->getMemBufferRef());
@@ -120,6 +135,20 @@ loadMachORelocatableObjectFromUniversalBinary(
   auto SliceRange = getMachOSliceRangeForTriple(**UniversalBin, TT);
   if (!SliceRange)
     return SliceRange.takeError();
+
+  Expected<sys::fs::file_t> FDOrErr =
+      sys::fs::openNativeFileForRead(UBPath, sys::fs::OF_None);
+  if (!FDOrErr)
+    return createFileError(UBPath, FDOrErr.takeError());
+  sys::fs::file_t FD = *FDOrErr;
+  auto Buf = MemoryBuffer::getOpenFileSlice(
+      FD, *IdentifierOverride, SliceRange->second, SliceRange->first);
+  sys::fs::closeFile(FD);
+  if (!Buf)
+    return make_error<StringError>(
+        "Could not load " + TT.getArchName() +
+            " slice of MachO universal binary at path " + UBPath,
+        Buf.getError());
 
   auto ObjBuf = errorOrToExpected(MemoryBuffer::getFileSlice(
       UBPath, SliceRange->second, SliceRange->first, false));
