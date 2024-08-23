@@ -445,13 +445,12 @@ static bool isTriviallyUniform(const Use &U) {
   Value *V = U.get();
   if (isa<Constant>(V))
     return true;
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    // If I and U are in different blocks then there is a possibility of
-    // temporal divergence.
-    if (I->getParent() != cast<Instruction>(U.getUser())->getParent())
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
       return false;
-    if (const auto *II = dyn_cast<IntrinsicInst>(I))
-      return AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID());
+    // If II and U are in different blocks then there is a possibility of
+    // temporal divergence.
+    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
   }
   return false;
 }
