@@ -31,9 +31,9 @@ namespace mlir {
 
 /// A result type used to indicate if a change happened. Boolean operations on
 /// ChangeResult behave as though `Change` is truth.
-enum class [[nodiscard]] ChangeResult{
-    NoChange,
-    Change,
+enum class [[nodiscard]] ChangeResult {
+  NoChange,
+  Change,
 };
 inline ChangeResult operator|(ChangeResult lhs, ChangeResult rhs) {
   return lhs == ChangeResult::Change ? lhs : rhs;
@@ -131,7 +131,7 @@ public:
   /// Get a uniqued instance of this lattice anchor class with the given
   /// arguments.
   template <typename... Args>
-  static ConcreteT *get(StorageUniquer &uniquer, Args &&... args) {
+  static ConcreteT *get(StorageUniquer &uniquer, Args &&...args) {
     return uniquer.get<ConcreteT>(/*initFn=*/{}, std::forward<Args>(args)...);
   }
 
@@ -242,7 +242,7 @@ public:
 
   /// Load an analysis into the solver. Return the analysis instance.
   template <typename AnalysisT, typename... Args>
-  AnalysisT *load(Args &&... args);
+  AnalysisT *load(Args &&...args);
 
   /// Initialize the children analyses starting from the provided top-level
   /// operation and run the analysis until fixpoint.
@@ -273,7 +273,7 @@ public:
   /// Get a uniqued lattice anchor instance. If one is not present, it is
   /// created with the provided arguments.
   template <typename AnchorT, typename... Args>
-  AnchorT *getLatticeAnchor(Args &&... args) {
+  AnchorT *getLatticeAnchor(Args &&...args) {
     return AnchorT::get(uniquer, std::forward<Args>(args)...);
   }
 
@@ -464,7 +464,7 @@ protected:
 
   /// Get or create a custom lattice anchor.
   template <typename AnchorT, typename... Args>
-  AnchorT *getLatticeAnchor(Args &&... args) {
+  AnchorT *getLatticeAnchor(Args &&...args) {
     return solver.getLatticeAnchor<AnchorT>(std::forward<Args>(args)...);
   }
 
@@ -503,7 +503,7 @@ private:
 };
 
 template <typename AnalysisT, typename... Args>
-AnalysisT *DataFlowSolver::load(Args &&... args) {
+AnalysisT *DataFlowSolver::load(Args &&...args) {
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   childAnalyses.back().get()->debugName = llvm::getTypeName<AnalysisT>();
