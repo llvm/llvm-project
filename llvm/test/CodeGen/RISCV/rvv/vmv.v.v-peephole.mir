@@ -11,8 +11,8 @@ body: |
     ; CHECK: liveins: $v8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %passthru:vr = COPY $v8
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
     ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 %passthru, $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */
     %passthru:vr = COPY $v8
     %y:gpr = ADDI $x0, 1
