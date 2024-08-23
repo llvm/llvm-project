@@ -218,9 +218,14 @@ public:
       const auto &Binding = RI.getBinding();
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
+      // For `CreateHandleFromBinding` we need the upper bound rather than the
+      // size, so we need to be careful about the difference for "unbounded".
+      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
+      uint32_t UpperBound = Binding.Size == Unbounded
+                                ? Unbounded
+                                : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, Binding.LowerBound + Binding.Size - 1,
-          Binding.Space, RI.getResourceClass());
+          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
       std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
                                       CI->getArgOperand(4)};
       Expected<CallInst *> OpBind =

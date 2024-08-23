@@ -227,6 +227,9 @@ public:
   LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
                                         const lldb::StackFrameSP &frame_sp);
 
+  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
+                                        const lldb::StackFrameSP &frame_sp);
+
   static bool LLDBSWIGPythonRunScriptKeywordProcess(
       const char *python_function_name, const char *session_dictionary_name,
       const lldb::ProcessSP &process, std::string &output);

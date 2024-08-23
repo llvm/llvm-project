@@ -690,7 +690,7 @@ def CreateHandle : DXILOp<57, createHandle> {
   // ResourceClass, RangeID, Index, NonUniform
   let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
   let result = HandleTy;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
 }
 
 def ThreadId :  DXILOp<93, threadId> {

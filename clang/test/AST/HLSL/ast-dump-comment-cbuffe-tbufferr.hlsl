@@ -38,12 +38,16 @@ tbuffer B {
 }
 
 // AST:HLSLBufferDecl {{.*}}:11:1, line:20:1> line:11:9 cbuffer A
+// AST-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+// AST-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
 // AST-NEXT:FullComment {{.*}}<line:10:4, col:17>
 // AST-NEXT:`-ParagraphComment {{.*}}<col:4, col:17>
 // AST-NEXT:`-TextComment {{.*}}<col:4, col:17> Text=" CBuffer decl."
 // AST-NEXT:-VarDecl {{.*}}<line:15:5, col:11> col:11 a 'float'
 // AST-NEXT:`-VarDecl {{.*}}<line:19:5, col:9> col:9 b 'int'
 // AST-NEXT:HLSLBufferDecl {{.*}}<line:29:1, line:38:1> line:29:9 tbuffer B
+// AST-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit SRV
+// AST-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit TBuffer
 // AST-NEXT:-FullComment {{.*}}<line:28:4, col:17>
 // AST-NEXT: `-ParagraphComment {{.*}}<col:4, col:17>
 // AST-NEXT:  `-TextComment {{.*}}<col:4, col:17> Text=" TBuffer decl."
