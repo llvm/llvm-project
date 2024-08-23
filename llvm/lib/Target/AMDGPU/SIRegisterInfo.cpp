@@ -3378,7 +3378,7 @@ unsigned SIRegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
 
   // Don't include AGPRs on functions that don't have them.
   // This cuts about 4000 register (almost half of all registers) off.
-  return MF.getInfo<SIMachineFunctionInfo>()->mayUseAGPRs(MF.getFunction())
+  return ST.hasMAIInsts() && MF.getInfo<SIMachineFunctionInfo>()->usesAGPRs(MF)
              ? AMDGPU::NUM_TARGET_REGS
              : AMDGPU::AGPR0;
 }
