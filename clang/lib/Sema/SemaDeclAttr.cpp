@@ -3165,8 +3165,7 @@ bool Sema::checkTargetClonesAttrString(
         } else if (AttrStr.starts_with("default")) {
           DefaultIsDupe = HasDefault;
           HasDefault = true;
-        } else if (AttrStr.starts_with("priority=")) {
-          AttrStr.consume_front("priority=");
+        } else if (AttrStr.consume_front("priority=")) {
           int Digit;
           if (AttrStr.getAsInteger(0, Digit))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
