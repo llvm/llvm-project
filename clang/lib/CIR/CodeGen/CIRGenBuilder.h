@@ -894,7 +894,7 @@ public:
         unsigned AlignMask = Layout.getABITypeAlign(Elts[I]).value() - 1;
         Pos = (Pos + AlignMask) & ~AlignMask;
         assert(Offset >= 0);
-        if (static_cast<uint64_t>(Offset) < Pos + EltSize) {
+        if (Offset < Pos + EltSize) {
           Indices.push_back(I);
           SubType = Elts[I];
           Offset -= Pos;
