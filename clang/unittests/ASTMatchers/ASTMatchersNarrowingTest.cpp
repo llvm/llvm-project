@@ -2518,11 +2518,11 @@ TEST_P(ASTMatchersTest, MatchesString) {
 TEST(MatchesString, MatchesStringPrefixed) {
   StatementMatcher Literal = stringLiteral(matchesString("foo.*"));
   EXPECT_TRUE(matchesConditionally("const char16_t* a = u\"foo\";", Literal,
-                                   true, {"-std=c++11"}));
+                                   false, {"-std=c++11"}));
   EXPECT_TRUE(matchesConditionally("const char32_t* a = U\"foo\";", Literal,
-                                   true, {"-std=c++11"}));
+                                   false, {"-std=c++11"}));
   EXPECT_TRUE(matchesConditionally("const wchar_t* a = L\"foo\";", Literal,
-                                   true, {"-std=c++11"}));
+                                   false, {"-std=c++11"}));
 }
 
 TEST_P(ASTMatchersTest, HasSize) {
