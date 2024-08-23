@@ -42,18 +42,18 @@ static constexpr size_t N_EXP10M1F16_EXCEPTS_HI = 6;
 static constexpr fputil::ExceptValues<float16, N_EXP10M1F16_EXCEPTS_HI>
     EXP10M1F16_EXCEPTS_HI = {{
         // (input, RZ output, RU offset, RD offset, RN offset)
-        // x = 0x1.8f4p-2, exp10mf16(x) = 0x1.744p+0 (RZ)
+        // x = 0x1.8f4p-2, exp10m1f16(x) = 0x1.744p+0 (RZ)
         {0x363dU, 0x3dd1U, 1U, 0U, 0U},
-        // x = 0x1.95cp-2, exp10mf16(x) = 0x1.7d8p+0 (RZ)
+        // x = 0x1.95cp-2, exp10m1f16(x) = 0x1.7d8p+0 (RZ)
         {0x3657U, 0x3df6U, 1U, 0U, 0U},
-        // x = 0x1.d04p-2, exp10mf16(x) = 0x1.d7p+0 (RZ)
+        // x = 0x1.d04p-2, exp10m1f16(x) = 0x1.d7p+0 (RZ)
         {0x3741U, 0x3f5cU, 1U, 0U, 1U},
 #ifndef LIBC_TARGET_CPU_HAS_FMA
-        // x = 0x1.0cp+1, exp10mf16(x) = 0x1.ec4p+6 (RZ)
+        // x = 0x1.0cp+1, exp10m1f16(x) = 0x1.ec4p+6 (RZ)
         {0x4030U, 0x57b1U, 1U, 0U, 1U},
-        // x = 0x1.1b8p+1, exp10mf16(x) = 0x1.45cp+7 (RZ)
+        // x = 0x1.1b8p+1, exp10m1f16(x) = 0x1.45cp+7 (RZ)
         {0x406eU, 0x5917U, 1U, 0U, 1U},
-        // x = 0x1.2f4p+2, exp10mf16(x) = 0x1.ab8p+15 (RZ)
+        // x = 0x1.2f4p+2, exp10m1f16(x) = 0x1.ab8p+15 (RZ)
         {0x44bdU, 0x7aaeU, 1U, 0U, 1U},
 #endif
     }};
