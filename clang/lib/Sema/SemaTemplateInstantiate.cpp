@@ -212,8 +212,6 @@ struct TemplateInstantiationArgumentCollecter
 
   Decl *ChangeDecl(const Decl *D) {
     RelativeToPrimary = false;
-    if (const TemplateDecl *TD = D->getDescribedTemplate())
-      D = TD;
     return const_cast<Decl *>(D);
   }
 
@@ -226,10 +224,8 @@ struct TemplateInstantiationArgumentCollecter
   }
 
   Decl *DontClearRelativeToPrimaryNextDecl(const Decl* D) {
-    D = Decl::castFromDeclContext(D->getDeclContext());
-    if (const TemplateDecl *TD = D->getDescribedTemplate())
-      D = TD;
-    return const_cast<Decl *>(D);
+    return const_cast<Decl *>(
+        Decl::castFromDeclContext(D->getDeclContext()));
   }
 
   void AddInnermostTemplateArguments(const Decl *D) {
@@ -239,12 +235,6 @@ struct TemplateInstantiationArgumentCollecter
   }
 
   void AddOuterTemplateArguments(const Decl *D, ArrayRef<TemplateArgument> Args, bool Final) {
-    #if 0
-    if (Innermost) {
-      Args = *Innermost;
-      Innermost.reset();
-    }
-    #endif
     Result.addOuterTemplateArguments(const_cast<Decl*>(D), Args, Final);
   }
 
@@ -342,6 +332,8 @@ struct TemplateInstantiationArgumentCollecter
   #endif
 
   Decl *VisitFunctionDecl(FunctionDecl *FD) {
+    assert(!FD->getDescribedFunctionTemplate() && "not for templated declarations");
+
     if (!RelativeToPrimary) {
       if (const MemberSpecializationInfo *MSI = FD->getMemberSpecializationInfo();
           MSI && MSI->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
@@ -392,11 +384,8 @@ struct TemplateInstantiationArgumentCollecter
           isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD))
         return Done();
 
-    } else if (FD->getDescribedFunctionTemplate()) {
-      assert(
-          (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
-          "Outer template not instantiated?");
     }
+
     // If this is a friend or local declaration and it declares an entity at
     // namespace scope, take arguments from its lexical parent
     // instead of its semantic parent, unless of course the pattern we're
@@ -412,17 +401,7 @@ struct TemplateInstantiationArgumentCollecter
   }
 
   Decl *VisitCXXRecordDecl(CXXRecordDecl *RD) {
-    if (ClassTemplateDecl *ClassTemplate = RD->getDescribedClassTemplate()) {
-      assert(
-          (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
-          "Outer template not instantiated?");
-      // llvm_unreachable("shouldn't get here");
-      if (ClassTemplate->isMemberSpecialization())
-        return Done();
-      if (ForConstraintInstantiation)
-        AddOuterTemplateArguments(
-            RD, ClassTemplate->getInjectedTemplateArgs(), /*Final=*/false);
-    }
+    assert(!RD->getDescribedClassTemplate() && "not for templated declarations");
 
     if (const MemberSpecializationInfo *MSI = RD->getMemberSpecializationInfo();
         MSI && MSI->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
@@ -609,7 +588,7 @@ struct TemplateInstantiationArgumentCollecter
     return UseNextDecl(D);
   }
 
-    #if 0
+    #if 1
   Decl *Visit(Decl *D) {
     if (TemplateDecl *TD = D->getDescribedTemplate())
       D = TD;
