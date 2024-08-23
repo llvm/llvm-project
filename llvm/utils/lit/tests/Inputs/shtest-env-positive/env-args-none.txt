@@ -1,4 +1,4 @@
-## Tests the env command's ability to handle setting, unsetting, and mixing environment variables.
+## Tests the env command in various scenarios: without arguments, setting, unsetting, and mixing envrionment variables. 
 
 ## Check default environment.
 # RUN: env | FileCheck -check-prefix=NO-ARGS %s
