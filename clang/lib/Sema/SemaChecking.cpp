@@ -5607,9 +5607,9 @@ bool Sema::BuiltinGetCountedBy(CallExpr *TheCall) {
       Arg = ASE->getBase()->IgnoreParenImpCasts();
   }
 
-  // Use 'void *' as the default return type. If the argument doesn't have the
-  // 'counted_by' attribute, it'll return a 'nullptr'.
-  TheCall->setType(Context.getPointerType(Context.VoidTy));
+  // Use 'size_t *' as the default return type. If the argument doesn't have
+  // the 'counted_by' attribute, it'll return a 'nullptr'.
+  TheCall->setType(Context.getPointerType(Context.getSizeType()));
 
   if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
     if (!ME->isFlexibleArrayMemberLike(
