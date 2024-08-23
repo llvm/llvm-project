@@ -107,19 +107,6 @@ C++ Language Changes
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++20 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-C++23 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Removed the restriction to literal types in constexpr functions in C++23 mode.
-
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -130,6 +117,13 @@ C++2c Feature Support
   `P2985R0 A type trait for detecting virtual base classes <https://wg21.link/p2985r0>`_
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
+
+C++23 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Removed the restriction to literal types in constexpr functions in C++23 mode.
+
+C++20 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -239,6 +233,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
 
+- Improved diagnostic when trying to befriend a concept. (#GH45182).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -292,6 +288,8 @@ Bug Fixes to C++ Support
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 - Fixed an assertion failure about a constraint of a friend function template references to a value with greater
   template depth than the friend function template. (#GH98258)
+- Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
+  of the current instantiation in all cases.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

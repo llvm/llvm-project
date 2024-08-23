@@ -713,6 +713,56 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(*HIt++, Handler1);
 }
 
+TEST_F(TrackerTest, CatchReturnInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %catchpad = catchpad within %cs [ptr @foo]
+  catchret from %catchpad to label %continue
+continue:
+  ret void
+catch2:
+  %catchpad2 = catchpad within %cs [ptr @foo]
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  BasicBlock *LLVMCatch = getBasicBlockByName(LLVMF, "catch");
+  auto LLVMIt = LLVMCatch->begin();
+  [[maybe_unused]] auto *LLVMCP = cast<llvm::CatchPadInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Catch = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMCatch));
+  auto *Catch2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "catch2")));
+  auto It = Catch->begin();
+  [[maybe_unused]] auto *CP = cast<sandboxir::CatchPadInst>(&*It++);
+  auto *CR = cast<sandboxir::CatchReturnInst>(&*It++);
+  auto *CP2 = cast<sandboxir::CatchPadInst>(&*Catch2->begin());
+
+  // Check setCatchPad().
+  auto *OrigCP = CR->getCatchPad();
+  auto *NewCP = CP2;
+  EXPECT_NE(NewCP, OrigCP);
+  Ctx.save();
+  CR->setCatchPad(NewCP);
+  EXPECT_EQ(CR->getCatchPad(), NewCP);
+  Ctx.revert();
+  EXPECT_EQ(CR->getCatchPad(), OrigCP);
+  // Check setSuccessor().
+  auto *OrigSucc = CR->getSuccessor();
+  auto *NewSucc = Catch;
+  EXPECT_NE(NewSucc, OrigSucc);
+  Ctx.save();
+  CR->setSuccessor(NewSucc);
+  EXPECT_EQ(CR->getSuccessor(), NewSucc);
+  Ctx.revert();
+  EXPECT_EQ(CR->getSuccessor(), OrigSucc);
+}
+
 TEST_F(TrackerTest, SwitchInstSetters) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
@@ -1031,6 +1081,57 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(CallBr->getIndirectDest(0), OtherBB);
   Ctx.revert();
   EXPECT_EQ(CallBr->getIndirectDest(0), OrigIndirectDest);
+}
+
+TEST_F(TrackerTest, FuncletPadInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+dispatch:
+  %cs = catchswitch within none [label %handler0] unwind to caller
+handler0:
+  %catchpad = catchpad within %cs [ptr @foo]
+  ret void
+handler1:
+  %cleanuppad = cleanuppad within %cs [ptr @foo]
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Dispatch = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "dispatch")));
+  auto *Handler0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler0")));
+  auto *Handler1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "handler1")));
+  auto *CP = cast<sandboxir::CatchPadInst>(&*Handler0->begin());
+  auto *CLP = cast<sandboxir::CleanupPadInst>(&*Handler1->begin());
+
+  for (auto *FPI : {static_cast<sandboxir::FuncletPadInst *>(CP),
+                    static_cast<sandboxir::FuncletPadInst *>(CLP)}) {
+    // Check setParentPad().
+    auto *OrigParentPad = FPI->getParentPad();
+    auto *NewParentPad = Dispatch;
+    EXPECT_NE(NewParentPad, OrigParentPad);
+    Ctx.save();
+    FPI->setParentPad(NewParentPad);
+    EXPECT_EQ(FPI->getParentPad(), NewParentPad);
+    Ctx.revert();
+    EXPECT_EQ(FPI->getParentPad(), OrigParentPad);
+
+    // Check setArgOperand().
+    auto *OrigArgOperand = FPI->getArgOperand(0);
+    auto *NewArgOperand = Dispatch;
+    EXPECT_NE(NewArgOperand, OrigArgOperand);
+    Ctx.save();
+    FPI->setArgOperand(0, NewArgOperand);
+    EXPECT_EQ(FPI->getArgOperand(0), NewArgOperand);
+    Ctx.revert();
+    EXPECT_EQ(FPI->getArgOperand(0), OrigArgOperand);
+  }
 }
 
 TEST_F(TrackerTest, PHINodeSetters) {

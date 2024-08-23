@@ -51,15 +51,14 @@
 // including inside any newly created loops. This ensures that any SCC hidden
 // inside a maximal SCC is also transformed.
 //
-// The actual transformation is handled by function CreateControlFlowHub, which
-// takes a set of incoming blocks (the predecessors) and outgoing blocks (the
-// headers). The function also moves every PHINode in an outgoing block to the
-// hub. Since the hub dominates all the outgoing blocks, each such PHINode
-// continues to dominate its uses. Since every header in an SCC has at least two
-// predecessors, every value used in the header (or later) but defined in a
-// predecessor (or earlier) is represented by a PHINode in a header. Hence the
-// above handling of PHINodes is sufficient and no further processing is
-// required to restore SSA.
+// The actual transformation is handled by the ControlFlowHub, which redirects
+// specified control flow edges through a set of guard blocks. This also moves
+// every PHINode in an outgoing block to the hub. Since the hub dominates all
+// the outgoing blocks, each such PHINode continues to dominate its uses. Since
+// every header in an SCC has at least two predecessors, every value used in the
+// header (or later) but defined in a predecessor (or earlier) is represented by
+// a PHINode in a header. Hence the above handling of PHINodes is sufficient and
+// no further processing is required to restore SSA.
 //
 // Limitation: The pass cannot handle switch statements and indirect
 //             branches. Both must be lowered to plain branches first.
@@ -74,6 +73,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ControlFlowUtils.h"
 
 #define DEBUG_TYPE "fix-irreducible"
 
@@ -189,9 +189,24 @@ static void createNaturalLoopInternal(LoopInfo &LI, DominatorTree &DT,
   // Redirect all the backedges through a "hub" consisting of a series
   // of guard blocks that manage the flow of control from the
   // predecessors to the headers.
+  ControlFlowHub CHub;
+  for (BasicBlock *P : Predecessors) {
+    auto *Branch = cast<BranchInst>(P->getTerminator());
+    BasicBlock *Succ0 = Branch->getSuccessor(0);
+    Succ0 = Headers.count(Succ0) ? Succ0 : nullptr;
+    BasicBlock *Succ1 =
+        Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+    Succ1 = Succ1 && Headers.count(Succ1) ? Succ1 : nullptr;
+    CHub.addBranch(P, Succ0, Succ1);
+
+    LLVM_DEBUG(dbgs() << "Added branch: " << P->getName() << " -> "
+                      << (Succ0 ? Succ0->getName() : "") << " "
+                      << (Succ1 ? Succ1->getName() : "") << "\n");
+  }
+
   SmallVector<BasicBlock *, 8> GuardBlocks;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-  CreateControlFlowHub(&DTU, GuardBlocks, Predecessors, Headers, "irr");
+  CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
 #else

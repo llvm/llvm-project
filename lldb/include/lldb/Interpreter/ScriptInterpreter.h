@@ -252,11 +252,6 @@ public:
     return lldb::ValueObjectListSP();
   }
 
-  virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                          lldb::StackFrameSP frame_sp) {
-    return false;
-  }
-
   virtual StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
                                    const StructuredDataImpl &args_data,

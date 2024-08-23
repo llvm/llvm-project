@@ -2541,6 +2541,36 @@ atomic {
   omp.yield
 }
 
+// CHECK-LABEL: @alloc_reduction
+// CHECK-SAME:  alloc {
+// CHECK-NEXT:  ^bb0(%[[ARG0:.*]]: !llvm.ptr):
+// ...
+// CHECK:         omp.yield
+// CHECK-NEXT:  } init {
+// CHECK:       } combiner {
+// CHECK:       }
+omp.declare_reduction @alloc_reduction : !llvm.ptr
+alloc {
+^bb0(%arg: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
+  omp.yield (%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %cst = arith.constant 1.0 : f32
+  llvm.store %cst, %alloc : f32, !llvm.ptr
+  omp.yield (%alloc : !llvm.ptr)
+}
+combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  %1 = llvm.load %arg1 : !llvm.ptr -> f32
+  %2 = arith.addf %0, %1 : f32
+  llvm.store %2, %arg0 : f32, !llvm.ptr
+  omp.yield (%arg0 : !llvm.ptr)
+}
+
 // CHECK-LABEL: omp_targets_with_map_bounds
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
