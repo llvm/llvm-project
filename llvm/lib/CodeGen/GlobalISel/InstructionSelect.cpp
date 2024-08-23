@@ -82,8 +82,12 @@ class InstructionSelect::MIIteratorMaintainer : public GISelChangeObserver {
 public:
   MachineBasicBlock::reverse_iterator MII;
 
-  void changingInstr(MachineInstr &MI) override {}
-  void changedInstr(MachineInstr &MI) override {}
+  void changingInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+  void changedInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
 
   void createdInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Creating:  " << MI; CreatedInstrs.insert(&MI));
@@ -220,7 +224,6 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
         LLVM_DEBUG(MIIMaintainer.reportFullyCreatedInstrs());
       }
     }
-    AllObservers.removeObserver(&MIIMaintainer);
   }
 
   for (MachineBasicBlock &MBB : MF) {

@@ -39,6 +39,9 @@ public:
 
   MachineOptimizationRemarkEmitter *MORE = nullptr;
 
+  /// Note: InstructionSelect does not track changed instructions.
+  /// changingInstr() and changedInstr() will never be called on these
+  /// observers.
   GISelObserverWrapper *AllObservers = nullptr;
 };
 } // namespace llvm
