@@ -196,7 +196,6 @@ struct DAP {
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
-  std::map<lldb::tid_t, uint32_t> thread_stack_size_cache;
   uint32_t reverse_request_seq;
   std::mutex call_mutex;
   std::map<int /* request_seq */, ResponseCallback /* reply handler */>
