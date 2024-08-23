@@ -305,13 +305,16 @@ public:
 
       auto DefLoc = MI->getDefinitionLoc();
 
-      if (SM.isWrittenInBuiltinFile(DefLoc) || SM.isWrittenInCommandLineFile(DefLoc))
+      if (SM.isWrittenInBuiltinFile(DefLoc) ||
+          SM.isWrittenInCommandLineFile(DefLoc))
         continue;
 
       auto AssociatedModuleMacros = MD.getModuleMacros();
       StringRef OwningModuleName;
       if (!AssociatedModuleMacros.empty())
-        OwningModuleName = AssociatedModuleMacros.back()->getOwningModule()->getTopLevelModuleName();
+        OwningModuleName = AssociatedModuleMacros.back()
+                               ->getOwningModule()
+                               ->getTopLevelModuleName();
 
       if (!shouldMacroBeIncluded(DefLoc, OwningModuleName))
         continue;
@@ -325,11 +328,13 @@ public:
           DeclarationFragmentsBuilder::getFragmentsForMacro(Name, MI),
           DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
           SM.isInSystemHeader(DefLoc));
-
     }
   }
 
-  virtual bool shouldMacroBeIncluded(const SourceLocation &MacroLoc, StringRef ModuleName) { return true; }
+  virtual bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                                     StringRef ModuleName) {
+    return true;
+  }
 
   const SourceManager &SM;
   APISet &API;
@@ -342,7 +347,8 @@ public:
                    LocationFileChecker &LCF)
       : MacroCallback(SM, API, PP), LCF(LCF) {}
 
-  bool shouldMacroBeIncluded(const SourceLocation &MacroLoc, StringRef ModuleName) override {
+  bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                             StringRef ModuleName) override {
     // Do not include macros from external files
     return LCF(MacroLoc) || API.ProductName == ModuleName;
   }
