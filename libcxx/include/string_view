@@ -212,6 +212,7 @@ namespace std {
 #include <__functional/unary_function.h>
 #include <__fwd/ostream.h>
 #include <__fwd/string_view.h>
+#include <__fwd/string.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
