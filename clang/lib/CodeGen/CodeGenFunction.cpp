@@ -2895,8 +2895,7 @@ static int getPriorityFromAttrString(StringRef AttrStr) {
   // Default Priority is zero.
   int Priority = 0;
   for (auto Attr : Attrs) {
-    if (Attr.starts_with("priority=")) {
-      Attr.consume_front("priority=");
+    if (Attr.consume_front("priority=")) {
       int Result;
       if (!Attr.getAsInteger(0, Result)) {
         Priority = Result;
